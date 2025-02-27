@@ -1,0 +1,24 @@
+{
+  "extends": "expo/tsconfig.base",  // On garde l'extension Expo
+  "compilerOptions": {
+    "strict": true,  // Active les vérifications strictes pour un code plus robuste
+    "noEmit": false, // Permet l'émission des fichiers JS
+    "outDir": "./dist",  // Spécifie le dossier de sortie pour les fichiers compilés
+    "esModuleInterop": true,  // Permet l'importation de modules CommonJS en ESModules
+    "module": "ESNext",  // Utilise le système de modules ESNext
+    "moduleResolution": "node",  // Résolution de module comme Node.js
+    "target": "ES5",  // Cible la version ES5 de JavaScript
+    "jsx": "react",  // Utilisation de JSX pour React
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./*"]  // Alias pour simplifier les imports
+    }
+  },
+  "include": [
+    "app/**/*.ts",  // Inclut tous les fichiers TS sous "app"
+    "app/**/*.tsx",  // Inclut tous les fichiers TSX sous "app"
+    ".expo/types/**/*.ts",  // Inclut les types Expo
+    "expo-env.d.ts",
+    "global.d.ts"  // Inclut les définitions d'environnement Expo
+  ]
+}

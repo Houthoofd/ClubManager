@@ -1,1 +1,2 @@
 # ClubManager
+ Club users management
