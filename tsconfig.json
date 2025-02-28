@@ -10,9 +10,7 @@
   "include": [
     "shared/**/*",
     "web/**/*",
-    "node_modules/@types/**/*",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "node_modules/@types/**/*"
   ],
   "extends": "expo/tsconfig.base"
 }
