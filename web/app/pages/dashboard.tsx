@@ -1,12 +1,12 @@
 import React from 'react';
-import Navigation from '../../components/navigation';
+import { Provider } from 'react-redux'; // Assurez-vous d'importer le provider
+import store from '../../redux/store'; // Importation du store
 
 const Dashboard = () => {
   return (
-    <div>
-      <h1>Hello, dashboard!</h1>
-      <Navigation />
-    </div>
+    <Provider store={store}>
+        <h1>Dashboard heho</h1>
+    </Provider>
   );
 };
 

@@ -1,5 +1,5 @@
 # Étape de construction du frontend
-FROM node:18-alpine
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY web/package*.json ./
 RUN npm install --legacy-peer-deps
 
 # Copier les fichiers du frontend
-COPY web/ .
+COPY web/ ./
 
 # Construire l'application pour la production
 RUN npm run build

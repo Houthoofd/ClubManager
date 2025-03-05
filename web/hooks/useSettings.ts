@@ -14,7 +14,6 @@ const useDarkMode = () => {
 
   // Utilisation d'un useEffect pour observer les changements du mode sombre
   useEffect(() => {
-    console.log('Dark mode toggled:', settings.darkMode); // Affiche la valeur à chaque changement
   }, [settings.darkMode]); // Cela écoute les changements de darkMode
 
   return { settings, handleToggleDarkMode };

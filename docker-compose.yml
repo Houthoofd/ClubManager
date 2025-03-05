@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   frontend:
     build:
@@ -5,6 +7,8 @@ services:
       dockerfile: web/Dockerfile  # Dockerfile pour la construction du frontend
     ports:
       - "8081:8081"
+    volumes:
+      - frontend-build:/app/dist  # Assurez-vous que le dossier de build est lié correctement
     networks:
       - clubmanager
 
@@ -25,6 +29,7 @@ services:
       dockerfile: nginx/Dockerfile  # Dockerfile pour la construction de Nginx
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+      - clubmanager-nginx:/usr/share/nginx/html  # Utilisez le bon volume
     ports:
       - "80:80"
     depends_on:
@@ -33,6 +38,21 @@ services:
     networks:
       - clubmanager
 
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Permet à Watchtower d'interagir avec Docker
+    command: --interval 30  # Vérifie toutes les 30 secondes
+    networks:
+      - clubmanager
+
 networks:
   clubmanager:
     driver: bridge
+
+volumes:
+  frontend-build:  # Définir le volume frontend-build
+    driver: local
+  clubmanager-nginx:  # Définir le volume pour nginx
+    driver: local

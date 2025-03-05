@@ -23,15 +23,12 @@ const useNavbar = () => {
   };
 
   useEffect(() => {
-    console.log('Left Navbar opened:', navigation.left_navbar);
   }, [navigation.left_navbar]);
 
   useEffect(() => {
-    console.log('Right Navbar opened:', navigation.right_navbar);
   }, [navigation.right_navbar]);
 
   useEffect(() => {
-    console.log('Right header panel opened:', navigation.header_right_panel);
   }, [navigation.right_navbar]);
 
   return { navigation, handleToggleLeftNavbar, handleToggleRightNavbar, handleToggleRightHeaderPanel };

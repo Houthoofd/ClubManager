@@ -1,16 +1,30 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import App from './app';
 import store from '../redux/store';
+import Cours from '../app/pages/cours';
+import Dashboard from '../app/pages/dashboard';
+import MainLayout from '../components/ui/mainlayout';
+import Messages from './pages/messages';
 
-if (typeof document !== 'undefined') {
-  createRoot(document.getElementById('root') as HTMLElement).render(
+const App = () => {
+  return (
     <Provider store={store}>
-      <App />
+      <Router>
+        <MainLayout>
+          <Routes>
+            {/* Définir les routes ici */}
+            <Route path="/pages/cours" element={<Cours />} />
+            <Route path="/pages/dashboard" element={<Dashboard />} />
+            <Route path="/pages/messages" element={<Messages />} />
+
+            {/* Redirection de la page d'accueil vers /pages/cours */}
+            <Route path="/" element={<Navigate to="/pages/cours" />} />
+          </Routes>
+        </MainLayout>
+      </Router>
     </Provider>
   );
-} else {
-  // Tu peux gérer le cas côté serveur ici si nécessaire
-  console.warn('document is not defined');
-}
+};
+
+export default App;
