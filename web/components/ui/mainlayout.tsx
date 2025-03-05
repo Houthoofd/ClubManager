@@ -4,7 +4,7 @@ import NotificationBell from '../ui/notification-bell';
 import { RightExpandButton, LeftExpandButton } from '../ui/expanse-btn';
 import MessageIcon from '../ui/message-icon';
 import { useDispatch, useSelector } from 'react-redux';
- 
+import DarkModeButton from '../ui/dark-mode-btn';
 
 interface MainLayoutProps {
   children?: ReactNode;
@@ -17,21 +17,23 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isLeftNavbarOpen = useSelector((state: any) => state.navigation.left_navbar);
   const isRightNavbarOpen = useSelector((state: any) => state.navigation.right_navbar);
   const isRightHeaderPanelOpen = useSelector((state: any) => state.navigation.header_right_panel);
+  const isDarkMode = useSelector((state:any) => state.settings.darkMode);
 
-  console.log({isLeftNavbarOpen: isLeftNavbarOpen, isRightNavbarOpen: isRightNavbarOpen, isRightHeaderPanelOpen: isRightHeaderPanelOpen})
+  console.log({isLeftNavbarOpen: isLeftNavbarOpen, isRightNavbarOpen: isRightNavbarOpen, isRightHeaderPanelOpen: isRightHeaderPanelOpen, isDarkMode: isDarkMode})
+
 
   return (
-    <div className='layout'>
-      <header className={`header ${isLeftNavbarOpen ? 'left-navbar-open' : 'left-navbar-close'} ${isRightHeaderPanelOpen ? 'right-header-open' : 'right-header-close'}`}>
-        <div className='layer'>
-          <LeftExpandButton /> {/* Bascule du navbar gauche */}
+    <div className={`layout ${isDarkMode ? 'light' : 'dark'}`}>
+      <header className={`header ${isLeftNavbarOpen ? 'left-header-open' : 'left-header-close'} ${isRightHeaderPanelOpen ? 'right-header-open' : 'right-header-close'}`}>
+        <div className={`layer ${isDarkMode ? 'light' : 'dark'}`}>
+          <LeftExpandButton />
         </div>
         <div className='header-content'>
-          {/* Contenu supplémentaire pour le header ici */}
+
         </div>
-        <nav className='header-right-navbar'>
+        <nav className={`header-right-navbar ${isDarkMode ? 'light': 'dark'}`}>
           <ul>
-            <RightExpandButton /> {/* Bascule du navbar droit */}
+            <RightExpandButton />
             <NotificationBell />
             <Link to="/pages/messages">
               <MessageIcon />
@@ -41,10 +43,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       </header>
 
       <div className={`content ${isLeftNavbarOpen ? 'left-panel-open' : 'left-panel-close'} ${isRightNavbarOpen ? 'right-panel-open' : 'right-panel-close'}`}>
-        <nav className={`navigation-left-panel ${isLeftNavbarOpen ? 'open' : ''}`}>
+        <nav className={`navigation-left-panel ${isLeftNavbarOpen ? 'open' : 'close'}`}>
           <ul>
             <li><Link to="/pages/cours">Cours</Link></li>
             <li><Link to="/pages/dashboard">Dashboard</Link></li>
+          </ul>
+          <ul>
+            <DarkModeButton />
           </ul>
         </nav>
 

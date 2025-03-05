@@ -8,6 +8,7 @@ import MainLayout from '../components/ui/mainlayout';
 import Messages from './pages/messages';
 
 const App = () => {
+
   return (
     <Provider store={store}>
       <Router>

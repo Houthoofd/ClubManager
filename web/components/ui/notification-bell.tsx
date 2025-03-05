@@ -13,8 +13,6 @@ const NotificationBell = () => {
 
   const isRightOpen = useSelector((state: any) => state.navigation.right_navbar);
 
-  console.log("right-navbar" + isRightOpen)
-
   const handleClick = () => {
     console.log("right-navbar" + isRightOpen)
     console.log('Current navbar state:', isRightOpen);

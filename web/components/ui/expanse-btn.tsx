@@ -7,9 +7,8 @@ import useNavbar from '../../hooks/useNavigation';  // Hook pour la navigation
 // Composant pour gérer le panneau gauche
 const LeftExpandButton = () => {
   const dispatch = useDispatch();
-  const { settings } = useDarkMode();
-  const { navigation } = useNavbar();
-  const isLeftPanelOpen = navigation.left_navbar;
+  const isDarkMode = useSelector((state:any) => state.settings.darkMode);
+  const isLeftPanelOpen = useSelector((state: any) => state.navigation.left_navbar);
 
   const handleLeftClick = () => {
     dispatch(OPEN_LEFT_NAVBAR());  // Ouvrir/fermer le panneau gauche uniquement
@@ -17,7 +16,7 @@ const LeftExpandButton = () => {
 
   return (
     <div
-      className={`expand-btn-${settings.darkMode ? 'dark' : 'light'} ${isLeftPanelOpen ? 'open-left' : 'close-left'}`}
+      className={`expand-btn-${isDarkMode ? 'light' : 'dark'} ${isLeftPanelOpen ? 'open-left' : 'close-left'}`}
       onClick={handleLeftClick}
     >
       {isLeftPanelOpen ? (
@@ -56,11 +55,8 @@ const LeftExpandButton = () => {
 // Composant pour gérer le panneau droit
 const RightExpandButton = () => {
   const dispatch = useDispatch();
-  const { settings } = useDarkMode();
-  const { navigation } = useNavbar();
-  const isRightPanelOpen = navigation.header_right_panel;
-
-  console.log(isRightPanelOpen)
+  const isDarkMode = useSelector((state:any) => state.settings.darkMode);
+  const isLeftPanelOpen = useSelector((state: any) => state.navigation.left_navbar);
 
   const handleRightClick = () => {
     console.log("handle right clock")
@@ -69,10 +65,10 @@ const RightExpandButton = () => {
 
   return (
     <div
-      className={`expand-btn-${settings.darkMode ? 'dark' : 'light'} ${isRightPanelOpen ? 'open-right' : 'close-right'}`}
+      className={`expand-btn-${isDarkMode ? 'light' : 'dark'} ${isLeftPanelOpen ? 'open-right' : 'close-right'}`}
       onClick={handleRightClick}
     >
-      {isRightPanelOpen ? (
+      {isLeftPanelOpen ? (
         <svg
           width="24"
           height="24"

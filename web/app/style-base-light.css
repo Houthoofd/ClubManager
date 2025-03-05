@@ -23,7 +23,7 @@ html{
   font-family: Poppins, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.layout {
+.layout.light {
   grid-template-rows: 10vh minmax(0, 1fr);
   width: 100%;
   height: 100%;
@@ -49,7 +49,7 @@ header {
   grid-template-columns: 200px minmax(0, 1fr) 200px;
   border-bottom: 1px solid var(--bck-icon-light);
 }
-header > .layer {
+header > .layer.light {
   background-color: var(--bck-icon-light);
   display: flex;
   justify-content: flex-end;
@@ -62,25 +62,25 @@ header > .layer > .expand-btn-light.close-left{
   transform: translateX(20px);
 }
 
-header > nav.header-right-navbar {
+header > nav.header-right-navbar.light {
   background-color: var(--bck-icon-light);
   display: flex;
   align-items: center;
 }
-header > nav.header-right-navbar > ul {
+header > nav.header-right-navbar.light > ul {
   display: flex;
   justify-content: space-around;
   align-items: center;
 }
-header > nav.header-right-navbar > ul > div:not(:first-child) {
+header > nav.header-right-navbar.light > ul > div:not(:first-child) {
   display: flex;
   justify-content: flex-start;
   align-items: center;
 }
-header > nav.header-right-navbar > ul > .expand-btn-light.open-right{
+header > nav.header-right-navbar.light > ul > .expand-btn-light.open-right{
   transform: translateX(-21px);
 }
-header > nav.header-right-navbar > ul > .expand-btn-light.close-right{
+header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
   transform: translateX(-21px);
 }
 
@@ -131,13 +131,17 @@ header > nav.header-right-navbar > ul > .expand-btn-light.close-right{
 
 
 /* add effect open / close */
-header.header.left-navbar-close.right-header-open {
+header.header.left-header-close.right-header-open {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr) 200px;
 }
-header.header.left-navbar-open.right-header-close {
+header.header.left-header-open.right-header-close {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr) 40px;
+}
+header.header.left-header-close.right-header-close {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 40px;
 }
 
 
