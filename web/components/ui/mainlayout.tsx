@@ -40,7 +40,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </nav>
       </header>
 
-      <div className={`content ${isLeftNavbarOpen ? 'left-navbar-open' : 'left-navbar-close'} ${isRightHeaderPanelOpen ? 'right-navbar-open' : 'right-navbar-close'}`}>
+      <div className={`content ${isLeftNavbarOpen ? 'left-panel-open' : 'left-panel-close'} ${isRightNavbarOpen ? 'right-panel-open' : 'right-panel-close'}`}>
         <nav className={`navigation-left-panel ${isLeftNavbarOpen ? 'open' : ''}`}>
           <ul>
             <li><Link to="/pages/cours">Cours</Link></li>

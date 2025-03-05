@@ -127,3 +127,30 @@ header > nav.header-right-navbar > ul > .expand-btn-light.close-right{
   background-color: var(--base-icon-clr);
   border: 1px solid var(--bck-icon-light);
 }
+
+
+
+/* add effect open / close */
+header.header.left-navbar-close.right-header-open {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 200px;
+}
+header.header.left-navbar-open.right-header-close {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 40px;
+}
+
+
+
+.content.left-panel-close.right-panel-close {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 0px;
+}
+.content.left-panel-open.right-panel-open {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 200px;
+}
+.content.left-panel-open.right-panel-close {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 0px;
+}
