@@ -24,7 +24,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
   return (
     <div className={`layout ${isDarkMode ? 'light' : 'dark'}`}>
-      <header className={`header ${isLeftNavbarOpen ? 'left-header-open' : 'left-header-close'} ${isRightHeaderPanelOpen ? 'right-header-open' : 'right-header-close'}`}>
+      <header className={`header ${isLeftNavbarOpen ? 'left-header-open' : 'left-header-close'} ${isRightHeaderPanelOpen ? 'right-header-open' : 'right-header-close'} ${isDarkMode ? 'light' : 'dark'}`}>
         <div className={`layer ${isDarkMode ? 'light' : 'dark'}`}>
           <LeftExpandButton />
         </div>
@@ -43,7 +43,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       </header>
 
       <div className={`content ${isLeftNavbarOpen ? 'left-panel-open' : 'left-panel-close'} ${isRightNavbarOpen ? 'right-panel-open' : 'right-panel-close'}`}>
-        <nav className={`navigation-left-panel ${isLeftNavbarOpen ? 'open' : 'close'}`}>
+        <nav className={`navigation-left-panel ${isLeftNavbarOpen ? 'open' : 'close'} ${isDarkMode ? 'light' : 'dark'}`}>
           <ul>
             <li><Link to="/pages/cours">Cours</Link></li>
             <li><Link to="/pages/dashboard">Dashboard</Link></li>

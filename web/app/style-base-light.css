@@ -36,7 +36,7 @@ html{
   grid-template-columns: 200px minmax(0, 1fr) 200px;
   display: grid;
 }
-.content > nav.navigation-left-panel {
+.content > nav.navigation-left-panel.light {
   border-right: 1px solid var(--bck-icon-light);
 }
 .content > .right-panel-content {
@@ -131,15 +131,15 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
 
 
 /* add effect open / close */
-header.header.left-header-close.right-header-open {
+header.header.left-header-close.right-header-open.light {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr) 200px;
 }
-header.header.left-header-open.right-header-close {
+header.header.left-header-open.right-header-close.light {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr) 40px;
 }
-header.header.left-header-close.right-header-close {
+header.header.left-header-close.right-header-close.light {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr) 40px;
 }

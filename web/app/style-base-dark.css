@@ -37,8 +37,8 @@ html{
   grid-template-columns: 200px minmax(0, 1fr) 200px;
   display: grid;
 }
-.content > nav.navigation-left-panel {
-  border-right: 1px solid var(--bck-icon-light);
+.content > nav.navigation-left-panel.dark {
+  border-right: 1px solid var(--hover-clr);
 }
 .content > .right-panel-content {
   border-left: 1px solid var(--bck-icon-light);
@@ -55,7 +55,7 @@ header > .layer.dark {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  border-right: 1px solid #f3f4f6;
+  border-right: 1px solid var(--hover-clr);
 }
 header > .layer > .expand-btn-dark.open-left{
   transform: translateX(20px);
@@ -73,7 +73,7 @@ header > nav.header-right-navbar.dark {
   background-color: #222533;
   align-items: center;
   display: flex;
-  border-left: 1px solid #b0b3c1;
+  border-left: 1px solid #222533;
 }
 header > nav.header-right-navbar.dark > ul {
   display: flex;
@@ -135,17 +135,25 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
 
 
 /* add effect open / close */
-header.header.left-header-close.right-header-open {
+header.header.left-header-close.right-header-open.dark {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr) 200px;
+  border-bottom: 1px solid #222533;
 }
-header.header.left-header-open.right-header-close {
+header.header.left-header-open.right-header-close.dark {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr) 40px;
+  border-bottom: 1px solid #222533;
 }
-header.header.left-header-close.right-header-close {
+header.header.left-header-close.right-header-close.dark {
   display: grid;
   grid-template-columns: 80px minmax(0, 1fr) 40px;
+  border-bottom: 1px solid #222533;
+}
+header.header.left-header-open.right-header-open.dark {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 200px;
+  border-bottom: 1px solid #222533;
 }
 
 
