@@ -53,6 +53,21 @@ html{
   height: 100vh;
   display: grid;
 }
+
+/* notification list */
+ul.notifications-list {
+  display: flex; 
+  flex-direction: column;
+}
+li.notifications-list-item {
+  list-style: none;
+  height: 50px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+
+
+
 .content > nav.navigation-left-panel.light {
   border-right: 1px solid var(--bck-icon-light);
   display: flex;

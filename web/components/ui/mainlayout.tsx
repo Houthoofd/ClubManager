@@ -101,16 +101,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
         <div className={`right-panel-content ${isRightNavbarOpen ? 'open' : 'close'} ${isDarkMode ? 'light' : 'dark'}`}>
           <div className="notifications">
-          <ul>
-  {Array.isArray(notifications) && notifications.length > 0 ? (
-    notifications.map((notification) => (
-      <li key={notification.id}>{notification.message}</li>  // Affiche les notifications dans la liste
-    ))
-  ) : (
-    <li>Aucune notification disponible</li>
-  )}
-</ul>
-
+          <ul className='notifications-list'>
+            {Array.isArray(notifications) && notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <li className="notifications-list-item" key={notification.id}>{notification.message}</li>  // Affiche les notifications dans la liste
+                ))
+              ) : (
+                <li>Aucune notification disponible</li>
+              )}
+            </ul>
           </div>
         </div>
       </div>
