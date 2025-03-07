@@ -245,6 +245,7 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
   border-radius: 10px;
   background-color: var(--base-icon-clr);
   border: 1px solid var(--text-clr);
+  transform: translateX(-13px);
 
   svg{
     stroke: var(--icon-color);
@@ -262,6 +263,7 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
   border-radius: 10px;
   background-color: var(--base-icon-clr);
   border: 1px solid var(--text-clr);
+  transform: translateX(-14px);
 
   svg{
     fill: var(--icon-color);
@@ -277,6 +279,7 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
   border-radius: 10px;
   background-color: var(--base-icon-clr);
   border: 1px solid var(--text-clr);
+  transform: translateX(-16px);
 
   svg{
     transform: translateX(10px);
@@ -306,6 +309,7 @@ span.notification-bell-light {
   border-radius: 10px;
   background-color: var(--base-icon-clr);
   border: 1px solid var(--text-clr);
+  transform: translateX(-18px);
 
   svg{
     stroke: var(--icon-color);
