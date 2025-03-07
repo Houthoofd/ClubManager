@@ -24,7 +24,7 @@ const MessageIcon = () => {
   };
 
   return (
-    <div className={`message-icon-${darkMode ? 'dark' : 'light'}`}>
+    <div className={`message-icon-${darkMode ? 'light' : 'dark'}`}>
       <svg
         onClick={handleClick}
         className="envelope-icon"

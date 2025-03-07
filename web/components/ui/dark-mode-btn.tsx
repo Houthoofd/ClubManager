@@ -15,7 +15,7 @@ const DarkModeButton = () => {
   };
 
   return (
-    <div className={`dark-mode-btn-${darkMode ? 'dark' : 'light'} ${navigation.left_navbar ? 'open' : 'close'}`} onClick={handleClick}>
+    <div className={`dark-mode-btn-${darkMode ? 'light' : 'dark'} ${navigation.left_navbar ? 'open' : 'close'}`} onClick={handleClick}>
       {darkMode ? (
         // Nouveau SVG pour la lune (mode sombre activé)
         <svg

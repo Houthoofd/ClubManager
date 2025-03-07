@@ -29,7 +29,7 @@ const NotificationBell = () => {
   };
 
   return (
-    <div className={`notification-bell-${darkMode ? 'dark' : 'light'}`} onClick={handleClick}>
+    <div className={`notification-bell-${darkMode ? 'light' : 'dark'}`} onClick={handleClick}>
       <svg
         className="bell-icon"
         width="24"
