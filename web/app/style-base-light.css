@@ -31,11 +31,26 @@ html{
   display: grid;
   background-color: var(--base-icon-clr);
 }
+.layout.light > .layer-icon-text-full {
+  width: 40px;
+  height: 40px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
 
 .content {
   height: 100vh;
   width: 100%;
   grid-template-columns: 200px minmax(0, 1fr) 200px;
+  display: grid;
+}
+.content.left-panel-close.right-panel-open {
+  grid-template-columns: 80px minmax(0, 1fr) 200px;
+  width: 100%;
+  height: 100vh;
   display: grid;
 }
 .content > nav.navigation-left-panel.light {
@@ -88,6 +103,20 @@ html{
 
   svg{
     fill: var(--icon-color);
+  }
+}
+.content > nav.navigation-left-panel.light > ul > li.menu-list-item.close > .menu-list-item-link.close > .menu-list-item-icon.close.selected {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--bck-icon-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background-color: var(--accent-clr);
+
+  svg{
+    fill: var(--bck-icon-light);
   }
 }
 .content > nav.navigation-left-panel.light > ul > li.menu-list-item.close > .menu-list-item-link.close > .menu-list-item-text.close {
@@ -201,6 +230,7 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
 
 
 
+
 /* Expand button style*/
 
 
@@ -240,6 +270,21 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
 
 
 .notification-bell-light {
+  height: var(--height-icon);
+  width: var(--width-icon);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  background-color: var(--base-icon-clr);
+  border: 1px solid var(--text-clr);
+
+  svg{
+    stroke: var(--icon-color);
+  }
+}
+
+.dark-mode-btn-light.open {
   height: var(--height-icon);
   width: var(--width-icon);
   display: flex;
@@ -294,7 +339,7 @@ header.header.left-header-open.right-header-open.light {
 }
 
 .main-content.light {
-  color: #ffff;
+  color: black;
 }
 
 .menu-list-item-text.open {

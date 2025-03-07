@@ -18,19 +18,7 @@ const DarkModeButton = () => {
     <div className={`dark-mode-btn-${darkMode ? 'light' : 'dark'} ${navigation.left_navbar ? 'open' : 'close'}`} onClick={handleClick}>
       {darkMode ? (
         // Nouveau SVG pour la lune (mode sombre activé)
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 2C7.58 2 4 5.58 4 10c0 2.93 1.6 5.5 3.91 7.06-.27-1.1-.41-2.25-.41-3.44 0-4.97 4.03-9 9-9 1.19 0 2.32.25 3.33.7A7.96 7.96 0 0 0 12 2z" />
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Z"/></svg>
       ) : (
         // SVG pour le soleil (mode clair activé)
         <svg
