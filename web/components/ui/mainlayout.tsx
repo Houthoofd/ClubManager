@@ -19,6 +19,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isRightHeaderPanelOpen = useSelector((state: any) => state.navigation.header_right_panel);
   const [isSelected, setIsSelected] = useState<string | null>(null); // État pour suivre l'élément sélectionné
 
+  const notifications = useSelector((state: any) => state.notifications.notifications);
+
+  console.log(notifications)
+
 
   const isDarkMode = useSelector((state:any) => state.settings.darkMode);
 
@@ -96,7 +100,18 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
 
         <div className={`right-panel-content ${isRightNavbarOpen ? 'open' : 'close'} ${isDarkMode ? 'light' : 'dark'}`}>
-          {/* Contenu supplémentaire pour le panneau droit ici */}
+          <div className="notifications">
+          <ul>
+  {Array.isArray(notifications) && notifications.length > 0 ? (
+    notifications.map((notification) => (
+      <li key={notification.id}>{notification.message}</li>  // Affiche les notifications dans la liste
+    ))
+  ) : (
+    <li>Aucune notification disponible</li>
+  )}
+</ul>
+
+          </div>
         </div>
       </div>
     </div>
