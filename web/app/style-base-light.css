@@ -87,7 +87,7 @@ html{
   background-color: var(--base-icon-clr);
 
   svg{
-    fill: #b0b3c1;
+    fill: var(--icon-color);
   }
 }
 .content > nav.navigation-left-panel.light > ul > li.menu-list-item.close > .menu-list-item-link.close > .menu-list-item-text.close {
