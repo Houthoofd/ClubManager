@@ -206,51 +206,51 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
 
 /*.light mode button */
 
-.light-mode-btn.light.close {
+.dark-mode-btn-light.close {
   height: var(--height-icon);
   width: var(--width-icon);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   border-radius: 10px;
+  background-color: var(--base-icon-clr);
+  border: 1px solid var(--text-clr);
+
   svg{
-    stroke: #ffff;
+    stroke: var(--icon-color);
   }
 }
 
-.notification-bell.light {
+
+
+.message-icon-light {
   height: var(--height-icon);
   width: var(--width-icon);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   border-radius: 10px;
+  background-color: var(--base-icon-clr);
+  border: 1px solid var(--text-clr);
+
   svg{
-    stroke: #ffff;
+    fill: var(--icon-color);
   }
 }
 
-header > nav.header-right-navbar.light > nav > ul > a.close > .message-icon.light {
+
+.notification-bell-light {
   height: var(--height-icon);
   width: var(--width-icon);
   display: flex;
-  align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  svg{
-    stroke: #ffff;
-  }
-}
-.message-icon.light {
-  height: var(--height-icon);
-  width: var(--width-icon);
-  display: flex;
   align-items: center;
-  justify-content: center;
   border-radius: 10px;
+  background-color: var(--base-icon-clr);
+  border: 1px solid var(--text-clr);
 
   svg{
-    fill: #ffff;
+    stroke: var(--icon-color);
   }
 }
 
@@ -295,4 +295,9 @@ header.header.left-header-open.right-header-open.light {
 
 .main-content.light {
   color: #ffff;
+}
+
+.menu-list-item-text.open {
+  color: #5f6368;
+  font-weight: 500;
 }
