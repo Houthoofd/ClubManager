@@ -268,7 +268,6 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
   }
 }
 
-
 .notification-bell-light {
   height: var(--height-icon);
   width: var(--width-icon);
@@ -280,8 +279,22 @@ header > nav.header-right-navbar.light > ul > .expand-btn-light.close-right{
   border: 1px solid var(--text-clr);
 
   svg{
+    transform: translateX(10px);
     stroke: var(--icon-color);
   }
+}
+
+span.notification-bell-light {
+  width: 20px;
+  height: 20px;
+  background-color: red;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  transform: translate(0px, -21px);
+  color: rgb(255, 255, 255);
+  font-size: 9px;
+  border-radius: 3px;
 }
 
 .dark-mode-btn-light.open {

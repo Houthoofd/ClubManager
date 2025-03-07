@@ -24,13 +24,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
 
 
   const handleSelection = (item: string): void => {
-    console.log(item);
     
-    // Utiliser un switch ou une approche plus concise pour mettre à jour l'état
     if (item === 'cours' || item === 'dashboard') {
-      setIsSelected(item); // Mettre à jour l'état avec l'item sélectionné
+      setIsSelected(item); 
     } else {
-      setIsSelected(null); // Réinitialise l'état si l'élément n'est pas 'cours' ou 'dashboard'
+      setIsSelected(null);
     }
   };
   
@@ -38,14 +36,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const ReduceFullName = (fullName: string) => {
     const nameParts = fullName.split(' ');
     
-    // Vérifier si le nom contient au moins un prénom et un nom
     if (nameParts.length >= 2) {
-      const firstInitial = nameParts[0].charAt(0).toUpperCase(); // Première lettre du prénom
-      const lastInitial = nameParts[1].charAt(0).toUpperCase();  // Première lettre du nom
-      return `${firstInitial}${lastInitial}`; // Retourner les initiales
+      const firstInitial = nameParts[0].charAt(0).toUpperCase(); 
+      const lastInitial = nameParts[1].charAt(0).toUpperCase();
+      return `${firstInitial}${lastInitial}`;
     }
-    
-    // Si seulement un nom est fourni, retourner la première lettre
+
     return fullName.charAt(0).toUpperCase();
   };
   
@@ -99,7 +95,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           {children}
         </div>
 
-        <div className={`right-panel-content ${isRightNavbarOpen ? 'open' : 'close'}`}>
+        <div className={`right-panel-content ${isRightNavbarOpen ? 'open' : 'close'} ${isDarkMode ? 'light' : 'dark'}`}>
           {/* Contenu supplémentaire pour le panneau droit ici */}
         </div>
       </div>

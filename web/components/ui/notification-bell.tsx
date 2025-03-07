@@ -45,7 +45,7 @@ const NotificationBell = () => {
         <path d="M12 22a2 2 0 002-2H10a2 2 0 002 2zm6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 00-3 0v.68C7.63 5.36 6 7.92 6 11v5l-1.7 1.7a1 1 0 00.7 1.7h14a1 1 0 00.7-1.7L18 16z" />
       </svg>
       {notificationCount > 0 && (
-        <span className={`notification-bell-${darkMode ? 'dark' : 'light'}`}>{notificationCount}</span>
+        <span className={`notification-bell-${darkMode ? 'light' : 'dark'}`}>{notificationCount}</span>
       )}
     </div>
   );

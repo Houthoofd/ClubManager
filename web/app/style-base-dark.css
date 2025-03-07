@@ -107,6 +107,9 @@ html{
 .content > .right-panel-content {
   border-left: 1px solid var(--bck-icon-light);
 }
+.content > .right-panel-content.open.dark {
+  border-left: 1px solid #222533;
+}
 
 
 header {
@@ -230,6 +233,21 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   }
 }
 
+.dark-mode-btn-dark.open {
+  width: 40px;
+  height: 40px;
+  background-color: var(--base-clr);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+
+  svg{
+    stroke: #ffff;
+  }
+}
+
+
 .notification-bell-dark {
   height: var(--height-icon);
   width: var(--width-icon);
@@ -237,9 +255,24 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   align-items: center;
   justify-content: center;
   border-radius: 10px;
+  
   svg{
     stroke: #ffff;
   }
+}
+
+
+span.notification-bell-dark {
+  width: 20px;
+  height: 20px;
+  background-color: #673AB7;
+  border-radius: 3px;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  transform: translate(0px, -21px);
+  color: #fff;
+  font-size: 9px;
 }
 
 header > nav.header-right-navbar.dark > nav > ul > a.close > .message-icon-dark {
