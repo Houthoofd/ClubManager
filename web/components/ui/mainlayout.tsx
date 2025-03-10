@@ -5,6 +5,7 @@ import { RightExpandButton, LeftExpandButton } from '../ui/expanse-btn';
 import MessageIcon from '../ui/message-icon';
 import { useDispatch, useSelector } from 'react-redux';
 import DarkModeButton from '../ui/dark-mode-btn';
+import NotificationList from '../ui/notification-list';  // Import du nouveau composant
 
 interface MainLayoutProps {
   children?: ReactNode;
@@ -13,58 +14,42 @@ interface MainLayoutProps {
 const MainLayout = ({ children }: MainLayoutProps) => {
   const dispatch = useDispatch();
 
-  // Utilisation des selectors pour récupérer les états de navigation
   const isLeftNavbarOpen = useSelector((state: any) => state.navigation.left_navbar);
   const isRightNavbarOpen = useSelector((state: any) => state.navigation.right_navbar);
   const isRightHeaderPanelOpen = useSelector((state: any) => state.navigation.header_right_panel);
-  const [isSelected, setIsSelected] = useState<string | null>(null); // État pour suivre l'élément sélectionné
+  const [isSelected, setIsSelected] = useState<string | null>(null);
 
-  const notifications = useSelector((state: any) => state.notifications.notifications);
-
-  console.log(notifications)
-
-
-  const isDarkMode = useSelector((state:any) => state.settings.darkMode);
-
+  const isDarkMode = useSelector((state: any) => state.settings.darkMode);
 
   const handleSelection = (item: string): void => {
-    
     if (item === 'cours' || item === 'dashboard') {
-      setIsSelected(item); 
+      setIsSelected(item);
     } else {
       setIsSelected(null);
     }
   };
-  
 
   const ReduceFullName = (fullName: string) => {
     const nameParts = fullName.split(' ');
-    
     if (nameParts.length >= 2) {
-      const firstInitial = nameParts[0].charAt(0).toUpperCase(); 
+      const firstInitial = nameParts[0].charAt(0).toUpperCase();
       const lastInitial = nameParts[1].charAt(0).toUpperCase();
       return `${firstInitial}${lastInitial}`;
     }
-
     return fullName.charAt(0).toUpperCase();
   };
-  
-  console.log({isLeftNavbarOpen: isLeftNavbarOpen, isRightNavbarOpen: isRightNavbarOpen, isRightHeaderPanelOpen: isRightHeaderPanelOpen, isDarkMode: isDarkMode})
-
 
   return (
     <div className={`layout ${isDarkMode ? 'light' : 'dark'}`}>
       <header className={`header ${isLeftNavbarOpen ? 'left-header-open' : 'left-header-close'} ${isRightHeaderPanelOpen ? 'right-header-open' : 'right-header-close'} ${isDarkMode ? 'light' : 'dark'}`}>
         <div className={`layer ${isDarkMode ? 'light' : 'dark'}`}>
-          <div className={`layer-icon-text-${isLeftNavbarOpen ? 'initial' : 'full'}`}>
+          <div className={`layer-icon-text-${isLeftNavbarOpen ? 'full' : 'initial'}`}>
             {isLeftNavbarOpen ? 'Houthoofd Benoit' : ReduceFullName('Houthoofd Benoit')}
           </div>
           <LeftExpandButton />
         </div>
-        <div className='header-content'>
-
-        </div>
-        <nav className={`header-right-navbar ${isDarkMode ? 'light': 'dark'}`}>
+        <div className='header-content'></div>
+        <nav className={`header-right-navbar ${isDarkMode ? 'light' : 'dark'}`}>
           <ul>
             <RightExpandButton />
             <NotificationBell />
@@ -81,13 +66,21 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <ul className={`${isLeftNavbarOpen ? 'open' : 'close'}`}>
             <li className={`menu-list-item ${isLeftNavbarOpen ? 'open' : 'close'}`}>
               <Link className={`menu-list-item-link ${isLeftNavbarOpen ? 'open' : 'close'}`} to="/pages/cours">
-                <div className={`menu-list-item-icon ${isLeftNavbarOpen ? 'open' : 'close'} ${isSelected === 'cours' ? 'selected' : ''}`} onClick={() => handleSelection('cours')}><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M840-280v-276L480-360 40-600l440-240 440 240v320h-80ZM480-120 200-272v-200l280 152 280-152v200L480-120Z"/></svg></div>
+                <div className={`menu-list-item-icon ${isLeftNavbarOpen ? 'open' : 'close'} ${isSelected === 'cours' ? 'selected' : ''}`} onClick={() => handleSelection('cours')}>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
+                    <path d="M840-280v-276L480-360 40-600l440-240 440 240v320h-80ZM480-120 200-272v-200l280 152 280-152v200L480-120Z" />
+                  </svg>
+                </div>
                 <div className={`menu-list-item-text ${isLeftNavbarOpen ? 'open' : 'close'}`}>Cours</div>
               </Link>
             </li>
-            <li className={`menu-list-item ${isLeftNavbarOpen ? 'open' : 'close'}`} >
+            <li className={`menu-list-item ${isLeftNavbarOpen ? 'open' : 'close'}`}>
               <Link className={`menu-list-item-link ${isLeftNavbarOpen ? 'open' : 'close'}`} to="/pages/dashboard">
-                <div className={`menu-list-item-icon ${isLeftNavbarOpen ? 'open' : 'close'} ${isSelected === 'dashboard' ? 'selected' : ''}`} onClick={() => handleSelection('dashboard')}><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M520-600v-240h320v240H520ZM120-440v-400h320v400H120Zm400 320v-400h320v400H520Zm-400 0v-240h320v240H120Z"/></svg></div>
+                <div className={`menu-list-item-icon ${isLeftNavbarOpen ? 'open' : 'close'} ${isSelected === 'dashboard' ? 'selected' : ''}`} onClick={() => handleSelection('dashboard')}>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
+                    <path d="M520-600v-240h320v240H520ZM120-440v-400h320v400H120Zm400 320v-400h320v400H520Zm-400 0v-240h320v240H120Z" />
+                  </svg>
+                </div>
                 <div className={`menu-list-item-text ${isLeftNavbarOpen ? 'open' : 'close'}`}>Dashboard</div>
               </Link>
             </li>
@@ -95,22 +88,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </nav>
 
         {/* Affichage des composants enfants */}
-        <div className={`main-content ${isDarkMode ? 'light': 'dark'}`}>
+        <div className={`main-content ${isDarkMode ? 'light' : 'dark'}`}>
           {children}
         </div>
 
         <div className={`right-panel-content ${isRightNavbarOpen ? 'open' : 'close'} ${isDarkMode ? 'light' : 'dark'}`}>
-          <div className="notifications">
-          <ul className='notifications-list'>
-            {Array.isArray(notifications) && notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <li className="notifications-list-item" key={notification.id}>{notification.message}</li>  // Affiche les notifications dans la liste
-                ))
-              ) : (
-                <li>Aucune notification disponible</li>
-              )}
-            </ul>
-          </div>
+          <NotificationList />
         </div>
       </div>
     </div>

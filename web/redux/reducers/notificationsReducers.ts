@@ -5,6 +5,7 @@ export type AppNotification = {
   id: number;
   message: string;
   visibility?: 'public' | 'prive';
+  type: 'success' | 'danger' | 'information'
 };
 
 interface NotificationState {

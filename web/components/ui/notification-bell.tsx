@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { OPEN_RIGHT_NAVBAR } from '../../redux/actions/navigationActions';
 import { ADD_NOTIFICATION } from '../../redux/actions/notificationsActions';
@@ -7,29 +7,46 @@ import { ADD_NOTIFICATION } from '../../redux/actions/notificationsActions';
 
 const NotificationBell = () => {
   const dispatch = useDispatch();
+  // État pour gérer si les notifications sont lues
+  const [notificationsRead, setNotificationsRead] = useState(false);
+  
+  // État pour ajouter une classe CSS qui modifie l'affichage
+  const [bellClass, setBellClass] = useState('');  // Classe initiale vide
   const notificationsState = useSelector((state: any) => state.notifications);
   const notificationCount = notificationsState?.notifications?.length || 0;
   const darkMode = useSelector((state: any) => state.settings.darkMode);
 
   const isRightOpen = useSelector((state: any) => state.navigation.right_navbar);
 
+  const notificationTypes = ['success', 'danger', 'information'] as const; // Liste des types de notifications
+
+  
+
   const handleClick = () => {
     console.log("right-navbar" + isRightOpen)
     console.log('Current navbar state:', isRightOpen);
+    const randomType = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
     // Bascule l'état du panneau droit
     dispatch(OPEN_RIGHT_NAVBAR());
     // Ajoute une nouvelle notification
     dispatch(
       ADD_NOTIFICATION({
         id: Date.now(),
-        message: 'New notification',
+        message: `New ${randomType} notification randomly generated`, // Message personnalisé selon le type
         visibility: 'public',
+        type: randomType
       })
     );
+
+    // Marquer les notifications comme lues
+    setNotificationsRead(true);
+
+    // Modifier la classe CSS pour la cloche lorsque cliquée
+    setBellClass('clicked');  // Remplacez par la classe de votre choix
   };
 
   return (
-    <div className={`notification-bell-${darkMode ? 'light' : 'dark'}`} onClick={handleClick}>
+    <div className={`notification-bell-${darkMode ? 'light' : 'dark'} ${bellClass}`} onClick={handleClick}>
       <svg
         className="bell-icon"
         width="24"
