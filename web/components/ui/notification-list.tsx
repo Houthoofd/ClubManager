@@ -71,7 +71,7 @@ const NotificationList = () => {
                 {getNotificationIcon(notification.type)}
               </div>
               <div className={`notification-list-item ${getNotificationClass(notification.type)}-content`}>
-                <div className='notification-list-item-title'>
+                <div className={`notification-list-item-title-${getNotificationClass(notification.type)}`}>
                   <span>{getNotificationTitle(notification.type)}</span>
                 </div>
                 <div className='notification-list-item-message'>

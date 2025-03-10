@@ -402,15 +402,33 @@ li.notifications-list-item {
   align-items: center;
   gap: 20px;
 }
+.notification-list-item-title-notification-success {
+  color: green;
+  font-weight: 600;
+}
 li.notifications-list-item > :first-child{
   svg{
     fill: green;
   }
 }
+li.notifications-list-item.notification-danger {
+  background-color: #ff000057;
+}
+.notification-list-item-title-notification-danger {
+  color: red;
+  font-weight: 600;
+}
 li.notifications-list-item.notification-danger >  .notification-list-item-icon.notification-danger-icon {
   svg{
     fill: red;
   }
+}
+.notification-list-item-title-notification-information {
+  color: orange;
+  font-weight: 600;
+}
+li.notifications-list-item.notification-information {
+  background-color: #ffa50042;
 }
 li.notifications-list-item.notification-information >  .notification-list-item-icon.notification-information-icon {
   svg{
