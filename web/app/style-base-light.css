@@ -407,6 +407,18 @@ li.notifications-list-item > :first-child{
     fill: green;
   }
 }
+li.notifications-list-item.notification-danger >  .notification-list-item-icon.notification-danger-icon {
+  svg{
+    fill: red;
+  }
+}
+li.notifications-list-item.notification-information >  .notification-list-item-icon.notification-information-icon {
+  svg{
+    fill: orange;
+  }
+}
+
+
 
 .notification-success {
   background-color: #d4edda;

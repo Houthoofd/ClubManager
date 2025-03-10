@@ -34,11 +34,11 @@ html{
 .content {
   height: 100vh;
   width: 100%;
-  grid-template-columns: 200px minmax(0, 1fr) 200px;
+  grid-template-columns: 200px minmax(0, 1fr) 350px;
   display: grid;
 }
 .content.left-panel-close.right-panel-open {
-  grid-template-columns: 110px minmax(0, 1fr) 200px;
+  grid-template-columns: 110px minmax(0, 1fr) 350px;
   width: 100%;
   height: 100vh;
   display: grid;
@@ -114,7 +114,7 @@ html{
 
 header {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 200px;
+  grid-template-columns: 200px minmax(0, 1fr) 350px;
   border-bottom: 1px solid var(--bck-icon-light);
 }
 header > .layer.dark {
@@ -331,7 +331,7 @@ header > nav.header-right-navbar.dark > nav > ul > a.close > .message-icon-dark 
 /* add effect open / close */
 header.header.left-header-close.right-header-open.dark {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) 200px;
+  grid-template-columns: 110px minmax(0, 1fr) 350px;
   border-bottom: 1px solid #222533;
 }
 header.header.left-header-open.right-header-close.dark {
@@ -346,7 +346,7 @@ header.header.left-header-close.right-header-close.dark {
 }
 header.header.left-header-open.right-header-open.dark {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 200px;
+  grid-template-columns: 200px minmax(0, 1fr) 350px;
   border-bottom: 1px solid #222533;
 }
 
@@ -358,7 +358,7 @@ header.header.left-header-open.right-header-open.dark {
 }
 .content.left-panel-open.right-panel-open {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 200px;
+  grid-template-columns: 200px minmax(0, 1fr) 350px;
 }
 .content.left-panel-open.right-panel-close {
   display: grid;
