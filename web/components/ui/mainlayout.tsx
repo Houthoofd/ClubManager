@@ -1,11 +1,12 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import NotificationBell from '../ui/notification-bell';
 import { RightExpandButton, LeftExpandButton } from '../ui/expanse-btn';
 import MessageIcon from '../ui/message-icon';
 import { useDispatch, useSelector } from 'react-redux';
 import DarkModeButton from '../ui/dark-mode-btn';
-import NotificationList from '../ui/notification-list';  // Import du nouveau composant
+import NotificationList from '../ui/notification-list';
+import { OPEN_RIGHT_NAVBAR } from '@/redux/actions'; // Import du nouveau composant
 
 interface MainLayoutProps {
   children?: ReactNode;
@@ -17,9 +18,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isLeftNavbarOpen = useSelector((state: any) => state.navigation.left_navbar);
   const isRightNavbarOpen = useSelector((state: any) => state.navigation.right_navbar);
   const isRightHeaderPanelOpen = useSelector((state: any) => state.navigation.header_right_panel);
+  const isDarkMode = useSelector((state: any) => state.settings.darkMode);
+  const notificationsCount = useSelector((state: any) => state.notifications.notifications.length);
   const [isSelected, setIsSelected] = useState<string | null>(null);
 
-  const isDarkMode = useSelector((state: any) => state.settings.darkMode);
+  useEffect(() => {
+    // Lorsque le nombre de notifications change, on met à jour l'état de la barre de navigation droite
+    dispatch(OPEN_RIGHT_NAVBAR(notificationsCount > 0));  // Ouvre la barre de navigation droite si des notifications existent
+  }, [notificationsCount, dispatch]);
+
 
   const handleSelection = (item: string): void => {
     if (item === 'cours' || item === 'dashboard') {
@@ -50,8 +57,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </div>
         <div className='header-content'></div>
         <nav className={`header-right-navbar ${isDarkMode ? 'light' : 'dark'}`}>
+          <RightExpandButton />
           <ul>
-            <RightExpandButton />
             <NotificationBell />
             <Link className={`${isLeftNavbarOpen ? 'open' : 'close'}`} to="/pages/messages">
               <MessageIcon />

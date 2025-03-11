@@ -1,9 +1,26 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, {useState} from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { REMOVE_NOTIFICATION } from '../../redux/actions';
 
 const NotificationList = () => {
+  const dispatch = useDispatch();
   // Récupérer les notifications depuis le store Redux
   const notifications = useSelector((state: any) => state.notifications.notifications);
+
+  const [removingNotifications, setRemovingNotifications] = useState<Set<number>>(new Set());
+
+  const removeNotification = (id: number) => {
+    // Ajouter l'ID de la notification à l'état des notifications en cours de suppression
+    setRemovingNotifications((prev) => new Set(prev.add(id)));
+
+    // Lancer la suppression du store Redux après l'animation
+    setRemovingNotifications((prev) => {
+      const updatedSet = new Set(prev);
+      updatedSet.delete(id);
+      return updatedSet;
+    });
+    dispatch(REMOVE_NOTIFICATION(id)); // Dispatch pour supprimer la notification après l'animation
+  };
 
   // Fonction pour assigner une classe en fonction du type de notification
   const getNotificationClass = (type: string) => {
@@ -64,7 +81,7 @@ const NotificationList = () => {
         {Array.isArray(notifications) && notifications.length > 0 ? (
           notifications.map((notification) => (
             <li 
-              className={`notifications-list-item ${getNotificationClass(notification.type)}`} 
+              className={`notifications-list-item ${getNotificationClass(notification.type)} ${removingNotifications ? '' : 'remove'}`} 
               key={notification.id}
             > 
               <div className={`notification-list-item-icon ${getNotificationClass(notification.type)}-icon`}>
@@ -74,11 +91,11 @@ const NotificationList = () => {
                 <div className={`notification-list-item-title-${getNotificationClass(notification.type)}`}>
                   <span>{getNotificationTitle(notification.type)}</span>
                 </div>
-                <div className='notification-list-item-message'>
+                <div className={`notification-list-item-message ${getNotificationClass(notification.type)}`}>
                   {notification.message}
                 </div>
               </div>
-              <div className={`notification-list-item-icon-close ${getNotificationClass(notification.type)}-close`}>
+              <div onClick={() => removeNotification(notification.id)} className={`notification-list-item-icon-close ${getNotificationClass(notification.type)}-close`}>
                 <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
                   <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
                 </svg>

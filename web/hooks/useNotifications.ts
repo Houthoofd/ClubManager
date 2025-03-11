@@ -1,16 +1,18 @@
 import { useDispatch } from 'react-redux';
 import { ADD_NOTIFICATION, REMOVE_NOTIFICATION } from '../redux/actions';
 
+
 // Hook personnalisé pour gérer les notifications
 const useNotifications = () => {
   const dispatch = useDispatch();
 
   // Fonction pour ajouter une notification
-  const handleAddNotification = (message: string, visibility: 'public' | 'prive') => {
+  const handleAddNotification = (message: string, visibility: 'public' | 'prive', type: 'success' | 'danger' | 'information') => {
     dispatch(ADD_NOTIFICATION({
       id: Date.now(),
       message,
       visibility,
+      type,
     }));
   };
 
@@ -23,3 +25,4 @@ const useNotifications = () => {
 };
 
 export default useNotifications;
+

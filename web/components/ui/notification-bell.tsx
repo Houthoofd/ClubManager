@@ -1,9 +1,7 @@
-import React, {useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { OPEN_RIGHT_NAVBAR } from '../../redux/actions/navigationActions';
 import { ADD_NOTIFICATION } from '../../redux/actions/notificationsActions';
-
-
 
 const NotificationBell = () => {
   const dispatch = useDispatch();
@@ -18,16 +16,24 @@ const NotificationBell = () => {
 
   const isRightOpen = useSelector((state: any) => state.navigation.right_navbar);
 
-  const notificationTypes = ['success', 'danger', 'information'] as const; // Liste des types de notifications
-
+  const notificationTypes = ['success', 'danger', 'information'] as const;
   
+  useEffect(() => {
+    // Lorsque le nombre de notifications change, on met à jour l'état de la barre de navigation droite
+    dispatch(OPEN_RIGHT_NAVBAR(notificationCount > 0));  // Ouvre la barre de navigation droite si des notifications existent
+    
+    // Si notificationCount est 0, enlever la classe 'clicked'
+    if (notificationCount === 0) {
+      setBellClass('');
+    }
+  }, [notificationCount, dispatch]); // Liste des types de notifications
 
   const handleClick = () => {
-    console.log("right-navbar" + isRightOpen)
+    console.log("right-navbar" + isRightOpen);
     console.log('Current navbar state:', isRightOpen);
     const randomType = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
     // Bascule l'état du panneau droit
-    dispatch(OPEN_RIGHT_NAVBAR());
+    dispatch(OPEN_RIGHT_NAVBAR(notificationCount > 0));
     // Ajoute une nouvelle notification
     dispatch(
       ADD_NOTIFICATION({
@@ -66,7 +72,6 @@ const NotificationBell = () => {
       )}
     </div>
   );
-  
 };
 
 export default NotificationBell;

@@ -138,9 +138,10 @@ header > nav.header-right-navbar {
 }
 header > nav.header-right-navbar.dark {
   background-color: #222533;
-  align-items: center;
-  display: flex;
-  border-left: 1px solid #222533;
+    border-left: 1px solid #222533;
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
 }
 header > nav.header-right-navbar.dark > ul {
   display: flex;
@@ -171,6 +172,7 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   border-radius: 10px;
   background-color: var(--base-clr);
   border: 1px solid #222533;
+  transform: translateX(-21px);
 
   svg{
     stroke: #ffff;
@@ -185,6 +187,7 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   border-radius: 10px;
   background-color: var(--base-clr);
   border: 1px solid #222533;
+  transform: translateX(-21px);
 
   svg{
     stroke: #ffff;
@@ -199,6 +202,7 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   border-radius: 10px;
   background-color: var(--base-clr);
   border: 1px solid #222533;
+  transform: translateX(-21px);
 
   svg{
     stroke: #ffff;
@@ -213,6 +217,7 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   border-radius: 10px;
   background-color: var(--base-clr);
   border: 1px solid #222533;
+  transform: translateX(-21px);
 
   svg{
     stroke: #ffff;
@@ -279,6 +284,19 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   transform: translateX(-16px);
 
   svg{
+    stroke: #fff;
+    transform: translateX(10px);
+  }
+}
+
+.notification-bell-dark.clicked {
+  svg {
+    stroke: #fff;
+    transform: translateX(1px);
+  }
+}
+.notification-bell-dark.clicked {
+  svg {
     stroke: #fff;
     transform: translateX(10px);
   }
