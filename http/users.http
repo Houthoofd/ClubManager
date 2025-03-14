@@ -1,1 +1,1 @@
-GET http://localhost:5000/informations/status
+GET http://localhost:3000/utilisateurs

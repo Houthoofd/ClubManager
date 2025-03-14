@@ -7,33 +7,33 @@ import dotenv from 'dotenv';
 //import jwt from 'jsonwebtoken';
 //import bcrypt from 'bcrypt';
 import mysql from 'mysql';
+import { default as indexRouter } from './routes/index.js';
+import { default as utilisateursRouter } from './routes/utilisateurs.js';
 
-// Charge les variables d'environnement
-dotenv.config();
+
 
 const __server_dirname = process.cwd ? process.cwd() : process.env.PWD as string;
+
+console.log(__server_dirname + utilisateursRouter)
 
 const app = express();
 
 // Configurer CORS pour autoriser les requêtes d'une origine spécifique
-app.use(cors({
-  origin: 'http://ec2-18-185-136-232.eu-central-1.compute.amazonaws.com'
-}));
+//app.use(cors({
+  //origin: 'http://ec2-18-185-136-232.eu-central-1.compute.amazonaws.com'
+//}));
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// Servir les fichiers statiques
-app.use(express.static(path.join(__server_dirname, 'server', 'public')));
+app.use('/', indexRouter);
+app.use('/utilisateurs', utilisateursRouter);
 
-// Définir une route principale (ou d'autres routes)
-app.get('/', (req, res) => {
-  res.send('Hello World');
-});
 
 // Démarrer le serveur
 app.listen(3000, () => {
   console.log('Server is running on port 3000');
 });
+
