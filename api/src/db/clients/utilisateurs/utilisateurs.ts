@@ -1,6 +1,6 @@
-import MysqlConnector from './mysqlconnector';
+import MysqlConnector from '../../connector/mysqlconnector.js';
 
-export class Client{
+export class Utlisateurs{
 
     VerificationUtilisateur(sql: string, values: any[]): Promise<any> {
         return new Promise((resolve, reject) => {
@@ -30,10 +30,10 @@ export class Client{
             const sql = `SELECT * FROM utilisateurs 
                          WHERE last_name = ? AND first_name = ? AND email = ? AND date_of_birth = ?`;
             const values = [nom, prenom, email, date_naissance];
-
+    
             console.log("Éxécution de la requête :");
             console.log(sql, values);
-
+    
             // Exécution de la requête
             mysqlConnector.query(sql, values, (error, results) => {
                 if (error) {
@@ -48,68 +48,64 @@ export class Client{
                         resolve({ exists: false });  // Aucun utilisateur trouvé
                     }
                 }
-
-                // Fermez la connexion après avoir traité les résultats
-                mysqlConnector.close();
             });
+    
+            // Fermez la connexion après avoir traité les résultats ou en cas d'erreur
+            mysqlConnector.close();
         });
     }
+    
 
     async inscrireUtilisateur(
         prenom: string,
         nom: string,
         nom_utilisateur: string,
         email: string,
-        genreName: string,
+        genre_id: number,
         date_naissance: string,
         password: string,
-        statusName: string,
-        gradeName: string,
-        planTarifaireName: string
+        status_id: number,
+        grade_id: number,
+        planTarifaire_id: number
     ): Promise<any> {
-        console.log(prenom, nom, nom_utilisateur, email, genreName, date_naissance,password, statusName, gradeName, planTarifaireName)
+        
         try {
             const mysqlConnector = new MysqlConnector();
         
             // Requête SQL pour insérer l'utilisateur avec la jointure pour récupérer les ids
+            
+
             const sql = `
                 INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
-                SELECT 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    g.id, 
-                    ?, 
-                    ?, 
-                    s.id,  -- Jointure pour récupérer l'ID du statut
-                    gr.id, 
-                    p.id
-                FROM genres g
-                JOIN grades gr ON gr.grade_id = ?
-                JOIN plans_tarifaires p ON p.nom_plan = ?
-                JOIN status s ON s.nom_role = ?  -- Correction ici
-                WHERE g.genre_name = ?
-                LIMIT 1;
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             `;
             // Liste des valeurs à passer à la requête SQL en respectant l'ordre des paramètres dans la requête
-    
             const values = [
                 prenom,
                 nom,
                 nom_utilisateur,
                 email,
+                genre_id,
                 date_naissance,
                 password,
-                gradeName,
-                statusName,
-                planTarifaireName,
-                genreName
+                status_id,
+                grade_id,
+                planTarifaire_id,
             ];
+
+            console.log(prenom,
+                nom,
+                nom_utilisateur,
+                email,
+                genre_id,
+                date_naissance,
+                password,
+                status_id,
+                grade_id,
+                planTarifaire_id
+            )
             
-            // Affichage pour le débogage
-            console.log("Requête SQL:", sql);
-            console.log("Valeurs utilisées:", values);
+            
         
             return new Promise((resolve, reject) => {
                 mysqlConnector.query(sql, values, (error, results) => {
@@ -131,6 +127,8 @@ export class Client{
             throw error;  // Propager l'erreur si une exception est lancée
         }
     }
+
+    
     
     
     

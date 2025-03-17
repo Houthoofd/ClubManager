@@ -7,8 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import MysqlConnector from './mysqlconnector.js';
-export class Client {
+import MysqlConnector from '../../connector/mysqlconnector.js';
+export class Utlisateurs {
     VerificationUtilisateur(sql, values) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
@@ -64,9 +64,9 @@ export class Client {
                 const mysqlConnector = new MysqlConnector();
                 // Requête SQL pour insérer l'utilisateur avec la jointure pour récupérer les ids
                 const sql = `
-    INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-`;
+                INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            `;
                 // Liste des valeurs à passer à la requête SQL en respectant l'ordre des paramètres dans la requête
                 const values = [
                     prenom,
@@ -81,16 +81,6 @@ export class Client {
                     planTarifaire_id,
                 ];
                 console.log(prenom, nom, nom_utilisateur, email, genre_id, date_naissance, password, status_id, grade_id, planTarifaire_id);
-                console.log(`
-                INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
-                SELECT '${prenom}', '${nom}', '${nom_utilisateur}', '${email}', g.id, '${date_naissance}', '${password}', s.id, gr.id, p.id
-                FROM genres g
-                JOIN grades gr ON gr.id = ${grade_id}
-                JOIN status s ON s.id = ${status_id}
-                JOIN plans_tarifaires p ON p.id = ${planTarifaire_id}
-                WHERE g.id = ${genre_id}
-                LIMIT 1;
-            `);
                 return new Promise((resolve, reject) => {
                     mysqlConnector.query(sql, values, (error, results) => {
                         if (error) {

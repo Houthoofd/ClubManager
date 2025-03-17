@@ -6,6 +6,7 @@ import { default as utilisateursRouter } from './routes/utilisateurs.js';
 const __server_dirname = process.cwd ? process.cwd() : process.env.PWD;
 console.log(__server_dirname + utilisateursRouter);
 const app = express();
+app.use(express.json());
 // Configurer CORS pour autoriser les requêtes d'une origine spécifique
 //app.use(cors({
 //origin: 'http://ec2-18-185-136-232.eu-central-1.compute.amazonaws.com'
