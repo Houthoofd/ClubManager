@@ -1,0 +1,21 @@
+
+## Exemple pour récupèrer les grades
+GET http://localhost:3000/informations/grades
+
+###
+
+## Exemple pour récupèrer les status
+GET http://localhost:3000/informations/status
+
+###
+
+## Exemple pour récupèrer les status
+GET http://localhost:3000/informations/abonnements
+
+###
+
+## Exemple pour récupèrer les status
+GET http://localhost:3000/informations/genres
+
+
+

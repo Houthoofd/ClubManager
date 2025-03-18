@@ -2,13 +2,9 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import cors from 'cors';
-import path from 'path';
-import dotenv from 'dotenv';
-//import jwt from 'jsonwebtoken';
-//import bcrypt from 'bcrypt';
-import mysql from 'mysql';
 import { default as indexRouter } from './routes/index.js';
 import { default as utilisateursRouter } from './routes/utilisateurs.js';
+import { default as informationsRouter } from './routes/informations.js';
 
 
 
@@ -20,10 +16,13 @@ const app = express();
 
 app.use(express.json());
 
-// Configurer CORS pour autoriser les requêtes d'une origine spécifique
-//app.use(cors({
-  //origin: 'http://ec2-18-185-136-232.eu-central-1.compute.amazonaws.com'
-//}));
+// Configuration CORS
+const corsOptions = {
+  origin: 'http://localhost:8081',  // Autorise uniquement localhost:8081
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+};
+
+app.use(cors(corsOptions));
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -32,6 +31,7 @@ app.use(cookieParser());
 
 app.use('/', indexRouter);
 app.use('/utilisateurs', utilisateursRouter);
+app.use('/informations', informationsRouter);
 
 
 // Démarrer le serveur

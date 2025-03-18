@@ -4,6 +4,8 @@ import { Provider } from 'react-redux';
 import store from '../redux/store';
 import Cours from '../app/pages/cours';
 import Dashboard from '../app/pages/dashboard';
+import Connexion from '../app/pages/connexion';
+import Enregistrement from '../app/pages/enregistrement';
 import MainLayout from '../components/ui/mainlayout';
 import Messages from './pages/messages';
 
@@ -18,6 +20,8 @@ const App = () => {
             <Route path="/pages/cours" element={<Cours />} />
             <Route path="/pages/dashboard" element={<Dashboard />} />
             <Route path="/pages/messages" element={<Messages />} />
+            <Route path="/pages/connexion" element={<Connexion />} />
+            <Route path="/pages/enregistrement" element={<Enregistrement />} />
 
             {/* Redirection de la page d'accueil vers /pages/cours */}
             <Route path="/" element={<Navigate to="/pages/cours" />} />

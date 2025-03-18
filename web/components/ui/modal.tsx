@@ -1,23 +1,61 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
-interface ModalProps {
+export interface ModalProps {
   showModal: boolean;
   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
   message: string;
+  title: string;
+  redirectUrl?: string; // Redirection optionnelle vers une page spécifique
 }
 
-const Modal: React.FC<ModalProps> = ({ showModal, setShowModal, message }) => {
+export const Modal: React.FC<ModalProps> = ({
+  showModal,
+  setShowModal,
+  message,
+  title,
+  redirectUrl = "/", // Si aucune URL n'est passée, redirection vers la racine '/'
+}) => {
+  const [isRedirecting, setIsRedirecting] = useState(false); // Pour éviter une double redirection
+
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowModal(false);
+        if (redirectUrl && !isRedirecting) {
+          setIsRedirecting(true);
+          window.location.href = redirectUrl; // Redirection vers l'URL donnée
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [setShowModal, redirectUrl, isRedirecting]);
+
   if (!showModal) return null;
 
+  const handleClose = () => {
+    setShowModal(false);
+    if (redirectUrl && !isRedirecting) {
+      setIsRedirecting(true);
+      window.location.href = redirectUrl; // Redirection vers l'URL donnée
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-md shadow-lg w-1/3">
-        <h2 className="text-xl font-bold mb-4">Notification</h2>
-        <p>{message}</p>
-        <div className="mt-4 flex justify-end">
+    <div className="modal-overlay" role="dialog" aria-labelledby="modal-title">
+      <div className="modal-content">
+        <h2 id="modal-title" className="modal-title">
+          {title}
+        </h2>
+        <p className="modal-message">{message}</p>
+        <div className="modal-actions">
           <button
-            onClick={() => setShowModal(false)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            onClick={handleClose}
+            className="modal-close-button"
+            aria-label="Close modal"
           >
             Fermer
           </button>
@@ -28,4 +66,3 @@ const Modal: React.FC<ModalProps> = ({ showModal, setShowModal, message }) => {
 };
 
 export default Modal;
-

@@ -1,15 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES2016",
-    "module": "ESNext",  
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "moduleResolution": "Node",
-    "outDir": "./dist",  // Assurez-vous que la sortie est configurée
-    "rootDir": "./src"   // Spécifiez la racine de vos fichiers source
+    "target": "ES2016",  // Cible ES2016 pour une compatibilité avec Node.js
+    "module": "ESNext",  // Utilise les modules ES
+    "esModuleInterop": true,  // Permet d'importer des modules CommonJS via des modules ES6
+    "forceConsistentCasingInFileNames": true,  // Force la consistance de la casse des fichiers
+    "strict": true,  // Active les vérifications strictes pour éviter les erreurs
+    "skipLibCheck": true,  // Ignore la vérification des types des bibliothèques pour accélérer la compilation
+    "moduleResolution": "Node",  // Utilise la résolution de module de Node.js
+    "outDir": "./dist",  // Répertoire de sortie pour la compilation
+    "rootDir": "./src",  // Dossier racine des fichiers source
+    "baseUrl": ".",  // Base URL pour les imports relatifs
+    "paths": {
+      "types/*": ["types/*"]  // Alias pour accéder aux types à la racine
+    }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*",  // Inclut tous les fichiers source dans le dossier src
+    "types/**/*"  // Inclut tous les fichiers types à la racine du projet
+  ],
+  "exclude": [
+    "node_modules",  // Exclut les modules node
+    "dist"  // Exclut le dossier dist de la compilation
+  ]
 }

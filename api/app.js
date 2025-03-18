@@ -21,9 +21,12 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configuration CORS
-app.use(cors({
-  origin: 'http://ec2-18-185-136-232.eu-central-1.compute.amazonaws.com/'
-}));
+const corsOptions = {
+  origin: 'http://localhost:8081',  // Autorise uniquement localhost:8081
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+};
+
+app.use(cors(corsOptions));
 
 // Utilisation du routeur pour la racine
 app.use('/', indexRouter);

@@ -8,20 +8,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import express from 'express';
-import { Utlisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
+import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
+import { z } from 'zod';
+import { userSchema, userDataLoginSchema } from '../../../packages/types/dist/index.js';
 const router = express.Router();
+// Fonction pour convertir une chaîne de caractères en nombre
+function convertToNumber(value) {
+    console.log(value);
+    if (value === null || value === undefined) {
+        return 0;
+    }
+    const convertedValue = Number(value);
+    return isNaN(convertedValue) ? 0 : convertedValue;
+}
+// Route de vérification de l'existence d'un utilisateur
 router.get('/verification', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { nom, prenom, email, date_naissance } = req.body; // Récupère les données du body
-    console.log(nom, prenom, email, date_naissance);
+    const { nom, prenom, email, date_naissance } = req.body;
     try {
-        const client = new Utlisateurs();
+        const client = new Utilisateurs();
         const result = yield client.IsUserExist(nom, prenom, email, date_naissance);
         if (result.exists) {
-            console.log('Utilisateur déjà existant:', result.user);
             res.status(409).json({ message: 'L\'utilisateur existe déjà.' });
         }
         else {
-            console.log('Aucun utilisateur trouvé, inscription possible.');
             res.status(200).json({ message: 'Aucun utilisateur trouvé, inscription possible.' });
         }
     }
@@ -30,40 +39,51 @@ router.get('/verification', (req, res) => __awaiter(void 0, void 0, void 0, func
         res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'utilisateur.' });
     }
 }));
-router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { prenom, nom, nom_utilisateur, email, genre_id, date_naissance, password, status_id, grade_id, nom_plan } = req.query;
-    // Conversion des champs censés être des nombres
-    const genreId = parseInt(genre_id, 10);
-    const statusId = parseInt(status_id, 10);
-    const gradeId = parseInt(grade_id, 10);
-    const planId = parseInt(nom_plan, 10);
-    console.log("Données reçues :", {
-        prenom,
-        nom,
-        nom_utilisateur,
-        email,
-        genreId,
-        date_naissance,
-        password,
-        statusId,
-        gradeId,
-        planId
-    });
+// Route de vérification de l'existence d'un utilisateur
+// Route to verify the existence of a user
+router.post('/connexion', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const client = new Utlisateurs();
-        const result = yield client.inscrireUtilisateur(prenom, nom, nom_utilisateur, email, genreId, date_naissance, password, statusId, gradeId, planId);
+        // Validate incoming data with Zod
+        const validatedData = userDataLoginSchema.parse(req.body);
+        console.log("Données validées :", validatedData);
+        const client = new Utilisateurs();
+        // Check if the user exists
+        const result = yield client.validerConnexion(validatedData);
+        if (result.isFind) {
+            res.status(200).json({ message: result.message, data: result.dataToStore });
+        }
+        else {
+            res.status(404).json({ message: result.message });
+        }
+    }
+    catch (error) {
+        console.error('Erreur lors de la vérification de l\'utilisateur :', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'utilisateur.' });
+    }
+}));
+// Route d'inscription d'un utilisateur
+router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Validation des données reçues avec Zod
+        const validatedData = userSchema.parse(req.body);
+        console.log("Données validées :", validatedData);
+        const client = new Utilisateurs();
+        const result = yield client.inscrireUtilisateur(validatedData);
         if (result.affectedRows > 0) {
-            console.log('Utilisateur inséré avec succès, ID:', result.insertId);
             res.status(201).json({ message: 'Utilisateur inscrit avec succès.', userId: result.insertId });
         }
         else {
-            console.log("Aucun utilisateur inséré, vérifier les correspondances des valeurs.");
             res.status(400).json({ message: 'Échec de l\'inscription de l\'utilisateur.' });
         }
     }
     catch (error) {
-        console.error("Erreur lors de l'inscription de l'utilisateur :", error);
-        res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
+        if (error instanceof z.ZodError) {
+            res.status(400).json({ message: 'Données invalides.', errors: error.errors });
+        }
+        else {
+            console.error("Erreur lors de l'inscription de l'utilisateur :", error);
+            res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
+        }
     }
 }));
 export default router;
