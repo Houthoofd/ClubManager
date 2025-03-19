@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import '../../app/style-modal.css';
 
 export interface ModalProps {
   showModal: boolean;

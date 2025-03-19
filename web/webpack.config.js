@@ -18,7 +18,7 @@ module.exports = {
       },
       {
         test: /\.(png|jpe?g|gif|svg)$/i,
-        type: 'asset/resource',
+        type: 'assets/resource',
         exclude: /node_modules/, // Exclusion pour éviter les conflits avec les modules spécifiques
       },
       {

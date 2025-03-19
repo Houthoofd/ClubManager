@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { UserDataLogin } from '@clubmanager/types';
-import Modal from '../../components/ui/modal'; // Adjust the import according to your file structure
+import Modal from '../../components/ui/modal';
+import '../connexion-style.css';
+import backGroundImage from '../../assets/images/bg.jpg' // Adjust the import according to your file structure
 
 const Connexion = () => {
   const [formData, setFormData] = useState<UserDataLogin>({
@@ -57,44 +59,43 @@ const Connexion = () => {
 
   return (
     <Provider store={store}>
-      <div>
-        <h1>Connexion</h1>
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="email">Email :</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              aria-label="Email"
-            />
-          </div>
-          <div>
-            <label htmlFor="password">Mot de passe :</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              aria-label="Mot de passe"
-            />
-          </div>
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          <button type="submit">Se connecter</button>
-        </form>
-        <Modal
-          showModal={showModal}
-          setShowModal={setShowModal}
-          message={modalMessage}
-          title="Notification"
-          redirectUrl="/" // Exemple de redirection avec '/pages'
-        />
-      </div>
+      <div className="login-container">
+          <h2>Bienvenue</h2>
+          <p>Veuillez vous connecter pour continuer.</p>
+          <form onSubmit={handleSubmit}>
+            <div className="input-group">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label htmlFor="password">Mot de passe</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+            <button type="submit">Se connecter</button>
+          </form>
+          <Modal
+            showModal={showModal}
+            setShowModal={setShowModal}
+            message={modalMessage}
+            title="Notification"
+            redirectUrl="/" // Exemple de redirection avec '/pages'
+          />
+        </div>
     </Provider>
   );
 };

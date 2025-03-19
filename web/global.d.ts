@@ -1,9 +1,9 @@
-declare global {
-  interface Global extends NodeJS.Global {
-    [key: string]: any;
-  }
-
-  var global: Global;
+declare module "*.jpg" {
+  const value: string;
+  export default value;
 }
 
-export {};
+declare module "*.png" {
+  const value: string;
+  export default value;
+}

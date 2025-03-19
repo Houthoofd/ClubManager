@@ -1,0 +1,302 @@
+.enregistrement-container {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+}
+
+form {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+}
+
+
+.input-group {
+  width: 100%;
+}
+input#email {
+  width: 94%;
+}
+input#password {
+  width: 94%;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.input-group input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #5a53ff;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* Styles généraux du formulaire */
+.enregistrement-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+input[type="date"] {
+  padding: 8px;
+}
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Progress Indicator */
+.progress-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.step {
+  width: 30px;
+  height: 30px;
+  background-color: #ccc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.step.active {
+  background-color: #4CAF50;
+}
+
+.step.completed {
+  background-color: #2196F3;
+}
+
+/* Étapes du formulaire */
+.input-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Boutons de navigation */
+button[type="button"] {
+  background-color: #2196F3;
+  margin-right: 10px;
+}
+
+button[type="button"]:hover {
+  background-color: #1976D2;
+}
+
+button[type="submit"] {
+  background-color: #4CAF50;
+}
+
+button[type="submit"]:hover {
+  background-color: #45a049;
+}
+
+/* Styles généraux */
+.enregistrement-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+select,
+input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin: 10px 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Progression de l'indicateur */
+.progress-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.step {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: #fff;
+  transition: background-color 0.3s;
+}
+
+.step.active {
+  background-color: #007bff;
+}
+
+.step:not(:last-child) {
+  margin-right: 10px;
+}
+
+/* Transition pour la progression de la jauge */
+.progress-indicator .step.active + span {
+  width: 100%;
+  height: 3px;
+  background-color: #007bff;
+  transition: width 0.3s ease;
+}
+
+span {
+  width: 0%;
+  height: 3px;
+  background-color: #ddd;
+}
+
+.step-indicators {
+  display: flex; /* Utilise flexbox pour aligner les éléments horizontalement */
+  justify-content: center; /* Centre les éléments horizontalement */
+  align-items: center; /* Aligne les éléments verticalement au centre */
+  gap: 10px; /* Ajoute de l'espace entre les indicateurs */
+}
+
+.step-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #ccc;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.step-indicator.active {
+  background-color: #4CAF50;
+  transform: scale(1.2);
+}
+
+.step-indicator.completed {
+  background-color: #2196F3;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 5px;
+  background-color: #e0e0e0;
+  margin-top: 10px;
+  border-radius: 3px;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background-color: #4CAF50;
+  width: 0;
+  transition: width 0.3s ease;
+}
+
+
