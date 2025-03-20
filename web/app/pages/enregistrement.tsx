@@ -4,7 +4,7 @@ import store from '../../redux/store';
 import { Abonnement, Grade, Genres, UserData } from '@clubmanager/types';
 import '../enregistrement-style.css';
 
-function convertToNumberIfNeeded(value: any): number | null {
+function convertToNumber(value: any): number | null {
   if (typeof value === 'number') {
     return value;
   }
@@ -12,10 +12,45 @@ function convertToNumberIfNeeded(value: any): number | null {
   return isNaN(parsedValue) ? null : parsedValue;
 }
 
+function removeDuplicates<T>(array: T[], key: keyof T): T[] {
+  return array.filter((item, index, self) => 
+    index === self.findIndex((t) => t[key] === item[key])
+  );
+}
+
+const findValueById = <T, K extends keyof T, V>(array: T[], id: any, key: K, valueKey: K): V | undefined => {
+  // Convertir l'ID en nombre pour éviter des problèmes de type
+  const numericId = Number(id);
+
+  // Trouver l'élément qui correspond à l'ID
+  const foundItem = array.find(item => item[key] === numericId);
+
+  // Log pour afficher le tableau, l'ID recherché et l'élément trouvé
+  console.log("Array:", array);
+  console.log("ID:", numericId);
+  console.log("Found Item:", foundItem);
+
+  // Si l'élément est trouvé, retourne la valeur de la clé spécifique (valueKey)
+  // Assurez-vous que la valeur retournée est du bon type
+  return foundItem ? (foundItem[valueKey] as V) : undefined;
+};
+
+
+
+
+
+
+
+
+
 const Enregistrement = () => {
+  console.log("Enregistrement component rendered");
+
   const [grades, setGrades] = useState<Grade[]>([]);
   const [genres, setGenres] = useState<Genres[]>([]);
   const [abonnements, setAbonnements] = useState<Abonnement[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Indicateur de chargement
   const [formData, setFormData] = useState<UserData>({
     prenom: '',
     nom: '',
@@ -30,10 +65,11 @@ const Enregistrement = () => {
   });
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [validate, setValidate] = useState(false); 
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
+
+    console.log(name, value)
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
@@ -42,18 +78,18 @@ const Enregistrement = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    
+
     const dataToSend: UserData = {
       prenom: formData.prenom,
       nom: formData.nom,
       nom_utilisateur: formData.nom_utilisateur,
       email: formData.email,
-      genre_id: convertToNumberIfNeeded(formData.genre_id),
+      genre_id: convertToNumber(formData.genre_id),
       date_naissance: formData.date_naissance,
       password: formData.password,
       status_id: formData.status_id,
-      grade_id: convertToNumberIfNeeded(formData.grade_id),
-      abonnement_id: convertToNumberIfNeeded(formData.abonnement_id),
+      grade_id: convertToNumber(formData.grade_id),
+      abonnement_id: convertToNumber(formData.abonnement_id),
     };
 
     try {
@@ -66,7 +102,7 @@ const Enregistrement = () => {
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         console.log('Utilisateur inscrit avec succès', data);
       } else {
@@ -77,43 +113,41 @@ const Enregistrement = () => {
     }
   };
 
+  const fetchData = async () => {
+    try {
+      const [gradesResponse, genresResponse, abonnementsResponse] = await Promise.all([
+        fetch('http://localhost:3000/informations/grades'),
+        fetch('http://localhost:3000/informations/genres'),
+        fetch('http://localhost:3000/informations/abonnements'),
+      ]);
+  
+      let grades = await gradesResponse.json();
+      let genres = await genresResponse.json();
+      let abonnements = await abonnementsResponse.json();
+  
+      grades = removeDuplicates(grades, 'grade_id');
+      genres = removeDuplicates(genres, 'genre_name');
+      abonnements = removeDuplicates(abonnements, 'nom_plan');
+  
+      setGrades(grades);
+      setGenres(genres);
+      setAbonnements(abonnements);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données:', error);
+    } finally {
+      setDataLoaded(true);
+      setIsLoading(false); // Mettre à jour l'indicateur de chargement
+    }
+  };
+  
+
   useEffect(() => {
-    const fetchGrades = async () => {
-      try {
-        const response = await fetch('http://localhost:3000/informations/grades');
-        const grades = await response.json();
-        setGrades(grades);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des grades:', error);
-      }
-    };
+    if (!dataLoaded && isLoading) { // Vérifier si les données ont déjà été chargées et si le chargement est en cours
+      fetchData();
+    }
+  }, [dataLoaded, isLoading]); // Tableau de dépendances pour s'assurer que cela ne s'exécute qu'une seule fois au montage
 
-    const fetchGenres = async () => {
-      try {
-        const response = await fetch('http://localhost:3000/informations/genres');
-        const genres = await response.json();
-        setGenres(genres);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des genres:', error);
-      }
-    };
-
-    const fetchAbonnements = async () => {
-      try {
-        const response = await fetch('http://localhost:3000/informations/abonnements');
-        const abonnements = await response.json();
-        setAbonnements(abonnements);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des abonnements:', error);
-      }
-    };
-
-    fetchGrades();
-    fetchGenres();
-    fetchAbonnements();
-  }, []);
-
-  const nextStep = () => setCurrentStep((prevStep) => Math.min(prevStep + 1, 4));
+  const nextStep = () => setCurrentStep((prevStep) => Math.min(prevStep + 1, 5));
   const prevStep = () => setCurrentStep((prevStep) => Math.max(prevStep - 1, 1));
 
   return (
@@ -122,58 +156,52 @@ const Enregistrement = () => {
         <h1>Enregistrement</h1>
 
         <div className="progress-indicator">
-  {[
-    { title: 'Personnelles', icon: 'personal' },
-    { title: 'Confidentielles', icon: 'confidential' },
-    { title: 'Connexion', icon: 'connexion' },
-    { title: 'Abonnement', icon: 'subscription' }
-  ].map((step, index) => (
-    <React.Fragment key={step.title}>
-      <div className={`step ${currentStep === index + 1 ? 'active' : currentStep > index + 1 ? 'validate' : ''}`}>
-        <div className="step-header">
-          {/* Afficher l'icône ou le check en fonction de l'étape */}
-          <div className='icon'>
-            {currentStep > index + 1 ? (
-              <svg className="check-icon" width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path fill="green" d="M9 16.2l-4.2-4.2-1.4 1.4L9 19l10-10-1.4-1.4L9 16.2z" />
-              </svg>
-            ) : (
-              <svg className={`icon ${step.icon}`} width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                {step.icon === 'personal' && (
-                  <path d="M12 12c2.67 0 8 1.33 8 4v2H4v-2c0-2.67 5.33-4 8-4zm0-2C9.79 10 8 8.21 8 6s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
-                )}
-                {step.icon === 'confidential' && (
-                  <path d="M12 2C9.24 2 7 4.24 7 7v4H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-1V7c0-2.76-2.24-5-5-5zm0 2c1.66 0 3 1.34 3 3v4H9V7c0-1.66 1.34-3 3-3zm-6 8h12v7H6v-7z" />
-                )}
-                {step.icon === 'connexion' && (
-                  <path d="M10 3h4v2h-4V3zm1 14h2v2h-2v-2zM11 7h2v8h-2V7z" />
-                )}
-                {step.icon === 'subscription' && (
-                  <path d="M17 7h2a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h2V4a5 5 0 0110 0v3zm-8-3v3h6V4a3 3 0 00-6 0zm11 5H4v11h14V9z" />
-                )}
-              </svg>
-            )}
-          </div>
-          {/* Titre de l'étape */}
-          <h6 className="step-title">{step.title}</h6>
+          {[
+            { title: 'Personnelles', icon: 'personal' },
+            { title: 'Confidentielles', icon: 'confidential' },
+            { title: 'Connexion', icon: 'connexion' },
+            { title: 'Abonnement', icon: 'subscription' },
+            { title: 'Résumé', icon: 'summary' }
+          ].map((step, index) => (
+            <React.Fragment key={step.title}>
+              <div className={`step ${currentStep === index + 1 ? 'active' : currentStep > index + 1 ? 'validate' : ''}`}>
+                <div className="step-header">
+                  <div className='icon'>
+                    {currentStep > index + 1 ? (
+                      <svg className="check-icon" width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path fill="green" d="M9 16.2l-4.2-4.2-1.4 1.4L9 19l10-10-1.4-1.4L9 16.2z" />
+                      </svg>
+                    ) : (
+                      <svg className={`icon ${step.icon}`} width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        {step.icon === 'personal' && (
+                          <path d="M12 12c2.67 0 8 1.33 8 4v2H4v-2c0-2.67 5.33-4 8-4zm0-2C9.79 10 8 8.21 8 6s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
+                        )}
+                        {step.icon === 'confidential' && (
+                          <path d="M12 2C9.24 2 7 4.24 7 7v4H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-1V7c0-2.76-2.24-5-5-5zm0 2c1.66 0 3 1.34 3 3v4H9V7c0-1.66 1.34-3 3-3zm-6 8h12v7H6v-7z" />
+                        )}
+                        {step.icon === 'connexion' && (
+                          <path d="M10 3h4v2h-4V3zm1 14h2v2h-2v-2zM11 7h2v8h-2V7z" />
+                        )}
+                        {step.icon === 'subscription' && (
+                          <path d="M17 7h2a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h2V4a5 5 0 0110 0v3zm-8-3v3h6V4a3 3 0 00-6 0zm11 5H4v11h14V9z" />
+                        )}
+                        {step.icon === 'summary' && (
+                          <path d="M12 2C9.79 2 8 3.79 8 6s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0-3c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
+                        )}
+                      </svg>
+                    )}
+                  </div>
+                  <h6 className="step-title">{step.title}</h6>
+                </div>
+              </div>
+              {index < 4 && (
+                <span className={`${currentStep > index + 1 ? 'progress' : ''}`}></span>
+              )}
+            </React.Fragment>
+          ))}
         </div>
-      </div>
-      {/* Indicateur de progression */}
-      {index <= 4 && (
-        <span className={`${currentStep > index + 1 ? 'progress' : ''}`}></span>
-      )}
-    </React.Fragment>
-  ))}
-</div>
-
-
-
-
-
-
 
         <form onSubmit={handleSubmit}>
-          {/* Step 1: Information Personnelle */}
           {currentStep === 1 && (
             <div className='form_1'>
               <div className='row_1'>
@@ -224,16 +252,16 @@ const Enregistrement = () => {
                   />
                 </div>
               </div>
-              <button 
-                type="button" 
-                className={currentStep === 1 ? 'disabled' : ''} 
-                onClick={prevStep} 
+              <button
+                type="button"
+                className={currentStep === 1 ? 'disabled' : ''}
+                onClick={prevStep}
                 disabled={currentStep === 1}
               >
                 Précédent
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={nextStep}
               >
                 Suivant
@@ -241,7 +269,6 @@ const Enregistrement = () => {
             </div>
           )}
 
-          {/* Step 2: Genre et Date de Naissance */}
           {currentStep === 2 && (
             <div className='form_2'>
               <div className='input-group'>
@@ -249,7 +276,7 @@ const Enregistrement = () => {
                 <select
                   id="genre_id"
                   name="genre_id"
-                  value={formData.genre_id}
+                  value={formData.genre_id ?? ""}
                   onChange={handleChange}
                   required
                 >
@@ -277,7 +304,6 @@ const Enregistrement = () => {
             </div>
           )}
 
-          {/* Step 3: Mot de Passe et Grade */}
           {currentStep === 3 && (
             <div className='form_3'>
               <div className='input-group'>
@@ -296,14 +322,14 @@ const Enregistrement = () => {
                 <select
                   id="grade_id"
                   name="grade_id"
-                  value={formData.grade_id}
+                  value={formData.grade_id ?? ""}
                   onChange={handleChange}
                   required
                 >
                   <option value="">Sélectionnez un grade</option>
                   {grades.map((grade: Grade) => (
                     <option key={grade.id} value={grade.id}>
-                      {grade.grade_name}
+                      {grade.grade_id}
                     </option>
                   ))}
                 </select>
@@ -313,7 +339,6 @@ const Enregistrement = () => {
             </div>
           )}
 
-          {/* Step 4: Abonnement */}
           {currentStep === 4 && (
             <div className='form_4'>
               <div className='input-group'>
@@ -321,20 +346,36 @@ const Enregistrement = () => {
                 <select
                   id="abonnement_id"
                   name="abonnement_id"
-                  value={formData.abonnement_id}
+                  value={formData.abonnement_id ?? ""}
                   onChange={handleChange}
                   required
                 >
                   <option value="">Sélectionnez un abonnement</option>
                   {abonnements.map((abonnement: Abonnement) => (
                     <option key={abonnement.id} value={abonnement.id}>
-                      {abonnement.abonnement_name}
+                      {abonnement.nom_plan}
                     </option>
                   ))}
                 </select>
               </div>
               <button type="button" onClick={prevStep}>Précédent</button>
-              <button type="submit">S'inscrire</button>
+              <button type="button" onClick={nextStep}>Suivant</button>
+            </div>
+          )}
+
+          {currentStep === 5 && (
+            <div className='form_5'>
+              <h2>Résumé des informations</h2>
+              <p><strong>Prénom :</strong> {formData.prenom}</p>
+              <p><strong>Nom :</strong> {formData.nom}</p>
+              <p><strong>Nom d'utilisateur :</strong> {formData.nom_utilisateur}</p>
+              <p><strong>Email :</strong> {formData.email}</p>
+              <p><strong>Genre :</strong> {formData.genre_id ? findValueById(genres, formData.genre_id, 'id', 'genre_name') : 'Aucun genre sélectionné'}</p>
+              <p><strong>Date de naissance :</strong> {formData.date_naissance}</p>
+              <p><strong>Grade :</strong> {formData.grade_id ? findValueById(grades, formData.grade_id, 'id', 'grade_id') : 'Aucun genre sélectionné'}</p>
+              <p><strong>Abonnement :</strong> {formData.abonnement_id ? findValueById(abonnements, formData.abonnement_id, 'id', 'nom_plan') : 'Aucun genre sélectionné'}</p>
+              <button type="button" onClick={prevStep}>Précédent</button>
+              <button type="submit">Soumettre</button>
             </div>
           )}
         </form>

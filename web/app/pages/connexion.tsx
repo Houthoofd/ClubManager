@@ -7,6 +7,7 @@ import '../connexion-style.css';
 import backGroundImage from '../../assets/images/bg.jpg' // Adjust the import according to your file structure
 
 const Connexion = () => {
+  console.log("Connexion component rendered");
   const [formData, setFormData] = useState<UserDataLogin>({
     email: '',
     password: '',
