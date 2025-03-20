@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { Abonnement, Grade, Genres, UserData } from '@clubmanager/types';
 import '../enregistrement-style.css';
+import Modal from '../../components/ui/modal';
 
 function convertToNumber(value: any): number | null {
   if (typeof value === 'number') {
@@ -51,6 +52,9 @@ const Enregistrement = () => {
   const [abonnements, setAbonnements] = useState<Abonnement[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Indicateur de chargement
+  const [error, setError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [modalMessage, setModalMessage] = useState<string>('');
   const [formData, setFormData] = useState<UserData>({
     prenom: '',
     nom: '',
@@ -92,6 +96,9 @@ const Enregistrement = () => {
       abonnement_id: convertToNumber(formData.abonnement_id),
     };
 
+    console.log("data to send")
+    console.log(dataToSend)
+
     try {
       const response = await fetch('http://localhost:3000/utilisateurs/inscription', {
         method: 'POST',
@@ -105,6 +112,8 @@ const Enregistrement = () => {
 
       if (response.ok) {
         console.log('Utilisateur inscrit avec succès', data);
+        setModalMessage('Inscription réussie !');
+        setShowModal(true);
       } else {
         console.error('Erreur de l\'API:', data.message || 'Erreur inconnue');
       }
@@ -379,6 +388,13 @@ const Enregistrement = () => {
             </div>
           )}
         </form>
+        <Modal
+          showModal={showModal}
+          setShowModal={setShowModal}
+          message={modalMessage}
+          title="Notification"
+          redirectUrl="/connexion" // Exemple de redirection avec '/pages'
+        />
       </div>
     </Provider>
   );

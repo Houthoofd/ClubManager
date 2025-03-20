@@ -50,6 +50,11 @@ const Connexion = () => {
         console.log('Utilisateur trouvé avec succès', data);
         setModalMessage('Connexion réussie !');
         setShowModal(true);
+        // Extraire la propriété 'message' et garder le reste de l'objet
+        const { message, ...dataToStore } = data;
+
+      // Stocker l'objet sans la propriété 'message'
+      localStorage.setItem("userData", JSON.stringify(dataToStore));
       } else {
         setError(data.message || 'Erreur inconnue');
       }

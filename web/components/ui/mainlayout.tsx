@@ -13,6 +13,22 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children }: MainLayoutProps) => {
+  // État pour stocker les données utilisateur
+  const [userData, setUserData] = useState<any | null>(null);
+
+  // Récupérer les données du localStorage au montage du composant
+  useEffect(() => {
+    const storedData = localStorage.getItem("userData");
+    console.log(storedData)
+
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setUserData(parsedData.data); // Stocker les données dans l'état
+    } else {
+      console.log("Aucune donnée trouvée dans le localStorage.");
+    }
+  }, []); // Cette fonction s'exécute seulement au montage
+
   const dispatch = useDispatch();
 
   const isLeftNavbarOpen = useSelector((state: any) => state.navigation.left_navbar);
@@ -27,7 +43,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     dispatch(OPEN_RIGHT_NAVBAR(notificationsCount > 0));  // Ouvre la barre de navigation droite si des notifications existent
   }, [notificationsCount, dispatch]);
 
-
   const handleSelection = (item: string): void => {
     if (item === 'cours' || item === 'dashboard') {
       setIsSelected(item);
@@ -36,22 +51,42 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     }
   };
 
-  const ReduceFullName = (fullName: string) => {
-    const nameParts = fullName.split(' ');
+  const ReduceFullName = (firstName: string | string[], lastName?: string) => {
+    // Si on reçoit un tableau (nom complet), on le divise
+    if (Array.isArray(firstName)) {
+      const [first, last] = firstName;
+      const firstInitial = first.charAt(0).toUpperCase();
+      const lastInitial = last.charAt(0).toUpperCase();
+      return `${firstInitial}${lastInitial}`;
+    }
+  
+    // Si on reçoit deux chaînes (prénom et nom séparés)
+    if (lastName) {
+      const firstInitial = firstName.charAt(0).toUpperCase();
+      const lastInitial = lastName.charAt(0).toUpperCase();
+      return `${firstInitial}${lastInitial}`;
+    }
+  
+    // Si on reçoit une seule chaîne avec un prénom et un nom
+    const nameParts = firstName.split(' ');
     if (nameParts.length >= 2) {
       const firstInitial = nameParts[0].charAt(0).toUpperCase();
       const lastInitial = nameParts[1].charAt(0).toUpperCase();
       return `${firstInitial}${lastInitial}`;
     }
-    return fullName.charAt(0).toUpperCase();
+  
+    // Sinon, on retourne simplement la première initiale
+    return firstName.charAt(0).toUpperCase();
   };
+  
 
   return (
     <div className={`layout ${isDarkMode ? 'light' : 'dark'}`}>
       <header className={`header ${isLeftNavbarOpen ? 'left-header-open' : 'left-header-close'} ${isRightHeaderPanelOpen ? 'right-header-open' : 'right-header-close'} ${isDarkMode ? 'light' : 'dark'}`}>
         <div className={`layer ${isDarkMode ? 'light' : 'dark'}`}>
           <div className={`layer-icon-text-${isLeftNavbarOpen ? 'full' : 'initial'}`}>
-            {isLeftNavbarOpen ? 'Houthoofd Benoit' : ReduceFullName('Houthoofd Benoit')}
+            {/* Affichage du prénom et nom si les données sont disponibles */}
+            {isLeftNavbarOpen ? `${userData.prenom} ${userData.nom}` : ReduceFullName(userData.prenom,userData.nom)}
           </div>
           <LeftExpandButton />
         </div>

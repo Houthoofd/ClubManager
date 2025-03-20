@@ -9,32 +9,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Utilisateurs {
-    VerificationUtilisateur(sql, values) {
+    verifierUtilisateur(utilisateurData) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
-            console.log("éxécution du query");
-            console.log(sql, values);
-            mysqlConnector.query(sql, values, (error, results) => {
-                if (error) {
-                    console.error('Erreur lors de l\'exécution de la requête : ' + error.message);
-                    reject(error);
-                }
-                else {
-                    console.log('Résultats de la requête :', results);
-                    resolve(results);
-                }
-                // Fermez la connexion ici après avoir traité les résultats
-                mysqlConnector.close();
-            });
-        });
-    }
-    IsUserExist(nom, prenom, email, date_naissance) {
-        return new Promise((resolve, reject) => {
-            const mysqlConnector = new MysqlConnector();
-            // Requête SQL pour vérifier si l'utilisateur existe déjà
-            const sql = `SELECT * FROM utilisateurs 
-                         WHERE last_name = ? AND first_name = ? AND email = ? AND date_of_birth = ?`;
-            const values = [nom, prenom, email, date_naissance];
+            // Requête SQL pour vérifier l'existence d'un utilisateur basé sur son email ou son nom d'utilisateur
+            const sql = `
+                SELECT * FROM utilisateurs
+                WHERE email = ? OR nom_utilisateur = ?
+            `;
+            const values = [
+                utilisateurData.email,
+                utilisateurData.nom_utilisateur
+            ];
             console.log("Éxécution de la requête :");
             console.log(sql, values);
             // Exécution de la requête
@@ -46,11 +32,11 @@ export class Utilisateurs {
                 else {
                     if (results.length > 0) {
                         console.log('Utilisateur trouvé :', results);
-                        resolve({ exists: true, user: results[0] }); // Utilisateur trouvé
+                        resolve({ isFind: true, message: "utilisateur trouvé" }); // Utilisateur trouvé
                     }
                     else {
                         console.log('Aucun utilisateur trouvé.');
-                        resolve({ exists: false }); // Aucun utilisateur trouvé
+                        resolve({ isFind: false, message: "utilisateur non trouvé" }); // Aucun utilisateur trouvé
                     }
                 }
             });
