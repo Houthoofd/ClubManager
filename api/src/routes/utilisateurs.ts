@@ -82,7 +82,4 @@ router.post('/inscription', async (req, res) => {
   }
 });
 
-
-
-
 export default router;

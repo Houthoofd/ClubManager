@@ -112,10 +112,12 @@ const Enregistrement = () => {
 
       if (response.ok) {
         console.log('Utilisateur inscrit avec succès', data);
-        setModalMessage('Inscription réussie !');
+        setModalMessage(data.message);
         setShowModal(true);
       } else {
         console.error('Erreur de l\'API:', data.message || 'Erreur inconnue');
+        setModalMessage(data.message);
+        setShowModal(true);
       }
     } catch (error) {
       console.error('Erreur de connexion:', error);

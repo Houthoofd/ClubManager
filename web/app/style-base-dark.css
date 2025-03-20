@@ -148,6 +148,7 @@ header > nav.header-right-navbar.dark > ul {
   justify-content: space-around;
   align-items: center;
   gap: 10px;
+  margin-right: 20px;
 }
 header > nav.header-right-navbar.dark > ul > div:not(:first-child) {
   display: flex;
@@ -234,7 +235,6 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   justify-content: center;
   border-radius: 10px;
   background-color: #11121a;
-  transform: translateX(-13px);
   svg{
     stroke: #ffff;
   }
@@ -249,10 +249,23 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   justify-content: center;
   border-radius: 10px;
   background-color: #11121a;
-  transform: translateX(-18px);
 
   svg{
     stroke: #ffff;
+  }
+}
+
+.logout-btn-dark.close {
+  height: var(--height-icon);
+  width: var(--width-icon);
+  background-color: #11121a;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+
+  svg{
+    fill: #ffff;
   }
 }
 
@@ -266,7 +279,6 @@ header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   justify-content: center;
   border-radius: 10px;
   background-color: #11121a;
-  transform: translateX(-16px);
   
   svg{
     stroke: #ffff;
@@ -337,7 +349,6 @@ header > nav.header-right-navbar.dark > nav > ul > a.close > .message-icon-dark 
   justify-content: center;
   border-radius: 10px;
   background-color: #11121a;
-  transform: translateX(-14px);
 
   svg{
     fill: #ffff;
@@ -384,7 +395,12 @@ header.header.left-header-open.right-header-open.dark {
 }
 
 .main-content.dark {
-  color: #ffff;
+  color: #fff;
+  margin-left: 20px;
+  margin-right: 20px;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
 }
 
 .layer-icon-text-initial,  .layer-icon-text-full{
@@ -401,4 +417,3 @@ header.header.left-header-open.right-header-open.dark {
   border-radius: 10px;
   transform: translateX(7px);
 }
-

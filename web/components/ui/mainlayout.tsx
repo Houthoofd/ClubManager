@@ -5,8 +5,10 @@ import { RightExpandButton, LeftExpandButton } from '../ui/expanse-btn';
 import MessageIcon from '../ui/message-icon';
 import { useDispatch, useSelector } from 'react-redux';
 import DarkModeButton from '../ui/dark-mode-btn';
+import LogOutButton from '../ui/logout';
 import NotificationList from '../ui/notification-list';
-import { OPEN_RIGHT_NAVBAR } from '@/redux/actions'; // Import du nouveau composant
+import { OPEN_RIGHT_NAVBAR } from '@/redux/actions';
+import Modal from '../../components/ui/modal';
 
 interface MainLayoutProps {
   children?: ReactNode;
@@ -25,7 +27,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       const parsedData = JSON.parse(storedData);
       setUserData(parsedData.data); // Stocker les données dans l'état
     } else {
-      console.log("Aucune donnée trouvée dans le localStorage.");
+      setModalMessage("Veuillez vous connecter afin d'accèder à l'application");
+      setShowModal(true);
     }
   }, []); // Cette fonction s'exécute seulement au montage
 
@@ -37,6 +40,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isDarkMode = useSelector((state: any) => state.settings.darkMode);
   const notificationsCount = useSelector((state: any) => state.notifications.notifications.length);
   const [isSelected, setIsSelected] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [modalMessage, setModalMessage] = useState<string>('');
 
   useEffect(() => {
     // Lorsque le nombre de notifications change, on met à jour l'état de la barre de navigation droite
@@ -52,6 +58,10 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   };
 
   const ReduceFullName = (firstName: string | string[], lastName?: string) => {
+    if (!firstName || !lastName) {
+      // Si prenom ou nom sont manquants, on retourne un caractère par défaut
+      return firstName ? lastName?.charAt(0).toUpperCase() : '';
+    }
     // Si on reçoit un tableau (nom complet), on le divise
     if (Array.isArray(firstName)) {
       const [first, last] = firstName;
@@ -86,7 +96,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <div className={`layer ${isDarkMode ? 'light' : 'dark'}`}>
           <div className={`layer-icon-text-${isLeftNavbarOpen ? 'full' : 'initial'}`}>
             {/* Affichage du prénom et nom si les données sont disponibles */}
-            {isLeftNavbarOpen ? `${userData.prenom} ${userData.nom}` : ReduceFullName(userData.prenom,userData.nom)}
+            {isLeftNavbarOpen ? `${userData?.prenom} ${userData?.nom}` : ReduceFullName(userData?.prenom,userData?.nom)}
           </div>
           <LeftExpandButton />
         </div>
@@ -99,6 +109,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               <MessageIcon />
             </Link>
             <DarkModeButton />
+            <LogOutButton />
           </ul>
         </nav>
       </header>
@@ -138,6 +149,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <NotificationList />
         </div>
       </div>
+      <Modal
+        showModal={showModal}
+        setShowModal={setShowModal}
+        message={modalMessage}
+        title="Notification"
+        redirectUrl="/pages/connexion" // Exemple de redirection avec '/pages'
+      />
     </div>
   );
 };
