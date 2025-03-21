@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { Abonnement, Grade, Genres, UserData } from '@clubmanager/types';
-import '../enregistrement-style.css';
+//import { convertToNumber, removeDuplicates, findValueById} from '@clubmanager/utils';
+import '../styles/enregistrement-style.css';
 import Modal from '../../components/ui/modal';
 
 function convertToNumber(value: any): number | null {
@@ -13,13 +14,19 @@ function convertToNumber(value: any): number | null {
   return isNaN(parsedValue) ? null : parsedValue;
 }
 
+
 function removeDuplicates<T>(array: T[], key: keyof T): T[] {
   return array.filter((item, index, self) => 
     index === self.findIndex((t) => t[key] === item[key])
   );
 }
 
-const findValueById = <T, K extends keyof T, V>(array: T[], id: any, key: K, valueKey: K): V | undefined => {
+function findValueById<T, K extends keyof T, V extends T[K]>(
+  array: T[], 
+  id: any, 
+  key: K, 
+  valueKey: K
+): V | undefined {
   // Convertir l'ID en nombre pour éviter des problèmes de type
   const numericId = Number(id);
 
@@ -34,14 +41,7 @@ const findValueById = <T, K extends keyof T, V>(array: T[], id: any, key: K, val
   // Si l'élément est trouvé, retourne la valeur de la clé spécifique (valueKey)
   // Assurez-vous que la valeur retournée est du bon type
   return foundItem ? (foundItem[valueKey] as V) : undefined;
-};
-
-
-
-
-
-
-
+}
 
 
 const Enregistrement = () => {

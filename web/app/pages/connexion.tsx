@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { UserDataLogin } from '@clubmanager/types';
 import Modal from '../../components/ui/modal';
-import '../connexion-style.css';
+import '../styles/connexion-style.css';
 import backGroundImage from '../../assets/images/bg.jpg' // Adjust the import according to your file structure
 
 const Connexion = () => {

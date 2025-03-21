@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@clubmanager/types": "file:../packages/types",
+    "@clubmanager/utils": "file:../packages/utils",
     "@types/mysql": "^2.15.25",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",

@@ -8,6 +8,10 @@ module.exports = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js'],
+    alias: {
+
+      // Ajoute d'autres alias selon ton besoin
+    },
   },
   module: {
     rules: [
@@ -33,5 +37,13 @@ module.exports = {
     ],
   },
   mode: 'development',
+  devServer: {
+    contentBase: path.join(__dirname, 'dist'),  // Dossier où le bundle sera servi
+    compress: true,  // Active la compression des fichiers
+    port: 9000,  // Port du serveur (par défaut, il est 8080)
+    hot: true,  // Active le rechargement à chaud des modules
+    open: true,  // Ouvre automatiquement le navigateur par défaut
+    historyApiFallback: true,  // Permet de rediriger les requêtes vers index.html (utile pour les routes SPA)
+  },
 };
 
