@@ -3,10 +3,20 @@ import { z } from 'zod';
 
 export type CoursData = {
   id: number;
-  date_cours: string;  // Peut être une date sous forme de chaîne
+  date_cours: string;
   type_cours: string;
-  heure_debut: string;  // Heure de début sous forme de chaîne
-  heure_fin: string;    // Heure de fin sous forme de chaîne
+  heure_debut: string;
+  heure_fin: string;
+};
+
+export type Utilisateur = {
+  utilisateurId: number;
+  nom: string;
+  prenom: string;
+};
+
+export type UtilisateursParCours = CoursData & {
+  utilisateurs: Utilisateur[];
 };
 
 export type DataReservation = {

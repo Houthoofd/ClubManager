@@ -6,6 +6,14 @@ export type CoursData = {
     heure_debut: string;
     heure_fin: string;
 };
+export type Utilisateur = {
+    utilisateurId: number;
+    nom: string;
+    prenom: string;
+};
+export type UtilisateursParCours = CoursData & {
+    utilisateurs: Utilisateur[];
+};
 export type DataReservation = {
     cours_id: number;
     utilisateur_nom: string;

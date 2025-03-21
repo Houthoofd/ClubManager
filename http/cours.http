@@ -2,3 +2,5 @@
 GET http://localhost:3000/cours
 
 ###
+
+GET http://localhost:3000/cours/3/utilisateurs

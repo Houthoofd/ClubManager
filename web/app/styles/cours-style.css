@@ -12,6 +12,7 @@
   display: flex;
   border: 1px solid #222533;
   border-radius: 5px;
+  cursor: pointer;
 }
 .header > .class-list-header {
   display: flex;

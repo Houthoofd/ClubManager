@@ -47,6 +47,23 @@ const Cours = () => {
     }
   };
 
+  const showParticipants = async (coursId: number) => {
+    try {
+      // Correctement formatée pour correspondre à l'URL de ton routeur
+      const response = await fetch(`/cours/${coursId}/utilisateurs`);
+      
+      if (!response.ok) {
+        throw new Error('Erreur de récupération des participants');
+      }
+  
+      const participants = await response.json();
+      console.log(participants);  // Affiche les participants dans la console
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+  
+
   const toggleReservation = async (coursItem: CoursData) => {
     console.log(coursItem)
     const convertedId = convertToNumber(coursItem.id);
@@ -141,7 +158,7 @@ const Cours = () => {
         </div>
         <div className='class-list'>
           {cours.map((coursItem) => (
-            <div className='class-list-item' key={coursItem.id}>
+            <div className='class-list-item' key={coursItem.id} onClick={() => showParticipants(coursItem.id)}>
               <div className='date'>{new Date(coursItem.date_cours).toLocaleDateString()}<div/></div>
               <div className='type'><div>{coursItem.type_cours}</div></div>
               <div className='heure-debut'><div>{coursItem.heure_debut}</div></div>
