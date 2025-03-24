@@ -57,10 +57,16 @@ html{
   margin-top: 20px;
   width: 140px;
 }
-.content > nav.navigation-left-panel.dark > ul.close {
+.content > nav.navigation-left-panel.dark > ul.close:first-child {
   display: grid;
   gap: 10px;
   margin-top: 20px;
+  width: 100%;
+}
+.content > nav.navigation-left-panel.dark > ul.close:last-child {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
   width: 100%;
 }
 .content > nav.navigation-left-panel.dark > ul > li.menu-list-item.open {
