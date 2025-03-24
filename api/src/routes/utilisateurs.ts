@@ -1,7 +1,7 @@
 import express from 'express';
 import {Utilisateurs} from '../db/clients/utilisateurs/utilisateurs.js';
 import { z } from 'zod';
-import { UserData, userSchema, userDataLoginSchema } from '../../../packages/types/dist/index.js';
+import { UserData, userSchema, userDataLoginSchema, VerifyResultWithData } from '../../../packages/types/dist/index.js';
 
 const router = express.Router();
 
@@ -111,7 +111,7 @@ router.get('/:id', async (req:any, res:any) => {
 
   try {
     const client = new Utilisateurs();
-    const utilisateur = await client.obtenirUnUtilisateur(utilisateurId);
+    const utilisateur: VerifyResultWithData = await client.obtenirUnUtilisateur(utilisateurId);
 
     if (utilisateur.isFind) {
       res.status(200).json(utilisateur.data);  // Renvoie les données de l'utilisateur trouvé

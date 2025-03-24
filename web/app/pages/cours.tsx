@@ -22,10 +22,6 @@ function formatDateFromISO(isoDateString: string) {
   return `${year}-${month}-${day}`;
 }
 
-function convertToISODate(dateString: string) {
-  const [year, month, day] = dateString.split('-');
-  return new Date(`${year}-${month}-${day}T00:00:00Z`).toISOString();
-}
 
 
 const Cours = () => {
@@ -176,8 +172,6 @@ const Cours = () => {
         </div>
         <div className='class-list'>
           {cours.map((coursItem) => {
-            console.log(coursItem.type_cours); // Affiche chaque élément coursItem dans la console
-
             return (
               <div className={`class-list-item ${coursItem.type_cours}`} key={coursItem.id} onClick={() => showParticipants(coursItem.id)}>
                 <div className='date'>{new Date(coursItem.date_cours).toLocaleDateString()}</div>
