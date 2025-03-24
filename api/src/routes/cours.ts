@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:coursId/utilisateurs', async (req:any, res:any) => {
+router.get('/:coursId', async (req:any, res:any) => {
   const coursId = parseInt(req.params.coursId, 10);
   console.log(`Récupération des utilisateurs pour le cours avec l'ID: ${coursId}`);
   

@@ -19,7 +19,6 @@ function convertToNumber(value: string | null | undefined): number {
 
 
 // Route de vérification de l'existence d'un utilisateur
-// Route to verify the existence of a user
 router.post('/connexion', async (req, res) => {
   try {
     // Validate incoming data with Zod
@@ -81,5 +80,53 @@ router.post('/inscription', async (req, res) => {
     }
   }
 });
+
+router.get('/', async (req: any, res: any) => {
+  try {
+    const client = new Utilisateurs();
+    
+    // Attendre la résolution de la méthode obtenirTousLesUtilisateurs
+    const utilisateurs = await client.obtenirTousLesUtilisateurs();
+    
+    // Vérifier si des utilisateurs ont été trouvés et renvoyer une réponse appropriée
+    if (utilisateurs.isFind) {
+      res.status(200).json(utilisateurs); // Renvoyer la liste des utilisateurs
+    } else {
+      res.status(404).json({ message: "Aucun utilisateur trouvé.", data: [] });
+    }
+  } catch (error) {
+    console.error("Erreur : ", error);
+    res.status(500).send("Erreur serveur");
+  }
+});
+
+router.get('/:id', async (req:any, res:any) => {
+  let utilisateurId = req.params.id;
+  
+  if (isNaN(Number(utilisateurId))) {
+    return res.status(400).json({ message: "ID invalide, il doit être un nombre." });
+  } else {
+    utilisateurId = Number(utilisateurId);
+  }
+
+  try {
+    const client = new Utilisateurs();
+    const utilisateur = await client.obtenirUnUtilisateur(utilisateurId);
+
+    if (utilisateur.isFind) {
+      res.status(200).json(utilisateur.data);  // Renvoie les données de l'utilisateur trouvé
+    } else {
+      res.status(404).json({ message: "Aucun utilisateur trouvé.", data: [] });
+    }
+  } catch (error) {
+    console.error("Erreur : ", error);
+    res.status(500).send("Erreur serveur");
+  }
+});
+
+
+
+
+
 
 export default router;

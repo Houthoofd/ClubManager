@@ -23,15 +23,16 @@ export default class MysqlConnector {
       });
   }
 
-  public query(sql: string, values: any[], callback: (error: mysql.MysqlError | null, results?: any, fields?: mysql.FieldInfo[]) => void): void {
+  // Méthode pour exécuter des requêtes SQL
+  public query(sql: string, values: any[] = [], callback: (error: mysql.MysqlError | null, results?: any, fields?: mysql.FieldInfo[]) => void): void {
     // Exécuter la requête SQL avec les valeurs échappées
     this.connection.query(sql, values, (error, results, fields) => {
         callback(error, results, fields);
     });
-}
+  }
 
+  // Fermer la connexion à la base de données
   public close(): void {
-      // Fermer la connexion à la base de données
       this.connection.end((err) => {
           if (err) {
               console.error('Erreur lors de la fermeture de la connexion : ' + err.stack);

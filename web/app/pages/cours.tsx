@@ -4,6 +4,7 @@ import store from '../../redux/store'; // Importation du store
 import { CoursData, DataReservation } from '@clubmanager/types';
 import '../styles/cours-style.css';
 import Modal from '../../components/ui/modal';
+import { useNavigate } from 'react-router-dom';
 
 function convertToNumber(value: any): number | null {
   if (typeof value === 'number') {
@@ -33,6 +34,7 @@ const Cours = () => {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
+  const navigate = useNavigate();
 
   const fetchData = async () => {
     try {
@@ -48,20 +50,36 @@ const Cours = () => {
   };
 
   const showParticipants = async (coursId: number) => {
+  
     try {
-      // Correctement formatée pour correspondre à l'URL de ton routeur
-      const response = await fetch(`/cours/${coursId}/utilisateurs`);
-      
+      // URL correctement formatée
+      const response = await fetch(`http://localhost:3000/cours/${coursId}/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+  
       if (!response.ok) {
         throw new Error('Erreur de récupération des participants');
       }
   
       const participants = await response.json();
       console.log(participants);  // Affiche les participants dans la console
+  
+      // Naviguer vers la page des participants avec React Router
+      navigate(`/pages/cours/participants`, {
+        state: { participants }  // Vous pouvez passer les données dans le state si nécessaire
+      });
+  
     } catch (error) {
       console.error('Erreur:', error);
+  
+      // Afficher un message d'erreur à l'utilisateur
+      alert("Impossible de récupérer les participants pour ce cours.");
     }
   };
+  
   
 
   const toggleReservation = async (coursItem: CoursData) => {
@@ -157,20 +175,22 @@ const Cours = () => {
             </div>
         </div>
         <div className='class-list'>
-          {cours.map((coursItem) => (
-            <div className='class-list-item' key={coursItem.id} onClick={() => showParticipants(coursItem.id)}>
-              <div className='date'>{new Date(coursItem.date_cours).toLocaleDateString()}<div/></div>
-              <div className='type'><div>{coursItem.type_cours}</div></div>
-              <div className='heure-debut'><div>{coursItem.heure_debut}</div></div>
-              <div className='heure-fin'><div>{coursItem.heure_fin}</div></div>
-              {/* Bouton pour réserver ou annuler */}
-              <button 
-                onClick={() => toggleReservation(coursItem)}
-              >
-                {reservations.includes(coursItem.id) ? 'Annuler' : 'Réserver'}
-              </button>
-            </div>
-          ))}
+          {cours.map((coursItem) => {
+            console.log(coursItem.type_cours); // Affiche chaque élément coursItem dans la console
+
+            return (
+              <div className={`class-list-item ${coursItem.type_cours}`} key={coursItem.id} onClick={() => showParticipants(coursItem.id)}>
+                <div className='date'>{new Date(coursItem.date_cours).toLocaleDateString()}</div>
+                <div className='type'>{coursItem.type_cours}</div>
+                <div className='heure-debut'>{coursItem.heure_debut}</div>
+                <div className='heure-fin'>{coursItem.heure_fin}</div>
+                {/* Bouton pour réserver ou annuler */}
+                <button onClick={() => toggleReservation(coursItem)}>
+                  {reservations.includes(coursItem.id) ? 'Annuler' : 'Réserver'}
+                </button>
+              </div>
+            );
+          })}
         </div>
         <Modal
           showModal={showModal}

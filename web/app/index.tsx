@@ -8,6 +8,7 @@ import Connexion from '../app/pages/connexion';
 import Enregistrement from '../app/pages/enregistrement';
 import MainLayout from '../components/ui/mainlayout';
 import Messages from './pages/messages';
+import Participants from './pages/cours/participants';
 
 const App = () => {
 
@@ -18,6 +19,7 @@ const App = () => {
           <Routes>
             {/* Définir les routes ici */}
             <Route path="/pages/cours" element={<Cours />} />
+            <Route path="/pages/cours/participants" element={<Participants />} />
             <Route path="/pages/dashboard" element={<Dashboard />} />
             <Route path="/pages/messages" element={<Messages />} />
             <Route path="/pages/connexion" element={<Connexion />} />

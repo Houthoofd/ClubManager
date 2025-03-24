@@ -31,7 +31,7 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
     }
 }));
-router.get('/:coursId/utilisateurs', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/:coursId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const coursId = parseInt(req.params.coursId, 10);
     console.log(`Récupération des utilisateurs pour le cours avec l'ID: ${coursId}`);
     if (isNaN(coursId)) {

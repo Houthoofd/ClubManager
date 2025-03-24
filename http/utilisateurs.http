@@ -5,3 +5,14 @@ GET http://localhost:3000/utilisateurs/verification?nom=Houthoofd&prenom=Benoit&
 ## Exemple pour s'inscrire 
 POST http://localhost:3000/utilisateurs/inscription?prenom=Benoit&nom=Houthoofd&nom_utilisateur=benoit.houthoofd&email=houthoofd.benoit48@gmail.com&genre_id=1&date_naissance=1993-08-12&password=12345678&status_id=1&grade_id=10&nom_plan=2
 
+###
+
+## Obtenir les utilisateur
+GET http://localhost:3000/utilisateurs
+
+###
+
+## Obtenir un utilisateur par son id
+GET http://localhost:3000/utilisateurs/2
+
+###

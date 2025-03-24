@@ -18,14 +18,15 @@ export default class MysqlConnector {
             console.log('Connecté à la base de données MySQL avec l\'ID : ' + this.connection.threadId);
         });
     }
-    query(sql, values, callback) {
+    // Méthode pour exécuter des requêtes SQL
+    query(sql, values = [], callback) {
         // Exécuter la requête SQL avec les valeurs échappées
         this.connection.query(sql, values, (error, results, fields) => {
             callback(error, results, fields);
         });
     }
+    // Fermer la connexion à la base de données
     close() {
-        // Fermer la connexion à la base de données
         this.connection.end((err) => {
             if (err) {
                 console.error('Erreur lors de la fermeture de la connexion : ' + err.stack);
