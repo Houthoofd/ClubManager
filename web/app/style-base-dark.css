@@ -421,11 +421,11 @@ header.header.left-header-open.right-header-open.dark {
   flex-direction: column;
   margin-top: 20px;
 }
-.main-content.dark > div{
+/* .main-content.dark > div{
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
+} */
 
 .layer-icon-text-initial,  .layer-icon-text-full{
   color: #ffffff;
