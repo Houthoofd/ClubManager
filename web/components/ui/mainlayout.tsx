@@ -101,10 +101,13 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           </div>
           <LeftExpandButton />
         </div>
-        <div className='header-content'></div>
+        <div className='header-content'>
+          <div className='header-content-btn'>
+            <RightExpandButton />
+          </div>
+        </div>
         <nav className={`header-right-navbar ${isDarkMode ? 'light' : 'dark'}`}>
-          <RightExpandButton />
-          <ul>
+        <ul className={`${isRightHeaderPanelOpen ? 'right-header-open' : 'right-header-close'}`}>
             <NotificationBell />
             <Link className={`${isLeftNavbarOpen ? 'open' : 'close'}`} to="/pages/messages">
               <MessageIcon />

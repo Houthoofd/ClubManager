@@ -120,7 +120,7 @@ html{
 
 header {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 350px;
+  grid-template-columns: 200px minmax(0, 1fr) 250px;
   border-bottom: 1px solid var(--bck-icon-light);
 }
 header > .layer.dark {
@@ -144,13 +144,20 @@ header > nav.header-right-navbar {
 }
 header > nav.header-right-navbar.dark {
   background-color: #222533;
-    border-left: 1px solid #222533;
-    align-items: center;
-    display: flex;
-    justify-content: space-between;
+  border-left: 1px solid #222533;
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
 }
 header > nav.header-right-navbar.dark > ul {
   display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 10px;
+  margin-right: 20px;
+}
+header > nav.header-right-navbar.dark > ul.right-header-close{
+  display: none;
   justify-content: space-around;
   align-items: center;
   gap: 10px;
@@ -162,9 +169,13 @@ header > nav.header-right-navbar.dark > ul > div:not(:first-child) {
 }
 header > nav.header-right-navbar.dark > ul > .expand-btn-dark.open-right{
   transform: translateX(-21px);
+  height: var(--height-icon);
+  width: var(--width-icon);
 }
 header > nav.header-right-navbar.dark > ul > .expand-btn-dark.close-right{
   transform: translateX(-21px);
+  height: var(--height-icon);
+  width: var(--width-icon);
 }
 
 
@@ -378,23 +389,36 @@ header > nav.header-right-navbar.dark > nav > ul > a.close > .message-icon-dark 
 /* add effect open / close */
 header.header.left-header-close.right-header-open.dark {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) 350px;
+  grid-template-columns: 110px minmax(0, 1fr) 205px;
   border-bottom: 1px solid #222533;
 }
 header.header.left-header-open.right-header-close.dark {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 40px;
+  grid-template-columns: 200px minmax(0, 1fr) 205px;
   border-bottom: 1px solid #222533;
 }
 header.header.left-header-close.right-header-close.dark {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) 40px;
+  grid-template-columns: 110px minmax(0, 1fr) 0px;
   border-bottom: 1px solid #222533;
 }
 header.header.left-header-open.right-header-open.dark {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 350px;
+  grid-template-columns: 200px minmax(0, 1fr) 205px;
   border-bottom: 1px solid #222533;
+}
+
+.header-content {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.header-content-btn {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #222533;
 }
 
 

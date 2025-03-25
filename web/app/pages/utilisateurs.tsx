@@ -14,7 +14,6 @@ function formatDateFromISO(isoDateString: string) {
   return `${year}-${month}-${day}`;
 }
 
-// Fonction pour calculer l'âge à partir de la date de naissance
 function calculateAge(birthDate: string) {
   const birth = new Date(birthDate);
   const today = new Date();
@@ -34,7 +33,11 @@ const Utilisateurs = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [usersPerPage] = useState<number>(10);
   const [expand, setExpand] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(''); // Term for search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'first_name', // Colonne initiale à trier
+    direction: 'asc',
+  });
 
   const navigate = useNavigate();
 
@@ -70,7 +73,7 @@ const Utilisateurs = () => {
       }
 
       const participants = await response.json();
-      navigate(`/pages/utilisateurs/participants`, {
+      navigate(`/pages/utilisateur/participants`, {
         state: { participants },
       });
     } catch (error) {
@@ -79,8 +82,22 @@ const Utilisateurs = () => {
     }
   };
 
+  // Fonction de tri des utilisateurs
+  const sortUsers = (users: VerifyResultWithData[], config: { key: string; direction: 'asc' | 'desc' }) => {
+    const sortedUsers = [...users];
+    sortedUsers.sort((a, b) => {
+      if (a[config.key] < b[config.key]) return config.direction === 'asc' ? -1 : 1;
+      if (a[config.key] > b[config.key]) return config.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sortedUsers;
+  };
+
+  // Filtrer et trier les utilisateurs
+  const sortedUsers = sortUsers(utilisateurs, sortConfig);
+
   // Filtrer les utilisateurs en fonction du terme de recherche
-  const filteredUsers = utilisateurs.filter((utilisateur) => {
+  const filteredUsers = sortedUsers.filter((utilisateur) => {
     const fullName = `${utilisateur.first_name} ${utilisateur.last_name}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
   });
@@ -115,8 +132,14 @@ const Utilisateurs = () => {
   };
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log(event.target.value)
     setSearchTerm(event.target.value);
+  };
+
+  const handleSort = (key: string) => {
+    setSortConfig((prevConfig) => {
+      const direction = prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc';
+      return { key, direction };
+    });
   };
 
   return (
@@ -130,7 +153,7 @@ const Utilisateurs = () => {
               placeholder="Rechercher par nom ou prénom..."
               className={expand ? 'expanded' : ''}
               value={searchTerm}
-              onChange={handleSearch} // Gérer la recherche en temps réel
+              onChange={handleSearch}
             />
           </div>
           <div className='search-box-icon' onClick={expandSearchButton}>
@@ -142,11 +165,22 @@ const Utilisateurs = () => {
       </div>
       <div className="header">
         <div className="class-list-header">
-          <div className="first-name"><span>Prénom</span></div>
-          <div className="last-name"><span>Nom</span></div>
+          <div className="first-name" onClick={() => handleSort('first_name')}>
+            <div className='sort-icon'>
+              <span>Prénom</span>
+              
+            </div>
+          </div>
+          <div className="last-name" onClick={() => handleSort('last_name')}>
+            <div className='sort-icon'></div><span>Nom</span>
+          </div>
           <div className="email"><span>Email</span></div>
-          <div className="date-naissance"><span>Date de naissance</span></div>
-          <div className="age"><span>Âge</span></div>
+          <div className="date-naissance" onClick={() => handleSort('date_of_birth')}>
+            <div className='sort-icon'></div><span>Date de naissance</span>
+          </div>
+          <div className="age" onClick={() => handleSort('date_of_birth')}>
+            <div className='sort-icon'></div><span>Âge</span>
+          </div>
         </div>
       </div>
       <div className="class-list">
@@ -160,7 +194,7 @@ const Utilisateurs = () => {
             <div className="last-name">{utilisateur.last_name}</div>
             <div className="email">{utilisateur.email}</div>
             <div className="date-naissance">{formatDateFromISO(utilisateur.date_of_birth)}</div>
-            <div className="age">{calculateAge(utilisateur.date_of_birth)}</div>
+            <div className="age">{calculateAge(utilisateur.date_of_birth)} ans</div>
           </div>
         ))}
       </div>
@@ -171,7 +205,6 @@ const Utilisateurs = () => {
           <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M220-240v-480h80v480h-80Zm520 0L380-480l360-240v480Zm-80-240Zm0 90v-180l-136 90 136 90Z" /></svg>
         </button>
 
-        {/* Affichage des pages dynamiquement */}
         {getVisiblePages().map((page) => (
           <button
             key={page}
@@ -183,7 +216,7 @@ const Utilisateurs = () => {
         ))}
 
         <button onClick={handleNextPage} disabled={currentPage === totalPages}>
-          <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M660-240v-480h80v480h-80Zm-440 0v-480l360 240-360 240Zm80-240Zm0 90 136-90-136-90v180Z" /></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M660-240v-480h80v480h-80Zm-440 0v-480l360 240-360 240Zm80-240Zm0 90 136-90-136-90v180Z"/></svg>
         </button>
       </div>
 
