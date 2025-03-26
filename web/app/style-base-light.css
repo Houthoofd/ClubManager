@@ -124,6 +124,21 @@ html{
     fill: var(--bck-icon-light);
   }
 }
+
+.menu-list-item-icon.close.selected {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--bck-icon-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background-color: var(--accent-clr);
+
+  svg{
+    fill: var(--bck-icon-light);
+  }
+}
 .content > nav.navigation-left-panel.light > ul > li.menu-list-item.close > .menu-list-item-link.close > .menu-list-item-text.close {
   width: 0;
   display: none;

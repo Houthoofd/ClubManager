@@ -271,7 +271,7 @@ export class Utilisateurs{
           console.error("Erreur lors de la récupération de l'utilisateur:", error);
           throw error; // Lever l'erreur pour que l'appelant puisse la gérer
         }
-    }
+    }    
 }
 
 

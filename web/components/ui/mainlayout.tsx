@@ -51,7 +51,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   }, [notificationsCount, dispatch]);
 
   const handleSelection = (item: string): void => {
-    if (item === 'cours' || item === 'dashboard') {
+    if (item === 'cours' || item === 'dashboard' || item === 'account' || item === 'chat' || item === 'paiement' || item === 'store' || item === 'settings' || item === 'utilisateurs') {
+      console.log(item)
       setIsSelected(item);
     } else {
       setIsSelected(null);

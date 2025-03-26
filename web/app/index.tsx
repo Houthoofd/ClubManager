@@ -11,6 +11,7 @@ import Magasin from '../app/pages/magasin';
 import Settings from '../app/pages/settings';
 import Compte from '../app/pages/compte';
 import Utilisateurs from '../app/pages/utilisateurs';
+import Utilisateur from '../app/pages/utilisateurs/utilisateur';
 import Paiements from '../app/pages/paiements';
 import MainLayout from '../components/ui/mainlayout';
 import Messages from './pages/messages';
@@ -34,6 +35,7 @@ const App = () => {
             <Route path="/pages/settings" element={<Settings />} />
             <Route path="/pages/compte" element={<Compte />} />
             <Route path="/pages/utilisateurs" element={<Utilisateurs />} />
+            <Route path="/pages/utilisateurs/utilisateur" element={<Utilisateur />} />
             <Route path="/pages/paiements" element={<Paiements />} />
             <Route path="/pages/enregistrement" element={<Enregistrement />} />
 

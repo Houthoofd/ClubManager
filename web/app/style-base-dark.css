@@ -394,7 +394,7 @@ header.header.left-header-close.right-header-open.dark {
 }
 header.header.left-header-open.right-header-close.dark {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 205px;
+  grid-template-columns: 200px minmax(0, 1fr) 30px;
   border-bottom: 1px solid #222533;
 }
 header.header.left-header-close.right-header-close.dark {

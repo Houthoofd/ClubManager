@@ -43,6 +43,10 @@
   align-items: center;
   gap: 10px;
   background-color: #222533;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
 }
 .search-box {
   display: flex;
@@ -53,6 +57,8 @@
   background-color: #222533;
   border-top-right-radius: 5px;
   border-bottom-right-radius: 5px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
   height: 43px;
   width: 43px;
   display: flex;
@@ -88,4 +94,31 @@
   border-bottom-left-radius: 5px;
   padding: 14px;
   width: 0px;
+}
+
+
+
+.informations-utilisateur-content {
+  display: inline-grid;
+  align-items: center;
+  gap: 20px;
+}
+.informations-utilisateur-list-item {
+  display: inline-grid;
+  justify-content: flex-start;
+  align-items: center;
+}
+.informations-input-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #222533;
+  background-color: #11121a;
+  border-radius: 5px;
+}
+.informations-input-group > input[type="text"] {
+  border: none;
+  background-color: #11121a;
+  color: #fff;
 }

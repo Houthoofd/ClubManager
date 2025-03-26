@@ -1,0 +1,26 @@
+.tabs {
+  flex-direction: column;
+  display: flex;
+  gap: 20px;
+}
+.tab-list {
+  display: flex;
+}
+
+button.tab-item {
+  background-color: #222533;
+  border-radius: 0px;
+  padding: 10px;
+}
+button.tab-item.active {
+  background-color: #673AB7;
+  border-radius: 5px;
+}
+button.tab-item:first-child{
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+button.tab-item:last-child{
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}

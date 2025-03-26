@@ -31,7 +31,7 @@ const ParticipantsPage = () => {
         <h1>Cours du {participantsData.date_cours ? formatDateFromISO(participantsData.date_cours) : 'Inconnu'}</h1>
         <h3>Nombre de participants : {participantsData.utilisateurs.length}</h3>
       </div>
-      <div className='participants-list'>
+      <div className='utilisateur-list-infos'>
         {participantsData.utilisateurs.map((participant: any) => (
           <div className='participants-list-item' key={participant.id}>
             <div className='participants-list-item-nom'>{participant.nom}</div>
