@@ -42,141 +42,107 @@ const Compte = () => {
       if (!response.ok) {
         throw new Error('Erreur réseau lors de la récupération des informations du compte');
       }
-      const data: UserData = await response.json();
-      console.log(data)
-      setCompte(data); // Mettre à jour l'état avec les données récupérées
+      const result: UserData = await response.json();
+      setCompte(result.data); // Mettre à jour l'état avec les données récupérées
     } catch (error) {
       console.error('Erreur lors de la récupération des données:', error);
     }
   };
 
+  console.log(compte)
   return (
     <Provider store={store}>
-      <div className='informations-utilisateur-content'>
-            {compte?.map((info: any) => (
-              <h1 key={info.id}>Compte de {info.first_name} {info.last_name}</h1>
-            ))}
-      
-            <Tabs>
-              <TabPanel label="Informations personnelles">
-                {compte?.map((info: any) => (
-                  <div className='informations-utilisateur-list-item' key={info.id}>
-                    <div className='informations-input-group'>
-                      <label>Nom :</label>
-                      <input
-                        type='text'
-                        value={info.last_name}
-                        onChange={(e) => {
-                          const updatedUser = compte.map((user: any) =>
-                            user.id === info.id ? { ...user, last_name: e.target.value } : user
-                          );
-                          setCompte(updatedUser);
-                        }}
-                      />
-                    </div>
-                    <div className='informations-input-group'>
-                      <label>Prénom :</label>
-                      <input
-                        type='text'
-                        value={info.first_name}
-                        onChange={(e) => {
-                          const updatedUser = compte?.map((user: any) =>
-                            user.id === info.id ? { ...user, first_name: e.target.value } : user
-                          );
-                          setCompte(updatedUser);
-                        }}
-                      />
-                    </div>
-                    <div className='informations-input-group'>
-                      <label>Date de naissance :</label>
-                      <input
-                        type='date'
-                        value={formatDateForInput(info.date_of_birth)}
-                        onChange={(e) => {
-                          const updatedUser = compte?.map((user: any) =>
-                            user.id === info.id ? { ...user, date_of_birth: e.target.value } : user
-                          );
-                          setCompte(updatedUser);
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </TabPanel>
-      
-              <TabPanel label="Informations supplémentaires">
-                {compte?.map((info: any) => (
-                  <div className='informations-utilisateur-list-item' key={info.id}>
-                    <div className='informations-input-group'>
-                      <label>Genre :</label>
-                      <input
-                        type='text'
-                        value={info.genre_id}
-                        onChange={(e) => {
-                          const updatedUser = compte?.map((user: any) =>
-                            user.id === info.id ? { ...user, genre_id: e.target.value } : user
-                          );
-                          setCompte(updatedUser);
-                        }}
-                      />
-                    </div>
-                    <div className='informations-input-group'>
-                      <label>Abonnement :</label>
-                      <input
-                        type='text'
-                        value={info.abonnement_id}
-                        onChange={(e) => {
-                          const updatedUser = compte?.map((user: any) =>
-                            user.id === info.id ? { ...user, abonnement_id: e.target.value } : user
-                          );
-                          setCompte(updatedUser);
-                        }}
-                      />
-                    </div>
-                    <div className='informations-input-group'>
-                      <label>Grade :</label>
-                      <input
-                        type='text'
-                        value={info.grade_id}
-                        onChange={(e) => {
-                          const updatedUser = compte?.map((user: any) =>
-                            user.id === info.id ? { ...user, grade_id: e.target.value } : user
-                          );
-                          setCompte(updatedUser);
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </TabPanel>
-      
-              <TabPanel label="Rôles et Statut">
-                {compte?.map((info: any) => (
-                  <div className='informations-utilisateur-list-item' key={info.id}>
-                    <div className='informations-input-group'>
-                      <label>Rôle :</label>
-                      <input
-                        type='text'
-                        value={info.status_id}
-                        onChange={(e) => {
-                          const updatedUser = compte?.map((user: any) =>
-                            user.id === info.id ? { ...user, status_id: e.target.value } : user
-                          );
-                          setCompte(updatedUser);
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </TabPanel>
-              <TabPanel label="Paiements">
-                {/* Logique pour la gestion des paiements */}
-              </TabPanel>
-              <TabPanel label="Statistiques">
-                {/* Logique pour afficher les statistiques */}
-              </TabPanel>
-            </Tabs>
+      <h1>Compte</h1>
+      <Tabs>
+        <TabPanel label="Informations personnelles">
+          <div className='informations-input-group'>
+            <label>Prénom :</label>
+            <input
+              type='text'
+              value={compte?.first_name}
+              onChange={(e) => {
+                
+              }}
+            />
           </div>
+          <div className='informations-input-group'>
+            <label>Prénom :</label>
+            <input
+              type='text'
+              value={compte?.last_name}
+              onChange={(e) => {
+                
+              }}
+            />
+          </div>
+          <div className='informations-input-group'>
+            <label>Nom d'utilisateur :</label>
+            <input
+              type='text'
+              value={compte?.nom_utilisateur}
+              onChange={(e) => {
+                
+              }}
+            />
+          </div>
+          <div className='informations-input-group'>
+            <label>Date de naissance :</label>
+            <input
+              type='date'
+              value={formatDateForInput(compte?.date_of_birth)}
+              onChange={(e) => {
+                
+              }}
+            />
+          </div>
+        </TabPanel>
+        <TabPanel label="Informations supplémentaires">
+          <div className='informations-input-group'>
+            <label>Grade :</label>
+            <input
+              type='text'
+              value={compte?.grades}
+              onChange={(e) => {
+                
+              }}
+            />
+          </div>
+          <div className='informations-input-group'>
+            <label>Genre :</label>
+            <input
+              type='text'
+              value={compte?.genres}
+              onChange={(e) => {
+                
+              }}
+            />
+          </div>
+          <div className='informations-input-group'>
+            <label>Abonnement :</label>
+            <input
+              type='text'
+              value={compte?.abonnement}
+              onChange={(e) => {
+                
+              }}
+            />
+          </div>
+        </TabPanel>
+        <TabPanel label="Rôle et status">
+          <div className='informations-input-group'>
+            <label>Rôle :</label>
+            <input
+              type='text'
+              value={compte?.status}
+              onChange={(e) => {
+                
+              }}
+            />
+          </div>
+        </TabPanel>
+        <TabPanel label="Paiements"></TabPanel>
+        <TabPanel label="Statistiques"></TabPanel>
+      </Tabs>
     </Provider>
   );
 };
