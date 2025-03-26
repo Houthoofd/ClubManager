@@ -7,6 +7,7 @@ import { default as utilisateursRouter } from './routes/utilisateurs.js';
 import { default as informationsRouter } from './routes/informations.js';
 import { default as coursRouter } from './routes/cours.js';
 import { default as compteRouter } from './routes/compte.js';
+import { default as paiementRouter } from './routes/paiements.js';
 
 
 
@@ -36,6 +37,7 @@ app.use('/utilisateurs', utilisateursRouter);
 app.use('/informations', informationsRouter);
 app.use('/cours', coursRouter);
 app.use('/compte', compteRouter);
+app.use('/paiements', paiementRouter);
 
 
 // Démarrer le serveur

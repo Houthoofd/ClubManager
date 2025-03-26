@@ -3,6 +3,7 @@ import express from 'express';
 import utilisateursRouter from './utilisateurs.js';
 import informationsRouter from './informations.js';
 import coursRouter from './cours.js';
+import paiementRouter from './paiements.js';
 
 const router = express.Router();
 
@@ -10,5 +11,6 @@ const router = express.Router();
 router.use('/utilisateurs', utilisateursRouter);
 router.use('/informations', informationsRouter);
 router.use('/cours', coursRouter);
+router.use('/paiements', paiementRouter);
 
 export default router;
