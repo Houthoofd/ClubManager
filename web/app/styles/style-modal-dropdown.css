@@ -1,0 +1,61 @@
+.modal-box {
+  background-color: #11121a;
+    position: absolute;
+    top: 221px;
+    right: 20px;
+    box-shadow: 0 4px 8px #000000;
+    width: 300px;
+    height: 448px;
+    margin-right: 10px;
+    margin-left: 10px;
+    border-radius: 5px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.modal-body {
+  margin: 20px 0;
+}
+
+.modal-body div {
+  margin-bottom: 15px;
+}
+
+.modal-body label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.modal-body select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-footer button {
+  padding: 8px 15px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.modal-footer button:first-child {
+  background-color: #f44336; /* Annuler : rouge */
+  color: white;
+}
+
+.modal-footer button:last-child {
+  background-color: #4caf50; /* Appliquer : vert */
+  color: white;
+}
+
+button {
+  cursor: pointer;
+}
