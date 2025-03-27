@@ -391,14 +391,19 @@ header.header.left-header-open.right-header-open.light {
   grid-template-columns: 200px minmax(0, 1fr) 0px;
 }
 
-.main-content.light {
-  color: black;
+.main-content.light.right-side-panel-close {
+  color: #fff;
+  gap: 20px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 0px;
+}
+.main-content.light.right-side-panel-open {
+  color: #fff;
+  gap: 20px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 200px;
 }
 
-.menu-list-item-text.open {
-  color: #5f6368;
-  font-weight: 500;
-}
 
 
 

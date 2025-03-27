@@ -26,3 +26,16 @@
     fill: #fff;
   }
 }
+
+.class-list-item {
+  cursor: pointer;
+  border: 1px solid #222533;
+  border-radius: 5px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  display: flex;
+}
+.class-list-item > .icon{
+  
+}

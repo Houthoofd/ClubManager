@@ -39,6 +39,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   const isRightNavbarOpen = useSelector((state: any) => state.navigation.right_navbar);
   const isRightHeaderPanelOpen = useSelector((state: any) => state.navigation.header_right_panel);
   const isDarkMode = useSelector((state: any) => state.settings.darkMode);
+  const isMainRightSidePanelOpen = useSelector((state: any) => state.navigation.main_content_right_panel);
   const notificationsCount = useSelector((state: any) => state.notifications.notifications.length);
   const [isSelected, setIsSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -196,9 +197,12 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         </nav>
 
         {/* Affichage des composants enfants */}
-        <div className={`main-content ${isDarkMode ? 'light' : 'dark'}`}>
-          <Breadcrumb />
-          {children}
+        <div className={`main-content ${isDarkMode ? 'light' : 'dark'} ${isMainRightSidePanelOpen ? 'right-side-panel-close' : 'right-side-panel-open'}`}>
+          <div className={`content ${isDarkMode ? 'light' : 'dark'} ${isMainRightSidePanelOpen ? 'right-side-panel-close' : 'right-side-panel-open'}`}>
+            <Breadcrumb />
+            {children}
+          </div>
+          <div className='main-right-side-panel'></div>
         </div>
 
         <div className={`right-panel-content ${isRightNavbarOpen ? 'open' : 'close'} ${isDarkMode ? 'light' : 'dark'}`}>

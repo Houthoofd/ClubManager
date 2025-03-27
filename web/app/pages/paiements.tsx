@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { VerifyResultWithData } from '@clubmanager/types';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/ui/modal';
-import ModalWithDropdown from '../../components/ui/modal-dropdown';
 import '../styles/paiements-style.css';
+import { MAIN_OPEN_RIGHT_SIDE_PANEL } from '@/redux/actions';
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -16,15 +17,18 @@ function formatDateFromISO(isoDateString: string) {
 }
 
 const Paiements = () => {
+  const dispatch = useDispatch();
+
+
   const [paiements, setPaiements] = useState<VerifyResultWithData[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [showModalDropDown, setShowModalDropDown] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [usersPerPage] = useState<number>(7);
   const [expand, setExpand] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const isMainRightSidePanelOpen = useSelector((state: any) => state.navigation.main_content_right_panel);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
     key: 'first_name',
     direction: 'asc',
@@ -90,9 +94,8 @@ const Paiements = () => {
     });
   };
 
-  const expandFilteredModalWindow = () => {
-    console.log("coucou")
-    setShowModalDropDown(true);
+  const expandRightSidePanel = () => {
+    dispatch(MAIN_OPEN_RIGHT_SIDE_PANEL()); // Alterne l'affichage de la modale
   };
 
   // Filtrer les paiements selon le terme de recherche
@@ -135,15 +138,10 @@ const Paiements = () => {
                 </div>
               </div>
               <div className={`filter-box ${expand ? 'expanded' : ''}`}>
-                <div className={`filter-box-icon ${expand ? 'expanded' : ''}`} onClick={expandFilteredModalWindow}>
+                <div className={`filter-box-icon ${expand ? 'expanded' : ''}`} onClick={expandRightSidePanel}>
                   <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
                 </div>
               </div>
-              <ModalWithDropdown
-                showModal={showModalDropDown}
-                setShowModal={setShowModal}
-                onApplyFilters={handleApplyFilters}
-              />
           </div>
       </div>
 

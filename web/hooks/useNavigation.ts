@@ -1,5 +1,5 @@
 import { useDispatch, useSelector } from 'react-redux';
-import { OPEN_LEFT_NAVBAR, OPEN_RIGHT_NAVBAR, OPEN_RIGHT_HEADER_PANEL, SELECT } from '../redux/actions';
+import { OPEN_LEFT_NAVBAR, OPEN_RIGHT_NAVBAR, OPEN_RIGHT_HEADER_PANEL, SELECT, MAIN_OPEN_RIGHT_SIDE_PANEL } from '../redux/actions';
 import { useEffect } from 'react';
 
 const useNavbar = () => {
@@ -22,6 +22,10 @@ const useNavbar = () => {
     dispatch(OPEN_RIGHT_HEADER_PANEL());
   };
 
+  const handleToggleMainRightSidePanel = () => {
+    dispatch(MAIN_OPEN_RIGHT_SIDE_PANEL());
+  };
+
   const handleToggleSelect = () => {
     dispatch(OPEN_RIGHT_HEADER_PANEL());
   };
@@ -38,7 +42,7 @@ const useNavbar = () => {
   useEffect(() => {
   }, [navigation.select]);
 
-  return { navigation, handleToggleLeftNavbar, handleToggleRightNavbar, handleToggleRightHeaderPanel, handleToggleSelect };
+  return { navigation, handleToggleLeftNavbar, handleToggleRightNavbar, handleToggleRightHeaderPanel, handleToggleMainRightSidePanel, handleToggleSelect };
 };
 
 export default useNavbar;
