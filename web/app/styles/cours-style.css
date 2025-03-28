@@ -4,6 +4,8 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 10px;
+  margin-right: 20px;
+  margin-left: 20px;
 }
 .class-list-item {
   justify-content: space-between;

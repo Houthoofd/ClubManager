@@ -438,13 +438,11 @@ header.header.left-header-open.right-header-open.dark {
 
 .main-content.dark.right-side-panel-close {
   color: #fff;
-  gap: 20px;
   display: grid;
   grid-template-columns: minmax(0,1fr) 0px;
 }
 .main-content.dark.right-side-panel-open {
   color: #fff;
-  gap: 20px;
   display: grid;
   grid-template-columns: minmax(0,1fr) 247px;
 }
@@ -454,9 +452,6 @@ header.header.left-header-open.right-header-open.dark {
   flex-direction: column;
   gap: 20px;
   display: flex;
-  margin-top: 20px;
-  margin-left: 20px;
-  margin-right: 20px;
 }
 .main-right-side-panel {
   background-color: #11121a;

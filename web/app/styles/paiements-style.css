@@ -2,11 +2,15 @@
   align-items: center;
   display: flex;
   justify-content: space-between;
+  margin-right: 20px;
+  margin-left: 20px;
 }
 .control-header-panel {
   gap: 20px;
   display: flex;
   justify-content: space-between;
+  margin-right: 20px;
+  margin-left: 20px;
 }
 
 .filter-box-icon {
@@ -37,5 +41,5 @@
   display: flex;
 }
 .class-list-item > .icon{
-  
+
 }

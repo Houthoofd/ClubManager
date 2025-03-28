@@ -2,6 +2,8 @@
   display: grid;
   align-items: center;
   grid-template-columns: 70% 30%;
+  margin-right: 20px;
+  margin-left: 20px;
 }
 .utilisateur-header-content {
   display: flex;
@@ -13,6 +15,8 @@
   align-items: center;
   justify-content: flex-end;
   gap: 20px;
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 .pagination > button {
