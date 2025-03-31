@@ -38,11 +38,11 @@ const Compte = () => {
         },
         body : JSON.stringify({prenom: prenom, nom: nom})
       });
-      console.log(response)
       if (!response.ok) {
         throw new Error('Erreur réseau lors de la récupération des informations du compte');
       }
       const result: UserData = await response.json();
+      console.log(result)
       setCompte(result.data); // Mettre à jour l'état avec les données récupérées
     } catch (error) {
       console.error('Erreur lors de la récupération des données:', error);

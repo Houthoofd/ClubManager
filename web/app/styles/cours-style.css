@@ -100,3 +100,10 @@
 .class-list-item.Grappling {
   border-left: 3px solid maroon;
 }
+
+.icon-more-informations {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}

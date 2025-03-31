@@ -62,9 +62,11 @@ const Paiements = () => {
       
       <DataView
         data={paiements}
+        title="Liste des statuts par utilisateur"
+        addExtraColumn={["selected"]}
         excludedColumns={["abonnement_id", "utilisateur_id", "id"]}  // Exclure ces colonnes du tableau
-        columnOrder={["first_name", "last_name", "nom_plan", "montant"]} // Ordre des colonnes
-        excludedFilteredValues={["first_name", "last_name", "date_paiement", "periode_debut", "periode_fin"]}  // Exclure 'first_name' et 'last_name' du menu de filtre
+        columnOrder={["selected","first_name", "last_name", "nom_plan", "montant"]} // Ordre des colonnes
+        excludedFilteredValues={["selected", "first_name", "last_name", "date_paiement", "periode_debut", "periode_fin"]}  // Exclure 'first_name' et 'last_name' du menu de filtre
       />
 
 

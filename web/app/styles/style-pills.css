@@ -1,0 +1,46 @@
+.pills-actions {
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  width: auto;
+  background-color: #11121a;
+  border: 1px solid #222533;
+  border-radius: 5px;
+  gap: 5px;
+  padding-right: 7px;
+  cursor: pointer;
+  color: #b0b3c1;
+
+  svg{
+    width: 30px;
+    height: 20px;
+    fill: #b0b3c1;
+  }
+}
+
+.pills-actions.active {
+  background-color: #222533;
+  color: #fff;
+
+  svg{
+    fill: #fff;
+  }
+}
+
+.pills-actions-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 30px;
+  height: 30px;
+}
+.pills-actions-text {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: auto;
+  height: 30px;
+}
+.pills-actions > .pills-actions-text > span {
+  transform: translateY(-3px);
+}

@@ -1,52 +1,72 @@
 import express from 'express';
 import { Cours } from '../db/clients/cours/cours.js';
-import { CoursData, BookResult, datareservationSchema, VerifyResultWithData, DataInscription } from '@clubmanager/types';
+import { CoursData, BookResult, datareservationSchema, VerifyResultWithData, DataInscription, Utilisateur, UtilisateursParCours } from '@clubmanager/types';
 import { z } from 'zod';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res: any) => {
   try {
     const client = new Cours();
-    
-    // Appel de la méthode pour obtenir les cours
+
+    // Récupérer tous les cours
     const cours: CoursData[] = await client.obtenirLesCours();
 
-    if (cours && cours.length > 0) {
-      console.log('Cours récupérés:', cours);
-      res.status(200).json(cours);  // Répondre avec les cours récupérés
-    } else {
+    if (!cours || cours.length === 0) {
       console.log('Aucun cours trouvé.');
-      res.status(404).json({ message: 'Aucun cours trouvé.' });
+      return res.status(404).json({ message: 'Aucun cours trouvé.' });
     }
+
+    // Ajouter les utilisateurs pour chaque cours
+    const coursAvecUtilisateurs: CoursData[] = await Promise.all(
+      cours.map(async (cour) => {
+        // Récupérer les utilisateurs pour chaque cours
+        const utilisateursParCours: UtilisateursParCours = await client.obtenirUtilisateursParCours(cour.id);
+
+        // Extraire la liste des utilisateurs
+        const utilisateurs: Utilisateur[] = utilisateursParCours.utilisateurs; // Assure-toi d'extraire uniquement les utilisateurs ici
+
+        // Retourner le cours avec les utilisateurs
+        return { ...cour, utilisateurs: utilisateurs || [] }; // Si aucun utilisateur, on retourne un tableau vide
+      })
+    );
+
+    console.log('Cours récupérés avec utilisateurs:', coursAvecUtilisateurs);
+    res.status(200).json(coursAvecUtilisateurs); // Renvoie les cours avec les utilisateurs
   } catch (error) {
-    console.error('Erreur lors de la récupération des cours :', error);
-    res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
+    console.error('Erreur lors de la récupération des cours avec utilisateurs :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours et des utilisateurs.' });
   }
 });
 
-router.get('/:coursId', async (req:any, res:any) => {
-  const coursId = parseInt(req.params.coursId, 10);
-  console.log(`Récupération des utilisateurs pour le cours avec l'ID: ${coursId}`);
-  
-  if (isNaN(coursId)) {
-    return res.status(400).json({ message: 'ID du cours invalide.' });
-  }
-  
+router.get('/:coursId', async (req: any, res: any) => {
   try {
-    const cours = new Cours();
-    const utilisateursParCours = await cours.obtenirUtilisateursParCours(coursId);
-    
-    if (!utilisateursParCours) {
-      return res.status(404).json({ message: 'Aucun utilisateur trouvé pour ce cours.' });
-    }
+    const client = new Cours();
+    const { coursId } = req.params; // Récupère l'ID du cours depuis l'URL
 
-    res.status(200).json(utilisateursParCours);
+
+    // Récupérer les utilisateurs associés à ce cours
+    const utilisateursParCours: UtilisateursParCours = await client.obtenirUtilisateursParCours(coursId);
+
+    // Ajouter les utilisateurs aux données du cours
+    const coursAvecUtilisateurs = { Cours: utilisateursParCours };
+
+    console.log('Cours récupéré avec utilisateurs:', coursAvecUtilisateurs);
+    res.status(200).json(coursAvecUtilisateurs);
+
   } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs par cours:', error);
-    res.status(500).json({ message: 'Erreur serveur lors de la récupération des utilisateurs.' });
+    console.error('Erreur lors de la récupération du cours avec utilisateurs :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
   }
 });
+
+
+
+
+
+
+
+
 
 
 

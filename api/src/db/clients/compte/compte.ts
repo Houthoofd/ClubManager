@@ -35,6 +35,8 @@ export class Compte{
                 grade_id: result.grade_id,
                 abonnement_id: result.abonnement_id
               }));
+
+              console.log(utilisateur)
   
               try {
                 // Récupérer les informations supplémentaires de l'utilisateur

@@ -22,6 +22,17 @@ function formatDateFromISO(isoDateString: string) {
   return `${year}-${month}-${day}`;
 }
 
+interface UserData {
+  prenom: string;
+  nom: string;
+  nom_utilisateur: string;
+  email: string;
+  abonnement_id: number;
+  grade_id: number;
+  status_id: number;
+  date_naissance: string;
+}
+
 
 
 const Cours = () => {
@@ -30,6 +41,7 @@ const Cours = () => {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
+  const [userData, setUserData] = useState<UserData | null>(null);
   const navigate = useNavigate();
 
   const fetchData = async () => {
@@ -39,6 +51,7 @@ const Cours = () => {
         throw new Error('Erreur réseau lors de la récupération des cours');
       }
       const data: CoursData[] = await response.json(); // Assurez-vous que la réponse est bien du type Cours[]
+      console.log(data)
       setCours(data); // Mise à jour de l'état avec les cours récupérés
     } catch (error) {
       console.error('Erreur lors de la récupération des données:', error);
@@ -60,12 +73,11 @@ const Cours = () => {
         throw new Error('Erreur de récupération des participants');
       }
   
-      const participants = await response.json();
-      console.log(participants);  // Affiche les participants dans la console
+      const cours = await response.json();
   
       // Naviguer vers la page des participants avec React Router
       navigate(`/pages/cours/participants`, {
-        state: { participants }  // Vous pouvez passer les données dans le state si nécessaire
+        state: { cours }  // Vous pouvez passer les données dans le state si nécessaire
       });
   
     } catch (error) {
@@ -150,12 +162,20 @@ const Cours = () => {
     }
   };
 
-  
-  
-
   useEffect(() => {
-    fetchData(); // Appel à fetchData lors du montage du composant
-  }, []); // Le tableau vide assure que la requête est faite uniquement au montage
+    const storedData = localStorage.getItem("userData");
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        if (parsedData?.data?.nom && parsedData?.data?.prenom) {
+          setUserData(parsedData.data);
+        }
+      } catch (error) {
+        console.error("Erreur lors du parsing des données utilisateur :", error);
+      }
+    }
+    fetchData();
+  }, []);
 
   return (
     <Provider store={store}>
@@ -173,15 +193,23 @@ const Cours = () => {
         <div className='class-list'>
           {cours.map((coursItem) => {
             return (
-              <div className={`class-list-item ${coursItem.type_cours}`} key={coursItem.id} onClick={() => showParticipants(coursItem.id)}>
+              <div className={`class-list-item ${coursItem.type_cours}`} key={coursItem.id}>
                 <div className='date'>{new Date(coursItem.date_cours).toLocaleDateString()}</div>
                 <div className='type'>{coursItem.type_cours}</div>
                 <div className='heure-debut'>{coursItem.heure_debut}</div>
                 <div className='heure-fin'>{coursItem.heure_fin}</div>
                 {/* Bouton pour réserver ou annuler */}
                 <button onClick={() => toggleReservation(coursItem)}>
-                  {reservations.includes(coursItem.id) ? 'Annuler' : 'Réserver'}
+                  {coursItem.utilisateurs?.some(
+                    (utilisateur) =>
+                      utilisateur.nom === userData?.nom && utilisateur.prenom === userData?.prenom
+                  )
+                    ? "Annuler"
+                    : "Réserver"}
                 </button>
+                <div className='icon-more-informations' onClick={() => showParticipants(coursItem.id)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"/></svg>
+                </div>
               </div>
             );
           })}

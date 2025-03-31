@@ -21,6 +21,7 @@ router.post('/informations', (req, res) => __awaiter(void 0, void 0, void 0, fun
     try {
         const client = new Compte();
         const utilisateur = yield client.obtenirUnUtilisateurParSonNomEtPrenom(prenom, nom);
+        console.log(utilisateur);
         if (utilisateur.isFind) {
             return res.status(200).json(utilisateur.data); // Renvoie les données de l'utilisateur trouvé
         }

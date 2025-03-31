@@ -14,10 +14,11 @@ function formatDateFromISO(isoDateString: string) {
 
 const ParticipantsPage = () => {
   const location = useLocation();
-  const participantsData = location.state?.participants || { utilisateurs: [], date_cours: null };
+  const coursData = location.state?.cours || { utilisateurs: [], date_cours: null };
+
 
   // État pour suivre les statuts des participants
-  const [participants, setParticipants] = useState(participantsData.utilisateurs);
+  const [cours, setParticipants] = useState(coursData.Cours);
 
   // Fonction pour gérer les actions de statut (valider ou annuler)
   const handleStatus = (participantId: number, status: string) => {
@@ -28,11 +29,11 @@ const ParticipantsPage = () => {
   return (
     <div>
       <div className='informations-cours'>
-        <h1>Cours du {participantsData.date_cours ? formatDateFromISO(participantsData.date_cours) : 'Inconnu'}</h1>
-        <h3>Nombre de participants : {participantsData.utilisateurs.length}</h3>
+        <h1>Cours du {cours.date_cours ? formatDateFromISO(cours.date_cours) : 'Inconnu'}</h1> 
+        <h3>Nombre de participants : {cours.utilisateurs?.length}</h3>
       </div>
       <div className='utilisateur-list-infos'>
-        {participantsData.utilisateurs.map((participant: any) => (
+        {cours.utilisateurs.map((participant: any) => (
           <div className='participants-list-item' key={participant.id}>
             <div className='participants-list-item-nom'>{participant.nom}</div>
             <div className='participants-list-item-prenom'>{participant.prenom}</div>

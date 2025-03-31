@@ -49,36 +49,23 @@ export class Cours {
                     reject(error);
                 }
                 else {
-                    if (results.length > 0) {
-                        // Extraire les détails du cours (on suppose qu'ils sont identiques pour tous les résultats)
-                        const coursDetails = {
-                            id: results[0].coursId,
-                            date_cours: results[0].date_cours,
-                            type_cours: results[0].type_cours,
-                            heure_debut: results[0].heure_debut,
-                            heure_fin: results[0].heure_fin
-                        };
-                        // Récupérer la liste des utilisateurs
-                        const utilisateurs = results
-                            .filter((row) => row.utilisateurId !== null) // Exclure les utilisateurs non inscrits
-                            .map((row) => ({
-                            utilisateurId: row.utilisateurId,
-                            nom: row.nom,
-                            prenom: row.prenom
-                        }));
-                        resolve(Object.assign(Object.assign({}, coursDetails), { utilisateurs }));
-                    }
-                    else {
-                        // Aucun utilisateur trouvé, mais les détails du cours sont toujours renvoyés
-                        resolve({
-                            id: coursId,
-                            date_cours: '',
-                            type_cours: '',
-                            heure_debut: '',
-                            heure_fin: '',
-                            utilisateurs: []
-                        });
-                    }
+                    // Filtrer les utilisateurs ayant un ID valide
+                    const utilisateurs = results
+                        .filter((row) => row.utilisateurId !== null) // Exclure les utilisateurs dont l'ID est null
+                        .map((row) => ({
+                        nom: row.nom,
+                        prenom: row.prenom
+                    }));
+                    // Construire un objet UtilisateursParCours avec les utilisateurs
+                    const coursAvecUtilisateurs = {
+                        id: coursId,
+                        date_cours: results.length > 0 ? results[0].date_cours : '',
+                        type_cours: results.length > 0 ? results[0].type_cours : '',
+                        heure_debut: results.length > 0 ? results[0].heure_debut : '',
+                        heure_fin: results.length > 0 ? results[0].heure_fin : '',
+                        utilisateurs: utilisateurs // Liste des utilisateurs filtrée
+                    };
+                    resolve(coursAvecUtilisateurs); // Retourner le cours avec ses utilisateurs
                 }
                 mysqlConnector.close();
             });

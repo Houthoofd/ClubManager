@@ -106,6 +106,7 @@ export class Compte {
                                 grade_id: result.grade_id,
                                 abonnement_id: result.abonnement_id
                             }));
+                            console.log(utilisateur);
                             try {
                                 // Récupérer les informations supplémentaires de l'utilisateur
                                 const informations = yield this.obtenirInformationsUtilisateur(utilisateur[0].prenom, utilisateur[0].nom);

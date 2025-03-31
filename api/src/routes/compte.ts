@@ -23,7 +23,7 @@ router.post('/informations', async (req: any, res: any) => {
   try {
     const client = new Compte();
     const utilisateur: VerifyResultWithData = await client.obtenirUnUtilisateurParSonNomEtPrenom(prenom, nom);
-
+    console.log(utilisateur)
     if (utilisateur.isFind) {
       return res.status(200).json(utilisateur.data);  // Renvoie les données de l'utilisateur trouvé
     } else {

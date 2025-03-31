@@ -7,10 +7,10 @@ export type CoursData = {
   type_cours: string;
   heure_debut: string;
   heure_fin: string;
+  utilisateurs ?: Utilisateur[]
 };
 
 export type Utilisateur = {
-  utilisateurId: number;
   nom: string;
   prenom: string;
 };

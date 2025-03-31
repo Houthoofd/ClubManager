@@ -1,4 +1,4 @@
-import { VerifyResultWithData, ConfirmationResult, CoursData, DataReservation, BookResult, DataInscription, UtilisateursParCours} from '@clubmanager/types';
+import { VerifyResultWithData, ConfirmationResult, CoursData, DataReservation, BookResult, DataInscription, UtilisateursParCours, Utilisateur} from '@clubmanager/types';
 import MysqlConnector from '../../connector/mysqlconnector.js';
 
 export class Cours {
@@ -47,7 +47,7 @@ export class Cours {
         WHERE 
           c.id = ?
       `;
-      
+  
       const values = [coursId];
   
       console.log("Exécution de la requête pour récupérer les utilisateurs inscrits au cours", coursId);
@@ -57,42 +57,31 @@ export class Cours {
           console.error('Erreur lors de la récupération des utilisateurs par cours : ' + error.message);
           reject(error);
         } else {
-          if (results.length > 0) {
-            // Extraire les détails du cours (on suppose qu'ils sont identiques pour tous les résultats)
-            const coursDetails = {
-              id: results[0].coursId,
-              date_cours: results[0].date_cours,
-              type_cours: results[0].type_cours,
-              heure_debut: results[0].heure_debut,
-              heure_fin: results[0].heure_fin
-            };
+          // Filtrer les utilisateurs ayant un ID valide
+          const utilisateurs: Utilisateur[] = results
+            .filter((row: any) => row.utilisateurId !== null) // Exclure les utilisateurs dont l'ID est null
+            .map((row: any) => ({
+              nom: row.nom,
+              prenom: row.prenom
+            }));
   
-            // Récupérer la liste des utilisateurs
-            const utilisateurs = results
-              .filter((row: any) => row.utilisateurId !== null) // Exclure les utilisateurs non inscrits
-              .map((row: any) => ({
-                utilisateurId: row.utilisateurId,
-                nom: row.nom,
-                prenom: row.prenom
-              }));
+          // Construire un objet UtilisateursParCours avec les utilisateurs
+          const coursAvecUtilisateurs: UtilisateursParCours = {
+            id: coursId,
+            date_cours: results.length > 0 ? results[0].date_cours : '',
+            type_cours: results.length > 0 ? results[0].type_cours : '',
+            heure_debut: results.length > 0 ? results[0].heure_debut : '',
+            heure_fin: results.length > 0 ? results[0].heure_fin : '',
+            utilisateurs: utilisateurs // Liste des utilisateurs filtrée
+          };
   
-            resolve({ ...coursDetails, utilisateurs });
-          } else {
-            // Aucun utilisateur trouvé, mais les détails du cours sont toujours renvoyés
-            resolve({
-              id: coursId,
-              date_cours: '',
-              type_cours: '',
-              heure_debut: '',
-              heure_fin: '',
-              utilisateurs: []
-            });
-          }
+          resolve(coursAvecUtilisateurs); // Retourner le cours avec ses utilisateurs
         }
         mysqlConnector.close();
       });
     });
   }
+  
   
   
 
