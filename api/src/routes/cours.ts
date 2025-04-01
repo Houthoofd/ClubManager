@@ -1,6 +1,6 @@
 import express from 'express';
 import { Cours } from '../db/clients/cours/cours.js';
-import { CoursData, BookResult, datareservationSchema, VerifyResultWithData, DataInscription, Utilisateur, UtilisateursParCours } from '@clubmanager/types';
+import { CoursData, BookResult, datareservationSchema, datannulationSchema, datavalidationSchema, DataInscription, Utilisateur, UtilisateursParCours, DataReservation, DataAnnulation, DataValidation } from '@clubmanager/types';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -62,18 +62,10 @@ router.get('/:coursId', async (req: any, res: any) => {
 
 
 
-
-
-
-
-
-
-
-
 router.post('/inscription', async (req: any, res: any) => {
   try {
     // Validation des données entrantes
-    const validatedData = datareservationSchema.parse(req.body);
+    const validatedData:DataReservation = datareservationSchema.parse(req.body);
     console.log("Données validées :", validatedData);
 
     const client = new Cours();
@@ -130,11 +122,71 @@ router.post('/inscription', async (req: any, res: any) => {
   }
 });
 
+router.patch("/inscription/annulation", async (req: any, res: any) => {
+  try {
+    // Validation des données entrantes
+    console.log("annulation" + req.body)
+    const validatedData: DataAnnulation = datannulationSchema.parse(req.body);
+    console.log("Données validées :", validatedData);
+
+    const client = new Cours();
+    const annulationReussie = await client.annulerUtilisateurAuCours(validatedData);
+
+    if (annulationReussie) {
+      res.status(200).json({ message: "Présence annulée avec succès." });
+    } else {
+      res.status(404).json({ message: "Présence non trouvée ou déjà annulée." });
+    }
+  } catch (error) {
+    console.error("Erreur lors de l'annulation :", error);
+    res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
+  }
+});
+
+router.patch("/inscription/validation", async (req: any, res: any) => {
+  try {
+    // Validation des données entrantes
+    console.log("validation" + req.body)
+    const validatedData: DataValidation = datavalidationSchema.parse(req.body);
+    console.log("Données validées :", validatedData);
+
+    const client = new Cours();
+    const validationReussie = await client.validerUtilisateurAuCours(validatedData);
+
+    if (validationReussie) {
+      res.status(200).json({ message: "Présence validée avec succès." });
+    } else {
+      res.status(404).json({ message: "Présence non trouvée ou déjà annulée." });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la confirmation de la présence :", error);
+    res.status(500).json({ message: "Erreur lors de la confirmation de la présence" });
+  }
+});
 
 
 
 
 
+router.delete("/annulation", async (req: any, res: any) => {
+  try {
+    // Validation des données entrantes
+    const validatedData: DataAnnulation = datannulationSchema.parse(req.body);
+    console.log("Données validées :", validatedData);
+
+    const client = new Cours();
+    const annulationReussie = await client.desinscrireUtilisateurDuCours(validatedData);
+
+    if (annulationReussie) {
+      res.status(200).json({ message: "Réservation annulée avec succès." });
+    } else {
+      res.status(404).json({ message: "Réservation non trouvée ou déjà annulée." });
+    }
+  } catch (error) {
+    console.error("Erreur lors de l'annulation :", error);
+    res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
+  }
+});
 
 
 export default router;

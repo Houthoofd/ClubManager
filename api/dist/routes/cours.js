@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import express from 'express';
 import { Cours } from '../db/clients/cours/cours.js';
-import { datareservationSchema } from '@clubmanager/types';
+import { datareservationSchema, datannulationSchema, datavalidationSchema } from '@clubmanager/types';
 import { z } from 'zod';
 const router = express.Router();
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -106,6 +106,65 @@ router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, func
             console.error("Erreur lors de l'inscription de l'utilisateur :", error);
             res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
         }
+    }
+}));
+router.patch("/inscription/annulation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Validation des données entrantes
+        console.log("annulation" + req.body);
+        const validatedData = datannulationSchema.parse(req.body);
+        console.log("Données validées :", validatedData);
+        const client = new Cours();
+        const annulationReussie = yield client.annulerUtilisateurAuCours(validatedData);
+        if (annulationReussie) {
+            res.status(200).json({ message: "Présence annulée avec succès." });
+        }
+        else {
+            res.status(404).json({ message: "Présence non trouvée ou déjà annulée." });
+        }
+    }
+    catch (error) {
+        console.error("Erreur lors de l'annulation :", error);
+        res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
+    }
+}));
+router.patch("/inscription/validation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Validation des données entrantes
+        console.log("validation" + req.body);
+        const validatedData = datavalidationSchema.parse(req.body);
+        console.log("Données validées :", validatedData);
+        const client = new Cours();
+        const validationReussie = yield client.validerUtilisateurAuCours(validatedData);
+        if (validationReussie) {
+            res.status(200).json({ message: "Présence validée avec succès." });
+        }
+        else {
+            res.status(404).json({ message: "Présence non trouvée ou déjà annulée." });
+        }
+    }
+    catch (error) {
+        console.error("Erreur lors de la confirmation de la présence :", error);
+        res.status(500).json({ message: "Erreur lors de la confirmation de la présence" });
+    }
+}));
+router.delete("/annulation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Validation des données entrantes
+        const validatedData = datannulationSchema.parse(req.body);
+        console.log("Données validées :", validatedData);
+        const client = new Cours();
+        const annulationReussie = yield client.desinscrireUtilisateurDuCours(validatedData);
+        if (annulationReussie) {
+            res.status(200).json({ message: "Réservation annulée avec succès." });
+        }
+        else {
+            res.status(404).json({ message: "Réservation non trouvée ou déjà annulée." });
+        }
+    }
+    catch (error) {
+        console.error("Erreur lors de l'annulation :", error);
+        res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
     }
 }));
 export default router;

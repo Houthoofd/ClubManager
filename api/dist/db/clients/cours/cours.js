@@ -31,7 +31,8 @@ export class Cours {
           c.heure_fin,
           u.id AS utilisateurId,
           u.last_name AS nom,
-          u.first_name AS prenom
+          u.first_name AS prenom,
+          i.status_id 
         FROM 
           cours c
         LEFT JOIN 
@@ -39,7 +40,7 @@ export class Cours {
         LEFT JOIN 
           utilisateurs u ON u.id = i.utilisateur_id
         WHERE 
-          c.id = ?
+          c.id = ?;
       `;
             const values = [coursId];
             console.log("Exécution de la requête pour récupérer les utilisateurs inscrits au cours", coursId);
@@ -54,7 +55,8 @@ export class Cours {
                         .filter((row) => row.utilisateurId !== null) // Exclure les utilisateurs dont l'ID est null
                         .map((row) => ({
                         nom: row.nom,
-                        prenom: row.prenom
+                        prenom: row.prenom,
+                        presence: row.status_id
                     }));
                     // Construire un objet UtilisateursParCours avec les utilisateurs
                     const coursAvecUtilisateurs = {
@@ -164,6 +166,98 @@ export class Cours {
                     console.log(message);
                     mysqlConnector.close(); // Fermeture de la connexion après réussite
                     resolve({ isConfirm: true, message });
+                }
+            });
+        });
+    }
+    desinscrireUtilisateurDuCours(data) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            // Requête pour supprimer l'inscription en récupérant d'abord l'ID utilisateur
+            const sql = `
+            DELETE FROM inscriptions
+            WHERE cours_id = ? 
+            AND utilisateur_id = (SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? LIMIT 1);
+        `;
+            const values = [data.cours_id, data.utilisateur_nom, data.utilisateur_prenom];
+            console.log("Exécution de la requête pour désinscrire l'utilisateur du cours");
+            mysqlConnector.query(sql, values, (error, results) => {
+                if (error) {
+                    console.error("Erreur lors de la désinscription : " + error.message);
+                    mysqlConnector.close();
+                    reject({ message: "Erreur lors de la désinscription.", error: error.message });
+                }
+                else if (results.affectedRows === 0) {
+                    console.warn("Aucune inscription trouvée.");
+                    mysqlConnector.close();
+                    resolve({ isConfirm: false, message: "Aucune inscription trouvée pour cet utilisateur et ce cours." });
+                }
+                else {
+                    console.log(`L'utilisateur ${data.utilisateur_nom} ${data.utilisateur_prenom} a été désinscrit du cours ${data.cours_id}.`);
+                    mysqlConnector.close();
+                    resolve({ isConfirm: true, message: `L'utilisateur ${data.utilisateur_nom} ${data.utilisateur_prenom} a été désinscrit du cours ${data.cours_id}.` });
+                }
+            });
+        });
+    }
+    validerUtilisateurAuCours(data) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            // Mise à jour du status_id à 1 (validé)
+            const sql = `
+            UPDATE inscriptions
+            SET status_id = 1
+            WHERE cours_id = ? 
+            AND utilisateur_id = (SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? LIMIT 1);
+        `;
+            const values = [data.cours_id, data.utilisateur_nom, data.utilisateur_prenom];
+            console.log("Exécution de la requête pour valider l'inscription");
+            mysqlConnector.query(sql, values, (error, results) => {
+                if (error) {
+                    console.error("Erreur lors de la validation : " + error.message);
+                    mysqlConnector.close();
+                    reject({ message: "Erreur lors de la validation.", error: error.message });
+                }
+                else if (results.affectedRows === 0) {
+                    console.warn("Aucune inscription trouvée.");
+                    mysqlConnector.close();
+                    resolve({ isConfirm: false, message: "Aucune inscription trouvée pour cet utilisateur et ce cours." });
+                }
+                else {
+                    console.log(`L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été validée.`);
+                    mysqlConnector.close();
+                    resolve({ isConfirm: true, message: `L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été validée.` });
+                }
+            });
+        });
+    }
+    annulerUtilisateurAuCours(data) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            // Mise à jour du status_id à 0 (annulé)
+            const sql = `
+            UPDATE inscriptions
+            SET status_id = 0
+            WHERE cours_id = ? 
+            AND utilisateur_id = (SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? LIMIT 1);
+        `;
+            const values = [data.cours_id, data.utilisateur_nom, data.utilisateur_prenom];
+            console.log("Exécution de la requête pour annuler l'inscription");
+            mysqlConnector.query(sql, values, (error, results) => {
+                if (error) {
+                    console.error("Erreur lors de l'annulation : " + error.message);
+                    mysqlConnector.close();
+                    reject({ message: "Erreur lors de l'annulation.", error: error.message });
+                }
+                else if (results.affectedRows === 0) {
+                    console.warn("Aucune inscription trouvée.");
+                    mysqlConnector.close();
+                    resolve({ isConfirm: false, message: "Aucune inscription trouvée pour cet utilisateur et ce cours." });
+                }
+                else {
+                    console.log(`L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été annulée.`);
+                    mysqlConnector.close();
+                    resolve({ isConfirm: true, message: `L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été annulée.` });
                 }
             });
         });

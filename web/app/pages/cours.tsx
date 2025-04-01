@@ -74,7 +74,7 @@ const Cours = () => {
       }
   
       const cours = await response.json();
-  
+      console.log(cours)
       // Naviguer vers la page des participants avec React Router
       navigate(`/pages/cours/participants`, {
         state: { cours }  // Vous pouvez passer les données dans le state si nécessaire
@@ -90,77 +90,87 @@ const Cours = () => {
   
   
 
-  const toggleReservation = async (coursItem: CoursData) => {
-    console.log(coursItem)
+  const toggleReservation = async (coursItem: CoursData, buttonText:any) => {
+    console.log(coursItem);
     const convertedId = convertToNumber(coursItem.id);
-
-    // Récupérer les données stockées dans localStorage
+  
+    // Vérifier si l'ID du cours est valide
+    if (convertedId === null) {
+      console.error("L'ID du cours n'est pas valide");
+      return;
+    }
+  
+    // Récupérer les données utilisateur depuis le localStorage
     const storedData = localStorage.getItem("userData");
-    
-    // Vérifier si les données existent dans localStorage
     if (!storedData) {
       console.error("Aucune donnée utilisateur trouvée dans localStorage");
       return;
     }
-    
-    // Essayer de parser les données JSON
+  
     let parsedData;
     try {
       parsedData = JSON.parse(storedData);
     } catch (error) {
-      console.error("Erreur lors du parsing des données utilisateur : ", error);
+      console.error("Erreur lors du parsing des données utilisateur :", error);
       return;
     }
-
-    // Si la conversion échoue (retourne null), on ne fait rien
-    if (convertedId === null) {
-      console.error("L'ID du cours n'est pas valide");
-      return; // Arrêter l'exécution si l'ID est invalide
-    }
-
-    // S'assurer que les données utilisateur sont présentes
+  
     if (!parsedData?.data?.nom || !parsedData?.data?.prenom) {
       console.error("Les données utilisateur sont incomplètes");
       return;
     }
-
+  
     const dataToSend: DataReservation = {
       cours_id: convertedId,
       utilisateur_nom: parsedData.data.nom,
-      utilisateur_prenom: parsedData.data.prenom
+      utilisateur_prenom: parsedData.data.prenom,
     };
-
-    console.log(dataToSend)
-
-    // Gérer la réservation ou l'annulation
-    if (reservations.includes(convertedId)) {
-      setReservations(reservations.filter(id => id !== convertedId)); // Annuler la réservation
-    } else {
-      try {
-        const response = await fetch('http://localhost:3000/cours/inscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+  
+    try {
+      if (buttonText.innerHTML === "Annuler") {
+        // Annuler l'inscription
+        const response = await fetch("http://localhost:3000/cours/annulation", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(dataToSend),
         });
   
         const data = await response.json();
         if (response.ok) {
-          console.log('Utilisateur inscrit avec succès', data);
-          setModalMessage(`Vous êtes inscrit au cours du ${formatDateFromISO(coursItem.date_cours)}`);
+          setReservations(reservations.filter((id) => id !== convertedId));
+          console.log("Annulation réussie", data);
+          setModalMessage(data.message);
           setShowModal(true);
         } else {
-          console.error('Erreur de l\'API:', data.message || 'Erreur inconnue');
+          console.log("Erreur", data.message);
           setModalMessage(data.message);
           setShowModal(true);
         }
-      } catch (error) {
-        console.error('Erreur de connexion:', error);
+      } else {
+        // Réserver un cours
+        const response = await fetch("http://localhost:3000/cours/inscription", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataToSend),
+        });
+  
+        const data = await response.json();
+        if (response.ok) {
+          console.log("Utilisateur inscrit avec succès", data);
+          setReservations([...reservations, convertedId]); // Ajoute l'ID à la liste des réservations
+          setModalMessage(`Vous êtes inscrit au cours du ${formatDateFromISO(coursItem.date_cours)}`);
+          setShowModal(true);
+        } else {
+          console.error("Erreur API inscription :", data.message);
+          setModalMessage(data.message);
+          setShowModal(true);
+        }
       }
-      setReservations([...reservations, convertedId]); // Réserver le cours
+    } catch (error) {
+      console.error("Erreur de connexion :", error);
     }
   };
+  
 
   useEffect(() => {
     const storedData = localStorage.getItem("userData");
@@ -199,7 +209,9 @@ const Cours = () => {
                 <div className='heure-debut'>{coursItem.heure_debut}</div>
                 <div className='heure-fin'>{coursItem.heure_fin}</div>
                 {/* Bouton pour réserver ou annuler */}
-                <button onClick={() => toggleReservation(coursItem)}>
+                <button
+                  onClick={(event) => toggleReservation(coursItem, event.target)}
+                >
                   {coursItem.utilisateurs?.some(
                     (utilisateur) =>
                       utilisateur.nom === userData?.nom && utilisateur.prenom === userData?.prenom
@@ -207,6 +219,7 @@ const Cours = () => {
                     ? "Annuler"
                     : "Réserver"}
                 </button>
+
                 <div className='icon-more-informations' onClick={() => showParticipants(coursItem.id)}>
                   <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"/></svg>
                 </div>

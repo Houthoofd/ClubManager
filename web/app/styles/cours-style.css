@@ -107,3 +107,10 @@
   align-items: center;
   cursor: pointer;
 }
+
+.participants-list-item.present {
+  background-color: #0080007a;
+}
+.participants-list-item.pas-present {
+  background-color: #ff00004a;
+}

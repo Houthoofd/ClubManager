@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.datareservationSchema = exports.coursdataSchema = void 0;
+exports.datavalidationSchema = exports.datannulationSchema = exports.datareservationSchema = exports.coursdataSchema = void 0;
 const zod_1 = require("zod");
 // Schéma Zod pour valider les données d'Abonnement
 exports.coursdataSchema = zod_1.z.object({
@@ -12,7 +12,17 @@ exports.coursdataSchema = zod_1.z.object({
 });
 // Schéma Zod pour valider les données d'Abonnement
 exports.datareservationSchema = zod_1.z.object({
-    cours_id: zod_1.z.number().positive("L'ID de l'abonnement doit être un nombre positif"),
+    cours_id: zod_1.z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
+    utilisateur_nom: zod_1.z.string().min(1, "Le nom de l'utilisateur est requis"),
+    utilisateur_prenom: zod_1.z.string().min(1, "Le prenom de l'utilisateur est requis")
+});
+exports.datannulationSchema = zod_1.z.object({
+    cours_id: zod_1.z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
+    utilisateur_nom: zod_1.z.string().min(1, "Le nom de l'utilisateur est requis"),
+    utilisateur_prenom: zod_1.z.string().min(1, "Le prenom de l'utilisateur est requis")
+});
+exports.datavalidationSchema = zod_1.z.object({
+    cours_id: zod_1.z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
     utilisateur_nom: zod_1.z.string().min(1, "Le nom de l'utilisateur est requis"),
     utilisateur_prenom: zod_1.z.string().min(1, "Le prenom de l'utilisateur est requis")
 });

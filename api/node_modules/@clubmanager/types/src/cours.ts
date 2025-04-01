@@ -13,6 +13,7 @@ export type CoursData = {
 export type Utilisateur = {
   nom: string;
   prenom: string;
+  presence: number
 };
 
 export type UtilisateursParCours = CoursData & {
@@ -20,6 +21,18 @@ export type UtilisateursParCours = CoursData & {
 };
 
 export type DataReservation = {
+  cours_id : number,
+  utilisateur_nom: string,
+  utilisateur_prenom: string
+}
+
+export type DataAnnulation = {
+  cours_id : number,
+  utilisateur_nom: string,
+  utilisateur_prenom: string
+}
+
+export type DataValidation = {
   cours_id : number,
   utilisateur_nom: string,
   utilisateur_prenom: string
@@ -42,7 +55,19 @@ export const coursdataSchema = z.object({
 
 // Schéma Zod pour valider les données d'Abonnement
 export const datareservationSchema = z.object({
-  cours_id: z.number().positive("L'ID de l'abonnement doit être un nombre positif"),
+  cours_id: z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
+  utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
+  utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
+});
+
+export const datannulationSchema = z.object({
+  cours_id: z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
+  utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
+  utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
+});
+
+export const datavalidationSchema = z.object({
+  cours_id: z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
   utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
   utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
 });

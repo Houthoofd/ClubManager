@@ -10,11 +10,22 @@ export type CoursData = {
 export type Utilisateur = {
     nom: string;
     prenom: string;
+    presence: number;
 };
 export type UtilisateursParCours = CoursData & {
     utilisateurs: Utilisateur[];
 };
 export type DataReservation = {
+    cours_id: number;
+    utilisateur_nom: string;
+    utilisateur_prenom: string;
+};
+export type DataAnnulation = {
+    cours_id: number;
+    utilisateur_nom: string;
+    utilisateur_prenom: string;
+};
+export type DataValidation = {
     cours_id: number;
     utilisateur_nom: string;
     utilisateur_prenom: string;
@@ -44,6 +55,32 @@ export declare const coursdataSchema: z.ZodObject<{
     heure_fin: string;
 }>;
 export declare const datareservationSchema: z.ZodObject<{
+    cours_id: z.ZodNumber;
+    utilisateur_nom: z.ZodString;
+    utilisateur_prenom: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    cours_id: number;
+    utilisateur_nom: string;
+    utilisateur_prenom: string;
+}, {
+    cours_id: number;
+    utilisateur_nom: string;
+    utilisateur_prenom: string;
+}>;
+export declare const datannulationSchema: z.ZodObject<{
+    cours_id: z.ZodNumber;
+    utilisateur_nom: z.ZodString;
+    utilisateur_prenom: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    cours_id: number;
+    utilisateur_nom: string;
+    utilisateur_prenom: string;
+}, {
+    cours_id: number;
+    utilisateur_nom: string;
+    utilisateur_prenom: string;
+}>;
+export declare const datavalidationSchema: z.ZodObject<{
     cours_id: z.ZodNumber;
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;

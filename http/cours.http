@@ -8,3 +8,7 @@ GET http://localhost:3000/cours/3?extended
 ###
 
 GET http://localhost:3000/cours/3/
+
+###
+
+PUT http://localhost:3000/cours/inscription/validation
