@@ -31,8 +31,8 @@ router.get('/', async (req: any, res: any) => {
       })
     );
 
-    console.log('Cours récupérés avec utilisateurs:', coursAvecUtilisateurs);
-    res.status(200).json(coursAvecUtilisateurs); // Renvoie les cours avec les utilisateurs
+    console.log('Cours récupérés avec utilisateurs:', cours);
+    res.status(200).json(cours); // Renvoie les cours avec les utilisateurs
   } catch (error) {
     console.error('Erreur lors de la récupération des cours avec utilisateurs :', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours et des utilisateurs.' });

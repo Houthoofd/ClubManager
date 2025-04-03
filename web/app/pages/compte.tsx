@@ -3,6 +3,8 @@ import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { UserData } from '@clubmanager/types';
 import { Tabs, TabPanel } from '../../components/ui/tabs';
+import Graph from '../../components/ui/chart';
+import DataView from '../../components/ui/dataview';
 
 function formatDateForInput(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -15,6 +17,21 @@ function formatDateForInput(isoDateString: string) {
 const Compte = () => {
   const [compte, setCompte] = useState<UserData | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  const data = {
+    Jan: 3,
+    Fév: 5,
+    Mar: 7,
+    Avr: 2,
+    Mai: 6,
+    Juin: 1,
+    Juil: 4,
+    Août: 5,
+    Sep: 3,
+    Oct: 6,
+    Nov: 2,
+    Déc: 7
+  };
 
   // Récupérer les données du localStorage au montage du composant
   useEffect(() => {
@@ -141,7 +158,13 @@ const Compte = () => {
           </div>
         </TabPanel>
         <TabPanel label="Paiements"></TabPanel>
-        <TabPanel label="Statistiques"></TabPanel>
+        <TabPanel label="Statistiques">
+          
+          <Graph
+            title="Présence par mois"
+            data={data}
+          />
+        </TabPanel>
       </Tabs>
     </Provider>
   );

@@ -17,7 +17,7 @@
   "include": [
     "src/**/*",  // Inclut tous les fichiers source dans le dossier src
     "types/**/*"  // Inclut tous les fichiers types à la racine du projet
-  ],
+, "../web/scripts/generateData.ts"  ],
   "exclude": [
     "node_modules",  // Exclut les modules node
     "dist"  // Exclut le dossier dist de la compilation

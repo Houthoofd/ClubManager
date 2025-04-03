@@ -5,7 +5,7 @@ import store from '../../redux/store';
 import { VerifyResultWithData } from '@clubmanager/types';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/ui/modal';
-import DataView, {DataViewProps} from '../../components/ui/dataview';
+import DataView  from '../../components/ui/dataview';
 import '../styles/paiements-style.css';
 import { MAIN_OPEN_RIGHT_SIDE_PANEL } from '@/redux/actions';
 

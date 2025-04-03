@@ -10,6 +10,7 @@ import NotificationList from '../ui/notification-list';
 import { OPEN_RIGHT_NAVBAR } from '@/redux/actions';
 import Modal from '../../components/ui/modal';
 import Breadcrumb from '../../components/ui/breadcrumb';
+import DropdownMenu from '../../components/ui/dropdown-menu'
 
 interface MainLayoutProps {
   children?: ReactNode;

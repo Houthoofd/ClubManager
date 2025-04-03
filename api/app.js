@@ -30,11 +30,16 @@ app.use(cors(corsOptions));
 
 // Utilisation du routeur pour la racine
 app.use('/', indexRouter);
+const publicPath = path.join(__dirname, 'public');
+console.log("Chemin du dossier public :", publicPath);
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
+
 
 // error handler
 app.use(function(err, req, res, next) {

@@ -84,9 +84,14 @@ const ParticipantsPage = () => {
       <div className='utilisateur-list-infos'>
   {participants.map((utilisateur) => (
     <div 
-      className={`participants-list-item ${utilisateur.presence === 1 ? "present" : "pas-present"}`} 
-      key={utilisateur.id}
-    >
+    className={`participants-list-item 
+      ${utilisateur.presence === 1 ? "present" 
+      : utilisateur.presence === 0 ? "pas-present" 
+      : utilisateur.presence === null ? "no-status" 
+      : ""}`} 
+    key={utilisateur.id}
+  >
+  
       <div className='participants-list-item-nom'>{utilisateur.nom}</div>
       <div className='participants-list-item-prenom'>{utilisateur.prenom}</div>
       <div className='participants-list-item-icon validate' 

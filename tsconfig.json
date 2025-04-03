@@ -11,6 +11,6 @@
     "shared/**/*",
     "web/**/*",
     "node_modules/@types/**/*"
-  ],
+, "scripts/generateData.ts"  ],
   "extends": "expo/tsconfig.base"
 }

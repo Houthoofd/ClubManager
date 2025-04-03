@@ -30,8 +30,8 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             // Retourner le cours avec les utilisateurs
             return Object.assign(Object.assign({}, cour), { utilisateurs: utilisateurs || [] }); // Si aucun utilisateur, on retourne un tableau vide
         })));
-        console.log('Cours récupérés avec utilisateurs:', coursAvecUtilisateurs);
-        res.status(200).json(coursAvecUtilisateurs); // Renvoie les cours avec les utilisateurs
+        console.log('Cours récupérés avec utilisateurs:', cours);
+        res.status(200).json(cours); // Renvoie les cours avec les utilisateurs
     }
     catch (error) {
         console.error('Erreur lors de la récupération des cours avec utilisateurs :', error);
