@@ -4,6 +4,14 @@
   overflow: hidden;
   justify-content: space-between;
 }
+.expand-menu.close:hover,
+.expand-menu.open:hover {
+  color: #fff;
+   svg{
+    fill: #fff;
+   }
+}
+
 
 .expand-menu.close {
   max-height: 40px;
@@ -21,6 +29,7 @@
 }
 .expand-menu.close:hover{
   background-color: #222533;
+  color: #fff;
 }
 .expand-menu.open {
   max-height: 500px;
@@ -29,7 +38,6 @@
   align-items: center;
   font-size: 15px;
   cursor: pointer;
-  gap: 10px;
   width: 100%;
   transition: max-height 0.3s ease-out;
 
