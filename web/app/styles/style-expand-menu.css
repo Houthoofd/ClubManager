@@ -1,0 +1,75 @@
+.expand-menu.close {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  width: 100%;
+
+  svg{
+    fill: #fff;
+  }
+}
+.expand-menu.open {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  gap: 10px;
+  width: 100%;
+
+  svg{
+    fill: #fff;
+  }
+}
+.expand-menu > .menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+.expand-menu > .menu-header > span.menu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+
+  svg{
+    fill: #5f6368;
+  }
+}
+.expand-menu > .menu-header > span.icon-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+
+  svg{
+    fill: #5f6368;;
+  }
+}
+
+
+.expand-menu > ul.menu-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 15px;
+  list-style: none;
+  background-color: #222533;
+  width: 100%;
+}
+.expand-menu > ul.menu-list > li.menu-item {
+  margin-left: 10px;
+}
+.expand-menu > ul.menu-list > li.menu-item:first-child {
+  margin-top: 10px;
+}
+.expand-menu > ul.menu-list > li.menu-item:last-child {
+  margin-bottom: 10px;
+}

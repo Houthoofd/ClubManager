@@ -7,7 +7,8 @@ import Dashboard from '../app/pages/dashboard';
 import Connexion from '../app/pages/connexion';
 import Enregistrement from '../app/pages/enregistrement';
 import Chat from '../app/pages/chat';
-import Magasin from '../app/pages/magasin';
+import Magasin from '../app/pages/magasin/magasin';
+import AjouterArticle from '../app/pages/magasin/ajouterArticle';
 import Settings from '../app/pages/settings';
 import Compte from '../app/pages/compte';
 import Utilisateurs from '../app/pages/utilisateurs';
@@ -31,7 +32,8 @@ const App = () => {
             <Route path="/pages/messages" element={<Messages />} />
             <Route path="/pages/connexion" element={<Connexion />} />
             <Route path="/pages/chat" element={<Chat />} />
-            <Route path="/pages/magasin" element={<Magasin />} />
+            <Route path="/pages/magasin/articles" element={<Magasin />} />
+            <Route path="/pages/magasin/ajouter_article" element={<AjouterArticle />} />
             <Route path="/pages/settings" element={<Settings />} />
             <Route path="/pages/compte" element={<Compte />} />
             <Route path="/pages/utilisateurs" element={<Utilisateurs />} />
