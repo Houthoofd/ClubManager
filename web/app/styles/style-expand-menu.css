@@ -125,7 +125,7 @@
   list-style: none;
   display: flex;
   color: #5f6368;
-  font-weight: 700;
+  font-weight: 500;
   text-decoration: none;
   display: flex;
   justify-content: center;
@@ -136,4 +136,35 @@
   display: flex;
   justify-content: flex-start;
   gap: 27px;
+}
+
+
+
+
+.expand-menu.close.unexpand {
+  width: 40px;
+  height: 40px;
+  background-color: #11121a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #222533;
+}
+
+.expand-menu.close.unexpand > .menu-header.close.with-arrow > .menu-icon {
+  width: 40px;
+  height: 40px;
+}
+.expand-menu.close.unexpand > .menu-header.close.with-arrow > .menu-text {
+  display: none;
+}
+.expand-menu.close.unexpand > .menu-header.close.with-arrow > .icon-arrow {
+  display: none;
+}
+.expand-menu.close.unexpand > .menu-header.close.without-arrow > .menu-icon {
+  width: 40px;
+  height: 40px;
+}
+.expand-menu.close.unexpand > .menu-header.close.without-arrow > .menu-text {
+  display: none;
 }

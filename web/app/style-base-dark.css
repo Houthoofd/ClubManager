@@ -473,3 +473,11 @@ header.header.left-header-open.right-header-open.dark {
   border-radius: 10px;
   transform: translateX(7px);
 }
+
+.top-nav {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
+}

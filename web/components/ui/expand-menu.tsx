@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useSelector, useDispatch } from 'react-redux';
 import "../../app/styles/style-expand-menu.css";
 
 export interface ExpandMenuProps {
@@ -11,10 +12,11 @@ export interface ExpandMenuProps {
 
 const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], listUrls = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const isLeftNavbarOpen = useSelector((state: any) => state.navigation.left_navbar);
   const hasSubMenu = subTitles.length > 0 && listUrls.length > 0;
 
   return (
-    <div className={`expand-menu ${isOpen ? "open" : "close"}`}>
+    <div className={`expand-menu ${isOpen ? "open" : "close"} ${isLeftNavbarOpen ? "expand" : "unexpand"}`}>
       <div
         className={`menu-header ${isOpen ? "open" : "close"} ${hasSubMenu ? "with-arrow" : "without-arrow"}`}
         onClick={() => hasSubMenu && setIsOpen(!isOpen)}
