@@ -1,17 +1,30 @@
+.expand-menu {
+  width: 100%;
+  transition: max-height 0.3s ease-out;
+  overflow: hidden;
+  justify-content: space-between;
+}
+
 .expand-menu.close {
-  display: flex;
+  max-height: 40px;
   justify-content: space-between;
   align-items: center;
   color: #fff;
   font-size: 15px;
   cursor: pointer;
   width: 100%;
+  transition: 0.3s ease-out;
+  border-radius: 5px;
 
   svg{
     fill: #fff;
   }
 }
+.expand-menu.close:hover{
+  background-color: #222533;
+}
 .expand-menu.open {
+  max-height: 500px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,16 +33,25 @@
   cursor: pointer;
   gap: 10px;
   width: 100%;
+  transition: max-height 0.3s ease-out;
 
   svg{
     fill: #fff;
   }
 }
-.expand-menu > .menu-header {
+.expand-menu > .menu-header.open {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 15px;
+  width: 100%;
+}
+.expand-menu > .menu-header.close {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  width: 100%;
 }
 .expand-menu > .menu-header > span.menu-icon {
   display: flex;
@@ -55,21 +77,48 @@
 }
 
 
-.expand-menu > ul.menu-list {
+.expand-menu > ul.menu-list.open {
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: auto;
+  list-style: none;
+  display: flex;
+}
+.expand-menu > ul.menu-list.close {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 15px;
   list-style: none;
-  background-color: #222533;
-  width: 100%;
 }
 .expand-menu > ul.menu-list > li.menu-item {
-  margin-left: 10px;
+  display: flex;
+  justify-content: flex-start;
+  list-style: none;
+  color: #fff;
+  max-height: 40px;
+  height: 40px;
+  align-items: center;
+  border-radius: 5px;
+  transition: 0.3s ease-out;
+  width: 100%;
 }
-.expand-menu > ul.menu-list > li.menu-item:first-child {
-  margin-top: 10px;
+.expand-menu > ul.menu-list > li.menu-item:hover{
+  background-color: #222533;
 }
-.expand-menu > ul.menu-list > li.menu-item:last-child {
-  margin-bottom: 10px;
+.expand-menu > ul.menu-list > li.menu-item > a{
+  list-style: none;
+  color: #fff;
+  text-decoration: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: 70px;
+  font-size: 14px;
+}
+.menu-header.close.without-arrow {
+  display: flex;
+  justify-content: flex-start;
+  gap: 27px;
 }
