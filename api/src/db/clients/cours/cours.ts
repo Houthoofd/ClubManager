@@ -1,4 +1,17 @@
-import { VerifyResultWithData, ConfirmationResult, CoursData, DataReservation, BookResult, DataInscription, UtilisateursParCours, Utilisateur, DataAnnulation, DataValidation} from '@clubmanager/types';
+import { 
+  VerifyResultWithData,
+  AjoutCours,
+  JourCours, 
+  ConfirmationResult, 
+  CoursData, 
+  DataReservation, 
+  BookResult, 
+  DataInscription, 
+  UtilisateursParCours, 
+  Utilisateur, 
+  DataAnnulation, 
+  DataValidation
+} from '@clubmanager/types';
 import MysqlConnector from '../../connector/mysqlconnector.js';
 
 export class Cours {
@@ -24,6 +37,153 @@ export class Cours {
       });
     });
   }
+
+  obtenirLesJoursDeCours(): Promise<JourCours[]> {
+    return new Promise<JourCours[]>((resolve, reject) => {
+      const mysqlConnector = new MysqlConnector();
+      const sql = `
+        SELECT DISTINCT 
+          DAYNAME(date_cours) AS jour,
+          type_cours,
+          DATE_FORMAT(heure_debut, '%H:%i') AS heure_debut,
+          DATE_FORMAT(heure_fin, '%H:%i') AS heure_fin
+        FROM cours
+        ORDER BY FIELD(DAYOFWEEK(date_cours), 1, 2, 5, 7);
+      `;
+    
+      console.log("Exécution de la requête pour obtenir les jours de cours...");
+    
+      mysqlConnector.query(sql, [], (error, results) => {
+        if (error) {
+          console.error('Erreur lors de la récupération des jours de cours : ' + error.message);
+          reject(error);
+        } else {
+          // Si on a des résultats, on les formate en fonction de JourCours
+          const joursDeCours: JourCours[] = results.map((result: any) => ({
+            jour: result.jour,
+            type_cours: result.type_cours,
+            heure_debut: result.heure_debut,
+            heure_fin: result.heure_fin
+          }));
+    
+          console.log('Cours récupérés avec succès:', joursDeCours);
+          resolve(joursDeCours);  // On renvoie les résultats formatés en type JourCours[]
+        }
+    
+        mysqlConnector.close();
+      });
+    });
+  }
+  
+
+  ajouterCoursRecurrent(data: AjoutCours): Promise<ConfirmationResult> {
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+      const mysqlConnector = new MysqlConnector();
+  
+      // Mappage des jours de la semaine (lundi = 1, ..., dimanche = 7)
+      const joursDeSemaine: { [key: string]: number } = {
+        lundi: 1,
+        mardi: 2,
+        mercredi: 3,
+        jeudi: 4,
+        vendredi: 5,
+        samedi: 6,
+        dimanche: 7
+      };
+  
+      const jourSemaine = joursDeSemaine[data.jour_semaine.toLowerCase()]; // Convertir le jour du front en nombre
+
+      console.log(jourSemaine)
+  
+      if (!jourSemaine) {
+        reject("Jour de la semaine invalide");
+        return;
+      }
+  
+      // Déterminer le premier jour du cours
+      const start_date = new Date('2024-01-01'); // Commencer avec le 1er janvier de l'année
+      const dayOfWeek = start_date.getDay(); // Jour de la semaine (0 = dimanche, 1 = lundi, ..., 6 = samedi)
+      const daysUntilTargetDay = (jourSemaine - dayOfWeek + 7) % 7;  // Calculer combien de jours jusqu'au jour souhaité
+      start_date.setDate(start_date.getDate() + daysUntilTargetDay);  // Ajuster à la date du premier jour choisi
+  
+      // Définir la date de fin au 31 décembre de la même année
+      const end_date = new Date(start_date);
+      end_date.setFullYear(start_date.getFullYear() + 1);  // Ajouter 1 an pour la fin de l'année
+      end_date.setDate(31);  // Fixer au 31 décembre
+  
+      const formattedEndDate = end_date.toISOString().split('T')[0]; // Format 'YYYY-MM-DD'
+
+      console.log(daysUntilTargetDay)
+  
+      // Étape 1 : Insérer dans cours_recurrent
+      const insertRecurrentSql = `
+        INSERT INTO cours_recurrent (type_cours, jour_semaine, heure_debut, heure_fin)
+        VALUES (?, ?, ?, ?)
+      `;
+  
+      console.log("Exécution de la requête pour insérer le cours récurrent");
+  
+      mysqlConnector.query(
+        insertRecurrentSql,
+        [data.type_cours, jourSemaine, data.heure_debut, data.heure_fin],
+        (error, results) => {
+          if (error) {
+            console.error('Erreur lors de l’ajout du cours récurrent : ' + error.message);
+            mysqlConnector.close();
+            reject(error);
+          } else {
+            console.log('Cours récurrent ajouté avec succès :', results);
+  
+            // Étape 2 : Générer les cours récurrents pour le jour de la semaine choisi
+            console.log("Initialisation de la variable @row");
+            mysqlConnector.query(`SET @row := -1`, [], (setVarError) => {
+              if (setVarError) {
+                console.error('Erreur lors de l’initialisation de la variable @row : ' + setVarError.message);
+                mysqlConnector.close();
+                reject(setVarError);
+              } else {
+                console.log("Insertion des cours générés entre", start_date.toISOString().split('T')[0], "et", formattedEndDate);
+  
+                const insertCoursSql = `
+                  INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin)
+                  SELECT 
+                    DATE_ADD(?, INTERVAL (7 * n) DAY) AS date_cours, 
+                    ?, 
+                    ?, 
+                    ?
+                  FROM 
+                    (SELECT @row := @row + 1 AS n FROM seq_0_to_52) t
+                  WHERE 
+                    DATE_ADD(?, INTERVAL (7 * n) DAY) BETWEEN ? AND ?
+                `;
+  
+                const params = [
+                  start_date.toISOString().split('T')[0], data.type_cours, data.heure_debut, data.heure_fin,
+                  start_date.toISOString().split('T')[0], start_date.toISOString().split('T')[0], formattedEndDate
+                ];
+  
+                mysqlConnector.query(insertCoursSql, params, (insertError, insertResults) => {
+                  if (insertError) {
+                    console.error('Erreur lors de la génération des cours : ' + insertError.message);
+                    mysqlConnector.close();
+                    reject(insertError);
+                  } else {
+                    console.log('Cours générés avec succès :', insertResults);
+                    mysqlConnector.close();
+                    resolve(insertResults);
+                  }
+                });
+              }
+            });
+          }
+        }
+      );
+    });
+  }
+  
+  
+  
+   
 
   obtenirTousLesCours(): Promise<Array<CoursData>> {
     return new Promise((resolve, reject) => {

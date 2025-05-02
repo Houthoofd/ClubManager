@@ -35,6 +35,19 @@ export type DataInscription = {
     utilisateur_id: number;
     status_id: number;
 };
+export type JourCours = {
+    jour: string;
+    type_cours: string;
+    heure_debut: string | null;
+    heure_fin: string | null;
+};
+export type AjoutCours = {
+    heure_debut: string | null;
+    heure_fin: string | null;
+    jour_semaine: string;
+    type_cours: string;
+    professeurs: string[];
+};
 export declare const coursdataSchema: z.ZodObject<{
     id: z.ZodNumber;
     date_cours: z.ZodString;

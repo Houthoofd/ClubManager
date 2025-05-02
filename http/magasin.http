@@ -1,0 +1,37 @@
+## Obtenir tous les articles du magasin
+
+GET http://localhost:3000/magasin/articles
+
+####
+
+## Obtenir toutes les categories d'articles du magasin
+
+GET http://localhost:3000/magasin/articles/categories
+
+###
+
+## Ajouter un article au magasin
+
+POST http://localhost:3000/magasin/articles/ajouter
+Content-Type: application/json
+
+{
+  "nom": "short",
+  "description": "tiens chaud l'hiver",
+  "prix": 50,
+  "image_url": "https://exemple.com/image.jpg",
+  "categorie_id": 1
+}
+
+
+###
+
+## Supprimer un article au magasin
+
+GET http://localhost:3000/magasin/articles/supprimer
+
+###
+
+## Modifier un article au magasin
+
+GET http://localhost:3000/magasin/articles/modifier

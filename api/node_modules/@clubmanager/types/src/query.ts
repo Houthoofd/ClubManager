@@ -11,7 +11,7 @@ export interface VerifyResult {
 export interface VerifyResultWithData {
   isFind: boolean;
   message: string;
-  data: any
+  data: any;
 }
 
 export interface Book {

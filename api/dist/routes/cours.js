@@ -167,4 +167,31 @@ router.delete("/annulation", (req, res) => __awaiter(void 0, void 0, void 0, fun
         res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
     }
 }));
+router.get('/informations/planning', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const client = new Cours();
+        console.log('Appel pour obtenir les jours de cours');
+        const result = yield client.obtenirLesJoursDeCours();
+        console.log('Résultat des jours de cours:', result); // Log du résultat
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des jours de cours :', error);
+        res.status(500).json({ message: "Erreur serveur lors de la récupération des jours de cours" });
+    }
+}));
+router.post('/ajouter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const data = req.body;
+    console.log(data);
+    try {
+        const client = new Cours();
+        // Insertion du cours récurrent
+        yield client.ajouterCoursRecurrent(data);
+        res.status(200).json({ message: 'Cours récurrent ajouté avec succès' });
+    }
+    catch (error) {
+        console.error('Erreur lors de l\'ajout du cours récurrent:', error);
+        res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
+    }
+}));
 export default router;

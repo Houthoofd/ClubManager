@@ -1,0 +1,130 @@
+.ajouter-article {
+  margin-left: 10px;
+  margin-right: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+}
+form {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  display: flex;
+  margin-top: 10px;
+}
+.ajouter-article > form > .input-group {
+  width: 100%;
+  display: flex;
+  justify-content: start;
+  gap: 10px;
+  align-items: center;
+}
+.ajouter-article > form > .input-group:nth-child(3) > button {
+  width: 50px;
+  height: 50px;
+  display: flex; /* Pour centrer le contenu si nécessaire */
+  justify-content: center;
+  align-items: center;
+}
+.ajouter-article > form > .input-group-special {
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  display: grid;
+}
+
+
+.ajouter-article > form > .input-group-special > .taille-group {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
+}
+.ajouter-article > form > .input-group-special > .taille-group > input[type="text"] {
+  background-color: #222533;
+  height: 43px;
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+}
+.ajouter-article > form > .input-group-special > .taille-group > input[type="number"] {
+  background-color: #222533;
+  height: 43px;
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+}
+.ajouter-article > form > .input-group-special > button{
+  width: 50px;
+  height: 50px;
+
+  svg{
+    fill: #fff;
+  }
+}
+.ajouter-article > form > .input-group-special > .taille-group > button{
+  width: 50px;
+  height: 50px;
+
+  svg{
+    fill: #fff;
+  }
+}
+.ajouter-article > form > .input-group > input[type="text"] {
+  background-color: #222533;
+  border: none;
+  color: #fff;
+  height: 23px;
+}
+.ajouter-article > form > .input-group > input[type="number"] {
+  background-color: #222533;
+  border: none;
+  color: #fff;
+  height: 23px;
+}
+.ajouter-article > form > .input-group > input[type="file"] {
+  background-color: #222533;
+  border: none;
+  color: #fff;
+  height: 23px;
+}
+.ajouter-article > form > .input-group > input[type="file"]::-webkit-file-upload-button {
+  background-color: #222533;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.ajouter-article > form > .input-group > textarea {
+  background-color: #222533;
+  border: none;
+  color: #fff;
+  border-radius: 5px;
+}
+.ajouter-article > form > .input-group > button{
+  width: 42px;
+  height: 42px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  svg{
+    fill: #fff;
+  }
+}
+
+button {
+  color: #fff;
+  cursor: pointer;
+  background-color: #5a53ff;
+  border: none;
+  border-radius: 5px;
+  width: 50%;
+  padding: 10px;
+  font-size: 16px;
+}

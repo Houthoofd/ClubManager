@@ -70,7 +70,8 @@ const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], lis
       >
         {isLeftNavbarOpen ? (
           <span className="menu-icon open">
-            <Link className="menu-text" to={listUrls[0] || "#"}>{icon}{text}</Link>
+            <Link className="menu-link" to={listUrls[0] || "#"}>{icon}</Link>
+            <span className="menu-text">{text}</span>
           </span>
         ) : (
           <Link

@@ -14,9 +14,9 @@ export const Modal: React.FC<ModalProps> = ({
   setShowModal,
   message,
   title,
-  redirectUrl = "/", // Si aucune URL n'est passée, redirection vers la racine '/'
+  redirectUrl, // Pas de valeur par défaut
 }) => {
-  const [isRedirecting, setIsRedirecting] = useState(false); // Pour éviter une double redirection
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -24,7 +24,7 @@ export const Modal: React.FC<ModalProps> = ({
         setShowModal(false);
         if (redirectUrl && !isRedirecting) {
           setIsRedirecting(true);
-          window.location.href = redirectUrl; // Redirection vers l'URL donnée
+          window.location.href = redirectUrl;
         }
       }
     };
@@ -41,7 +41,7 @@ export const Modal: React.FC<ModalProps> = ({
     setShowModal(false);
     if (redirectUrl && !isRedirecting) {
       setIsRedirecting(true);
-      window.location.href = redirectUrl; // Redirection vers l'URL donnée
+      window.location.href = redirectUrl;
     }
   };
 

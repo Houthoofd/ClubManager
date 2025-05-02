@@ -19,7 +19,7 @@
   align-items: center;
   font-size: 15px;
   cursor: pointer;
-  width: 100%;
+  width: 150px;
   transition: 0.3s ease-out;
   border-radius: 5px;
 
@@ -66,9 +66,10 @@
 .expand-menu > .menu-header > span.menu-icon {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   width: 40px;
   height: 40px;
+  gap: 10px;
 
   svg{
     fill: #5f6368;
@@ -77,9 +78,10 @@
 .expand-menu > .menu-header > span.icon-arrow {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   width: 40px;
   height: 40px;
+  gap: 10px;
 
   svg{
     fill: #5f6368;;
@@ -149,6 +151,10 @@
   justify-content: center;
   align-items: center;
   border: 1px solid #222533;
+}
+.menu-header.close.with-arrow {
+  display: flex;
+  width: 100%;
 }
 
 .expand-menu.close.unexpand > .menu-header.close.with-arrow > .menu-icon {

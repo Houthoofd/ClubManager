@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Professeur} from './utilisateurs'
 
 
 export type CoursData = {
@@ -43,6 +44,22 @@ export type DataInscription = {
   utilisateur_id: number,
   status_id : number
 }
+
+export type JourCours = {
+  jour : string,
+  type_cours : string,
+  heure_debut: string | null; // Ex: '19:00:00'
+  heure_fin: string | null; 
+}
+
+export type AjoutCours = {
+  heure_debut: string | null; // Ex: '19:00:00'
+  heure_fin: string | null;   // Ex: '21:30:00'
+  jour_semaine: string;
+  type_cours: string;
+  professeurs: string[]; // Array of professor IDs
+};
+
 
 // Schéma Zod pour valider les données d'Abonnement
 export const coursdataSchema = z.object({

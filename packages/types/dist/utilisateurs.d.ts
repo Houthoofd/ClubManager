@@ -25,6 +25,16 @@ export type UserDataSession = {
         abonnement_id: number | null;
     };
 };
+export type Professeur = {
+    id: string;
+    prenom: string;
+    nom: string;
+    nom_utilisateur: string;
+    email: string;
+    genre_id: number;
+    date_naissance: string;
+    grade_id: number;
+};
 export type UserDataLogin = {
     email: string;
     password: string;

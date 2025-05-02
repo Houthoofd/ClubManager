@@ -11,6 +11,7 @@ import Enregistrement from '../app/pages/enregistrement';
 import Chat from '../app/pages/chat';
 import Magasin from '../app/pages/magasin/magasin';
 import AjouterArticle from '../app/pages/magasin/ajouterArticle';
+import ModifierArticle from '../app/pages/magasin/modifierArticle';
 import Settings from '../app/pages/settings';
 import Compte from '../app/pages/compte';
 import Utilisateurs from '../app/pages/utilisateurs';
@@ -44,6 +45,7 @@ const App = () => {
 
             <Route path="/pages/magasin/articles" element={<Magasin />} />
             <Route path="/pages/magasin/ajouter_article" element={<AjouterArticle />} />
+            <Route path="/pages/magasin/modifier_article" element={<ModifierArticle />} />
 
             <Route path="/pages/settings" element={<Settings />} />
 

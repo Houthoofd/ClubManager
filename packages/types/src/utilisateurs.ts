@@ -29,6 +29,18 @@ export type UserDataSession = {
   };
 };
 
+export type Professeur = {
+  id: string; // ou number si l'ID est un entier
+  prenom: string;
+  nom: string;
+  nom_utilisateur: string;
+  email: string;
+  genre_id: number;
+  date_naissance: string;
+  grade_id: number;
+};
+
+
 
 
 export type UserDataLogin = {

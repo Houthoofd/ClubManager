@@ -1,6 +1,19 @@
 import express from 'express';
 import { Cours } from '../db/clients/cours/cours.js';
-import { CoursData, BookResult, datareservationSchema, datannulationSchema, datavalidationSchema, DataInscription, Utilisateur, UtilisateursParCours, DataReservation, DataAnnulation, DataValidation } from '@clubmanager/types';
+import { 
+  CoursData,
+  AjoutCours,
+  BookResult, 
+  datareservationSchema, 
+  datannulationSchema, 
+  datavalidationSchema, 
+  DataInscription, 
+  Utilisateur, 
+  UtilisateursParCours, 
+  DataReservation, 
+  DataAnnulation, 
+  DataValidation 
+} from '@clubmanager/types';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -187,6 +200,37 @@ router.delete("/annulation", async (req: any, res: any) => {
     res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
   }
 });
+
+router.get('/informations/planning', async (req: any, res: any) => {
+  try {
+    const client = new Cours();
+    console.log('Appel pour obtenir les jours de cours');
+    const result = await client.obtenirLesJoursDeCours();
+    console.log('Résultat des jours de cours:', result); // Log du résultat
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des jours de cours :', error);
+    res.status(500).json({ message: "Erreur serveur lors de la récupération des jours de cours" });
+  }
+});
+
+router.post('/ajouter', async (req, res) => {
+  const data: AjoutCours = req.body;
+  console.log(data)
+  try {
+    const client = new Cours();
+    // Insertion du cours récurrent
+    await client.ajouterCoursRecurrent(data);
+
+    res.status(200).json({ message: 'Cours récurrent ajouté avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout du cours récurrent:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
+  }
+});
+
+
+
 
 
 export default router;
