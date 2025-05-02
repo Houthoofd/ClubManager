@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, TabPanel } from '../../../components/ui/tabs';
 import Modal from '@/components/ui/modal';
+import type { Professeur } from '@clubmanager/types';
 
 const AjouterProf = () => {
-  const [professeurs, setProfesseurs] = useState<any[]>([]);
+  const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
   const [formData, setFormData] = useState<any>({});
   const [selectOptions, setSelectOptions] = useState<any>({});
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -14,11 +15,12 @@ const AjouterProf = () => {
       try {
         const response = await fetch('http://localhost:3000/professeurs');
         const data = await response.json();
-        setProfesseurs(data);
+        console.log(data)
+        setProfesseurs(data.data);
 
-        if (data.length > 0) {
+        if (data.data.length > 0) {
           const initialFormData: any = {};
-          Object.keys(data[0]).forEach((key) => {
+          Object.keys(data.data[0]).forEach((key) => {
             if (key !== 'id') initialFormData[key] = '';
           });
           setFormData(initialFormData);
@@ -105,6 +107,8 @@ const AjouterProf = () => {
       setShowModal(true);
     }
   };
+
+  console.log(professeurs)
 
   const CreerFormulaire = () => {
     const formatLabel = (label: string) => {
