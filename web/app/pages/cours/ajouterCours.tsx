@@ -4,6 +4,7 @@ import store from '../../../redux/store';
 import { Tabs, TabPanel } from '../../../components/ui/tabs';
 import Modal from '@/components/ui/modal';
 import type { AjoutCours, JourCours, Professeur } from '@clubmanager/types';
+import '../../styles/pages/ajouter_cours.css';
 
 function convertTimeToSQLTime(value: string): string | null {
   if (!value) return null;
@@ -17,6 +18,7 @@ const AjouterCOurs = () => {
   const [modalMessage, setModalMessage] = useState<string>('');
   const [joursCours, setJoursCours] = useState<JourCours[]>([]);
   const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
 
 
   const [formData, setFormData] = useState({
@@ -24,7 +26,7 @@ const AjouterCOurs = () => {
     heure_debut: '',
     heure_fin: '',
     jour_semaine: '',
-    professeurs: [] as string[]
+    professeurs: [] as string[], // 🔥 ici on reste en string[], comme AjoutCours
   });
 
   const [joursSemaine, setJoursSemaine] = useState([
@@ -110,8 +112,8 @@ const AjouterCOurs = () => {
       }));
     }
   };
-  
-  
+
+  console.log(joursCours)
   
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +124,7 @@ const AjouterCOurs = () => {
       heure_fin: convertTimeToSQLTime(formData.heure_fin),
       jour_semaine: formData.jour_semaine,
       type_cours: formData.type_cours,
-      professeurs: formData.professeurs, // Tableau des professeurs
+      professeurs: formData.professeurs, // ✅ string[] attendu, string[] fourni
     };
   
     try {
@@ -147,6 +149,41 @@ const AjouterCOurs = () => {
       setShowModal(true);
     }
   };
+
+  async function deleteCours(jourSemaine: string): Promise<void> {
+    console.log(jourSemaine)
+    try {
+        // Envoi de la requête de suppression vers le back-end
+        const response = await fetch(`http://localhost:3000/cours/supprimer`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ jourSemaine }),
+        });
+  
+        if (!response.ok) {
+            throw new Error('Erreur lors de la suppression des cours');
+        }
+  
+        const result = await response.json();
+        console.log(result.message); // Affiche le message du back-end
+        setModalMessage('Cours supprimé avec succès');
+        setShowModal(true);
+  
+        // Appel de supprimerJour avec le jourSupprimé
+        supprimerJour(jourSemaine);
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors de la suppression des cours.');
+    }
+  }
+  
+
+  const supprimerJour = (jourSupprimé: string) => {
+    setJoursCours(prev => prev.filter(c => c.jour !== jourSupprimé));
+  };
+
   
   
 
@@ -155,10 +192,27 @@ const AjouterCOurs = () => {
       <Tabs>
         <TabPanel label="Jours de cours">
           <h1>Liste des cours</h1>
-          <ul>
+          <ul className='list'>
             {joursCours.map((cours, index) => (
-              <li key={index}>
-                {cours.jour} - {cours.type_cours} - {cours.heure_debut} - {cours.heure_fin}
+              <li key={index} className='list-item'>
+                <span className='list-item-infos'>{cours.jour}</span>
+                <span className='list-item-infos'>{cours.type_cours}</span>
+                <span className='list-item-infos'>{cours.heure_debut}</span>
+                <span className='list-item-infos'>{cours.heure_fin}</span>
+                <span className='icons'>
+                {isOpen ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
+                      <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
+                      <path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z" />
+                    </svg>
+                  )}
+                </span>
+                <span className='icon' onClick={() => deleteCours(cours.jour)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm80-160h80v-360h-80v360Zm160 0h80v-360h-80v360Z"/></svg>
+                </span>
               </li>
             ))}
           </ul>
@@ -220,25 +274,23 @@ const AjouterCOurs = () => {
               </select>
             </div>
             <div>
-              <label htmlFor="professeurs">Sélectionner les professeurs :</label>
+              <label htmlFor="professeurs">Sélectionner un ou plusieurs professeurs :</label>
               <select
                 id="professeurs"
                 name="professeurs"
                 value={formData.professeurs}
-                onChange={handleChange}
+                onChange={handleChange} // nouveau handler spécial pour ce select multiple
+                multiple
                 required
               >
-                {professeurs.map((professeur) => {
-                  console.log(professeur.first_name);
-                  return (
-                    <option key={professeur.id} value={professeur.id}>
-                      {professeur.first_name} {professeur.last_name}
-                    </option>
-                  );
-                })}
-
+                {professeurs.map((professeur) => (
+                  <option key={professeur.id} value={professeur.id}>
+                    {professeur.first_name} {professeur.last_name}
+                  </option>
+                ))}
               </select>
             </div>
+
             <div>
               <button type="submit">Ajouter le cours</button>
             </div>

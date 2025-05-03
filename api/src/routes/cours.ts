@@ -220,7 +220,7 @@ router.post('/ajouter', async (req, res) => {
   try {
     const client = new Cours();
     // Insertion du cours récurrent
-    await client.ajouterCoursRecurrent(data);
+    await client.ajouterCoursRecurrentAvecProfesseurs(data);
 
     res.status(200).json({ message: 'Cours récurrent ajouté avec succès' });
   } catch (error) {
@@ -228,6 +228,43 @@ router.post('/ajouter', async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
   }
 });
+
+router.delete('/supprimer', async (req:any, res:any) => {
+  const joursDeSemaine: { [key: string]: number } = {
+    lundi: 2,
+    mardi: 3,
+    mercredi: 4,
+    jeudi: 5,
+    vendredi: 6,
+    samedi: 7,
+    dimanche: 1
+  };
+
+  const jourRecu = req.body;
+
+  console.log("Body reçu :", req.body);
+
+  const jourTexte = jourRecu.jourSemaine;
+  const jourNum = joursDeSemaine[jourTexte?.toLowerCase().trim()];
+
+  if (!jourNum) {
+    return res.status(400).json({ message: 'Jour invalide. Veuillez fournir un jour valide (ex: lundi, mardi...)' });
+  }
+
+  try {
+    const client = new Cours();
+    await client.supprimerJourDeCours(jourNum);
+
+    res.status(200).json({ message: `Cours du ${jourTexte} supprimé avec succès` });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du cours:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la suppression' });
+  }
+});
+
+
+
+
 
 
 

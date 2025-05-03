@@ -25,13 +25,27 @@ export default class MysqlConnector {
 
   // Méthode pour exécuter des requêtes SQL
   public query(sql: string, values: any[] = [], callback: (error: mysql.MysqlError | null, results?: any, fields?: mysql.FieldInfo[]) => void): void {
-    // Exécuter la requête SQL avec les valeurs échappées
     this.connection.query(sql, values, (error, results, fields) => {
         callback(error, results, fields);
     });
   }
 
-  // Fermer la connexion à la base de données
+  // Démarrer une transaction
+  public beginTransaction(callback: (err: mysql.MysqlError | null) => void): void {
+    this.connection.beginTransaction(callback);
+  }
+
+  // Commit une transaction
+  public commit(callback: (err: mysql.MysqlError | null) => void): void {
+    this.connection.commit(callback);
+  }
+
+  // Rollback une transaction
+  public rollback(callback: () => void): void {
+    this.connection.rollback(callback);
+  }
+
+  // Fermer la connexion
   public close(): void {
       this.connection.end((err) => {
           if (err) {

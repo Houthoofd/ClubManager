@@ -43,16 +43,29 @@ export class Cours {
       const mysqlConnector = new MysqlConnector();
       const sql = `
         SELECT DISTINCT 
-          DAYNAME(date_cours) AS jour,
-          type_cours,
-          DATE_FORMAT(heure_debut, '%H:%i') AS heure_debut,
-          DATE_FORMAT(heure_fin, '%H:%i') AS heure_fin
-        FROM cours
-        ORDER BY FIELD(DAYOFWEEK(date_cours), 1, 2, 5, 7);
+            CASE DAYNAME(c.date_cours)
+                WHEN 'Monday' THEN 'Lundi'
+                WHEN 'Tuesday' THEN 'Mardi'
+                WHEN 'Wednesday' THEN 'Mercredi'
+                WHEN 'Thursday' THEN 'Jeudi'
+                WHEN 'Friday' THEN 'Vendredi'
+                WHEN 'Saturday' THEN 'Samedi'
+                WHEN 'Sunday' THEN 'Dimanche'
+            END AS jour, 
+            c.type_cours, 
+            DATE_FORMAT(c.heure_debut, '%H:%i') AS heure_debut, 
+            DATE_FORMAT(c.heure_fin, '%H:%i') AS heure_fin, 
+            GROUP_CONCAT(DISTINCT CONCAT(p.prenom, ' ', p.nom) ORDER BY p.nom ASC SEPARATOR ', ') AS professeurs
+        FROM cours c 
+        LEFT JOIN cours_recurrent_professeur crp ON c.cours_recurrent_id = crp.cours_recurrent_id 
+        LEFT JOIN professeurs p ON crp.professeur_id = p.id 
+        GROUP BY jour, c.type_cours, c.heure_debut, c.heure_fin 
+        ORDER BY FIELD(DAYOFWEEK(c.date_cours), 2, 3, 4, 5, 6, 7, 1);
+
       `;
-    
-      console.log("Exécution de la requête pour obtenir les jours de cours...");
-    
+      
+      console.log("Exécution de la requête pour obtenir les jours de cours avec les professeurs...");
+      
       mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des jours de cours : ' + error.message);
@@ -63,24 +76,223 @@ export class Cours {
             jour: result.jour,
             type_cours: result.type_cours,
             heure_debut: result.heure_debut,
-            heure_fin: result.heure_fin
+            heure_fin: result.heure_fin,
+            professeurs: result.professeurs ? result.professeurs.split(',') : [] // Séparation des noms des professeurs
           }));
-    
+      
           console.log('Cours récupérés avec succès:', joursDeCours);
           resolve(joursDeCours);  // On renvoie les résultats formatés en type JourCours[]
         }
-    
+      
         mysqlConnector.close();
       });
     });
   }
   
 
+  ajouterCoursRecurrentAvecProfesseurs(data: AjoutCours): Promise<ConfirmationResult> {
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+        const mysqlConnector = new MysqlConnector();
+  
+        const joursDeSemaine: { [key: string]: number } = {
+            lundi: 1,
+            mardi: 2,
+            mercredi: 3,
+            jeudi: 4,
+            vendredi: 5,
+            samedi: 6,
+            dimanche: 7
+        };
+  
+        const jourSemaine = joursDeSemaine[data.jour_semaine.toLowerCase()];
+        if (!jourSemaine) {
+            reject("Jour de la semaine invalide");
+            return;
+        }
+  
+        const start_date = new Date('2024-01-01');
+        const dayOfWeek = start_date.getDay();
+        const daysUntilTargetDay = (jourSemaine - dayOfWeek + 7) % 7;
+        start_date.setDate(start_date.getDate() + daysUntilTargetDay);
+  
+        const end_date = new Date(start_date);
+        end_date.setFullYear(start_date.getFullYear() + 1);
+        end_date.setDate(31);
+        const formattedEndDate = end_date.toISOString().split('T')[0];
+  
+        const insertRecurrentSql = `
+            INSERT INTO cours_recurrent (type_cours, jour_semaine, heure_debut, heure_fin)
+            VALUES (?, ?, ?, ?)
+        `;
+  
+        mysqlConnector.query(
+            insertRecurrentSql,
+            [data.type_cours, jourSemaine, data.heure_debut, data.heure_fin],
+            (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de l’ajout du cours récurrent : ' + error.message);
+                    mysqlConnector.close();
+                    reject(error);
+                } else {
+                    const coursRecurrentId = results.insertId;
+  
+                    mysqlConnector.query(`SET @row := -1`, [], (setVarError) => {
+                        if (setVarError) {
+                            console.error('Erreur lors de l’initialisation de la variable @row : ' + setVarError.message);
+                            mysqlConnector.close();
+                            reject(setVarError);
+                        } else {
+                            const insertCoursSql = `
+                                INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin, cours_recurrent_id)
+                                SELECT 
+                                    DATE_ADD(?, INTERVAL (7 * n) DAY) AS date_cours, 
+                                    ?, 
+                                    ?, 
+                                    ?, 
+                                    ?
+                                FROM 
+                                    (SELECT @row := @row + 1 AS n FROM seq_0_to_52) t
+                                WHERE 
+                                    DATE_ADD(?, INTERVAL (7 * n) DAY) BETWEEN ? AND ?
+                            `;
+  
+                            const params = [
+                                start_date.toISOString().split('T')[0], data.type_cours, data.heure_debut, data.heure_fin, coursRecurrentId,
+                                start_date.toISOString().split('T')[0], start_date.toISOString().split('T')[0], formattedEndDate
+                            ];
+  
+                            mysqlConnector.query(insertCoursSql, params, (insertError, insertResults) => {
+                                if (insertError) {
+                                    console.error('Erreur lors de la génération des cours : ' + insertError.message);
+                                    mysqlConnector.close();
+                                    reject(insertError);
+                                } else {
+                                    // 🔥 Gestion des professeurs
+                                    const utilisateursIds = data.professeurs;
+  
+                                    if (!utilisateursIds || utilisateursIds.length === 0) {
+                                        console.warn('Aucun professeur à associer');
+                                        mysqlConnector.close();
+                                        resolve(insertResults);
+                                    } else {
+                                        // 🔥 On récupère les bons IDs de la table professeur
+                                        const getProfIdsSql = `
+                                            SELECT p.id AS professeur_id 
+                                            FROM professeurs p
+                                            JOIN utilisateurs u ON p.email = u.email
+                                            WHERE u.id IN (${utilisateursIds.map(() => '?').join(', ')})
+                                        `;
+  
+                                        mysqlConnector.query(getProfIdsSql, utilisateursIds, (getProfError, profRows) => {
+                                            if (getProfError) {
+                                                console.error('Erreur lors de la récupération des IDs professeur : ' + getProfError.message);
+                                                mysqlConnector.close();
+                                                reject(getProfError);
+                                            } else {
+                                                const professeurIdsCorrects = profRows.map((row: any) => row.professeur_id);
+  
+                                                if (professeurIdsCorrects.length === 0) {
+                                                    console.warn('Aucun professeur correspondant trouvé');
+                                                    mysqlConnector.close();
+                                                    resolve(insertResults);
+                                                } else {
+                                                    const values = professeurIdsCorrects.map(() => '(?, ?)').join(', ');
+                                                    const profParams: any[] = [];
+                                                    professeurIdsCorrects.forEach((profId: number) => {
+                                                        profParams.push(coursRecurrentId, profId);
+                                                    });
+  
+                                                    const insertProfSql = `
+                                                        INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id)
+                                                        VALUES ${values}
+                                                    `;
+  
+                                                    mysqlConnector.query(insertProfSql, profParams, (profError, profResults) => {
+                                                        mysqlConnector.close();
+  
+                                                        if (profError) {
+                                                            console.error('Erreur lors de l’association des professeurs : ' + profError.message);
+                                                            reject({isConfirm: false, message: "Cours récurrent + cours générés + professeurs associés n'ont pas été générés et associés avec succès"});
+                                                        } else {
+                                                            console.log('Cours récurrent + cours générés + professeurs associés avec succès');
+                                                            resolve({isConfirm: true, message: "Cours récurrent + cours générés + professeurs associés avec succès"});
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        );
+    });
+  }
+
+  supprimerJourDeCours(joursSemaine: number): Promise<ConfirmationResult> {
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+        const mysqlConnector = new MysqlConnector();
+
+        mysqlConnector.beginTransaction((beginError) => {
+            if (beginError) {
+                console.error('Erreur lors de la création de la transaction : ' + beginError.message);
+                mysqlConnector.close();
+                reject(beginError);
+            } else {
+
+                // Supprimer dans cours_recurrent : le reste est géré par ON DELETE CASCADE
+                const deleteRecurrentSql = `
+                    DELETE FROM cours_recurrent WHERE jour_semaine = ?
+                `;
+
+                mysqlConnector.query(deleteRecurrentSql, [joursSemaine], (recurrentError) => {
+                    if (recurrentError) {
+                        console.error('Erreur lors de la suppression des cours récurrents : ' + recurrentError.message);
+                        mysqlConnector.rollback(() => {
+                            mysqlConnector.close();
+                        });
+                        reject(recurrentError);
+                    } else {
+                        // Valider la transaction
+                        mysqlConnector.commit((commitError) => {
+                            if (commitError) {
+                                console.error('Erreur lors de la validation de la transaction : ' + commitError.message);
+                                mysqlConnector.rollback(() => {
+                                    mysqlConnector.close();
+                                });
+                                reject(commitError);
+                            } else {
+                                console.log('Cours récurrents et toutes les dépendances supprimés avec succès pour les jours : ' + joursSemaine);
+                                resolve({ isConfirm: true, message: `Cours récurrents et toutes les dépendances supprimés avec succès pour les jours ${joursSemaine}` });
+                                mysqlConnector.close();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    });
+  }
+
+
+
+
+
+
+
+
+
+
+    
+  
+
   ajouterCoursRecurrent(data: AjoutCours): Promise<ConfirmationResult> {
     return new Promise<ConfirmationResult>((resolve, reject) => {
       const mysqlConnector = new MysqlConnector();
   
-      // Mappage des jours de la semaine (lundi = 1, ..., dimanche = 7)
       const joursDeSemaine: { [key: string]: number } = {
         lundi: 1,
         mardi: 2,
@@ -91,31 +303,26 @@ export class Cours {
         dimanche: 7
       };
   
-      const jourSemaine = joursDeSemaine[data.jour_semaine.toLowerCase()]; // Convertir le jour du front en nombre
-
-      console.log(jourSemaine)
+      const jourSemaine = joursDeSemaine[data.jour_semaine.toLowerCase()];
+      console.log(jourSemaine);
   
       if (!jourSemaine) {
         reject("Jour de la semaine invalide");
         return;
       }
   
-      // Déterminer le premier jour du cours
-      const start_date = new Date('2024-01-01'); // Commencer avec le 1er janvier de l'année
-      const dayOfWeek = start_date.getDay(); // Jour de la semaine (0 = dimanche, 1 = lundi, ..., 6 = samedi)
-      const daysUntilTargetDay = (jourSemaine - dayOfWeek + 7) % 7;  // Calculer combien de jours jusqu'au jour souhaité
-      start_date.setDate(start_date.getDate() + daysUntilTargetDay);  // Ajuster à la date du premier jour choisi
+      const start_date = new Date('2024-01-01');
+      const dayOfWeek = start_date.getDay(); 
+      const daysUntilTargetDay = (jourSemaine - dayOfWeek + 7) % 7;  
+      start_date.setDate(start_date.getDate() + daysUntilTargetDay); 
   
-      // Définir la date de fin au 31 décembre de la même année
       const end_date = new Date(start_date);
-      end_date.setFullYear(start_date.getFullYear() + 1);  // Ajouter 1 an pour la fin de l'année
-      end_date.setDate(31);  // Fixer au 31 décembre
+      end_date.setFullYear(start_date.getFullYear() + 1);
+      end_date.setDate(31);
   
-      const formattedEndDate = end_date.toISOString().split('T')[0]; // Format 'YYYY-MM-DD'
-
-      console.log(daysUntilTargetDay)
+      const formattedEndDate = end_date.toISOString().split('T')[0];
+      console.log(daysUntilTargetDay);
   
-      // Étape 1 : Insérer dans cours_recurrent
       const insertRecurrentSql = `
         INSERT INTO cours_recurrent (type_cours, jour_semaine, heure_debut, heure_fin)
         VALUES (?, ?, ?, ?)
@@ -134,7 +341,9 @@ export class Cours {
           } else {
             console.log('Cours récurrent ajouté avec succès :', results);
   
-            // Étape 2 : Générer les cours récurrents pour le jour de la semaine choisi
+            // 🔥 Récupérer l’ID du cours récurrent ajouté
+            const coursRecurrentId = results.insertId;
+  
             console.log("Initialisation de la variable @row");
             mysqlConnector.query(`SET @row := -1`, [], (setVarError) => {
               if (setVarError) {
@@ -145,11 +354,12 @@ export class Cours {
                 console.log("Insertion des cours générés entre", start_date.toISOString().split('T')[0], "et", formattedEndDate);
   
                 const insertCoursSql = `
-                  INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin)
+                  INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin, cours_recurrent_id)
                   SELECT 
                     DATE_ADD(?, INTERVAL (7 * n) DAY) AS date_cours, 
                     ?, 
                     ?, 
+                    ?,
                     ?
                   FROM 
                     (SELECT @row := @row + 1 AS n FROM seq_0_to_52) t
@@ -158,8 +368,14 @@ export class Cours {
                 `;
   
                 const params = [
-                  start_date.toISOString().split('T')[0], data.type_cours, data.heure_debut, data.heure_fin,
-                  start_date.toISOString().split('T')[0], start_date.toISOString().split('T')[0], formattedEndDate
+                  start_date.toISOString().split('T')[0], 
+                  data.type_cours, 
+                  data.heure_debut, 
+                  data.heure_fin,
+                  coursRecurrentId, // 👈 On insère bien l’ID ici
+                  start_date.toISOString().split('T')[0], 
+                  start_date.toISOString().split('T')[0], 
+                  formattedEndDate
                 ];
   
                 mysqlConnector.query(insertCoursSql, params, (insertError, insertResults) => {
@@ -180,6 +396,44 @@ export class Cours {
       );
     });
   }
+
+  associerProfesseursAuCoursRecurrent(coursRecurrentId: number, professeursIds: number[]): Promise<ConfirmationResult> {
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+      const mysqlConnector = new MysqlConnector();
+  
+      if (professeursIds.length === 0) {
+        reject("Aucun professeur à associer");
+        return;
+      }
+  
+      // Construire les valeurs pour l'INSERT MULTIPLE
+      const values = professeursIds.map(() => '(?, ?)').join(', '); // Ex: "(?, ?), (?, ?), (?, ?)"
+      const params: any[] = [];
+  
+      professeursIds.forEach(profId => {
+        params.push(coursRecurrentId, profId);
+      });
+  
+      const insertSql = `
+        INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id)
+        VALUES ${values}
+      `;
+  
+      mysqlConnector.query(insertSql, params, (error, results) => {
+        if (error) {
+          console.error('Erreur lors de l’association des professeurs : ' + error.message);
+          mysqlConnector.close();
+          reject(error);
+        } else {
+          console.log('Professeurs associés avec succès :', results);
+          mysqlConnector.close();
+          resolve(results);
+        }
+      });
+    });
+  }
+  
+  
   
   
   

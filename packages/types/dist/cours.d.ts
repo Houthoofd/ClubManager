@@ -40,6 +40,7 @@ export type JourCours = {
     type_cours: string;
     heure_debut: string | null;
     heure_fin: string | null;
+    professeurs: string[];
 };
 export type AjoutCours = {
     heure_debut: string | null;

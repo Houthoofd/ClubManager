@@ -20,12 +20,23 @@ export default class MysqlConnector {
     }
     // Méthode pour exécuter des requêtes SQL
     query(sql, values = [], callback) {
-        // Exécuter la requête SQL avec les valeurs échappées
         this.connection.query(sql, values, (error, results, fields) => {
             callback(error, results, fields);
         });
     }
-    // Fermer la connexion à la base de données
+    // Démarrer une transaction
+    beginTransaction(callback) {
+        this.connection.beginTransaction(callback);
+    }
+    // Commit une transaction
+    commit(callback) {
+        this.connection.commit(callback);
+    }
+    // Rollback une transaction
+    rollback(callback) {
+        this.connection.rollback(callback);
+    }
+    // Fermer la connexion
     close() {
         this.connection.end((err) => {
             if (err) {

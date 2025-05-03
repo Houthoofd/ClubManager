@@ -186,12 +186,39 @@ router.post('/ajouter', (req, res) => __awaiter(void 0, void 0, void 0, function
     try {
         const client = new Cours();
         // Insertion du cours récurrent
-        yield client.ajouterCoursRecurrent(data);
+        yield client.ajouterCoursRecurrentAvecProfesseurs(data);
         res.status(200).json({ message: 'Cours récurrent ajouté avec succès' });
     }
     catch (error) {
         console.error('Erreur lors de l\'ajout du cours récurrent:', error);
         res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
+    }
+}));
+router.delete('/supprimer', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const joursDeSemaine = {
+        lundi: 2,
+        mardi: 3,
+        mercredi: 4,
+        jeudi: 5,
+        vendredi: 6,
+        samedi: 7,
+        dimanche: 1
+    };
+    const jourRecu = req.body;
+    console.log("Body reçu :", req.body);
+    const jourTexte = jourRecu.jourSemaine;
+    const jourNum = joursDeSemaine[jourTexte === null || jourTexte === void 0 ? void 0 : jourTexte.toLowerCase().trim()];
+    if (!jourNum) {
+        return res.status(400).json({ message: 'Jour invalide. Veuillez fournir un jour valide (ex: lundi, mardi...)' });
+    }
+    try {
+        const client = new Cours();
+        yield client.supprimerJourDeCours(jourNum);
+        res.status(200).json({ message: `Cours du ${jourTexte} supprimé avec succès` });
+    }
+    catch (error) {
+        console.error('Erreur lors de la suppression du cours:', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la suppression' });
     }
 }));
 export default router;
