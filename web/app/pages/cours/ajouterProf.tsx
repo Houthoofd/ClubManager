@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, TabPanel } from '../../../components/ui/tabs';
 import Modal from '@/components/ui/modal';
-import type { Professeur } from '@clubmanager/types';
+import type { Professeur, UserData } from '@clubmanager/types';
 
 const AjouterProf = () => {
   const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
+  const [userSchema, setUserSchema] = useState<UserData>();
   const [formData, setFormData] = useState<any>({});
   const [selectOptions, setSelectOptions] = useState<any>({});
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
 
   useEffect(() => {
-    const fetchProfesseurs = async () => {
+    const fetchUserSchema = async () => {
       try {
-        const response = await fetch('http://localhost:3000/professeurs');
+        const response = await fetch('http://localhost:3000/utilisateurs');
         const data = await response.json();
-        console.log(data)
-        setProfesseurs(data.data);
-
+        setUserSchema(data.data);
         if (data.data.length > 0) {
           const initialFormData: any = {};
           Object.keys(data.data[0]).forEach((key) => {
@@ -26,8 +25,10 @@ const AjouterProf = () => {
           setFormData(initialFormData);
 
           // On charge les options pour chaque champ relationnel *_id
-          Object.keys(data[0]).forEach((key) => {
+          Object.keys(data.data[0]).forEach((key) => {
+            console.log(key)
             if (key.endsWith('_id')) {
+              console.log(key)
               fetchSelectOptions(key);
             }
           });
@@ -37,7 +38,8 @@ const AjouterProf = () => {
       }
     };
 
-    fetchProfesseurs();
+    fetchUserSchema();
+    fetchProfesseur();
   }, []);
 
   const pluralize = (word: string) => {
@@ -55,11 +57,10 @@ const AjouterProf = () => {
   const fetchSelectOptions = async (key: string) => {
     const apiName = key.replace('_id', ''); // Ex: abonnement_id ➔ abonnement
     const pluralApiName = pluralize(apiName); // Ex: abonnement ➔ abonnements
-
     try {
       const response = await fetch(`http://localhost:3000/informations/${pluralApiName}`);
       const data = await response.json();
-
+      console.log(data)
       setSelectOptions((prev: any) => ({
         ...prev,
         [key]: data,
@@ -70,6 +71,28 @@ const AjouterProf = () => {
       setShowModal(true);
     }
   };
+
+  const fetchProfesseur = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/professeurs', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+    
+        if (response.ok) {
+          const data = await response.json(); // Notez l'utilisation de `JourCours[]` au lieu de `JourCours`
+          setProfesseurs(data.data);
+        } else {
+          setModalMessage('Erreur lors de la récupération des professeurs');
+          setShowModal(true);
+        }
+      } catch (error) {
+        setModalMessage('Erreur lors de la récupération des professeurs');
+        setShowModal(true);
+      }
+    };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -95,7 +118,7 @@ const AjouterProf = () => {
         alert('Professeur ajouté avec succès');
         const updatedProfesseurs = await fetch('http://localhost:3000/professeurs');
         const data = await updatedProfesseurs.json();
-        setProfesseurs(data);
+        setProfesseurs(data.data);
       } else {
         alert('Erreur lors de l\'ajout');
         setModalMessage('Erreur lors de l\'ajout');

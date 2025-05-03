@@ -63,6 +63,7 @@ export class Professeurs {
     ajouterUnProfesseur(userData) {
         return __awaiter(this, void 0, void 0, function* () {
             const mysqlConnector = new MysqlConnector();
+            console.log(userData.first_name);
             // 1. Vérifier si l'utilisateur existe déjà
             const selectSql = `SELECT * FROM utilisateurs WHERE email = ?`;
             return new Promise((resolve, reject) => {
@@ -98,12 +99,12 @@ export class Professeurs {
             VALUES (?, ?, ?, ?, ?, ?, 5, ?, ?)
           `;
                         mysqlConnector.query(insertSql, [
-                            userData.prenom,
-                            userData.nom,
+                            userData.first_name,
+                            userData.last_name,
                             userData.nom_utilisateur,
                             userData.email,
                             userData.genre_id,
-                            userData.date_naissance,
+                            userData.date_of_birth,
                             userData.grade_id,
                             userData.abonnement_id
                         ], (insertError) => {

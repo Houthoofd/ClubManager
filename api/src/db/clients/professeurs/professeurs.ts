@@ -57,8 +57,10 @@ export class Professeurs {
     });
   }
 
-  async ajouterUnProfesseur(userData: UserData): Promise<ConfirmationResult> {
+  async ajouterUnProfesseur(userData: any): Promise<ConfirmationResult> {
     const mysqlConnector = new MysqlConnector();
+
+    console.log(userData.first_name)
   
     // 1. Vérifier si l'utilisateur existe déjà
     const selectSql = `SELECT * FROM utilisateurs WHERE email = ?`;
@@ -98,12 +100,12 @@ export class Professeurs {
           `;
   
           mysqlConnector.query(insertSql, [
-            userData.prenom,
-            userData.nom,
+            userData.first_name,
+            userData.last_name,
             userData.nom_utilisateur,
             userData.email,
             userData.genre_id,
-            userData.date_naissance,
+            userData.date_of_birth,
             userData.grade_id,
             userData.abonnement_id
           ], (insertError) => {
