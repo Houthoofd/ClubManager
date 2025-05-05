@@ -24,30 +24,66 @@ const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], lis
   } | null>(null);
 
   const handleClick = () => {
-    if (!hasSubMenu) {
-      // Si le menu n'a pas de sous-menu, fermer la right sidebar
-      dispatch(TOGGLE_RIGHT_SIDEBAR(false));
+    console.log('menuId:', menuId); // Vérifie que menuId est bien 'chat'
+  
+    // Si le menu est "chat", on récupère les utilisateurs
+    if (menuId === "chat") {
+      console.log('menuId est "chat"');
+  
+      const fetchUsers = async () => {
+        try {
+          const response = await fetch('http://localhost:3000/utilisateurs');
+          if (!response.ok) {
+            throw new Error('Erreur réseau lors de la récupération des utilisateurs');
+          }
+          const utilisateurs = await response.json();
+          console.log('Utilisateurs:', utilisateurs); // Affiche les utilisateurs récupérés
+          const items = utilisateurs.data.map((user: { first_name: string; last_name: string; id: string }) => ({
+            label: `${user.first_name} ${user.last_name}`,
+            link: `/chat/${user.id}`,
+          }));
+          
+          // Envoie les utilisateurs à la sidebar et l'ouvrons
+          if (rightSidebarOpen) {
+            setPendingSidebarData({ menuId, items });
+            dispatch(TOGGLE_RIGHT_SIDEBAR(false)); // On ferme d'abord
+          } else {
+            dispatch({ type: "SET_RIGHT_SIDEBAR_ITEMS", payload: { menuId, items } });
+            dispatch(TOGGLE_RIGHT_SIDEBAR(true)); // On ouvre
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération des utilisateurs:', error);
+        }
+      };
+  
+      // Appeler la fonction pour récupérer les utilisateurs
+      fetchUsers();
       return;
     }
-
-    // Si le menu a des sous-menus
-    if (isLeftNavbarOpen) {
-      setIsOpen(!isOpen);
+  
+    // Si ce n'est pas le menu "chat", vérifier les sous-menus et gérer la sidebar
+    if (!hasSubMenu) {
+      dispatch(TOGGLE_RIGHT_SIDEBAR(false)); // On ferme si pas de sous-menu
+      return;
+    }
+  
+    const items = subTitles.map((subtitle, index) => ({
+      label: subtitle,
+      link: listUrls[index],
+    }));
+  
+    // Envoie les sous-menus à la sidebar et l'ouvrons
+    if (rightSidebarOpen) {
+      setPendingSidebarData({ menuId, items });
+      dispatch(TOGGLE_RIGHT_SIDEBAR(false)); // On ferme d'abord
     } else {
-      const items = subTitles.map((subtitle, index) => ({
-        label: subtitle,
-        link: listUrls[index],
-      }));
-
-      if (rightSidebarOpen) {
-        setPendingSidebarData({ menuId, items });
-        dispatch(TOGGLE_RIGHT_SIDEBAR(false)); // On ferme
-      } else {
-        dispatch({ type: "SET_RIGHT_SIDEBAR_ITEMS", payload: { menuId, items } });
-        dispatch(TOGGLE_RIGHT_SIDEBAR(true)); // On ouvre
-      }
+      dispatch({ type: "SET_RIGHT_SIDEBAR_ITEMS", payload: { menuId, items } });
+      dispatch(TOGGLE_RIGHT_SIDEBAR(true)); // On ouvre
     }
   };
+  
+  
+  
 
   useEffect(() => {
     if (!rightSidebarOpen && pendingSidebarData) {

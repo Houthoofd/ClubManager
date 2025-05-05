@@ -1,10 +1,30 @@
-// navigationReducer.ts
 import { createReducer } from '@reduxjs/toolkit';
-import { OPEN_LEFT_NAVBAR, OPEN_RIGHT_NAVBAR, OPEN_RIGHT_HEADER_PANEL, SELECT, MAIN_OPEN_RIGHT_SIDE_PANEL, TOGGLE_RIGHT_SIDEBAR, SET_RIGHT_SIDEBAR_ITEMS } from '../actions';
+import { 
+  OPEN_LEFT_NAVBAR, 
+  OPEN_RIGHT_NAVBAR, 
+  OPEN_RIGHT_HEADER_PANEL, 
+  SELECT, MAIN_OPEN_RIGHT_SIDE_PANEL, 
+  TOGGLE_RIGHT_SIDEBAR, 
+  SET_RIGHT_SIDEBAR_ITEMS, 
+  SET_RIGHT_SIDEBAR_USERS,
+  SELECT_USER
+} from '../actions';
 
 interface SidebarItem {
   label: string;
   link?: string;
+}
+
+interface UserItem {
+  id: string;
+  prenom: string;
+  nom: string;
+}
+
+interface User {
+  id: string;
+  prenom: string;
+  nom: string;
 }
 
 interface NavigationState {
@@ -16,7 +36,9 @@ interface NavigationState {
   right_sidebar_items: {
     [menuId: string]: SidebarItem[];
   };
+  right_sidebar_users: UserItem[];
   select: string | null;
+  selecte_chat_user: User | null;  // Modifié pour accepter un utilisateur ou null
 }
 
 const initialState: NavigationState = {
@@ -26,7 +48,9 @@ const initialState: NavigationState = {
   main_content_right_panel: false,
   right_sidebar_open: false,
   right_sidebar_items: {},
+  right_sidebar_users: [],
   select: null,
+  selecte_chat_user: null,  // Initialisé à null
 };
 
 const navigationReducer = createReducer(initialState, (builder) => {
@@ -51,15 +75,16 @@ const navigationReducer = createReducer(initialState, (builder) => {
     })
     .addCase(SET_RIGHT_SIDEBAR_ITEMS, (state, action) => {
       const { menuId, items } = action.payload;
-    
-      // Remplace les items du menuId actuel par les nouveaux éléments
       state.right_sidebar_items = {
         [menuId]: items,
       };
+    })
+    .addCase(SET_RIGHT_SIDEBAR_USERS, (state, action) => {
+      state.right_sidebar_users = action.payload;
+    })
+    .addCase(SELECT_USER, (state, action) => {
+      state.selecte_chat_user = action.payload;  // Met à jour l'utilisateur sélectionné
     });
-    
-    
-    
 });
 
 export default navigationReducer;
