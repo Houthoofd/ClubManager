@@ -119,4 +119,34 @@ router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.status(500).send("Erreur serveur");
     }
 }));
+router.post('/ajouter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const client = new Utilisateurs();
+        const data = req.body;
+        console.log(data);
+        // Récupérer les utilisateurs associés à ce cours
+        const result = yield client.inscrireUtilisateur(data);
+        console.log('Professeur ajouté avec succès:', result);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error("Erreur lors de l'ajout ou de la modification :", error);
+        res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
+    }
+}));
+router.delete('/supprimer', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const client = new Utilisateurs();
+        const data = req.body;
+        console.log(data);
+        // Récupérer les utilisateurs associés à ce cours
+        const result = yield client.supprimerUtilisateur(data.utilisateurId);
+        console.log('Professeur ajouté avec succès:', result);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error("Erreur lors de l'ajout ou de la modification :", error);
+        res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
+    }
+}));
 export default router;

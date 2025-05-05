@@ -6,7 +6,9 @@ export interface ModalProps {
   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
   message: string;
   title: string;
-  redirectUrl?: string; // Redirection optionnelle vers une page spécifique
+  type?: 'validation' | 'notification' | 'error'; // Types possibles
+  onConfirm?: () => void; // Optionnel pour validation
+  redirectUrl?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -14,26 +16,21 @@ export const Modal: React.FC<ModalProps> = ({
   setShowModal,
   message,
   title,
-  redirectUrl, // Pas de valeur par défaut
+  type = 'notification', // Par défaut notification
+  onConfirm,
+  redirectUrl,
 }) => {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setShowModal(false);
-        if (redirectUrl && !isRedirecting) {
-          setIsRedirecting(true);
-          window.location.href = redirectUrl;
-        }
+        handleClose();
       }
     };
     window.addEventListener('keydown', handleEsc);
-
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-    };
-  }, [setShowModal, redirectUrl, isRedirecting]);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isRedirecting]);
 
   if (!showModal) return null;
 
@@ -45,21 +42,29 @@ export const Modal: React.FC<ModalProps> = ({
     }
   };
 
+  const handleConfirm = () => {
+    if (onConfirm) onConfirm();
+    handleClose();
+  };
+
   return (
     <div className="modal-overlay" role="dialog" aria-labelledby="modal-title">
-      <div className="modal-content">
-        <h2 id="modal-title" className="modal-title">
-          {title}
-        </h2>
+      <div className={`modal-content modal-${type}`}>
+        <h2 id="modal-title" className="modal-title">{title}</h2>
         <p className="modal-message">{message}</p>
         <div className="modal-actions">
-          <button
-            onClick={handleClose}
-            className="modal-close-button"
-            aria-label="Close modal"
-          >
-            Fermer
-          </button>
+
+          {type === 'validation' && (
+            <>
+              <button onClick={handleConfirm} className="modal-confirm-button">Confirmer</button>
+              <button onClick={handleClose} className="modal-close-button">Annuler</button>
+            </>
+          )}
+
+          {type !== 'validation' && (
+            <button onClick={handleClose} className="modal-close-button">Fermer</button>
+          )}
+
         </div>
       </div>
     </div>

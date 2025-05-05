@@ -124,10 +124,42 @@ router.get('/:id', async (req:any, res:any) => {
   }
 });
 
+router.post('/ajouter', async (req: any, res: any) => {
+  try {
+    const client = new Utilisateurs();
+    const data = req.body;
+    console.log(data)
 
 
+    // Récupérer les utilisateurs associés à ce cours
+    const result = await client.inscrireUtilisateur(data);
+
+    console.log('Professeur ajouté avec succès:', result);
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error("Erreur lors de l'ajout ou de la modification :", error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
+  }
+});
+
+router.delete('/supprimer', async (req: any, res: any) => {
+  try {
+    const client = new Utilisateurs();
+    const data = req.body;
+    console.log(data)
 
 
+    // Récupérer les utilisateurs associés à ce cours
+    const result = await client.supprimerUtilisateur(data.utilisateurId);
 
+    console.log('Professeur ajouté avec succès:', result);
+    res.status(200).json(result);
+
+  } catch (error) {
+    console.error("Erreur lors de l'ajout ou de la modification :", error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
+  }
+});
 
 export default router;

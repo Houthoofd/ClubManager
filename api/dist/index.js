@@ -13,6 +13,7 @@ import { default as paiementRouter } from './routes/paiements.js';
 import { default as statistiquesRouter } from './routes/statistiques.js';
 import { default as magasinRouter } from './routes/magasin.js';
 import { default as professeursRouter } from './routes/professeurs.js';
+import { default as chatRouter } from './routes/chat.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, 'public');
@@ -40,6 +41,7 @@ app.use('/compte', compteRouter);
 app.use('/paiements', paiementRouter);
 app.use('/magasin', magasinRouter);
 app.use('/professeurs', professeursRouter);
+app.use('/chat', chatRouter);
 app.use('/public', express.static(path.join(__dirname, '../public')));
 // routes secondaires //
 app.use('/cours/statistiques', statistiquesRouter);

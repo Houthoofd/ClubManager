@@ -83,6 +83,52 @@ const Utilisateurs = () => {
     }
   };
 
+  async function handleDeleteUtilisateur(utilisateurId: number) {
+    try {
+        await deleteUtilisateur(utilisateurId);
+
+        // Mise à jour de la liste après suppression
+        setUtilisateurs((prevUtilisateurs) =>
+            prevUtilisateurs.filter((utilisateur) => utilisateur.id !== utilisateurId)
+        );
+
+        // Message de confirmation
+        setModalMessage('Utilisateur supprimé avec succès');
+        setShowModal(true);
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors de la suppression de l\'utilisateur.');
+    }
+}
+
+
+  async function deleteUtilisateur(utilisateurId: number): Promise<void> {
+
+    console.log(utilisateurId);
+    try {
+        // Envoi de la requête de suppression vers le back-end
+        const response = await fetch(`http://localhost:3000/utilisateurs/supprimer`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ utilisateurId }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Erreur lors de la suppression de l\'utilisateur');
+        }
+
+        const result = await response.json();
+        console.log(result.message); // Affiche le message du back-end
+
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+  }
+
+
   // Fonction de tri des utilisateurs
   const sortUsers = (users: VerifyResultWithData[], config: { key: string; direction: 'asc' | 'desc' }) => {
     const sortedUsers = [...users];
@@ -182,23 +228,42 @@ const Utilisateurs = () => {
           <div className="age" onClick={() => handleSort('date_of_birth')}>
             <div className='sort-icon'></div><span>Âge</span>
           </div>
+          <div className="rest"></div>
         </div>
       </div>
       <div className="class-list">
-        {currentUsers.map((utilisateur) => (
-          <div
-            className="class-list-item"
-            key={utilisateur.id}
-            onClick={() => showUtilisateur(utilisateur.id)}
-          >
-            <div className="first-name">{utilisateur.first_name}</div>
-            <div className="last-name">{utilisateur.last_name}</div>
-            <div className="email">{utilisateur.email}</div>
-            <div className="date-naissance">{formatDateFromISO(utilisateur.date_of_birth)}</div>
-            <div className="age">{calculateAge(utilisateur.date_of_birth)} ans</div>
-          </div>
-        ))}
-      </div>
+  {currentUsers.map((utilisateur) => (
+    <div
+      className="class-list-item"
+      key={utilisateur.id}
+      onClick={() => showUtilisateur(utilisateur.id)}
+    >
+      <div className="first-name">{utilisateur.first_name}</div>
+      <div className="last-name">{utilisateur.last_name}</div>
+      <div className="email">{utilisateur.email}</div>
+      <div className="date-naissance">{formatDateFromISO(utilisateur.date_of_birth)}</div>
+      <div className="age">{calculateAge(utilisateur.date_of_birth)} ans</div>
+      <span
+        className="icon"
+        onClick={(e) => {
+          e.stopPropagation(); // évite de déclencher aussi le clic du parent
+          handleDeleteUtilisateur(utilisateur.id);
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="24px"
+          viewBox="0 -960 960 960"
+          width="24px"
+          fill="#5f6368"
+        >
+          <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm80-160h80v-360h-80v360Zm160 0h80v-360h-80v360Z" />
+        </svg>
+      </span>
+    </div>
+  ))}
+</div>
+
 
       {/* Pagination controls */}
       <div className="pagination">

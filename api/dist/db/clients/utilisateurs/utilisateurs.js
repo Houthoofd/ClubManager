@@ -49,17 +49,21 @@ export class Utilisateurs {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const mysqlConnector = new MysqlConnector();
+                // Si password est vide, on le remplace par un mot de passe par défaut
+                if (!utilisateurData.password || utilisateurData.password.trim() === "") {
+                    utilisateurData.password = "password123"; // mot de passe par défaut
+                }
                 const sql = `
-                INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            `;
+              INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          `;
                 const values = [
-                    utilisateurData.prenom,
-                    utilisateurData.nom,
+                    utilisateurData.first_name,
+                    utilisateurData.last_name,
                     utilisateurData.nom_utilisateur,
                     utilisateurData.email,
                     utilisateurData.genre_id,
-                    utilisateurData.date_naissance,
+                    utilisateurData.date_of_birth,
                     utilisateurData.password,
                     utilisateurData.status_id,
                     utilisateurData.grade_id,
@@ -263,5 +267,25 @@ export class Utilisateurs {
             console.error("Erreur lors de la récupération de l'utilisateur:", error);
             throw error; // Lever l'erreur pour que l'appelant puisse la gérer
         }
+    }
+    supprimerUtilisateur(utilisateurId) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            console.log();
+            const deleteSql = `
+              DELETE FROM utilisateurs WHERE id = ?
+          `;
+            mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
+                mysqlConnector.close();
+                if (error) {
+                    console.error('Erreur lors de la suppression de l\'utilisateur : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    console.log(`Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
+                    resolve({ isConfirm: true, message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès` });
+                }
+            });
+        });
     }
 }
