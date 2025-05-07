@@ -29,14 +29,21 @@ export class Chat {
         });
     }
     // Récupère l'historique des 50 derniers messages
-    recupererHistorique() {
+    recupererHistorique(userId, receiverId) {
         return __awaiter(this, void 0, void 0, function* () {
             const mysqlConnector = new MysqlConnector();
             const selectSql = `
-      SELECT * FROM messages ORDER BY created_at DESC LIMIT 50
+      SELECT * FROM messages 
+      WHERE 
+        (sender_id = ? AND receiver_id = ?) 
+        OR 
+        (sender_id = ? AND receiver_id = ?)
+      ORDER BY created_at DESC 
+      LIMIT 50
     `;
+            const params = [userId, receiverId, receiverId, userId];
             return new Promise((resolve, reject) => {
-                mysqlConnector.query(selectSql, [], (error, results) => {
+                mysqlConnector.query(selectSql, params, (error, results) => {
                     mysqlConnector.close();
                     if (error)
                         return reject(error);

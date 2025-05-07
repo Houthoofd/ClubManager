@@ -57,6 +57,7 @@ html{
 .content.right-side-open.left-panel-close.right-panel-close {
   display: grid;
   grid-template-columns: 110px 180px minmax(0, 1fr) 0px;
+  height: 100%;
 }
 
 

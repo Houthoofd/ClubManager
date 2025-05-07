@@ -11,12 +11,14 @@ import { Chat } from '../db/clients/chat/chat.js';
 export default function (io) {
     io.on('connection', (socket) => {
         console.log('✅ Un utilisateur s\'est connecté au chat');
-        // 1. Lorsque l'utilisateur se connecte, on récupère l'historique des messages
-        socket.on('getHistorique', () => __awaiter(this, void 0, void 0, function* () {
+        // 1. Lorsque l'utilisateur demande l'historique entre lui et un autre utilisateur
+        socket.on('getHistorique', (data) => __awaiter(this, void 0, void 0, function* () {
             try {
+                const { userId, receiverId } = data;
+                console.log(data);
                 const client = new Chat();
-                const historique = yield client.recupererHistorique();
-                socket.emit('historique', historique); // Envoi l'historique à l'utilisateur
+                const historique = yield client.recupererHistorique(userId, receiverId);
+                socket.emit('historique', historique); // Envoi l'historique filtré à l'utilisateur
             }
             catch (error) {
                 console.error('Erreur lors de la récupération de l\'historique', error);

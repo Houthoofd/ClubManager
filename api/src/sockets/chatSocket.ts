@@ -5,12 +5,14 @@ export default function (io: Server) {
   io.on('connection', (socket: Socket) => {
     console.log('✅ Un utilisateur s\'est connecté au chat');
 
-    // 1. Lorsque l'utilisateur se connecte, on récupère l'historique des messages
-    socket.on('getHistorique', async () => {
+    // 1. Lorsque l'utilisateur demande l'historique entre lui et un autre utilisateur
+    socket.on('getHistorique', async (data: { userId: number; receiverId: number }) => {
       try {
+        const { userId, receiverId } = data;
+        console.log(data)
         const client = new Chat();
-        const historique = await client.recupererHistorique();
-        socket.emit('historique', historique); // Envoi l'historique à l'utilisateur
+        const historique = await client.recupererHistorique(userId, receiverId);
+        socket.emit('historique', historique); // Envoi l'historique filtré à l'utilisateur
       } catch (error) {
         console.error('Erreur lors de la récupération de l\'historique', error);
       }
@@ -58,7 +60,6 @@ export default function (io: Server) {
       }
     });
     
-
     // Lors de la déconnexion d'un utilisateur
     socket.on('disconnect', () => {
       console.log('❌ Un utilisateur s\'est déconnecté');
