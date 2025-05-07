@@ -18,6 +18,7 @@ export type UserDataSession = {
   isFind: boolean;
   message: string;
   dataToStore: {
+    id: number | null,
     prenom: string;
     nom: string;
     nom_utilisateur: string;

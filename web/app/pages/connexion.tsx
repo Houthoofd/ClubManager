@@ -45,6 +45,7 @@ const Connexion = () => {
       });
 
       const data = await response.json();
+      console.log(data)
 
       if (response.ok) {
         console.log('Utilisateur trouvé avec succès', data);

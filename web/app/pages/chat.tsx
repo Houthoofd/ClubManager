@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { useDispatch, useSelector } from 'react-redux';
-import { SET_RIGHT_SIDEBAR_USERS } from '../../redux/actions';  // Assurez-vous d'importer le bon type d'action
 
 interface Message {
   utilisateur: string;
@@ -9,25 +8,66 @@ interface Message {
   date_envoi: string;
 }
 
-interface Utilisateur {
-  id: string;
-  prenom: string;
-  nom: string;
-}
-
 const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Sélectionner l'état des utilisateurs sélectionnés depuis Redux
   const selectedUser = useSelector((state: any) => state.navigation.selecte_chat_user);
-
   const dispatch = useDispatch();
 
-  console.log(selectedUser)
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // ✅ Scroll automatique
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
 
   useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = () => {
+    if (messageInput && socket) {
+      const storedData = localStorage.getItem('userData');
+      let userId = null;
+
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          userId = parsedData?.data.id;
+        } catch (error) {
+          console.error('Erreur lors du parsing de userData', error);
+        }
+      }
+
+      const messageData = {
+        utilisateur: userId,
+        message: messageInput,
+        receiverId: selectedUser ? selectedUser.id : null,
+      };
+
+      console.log('✅ Message envoyé côté client :', messageData);
+      socket.emit('chatMessage', messageData);
+
+      setMessageInput('');
+    }
+  };
+
+  useEffect(() => {
+    // ✅ On récupère l'id du user connecté
+    const storedData = localStorage.getItem('userData');
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        setCurrentUserId(parsedData?.data.id?.toString() || null);
+      } catch (error) {
+        console.error('Erreur lors du parsing de userData', error);
+      }
+    }
+
     // ✅ Connexion socket
     const newSocket = io('http://localhost:3000');
     setSocket(newSocket);
@@ -42,46 +82,33 @@ const Chat = () => {
       setMessages((prevMessages) => [...prevMessages, message]);
     });
 
-    // ✅ On fetch la liste des utilisateurs pour la sidebar
     fetch("http://localhost:3000/utilisateurs")
       .then((res) => res.json())
       .then((data) => {
-        // ✅ Vérifie bien la structure de la réponse, ici data.data doit être un tableau d'utilisateurs
         if (data && data.data) {
-
-          // ✅ On dispatch avec la nouvelle action pour stocker des users (id/prenom/nom)
           dispatch({
             type: "SET_RIGHT_SIDEBAR_USERS",
-            payload: data.data, // On passe directement les utilisateurs récupérés
+            payload: data.data,
           });
 
-          // ✅ Et on dispatch pour VIDER les items
-        dispatch({
-          type: "SET_RIGHT_SIDEBAR_ITEMS",
-          payload: {}, // On vide tous les items
-        });
+          dispatch({
+            type: "SET_RIGHT_SIDEBAR_ITEMS",
+            payload: {},
+          });
         }
       })
       .catch((error) => {
         console.error("Erreur lors du fetch des utilisateurs :", error);
       });
 
-    // ⛔️ Fermer le socket à la fin
     return () => {
       newSocket.disconnect();
     };
   }, [dispatch]);
 
-  const handleSendMessage = () => {
-    if (messageInput && socket) {
-      socket.emit('chatMessage', { utilisateur: 'User', message: messageInput });
-      setMessageInput('');
-    }
-  };
-
   return (
     <div>
-      <h1>Chat en ligne</h1>
+      <h1>Chat {selectedUser?.first_name} {selectedUser?.last_name}</h1>
       <div>
         {messages.map((msg, index) => (
           <div key={index}>

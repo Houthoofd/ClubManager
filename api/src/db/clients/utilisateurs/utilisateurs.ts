@@ -108,7 +108,7 @@ export class Utilisateurs{
             const mysqlConnector = new MysqlConnector();
             
             const sql = `
-                SELECT first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id
+                SELECT id, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id
                 FROM utilisateurs
                 WHERE email = ? AND password = ?
             `;
@@ -133,6 +133,7 @@ export class Utilisateurs{
                                 isFind: true,
                                 message: 'Utilisateur trouvé avec succès.',
                                 dataToStore: {
+                                    id: utilisateur.id,
                                     prenom: utilisateur.first_name,
                                     nom: utilisateur.last_name,
                                     nom_utilisateur: utilisateur.nom_utilisateur,
@@ -149,6 +150,7 @@ export class Utilisateurs{
                                 isFind: false,
                                 message: 'Aucun utilisateur trouvé avec ces identifiants.',
                                 dataToStore: {
+                                    id: null,
                                     prenom: '',
                                     nom: '',
                                     nom_utilisateur: '',

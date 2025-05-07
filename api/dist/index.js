@@ -14,17 +14,18 @@ import { default as statistiquesRouter } from './routes/statistiques.js';
 import { default as magasinRouter } from './routes/magasin.js';
 import { default as professeursRouter } from './routes/professeurs.js';
 import { default as chatRouter } from './routes/chat.js';
+import http from 'http';
+import { Server } from 'socket.io';
+import socketHandler from './sockets/chatSocket.js'; // Assure-toi que le handler est correctement importé
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, 'public');
 console.log("Chemin du dossier public :", publicPath);
-const __server_dirname = process.cwd ? process.cwd() : process.env.PWD;
-console.log(__server_dirname + utilisateursRouter);
 const app = express();
 app.use(express.json());
 // Configuration CORS
 const corsOptions = {
-    origin: 'http://localhost:8081', // Autorise uniquement localhost:8081
+    origin: 'http://localhost:8081', // Frontend
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 };
 app.use(cors(corsOptions));
@@ -32,7 +33,7 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-// routes principales //
+// Routes principales
 app.use('/', indexRouter);
 app.use('/utilisateurs', utilisateursRouter);
 app.use('/informations', informationsRouter);
@@ -43,9 +44,21 @@ app.use('/magasin', magasinRouter);
 app.use('/professeurs', professeursRouter);
 app.use('/chat', chatRouter);
 app.use('/public', express.static(path.join(__dirname, '../public')));
-// routes secondaires //
+// Routes secondaires
 app.use('/cours/statistiques', statistiquesRouter);
-// Démarrer le serveur
-app.listen(3000, () => {
+// Crée le serveur HTTP avec Express
+const server = http.createServer(app);
+// Instancie Socket.io avec le serveur
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:8081", // Frontend
+        methods: ["GET", "POST"]
+    }
+});
+// Lier le gestionnaire des événements Socket.io
+socketHandler(io);
+console.log(server);
+// Démarrer le serveur Express et Socket.io
+server.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
