@@ -19,7 +19,8 @@ import Utilisateur from './pages/utilisateurs/consulterUtilisateur';
 import AjouterUtilisateur from './pages/utilisateurs/ajouterUtilisateur';
 import Paiements from '../app/pages/paiements';
 import MainLayout from '../components/ui/mainlayout';
-import Messages from './pages/messages';
+import Messages from './pages/messages/messages';
+import CreerMessage from './pages/messages/creerMessage';
 import Participants from './pages/cours/consulterParticipants';
 
 const App = () => {
@@ -37,7 +38,8 @@ const App = () => {
 
             <Route path="/pages/dashboard" element={<Dashboard />} />
 
-            <Route path="/pages/messages" element={<Messages />} />
+            <Route path="/pages/messages/envoyer" element={<Messages />} />
+            <Route path="/pages/messages/creer" element={<CreerMessage />} />
 
             <Route path="/pages/connexion" element={<Connexion />} />
 

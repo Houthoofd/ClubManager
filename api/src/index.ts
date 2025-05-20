@@ -14,6 +14,7 @@ import { default as statistiquesRouter } from './routes/statistiques.js';
 import { default as magasinRouter } from './routes/magasin.js';
 import { default as professeursRouter } from './routes/professeurs.js';
 import { default as chatRouter } from './routes/chat.js';
+import { default as messagesRouter } from './routes/messages.js';
 
 import http from 'http';
 import { Server } from 'socket.io';
@@ -52,6 +53,7 @@ app.use('/paiements', paiementRouter);
 app.use('/magasin', magasinRouter);
 app.use('/professeurs', professeursRouter);
 app.use('/chat', chatRouter);
+app.use('/messages', messagesRouter);
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Routes secondaires

@@ -27,6 +27,7 @@ const Chat = () => {
   const [messageInput, setMessageInput] = useState('');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true); // Nouvel état pour le chargement
 
   const selectedUser = useSelector((state: any) => state.navigation.selecte_chat_user);
   const dispatch = useDispatch();
@@ -43,6 +44,7 @@ const Chat = () => {
 
   useEffect(() => {
     if (socket && currentUserId && selectedUser?.id) {
+      setLoading(true); // Déclenche le "chargement" quand on change d'utilisateur
       socket.emit('getHistorique', { userId: currentUserId, receiverId: selectedUser.id });
     }
   }, [selectedUser, socket, currentUserId]);
@@ -66,13 +68,12 @@ const Chat = () => {
         message: messageInput,
         receiverId: selectedUser ? selectedUser.id : null,
         date_envoi: new Date().toISOString(),
-        sender_id: userId // Ajouté pour comparer
+        sender_id: userId
       };
 
       socket.emit('chatMessage', messageData);
 
       setMessages((prevMessages) => [...prevMessages, messageData]);
-
       setMessageInput('');
     }
   };
@@ -95,6 +96,7 @@ const Chat = () => {
 
     newSocket.on('historique', (historique: Message[]) => {
       setMessages(historique);
+      setLoading(false); // Fin du chargement une fois qu'on a les messages
     });
 
     newSocket.on('chatMessage', (message: Message) => {
@@ -125,7 +127,7 @@ const Chat = () => {
     };
   }, [dispatch]);
 
-  // ==> ICI on récupère userId UNE SEULE FOIS avant le .map
+  // ==> On récupère userId UNE SEULE FOIS avant le .map
   let userId = null;
   const storedData = localStorage.getItem('userData');
   if (storedData) {
@@ -138,42 +140,45 @@ const Chat = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '750px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'auto' }}>
       <h1>Chat avec {selectedUser?.first_name} {selectedUser?.last_name}</h1>
       <div style={{ flexGrow: 1, overflowY: 'auto', padding: '10px', marginBottom: '10px' }}>
-        {[...messages]
-          .sort((a, b) => {
-            const dateA = new Date(a.date_envoi || a.created_at).getTime();
-            const dateB = new Date(b.date_envoi || b.created_at).getTime();
-            return dateA - dateB;
-          })
-          .map((msg, index) => {
-            // Bonne condition : si moi = sender_id
-            const isSentByMe = msg.sender_id?.toString() === userId;
+        {loading ? (
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>Chargement des messages...</div>
+        ) : (
+          [...messages]
+            .sort((a, b) => {
+              const dateA = new Date(a.date_envoi || a.created_at).getTime();
+              const dateB = new Date(b.date_envoi || b.created_at).getTime();
+              return dateA - dateB;
+            })
+            .map((msg, index) => {
+              const isSentByMe = msg.sender_id?.toString() === userId;
 
-            const userName = isSentByMe
-              ? 'Moi'
-              : `${selectedUser?.first_name || 'Utilisateur'} ${selectedUser?.last_name || ''}`;
+              const userName = isSentByMe
+                ? 'Moi'
+                : `${selectedUser?.first_name || 'Utilisateur'} ${selectedUser?.last_name || ''}`;
 
-            return (
-              <div key={index} style={{ textAlign: isSentByMe ? 'right' : 'left' }}>
-                <strong>{userName} :</strong>
-                <div
-                  style={{
-                    backgroundColor: isSentByMe ? '#d1e7dd' : '#f8d7da',
-                    padding: '5px 10px',
-                    borderRadius: '5px',
-                    marginBottom: '10px',
-                  }}
-                >
-                  {msg.contenu || msg.message}
+              return (
+                <div key={index} style={{ textAlign: isSentByMe ? 'right' : 'left' }}>
+                  <strong>{userName} :</strong>
+                  <div
+                    style={{
+                      backgroundColor: isSentByMe ? '#222533' : '#222533',
+                      padding: '5px 10px',
+                      borderRadius: '5px',
+                      marginBottom: '10px',
+                    }}
+                  >
+                    {msg.contenu || msg.message}
+                  </div>
+                  <span>
+                    {formatDateFromISO(msg.date_envoi || msg.created_at)}
+                  </span>
                 </div>
-                <span>
-                  {formatDateFromISO(msg.date_envoi || msg.created_at)}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -198,7 +203,7 @@ const Chat = () => {
             justifyContent: 'center',
             alignItems: 'center',
             width: '40px',
-            height: '40px', // Pour que le bouton soit bien carré
+            height: '40px',
             border: 'none',
             backgroundColor: '#d1e7dd',
             cursor: 'pointer',
@@ -214,7 +219,6 @@ const Chat = () => {
             <path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z" />
           </svg>
         </button>
-
       </div>
     </div>
   );

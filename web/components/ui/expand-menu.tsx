@@ -1,20 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from 'react-redux';
 import { SET_RIGHT_SIDEBAR_ITEMS, TOGGLE_RIGHT_SIDEBAR } from "../../redux/actions";
 import "../../app/styles/style-expand-menu.css";
 
 export interface ExpandMenuProps {
-  icon?: JSX.Element;
+  icon: React.ReactNode;
   text: string;
   subTitles?: string[];
-  listUrls?: string[];
+  listUrls: string[];
   menuId: string;
+  activeMenuId: string | null;
+  setActiveMenuId: (id: string | null) => void;
 }
 
-const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], listUrls = [], menuId }) => {
+const ExpandMenu: React.FC<ExpandMenuProps> = ({
+  icon,
+  text,
+  subTitles = [],
+  listUrls = [],
+  menuId,
+  activeMenuId,
+  setActiveMenuId,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const dispatch = useDispatch();
+  const menuRef = useRef<HTMLDivElement>(null);
   const isLeftNavbarOpen = useSelector((state: any) => state.navigation.left_navbar);
   const rightSidebarOpen = useSelector((state: any) => state.navigation.right_sidebar_open);
   const hasSubMenu = subTitles.length > 0 && listUrls.length > 0;
@@ -23,13 +34,36 @@ const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], lis
     items: { label: string; link: string }[];
   } | null>(null);
 
+  // Fermer si clic à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [setActiveMenuId]);
+
+  // Fermer si un autre menu est actif
+  useEffect(() => {
+    setIsOpen(activeMenuId === menuId);
+  }, [activeMenuId, menuId]);
+
   const handleClick = () => {
-    console.log('menuId:', menuId); // Vérifie que menuId est bien 'chat'
-  
-    // Si le menu est "chat", on récupère les utilisateurs
+    // Toggle l’état actif
+    if (activeMenuId === menuId) {
+      setActiveMenuId(null);
+      return;
+    } else {
+      setActiveMenuId(menuId);
+    }
+
+    // Cas particulier pour "chat"
     if (menuId === "chat") {
-      console.log('menuId est "chat"');
-  
       const fetchUsers = async () => {
         try {
           const response = await fetch('http://localhost:3000/utilisateurs');
@@ -37,60 +71,51 @@ const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], lis
             throw new Error('Erreur réseau lors de la récupération des utilisateurs');
           }
           const utilisateurs = await response.json();
-          console.log('Utilisateurs:', utilisateurs); // Affiche les utilisateurs récupérés
           const items = utilisateurs.data.map((user: { first_name: string; last_name: string; id: string }) => ({
             label: `${user.first_name} ${user.last_name}`,
             link: `/chat/${user.id}`,
           }));
-          
-          // Envoie les utilisateurs à la sidebar et l'ouvrons
+
           if (rightSidebarOpen) {
             setPendingSidebarData({ menuId, items });
-            dispatch(TOGGLE_RIGHT_SIDEBAR(false)); // On ferme d'abord
+            dispatch(TOGGLE_RIGHT_SIDEBAR(false));
           } else {
             dispatch({ type: "SET_RIGHT_SIDEBAR_ITEMS", payload: { menuId, items } });
-            dispatch(TOGGLE_RIGHT_SIDEBAR(true)); // On ouvre
+            dispatch(TOGGLE_RIGHT_SIDEBAR(true));
           }
         } catch (error) {
           console.error('Erreur lors de la récupération des utilisateurs:', error);
         }
       };
-  
-      // Appeler la fonction pour récupérer les utilisateurs
       fetchUsers();
       return;
     }
-  
-    // Si ce n'est pas le menu "chat", vérifier les sous-menus et gérer la sidebar
+
+    // Pas de sous-menu → juste fermeture de la sidebar
     if (!hasSubMenu) {
-      dispatch(TOGGLE_RIGHT_SIDEBAR(false)); // On ferme si pas de sous-menu
+      dispatch(TOGGLE_RIGHT_SIDEBAR(false));
       return;
     }
-  
+
+    // Sous-menus → sidebar + menu local
     const items = subTitles.map((subtitle, index) => ({
       label: subtitle,
       link: listUrls[index],
     }));
-  
-    // Envoie les sous-menus à la sidebar et l'ouvrons
+
     if (rightSidebarOpen) {
       setPendingSidebarData({ menuId, items });
-      dispatch(TOGGLE_RIGHT_SIDEBAR(false)); // On ferme d'abord
+      dispatch(TOGGLE_RIGHT_SIDEBAR(false));
     } else {
       dispatch({ type: "SET_RIGHT_SIDEBAR_ITEMS", payload: { menuId, items } });
-      dispatch(TOGGLE_RIGHT_SIDEBAR(true)); // On ouvre
+      dispatch(TOGGLE_RIGHT_SIDEBAR(true));
     }
   };
-  
-  
-  
 
+  // Rouvrir sidebar si elle était temporairement fermée
   useEffect(() => {
     if (!rightSidebarOpen && pendingSidebarData) {
-      dispatch({
-        type: "SET_RIGHT_SIDEBAR_ITEMS",
-        payload: pendingSidebarData,
-      });
+      dispatch({ type: "SET_RIGHT_SIDEBAR_ITEMS", payload: pendingSidebarData });
       dispatch(TOGGLE_RIGHT_SIDEBAR(true));
       setPendingSidebarData(null);
     }
@@ -98,22 +123,18 @@ const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], lis
 
   return (
     <div
+      ref={menuRef}
       className={`expand-menu ${isOpen ? "open" : "close"} ${isLeftNavbarOpen ? "expand" : "unexpand"}`}
       onClick={handleClick}
     >
-      <div
-        className={`menu-header ${isOpen ? "open" : "close"} ${hasSubMenu ? "with-arrow" : "without-arrow"}`}
-      >
+      <div className={`menu-header ${isOpen ? "open" : "close"} ${hasSubMenu ? "with-arrow" : "without-arrow"}`}>
         {isLeftNavbarOpen ? (
           <span className="menu-icon open">
             <Link className="menu-link" to={listUrls[0] || "#"}>{icon}</Link>
             <span className="menu-text">{text}</span>
           </span>
         ) : (
-          <Link
-            to={listUrls[0] || "#"}
-            className="menu-icon close"
-          >
+          <Link to={listUrls[0] || "#"} className="menu-icon close">
             {icon}
           </Link>
         )}
@@ -133,13 +154,16 @@ const ExpandMenu: React.FC<ExpandMenuProps> = ({ icon, text, subTitles = [], lis
         )}
       </div>
 
-      {isOpen && isLeftNavbarOpen && hasSubMenu && (
+      {isLeftNavbarOpen && (
         <ul className="menu-list">
-          {subTitles.map((subtitle, index) => (
-            <li key={index} className="menu-item">
-              {listUrls[index] ? <Link to={listUrls[index]}>{subtitle}</Link> : subtitle}
-            </li>
-          ))}
+          {subTitles.map((subtitle, index) => {
+            console.log(isLeftNavbarOpen)
+            return (
+              <li key={index} className="menu-item">
+                {listUrls[index] ? <Link to={listUrls[index]}>{subtitle}</Link> : subtitle}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

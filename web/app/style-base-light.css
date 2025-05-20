@@ -22,6 +22,12 @@
 }
 html{
   font-family: Poppins, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100%;
+}
+#root {
+  display: flex;
+  flex: 1;
+  height: 100%;
 }
 
 .layout.light{

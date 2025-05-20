@@ -18,9 +18,6 @@ const RightSidebar: React.FC = () => {
   const rightSidebarUsers = useSelector((state: any) => state.navigation.right_sidebar_users);
 
   useEffect(() => {
-    // Pour débug si besoin
-    // console.log("Items:", rightSidebarItems);
-    // console.log("Users:", rightSidebarUsers);
   }, [rightSidebarItems, rightSidebarUsers]);
 
   if (!rightSidebarOpen) return null;
@@ -28,6 +25,7 @@ const RightSidebar: React.FC = () => {
   const hasItems = Object.values(rightSidebarItems).some(items => Array.isArray(items) && items.length > 0);
   const hasUsers = Array.isArray(rightSidebarUsers) && rightSidebarUsers.length > 0;
 
+  console.log(rightSidebarOpen)
 
   return (
     <div className={`right-sidebar ${rightSidebarOpen ? "open" : "close"}`}>
