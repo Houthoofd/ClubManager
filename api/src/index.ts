@@ -17,6 +17,8 @@ import { default as chatRouter } from './routes/chat.js';
 import { default as messagesRouter } from './routes/messages.js';
 import {default as uploadRouter } from './routes/upload.js';
 
+import dotenv from 'dotenv';
+
 import http from 'http';
 import { Server } from 'socket.io';
 import socketHandler from './sockets/chatSocket.js'; // Assure-toi que le handler est correctement importé
@@ -28,6 +30,10 @@ const publicPath = path.join(__dirname, 'public');
 console.log("Chemin du dossier public :", publicPath);
 
 const app = express();
+
+
+// Charger le .env (une seule fois !)
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 app.use(express.json());
 

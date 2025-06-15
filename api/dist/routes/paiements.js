@@ -8,11 +8,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import express from 'express';
-import Stripe from 'stripe'; // Correct importation de Stripe
+import Stripe from 'stripe';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Paiements } from '../db/clients/paiements/paiements.js';
+// Recréation de __dirname pour modules ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Charger le .env situé à la racine du projet
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+console.log(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
-// Initialisation de Stripe avec votre clé secrète
-const stripe = new Stripe('sk_test_51R6wB1AxYwLhmnM2JhR2XJ5lC9IdNinj649NWeSujB4GEgG1oAulYHAm1fMH8J7N8vLwttw4ytGFBUXxp2pWXL7r00qy1eP7zX', {
+if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("La clé secrète Stripe est manquante dans le fichier .env");
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2025-02-24.acacia',
 });
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {

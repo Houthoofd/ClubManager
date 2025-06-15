@@ -1,9 +1,19 @@
 import express from 'express';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Paiements } from '../db/clients/paiements/paiements.js';
 
-dotenv.config();
+
+// Recréation de __dirname pour modules ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Charger le .env situé à la racine du projet
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
+console.log(process.env.STRIPE_SECRET_KEY)
 
 const router = express.Router();
 
@@ -14,7 +24,6 @@ if (!process.env.STRIPE_SECRET_KEY) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-02-24.acacia',
 });
-
 
 router.get('/', async (req, res) => {
   try {
