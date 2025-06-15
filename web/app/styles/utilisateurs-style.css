@@ -1,0 +1,128 @@
+.utilisateurs-header-content {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 70% 30%;
+  margin-right: 20px;
+  margin-left: 20px;
+}
+.utilisateur-header-content {
+  display: flex;
+  justify-content: start;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 20px;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.pagination > button {
+  color: #fff;
+  cursor: pointer;
+  background-color: #11121a;
+  border: 1px solid #222533;
+  width: 5ch;
+  height: 100%;
+}
+.pagination > button.active {
+  background-color: #5a53ff;
+}
+.pagination > button:last-child {
+  background-color: #5a53ff;
+}
+.pagination > button:first-child {
+  background-color: #5a53ff;
+}
+
+.pagination > button > svg{
+  fill: #fff;
+}
+
+.search-box.expanded {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  background-color: #222533;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+.search-box {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.search-box-icon {
+  background-color: #222533;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  height: 43px;
+  width: 43px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+.search-box-icon > svg{
+  fill: #fff;
+}
+.search-box-content.expanded {
+  background-color: #222533;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  width: 100%;
+}
+.search-box-content {
+  width: 0px;
+}
+.search-box-content > input[type="text"].expanded {
+  background-color: #222533;
+  border: none;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  padding: 14px;
+  width: 36ch;
+  color: #fff;
+}
+.search-box-content > input[type="text"] {
+  background-color: #222533;
+  border: none;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  padding: 14px;
+  width: 0px;
+}
+
+
+
+.informations-utilisateur-content {
+  display: inline-grid;
+  align-items: center;
+  gap: 20px;
+}
+.informations-utilisateur-list-item {
+  display: inline-grid;
+  justify-content: flex-start;
+  align-items: center;
+}
+.informations-input-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #222533;
+  background-color: #11121a;
+  border-radius: 5px;
+}
+.informations-input-group > input[type="text"] {
+  border: none;
+  background-color: #11121a;
+  color: #fff;
+}

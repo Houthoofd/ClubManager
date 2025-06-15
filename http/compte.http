@@ -1,0 +1,4 @@
+## Obtenir les informations d'un utilisateur via son nom et prenom
+GET http://localhost:3000/compte/informations
+
+###

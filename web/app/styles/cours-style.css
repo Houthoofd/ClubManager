@@ -1,0 +1,116 @@
+
+.class-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  margin-right: 20px;
+  margin-left: 20px;
+}
+.class-list-item {
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  display: flex;
+  border: 1px solid #222533;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.header > .class-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid #222533;
+  border-radius: 5px;
+}
+.header > .class-list-header > div > span{
+  background-color: #11121a;
+}
+.rest {
+  width: 100px;
+}
+
+.class-list > .class-list-item > button {
+  color: #fff;
+  cursor: pointer;
+  background-color: #5a53ff;
+  border: none;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 16px;
+  width: 10ch;
+}
+
+
+
+
+
+.informations-cours {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.participants-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: auto;
+  height: 50px;
+  border: 1px solid #222533;
+  padding: 10px 10px;
+  border-radius: 5px;
+}
+.participants-list-item-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.participants-list-item-icon.validate{
+  border: 1px solid green;
+  background-color: #8bc34a30;
+}
+.participants-list-item-icon.cancel{
+  border: 1px solid red;
+  background-color: #f4433642;
+}
+.participants-list-item-icon.validate > svg{
+  fill: green;
+  width: 15px;
+  height: 15px;
+}
+.participants-list-item-icon.cancel > svg{
+  fill: red;
+  width: 15px;
+  height: 15px;
+}
+
+.class-list-item.JJB {
+  border-left: 3px solid violet;
+}
+.class-list-item.Grappling {
+  border-left: 3px solid maroon;
+}
+
+.icon-more-informations {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.participants-list-item.present {
+  background-color: #0080007a;
+}
+.participants-list-item.pas-present {
+  background-color: #ff00004a;
+}

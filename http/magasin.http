@@ -1,0 +1,66 @@
+### Obtenir tous les articles du magasin
+GET http://localhost:3000/magasin/articles
+
+###
+
+### Obtenir toutes les catégories d'articles du magasin
+GET http://localhost:3000/magasin/articles/categories
+
+###
+
+### Ajouter un article au magasin
+POST http://localhost:3000/magasin/articles/ajouter
+Content-Type: application/json
+
+{
+  "nom": "Short de sport",
+  "description": "Short confortable et respirant pour l'entraînement",
+  "prix": 35.99,
+  "image_url": "https://exemple.com/short.jpg",
+  "categorie_id": 1
+}
+
+###
+
+### Supprimer un article du magasin (exemple avec l'ID 3)
+DELETE http://localhost:3000/magasin/articles/3
+
+###
+
+### Modifier un article dans le magasin (exemple avec l'ID 2)
+PUT http://localhost:3000/magasin/articles/2
+Content-Type: application/json
+
+{
+  "nom": "Short mis à jour",
+  "description": "Nouvelle version du short",
+  "prix": 39.99,
+  "image_url": "https://exemple.com/short-new.jpg",
+  "categorie_id": 2
+}
+
+###
+
+### Ajouter une commande
+POST http://localhost:3000/magasin/commandes/ajouter
+Content-Type: application/json
+
+{
+  "utilisateur_id": 1,
+  "articles": [
+    {
+      "article_id": 1,
+      "taille_id": 2,
+      "quantite": 2,
+      "prix": 35.99
+    },
+    {
+      "article_id": 2,
+      "taille_id": 1,
+      "quantite": 1,
+      "prix": 39.99
+    }
+  ]
+}
+
+###

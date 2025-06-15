@@ -1,0 +1,38 @@
+.carousel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.right-sidebar-list-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+}
+
+.avatar-initials {
+  color: #fff;
+  background-color: #222533;
+  border-radius: 10px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+  font-weight: lighter;
+  display: flex;
+  cursor: pointer;
+}
+
+.scroll-button {
+  background: #222533;
+  cursor: pointer;
+  margin-top: 10px;
+  border-radius: 50%;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}

@@ -1,0 +1,45 @@
+.paiements-header-content {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-right: 20px;
+  margin-left: 20px;
+}
+.control-header-panel {
+  gap: 20px;
+  display: flex;
+  justify-content: space-between;
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+.filter-box-icon {
+  background-color: #222533;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  height: 43px;
+  width: 43px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+
+  svg{
+    fill: #fff;
+  }
+}
+
+.class-list-item {
+  cursor: pointer;
+  border: 1px solid #222533;
+  border-radius: 5px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  display: flex;
+}
+.class-list-item > .icon{
+
+}

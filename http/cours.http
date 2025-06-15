@@ -1,0 +1,19 @@
+## Exemple pour récupèrer les cours
+GET http://localhost:3000/cours
+
+###
+
+GET http://localhost:3000/cours/3?extended
+
+###
+
+GET http://localhost:3000/cours/3/
+
+###
+
+PUT http://localhost:3000/cours/inscription/validation
+
+###
+
+## Exemple pour récupèrer les cours
+GET http://localhost:3000/cours/informations/planning

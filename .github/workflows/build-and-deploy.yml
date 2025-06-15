@@ -1,0 +1,36 @@
+name: Build and Publish Docker Image
+
+on:
+  push:
+    branches:
+      - main # Déclenche l'action sur un push dans la branche principale
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'  # Utiliser la version appropriée de Node.js
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build project
+      run: npm run build
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to GitHub Docker registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+    - name: Build and Push Docker image with Nginx
+      run: |
+        docker build -t ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest .
+        docker push ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
