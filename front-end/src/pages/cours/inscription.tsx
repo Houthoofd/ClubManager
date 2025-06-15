@@ -79,7 +79,7 @@ const Inscription = () => {
       const response = await fetch(`http://localhost:3000/cours/${coursId}/`);
       if (!response.ok) throw new Error('Erreur récupération participants');
       const cours = await response.json();
-      navigate(`/pages/cours/participants`, { state: { cours } });
+      navigate(`/pages/cours/${coursId}/participants`, { state: { cours } });
     } catch (err) {
       alert("Impossible de récupérer les participants.");
     }

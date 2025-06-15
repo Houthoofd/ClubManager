@@ -69,7 +69,7 @@ export declare const coursdataSchema: z.ZodObject<{
     heure_fin: string;
 }>;
 export declare const datareservationSchema: z.ZodObject<{
-    cours_id: z.ZodNumber;
+    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -77,12 +77,12 @@ export declare const datareservationSchema: z.ZodObject<{
     utilisateur_nom: string;
     utilisateur_prenom: string;
 }, {
-    cours_id: number;
     utilisateur_nom: string;
     utilisateur_prenom: string;
+    cours_id?: unknown;
 }>;
 export declare const datannulationSchema: z.ZodObject<{
-    cours_id: z.ZodNumber;
+    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -90,12 +90,12 @@ export declare const datannulationSchema: z.ZodObject<{
     utilisateur_nom: string;
     utilisateur_prenom: string;
 }, {
-    cours_id: number;
     utilisateur_nom: string;
     utilisateur_prenom: string;
+    cours_id?: unknown;
 }>;
 export declare const datavalidationSchema: z.ZodObject<{
-    cours_id: z.ZodNumber;
+    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -103,8 +103,8 @@ export declare const datavalidationSchema: z.ZodObject<{
     utilisateur_nom: string;
     utilisateur_prenom: string;
 }, {
-    cours_id: number;
     utilisateur_nom: string;
     utilisateur_prenom: string;
+    cours_id?: unknown;
 }>;
 //# sourceMappingURL=cours.d.ts.map

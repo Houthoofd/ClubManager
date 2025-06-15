@@ -73,19 +73,19 @@ export const coursdataSchema = z.object({
 
 // Schéma Zod pour valider les données d'Abonnement
 export const datareservationSchema = z.object({
-  cours_id: z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
+  cours_id: z.preprocess((val) => Number(val), z.number().positive("L'ID du cours doit être un nombre positif")),
   utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
   utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
 });
 
 export const datannulationSchema = z.object({
-  cours_id: z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
+  cours_id: z.preprocess((val) => Number(val), z.number().positive("L'ID du cours doit être un nombre positif")),
   utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
   utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
 });
 
 export const datavalidationSchema = z.object({
-  cours_id: z.number().positive("L'ID de l'utilisateur doit être un nombre positif"),
+  cours_id: z.preprocess((val) => Number(val), z.number().positive("L'ID du cours doit être un nombre positif")),
   utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
   utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
 });

@@ -9,6 +9,7 @@ import ProtectedRoute from './pages/protectedroute';
 import Inscription from './pages/cours/inscription';
 import AjouterCours from './pages/cours/ajouterCours';
 import AjouterProfesseur from './pages/cours/ajouterProf';
+import Participants from './pages/cours/consulterParticipants';
 
 import Magasin from './pages/magasin/magasin';
 import AjouterArticle from './pages/magasin/ajouterArticle';
@@ -53,6 +54,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Inscription />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'pages/cours/:id/participants',
+        element: (
+          <ProtectedRoute>
+            <Participants />
           </ProtectedRoute>
         ),
       },

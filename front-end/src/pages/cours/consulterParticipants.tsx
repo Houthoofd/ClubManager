@@ -1,9 +1,18 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
-import store from '../../../redux/store';
-import { useLocation } from 'react-router-dom';
-import '../../styles/cours-style.css';
-import { CoursData, DataAnnulation, Utilisateur } from '@clubmanager/types';
+import store from '../../redux/store';
+import { useParams } from 'react-router-dom';
+import {
+  Card,
+  CardTitle,
+  CardBody,
+  Flex,
+  FlexItem,
+  Button,
+  Label
+} from '@patternfly/react-core';
+import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
+import type { CoursData, DataAnnulation, Utilisateur } from '@clubmanager/types';
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -13,56 +22,60 @@ function formatDateFromISO(isoDateString: string) {
   return `${year}-${month}-${day}`;
 }
 
-function convertToNumber(value: any): number {
-  if (typeof value === 'number') {
-    return value;
-  }
-  const parsedValue = Number(value);
-  return parsedValue;
-}
-
 const ParticipantsPage = () => {
-  const location = useLocation();
-  const coursData = location.state?.cours || { utilisateurs: [], date_cours: null };
+  const { id } = useParams();
+  const coursId = Number(id);
 
-  // État pour suivre le cours //
-  const [cours, setCours] = useState<CoursData[]>(coursData.Cours || []);
+  console.log(id)
 
-  // État pour suivre les statuts des participants
-  const [participants, setParticipants] = useState<Utilisateur[]>(coursData.Cours.utilisateurs || []);
-
+  const [cours, setCours] = useState<CoursData | null>(null);
+  const [participants, setParticipants] = useState<Utilisateur[]>([]);
 
   useEffect(() => {
-    console.log("Participants mis à jour :", participants);
-  }, [participants]);
-  
-  
+    if (!coursId) return;
 
-  // Fonction pour gérer les actions de statut (valider ou annuler)
+    const fetchCours = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/cours/${coursId}`);
+        if (!response.ok) throw new Error("Erreur lors du chargement du cours");
+
+        const data: CoursData = await response.json();
+        setCours(data.Cours);
+        setParticipants(data.Cours.utilisateurs || []);
+      } catch (error) {
+        console.error("Erreur fetch cours:", error);
+      }
+    };
+
+    fetchCours();
+  }, [coursId]);
+
   const handleStatus = async (data: Record<string, string>, status: string) => {
-    const convertedId = convertToNumber(cours.id);
+    if (!cours?.id) return;
+
     const dataToSend: DataAnnulation = {
-      cours_id: convertedId,
+      cours_id: cours.id,
       utilisateur_nom: data.nom,
       utilisateur_prenom: data.prenom
     };
-    const endpoint = status === "annuler" 
-      ? "http://localhost:3000/cours/inscription/annulation" 
+    console.log(dataToSend)
+    const endpoint = status === "annuler"
+      ? "http://localhost:3000/cours/inscription/annulation"
       : "http://localhost:3000/cours/inscription/validation";
-  
+
     try {
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),
       });
-  
+
       if (response.ok) {
-        setParticipants((prevParticipants) =>
-          prevParticipants.map((utilisateur) =>
-            utilisateur.nom === data.nom && utilisateur.prenom === data.prenom
-              ? { ...utilisateur, presence: status === "valider" ? 1 : 0 }
-              : utilisateur
+        setParticipants((prev) =>
+          prev.map((u) =>
+            u.nom === data.nom && u.prenom === data.prenom
+              ? { ...u, presence: status === "valider" ? 1 : 0 }
+              : u
           )
         );
       } else {
@@ -72,53 +85,73 @@ const ParticipantsPage = () => {
       console.log(error);
     }
   };
-  
 
+  if (!cours) {
+    return <p>Chargement en cours...</p>;
+  }
 
   return (
-    <div>
-      <div className='informations-cours'>
-        <h1>Cours du {cours.date_cours ? formatDateFromISO(cours.date_cours) : 'Inconnu'}</h1> 
-        <h3>Nombre de participants : {cours.utilisateurs?.length}</h3>
-      </div>
-      <div className='utilisateur-list-infos'>
-  {participants.map((utilisateur) => (
-    <div 
-    className={`participants-list-item 
-      ${utilisateur.presence === 1 ? "present" 
-      : utilisateur.presence === 0 ? "pas-present" 
-      : utilisateur.presence === null ? "no-status" 
-      : ""}`} 
-    key={utilisateur.id}
-  >
-  
-      <div className='participants-list-item-nom'>{utilisateur.nom}</div>
-      <div className='participants-list-item-prenom'>{utilisateur.prenom}</div>
-      <div className='participants-list-item-icon validate' 
-        onClick={() => handleStatus({nom: utilisateur.nom, prenom: utilisateur.prenom}, 'valider')}>
-        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
-          <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-        </svg>
-      </div>
-      <div className='participants-list-item-icon cancel' 
-        onClick={() => handleStatus({nom: utilisateur.nom, prenom: utilisateur.prenom}, 'annuler')}>
-        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
-          <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-        </svg>
-      </div>
-    </div>
-  ))}
-</div>
+    <div style={{ padding: '1rem' }}>
+      <Card>
+        <CardTitle>
+          Cours du {cours.date_cours ? formatDateFromISO(cours.date_cours) : 'Inconnu'}
+        </CardTitle>
+        <CardBody>
+          <p>Nombre de participants : {cours.utilisateurs?.length}</p>
+        </CardBody>
+      </Card>
 
+      <div style={{ marginTop: '1rem' }}>
+        {participants.map((utilisateur) => {
+          const presence = utilisateur.presence;
+          let presenceColor = 'grey';
+          if (presence === 1) presenceColor = 'green';
+          else if (presence === 0) presenceColor = 'red';
+
+          return (
+            <Card key={utilisateur.id} style={{ marginBottom: '0.5rem' }}>
+              <CardBody>
+                <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+                  <FlexItem>
+                    <Label color="blue">{utilisateur.nom} {utilisateur.prenom}</Label>
+                  </FlexItem>
+                  <FlexItem>
+                    {presence !== null && (
+                      <Label color={presenceColor as any}>
+                        {presence === 1 ? 'Présent' : 'Absent'}
+                      </Label>
+                    )}
+                  </FlexItem>
+                  <FlexItem>
+                    <Button
+                      variant="plain"
+                      aria-label="Valider présence"
+                      onClick={() => handleStatus({ nom: utilisateur.nom, prenom: utilisateur.prenom }, 'valider')}
+                    >
+                      <CheckCircleIcon color="green" />
+                    </Button>
+                    <Button
+                      variant="plain"
+                      aria-label="Annuler présence"
+                      onClick={() => handleStatus({ nom: utilisateur.nom, prenom: utilisateur.prenom }, 'annuler')}
+                    >
+                      <TimesCircleIcon color="red" />
+                    </Button>
+                  </FlexItem>
+                </Flex>
+              </CardBody>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };
 
-// Composant fonctionnel pour inclure le store Redux
 const Participants = () => {
   return (
     <Provider store={store}>
-      <ParticipantsPage /> {/* Utilisez ParticipantsPage à l'intérieur du Provider */}
+      <ParticipantsPage />
     </Provider>
   );
 };
