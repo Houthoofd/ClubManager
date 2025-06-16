@@ -9,21 +9,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Magasin {
-    // Récupérer les articles
     obtenirLesArticles() {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
             const sql = `
-        SELECT 
-          a.*, 
-          i.url AS image_url,
-          t.nom AS stock_taille, -- ou t.nom selon ta table
-          s.quantite AS stock_quantite
-        FROM articles a
-        LEFT JOIN images i ON i.article_id = a.id
-        LEFT JOIN stocks s ON s.article_id = a.id
-        LEFT JOIN tailles t ON t.id = s.taille_id
-      `;
+      SELECT 
+        a.*, 
+        i.url AS image_url,
+        t.nom AS stock_taille,
+        s.quantite AS stock_quantite,
+        c.id AS categorie_id,
+        c.nom AS categorie_nom
+      FROM articles a
+      LEFT JOIN images i ON i.article_id = a.id
+      LEFT JOIN stocks s ON s.article_id = a.id
+      LEFT JOIN tailles t ON t.id = s.taille_id
+      LEFT JOIN categories c ON c.id = a.categorie_id
+    `;
             console.log("Exécution de la requête avec LEFT JOIN");
             mysqlConnector.query(sql, [], (error, results) => {
                 mysqlConnector.close();
@@ -31,7 +33,6 @@ export class Magasin {
                     console.error('Erreur lors de la récupération des articles : ' + error.message);
                     return reject(error);
                 }
-                // Regrouper les résultats
                 const articlesMap = new Map();
                 for (const row of results) {
                     if (!articlesMap.has(row.id)) {
@@ -39,10 +40,13 @@ export class Magasin {
                             id: row.id,
                             nom: row.nom,
                             prix: row.prix,
-                            categorie_id: row.categorie_id,
                             description: row.description,
                             images: [],
-                            stocks: []
+                            stocks: [],
+                            categorie: {
+                                id: row.categorie_id,
+                                nom: row.categorie_nom
+                            }
                         });
                     }
                     const article = articlesMap.get(row.id);
@@ -57,8 +61,65 @@ export class Magasin {
                     }
                 }
                 const articlesAvecDetails = Array.from(articlesMap.values());
-                console.log("Articles enrichis avec LEFT JOIN :", articlesAvecDetails);
+                console.log("Articles enrichis avec catégories :", articlesAvecDetails);
                 resolve(articlesAvecDetails);
+            });
+        });
+    }
+    obtenirArticlesParCategories() {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            const sql = `
+      SELECT 
+        a.*, 
+        a.categorie_id,
+        i.url AS image_url,
+        t.nom AS stock_taille,
+        s.quantite AS stock_quantite,
+        c.nom AS categorie_nom
+      FROM articles a
+      LEFT JOIN images i ON i.article_id = a.id
+      LEFT JOIN stocks s ON s.article_id = a.id
+      LEFT JOIN tailles t ON t.id = s.taille_id
+      LEFT JOIN categories c ON c.id = a.categorie_id
+      ORDER BY c.nom, a.id
+    `;
+            mysqlConnector.query(sql, [], (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    console.error('Erreur lors de la récupération des articles par catégories : ' + error.message);
+                    return reject(error);
+                }
+                const mapCategories = {};
+                for (const row of results) {
+                    if (!mapCategories[row.categorie_nom]) {
+                        mapCategories[row.categorie_nom] = [];
+                    }
+                    let articles = mapCategories[row.categorie_nom];
+                    let article = articles.find(a => a.id === row.id);
+                    if (!article) {
+                        article = {
+                            id: row.id,
+                            nom: row.nom,
+                            prix: row.prix,
+                            description: row.description,
+                            images: [],
+                            stocks: [],
+                            categorie_id: row.categorie_id, // bien récupéré dans la requête
+                        };
+                        articles.push(article);
+                    }
+                    if (row.image_url && !article.images.includes(row.image_url)) {
+                        article.images.push(row.image_url);
+                    }
+                    if (row.stock_taille && row.stock_quantite !== null) {
+                        article.stocks.push({
+                            taille: row.stock_taille,
+                            quantite: row.stock_quantite
+                        });
+                    }
+                }
+                resolve(mapCategories);
             });
         });
     }

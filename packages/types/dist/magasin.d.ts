@@ -1,5 +1,6 @@
 import { z } from 'zod';
 export type ArticleData = {
+    id: number;
     nom: string;
     description: string;
     prix: number;
@@ -9,6 +10,20 @@ export type ArticleData = {
         taille: string;
         quantite: number;
     }[];
+};
+export type ArticleAPI = {
+    id: number;
+    nom: string;
+    prix: number;
+    description: string;
+    images: string[];
+    stocks: {
+        taille: string;
+        quantite: number;
+    }[];
+};
+export type ArticlesParCategorie = {
+    [categorieNom: string]: ArticleData[];
 };
 export type Categorie = {
     id: number;
@@ -31,7 +46,7 @@ export type NouvelleCommande = {
     articles: ArticleCommande[];
     statut?: string;
 };
-export declare const articleDataValidationSchema: z.ZodObject<{
+export declare const articleCreationSchema: z.ZodObject<{
     nom: z.ZodString;
     description: z.ZodString;
     prix: z.ZodEffects<z.ZodNumber, number, unknown>;
@@ -58,6 +73,47 @@ export declare const articleDataValidationSchema: z.ZodObject<{
         quantite: number;
     }[];
 }, {
+    nom: string;
+    description: string;
+    images: string[];
+    stocks: {
+        taille: string;
+        quantite?: unknown;
+    }[];
+    prix?: unknown;
+    categorie_id?: unknown;
+}>;
+export declare const articleDataValidationSchema: z.ZodObject<{
+    nom: z.ZodString;
+    description: z.ZodString;
+    prix: z.ZodEffects<z.ZodNumber, number, unknown>;
+    images: z.ZodArray<z.ZodString, "many">;
+    categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    stocks: z.ZodArray<z.ZodObject<{
+        taille: z.ZodString;
+        quantite: z.ZodEffects<z.ZodNumber, number, unknown>;
+    }, "strip", z.ZodTypeAny, {
+        taille: string;
+        quantite: number;
+    }, {
+        taille: string;
+        quantite?: unknown;
+    }>, "many">;
+} & {
+    id: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    id: number;
+    nom: string;
+    description: string;
+    prix: number;
+    images: string[];
+    categorie_id: number;
+    stocks: {
+        taille: string;
+        quantite: number;
+    }[];
+}, {
+    id: number;
     nom: string;
     description: string;
     images: string[];

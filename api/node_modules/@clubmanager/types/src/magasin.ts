@@ -1,15 +1,29 @@
 import { z } from 'zod';
 
 export type ArticleData = {
+  id: number;
   nom: string;
   description: string;
   prix: number;
-  images: string[]; // ← modifié ici
+  images: string[];
   categorie_id: number;
   stocks: {
     taille: string;
     quantite: number;
   }[];
+};
+
+export type ArticleAPI = {
+  id: number;
+  nom: string;
+  prix: number;
+  description: string;
+  images: string[];
+  stocks: { taille: string; quantite: number }[];
+};
+
+export type ArticlesParCategorie = {
+  [categorieNom: string]: ArticleData[];
 };
 
 
@@ -40,12 +54,13 @@ export type NouvelleCommande = {
 };
 
 
-export const articleDataValidationSchema = z.object({
+// Pour création (sans id)
+export const articleCreationSchema = z.object({
   nom: z.string(),
   description: z.string(),
-  prix: z.preprocess((val) => Number(val), z.number()), // ← transformation automatique
-  images: z.array(z.string()), // si ce ne sont pas des URL, enlève `.url()`
-  categorie_id: z.preprocess((val) => Number(val), z.number()), // ← ici aussi
+  prix: z.preprocess((val) => Number(val), z.number()),
+  images: z.array(z.string()),
+  categorie_id: z.preprocess((val) => Number(val), z.number()),
   stocks: z.array(
     z.object({
       taille: z.string(),
@@ -53,6 +68,13 @@ export const articleDataValidationSchema = z.object({
     })
   )
 });
+
+// Pour lecture/modification (avec id)
+export const articleDataValidationSchema = articleCreationSchema.extend({
+  id: z.number().int().positive(),
+});
+
+
 
 
 

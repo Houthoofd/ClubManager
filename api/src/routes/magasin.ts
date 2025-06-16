@@ -1,6 +1,6 @@
 import express from 'express';
 import { Magasin } from '../db/clients/magasin/magasin.js';
-import { ArticleData, articleDataValidationSchema } from '@clubmanager/types';
+import { ArticleData, articleCreationSchema, articleDataValidationSchema } from '@clubmanager/types';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -11,7 +11,7 @@ router.get('/articles', async (req: any, res: any) => {
 
 
     // Récupérer les utilisateurs associés à ce cours
-    const result = await client.obtenirLesArticles();
+    const result = await client.obtenirArticlesParCategories();
 
     console.log('articles récupèrés avec succès', result);
     res.status(200).json(result);
@@ -101,7 +101,7 @@ router.delete('/articles/:id', async (req:any, res:any) => {
   }
 });
 
-router.put('/articles/:id', async (req:any, res:any) => {
+router.put('/articles/:id', async (req: any, res: any) => {
   const articleId = parseInt(req.params.id);
   const client = new Magasin();
 
@@ -110,7 +110,10 @@ router.put('/articles/:id', async (req:any, res:any) => {
   }
 
   try {
+    // Valide les données sans l'id (car id vient de req.params)
     const validatedData = articleDataValidationSchema.parse(req.body);
+
+    // Puis passe l'id séparément
     const result = await client.modifierArticle(articleId, validatedData);
 
     if (result.isConfirm) {

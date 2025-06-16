@@ -45,8 +45,25 @@ const AjouterArticle = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [prix, setPrix] = useState('0');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ id: number; nom: string }[]>([]);
+
 
   const tailles = ['S', 'M', 'L', 'XL'];
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/magasin/articles/categories');
+        if (!res.ok) throw new Error('Erreur lors du chargement des catégories');
+        const data = await res.json();
+        setCategories(data);
+      } catch (err) {
+        console.error('Erreur de chargement des catégories :', err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleTabClick = (_event: React.MouseEvent, tabIndex: number) => {
     setActiveTabKey(tabIndex);
@@ -201,10 +218,11 @@ const ouvrirEdition = (article: any) => {
               shouldFocusToggleOnSelect
             >
               <SelectList>
-                <SelectOption value="1">Rashguards</SelectOption>
-                <SelectOption value="2">Shorts</SelectOption>
-                <SelectOption value="4">Ceintures</SelectOption>
-                <SelectOption value="5">Sacs</SelectOption>
+                {categories.map(categorie => (
+                  <SelectOption key={categorie.id} value={categorie.id.toString()}>
+                    {categorie.nom}
+                  </SelectOption>
+                ))}
               </SelectList>
             </Select>
           </FormGroup>

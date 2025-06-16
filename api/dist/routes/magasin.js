@@ -16,7 +16,7 @@ router.get('/articles', (req, res) => __awaiter(void 0, void 0, void 0, function
     try {
         const client = new Magasin();
         // Récupérer les utilisateurs associés à ce cours
-        const result = yield client.obtenirLesArticles();
+        const result = yield client.obtenirArticlesParCategories();
         console.log('articles récupèrés avec succès', result);
         res.status(200).json(result);
     }
@@ -100,7 +100,9 @@ router.put('/articles/:id', (req, res) => __awaiter(void 0, void 0, void 0, func
         return res.status(400).json({ message: 'ID invalide.' });
     }
     try {
+        // Valide les données sans l'id (car id vient de req.params)
         const validatedData = articleDataValidationSchema.parse(req.body);
+        // Puis passe l'id séparément
         const result = yield client.modifierArticle(articleId, validatedData);
         if (result.isConfirm) {
             res.status(200).json({ message: result.message });
