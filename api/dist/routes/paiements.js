@@ -40,7 +40,7 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(500).json({ message: 'Erreur lors de la récupération des paiements', error }); // Envoie une réponse d'erreur
     }
 }));
-router.post('/paiements', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/stripe', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { amount, currency } = req.body;
     try {
         // Créer un Payment Intent
@@ -48,6 +48,7 @@ router.post('/paiements', (req, res) => __awaiter(void 0, void 0, void 0, functi
             amount, // Le montant en centimes (par exemple, 10€ -> 1000)
             currency, // La devise, par exemple, "usd" ou "eur"
         });
+        console.log(paymentIntent);
         // Retourner les informations du Payment Intent
         res.status(200).json({
             clientSecret: paymentIntent.client_secret,

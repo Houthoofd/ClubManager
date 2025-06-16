@@ -1,4 +1,5 @@
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import {
   Drawer,
   DrawerContent,
@@ -16,7 +17,9 @@ import {
   SelectOption,
   SelectList,
   MenuToggle,
+  Modal
 } from '@patternfly/react-core';
+import PaymentForm from '../form/paymentForm';
 
 type Stock = {
   taille: string;
@@ -40,7 +43,6 @@ type RightSidePanelProps = {
   articles: Article[];
   onRemoveArticle: (index: number) => void;
   onUpdateQuantite: (index: number, quantite: number, taille: string) => void;
-  onPasserCommande: () => void;
   children?: ReactNode;
 };
 
@@ -50,7 +52,6 @@ const RightSidePanel = ({
   articles,
   onRemoveArticle,
   onUpdateQuantite,
-  onPasserCommande,
   children
 }: RightSidePanelProps) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -58,6 +59,7 @@ const RightSidePanel = ({
   const [quantiteTemp, setQuantiteTemp] = useState<number>(1);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [localArticles, setLocalArticles] = useState<Article[]>(articles);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     setLocalArticles(articles);
@@ -81,6 +83,39 @@ const RightSidePanel = ({
       alert("Veuillez sélectionner une taille et une quantité valides.");
     }
   };
+
+  const onPasserCommande = async () => {
+    try {
+      // Calculer le total avec localArticles
+      setIsPaymentModalOpen(true);
+      const total = localArticles.reduce((sum, article) => {
+        return sum + article.prix * (article.quantite || 0);
+      }, 0);
+      const amountInCents = Math.round(total * 100);
+
+      const response = await fetch('http://localhost:3000/paiements/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ amount: amountInCents, currency: 'eur' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la création du paiement');
+      }
+
+      const data = await response.json();
+      console.log('Client secret reçu :', data.clientSecret);
+
+      // TODO: Intégrer Stripe.js ici pour confirmer le paiement avec data.clientSecret
+    } catch (error: any) {
+      console.error(error);
+      alert("Erreur lors de la commande : " + error.message);
+    }
+  };
+
+
 
   const toggleSelect = (toggleRef: React.Ref<any>) => (
     <MenuToggle
@@ -211,7 +246,7 @@ const RightSidePanel = ({
               </StackItem>
 
               <StackItem>
-                <Button variant="primary" onClick={onPasserCommande} style={{ width: '100%' }}>
+                <Button variant="primary" onClick={() => onPasserCommande()} style={{ width: '100%' }}>
                   Passer Commande
                 </Button>
               </StackItem>
@@ -221,9 +256,21 @@ const RightSidePanel = ({
       >
         <DrawerContentBody>
           {children}
+          <Modal
+            title="Paiement"
+            isOpen={isPaymentModalOpen}
+            onClose={() => setIsPaymentModalOpen(false)}
+            variant="medium"
+            aria-label="Formulaire de paiement"
+            hasNoBodyPadding
+          >
+            <PaymentForm />
+          </Modal>
         </DrawerContentBody>
       </DrawerContent>
     </Drawer>
+
+    
   );
 };
 

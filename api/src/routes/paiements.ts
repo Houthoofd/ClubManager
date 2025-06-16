@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
 });
 
 
-router.post('/paiements', async (req, res) => {
+router.post('/stripe', async (req, res) => {
   const { amount, currency } = req.body;
 
   try {
@@ -52,6 +52,8 @@ router.post('/paiements', async (req, res) => {
       amount, // Le montant en centimes (par exemple, 10€ -> 1000)
       currency, // La devise, par exemple, "usd" ou "eur"
     });
+
+    console.log(paymentIntent)
 
     // Retourner les informations du Payment Intent
     res.status(200).json({
