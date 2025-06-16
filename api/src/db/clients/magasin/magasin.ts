@@ -1,6 +1,6 @@
 import { } from '@clubmanager/types';
 import MysqlConnector from '../../connector/mysqlconnector.js';
-import { ArticleData, ConfirmationResult, NouvelleCommande, ArticleCommande, ArticlesParCategorie } from '@clubmanager/types'
+import { ArticleData, ConfirmationResult, NouvelleCommande, ArticleCommande, ArticlesParCategorie, ArticleCreationData } from '@clubmanager/types'
 
 export class Magasin {
 
@@ -183,7 +183,7 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
     });
   }
 
-  async ajouterArticle(data: ArticleData): Promise<ConfirmationResult> {
+  async ajouterArticle(data: ArticleCreationData): Promise<ConfirmationResult> {
     const mysqlConnector = new MysqlConnector();
 
     const articleSql = `

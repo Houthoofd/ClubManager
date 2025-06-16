@@ -1,6 +1,6 @@
 import express from 'express';
 import { Magasin } from '../db/clients/magasin/magasin.js';
-import { ArticleData, articleCreationSchema, articleDataValidationSchema } from '@clubmanager/types';
+import { ArticleCreationData, articleCreationSchema, articleDataValidationSchema } from '@clubmanager/types';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -43,43 +43,39 @@ router.post('/articles/ajouter', async (req: any, res: any) => {
   try {
     const client = new Magasin();
 
-    // Valider les données avec Zod
-    const validatedData = articleDataValidationSchema.parse(req.body);
+    // ✅ Valider les données avec le schéma pour la création (sans id)
+    const validatedData: ArticleCreationData = articleCreationSchema.parse(req.body);
 
-    // Afficher les données validées dans la console
     console.log("Données validées par le schéma Zod : ", JSON.stringify(validatedData));
 
-    // Ajouter l'article en utilisant la méthode client.ajouterArticle
     const result = await client.ajouterArticle(validatedData);
 
-    // Vérification du résultat et renvoi d'un message approprié
     if (result.isConfirm) {
       console.log('Article ajouté avec succès', result);
       return res.status(200).json({
-        message: result.message, // Message de succès renvoyé au front
+        message: result.message,
       });
     } else {
       console.error('Erreur lors de l\'ajout de l\'article', result.message);
       return res.status(500).json({
         message: 'Erreur lors de l\'ajout de l\'article.',
-        error: result.message, // Message d'erreur renvoyé si l'ajout a échoué
+        error: result.message,
       });
     }
 
   } catch (error) {
-    // Si l'erreur provient de Zod
     if (error instanceof z.ZodError) {
       console.error('Erreur de validation Zod :', error);
       return res.status(400).json({
         message: 'Erreur de validation des données.',
-        errors: error.errors, // Les erreurs de validation Zod renvoyées au front
+        errors: error.errors,
       });
     }
 
     console.error("Erreur lors de l'ajout de l'article :", error);
     return res.status(500).json({
       message: 'Erreur lors de l\'ajout de l\'article.',
-      error: error, // Message d'erreur générique renvoyé au front en cas d'échec
+      error: error,
     });
   }
 });

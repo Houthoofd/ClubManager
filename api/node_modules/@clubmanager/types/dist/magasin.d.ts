@@ -1,16 +1,4 @@
 import { z } from 'zod';
-export type ArticleData = {
-    id: number;
-    nom: string;
-    description: string;
-    prix: number;
-    images: string[];
-    categorie_id: number;
-    stocks: {
-        taille: string;
-        quantite: number;
-    }[];
-};
 export type ArticleAPI = {
     id: number;
     nom: string;
@@ -124,4 +112,6 @@ export declare const articleDataValidationSchema: z.ZodObject<{
     prix?: unknown;
     categorie_id?: unknown;
 }>;
+export type ArticleCreationData = z.infer<typeof articleCreationSchema>;
+export type ArticleData = z.infer<typeof articleDataValidationSchema>;
 //# sourceMappingURL=magasin.d.ts.map
