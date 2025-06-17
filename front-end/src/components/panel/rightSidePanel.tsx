@@ -20,11 +20,15 @@ import {
   Modal
 } from '@patternfly/react-core';
 import PaymentForm from '../form/paymentForm';
+import type { nouvelleCommandeSchema } from '@clubmanager/types';
 
 type Stock = {
   taille: string;
   quantite: number;
 };
+
+type Taille = 'S' | 'M' | 'L' | 'XL';
+
 
 type Article = {
   id: number;
@@ -60,6 +64,8 @@ const RightSidePanel = ({
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [localArticles, setLocalArticles] = useState<Article[]>(articles);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [commande, setCommande] = useState<any>(null);
+
 
   useEffect(() => {
     setLocalArticles(articles);
@@ -84,9 +90,42 @@ const RightSidePanel = ({
     }
   };
 
-  const onPasserCommande = () => {
-    setIsPaymentModalOpen(true);
+ const onPasserCommande = () => {
+  const userData = localStorage.getItem('userData');
+  if (!userData) {
+    alert("Utilisateur non connecté.");
+    return;
+  }
+
+  const user = JSON.parse(userData);
+  const utilisateur_id = Number(user.data.id);
+
+  const articles = localArticles.map(article => ({
+    article_id: Number(article.id),
+    quantite: Number(article.quantite),
+    prix: Number(article.prix),
+    taille: article.taille ?? undefined,  // taille reste string ou undefined
+  }));
+
+  const total = articles.reduce((acc, article) => acc + article.prix * article.quantite, 0);
+
+  const nouvelleCommande = {
+    utilisateur_id,
+    articles,
+    total: Number(total.toFixed(2)),
+    statut: 'en_attente',
+    date: new Date().toISOString(),
   };
+  console.log(nouvelleCommande)
+  setCommande(nouvelleCommande);
+  setIsPaymentModalOpen(true);
+};
+
+
+
+
+
+
 
 
 
@@ -239,7 +278,7 @@ const RightSidePanel = ({
             aria-label="Formulaire de paiement"
             hasNoBodyPadding
           >
-            <PaymentForm totalAmount={totalPrice} onClose={() => setIsPaymentModalOpen(false)} />
+            <PaymentForm totalAmount={totalPrice} commande={commande} onClose={() => setIsPaymentModalOpen(false)} />
           </Modal>
         </DrawerContentBody>
       </DrawerContent>

@@ -358,102 +358,87 @@ obtenirLesCommandes(): Promise<any[]> {
   });
 }
 
-ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult> {
-  return new Promise((resolve, reject) => {
-    const mysqlConnector = new MysqlConnector();
+ async ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult> {
+  const mysqlConnector = new MysqlConnector();
 
-    mysqlConnector.beginTransaction((err) => {
-      if (err) {
-        reject({ isConfirm: false, message: "Erreur lors du début de la transaction" });
-        return;
-      }
+  try {
+    // Récupérer la map tailleNom -> tailleId
+    const tailleMap = await this.getTailleMap();
 
-      const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id) VALUES (?)`;
-
-      mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id], (err, result) => {
-        if (err) {
-          return mysqlConnector.rollback(() => {
-            reject({ isConfirm: false, message: "Erreur lors de l'insertion de la commande" });
-          });
-        }
-
-        const commandeId = result.insertId;
-
-        const valeursArticles = data.articles.map((article) => [
-          commandeId,
-          article.article_id,
-          article.taille_id,
-          article.quantite,
-          article.prix
-        ]);
-
-        const sqlInsertArticles = `
-          INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
-          VALUES ?
-        `;
-
-        mysqlConnector.query(sqlInsertArticles, [valeursArticles], (err2) => {
-          if (err2) {
-            return mysqlConnector.rollback(() => {
-              reject({ isConfirm: false, message: "Erreur lors de l'insertion des articles" });
-            });
-          }
-
-          // Décrémenter les stocks
-          const decrements = data.articles.map((article) => {
-            return new Promise<void>((resolveDec, rejectDec) => {
-              const sqlMajStock = `
-                UPDATE stocks
-                SET quantite = quantite - ?
-                WHERE article_id = ? AND taille_id = ? AND quantite >= ?
-              `;
-
-              const values = [
-                article.quantite,
-                article.article_id,
-                article.taille_id,
-                article.quantite
-              ];
-
-              mysqlConnector.query(sqlMajStock, values, (err3, result3) => {
-                if (err3 || result3.affectedRows === 0) {
-                  return rejectDec("Stock insuffisant ou erreur lors de la mise à jour du stock");
-                }
-
-                resolveDec();
-              });
-            });
-          });
-
-          // Vérifie que tous les stocks ont été décrémentés
-          Promise.allSettled(decrements).then((results) => {
-            const hasFailure = results.some(r => r.status === 'rejected');
-
-            if (hasFailure) {
-              return mysqlConnector.rollback(() => {
-                reject({ isConfirm: false, message: "Échec lors de la mise à jour des stocks" });
-              });
-            }
-
-            // Tout s’est bien passé → commit
-            mysqlConnector.commit((commitErr) => {
-              if (commitErr) {
-                return mysqlConnector.rollback(() => {
-                  reject({ isConfirm: false, message: "Erreur lors du commit final" });
-                });
-              }
-
-              resolve({
-                isConfirm: true,
-                message: "Commande enregistrée et stock mis à jour avec succès"
-              });
-            });
-          });
-        });
+    // Début de transaction
+    await new Promise<void>((resolve, reject) => {
+      mysqlConnector.beginTransaction(err => {
+        if (err) reject(err);
+        else resolve();
       });
     });
-  });
+
+    // Insertion commande
+    const result = await new Promise<any>((resolve, reject) => {
+      const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, statut, date_commande) VALUES (?, ?, ?)`;
+      mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id, data.statut, data.date], (err, res) => {
+        if (err) reject(err);
+        else resolve(res);
+      });
+    });
+
+    const commandeId = result.insertId;
+    console.log("commandeId:", commandeId);
+
+    // Construire valeursArticlesFinales *après* avoir la commandeId
+    const valeursArticlesFinales = data.articles.map(article => [
+      commandeId,
+      article.article_id,
+      article.taille ? tailleMap[article.taille] || null : null,
+      article.quantite || 1,
+      article.prix,
+    ]);
+
+    console.log("valeursArticlesFinales:", valeursArticlesFinales);
+
+    // Insertion articles commande
+    await new Promise<void>((resolve, reject) => {
+      const sqlInsertArticles = `
+        INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
+        VALUES ?
+      `;
+      mysqlConnector.query(sqlInsertArticles, [valeursArticlesFinales], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    // Commit
+    await new Promise<void>((resolve, reject) => {
+      mysqlConnector.commit(err => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    mysqlConnector.close();
+
+    return { isConfirm: true, message: "Commande créée avec succès, en attente de paiement" };
+  } catch (error) {
+    console.error("Erreur dans ajouterCommande:", error);
+
+    // Rollback si erreur
+    await new Promise<void>((resolve) => {
+      mysqlConnector.rollback(() => {
+        mysqlConnector.close();
+        resolve();
+      });
+    });
+
+    return { isConfirm: false, message: "Erreur lors de la création de la commande" };
+  }
 }
+
+
+
+
+
+
 
 supprimerArticle(articleId: number): Promise<ConfirmationResult> {
   return new Promise((resolve, reject) => {
@@ -561,15 +546,17 @@ async modifierStock(articleId: number, tailleId: number, quantite: number): Prom
 }
 
 
-creerCommande(utilisateur_id: number, articles: ArticleCommande[]): Promise<ConfirmationResult> {
-  const commande = {
-    utilisateur_id,
-    articles,
-    statut: 'en_attente'
-  };
+  creerCommande(
+    utilisateur_id: number,
+    articles: ArticleCommande[],
+    total: number,
+    date: string,
+    statut = 'en_attente'
+  ): Promise<ConfirmationResult> {
+    const commande = { utilisateur_id, articles, total, date, statut };
+    return this.ajouterCommande(commande);
+  }
 
-  return this.ajouterCommande(commande);
-}
 
 
 }

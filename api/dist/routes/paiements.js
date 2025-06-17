@@ -48,7 +48,6 @@ router.post('/stripe', (req, res) => __awaiter(void 0, void 0, void 0, function*
             currency,
             automatic_payment_methods: { enabled: true },
         });
-        console.log(paymentIntent);
         res.status(200).json({
             clientSecret: paymentIntent.client_secret,
             paymentMethods: paymentIntent.payment_method_types,

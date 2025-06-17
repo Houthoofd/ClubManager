@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import express from 'express';
 import { Magasin } from '../db/clients/magasin/magasin.js';
-import { articleCreationSchema, articleDataValidationSchema } from '@clubmanager/types';
+import { articleCreationSchema, articleDataValidationSchema, nouvelleCommandeSchema } from '@clubmanager/types';
 import { z } from 'zod';
 const router = express.Router();
 router.get('/articles', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -116,16 +116,21 @@ router.put('/articles/:id', (req, res) => __awaiter(void 0, void 0, void 0, func
     }
 }));
 router.post('/commandes/ajouter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const client = new Magasin();
-    const { utilisateur_id, articles } = req.body;
-    if (!utilisateur_id || !Array.isArray(articles) || articles.length === 0) {
-        return res.status(400).json({ message: "Données de commande invalides." });
-    }
     try {
-        const result = yield client.creerCommande(utilisateur_id, articles);
+        console.log('Corps reçu:', req.body); // Ajoute ça pour debugger
+        const data = nouvelleCommandeSchema.parse(req.body);
+        const { utilisateur_id, articles, statut, date, total } = data;
+        const client = new Magasin();
+        const result = yield client.creerCommande(utilisateur_id, articles, total !== null && total !== void 0 ? total : 0, date !== null && date !== void 0 ? date : new Date().toISOString(), statut);
         res.status(200).json({ message: result.message });
     }
     catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({
+                message: "Données de commande invalides.",
+                errors: error.errors,
+            });
+        }
         console.error('Erreur lors de la création de la commande :', error);
         res.status(500).json({ message: 'Erreur lors de la création de la commande.' });
     }

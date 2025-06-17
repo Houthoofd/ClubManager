@@ -317,84 +317,77 @@ export class Magasin {
         });
     }
     ajouterCommande(data) {
-        return new Promise((resolve, reject) => {
+        return __awaiter(this, void 0, void 0, function* () {
             const mysqlConnector = new MysqlConnector();
-            mysqlConnector.beginTransaction((err) => {
-                if (err) {
-                    reject({ isConfirm: false, message: "Erreur lors du début de la transaction" });
-                    return;
-                }
-                const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id) VALUES (?)`;
-                mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id], (err, result) => {
-                    if (err) {
-                        return mysqlConnector.rollback(() => {
-                            reject({ isConfirm: false, message: "Erreur lors de l'insertion de la commande" });
-                        });
-                    }
-                    const commandeId = result.insertId;
-                    const valeursArticles = data.articles.map((article) => [
-                        commandeId,
-                        article.article_id,
-                        article.taille_id,
-                        article.quantite,
-                        article.prix
-                    ]);
-                    const sqlInsertArticles = `
-          INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
-          VALUES ?
-        `;
-                    mysqlConnector.query(sqlInsertArticles, [valeursArticles], (err2) => {
-                        if (err2) {
-                            return mysqlConnector.rollback(() => {
-                                reject({ isConfirm: false, message: "Erreur lors de l'insertion des articles" });
-                            });
-                        }
-                        // Décrémenter les stocks
-                        const decrements = data.articles.map((article) => {
-                            return new Promise((resolveDec, rejectDec) => {
-                                const sqlMajStock = `
-                UPDATE stocks
-                SET quantite = quantite - ?
-                WHERE article_id = ? AND taille_id = ? AND quantite >= ?
-              `;
-                                const values = [
-                                    article.quantite,
-                                    article.article_id,
-                                    article.taille_id,
-                                    article.quantite
-                                ];
-                                mysqlConnector.query(sqlMajStock, values, (err3, result3) => {
-                                    if (err3 || result3.affectedRows === 0) {
-                                        return rejectDec("Stock insuffisant ou erreur lors de la mise à jour du stock");
-                                    }
-                                    resolveDec();
-                                });
-                            });
-                        });
-                        // Vérifie que tous les stocks ont été décrémentés
-                        Promise.allSettled(decrements).then((results) => {
-                            const hasFailure = results.some(r => r.status === 'rejected');
-                            if (hasFailure) {
-                                return mysqlConnector.rollback(() => {
-                                    reject({ isConfirm: false, message: "Échec lors de la mise à jour des stocks" });
-                                });
-                            }
-                            // Tout s’est bien passé → commit
-                            mysqlConnector.commit((commitErr) => {
-                                if (commitErr) {
-                                    return mysqlConnector.rollback(() => {
-                                        reject({ isConfirm: false, message: "Erreur lors du commit final" });
-                                    });
-                                }
-                                resolve({
-                                    isConfirm: true,
-                                    message: "Commande enregistrée et stock mis à jour avec succès"
-                                });
-                            });
-                        });
+            try {
+                // Récupérer la map tailleNom -> tailleId
+                const tailleMap = yield this.getTailleMap();
+                // Début de transaction
+                yield new Promise((resolve, reject) => {
+                    mysqlConnector.beginTransaction(err => {
+                        if (err)
+                            reject(err);
+                        else
+                            resolve();
                     });
                 });
-            });
+                // Insertion commande
+                const result = yield new Promise((resolve, reject) => {
+                    const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, statut, date_commande) VALUES (?, ?, ?)`;
+                    mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id, data.statut, data.date], (err, res) => {
+                        if (err)
+                            reject(err);
+                        else
+                            resolve(res);
+                    });
+                });
+                const commandeId = result.insertId;
+                console.log("commandeId:", commandeId);
+                // Construire valeursArticlesFinales *après* avoir la commandeId
+                const valeursArticlesFinales = data.articles.map(article => [
+                    commandeId,
+                    article.article_id,
+                    article.taille ? tailleMap[article.taille] || null : null,
+                    article.quantite || 1,
+                    article.prix,
+                ]);
+                console.log("valeursArticlesFinales:", valeursArticlesFinales);
+                // Insertion articles commande
+                yield new Promise((resolve, reject) => {
+                    const sqlInsertArticles = `
+        INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
+        VALUES ?
+      `;
+                    mysqlConnector.query(sqlInsertArticles, [valeursArticlesFinales], (err) => {
+                        if (err)
+                            reject(err);
+                        else
+                            resolve();
+                    });
+                });
+                // Commit
+                yield new Promise((resolve, reject) => {
+                    mysqlConnector.commit(err => {
+                        if (err)
+                            reject(err);
+                        else
+                            resolve();
+                    });
+                });
+                mysqlConnector.close();
+                return { isConfirm: true, message: "Commande créée avec succès, en attente de paiement" };
+            }
+            catch (error) {
+                console.error("Erreur dans ajouterCommande:", error);
+                // Rollback si erreur
+                yield new Promise((resolve) => {
+                    mysqlConnector.rollback(() => {
+                        mysqlConnector.close();
+                        resolve();
+                    });
+                });
+                return { isConfirm: false, message: "Erreur lors de la création de la commande" };
+            }
         });
     }
     supprimerArticle(articleId) {
@@ -489,12 +482,8 @@ export class Magasin {
             });
         });
     }
-    creerCommande(utilisateur_id, articles) {
-        const commande = {
-            utilisateur_id,
-            articles,
-            statut: 'en_attente'
-        };
+    creerCommande(utilisateur_id, articles, total, date, statut = 'en_attente') {
+        const commande = { utilisateur_id, articles, total, date, statut };
         return this.ajouterCommande(commande);
     }
 }

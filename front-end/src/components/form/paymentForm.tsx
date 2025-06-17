@@ -4,6 +4,7 @@ import { CreditCardIcon, PaypalIcon, BitcoinIcon } from '@patternfly/react-icons
 import StripeForm from './stripeForm';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import type { Commande } from '@clubmanager/types';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
@@ -28,12 +29,16 @@ const BitcoinForm = () => (
   </div>
 );
 
+
 type PaymentFormProps = {
   totalAmount: number;
   onClose: () => void;
+  commande: Commande;
 };
 
-const PaymentForm = ({ totalAmount, onClose }: PaymentFormProps) => {
+type PaymentMethod = 'bancontact' | 'paypal' | 'bitcoin';
+
+const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
   const [paymentMethod, setPaymentMethod] = React.useState('bancontact');
   const [clientSecret, setClientSecret] = React.useState<string | null>(null);
   const [stripeOptions, setStripeOptions] = React.useState<any | null>(null);
@@ -49,17 +54,13 @@ const PaymentForm = ({ totalAmount, onClose }: PaymentFormProps) => {
 
 
   const onPayement = async () => {
-
-    console.log("lmazfaz")
     if (!paymentMethod || !totalAmount) {
       alert('Veuillez sélectionner une méthode de paiement et entrer un montant.');
       return;
     }
 
     const amountInCents = totalAmount * 100;
-    console.log("coucou")
 
-    // Construction dynamique du body selon la méthode de paiement
     let body: any;
 
     switch (paymentMethod) {
@@ -67,7 +68,7 @@ const PaymentForm = ({ totalAmount, onClose }: PaymentFormProps) => {
         body = { amount: amountInCents, currency: 'eur' };
         break;
       case 'paypal':
-        body = { totalAmount: amountInCents, userId: '123' }; // remplace '123' si besoin
+        body = { totalAmount: amountInCents, userId: commande };
         break;
       case 'bitcoin':
         body = { sats: amountInCents / 100000000 };
@@ -77,50 +78,48 @@ const PaymentForm = ({ totalAmount, onClose }: PaymentFormProps) => {
         return;
     }
 
-    // Endpoint spécifique selon la méthode de paiement
-    const paymentEndpoints: Record<string, string> = {
-      bancontact: 'http://localhost:3000/paiements/stripe',
-      paypal: 'http://localhost:3000/paiements/paypal',
-      bitcoin: 'http://localhost:3000/paiements/bitcoin',
-    };
-
     const endpoint = paymentEndpoints[paymentMethod];
 
-    console.log(amountInCents)
-
     try {
-      const response = await fetch(endpoint, {
+      // ✅ 1. Envoyer la commande (contenant déjà userId)
+      const commandeResponse = await fetch('http://localhost:3000/magasin/commandes/ajouter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commande),
+      });
+
+      if (!commandeResponse.ok) {
+        throw new Error("Échec lors de l'enregistrement de la commande");
+      }
+
+      // ✅ 2. Effectuer le paiement
+      const paiementResponse = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
-      const data = await response.json();
+      const data = await paiementResponse.json();
       console.log('Réponse du serveur :', data);
 
-      // ✅ Si le serveur retourne clientSecret
       if (data.clientSecret) {
-  setClientSecret(data.clientSecret);
-
-  // ⚙️ Options Stripe nécessaires pour <Elements />
-  const options = {
-    clientSecret: data.clientSecret,
-    appearance: {
-      theme: 'stripe',
-    },
-  };
-
-  setStripeOptions(options);
-} else if (data.url) {
+        setClientSecret(data.clientSecret);
+        setStripeOptions({
+          clientSecret: data.clientSecret,
+          appearance: { theme: 'stripe' },
+        });
+      } else if (data.url) {
         window.location.href = data.url;
       } else {
-       
+        console.error("Réponse inattendue du serveur :", data);
+        alert("Aucune information de paiement reçue.");
       }
     } catch (error) {
-      console.error('Erreur lors de la commande :', error);
+      console.error('Erreur lors du paiement :', error);
       alert('Erreur lors du paiement.');
     }
   };
+
 
   console.log(clientSecret)
 
