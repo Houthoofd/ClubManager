@@ -7,7 +7,6 @@ import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-console.log("Stripe public key:", import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 
 
