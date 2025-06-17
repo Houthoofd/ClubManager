@@ -1,74 +1,80 @@
 import React, { useState } from 'react';
-import { Form, FormGroup, TextInput, Button, Title } from '@patternfly/react-core';
+import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { Button } from '@patternfly/react-core';
 
-const StripeForm = ({ onSubmit }) => {
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardHolderName, setCardHolderName] = useState('');
+type StripeFormProps = {
+  onClose: () => void;
+  totalAmount?: number;
+  clientSecret: string; // obligatoire ici
+};
 
-  const handleSubmit = (e) => {
+const StripeForm = ({ onClose, totalAmount, clientSecret }: StripeFormProps) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  console.log("stripeForm rendered")
+  console.log(clientSecret)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Ici, vous pouvez ajouter la logique pour envoyer les données à Stripe
-    onSubmit({ cardNumber, expiryDate, cvv, cardHolderName });
+    if (!stripe || !elements) return;
+
+    setIsProcessing(true);
+
+    // Étape 1 : submit les éléments pour valider le formulaire
+    const submitResult = await elements.submit();
+    if (submitResult.error) {
+      setMessage(submitResult.error.message || 'Erreur lors de la validation du formulaire.');
+      setIsProcessing(false);
+      return;
+    }
+
+    // Étape 2 : confirmer le paiement
+    const { error } = await stripe.confirmPayment({
+      elements,
+      clientSecret, // clé secrète venant du serveur
+      confirmParams: {
+        return_url: window.location.origin + '/success',
+      },
+    });
+
+    if (error) {
+      setMessage(error.message || 'Erreur lors du paiement.');
+    }
+
+    setIsProcessing(false);
   };
 
+
   return (
-    <div style={{ maxWidth: '600px', margin: 'auto', padding: '20px' }}>
-      <Title headingLevel="h2" style={{ marginBottom: '20px' }}>
-        Paiement par Carte de Crédit
-      </Title>
-      <Form onSubmit={handleSubmit}>
-        <FormGroup label="Numéro de Carte" isRequired fieldId="card-number">
-          <TextInput
-            isRequired
-            type="text"
-            id="card-number"
-            name="card-number"
-            value={cardNumber}
-            onChange={(value) => setCardNumber(value)}
-            placeholder="1234 5678 9012 3456"
-          />
-        </FormGroup>
-        <FormGroup label="Date d'Expiration" isRequired fieldId="expiry-date">
-          <TextInput
-            isRequired
-            type="text"
-            id="expiry-date"
-            name="expiry-date"
-            value={expiryDate}
-            onChange={(value) => setExpiryDate(value)}
-            placeholder="MM/AA"
-          />
-        </FormGroup>
-        <FormGroup label="CVV" isRequired fieldId="cvv">
-          <TextInput
-            isRequired
-            type="text"
-            id="cvv"
-            name="cvv"
-            value={cvv}
-            onChange={(value) => setCvv(value)}
-            placeholder="123"
-          />
-        </FormGroup>
-        <FormGroup label="Nom du Titulaire de la Carte" isRequired fieldId="card-holder-name">
-          <TextInput
-            isRequired
-            type="text"
-            id="card-holder-name"
-            name="card-holder-name"
-            value={cardHolderName}
-            onChange={(value) => setCardHolderName(value)}
-            placeholder="Nom comme sur la carte"
-          />
-        </FormGroup>
-        <Button variant="primary" type="submit">
-          Payer
+  <>
+    {totalAmount !== undefined && (
+      <div style={{ marginBottom: 20, fontWeight: 'bold', fontSize: 18 }}>
+        Montant à payer : {totalAmount.toFixed(2)} €
+      </div>
+    )}
+
+    {/* Ne pas afficher tant que le clientSecret n'est pas prêt */}
+    {clientSecret && (
+      <form onSubmit={handleSubmit} style={{ marginTop: '20px' }}>
+        <PaymentElement />
+        <Button
+          type="submit"
+          isDisabled={isProcessing || !stripe || !elements}
+          variant="primary"
+          style={{ marginTop: 20 }}
+        >
+          {isProcessing ? 'Traitement...' : 'Payer'}
         </Button>
-      </Form>
-    </div>
-  );
+        {message && <div style={{ color: 'red', marginTop: '10px' }}>{message}</div>}
+      </form>
+    )}
+  </>
+);
+
 };
 
 export default StripeForm;
+

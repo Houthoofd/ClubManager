@@ -1,1 +1,5 @@
-http://localhost:3000/paiements
+GET http://localhost:3000/paiements
+
+###
+
+POST http://localhost:3000/paiements/stripe

@@ -84,35 +84,8 @@ const RightSidePanel = ({
     }
   };
 
-  const onPasserCommande = async () => {
-    try {
-      // Calculer le total avec localArticles
-      setIsPaymentModalOpen(true);
-      const total = localArticles.reduce((sum, article) => {
-        return sum + article.prix * (article.quantite || 0);
-      }, 0);
-      const amountInCents = Math.round(total * 100);
-
-      const response = await fetch('http://localhost:3000/paiements/stripe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ amount: amountInCents, currency: 'eur' })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la création du paiement');
-      }
-
-      const data = await response.json();
-      console.log('Client secret reçu :', data.clientSecret);
-
-      // TODO: Intégrer Stripe.js ici pour confirmer le paiement avec data.clientSecret
-    } catch (error: any) {
-      console.error(error);
-      alert("Erreur lors de la commande : " + error.message);
-    }
+  const onPasserCommande = () => {
+    setIsPaymentModalOpen(true);
   };
 
 
@@ -130,6 +103,8 @@ const RightSidePanel = ({
   const totalPrice = localArticles.reduce((total, article) => {
     return total + article.prix * (article.quantite || 0);
   }, 0);
+
+  console.log(totalPrice)
 
   return (
     <Drawer isExpanded={isExpanded} style={{ height: '100vh' }}>
@@ -264,7 +239,7 @@ const RightSidePanel = ({
             aria-label="Formulaire de paiement"
             hasNoBodyPadding
           >
-            <PaymentForm />
+            <PaymentForm totalAmount={totalPrice} onClose={() => setIsPaymentModalOpen(false)} />
           </Modal>
         </DrawerContentBody>
       </DrawerContent>

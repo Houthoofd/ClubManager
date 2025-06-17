@@ -1,15 +1,15 @@
 import React from 'react';
 import { Radio, Stack, Button, Title } from '@patternfly/react-core';
 import { CreditCardIcon, PaypalIcon, BitcoinIcon } from '@patternfly/react-icons';
+import StripeForm from './stripeForm';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 
-// Composant pour le formulaire Bancontact
-const BancontactForm = () => (
-  <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
-    <h3>Formulaire Bancontact</h3>
-    <p>Formulaire spécifique pour Bancontact</p>
-    {/* Ajoutez ici le contenu spécifique pour Bancontact */}
-  </div>
-);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+
+console.log("Stripe public key:", import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+
+
 
 // Composant pour le formulaire PayPal
 const PayPalForm = () => (
@@ -29,8 +29,103 @@ const BitcoinForm = () => (
   </div>
 );
 
-const PaymentForm = () => {
+type PaymentFormProps = {
+  totalAmount: number;
+  onClose: () => void;
+};
+
+const PaymentForm = ({ totalAmount, onClose }: PaymentFormProps) => {
   const [paymentMethod, setPaymentMethod] = React.useState('bancontact');
+  const [clientSecret, setClientSecret] = React.useState<string | null>(null);
+  const [stripeOptions, setStripeOptions] = React.useState<any | null>(null);
+
+
+  console.log(totalAmount)
+
+  const paymentEndpoints = {
+    bancontact: 'http://localhost:3000/paiements/bancontact',
+    paypal: 'http://localhost:3000/paiements/paypal',
+    bitcoin: 'http://localhost:3000/paiements/bitcoin',
+  };
+
+
+  const onPayement = async () => {
+
+    console.log("lmazfaz")
+    if (!paymentMethod || !totalAmount) {
+      alert('Veuillez sélectionner une méthode de paiement et entrer un montant.');
+      return;
+    }
+
+    const amountInCents = totalAmount * 100;
+    console.log("coucou")
+
+    // Construction dynamique du body selon la méthode de paiement
+    let body: any;
+
+    switch (paymentMethod) {
+      case 'bancontact':
+        body = { amount: amountInCents, currency: 'eur' };
+        break;
+      case 'paypal':
+        body = { totalAmount: amountInCents, userId: '123' }; // remplace '123' si besoin
+        break;
+      case 'bitcoin':
+        body = { sats: amountInCents / 100000000 };
+        break;
+      default:
+        alert('Méthode de paiement non reconnue.');
+        return;
+    }
+
+    // Endpoint spécifique selon la méthode de paiement
+    const paymentEndpoints: Record<string, string> = {
+      bancontact: 'http://localhost:3000/paiements/stripe',
+      paypal: 'http://localhost:3000/paiements/paypal',
+      bitcoin: 'http://localhost:3000/paiements/bitcoin',
+    };
+
+    const endpoint = paymentEndpoints[paymentMethod];
+
+    console.log(amountInCents)
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+      console.log('Réponse du serveur :', data);
+
+      // ✅ Si le serveur retourne clientSecret
+      if (data.clientSecret) {
+  setClientSecret(data.clientSecret);
+
+  // ⚙️ Options Stripe nécessaires pour <Elements />
+  const options = {
+    clientSecret: data.clientSecret,
+    appearance: {
+      theme: 'stripe',
+    },
+  };
+
+  setStripeOptions(options);
+} else if (data.url) {
+        window.location.href = data.url;
+      } else {
+       
+      }
+    } catch (error) {
+      console.error('Erreur lors de la commande :', error);
+      alert('Erreur lors du paiement.');
+    }
+  };
+
+  console.log(clientSecret)
+
+
 
   const handlePaymentMethodChange = (method) => {
     setPaymentMethod(method);
@@ -119,7 +214,11 @@ const PaymentForm = () => {
       </Stack>
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        {paymentMethod === 'bancontact' && <BancontactForm />}
+        {paymentMethod === 'bancontact' && clientSecret && stripeOptions && (
+  <Elements stripe={stripePromise} options={stripeOptions}>
+    <StripeForm clientSecret={clientSecret} onClose={onClose} totalAmount={totalAmount} />
+  </Elements>
+)}
         {paymentMethod === 'paypal' && <PayPalForm />}
         {paymentMethod === 'bitcoin' && <BitcoinForm />}
 
@@ -136,9 +235,9 @@ const PaymentForm = () => {
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
             marginTop: '20px'
           }}
-          onClick={() => alert(`Paiement via ${paymentMethod} (à implémenter)`)}
+          onClick={() => onPayement()}
         >
-          Plus d'informations
+          Payer
         </Button>
       </div>
     </div>

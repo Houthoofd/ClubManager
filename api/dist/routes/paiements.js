@@ -43,19 +43,19 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 router.post('/stripe', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { amount, currency } = req.body;
     try {
-        // Créer un Payment Intent
         const paymentIntent = yield stripe.paymentIntents.create({
-            amount, // Le montant en centimes (par exemple, 10€ -> 1000)
-            currency, // La devise, par exemple, "usd" ou "eur"
+            amount,
+            currency,
+            automatic_payment_methods: { enabled: true },
         });
         console.log(paymentIntent);
-        // Retourner les informations du Payment Intent
         res.status(200).json({
             clientSecret: paymentIntent.client_secret,
+            paymentMethods: paymentIntent.payment_method_types,
         });
     }
     catch (error) {
-        res.status(500).json({ error: error });
+        res.status(500).json({ error: error || error });
     }
 }));
 // Utilisation de export default pour le routeur

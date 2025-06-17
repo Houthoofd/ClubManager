@@ -3,7 +3,8 @@
 
 # Fichiers d'environnement
 .env
-.env.*  # Par exemple .env.local, .env.development...
+.env.*  # .env.local, .env.production, etc.
+**/.env*  # Pour les fichiers .env partout dans l’arborescence
 
 # Logs
 logs
