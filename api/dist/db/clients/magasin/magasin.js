@@ -293,7 +293,7 @@ export class Magasin {
         c.id AS commande_id,
         c.date_commande,
         c.statut,
-        u.nom AS client,
+        u.nom_utilisateur AS client,
         a.nom AS article,
         t.nom AS taille,
         ca.quantite,
@@ -311,7 +311,29 @@ export class Magasin {
                     reject(error);
                 }
                 else {
-                    resolve(results);
+                    // Regrouper les commandes
+                    const commandesMap = {};
+                    results.forEach((row) => {
+                        const { commande_id, date_commande, statut, client, article, taille, quantite, prix } = row;
+                        if (!commandesMap[commande_id]) {
+                            commandesMap[commande_id] = {
+                                commande_id,
+                                date_commande,
+                                statut,
+                                client,
+                                articles: []
+                            };
+                        }
+                        commandesMap[commande_id].articles.push({
+                            article,
+                            taille,
+                            quantite,
+                            prix
+                        });
+                    });
+                    // Transformer en tableau
+                    const commandes = Object.values(commandesMap);
+                    resolve(commandes);
                 }
             });
         });

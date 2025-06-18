@@ -13,6 +13,7 @@ import Participants from './pages/cours/consulterParticipants';
 
 import Magasin from './pages/magasin/magasin';
 import AjouterArticle from './pages/magasin/ajouterArticle';
+import Commandes from './pages/commandes/commandes';
 
 import Utilisateur from './pages/utilisateurs/ajouterUtilisateur';
 import ConsulterUtilisateur from './pages/utilisateurs/consulterUtilisateur';
@@ -94,6 +95,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Magasin />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'pages/magasin/commandes',
+        element: (
+          <ProtectedRoute>
+            <Commandes />
           </ProtectedRoute>
         ),
       },

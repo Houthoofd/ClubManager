@@ -334,7 +334,7 @@ obtenirLesCommandes(): Promise<any[]> {
         c.id AS commande_id,
         c.date_commande,
         c.statut,
-        u.nom AS client,
+        u.nom_utilisateur AS client,
         a.nom AS article,
         t.nom AS taille,
         ca.quantite,
@@ -352,11 +352,48 @@ obtenirLesCommandes(): Promise<any[]> {
       if (error) {
         reject(error);
       } else {
-        resolve(results);
+        // Regrouper les commandes
+        const commandesMap: Record<number, any> = {};
+
+        results.forEach((row: any) => {
+          const {
+            commande_id,
+            date_commande,
+            statut,
+            client,
+            article,
+            taille,
+            quantite,
+            prix
+          } = row;
+
+          if (!commandesMap[commande_id]) {
+            commandesMap[commande_id] = {
+              commande_id,
+              date_commande,
+              statut,
+              client,
+              articles: []
+            };
+          }
+
+          commandesMap[commande_id].articles.push({
+            article,
+            taille,
+            quantite,
+            prix
+          });
+        });
+
+        // Transformer en tableau
+        const commandes = Object.values(commandesMap);
+        resolve(commandes);
       }
     });
   });
 }
+
+
 
  async ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult> {
   const mysqlConnector = new MysqlConnector();

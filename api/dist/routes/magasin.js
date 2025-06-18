@@ -135,4 +135,15 @@ router.post('/commandes/ajouter', (req, res) => __awaiter(void 0, void 0, void 0
         res.status(500).json({ message: 'Erreur lors de la création de la commande.' });
     }
 }));
+router.get('/commandes', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const client = new Magasin();
+        const commandes = yield client.obtenirLesCommandes(); // ATTENTION AU await
+        res.status(200).json({ commandes }); // on renvoie les données directement
+    }
+    catch (error) {
+        console.error("Erreur lors de la récupération des commandes :", error);
+        res.status(500).json({ message: "Erreur serveur lors de la récupération des commandes." });
+    }
+}));
 export default router;

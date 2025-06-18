@@ -153,7 +153,7 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
                 </NavItem>
                 {hasRole(role, [ROLES.SUPER_ADMIN]) && (
                   <>
-                    <NavItem to="/pages/magasin/ajouter-cours" itemId="store-inventory">
+                    <NavItem to="/pages/magasin/commandes" itemId="commandes">
                       <PackageIcon style={iconStyle} />
                       Commandes
                     </NavItem>

@@ -41,6 +41,8 @@ Content-Type: application/json
 
 ###
 
+GET http://localhost:3000/magasin/commandes
+
 ### Ajouter une commande
 POST http://localhost:3000/magasin/commandes/ajouter
 Content-Type: application/json
