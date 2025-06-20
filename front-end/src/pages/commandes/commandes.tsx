@@ -1,22 +1,51 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Tbody,
-  Td,
-  Th,
+  Table,
   Thead,
   Tr,
-  ExpandableRowContent,
+  Th,
+  Tbody,
+  Td,
 } from '@patternfly/react-table';
-import {
-  TextInput,
-  Spinner,
-  Title,
-} from '@patternfly/react-core';
+import { TextInput, Title, Spinner, FormSelect, FormSelectOption } from '@patternfly/react-core';
+
+interface Article {
+  article: string;
+  taille: string;
+  quantite: number;
+  prix: number;
+}
+
+interface Commande {
+  commande_id: string;
+  date_commande: string;
+  statut: string;
+  articles: Article[];
+}
+
+// Couleurs associées au statut (inutile si on ne met plus le badge, mais je les laisse au cas où)
+const statutCouleurs: Record<string, 'purple' | 'green' | 'orange' | 'red' | 'blue'> = {
+  'En attente': 'orange',
+  'Expédiée': 'green',
+  'Annulée': 'red',
+  'En cours': 'blue',
+};
+
+// Options pour le FormSelect
+const statutOptions = [
+  { value: 'En attente', label: 'En attente' },
+  { value: 'Expédiée', label: 'Expédiée' },
+  { value: 'Annulée', label: 'Annulée' },
+  { value: 'En cours', label: 'En cours' },
+];
 
 const Commandes = () => {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterInput, setFilterInput] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [activeSortIndex, setActiveSortIndex] = useState<number | null>(null);
+  const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | null>(null);
 
   useEffect(() => {
     fetch('http://localhost:3000/magasin/commandes')
@@ -26,153 +55,178 @@ const Commandes = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const columns = useMemo(
-    () => [
-      {
-        // Colonne pour bouton expand
-        id: 'expander', // id obligatoire
-        Header: () => null,
-        Cell: ({ row }) => (
-          <Td
-            expand={{
-              isExpanded: row.isExpanded,
-              onToggle: row.getToggleRowExpandedHandler(),
-            }}
-          />
-        ),
-      },
-      {
-        Header: 'ID',
-        accessor: 'commande_id',
-      },
-      {
-        Header: 'Date',
-        accessor: d => new Date(d.date_commande).toLocaleString(),
-        id: 'date_commande',
-      },
-      {
-        Header: 'Statut',
-        accessor: 'statut',
-      },
-      {
-        Header: "Nombre d'articles",
-        accessor: d => d.articles.length,
-        id: 'nombre_articles',
-      },
-      {
-        Header: 'Total (€)',
-        accessor: d =>
-          d.articles.reduce((sum, a) => sum + a.prix * a.quantite, 0).toFixed(2),
-        id: 'total',
-      },
-    ],
-    []
-  );
+  const filteredData = useMemo(() => {
+    if (!filterInput) return data;
+    return data.filter(c =>
+      c.commande_id.toLowerCase().includes(filterInput.toLowerCase()) ||
+      c.statut.toLowerCase().includes(filterInput.toLowerCase())
+    );
+  }, [data, filterInput]);
 
-  const {
-    getTableProps,
-    getTableBodyProps,
-    headerGroups,
-    rows,
-    prepareRow,
-    state,
-    setGlobalFilter,
-  } = useTable(
-    { columns, data },
-    useGlobalFilter,
-    useExpanded
-  );
+  const getSortableRowValues = (commande: Commande): (string | number)[] => [
+    commande.commande_id,
+    new Date(commande.date_commande).getTime(),
+    commande.statut,
+    commande.articles.length,
+    commande.articles.reduce((sum, a) => sum + a.prix * a.quantite, 0),
+  ];
 
-  // Met à jour le filtre global (sur toutes les colonnes)
-  const handleFilterChange = value => {
-    setFilterInput(value);
-    setGlobalFilter(value || undefined);
+  const sortedData = useMemo(() => {
+    if (activeSortIndex === null || activeSortDirection === null) return filteredData;
+
+    return [...filteredData].sort((a, b) => {
+      const aValue = getSortableRowValues(a)[activeSortIndex];
+      const bValue = getSortableRowValues(b)[activeSortIndex];
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return activeSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      return activeSortDirection === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+  }, [filteredData, activeSortIndex, activeSortDirection]);
+
+  const columns = [
+    { title: '', key: 'expander' }, // pour le bouton d'expansion
+    { title: 'ID', key: 'commande_id' },
+    { title: 'Date', key: 'date_commande' },
+    { title: 'Statut', key: 'statut' },
+    { title: "Nombre d'articles", key: 'nombre_articles' },
+    { title: 'Total (€)', key: 'total' },
+  ];
+
+  const toggleRow = (rowIndex: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(rowIndex)) {
+      newExpanded.delete(rowIndex);
+    } else {
+      newExpanded.add(rowIndex);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const onSort = (_event: React.MouseEvent, index: number, direction: 'asc' | 'desc') => {
+    setActiveSortIndex(index);
+    setActiveSortDirection(direction);
+  };
+
+  const onChangeStatut = (commandeId: string, newStatut: string) => {
+    setData(current =>
+      current.map(c =>
+        c.commande_id === commandeId ? { ...c, statut: newStatut } : c
+      )
+    );
   };
 
   return (
     <div style={{ padding: 20 }}>
-      <Title component="h1" style={{ marginBottom: 20 }}>
+      <Title headingLevel="h1" size="2xl" style={{ marginBottom: 20 }}>
         Commandes
       </Title>
 
       <TextInput
         value={filterInput}
         type="search"
-        onChange={handleFilterChange}
+        onChange={(_e, value) => setFilterInput(value)}
         aria-label="Filtrer les commandes"
-        placeholder="Filtrer..."
+        placeholder="Filtrer par ID ou statut..."
         style={{ maxWidth: 300, marginBottom: 20 }}
       />
 
       {loading ? (
         <Spinner size="xl" />
       ) : (
-        <TableComposable
-          {...getTableProps()}
-          aria-label="Tableau des commandes"
-          variant="compact"
-          borders
-        >
+        <Table aria-label="Table des commandes" variant="compact" borders>
           <Thead>
-            {headerGroups.map(headerGroup => (
-              <Tr {...headerGroup.getHeaderGroupProps()} key={headerGroup.id}>
-                {headerGroup.headers.map(column => (
-                  <Th {...column.getHeaderProps()} key={column.id}>
-                    {column.render('Header')}
-                  </Th>
-                ))}
-              </Tr>
-            ))}
+            <Tr>
+              {columns.map((col, index) => (
+                <Th
+                  key={col.key}
+                  sort={col.key !== 'expander' ? {
+                    sortBy: {
+                      index: activeSortIndex,
+                      direction: activeSortDirection,
+                    },
+                    onSort,
+                    columnIndex: index,
+                    defaultDirection: 'asc',
+                  } : undefined}
+                >
+                  {col.title}
+                </Th>
+              ))}
+            </Tr>
           </Thead>
-          <Tbody {...getTableBodyProps()}>
-            {rows.length === 0 && (
+          <Tbody>
+            {sortedData.length === 0 && (
               <Tr>
                 <Td colSpan={columns.length} style={{ textAlign: 'center' }}>
                   Aucune commande trouvée.
                 </Td>
               </Tr>
             )}
-            {rows.map(row => {
-              prepareRow(row);
-              const isExpanded = row.isExpanded;
+
+            {sortedData.map((commande, rowIndex) => {
+              const total = commande.articles.reduce((sum, a) => sum + a.prix * a.quantite, 0).toFixed(2);
               return (
-                <React.Fragment key={row.id}>
-                  <Tr {...row.getRowProps()} isExpanded={isExpanded}>
-                    {row.cells.map(cell => (
-                      <Td {...cell.getCellProps()} key={cell.column.id}>
-                        {cell.render('Cell')}
-                      </Td>
-                    ))}
+                <React.Fragment key={commande.commande_id}>
+                  <Tr>
+                    <Td
+                      expand={{
+                        rowIndex,
+                        isExpanded: expandedRows.has(rowIndex),
+                        onToggle: () => toggleRow(rowIndex),
+                      }}
+                    />
+                    <Td dataLabel="ID">{commande.commande_id}</Td>
+                    <Td dataLabel="Date">{new Date(commande.date_commande).toLocaleString()}</Td>
+                    <Td dataLabel="Statut" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <FormSelect
+                        value={commande.statut}
+                        onChange={(value) => onChangeStatut(commande.commande_id, value)}
+                        aria-label="Modifier le statut"
+                        style={{ minWidth: 150 }}
+                      >
+                        {statutOptions.map((option) => (
+                          <FormSelectOption
+                            key={option.value}
+                            value={option.value}
+                            label={option.label}
+                          />
+                        ))}
+                      </FormSelect>
+                      {/* Badge retiré */}
+                    </Td>
+                    <Td dataLabel="Nombre d'articles">{commande.articles.length}</Td>
+                    <Td dataLabel="Total (€)">{total}</Td>
                   </Tr>
-                  {isExpanded && (
+                  {expandedRows.has(rowIndex) && (
                     <Tr isExpanded>
                       <Td />
                       <Td colSpan={columns.length - 1}>
-                        <ExpandableRowContent>
-                          <Title component="h3" style={{ marginBottom: 10 }}>
-                            Articles
-                          </Title>
-                          <TableComposable variant="compact" borders>
-                            <Thead>
-                              <Tr>
-                                <Th>Article</Th>
-                                <Th>Taille</Th>
-                                <Th>Quantité</Th>
-                                <Th>Prix (€)</Th>
+                        <Title headingLevel="h3" size="lg" style={{ marginBottom: 10 }}>
+                          Articles
+                        </Title>
+                        <Table variant="compact" borders>
+                          <Thead>
+                            <Tr>
+                              <Th>Article</Th>
+                              <Th>Taille</Th>
+                              <Th>Quantité</Th>
+                              <Th>Prix (€)</Th>
+                            </Tr>
+                          </Thead>
+                          <Tbody>
+                            {commande.articles.map((art, idx) => (
+                              <Tr key={idx}>
+                                <Td dataLabel="Article">{art.article}</Td>
+                                <Td dataLabel="Taille">{art.taille}</Td>
+                                <Td dataLabel="Quantité">{art.quantite}</Td>
+                                <Td dataLabel="Prix (€)">{art.prix.toFixed(2)}</Td>
                               </Tr>
-                            </Thead>
-                            <Tbody>
-                              {row.original.articles.map((art, idx) => (
-                                <Tr key={idx}>
-                                  <Td>{art.article}</Td>
-                                  <Td>{art.taille}</Td>
-                                  <Td>{art.quantite}</Td>
-                                  <Td>{art.prix.toFixed(2)}</Td>
-                                </Tr>
-                              ))}
-                            </Tbody>
-                          </TableComposable>
-                        </ExpandableRowContent>
+                            ))}
+                          </Tbody>
+                        </Table>
                       </Td>
                     </Tr>
                   )}
@@ -180,7 +234,7 @@ const Commandes = () => {
               );
             })}
           </Tbody>
-        </TableComposable>
+        </Table>
       )}
     </div>
   );
