@@ -46,6 +46,7 @@ const AjouterArticle = () => {
   const [prix, setPrix] = useState('0');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [categories, setCategories] = useState<{ id: number; nom: string }[]>([]);
+  const [articleEnEdition, setArticleEnEdition] = useState<any | null>(null);
 
   const tailles = ['S', 'M', 'L', 'XL'];
 
@@ -64,8 +65,9 @@ const AjouterArticle = () => {
     fetchCategories();
   }, []);
 
-  const handleTabClick = (_event: React.MouseEvent, tabIndex: number) => {
-    setActiveTabKey(tabIndex);
+  const handleTabClick = (_event: React.MouseEvent, tabIndex: string | number) => {
+    const parsedIndex = typeof tabIndex === 'string' ? parseInt(tabIndex, 10) : tabIndex;
+    setActiveTabKey(parsedIndex);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -184,8 +186,6 @@ const AjouterArticle = () => {
     }
   };
 
-  const [articleEnEdition, setArticleEnEdition] = useState<any | null>(null);
-
   const ouvrirEdition = (article: any) => {
     setArticleEnEdition(article);
     setNom(article.nom);
@@ -242,12 +242,17 @@ const AjouterArticle = () => {
           </FormGroup>
 
           <FormGroup label="Prix (€)" isRequired fieldId="prix">
-            <PriceInput value={prix} onChange={setPrix} />
+            <PriceInput 
+              value={prix === "" ? "" : Number(prix)} 
+              onChange={(newValue) => setPrix(newValue === "" ? "" : String(newValue))} 
+            />
           </FormGroup>
+
 
           <FormGroup label="Image (texte ou fichier)" fieldId="image-upload">
             <MultiImageUpload onImageUrlsChange={setImageUrls} />
           </FormGroup>
+
 
           <Title headingLevel="h3">Quantités par taille</Title>
           {stocks.map((stock, index) => (
@@ -258,15 +263,21 @@ const AjouterArticle = () => {
             >
               <NumberInput
                 id={`taille-${stock.taille}-${index}`}
-                value={stock.quantite.toString()}
+                value={stock.quantite}  // un nombre
                 min={0}
                 onChange={(event) => {
-                  const input = event.currentTarget.value.replace(',', '.').replace(/[^\d]/g, '');
-                  if (input === '') {
+                  const valueAsString = event.currentTarget.value;
+
+                  // On autorise la chaîne vide pour permettre effacement
+                  if (valueAsString === '') {
                     updateQuantite(index, 0);
                     return;
                   }
-                  const parsed = parseInt(input, 10);
+
+                  // On nettoie la chaîne pour ne garder que des chiffres
+                  const cleaned = valueAsString.replace(',', '.').replace(/[^\d]/g, '');
+
+                  const parsed = parseInt(cleaned, 10);
                   if (!isNaN(parsed)) {
                     updateQuantite(index, parsed);
                   }
@@ -317,7 +328,7 @@ const AjouterArticle = () => {
       <Tab eventKey={1} title={<TabTitleText>Voir les articles</TabTitleText>}>
         <div style={{ marginTop: '1rem' }}>
           {isLoading ? (
-            <Spinner isSVG size="xl" />
+            <Spinner size="xl" />
           ) : (
             categories.map((category, index) => {
               const categoryArticles = articles.filter(article => article.categorie_id === category.id);
@@ -344,7 +355,7 @@ const AjouterArticle = () => {
                                 <div style={{ marginTop: '0.5rem' }}>
                                   <strong>Stocks :</strong>
                                   <ul style={{ paddingLeft: '1rem', margin: 0 }}>
-                                    {article.stocks?.map((stock, i) => (
+                                    {article.stocks?.map((stock:any, i:any) => (
                                       <li key={i}>
                                         Taille <Label color="blue">{stock.taille}</Label> : {stock.quantite}
                                       </li>
@@ -353,10 +364,10 @@ const AjouterArticle = () => {
                                 </div>
                               </CardBody>
                               <CardFooter style={{ display: 'flex', gap: '0.5rem' }}>
-                                <Button variant="secondary" isSmall onClick={() => ouvrirEdition(article)}>
+                                <Button variant="secondary" onClick={() => ouvrirEdition(article)}>
                                   Modifier
                                 </Button>
-                                <Button variant="danger" isSmall onClick={() => supprimerArticle(article.id)}>
+                                <Button variant="danger" onClick={() => supprimerArticle(article.id)}>
                                   Supprimer
                                 </Button>
                               </CardFooter>

@@ -1,17 +1,30 @@
 import { z } from 'zod';
+export type Stock = {
+    taille: string;
+    quantite: number;
+};
+export type Taille = "S" | "M" | "L" | "XL";
+export type Article = {
+    id: number;
+    nom: string;
+    description: string;
+    prix: number;
+    images: string[];
+    stocks: Stock[];
+    categorie_id: number;
+    taille?: string;
+    quantite?: number;
+};
 export type ArticleAPI = {
     id: number;
     nom: string;
     prix: number;
     description: string;
     images: string[];
-    stocks: {
-        taille: string;
-        quantite: number;
-    }[];
+    stocks: Stock[];
 };
 export type ArticlesParCategorie = {
-    [categorieNom: string]: ArticleData[];
+    [categorieNom: string]: Article[];
 };
 export type Categorie = {
     id: number;

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
   PageSection,
   Title,
   Modal,
@@ -54,6 +53,13 @@ const Utilisateur = () => {
       console.error('Erreur lors de la récupération du schéma utilisateur :', error);
       return [];
     }
+  };
+
+  const handleSelectToggle = (key: string, isOpen: boolean) => {
+    setSelectOpenStates(prev => ({
+      ...prev,
+      [key]: isOpen
+    }));
   };
 
   const fetchUtilisateurs = async () => {
@@ -143,7 +149,7 @@ const Utilisateur = () => {
       <Tabs activeKey={activeTabKey} onSelect={(_, key) => setActiveTabKey(Number(key))}>
         <Tab eventKey={0} title={<TabTitleText>Afficher</TabTitleText>}>
           {userSchema ? (
-            <EditableTable data={utilisateurs} />
+            <EditableTable data={utilisateurs} columns={columns} />
           ) : (
             <Bullseye>Chargement...</Bullseye>
           )}
@@ -151,15 +157,21 @@ const Utilisateur = () => {
         <Tab eventKey={1} title={<TabTitleText>Ajouter</TabTitleText>}>
           <GenericForm
             formData={formData}
-            setFormData={setFormData}
             selectOptions={selectOptions}
             selectOpenStates={selectOpenStates}
-            setSelectOpenStates={setSelectOpenStates}
-            onSubmit={handleSubmit}
             onChange={handleChange}
-            formatLabel={formatLabel}
+            onSelectToggle={handleSelectToggle}
+            onSubmit={handleSubmit}
           />
+
+          {utilisateur && (
+            <PageSection variant="default">
+              <Title headingLevel="h2" size="lg">Dernier utilisateur ajouté :</Title>
+              <pre>{JSON.stringify(utilisateur, null, 2)}</pre>
+            </PageSection>
+          )}
         </Tab>
+
       </Tabs>
 
       <Modal

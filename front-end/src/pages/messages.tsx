@@ -1,16 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   PageSection,
   Title,
   Tabs,
   Tab,
   TabTitleText,
-  Select,
-  SelectOption,
   Button,
   Alert,
   Modal,
-  ModalVariant,
   Form,
   FormGroup,
   FormSelect,
@@ -47,10 +44,9 @@ const Messages = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersRes, typesRes, messagesRes] = await Promise.all([
+        const [usersRes, typesRes] = await Promise.all([
           fetch('http://localhost:3000/utilisateurs'),
           fetch('http://localhost:3000/messages'),
-          //fetch('http://localhost:3000/messages/recus'),
         ]);
 
         if (!usersRes.ok || !typesRes.ok) throw new Error('Erreur réseau');
@@ -280,7 +276,15 @@ const handleSaveEdit = async (id: number) => {
             onSubmit={handleSubmit}
             onChange={handleChange}
             formatLabel={formatLabel}
+            onSelectToggle={(fieldName: string, isOpen: boolean) => {
+              // Implémente ici ce que tu veux faire quand un select s’ouvre/se ferme
+              setSelectOpenStates((prev: any) => ({
+                ...prev,
+                [fieldName]: isOpen,
+              }));
+            }}
           />
+
         </Tab>
 
         <Tab eventKey={3} title={<TabTitleText>Messages existants</TabTitleText>}>
@@ -329,7 +333,7 @@ const handleSaveEdit = async (id: number) => {
                 variant="secondary"
                 onClick={() => {
                   setEditingId(null);
-                  setEditFormData({});
+                  setEditFormData({title: '', content: ''});
                 }}
               >
                 Annuler
@@ -369,14 +373,12 @@ const handleSaveEdit = async (id: number) => {
         title="Notification"
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        variant={ModalVariant.small}
-        actions={[
-          <Button key="close" variant="primary" onClick={() => setShowModal(false)}>
-            Fermer
-          </Button>
-        ]}
+        variant="default"
       >
         <p>{modalMessage}</p>
+        <Button variant="primary" onClick={() => setShowModal(false)}>
+          Fermer
+        </Button>
       </Modal>
     </PageSection>
   );

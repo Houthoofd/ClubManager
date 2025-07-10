@@ -130,7 +130,7 @@ function DualListSelectorGeneric<T>({
   };
 
   const onOptionSelect = (
-    event: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent,
+    _event: React.MouseEvent | React.ChangeEvent | React.KeyboardEvent,
     index: number,
     isChosen: boolean
   ) => {

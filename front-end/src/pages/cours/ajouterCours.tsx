@@ -91,25 +91,43 @@ const AjouterCours = () => {
       fetchData().finally(() => setIsLoading(false));
     }
   }, [activeTabKey]);
+type CoursData = {
+  professeurs: string[];
+  [key: string]: any;
+};
 
   const fetchData = async () => {
     try {
       const res = await fetch('http://localhost:3000/cours/informations/planning');
-      const data = await res.json();
-      const tousLesNoms = data.flatMap((cours: any) =>
-        cours.professeurs.map((p: string, index: number) => ({
-          id: index,
-          name: p.trim()
+
+      if (!res.ok) {
+        throw new Error(`Erreur HTTP: ${res.status}`);
+      }
+
+      const data: CoursData[] = await res.json();
+
+      const tousLesNoms = data.flatMap((cours, coursIndex) =>
+        cours.professeurs.map((nomProf, profIndex) => ({
+          id: coursIndex * 1000 + profIndex,
+          name: nomProf.trim()
         }))
       );
-      const nomsUniques = Array.from(new Map(tousLesNoms.map(item => [item.name, item])).values());
+
+      const nomsUniquesMap = new Map<string, { id: number; name: string }>();
+      for (const prof of tousLesNoms) {
+        nomsUniquesMap.set(prof.name, prof);
+      }
+
+      const nomsUniques = Array.from(nomsUniquesMap.values());
 
       setAllUsers(nomsUniques);
       setCours(data);
     } catch (err) {
-      console.error('Erreur de récupération des données', err);
+      console.error('Erreur de récupération des données :', err);
     }
   };
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,10 +165,18 @@ const AjouterCours = () => {
   );
 
   const handleRemoveProfesseur = (coursIndex: number, profIndex: number) => {
-    const newCours = [...cours];
-    newCours[coursIndex].professeurs = newCours[coursIndex].professeurs.filter((_, i) => i !== profIndex);
-    setCours(newCours);
+    setCours((prevCours: typeof cours) => {
+      const newCours = [...prevCours];
+      const coursTarget = { ...newCours[coursIndex] };
+
+      coursTarget.professeurs = coursTarget.professeurs.filter((_: string, i: number) => i !== profIndex);
+      newCours[coursIndex] = coursTarget;
+
+      return newCours;
+    });
   };
+
+
 
   const handleRemoveCours = (index: number) => {
     setCours(cours.filter((_, i) => i !== index));

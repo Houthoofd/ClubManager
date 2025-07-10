@@ -1,3 +1,4 @@
+import type { CoursData, Utilisateur } from './cours';
 export interface InsertResult {
     insertId: number;
     affectedRows: number;
@@ -6,19 +7,23 @@ export interface VerifyResult {
     isFind: boolean;
     message: string;
 }
-export interface VerifyResultWithData {
-    isFind: boolean;
-    message: string;
-    data: any;
+export interface VerifyResultWithData<T = any> extends VerifyResult {
+    data: T;
 }
-export interface Book {
+export interface Book<T = any> {
     isBooked: boolean;
     message: string;
-    data: any;
+    data: T;
 }
+export type BookResult<T = any> = Book<T> & VerifyResult;
 export interface ConfirmationResult {
     isConfirm: boolean;
     message: string;
 }
-export type BookResult = Book & VerifyResult;
+export type CoursApiResponse = VerifyResultWithData<{
+    Cours: CoursData;
+}>;
+export type UtilisateurApiResponse = VerifyResultWithData<{
+    utilisateurs: Utilisateur[];
+}>;
 //# sourceMappingURL=query.d.ts.map

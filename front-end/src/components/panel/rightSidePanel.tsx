@@ -20,26 +20,8 @@ import {
   Modal
 } from '@patternfly/react-core';
 import PaymentForm from '../form/paymentForm';
-import type { nouvelleCommandeSchema } from '@clubmanager/types';
-
-type Stock = {
-  taille: string;
-  quantite: number;
-};
-
-type Taille = 'S' | 'M' | 'L' | 'XL';
-
-
-type Article = {
-  id: number;
-  nom: string;
-  description: string;
-  prix: number;
-  images: string[];
-  stocks: Stock[];
-  taille?: string;
-  quantite?: number;
-};
+// Import des types (à ajuster selon ton arborescence)
+import type { Article, Taille } from '@clubmanager/types';
 
 type RightSidePanelProps = {
   isExpanded: boolean;
@@ -47,6 +29,7 @@ type RightSidePanelProps = {
   articles: Article[];
   onRemoveArticle: (index: number) => void;
   onUpdateQuantite: (index: number, quantite: number, taille: string) => void;
+  onUpdateTaille: (index: number, nouvelleTaille: string) => void; // à ajouter
   children?: ReactNode;
 };
 
@@ -59,7 +42,7 @@ const RightSidePanel = ({
   children
 }: RightSidePanelProps) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [selectedTaille, setSelectedTaille] = useState<string | null>(null);
+  const [selectedTaille, setSelectedTaille] = useState<Taille | null>(null);
   const [quantiteTemp, setQuantiteTemp] = useState<number>(1);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [localArticles, setLocalArticles] = useState<Article[]>(articles);
@@ -73,7 +56,7 @@ const RightSidePanel = ({
 
   const startEditing = (index: number) => {
     setEditingIndex(index);
-    setSelectedTaille(localArticles[index].taille || null);
+    setSelectedTaille(localArticles[index].taille as Taille || null);
     setQuantiteTemp(localArticles[index].quantite || 1);
   };
 
@@ -150,7 +133,7 @@ const RightSidePanel = ({
       <DrawerContent
         panelContent={
           <DrawerPanelContent
-            widths={{ default: '30%' }}
+            widths={{ default: 'width_33' }}
             style={{ padding: '1rem', overflowY: 'auto', height: '100vh' }}
           >
             <Stack hasGutter>
@@ -184,8 +167,8 @@ const RightSidePanel = ({
                               <Select
                                 toggle={toggleSelect}
                                 isOpen={isSelectOpen}
-                                onSelect={(event, value) => {
-                                  setSelectedTaille(value as string);
+                                onSelect={(_event, value) => {
+                                  setSelectedTaille(value as Taille);
                                   setIsSelectOpen(false);
                                 }}
                                 onOpenChange={setIsSelectOpen}
@@ -276,7 +259,6 @@ const RightSidePanel = ({
             onClose={() => setIsPaymentModalOpen(false)}
             variant="medium"
             aria-label="Formulaire de paiement"
-            hasNoBodyPadding
           >
             <PaymentForm totalAmount={totalPrice} commande={commande} onClose={() => setIsPaymentModalOpen(false)} />
           </Modal>

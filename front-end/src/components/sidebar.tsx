@@ -18,7 +18,6 @@ import {
   GraduationCapIcon,
   EditIcon,
   ShoppingCartIcon,
-  BoxesIcon,
   CogIcon, 
   PackageIcon
 } from '@patternfly/react-icons';
@@ -30,10 +29,10 @@ interface AppSidebarProps {
 
 const iconStyle = { marginRight: '8px' };
 
-const sectionTitleStyle = {
+const sectionTitleStyle: React.CSSProperties = {
   padding: '0.5rem 1rem',
   fontSize: '0.75rem',
-  textTransform: 'uppercase',
+  textTransform: 'uppercase', // ici c'est OK
   color: '#6a6e73',
   fontWeight: 'bold'
 };
@@ -112,7 +111,7 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
               {(hasRole(role, [ROLES.SUPER_ADMIN])) && (
                 <NavExpandable
                   title={<span><UsersIcon style={iconStyle} /> Utilisateurs</span>}
-                  itemId="users"
+                  itemID="users"
                 >
                   <NavItem to="/pages/utilisateurs/ajouter-utilisateur" itemId="ajouter-utilisateur">
                     <PlusCircleIcon style={iconStyle} />
@@ -123,7 +122,7 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
 
               <NavExpandable
                 title={<span><BookIcon style={iconStyle} /> Cours</span>}
-                itemId="courses"
+                itemID="courses"
               >
                 <NavItem to="/pages/cours/inscription" data-item-id="inscription">
                   <ClipboardCheckIcon style={iconStyle} />
@@ -145,7 +144,7 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
 
               <NavExpandable
                 title={<span><StoreIcon style={iconStyle} /> Magasins</span>}
-                itemId="stores"
+                itemID="stores"
               >
                 <NavItem to="/pages/magasin/magasin" itemId="magasin">
                   <StoreIcon style={iconStyle} />

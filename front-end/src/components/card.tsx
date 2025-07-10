@@ -49,7 +49,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
 
   return (
     <>
-      <Card isFlat isCompact style={{ height: '100%' }}>
+      <Card style={{ height: '100%' }}>
         <img
           src={imageUrl}
           alt={title}
@@ -74,13 +74,8 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
   variant="large"
   isOpen={isModalOpen}
   onClose={() => setIsModalOpen(false)}
-  actions={[
-    <Button key="cancel" variant="link" onClick={() => setIsModalOpen(false)}>
-      Annuler
-    </Button>
-  ]}
 >
-  {/* Contenu de la modal */}
+  {/* Contenu du modal */}
   <img
     src={imageUrl}
     alt={title}
@@ -107,13 +102,10 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
     </FormSelect>
   </div>
 
-  {/* Bouton dans le contenu modal */}
-  <div style={{ marginTop: '1rem' }}>
-    <Button
-      variant="primary"
-      onClick={handleAddToCart}
-      isDisabled={!selectedSize}
-    >
+  {/* Actions */}
+  <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+    <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Annuler</Button>
+    <Button variant="primary" onClick={handleAddToCart} isDisabled={!selectedSize}>
       Ajouter au panier
     </Button>
   </div>

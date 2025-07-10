@@ -15,7 +15,9 @@ import { useNavigate } from 'react-router-dom';
 
 interface EditableTableProps<T> {
   data: T[];
+  columns?: { title: string; dataKey: string }[];
 }
+
 
 export function EditableTable<T extends Record<string, any>>({ data }: EditableTableProps<T>) {
   const [rows, setRows] = useState(data);

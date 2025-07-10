@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { useParams } from 'react-router-dom';
@@ -12,7 +12,9 @@ import {
   Label
 } from '@patternfly/react-core';
 import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
-import type { CoursData, DataAnnulation, Utilisateur } from '@clubmanager/types';
+import type { CoursData, DataAnnulation, Utilisateur, VerifyResultWithData } from '@clubmanager/types';
+
+type CoursApiResponse = VerifyResultWithData<{ Cours: CoursData }>;
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -32,16 +34,23 @@ const ParticipantsPage = () => {
   const [participants, setParticipants] = useState<Utilisateur[]>([]);
 
   useEffect(() => {
-    if (!coursId) return;
+    if (!coursId || isNaN(coursId)) return;
 
     const fetchCours = async () => {
       try {
         const response = await fetch(`http://localhost:3000/cours/${coursId}`);
         if (!response.ok) throw new Error("Erreur lors du chargement du cours");
 
-        const data: CoursData = await response.json();
-        setCours(data.Cours);
-        setParticipants(data.Cours.utilisateurs || []);
+        const data: CoursApiResponse = await response.json();
+
+        if (data.data && data.data.Cours) {
+          setCours(data.data.Cours);
+          setParticipants(Array.isArray(data.data.Cours.utilisateurs) ? data.data.Cours.utilisateurs : []);
+        } else {
+          console.warn("Aucun cours trouvé");
+          setCours(null);
+          setParticipants([]);
+        }
       } catch (error) {
         console.error("Erreur fetch cours:", error);
       }
@@ -49,6 +58,8 @@ const ParticipantsPage = () => {
 
     fetchCours();
   }, [coursId]);
+
+
 
   const handleStatus = async (data: Record<string, string>, status: string) => {
     if (!cours?.id) return;
@@ -109,7 +120,7 @@ const ParticipantsPage = () => {
           else if (presence === 0) presenceColor = 'red';
 
           return (
-            <Card key={utilisateur.id} style={{ marginBottom: '0.5rem' }}>
+            <Card key={utilisateur.nom} style={{ marginBottom: '0.5rem' }}>
               <CardBody>
                 <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
                   <FlexItem>

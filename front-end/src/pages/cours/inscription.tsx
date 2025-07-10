@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import type { CoursData, DataReservation } from '@clubmanager/types';
-import ModalSize from '../../components/modal'; // ajuste selon ton arborescence
+import ModalSize from '../../components/modal';
 import { useNavigate } from 'react-router-dom';
 import {
   Page,
@@ -54,22 +54,28 @@ const Inscription = () => {
         if (!response.ok) throw new Error('Erreur lors de la récupération des cours');
         const data: CoursData[] = await response.json();
         setCours(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
 
-    const stored = localStorage.getItem("userData");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed?.data?.nom && parsed?.data?.prenom) {
-          setUserData(parsed.data);
+        const stored = localStorage.getItem("userData");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.data?.nom && parsed?.data?.prenom) {
+            const nom = parsed.data.nom;
+            const prenom = parsed.data.prenom;
+            const reservedIds = data
+              .filter((cours) =>
+                cours.utilisateurs?.some(
+                  (u) => u.nom === nom && u.prenom === prenom
+                )
+              )
+              .map((c) => c.id);
+            setReservations(reservedIds);
+            setUserData(parsed.data);
+          }
         }
       } catch (err) {
         console.error(err);
       }
-    }
+    };
 
     fetchData();
   }, []);
@@ -134,12 +140,10 @@ const Inscription = () => {
         <PageSection>
           <Title headingLevel="h1">Liste des Cours</Title>
           {cours.map((coursItem) => {
-            const isReserved = coursItem.utilisateurs?.some(
-              (u) => u.nom === userData?.nom && u.prenom === userData?.prenom
-            );
+            const isReserved = reservations.includes(coursItem.id);
 
             return (
-              <Card key={coursItem.id} className="mb-4" isFlat>
+              <Card key={coursItem.id} className="mb-4">
                 <CardTitle>
                   {new Date(coursItem.date_cours).toLocaleDateString()} - {coursItem.type_cours}
                 </CardTitle>

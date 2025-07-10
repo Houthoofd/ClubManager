@@ -39,7 +39,7 @@ type PaymentFormProps = {
 type PaymentMethod = 'bancontact' | 'paypal' | 'bitcoin';
 
 const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
-  const [paymentMethod, setPaymentMethod] = React.useState('bancontact');
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('bancontact');
   const [clientSecret, setClientSecret] = React.useState<string | null>(null);
   const [stripeOptions, setStripeOptions] = React.useState<any | null>(null);
 
@@ -125,7 +125,7 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
 
 
 
-  const handlePaymentMethodChange = (method) => {
+  const handlePaymentMethodChange = (method:PaymentMethod) => {
     setPaymentMethod(method);
   };
 

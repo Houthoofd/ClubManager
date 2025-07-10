@@ -8,7 +8,7 @@ type StripeFormProps = {
   clientSecret: string; // obligatoire ici
 };
 
-const StripeForm = ({ onClose, totalAmount, clientSecret }: StripeFormProps) => {
+const StripeForm = ({ totalAmount, clientSecret }: StripeFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);

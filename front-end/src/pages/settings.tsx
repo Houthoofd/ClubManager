@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   PageSection,
   PageSectionVariants,
@@ -61,13 +61,12 @@ const Settings = () => {
           <Divider className="my-4" />
 
           {/* Notifications */}
-          <FormGroup label="Notifications par e-mail" fieldId="notifications">
+          <FormGroup label="Notifications par e‑mail" fieldId="notifications">
             <Switch
               id="notifications"
-              label="Activées"
-              labelOff="Désactivées"
+              label={notifications ? 'Activées' : 'Désactivées'}
               isChecked={notifications}
-              onChange={setNotifications}
+              onChange={(_e, checked) => setNotifications(checked)}
             />
           </FormGroup>
 

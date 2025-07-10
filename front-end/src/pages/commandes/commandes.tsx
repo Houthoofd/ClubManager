@@ -24,12 +24,12 @@ interface Commande {
 }
 
 // Couleurs associées au statut (inutile si on ne met plus le badge, mais je les laisse au cas où)
-const statutCouleurs: Record<string, 'purple' | 'green' | 'orange' | 'red' | 'blue'> = {
-  'En attente': 'orange',
-  'Expédiée': 'green',
-  'Annulée': 'red',
-  'En cours': 'blue',
-};
+// const statutCouleurs: Record<string, 'purple' | 'green' | 'orange' | 'red' | 'blue'> = {
+//   'En attente': 'orange',
+//   'Expédiée': 'green',
+//   'Annulée': 'red',
+//   'En cours': 'blue',
+// };
 
 // Options pour le FormSelect
 const statutOptions = [
@@ -44,8 +44,8 @@ const Commandes = () => {
   const [loading, setLoading] = useState(true);
   const [filterInput, setFilterInput] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  const [activeSortIndex, setActiveSortIndex] = useState<number | null>(null);
-  const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | null>(null);
+  const [activeSortIndex, setActiveSortIndex] = useState<number | undefined>(undefined);
+  const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | undefined>(undefined);
 
   useEffect(() => {
     fetch('http://localhost:3000/magasin/commandes')
@@ -72,7 +72,7 @@ const Commandes = () => {
   ];
 
   const sortedData = useMemo(() => {
-    if (activeSortIndex === null || activeSortDirection === null) return filteredData;
+    if (activeSortIndex === undefined || activeSortDirection === undefined) return filteredData;
 
     return [...filteredData].sort((a, b) => {
       const aValue = getSortableRowValues(a)[activeSortIndex];
@@ -85,6 +85,7 @@ const Commandes = () => {
         : String(bValue).localeCompare(String(aValue));
     });
   }, [filteredData, activeSortIndex, activeSortDirection]);
+
 
   const columns = [
     { title: '', key: 'expander' }, // pour le bouton d'expansion
@@ -142,15 +143,18 @@ const Commandes = () => {
               {columns.map((col, index) => (
                 <Th
                   key={col.key}
-                  sort={col.key !== 'expander' ? {
-                    sortBy: {
-                      index: activeSortIndex,
-                      direction: activeSortDirection,
-                    },
-                    onSort,
-                    columnIndex: index,
-                    defaultDirection: 'asc',
-                  } : undefined}
+                  sort={
+                    col.key !== 'expander'
+                      ? {
+                          sortBy: {
+                            index: activeSortIndex,
+                            direction: activeSortDirection || 'asc',
+                          },
+                          onSort,
+                          columnIndex: index,
+                        }
+                      : undefined
+                  }
                 >
                   {col.title}
                 </Th>
@@ -183,16 +187,12 @@ const Commandes = () => {
                     <Td dataLabel="Statut" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <FormSelect
                         value={commande.statut}
-                        onChange={(value) => onChangeStatut(commande.commande_id, value)}
+                        onChange={(_event, value) => onChangeStatut(commande.commande_id, value)}
                         aria-label="Modifier le statut"
                         style={{ minWidth: 150 }}
                       >
                         {statutOptions.map((option) => (
-                          <FormSelectOption
-                            key={option.value}
-                            value={option.value}
-                            label={option.label}
-                          />
+                          <FormSelectOption key={option.value} value={option.value} label={option.label} />
                         ))}
                       </FormSelect>
                       {/* Badge retiré */}

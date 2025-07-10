@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import store from '../../redux/store';
-import { useLocation, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   Tabs,
   Tab,
@@ -36,7 +36,6 @@ function formatDateForInput(isoDateString: string) {
 
 const ConsulterUtilisateurPage = () => {
   const { id } = useParams();
-  const location = useLocation();
   const [utilisateur, setUtilisateur] = useState<UtilisateurType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,17 +65,15 @@ const ConsulterUtilisateurPage = () => {
   }, [id]);
 
   const handleTabClick = (
-    event: React.MouseEvent<HTMLElement, MouseEvent>,
-    tabIndex: number
+    _event: React.MouseEvent<HTMLElement, MouseEvent>,
+    eventKey: string | number
   ) => {
-    setActiveTabKey(tabIndex);
+    setActiveTabKey(Number(eventKey)); // forcer en number
   };
 
-  if (loading) return <Spinner isSVG size="xl" />;
+  if (loading) return <Spinner size="xl" />;
   if (error) return <Alert variant="danger" title={error} />;
-
   if (!utilisateur) return null;
-  
 
   return (
     <PageSection>
@@ -91,14 +88,18 @@ const ConsulterUtilisateurPage = () => {
               <TextInput
                 id="last-name"
                 value={utilisateur.last_name}
-                onChange={(value) => setUtilisateur({ ...utilisateur, last_name: value })}
+                onChange={(e) =>
+                  setUtilisateur({ ...utilisateur, last_name: e.currentTarget.value })
+                }
               />
             </FormGroup>
             <FormGroup label="Prénom :" fieldId="first-name">
               <TextInput
                 id="first-name"
                 value={utilisateur.first_name}
-                onChange={(value) => setUtilisateur({ ...utilisateur, first_name: value })}
+                onChange={(e) =>
+                  setUtilisateur({ ...utilisateur, first_name: e.currentTarget.value })
+                }
               />
             </FormGroup>
             <FormGroup label="Date de naissance :" fieldId="dob">
@@ -106,7 +107,9 @@ const ConsulterUtilisateurPage = () => {
                 id="dob"
                 type="date"
                 value={formatDateForInput(utilisateur.date_of_birth)}
-                onChange={(value) => setUtilisateur({ ...utilisateur, date_of_birth: value })}
+                onChange={(e) =>
+                  setUtilisateur({ ...utilisateur, date_of_birth: e.currentTarget.value })
+                }
               />
             </FormGroup>
           </Form>
@@ -118,21 +121,27 @@ const ConsulterUtilisateurPage = () => {
               <TextInput
                 id="genre"
                 value={utilisateur.genre_id}
-                onChange={(value) => setUtilisateur({ ...utilisateur, genre_id: value })}
+                onChange={(e) =>
+                  setUtilisateur({ ...utilisateur, genre_id: e.currentTarget.value })
+                }
               />
             </FormGroup>
             <FormGroup label="Abonnement :" fieldId="abonnement">
               <TextInput
                 id="abonnement"
                 value={utilisateur.abonnement_id}
-                onChange={(value) => setUtilisateur({ ...utilisateur, abonnement_id: value })}
+                onChange={(e) =>
+                  setUtilisateur({ ...utilisateur, abonnement_id: e.currentTarget.value })
+                }
               />
             </FormGroup>
             <FormGroup label="Grade :" fieldId="grade">
               <TextInput
                 id="grade"
                 value={utilisateur.grade_id}
-                onChange={(value) => setUtilisateur({ ...utilisateur, grade_id: value })}
+                onChange={(e) =>
+                  setUtilisateur({ ...utilisateur, grade_id: e.currentTarget.value })
+                }
               />
             </FormGroup>
           </Form>
@@ -144,7 +153,9 @@ const ConsulterUtilisateurPage = () => {
               <TextInput
                 id="role"
                 value={utilisateur.role_id}
-                onChange={(value) => setUtilisateur({ ...utilisateur, role_id: value })}
+                onChange={(e) =>
+                  setUtilisateur({ ...utilisateur, role_id: e.currentTarget.value })
+                }
               />
             </FormGroup>
           </Form>

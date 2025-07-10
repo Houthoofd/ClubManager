@@ -2,8 +2,8 @@ import React from 'react';
 import { NumberInput } from '@patternfly/react-core';
 
 type PriceInputProps = {
-  value: string;
-  onChange: (value: string) => void;
+  value: number | "";
+  onChange: (value: number | "") => void;
   onBlur?: () => void;
 };
 
@@ -12,35 +12,38 @@ export const PriceInput: React.FC<PriceInputProps> = ({ value, onChange, onBlur 
   const min = 0;
   const max = 1000;
 
-  const parse = (val: string): number => parseFloat(val.replace(',', '.')) || 0;
-
-  const format = (val: number): string => val.toFixed(2);
-
   const handlePlus = () => {
-    const current = parse(value);
+    const current = typeof value === "number" ? value : 0;
     const newVal = Math.min(current + step, max);
-    onChange(format(newVal));
+    onChange(newVal);
   };
 
   const handleMinus = () => {
-    const current = parse(value);
+    const current = typeof value === "number" ? value : 0;
     const newVal = Math.max(current - step, min);
-    onChange(format(newVal));
+    onChange(newVal);
   };
 
   const handleInputChange = (event: React.FormEvent<HTMLInputElement>) => {
-    let input = (event.currentTarget as HTMLInputElement).value;
-    input = input.replace(',', '.').replace(/[^\d.]/g, '');
-
-    const parts = input.split('.');
-    const cleaned = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : input;
-
-    onChange(cleaned);
+    let inputValue = event.currentTarget.value;
+    inputValue = inputValue.replace(',', '.').replace(/[^\d.]/g, '');
+    const parts = inputValue.split('.');
+    if (parts.length > 2) {
+      inputValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (inputValue === '') {
+      onChange("");
+    } else {
+      const parsed = parseFloat(inputValue);
+      if (!isNaN(parsed)) {
+        onChange(parsed);
+      }
+    }
   };
 
   return (
     <NumberInput
-      value={value}
+      value={value === "" ? 0 : value}
       onMinus={handleMinus}
       onPlus={handlePlus}
       onChange={handleInputChange}
@@ -50,6 +53,9 @@ export const PriceInput: React.FC<PriceInputProps> = ({ value, onChange, onBlur 
       plusBtnAriaLabel="Augmenter le prix"
       id="prix"
       onBlur={onBlur}
+      min={min}
+      max={max}
     />
+
   );
 };

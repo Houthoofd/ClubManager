@@ -4,8 +4,6 @@ import {
   Tab,
   TabTitleText,
   Alert,
-  List,
-  ListItem,
   Spinner,
   EmptyState,
   EmptyStateBody,
@@ -52,13 +50,16 @@ const AjouterProfesseur = () => {
     ]
   };
 
-  const handleTabClick = (_event: React.MouseEvent, tabIndex: number) => {
-    setActiveTabKey(tabIndex);
+  const handleTabClick = (_event: React.MouseEvent, tabIndex: string | number) => {
+    if (typeof tabIndex === 'number') {
+      setActiveTabKey(tabIndex);
+    }
   };
 
-  const onChange = (value: string, key: string) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+  const onChange = (e: React.FormEvent<HTMLSelectElement>, key: string) => {
+    setFormData(prev => ({ ...prev, [key]: e.currentTarget.value }));
   };
+
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,9 +93,9 @@ const AjouterProfesseur = () => {
       const usersData: Utilisateur[] = await usersRes.json();
 
       setCours(coursData);
-      setUtilisateurs(usersData.data);
+      setUtilisateurs(usersData);
 
-      const allProfesseurs = coursData.flatMap((c: CoursAvecProfesseurs) =>
+      const allProfesseurs: string[] = coursData.flatMap((c: { professeurs: string[] }) =>
         c.professeurs.map((p: string) => p.trim())
       );
       const uniques = Array.from(new Set(allProfesseurs));
@@ -107,7 +108,7 @@ const AjouterProfesseur = () => {
   };
 
   fetchData();
-}, [activeTabKey]);
+  }, [activeTabKey]);
 
 
 
@@ -195,7 +196,7 @@ const AjouterProfesseur = () => {
       <Tab eventKey={1} title={<TabTitleText>Voir les professeurs</TabTitleText>}>
         <div style={{ marginTop: '1rem' }}>
           {isLoading ? (
-            <Spinner isSVG size="xl" />
+            <Spinner size="xl" />
           ) : cours.length > 0 ? (
             <>
               <h2 style={{ marginTop: '2rem' }}>Professeurs enregistrés</h2>

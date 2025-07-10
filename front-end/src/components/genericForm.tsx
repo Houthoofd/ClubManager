@@ -14,12 +14,16 @@ import type { MenuToggleElement } from '@patternfly/react-core';
 
 interface GenericFormProps {
   formData: any;
+  setFormData?: React.Dispatch<any>;
   selectOptions: any;
   selectOpenStates: { [key: string]: boolean };
+  setSelectOpenStates?: React.Dispatch<React.SetStateAction<{ [key: string]: boolean }>>;
   onChange: (value: string, key: string) => void;
   onSelectToggle: (key: string, isOpen: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
+  formatLabel?: (label: string) => string;
 }
+
 
 const formatLabel = (label: string) => {
   let formatted = label.replace(/_/g, ' ');
@@ -95,7 +99,7 @@ const GenericForm: React.FC<GenericFormProps> = ({
               id={key}
               name={key}
               value={formData[key]}
-              onChange={(value) => onChange(value, key)}
+              onChange={(_event, value) => onChange(value, key)}
             />
           </FormGroup>
         );

@@ -5,14 +5,12 @@ import {
   Page,
   PageSection,
   PageGroup,
-  PageSidebar
 } from '@patternfly/react-core';
 import { OPEN_RIGHT_NAVBAR } from '../redux/actions';
 
-import ModalSize from './modal';
-import DashboardPage from '../pages/dashboard';
-import AppPanelHeader from './header'; // Composant custom
-import AppSidebar from './sidebar';    // Doit retourner <PageSidebar />
+import ModalSize from '../components/modal';
+import AppPanelHeader from '../components/header'; // Composant custom
+import AppSidebar from '../components/sidebar';    // Doit retourner <PageSidebar />
 
 interface MainLayoutProps {
   children?: ReactNode;

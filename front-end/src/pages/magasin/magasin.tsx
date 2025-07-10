@@ -18,28 +18,8 @@ import {
 import ArticleCard from '../../components/card';
 import RightSidePanel from '../../components/panel/rightSidePanel';
 
-type Stock = {
-  taille: string;
-  quantite: number;
-};
-
-type Article = {
-  id: number;
-  nom: string;
-  description: string;
-  prix: number;
-  images: string[];
-  stocks: Stock[];
-  categorie_id: number;
-  // taille et quantite sont optionnels pour le panier
-  taille?: string;
-  quantite?: number;
-};
-
-type Categorie = {
-  id: number;
-  nom: string;
-};
+// Import des types (à ajuster selon ton arborescence)
+import type { Article, Categorie } from '@clubmanager/types';
 
 const Magasin = () => {
   // articles devient un objet où clé = nom catégorie, valeur = array d'articles
@@ -63,14 +43,12 @@ const Magasin = () => {
           throw new Error('Erreur lors du chargement des données');
         }
 
-        // Ici on récupère l'objet avec les clés catégories
         const articlesData: Record<string, Article[]> = await resArticles.json();
         const categoriesData: Categorie[] = await resCategories.json();
 
         setArticlesParCategorie(articlesData);
         setCategories(categoriesData);
 
-        // Initialise l'état d'expansion avec toutes les catégories à false
         const initExpanded: Record<string, boolean> = {};
         Object.keys(articlesData).forEach((cat) => {
           initExpanded[cat] = false;
@@ -87,29 +65,33 @@ const Magasin = () => {
     fetchData();
   }, []);
 
+  // Ajoute un article au panier, avec taille choisie
   const ajouterAuPanier = (article: Article, taille: string) => {
-    const nouvelArticle = { ...article, taille, quantite: 1 };
+    // On ajoute quantite et taille à l'article dans le panier
+    const nouvelArticle: Article = { ...article, taille, quantite: 1 };
     setPanier((prev) => [...prev, nouvelArticle]);
   };
 
+  // Supprime un article du panier par son index
   const supprimerDuPanier = (index: number) => {
-    const copie = [...panier];
-    copie.splice(index, 1);
-    setPanier(copie);
+    setPanier((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Change la taille d'un article dans le panier (par index)
   const changerTailleArticle = (index: number, nouvelleTaille: string) => {
-    const copie = [...panier];
-    copie[index].taille = nouvelleTaille;
-    setPanier(copie);
+    setPanier((prev) =>
+      prev.map((article, i) => (i === index ? { ...article, taille: nouvelleTaille } : article))
+    );
   };
 
+  // Change la quantité d'un article dans le panier (par index)
   const changerQuantiteArticle = (index: number, quantite: number) => {
-    const copie = [...panier];
-    copie[index].quantite = quantite;
-    setPanier(copie);
+    setPanier((prev) =>
+      prev.map((article, i) => (i === index ? { ...article, quantite } : article))
+    );
   };
 
+  // Ouvre/ferme la section des articles d'une catégorie
   const toggleCategorie = (nomCategorie: string) => {
     setExpandedCategories((prev) => ({
       ...prev,

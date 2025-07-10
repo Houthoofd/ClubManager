@@ -26,6 +26,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 interface AppPanelHeaderProps {
+  username: string; 
   onSidebarToggle: () => void;
   onLogout?: () => void;
 }
