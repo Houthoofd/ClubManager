@@ -24,7 +24,7 @@ const Messages = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [utilisateurs, setUtilisateurs] = useState<any[]>([]);
   const [typesMessages, setTypesMessages] = useState<any[]>([]);
-  const [receivedMessages, setReceivedMessages] = useState<any[]>([]);
+  const [receivedMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +34,7 @@ const Messages = () => {
   const [selectedType, setSelectedType] = useState<string>('');
 
   const [formData, setFormData] = useState<any>({ title: '', content: '' });
-  const [selectOptions, setSelectOptions] = useState<any>({});
+  const [selectOptions] = useState<any>({});
   const [selectOpenStates, setSelectOpenStates] = useState<any>({});
 
   const [editingId, setEditingId] = useState<number | null>(null);

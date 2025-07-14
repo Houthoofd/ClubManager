@@ -38,7 +38,6 @@ const AjouterArticle = () => {
   const [isCategorieOpen, setIsCategorieOpen] = useState(false);
   const [nom, setNom] = useState('');
   const [description, setDescription] = useState('');
-  const [fileUploads, setFileUploads] = useState<string[]>(['']);
   const [stocks, setStocks] = useState([{ taille: 'S', quantite: 0 }]);
   const [message, setMessage] = useState('');
   const [articles, setArticles] = useState<any[]>([]);
@@ -115,7 +114,6 @@ const AjouterArticle = () => {
       setPrix('0');
       setCategorieId(null);
       setStocks([{ taille: 'S', quantite: 0 }]);
-      setFileUploads(['']);
       setArticleEnEdition(null);
     } catch (err) {
       console.error(err);

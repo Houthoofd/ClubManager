@@ -18,11 +18,10 @@ import {
 import ArticleCard from '../../components/card';
 import RightSidePanel from '../../components/panel/rightSidePanel';
 
-// Import des types (à ajuster selon ton arborescence)
+// Import des types
 import type { Article, Categorie } from '@clubmanager/types';
 
 const Magasin = () => {
-  // articles devient un objet où clé = nom catégorie, valeur = array d'articles
   const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article[]>>({});
   const [categories, setCategories] = useState<Categorie[]>([]);
   const [panier, setPanier] = useState<Article[]>([]);
@@ -50,8 +49,8 @@ const Magasin = () => {
         setCategories(categoriesData);
 
         const initExpanded: Record<string, boolean> = {};
-        Object.keys(articlesData).forEach((cat) => {
-          initExpanded[cat] = false;
+        categoriesData.forEach((cat) => {
+          initExpanded[cat.nom] = false;
         });
         setExpandedCategories(initExpanded);
       } catch (err) {
@@ -65,33 +64,27 @@ const Magasin = () => {
     fetchData();
   }, []);
 
-  // Ajoute un article au panier, avec taille choisie
   const ajouterAuPanier = (article: Article, taille: string) => {
-    // On ajoute quantite et taille à l'article dans le panier
     const nouvelArticle: Article = { ...article, taille, quantite: 1 };
     setPanier((prev) => [...prev, nouvelArticle]);
   };
 
-  // Supprime un article du panier par son index
   const supprimerDuPanier = (index: number) => {
     setPanier((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Change la taille d'un article dans le panier (par index)
   const changerTailleArticle = (index: number, nouvelleTaille: string) => {
     setPanier((prev) =>
       prev.map((article, i) => (i === index ? { ...article, taille: nouvelleTaille } : article))
     );
   };
 
-  // Change la quantité d'un article dans le panier (par index)
   const changerQuantiteArticle = (index: number, quantite: number) => {
     setPanier((prev) =>
       prev.map((article, i) => (i === index ? { ...article, quantite } : article))
     );
   };
 
-  // Ouvre/ferme la section des articles d'une catégorie
   const toggleCategorie = (nomCategorie: string) => {
     setExpandedCategories((prev) => ({
       ...prev,
@@ -131,34 +124,44 @@ const Magasin = () => {
         ) : error ? (
           <Alert variant="danger" title={error} />
         ) : (
-          Object.entries(articlesParCategorie).map(([nomCategorie, articles]) => (
-            <div key={nomCategorie}>
-              <Divider />
-              <Title headingLevel="h2" size="xl" style={{ marginTop: '1rem' }}>
-                {nomCategorie}
-              </Title>
-              <ExpandableSection
-                toggleText={expandedCategories[nomCategorie] ? 'Réduire' : 'Voir les articles'}
-                onToggle={() => toggleCategorie(nomCategorie)}
-                isExpanded={expandedCategories[nomCategorie]}
-              >
-                <Gallery hasGutter minWidths={{ default: '300px' }}>
-                  {articles.map((article) => (
-                    <GalleryItem key={article.id}>
-                      <ArticleCard
-                        title={article.nom}
-                        description={article.description}
-                        imageUrl={article.images[0]}
-                        prix={article.prix}
-                        stocks={article.stocks}
-                        onAddToCart={(taille) => ajouterAuPanier(article, taille)}
-                      />
-                    </GalleryItem>
-                  ))}
-                </Gallery>
-              </ExpandableSection>
-            </div>
-          ))
+          categories.map((categorie) => {
+            const articles = articlesParCategorie[categorie.nom] || [];
+
+            return (
+              <div key={categorie.id}>
+                <Divider />
+                <Title headingLevel="h2" size="xl" style={{ marginTop: '1rem' }}>
+                  {categorie.nom}
+                </Title>
+                <ExpandableSection
+                  toggleText={
+                    expandedCategories[categorie.nom] ? 'Réduire' : 'Voir les articles'
+                  }
+                  onToggle={() => toggleCategorie(categorie.nom)}
+                  isExpanded={expandedCategories[categorie.nom]}
+                >
+                  {articles.length > 0 ? (
+                    <Gallery hasGutter minWidths={{ default: '300px' }}>
+                      {articles.map((article) => (
+                        <GalleryItem key={article.id}>
+                          <ArticleCard
+                            title={article.nom}
+                            description={article.description}
+                            imageUrl={article.images[0]}
+                            prix={article.prix}
+                            stocks={article.stocks}
+                            onAddToCart={(taille) => ajouterAuPanier(article, taille)}
+                          />
+                        </GalleryItem>
+                      ))}
+                    </Gallery>
+                  ) : (
+                    <p>Aucun article dans cette catégorie.</p>
+                  )}
+                </ExpandableSection>
+              </div>
+            );
+          })
         )}
       </PageSection>
     </RightSidePanel>
