@@ -60,19 +60,21 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            cd /home/ec2-user/ClubManager
+            cd /home/***/ClubManager
 
-            # Remise à zéro des droits avant mise à jour
             echo "🔧 Ajustement des droits sur le dossier ClubManager..."
-            sudo chown -R $USER:$USER /home/ec2-user/ClubManager
-            sudo chmod -R u+rwX /home/ec2-user/ClubManager
+            sudo chown -R $USER:$USER /home/***/ClubManager
+            sudo chmod -R u+rwX /home/***/ClubManager
 
+            # Nettoyage Git local avant pull pour éviter conflits
+            git reset --hard HEAD
+            git clean -fd
             git pull origin hosting
 
-            # Build types partagés
+            # Build types partagés (si script build présent)
             cd packages/types
             npm install
-            npm run build
+            if npm run | grep -q build; then npm run build; else echo "No build script in packages/types"; fi
 
             # Build API et restart
             cd ../../api
@@ -85,10 +87,10 @@ jobs:
             npm install
             npm run build
 
-            # Copier les fichiers front dans nginx
+            # Préparer dossier nginx
+            sudo mkdir -p /var/www/html
             sudo rm -rf /var/www/html/*
             sudo cp -r dist/* /var/www/html/
 
-            # Ajustement des droits pour nginx
             echo "🔧 Ajustement des droits pour nginx sur /var/www/html..."
             sudo chown -R nginx:nginx /var/www/html
