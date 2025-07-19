@@ -18,6 +18,18 @@ jobs:
         with:
           node-version: '20'
 
+      # Installer toutes les dépendances à la racine si workspaces (recommandé)
+      - name: Install root dependencies
+        run: npm install
+
+      # Compiler les types
+      - name: Build shared types
+        run: |
+          cd packages/types
+          npm install
+          npm run build
+
+      # API
       - name: Install dependencies (API)
         run: |
           cd api
@@ -28,6 +40,7 @@ jobs:
           cd api
           npm run build
 
+      # Front
       - name: Install dependencies (Front)
         run: |
           cd front-end
@@ -38,6 +51,7 @@ jobs:
           cd front-end
           npm run build
 
+      # Déploiement EC2
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -49,7 +63,11 @@ jobs:
             cd /home/ec2-user/ClubManager
             git pull origin hosting
 
-            cd api
+            cd packages/types
+            npm install
+            npm run build
+
+            cd ../../api
             npm install
             npm run build
             sudo systemctl restart clubmanager.service
@@ -58,6 +76,6 @@ jobs:
             npm install
             npm run build
 
-            # Copie le build du front vers Nginx (adapter si besoin)
+            # Copie vers Nginx
             sudo rm -rf /var/www/html/*
             sudo cp -r dist/* /var/www/html/
