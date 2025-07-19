@@ -51,7 +51,8 @@ jobs:
           cd front-end
           npm run build
 
-            - name: Deploy to EC2 via SSH
+      # Déploiement EC2
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -59,7 +60,6 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            echo "✅ Connexion SSH réussie"
             cd /home/ec2-user/ClubManager
 
             # Remise à zéro des droits avant mise à jour
@@ -85,11 +85,10 @@ jobs:
             npm install
             npm run build
 
-            # Ajustement des droits pour nginx
-            echo "🔧 Ajustement des droits pour nginx sur /var/www/html..."
-            sudo chown -R nginx:nginx /var/www/html
-
             # Copier les fichiers front dans nginx
             sudo rm -rf /var/www/html/*
             sudo cp -r dist/* /var/www/html/
 
+            # Ajustement des droits pour nginx
+            echo "🔧 Ajustement des droits pour nginx sur /var/www/html..."
+            sudo chown -R nginx:nginx /var/www/html
