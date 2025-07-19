@@ -1,36 +1,63 @@
-name: Build and Publish Docker Image
+name: Build and Deploy ClubManager (API & Front)
 
 on:
   push:
     branches:
-      - main # Déclenche l'action sur un push dans la branche principale
+      - hosting
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'  # Utiliser la version appropriée de Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies (API)
+        run: |
+          cd api
+          npm install
 
-    - name: Build project
-      run: npm run build
+      - name: Build API
+        run: |
+          cd api
+          npm run build
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Install dependencies (Front)
+        run: |
+          cd front-end
+          npm install
 
-    - name: Log in to GitHub Docker registry
-      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+      - name: Build Front
+        run: |
+          cd front-end
+          npm run build
 
-    - name: Build and Push Docker image with Nginx
-      run: |
-        docker build -t ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest .
-        docker push ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            cd /home/ec2-user/ClubManager
+            git pull origin hosting
+
+            cd api
+            npm install
+            npm run build
+            sudo systemctl restart clubmanager.service
+
+            cd ../front-end
+            npm install
+            npm run build
+
+            # Copie le build du front vers Nginx (adapter si besoin)
+            sudo rm -rf /var/www/html/*
+            sudo cp -r dist/* /var/www/html/
