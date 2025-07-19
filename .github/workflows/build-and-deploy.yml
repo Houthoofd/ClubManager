@@ -59,8 +59,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          script: echo "✅ Connexion SSH réussie"
           script: |
+            "✅ Connexion SSH réussie"
             cd /home/ec2-user/ClubManager
             git pull origin hosting
 
