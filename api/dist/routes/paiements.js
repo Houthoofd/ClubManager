@@ -17,7 +17,7 @@ import { Paiements } from '../db/clients/paiements/paiements.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Charger le .env situé à la racine du projet
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 console.log(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
 if (!process.env.STRIPE_SECRET_KEY) {
