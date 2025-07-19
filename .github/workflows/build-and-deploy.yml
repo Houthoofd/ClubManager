@@ -76,11 +76,10 @@ jobs:
             npm install
             if npm run | grep -q build; then npm run build; else echo "No build script in packages/types"; fi
 
-            # Build API et restart
+            # Build API
             cd ../../api
             npm install
             npm run build
-            sudo systemctl restart clubmanager.service
 
             # Build front
             cd ../front-end
@@ -94,3 +93,7 @@ jobs:
 
             echo "🔧 Ajustement des droits pour nginx sur /var/www/html..."
             sudo chown -R nginx:nginx /var/www/html
+
+            # Redémarrage du service à la toute fin
+            sudo systemctl restart clubmanager.service
+
