@@ -1,4 +1,4 @@
-name: Build and Deploy ClubManager (API & Front)
+name: Deploy ClubManager (no build, only deploy)
 
 on:
   push:
@@ -6,46 +6,12 @@ on:
       - hosting
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      - name: Install root dependencies
-        run: npm install
-
-      - name: Build shared types
-        run: |
-          cd packages/types
-          npm install
-          npm run build
-
-      - name: Install dependencies (API)
-        run: |
-          cd api
-          npm install
-
-      - name: Build API
-        run: |
-          cd api
-          npm run build
-
-      - name: Install dependencies (Front)
-        run: |
-          cd front-end
-          npm install
-
-      - name: Build Front
-        run: |
-          cd front-end
-          npm run build
 
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.7
@@ -57,36 +23,18 @@ jobs:
           script: |
             cd /home/***/ClubManager
 
-            echo "🔧 Ajustement des droits sur le dossier ClubManager..."
-            sudo chown -R $USER:$USER /home/***/ClubManager
-            sudo chmod -R u+rwX /home/***/ClubManager
-
             echo "🔄 Pull depuis la branche hosting..."
             git reset --hard HEAD
             git clean -fd
             git pull origin hosting
 
-            echo "📦 Build des types partagés..."
-            cd packages/types
-            npm install
-            if npm run | grep -q build; then npm run build; else echo "No build script in packages/types"; fi
-
-            echo "🛠️ Build de l'API..."
-            cd ../../api
-            npm install
-            npm run build
-
-      
             echo "🧹 Nettoyage du dossier HTML distant..."
             sudo rm -rf /var/www/html/*
 
-            echo "📁 Copie du build dans /var/www/html..."
+            echo "📁 Copie du build front-end dans /var/www/html..."
             sudo cp -r front-end/dist/* /var/www/html/
             sudo chown -R $USER:$USER /var/www/html
             sudo chmod -R 755 /var/www/html
-
-            echo "📂 Contenu actuel de /var/www/html :"
-            ls -l /var/www/html
 
             echo "🔁 Redémarrage de nginx et du service clubmanager..."
             sudo systemctl reload nginx
