@@ -37,6 +37,8 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     e.preventDefault();
     setError(null);
 
+
+    console.log("aeznfzkeg")
     console.log(API_BASE_URL)
 
     try {
