@@ -38,7 +38,7 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     setError(null);
 
     try {
-      const response = await fetch('${API_BASE_URL}/utilisateurs/connexion', {
+      const response = await fetch(`${API_BASE_URL}/utilisateurs/connexion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
