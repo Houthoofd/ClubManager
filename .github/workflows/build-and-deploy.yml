@@ -18,18 +18,15 @@ jobs:
         with:
           node-version: '20'
 
-      # Installer les dépendances à la racine
       - name: Install root dependencies
         run: npm install
 
-      # Compiler les types
       - name: Build shared types
         run: |
           cd packages/types
           npm install
           npm run build
 
-      # API
       - name: Install dependencies (API)
         run: |
           cd api
@@ -40,7 +37,6 @@ jobs:
           cd api
           npm run build
 
-      # Front
       - name: Install dependencies (Front)
         run: |
           cd front-end
@@ -49,9 +45,10 @@ jobs:
       - name: Build Front
         run: |
           cd front-end
+          echo "VITE_API_BASE_URL=https://clubmanagment.com" > .env
+          rm -rf dist
           npm run build
 
-      # Déploiement EC2
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -63,47 +60,40 @@ jobs:
             cd /home/***/ClubManager
 
             echo "🔧 Ajustement des droits sur le dossier ClubManager..."
-            sudo chown -R $USER:$USER /home/***/ClubManager
-            sudo chmod -R u+rwX /home/***/ClubManager
+            sudo chown -R $USER:$USER .
+            sudo chmod -R u+rwX .
 
-            echo "📌 Nettoyage Git local avant pull"
+            echo "🔄 Récupération du code..."
             git reset --hard HEAD
             git clean -fd
             git pull origin hosting
 
-            echo "📦 Build shared types"
+            echo "🔨 Build types..."
             cd packages/types
             npm install
-            if npm run | grep -q build; then npm run build; else echo "No build script in packages/types"; fi
+            npm run build || echo "No build script"
 
-            echo "📦 Build API"
+            echo "⚙️ Build API..."
             cd ../../api
             npm install
             npm run build
 
-            echo "📦 Build Front"
+            echo "🖼️ Build Frontend..."
             cd ../front-end
             npm install
-
-            # Supprimer dist avant build pour éviter les conflits
-            rm -rf dist
-
             echo "VITE_API_BASE_URL=https://clubmanagment.com" > .env
+            rm -rf dist
             npm run build
 
-            echo "🚀 Déploiement frontend vers /var/www/html"
+            echo "📦 Déploiement du frontend..."
             sudo rm -rf /var/www/html/*
-            sudo cp -r dist/* /var/www/html/
-
-            # Donner les droits à l'utilisateur nginx (ou www-data selon ta config)
-            sudo chown -R nginx:nginx /var/www/html
+            sudo cp -r dist/. /var/www/html/
+            sudo chown -R $USER:$USER /var/www/html
             sudo chmod -R 755 /var/www/html
 
-            echo "📂 Contenu de /var/www/html après déploiement :"
+            echo "📁 Contenu de /var/www/html :"
             ls -l /var/www/html
 
-            echo "🔄 Reload Nginx"
+            echo "♻️ Redémarrage des services..."
             sudo systemctl reload nginx
-
-            echo "🔄 Restart ClubManager API service"
             sudo systemctl restart clubmanager.service
