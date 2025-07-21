@@ -38,9 +38,15 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 app.use(express.json());
 
 // Configuration CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL_LOCAL,
+].filter(Boolean) as string[]; // filtre les valeurs falsy (comme undefined)
+
 const corsOptions = {
-  origin: 'http://localhost:5173',  // Frontend
+  origin: allowedOrigins,
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
