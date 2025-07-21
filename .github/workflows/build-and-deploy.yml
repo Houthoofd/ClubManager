@@ -46,11 +46,6 @@ jobs:
           cd front-end
           npm install
 
-      - name: Inject env variables for Vite
-        run: |
-          cd front-end
-          echo "VITE_API_BASE_URL=https://clubmanagment.com" > .env
-
       - name: Build Front
         run: |
           cd front-end
@@ -102,3 +97,4 @@ jobs:
 
             # Redémarrage du service à la toute fin
             sudo systemctl restart clubmanager.service
+
