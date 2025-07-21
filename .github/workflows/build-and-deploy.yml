@@ -76,20 +76,7 @@ jobs:
             npm install
             npm run build
 
-            echo "🧱 Build du Front..."
-            cd ../front-end
-            npm install
-            echo "VITE_API_BASE_URL=https://clubmanagment.com" > .env
-
-            # 🔐 Correction des permissions pour tsc & vite
-            chmod +x node_modules/.bin/*
-
-            # ✅ Supprimer l'ancien build si besoin
-            rm -rf dist
-
-            # 🏗️ Build
-            npm run build || { echo "❌ Échec du build frontend"; exit 1; }
-
+      
             echo "🧹 Nettoyage du dossier HTML distant..."
             sudo rm -rf /var/www/html/*
 
