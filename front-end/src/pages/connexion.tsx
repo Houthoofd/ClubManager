@@ -10,6 +10,8 @@ import {
 } from '@patternfly/react-core';
 import type { UserDataLogin } from '@clubmanager/types';
 
+import { API_BASE_URL } from '../../config';
+
 
 interface LoginPageProps {
   onSuccess?: (data: any) => void;
@@ -36,7 +38,7 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3000/utilisateurs/connexion', {
+      const response = await fetch('${API_BASE_URL}/utilisateurs/connexion', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

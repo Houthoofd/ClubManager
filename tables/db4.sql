@@ -206,22 +206,38 @@ VALUES
 
 
 
+-- Variables saison
+SET @current_year = YEAR(CURDATE());
+SET @season_start = STR_TO_DATE(
+  CONCAT(
+    CASE WHEN MONTH(CURDATE()) < 9 THEN @current_year - 1 ELSE @current_year END,
+    '-09-01'
+  ), '%Y-%m-%d'
+);
+SET @season_end = DATE_ADD(@season_start, INTERVAL 730 DAY); -- 2 ans
 
-
-
-
-
--- Créer une table temporaire pour les dates
-CREATE TEMPORARY TABLE dates (
+-- Table temporaire dates
+CREATE TEMPORARY TABLE IF NOT EXISTS dates (
     date_cours DATE
 );
+TRUNCATE TABLE dates;
 
--- Insérer des dates dans la table temporaire (remplacer seq_0_to_729 par la bonne séquence)
+-- Génération des dates entre saison start et end
 INSERT INTO dates (date_cours)
-SELECT DATE_ADD('2024-01-01', INTERVAL seq DAY)
-FROM seq_0_to_729; -- Séquence pour 730 jours
+SELECT DATE_ADD(@season_start, INTERVAL seq DAY)
+FROM (
+    SELECT a.N + b.N * 10 + c.N * 100 AS seq
+    FROM
+      (SELECT 0 AS N UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+       UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) a,
+      (SELECT 0 AS N UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+       UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) b,
+      (SELECT 0 AS N UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+       UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7) c
+) numbers
+WHERE DATE_ADD(@season_start, INTERVAL seq DAY) <= @season_end;
 
--- Insérer les cours basés sur les dates UNIQUEMENT si un cours_recurrent existe pour ce jour
+-- Insertion dans cours
 INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin, cours_recurrent_id)
 SELECT 
     d.date_cours,
@@ -230,24 +246,27 @@ SELECT
         WHEN DAYOFWEEK(d.date_cours) = 5 THEN 'JJB'         -- Jeudi (5)
         WHEN DAYOFWEEK(d.date_cours) = 7 THEN 'Grappling'   -- Samedi (7)
         WHEN DAYOFWEEK(d.date_cours) = 1 THEN 'Grappling'   -- Dimanche (1)
+        ELSE NULL
     END AS type_cours,
     CASE 
         WHEN DAYOFWEEK(d.date_cours) = 2 THEN '19:30:00'    -- Lundi
         WHEN DAYOFWEEK(d.date_cours) = 5 THEN '19:30:00'    -- Jeudi
         WHEN DAYOFWEEK(d.date_cours) = 7 THEN '12:00:00'    -- Samedi
         WHEN DAYOFWEEK(d.date_cours) = 1 THEN '14:15:00'    -- Dimanche
+        ELSE NULL
     END AS heure_debut,
     CASE 
         WHEN DAYOFWEEK(d.date_cours) = 2 THEN '21:15:00'    -- Lundi
         WHEN DAYOFWEEK(d.date_cours) = 5 THEN '21:15:00'    -- Jeudi
         WHEN DAYOFWEEK(d.date_cours) = 7 THEN '13:30:00'    -- Samedi
         WHEN DAYOFWEEK(d.date_cours) = 1 THEN '16:00:00'    -- Dimanche
+        ELSE NULL
     END AS heure_fin,
     cr.id AS cours_recurrent_id
 FROM dates d
-JOIN cours_recurrent cr 
-  ON cr.jour_semaine = DAYOFWEEK(d.date_cours)
+JOIN cours_recurrent cr ON cr.jour_semaine = DAYOFWEEK(d.date_cours)
 WHERE DAYOFWEEK(d.date_cours) IN (1, 2, 5, 7);
+
 
 
 
@@ -49997,6 +50016,7 @@ INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id)
 INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id) VALUES (118, 366, '2024-10-14', NULL);
 INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id) VALUES (118, 367, '2025-03-30', NULL);
 INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id) VALUES (118, 368, '2024-07-13', NULL);
+--------------------- Limit atteinte-----------------------------------
 INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id) VALUES (118, 369, '2024-08-29', NULL);
 INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id) VALUES (118, 370, '2025-06-23', NULL);
 INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id) VALUES (118, 371, '2024-06-20', NULL);
