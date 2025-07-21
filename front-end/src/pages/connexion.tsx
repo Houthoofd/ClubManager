@@ -37,6 +37,8 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     e.preventDefault();
     setError(null);
 
+    console.log(API_BASE_URL)
+
     try {
       const response = await fetch(`${API_BASE_URL}/utilisateurs/connexion`, {
         method: 'POST',
