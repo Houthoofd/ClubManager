@@ -18,18 +18,15 @@ jobs:
         with:
           node-version: '20'
 
-      # Installer les dépendances racine si workspaces
       - name: Install root dependencies
         run: npm install
 
-      # Build types partagés
       - name: Build shared types
         run: |
           cd packages/types
           npm install
           npm run build
 
-      # API
       - name: Install dependencies (API)
         run: |
           cd api
@@ -40,7 +37,6 @@ jobs:
           cd api
           npm run build
 
-      # Front
       - name: Install dependencies (Front)
         run: |
           cd front-end
@@ -51,7 +47,6 @@ jobs:
           cd front-end
           npm run build
 
-      # Déploiement EC2
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -66,45 +61,48 @@ jobs:
             sudo chown -R $USER:$USER /home/***/ClubManager
             sudo chmod -R u+rwX /home/***/ClubManager
 
-            echo "🔄 Reset Git et pull depuis hosting"
+            echo "🔄 Pull depuis la branche hosting..."
             git reset --hard HEAD
             git clean -fd
             git pull origin hosting
 
-            # Build types partagés
+            echo "📦 Build des types partagés..."
             cd packages/types
             npm install
             if npm run | grep -q build; then npm run build; else echo "No build script in packages/types"; fi
 
-            # Build API
+            echo "🛠️ Build de l'API..."
             cd ../../api
             npm install
             npm run build
 
-            # Build Front
+            echo "🧱 Build du Front..."
             cd ../front-end
             npm install
             echo "VITE_API_BASE_URL=https://clubmanagment.com" > .env
+
+            # 🔐 Correction des permissions pour tsc & vite
+            chmod +x node_modules/.bin/*
+
+            # ✅ Supprimer l'ancien build si besoin
+            rm -rf dist
+
+            # 🏗️ Build
             npm run build || { echo "❌ Échec du build frontend"; exit 1; }
 
-            echo "📂 Contenu du dossier front-end :"
-            ls -la
+            echo "🧹 Nettoyage du dossier HTML distant..."
+            sudo rm -rf /var/www/html/*
 
-            # Vérification de l'existence du dossier dist
-            if [ -d "dist" ]; then
-              echo "✅ Le dossier dist existe, déploiement en cours..."
-              sudo rm -rf /var/www/html/*
-              sudo cp -r dist/. /var/www/html/
-              sudo chown -R $USER:$USER /var/www/html
-              sudo chmod -R 755 /var/www/html
-            else
-              echo "❌ Le dossier dist est introuvable après le build !"
-              exit 1
-            fi
+            echo "📁 Copie du build dans /var/www/html..."
+            sudo cp -r dist/* /var/www/html/
+            sudo chown -R $USER:$USER /var/www/html
+            sudo chmod -R 755 /var/www/html
 
-            echo "📁 Contenu final de /var/www/html :"
+            echo "📂 Contenu actuel de /var/www/html :"
             ls -l /var/www/html
 
-            # Restart des services
+            echo "🔁 Redémarrage de nginx et du service clubmanager..."
             sudo systemctl reload nginx
             sudo systemctl restart clubmanager.service
+
+            echo "✅ Déploiement terminé avec succès"
