@@ -12,6 +12,7 @@ import type { UserDataLogin } from '@clubmanager/types';
 
 import { API_BASE_URL } from '../../config';
 
+console.log(API_BASE_URL)
 
 interface LoginPageProps {
   onSuccess?: (data: any) => void;
