@@ -87,14 +87,15 @@ jobs:
             echo "VITE_API_BASE_URL=https://clubmanagment.com" > .env
             npm run build
 
-            # Préparer dossier nginx
-            sudo mkdir -p /var/www/html
+            # Ajustement des droits
             sudo rm -rf /var/www/html/*
             sudo cp -r dist/* /var/www/html/
+            sudo chown -R $USER:$USER /var/www/html
+            sudo chmod -R 755 /var/www/html
 
-            echo "🔧 Ajustement des droits pour nginx sur /var/www/html..."
-            sudo chown -R nginx:nginx /var/www/html
+            echo "Contenu de /var/www/html :"
+            ls -l /var/www/html
 
-            # Redémarrage du service à la toute fin
+            sudo systemctl reload nginx
             sudo systemctl restart clubmanager.service
 
