@@ -16,7 +16,6 @@ yarn-error.log*
 # Cache
 .cache/
 .next/
-# dist/
 build/
 coverage/
 tmp/
