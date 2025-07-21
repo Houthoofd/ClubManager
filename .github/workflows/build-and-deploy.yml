@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '20'
 
-      # Installer toutes les dépendances à la racine si workspaces (recommandé)
+      # Installer les dépendances à la racine
       - name: Install root dependencies
         run: npm install
 
@@ -66,36 +66,44 @@ jobs:
             sudo chown -R $USER:$USER /home/***/ClubManager
             sudo chmod -R u+rwX /home/***/ClubManager
 
-            # Nettoyage Git local avant pull pour éviter conflits
+            echo "📌 Nettoyage Git local avant pull"
             git reset --hard HEAD
             git clean -fd
             git pull origin hosting
 
-            # Build types partagés (si script build présent)
+            echo "📦 Build shared types"
             cd packages/types
             npm install
             if npm run | grep -q build; then npm run build; else echo "No build script in packages/types"; fi
 
-            # Build API
+            echo "📦 Build API"
             cd ../../api
             npm install
             npm run build
 
-            # Build front
+            echo "📦 Build Front"
             cd ../front-end
             npm install
+
+            # Supprimer dist avant build pour éviter les conflits
+            rm -rf dist
+
             echo "VITE_API_BASE_URL=https://clubmanagment.com" > .env
             npm run build
 
-            # Ajustement des droits
+            echo "🚀 Déploiement frontend vers /var/www/html"
             sudo rm -rf /var/www/html/*
             sudo cp -r dist/* /var/www/html/
-            sudo chown -R $USER:$USER /var/www/html
+
+            # Donner les droits à l'utilisateur nginx (ou www-data selon ta config)
+            sudo chown -R nginx:nginx /var/www/html
             sudo chmod -R 755 /var/www/html
 
-            echo "Contenu de /var/www/html :"
+            echo "📂 Contenu de /var/www/html après déploiement :"
             ls -l /var/www/html
 
+            echo "🔄 Reload Nginx"
             sudo systemctl reload nginx
-            sudo systemctl restart clubmanager.service
 
+            echo "🔄 Restart ClubManager API service"
+            sudo systemctl restart clubmanager.service
