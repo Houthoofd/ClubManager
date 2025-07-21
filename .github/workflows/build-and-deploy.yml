@@ -81,7 +81,7 @@ jobs:
             sudo rm -rf /var/www/html/*
 
             echo "📁 Copie du build dans /var/www/html..."
-            sudo cp -r dist/* /var/www/html/
+            sudo cp -r front-end/dist/* /var/www/html/
             sudo chown -R $USER:$USER /var/www/html
             sudo chmod -R 755 /var/www/html
 
