@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 console.log('MYSQL_HOST:', process.env.MYSQL_HOST);
 console.log('MYSQL_USER:', process.env.MYSQL_USER);
 console.log('MYSQL_PASSWORD:', process.env.MYSQL_PASSWORD);
