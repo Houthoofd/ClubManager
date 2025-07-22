@@ -1,7 +1,9 @@
 import mysql from 'mysql';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config(); // Charge les variables d'environnement
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 export default class MysqlConnector {
   private connection: mysql.Connection;
