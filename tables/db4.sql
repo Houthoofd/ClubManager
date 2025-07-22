@@ -206,7 +206,7 @@ VALUES
 
 
 
--- Variables saison
+-- Variables de saison (2 ans à partir de septembre courant ou précédent)
 SET @current_year = YEAR(CURDATE());
 SET @season_start = STR_TO_DATE(
   CONCAT(
@@ -214,17 +214,20 @@ SET @season_start = STR_TO_DATE(
     '-09-01'
   ), '%Y-%m-%d'
 );
-SET @season_end = DATE_ADD(@season_start, INTERVAL 730 DAY); -- 2 ans
+SET @season_end = DATE_ADD(@season_start, INTERVAL 730 DAY);
 
--- Table temporaire dates
-CREATE TEMPORARY TABLE IF NOT EXISTS dates (
-    date_cours DATE
+-- Table temporaire avec uniquement les jours valides pour les cours
+CREATE TEMPORARY TABLE IF NOT EXISTS dates_valides (
+    date_cours DATE,
+    jour_semaine INT
 );
-TRUNCATE TABLE dates;
+TRUNCATE TABLE dates_valides;
 
--- Génération des dates entre saison start et end
-INSERT INTO dates (date_cours)
-SELECT DATE_ADD(@season_start, INTERVAL seq DAY)
+-- Générer les dates valides (dimanche, lundi, jeudi, samedi)
+INSERT INTO dates_valides (date_cours, jour_semaine)
+SELECT
+  DATE_ADD(@season_start, INTERVAL seq DAY) AS date_cours,
+  DAYOFWEEK(DATE_ADD(@season_start, INTERVAL seq DAY)) AS jour_semaine
 FROM (
     SELECT a.N + b.N * 10 + c.N * 100 AS seq
     FROM
@@ -235,37 +238,30 @@ FROM (
       (SELECT 0 AS N UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
        UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7) c
 ) numbers
-WHERE DATE_ADD(@season_start, INTERVAL seq DAY) <= @season_end;
+WHERE DAYOFWEEK(DATE_ADD(@season_start, INTERVAL seq DAY)) IN (1, 2, 5, 7)
+  AND DATE_ADD(@season_start, INTERVAL seq DAY) <= @season_end;
 
--- Insertion dans cours
+-- Insérer dans cours de manière cohérente
 INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin, cours_recurrent_id)
 SELECT 
-    d.date_cours,
+    dv.date_cours,
+    cr.type_cours,
     CASE 
-        WHEN DAYOFWEEK(d.date_cours) = 2 THEN 'JJB'         -- Lundi (2)
-        WHEN DAYOFWEEK(d.date_cours) = 5 THEN 'JJB'         -- Jeudi (5)
-        WHEN DAYOFWEEK(d.date_cours) = 7 THEN 'Grappling'   -- Samedi (7)
-        WHEN DAYOFWEEK(d.date_cours) = 1 THEN 'Grappling'   -- Dimanche (1)
-        ELSE NULL
-    END AS type_cours,
-    CASE 
-        WHEN DAYOFWEEK(d.date_cours) = 2 THEN '19:30:00'    -- Lundi
-        WHEN DAYOFWEEK(d.date_cours) = 5 THEN '19:30:00'    -- Jeudi
-        WHEN DAYOFWEEK(d.date_cours) = 7 THEN '12:00:00'    -- Samedi
-        WHEN DAYOFWEEK(d.date_cours) = 1 THEN '14:15:00'    -- Dimanche
-        ELSE NULL
+        WHEN dv.jour_semaine = 2 THEN '19:30:00'    -- Lundi
+        WHEN dv.jour_semaine = 5 THEN '19:30:00'    -- Jeudi
+        WHEN dv.jour_semaine = 7 THEN '12:00:00'    -- Samedi
+        WHEN dv.jour_semaine = 1 THEN '14:15:00'    -- Dimanche
     END AS heure_debut,
     CASE 
-        WHEN DAYOFWEEK(d.date_cours) = 2 THEN '21:15:00'    -- Lundi
-        WHEN DAYOFWEEK(d.date_cours) = 5 THEN '21:15:00'    -- Jeudi
-        WHEN DAYOFWEEK(d.date_cours) = 7 THEN '13:30:00'    -- Samedi
-        WHEN DAYOFWEEK(d.date_cours) = 1 THEN '16:00:00'    -- Dimanche
-        ELSE NULL
+        WHEN dv.jour_semaine = 2 THEN '21:15:00'
+        WHEN dv.jour_semaine = 5 THEN '21:15:00'
+        WHEN dv.jour_semaine = 7 THEN '13:30:00'
+        WHEN dv.jour_semaine = 1 THEN '16:00:00'
     END AS heure_fin,
     cr.id AS cours_recurrent_id
-FROM dates d
-JOIN cours_recurrent cr ON cr.jour_semaine = DAYOFWEEK(d.date_cours)
-WHERE DAYOFWEEK(d.date_cours) IN (1, 2, 5, 7);
+FROM dates_valides dv
+JOIN cours_recurrent cr ON cr.jour_semaine = dv.jour_semaine;
+
 
 
 
@@ -437,6 +433,17 @@ INSERT INTO grades (grade_id) VALUES
 ('ceinture noire huit barettes (ceinture rouge et noire)'),
 ('ceinture noire neuf barettes (ceinture rouge)'),
 ('ceinture noire dix barettes (ceinture rouge)');
+
+
+
+INSERT INTO inscriptions (utilisateur_id, cours_id, date_inscription, status_id)
+SELECT 
+    u.id,
+    c.id,
+    c.date_cours,
+    NULL
+FROM utilisateurs u
+JOIN cours c;
 
 
 insert into utilisateurs (id, first_name, last_name, email, genre_id, date_of_birth, status_id, grade_id, abonnement_id) values (1, 'Cinéma', 'Burkinshaw', 'sburkinshaw0@reference.com', 1, '2002-08-09', 3, 10, 1);
