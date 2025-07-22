@@ -28,13 +28,13 @@ jobs:
             git clean -fd
             git pull origin hosting
 
-            echo "🧹 Nettoyage du dossier HTML distant..."
-            sudo rm -rf /var/www/html/*
+            echo "🧹 Nettoyage de l'ancien contenu..."
+            sudo rm -rf /usr/share/nginx/html/*
 
-            echo "📁 Copie du build front-end dans /var/www/html..."
-            sudo cp -r front-end/dist/* /var/www/html/
-            sudo chown -R $USER:$USER /var/www/html
-            sudo chmod -R 755 /var/www/html
+            echo "📁 Copie du build front-end dans /usr/share/nginx/html..."
+            sudo cp -r front-end/dist/* /usr/share/nginx/html/
+            sudo chown -R $USER:$USER /usr/share/nginx/html
+            sudo chmod -R 755 /usr/share/nginx/html
 
             echo "🔁 Redémarrage de nginx et du service clubmanager..."
             sudo systemctl reload nginx
