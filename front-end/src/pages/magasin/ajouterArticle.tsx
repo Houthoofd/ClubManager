@@ -32,6 +32,8 @@ import type { MenuToggleElement } from '@patternfly/react-core';
 import { MultiImageUpload } from '../../components/fileUploader';
 import { PriceInput } from '../../components/input/numberInput';
 
+import { API_BASE_URL } from '../../../config';
+
 const AjouterArticle = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [categorieId, setCategorieId] = useState<string | null>(null);
@@ -52,7 +54,7 @@ const AjouterArticle = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('http://localhost:3000/magasin/articles/categories');
+        const res = await fetch(`${API_BASE_URL}api/magasin/articles/categories`);
         if (!res.ok) throw new Error('Erreur lors du chargement des catégories');
         const data = await res.json();
         setCategories(data);
@@ -84,8 +86,8 @@ const AjouterArticle = () => {
 
     try {
       const url = articleEnEdition
-        ? `http://localhost:3000/magasin/articles/${articleEnEdition.id}`
-        : 'http://localhost:3000/magasin/articles/ajouter';
+        ? `${API_BASE_URL}api/magasin/articles/${articleEnEdition.id}`
+        : `${API_BASE_URL}api/magasin/articles/ajouter`;
 
       const method = articleEnEdition ? 'PUT' : 'POST';
 
@@ -125,7 +127,7 @@ const AjouterArticle = () => {
     const fetchArticles = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch('http://localhost:3000/magasin/articles');
+        const res = await fetch(`${API_BASE_URL}api/magasin/articles`);
         if (!res.ok) throw new Error('Erreur de chargement des articles');
         const data = await res.json();
 
@@ -171,7 +173,7 @@ const AjouterArticle = () => {
     if (!window.confirm('Supprimer cet article ?')) return;
 
     try {
-      const res = await fetch(`http://localhost:3000/magasin/articles/${id}`, {
+      const res = await fetch(`${API_BASE_URL}api/magasin/articles/${id}`, {
         method: 'DELETE'
       });
 

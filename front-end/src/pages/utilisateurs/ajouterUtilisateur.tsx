@@ -13,6 +13,8 @@ import type { UserData } from '@clubmanager/types';
 import GenericForm from '../../components/genericForm';
 import EditableTable from '../../components/table/editableTable';
 
+import { API_BASE_URL } from '../../../config';
+
 const Utilisateur = () => {
   const [utilisateur, setUtilisateur] = useState<UserData>();
   const [userSchema, setUserSchema] = useState<UserData>();
@@ -45,7 +47,7 @@ const Utilisateur = () => {
 
   const fetchUserSchema = async () => {
     try {
-      const res = await fetch('http://localhost:3000/utilisateurs');
+      const res = await fetch(`${API_BASE_URL}api/utilisateurs`);
       const data = await res.json();
       setUserSchema(data.data);
       return data.data;
@@ -64,7 +66,7 @@ const Utilisateur = () => {
 
   const fetchUtilisateurs = async () => {
     try {
-      const res = await fetch('http://localhost:3000/utilisateurs');
+      const res = await fetch(`${API_BASE_URL}api/utilisateurs`);
       const data = await res.json();
       setUtilisateurs(data.data);
     } catch (error) {
@@ -76,7 +78,7 @@ const Utilisateur = () => {
     const apiName = key.replace('_id', '');
     const pluralApiName = pluralize(apiName);
     try {
-      const res = await fetch(`http://localhost:3000/informations/${pluralApiName}`);
+      const res = await fetch(`${API_BASE_URL}api/informations/${pluralApiName}`);
       const data = await res.json();
       setSelectOptions((prev: any) => ({ ...prev, [key]: data }));
     } catch (error) {
@@ -112,7 +114,7 @@ const Utilisateur = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:3000/utilisateurs/ajouter', {
+      const response = await fetch(`${API_BASE_URL}api/utilisateurs/ajouter`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

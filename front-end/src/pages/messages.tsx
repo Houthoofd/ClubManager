@@ -19,6 +19,7 @@ import {
 import { Button as PfButton } from '@patternfly/react-core';
 import { TimesIcon } from '@patternfly/react-icons';
 import GenericForm from '../components/genericForm';
+import { API_BASE_URL } from '../../config';
 
 const Messages = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -45,8 +46,8 @@ const Messages = () => {
     const fetchData = async () => {
       try {
         const [usersRes, typesRes] = await Promise.all([
-          fetch('http://localhost:3000/utilisateurs'),
-          fetch('http://localhost:3000/messages'),
+          fetch(`${API_BASE_URL}api/utilisateurs`),
+          fetch(`${API_BASE_URL}api/messages`),
         ]);
 
         if (!usersRes.ok || !typesRes.ok) throw new Error('Erreur réseau');
@@ -70,7 +71,7 @@ const Messages = () => {
 
   const handleDeleteType = async (id: number) => {
   try {
-    const response = await fetch(`http://localhost:3000/messages/types/${id}`, {
+    const response = await fetch(`${API_BASE_URL}api/messages/types/${id}`, {
       method: 'DELETE'
     });
 
@@ -88,7 +89,7 @@ const Messages = () => {
 
 const handleSaveEdit = async (id: number) => {
   try {
-    const response = await fetch(`http://localhost:3000/messages/types/${id}`, {
+    const response = await fetch(`${API_BASE_URL}api/messages/types/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editFormData)
@@ -119,7 +120,7 @@ const handleSaveEdit = async (id: number) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/messages/envoie`, {
+      const response = await fetch(`${API_BASE_URL}api/messages/envoie`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -153,7 +154,7 @@ const handleSaveEdit = async (id: number) => {
 
   const handleSubmit = async () => {
     try {
-      const response = await fetch('http://localhost:3000/messages/types', {
+      const response = await fetch(`${API_BASE_URL}api/messages/types`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

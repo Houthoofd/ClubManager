@@ -21,6 +21,7 @@ import {
 import { TrashIcon } from '@patternfly/react-icons';
 import type { MenuToggleElement } from '@patternfly/react-core';
 import DualListSelectorGeneric from '../../components/dualListSelector';
+import { API_BASE_URL } from '../../../config';
 
 const joursSemaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
@@ -98,7 +99,7 @@ type CoursData = {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('http://localhost:3000/cours/informations/planning');
+      const res = await fetch(`${API_BASE_URL}api/cours/informations/planning`);
 
       if (!res.ok) {
         throw new Error(`Erreur HTTP: ${res.status}`);

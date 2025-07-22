@@ -15,6 +15,7 @@ import {
   Flex,
   FlexItem
 } from '@patternfly/react-core';
+import { API_BASE_URL } from '../../../config';
 
 function convertToNumber(value: any): number | null {
   const parsedValue = Number(value);
@@ -50,7 +51,7 @@ const Inscription = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:3000/cours');
+        const response = await fetch(`${API_BASE_URL}api/cours`);
         if (!response.ok) throw new Error('Erreur lors de la récupération des cours');
         const data: CoursData[] = await response.json();
         setCours(data);
@@ -82,7 +83,7 @@ const Inscription = () => {
 
   const showParticipants = async (coursId: number) => {
     try {
-      const response = await fetch(`http://localhost:3000/cours/${coursId}/`);
+      const response = await fetch(`${API_BASE_URL}api/cours/${coursId}/`);
       if (!response.ok) throw new Error('Erreur récupération participants');
       const cours = await response.json();
       navigate(`/pages/cours/${coursId}/participants`, { state: { cours } });
@@ -103,8 +104,8 @@ const Inscription = () => {
 
     try {
       const url = isReserved
-        ? "http://localhost:3000/cours/annulation"
-        : "http://localhost:3000/cours/inscription";
+        ? `${API_BASE_URL}api/annulation`
+        : `${API_BASE_URL}api/cours/inscription`;
 
       const method = isReserved ? "DELETE" : "POST";
 

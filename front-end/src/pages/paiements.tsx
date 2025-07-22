@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Spinner, Bullseye } from '@patternfly/react-core';
 import { SortableTable } from '../components/table/sortableTable';
 import type { VerifyResultWithData } from '@clubmanager/types';
+import { API_BASE_URL } from '../../config';
 
 export const Paiements: React.FC = () => {
   const [data, setData] = useState<VerifyResultWithData[]>([]);
@@ -11,7 +12,7 @@ export const Paiements: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('http://localhost:3000/paiements');
+        const res = await fetch(`${API_BASE_URL}api/paiements`);
         if (!res.ok) throw new Error('Erreur de chargement');
         const json = await res.json();
         setData(json);

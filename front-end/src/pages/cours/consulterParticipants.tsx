@@ -13,6 +13,7 @@ import {
 } from '@patternfly/react-core';
 import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
 import type { CoursData, DataAnnulation, Utilisateur, VerifyResultWithData } from '@clubmanager/types';
+import { API_BASE_URL } from '../../../config';
 
 type CoursApiResponse = VerifyResultWithData<{ Cours: CoursData }>;
 
@@ -38,7 +39,7 @@ const ParticipantsPage = () => {
 
     const fetchCours = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/cours/${coursId}`);
+        const response = await fetch(`${API_BASE_URL}api/cours/${coursId}`);
         if (!response.ok) throw new Error("Erreur lors du chargement du cours");
 
         const data: CoursApiResponse = await response.json();
@@ -71,8 +72,8 @@ const ParticipantsPage = () => {
     };
     console.log(dataToSend)
     const endpoint = status === "annuler"
-      ? "http://localhost:3000/cours/inscription/annulation"
-      : "http://localhost:3000/cours/inscription/validation";
+      ? `${API_BASE_URL}api/cours/inscription/annulation`
+      : `${API_BASE_URL}api/cours/inscription/validation`;
 
     try {
       const response = await fetch(endpoint, {
