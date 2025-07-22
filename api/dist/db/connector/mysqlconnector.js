@@ -1,6 +1,9 @@
 import mysql from 'mysql';
-import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 export default class MysqlConnector {
     constructor() {
