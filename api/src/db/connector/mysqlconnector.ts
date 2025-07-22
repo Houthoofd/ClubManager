@@ -1,15 +1,15 @@
-import mysql from 'mysql';
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import mysql from 'mysql';
 
+// Pour __dirname dans ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
-console.log('MYSQL_HOST:', process.env.MYSQL_HOST);
-console.log('MYSQL_USER:', process.env.MYSQL_USER);
-console.log('MYSQL_PASSWORD:', process.env.MYSQL_PASSWORD);
+// Va chercher .env à la racine du projet (../.. depuis /src/db/connector/)
+dotenv.config({ path: path.resolve(__dirname, '../../../.env'), debug: true });
+
 
 export default class MysqlConnector {
   private connection: mysql.Connection;
