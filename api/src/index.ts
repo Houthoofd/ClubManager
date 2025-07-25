@@ -40,6 +40,7 @@ app.use(express.json());
 // Configuration CORS
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL_ALT,
   process.env.FRONTEND_URL_LOCAL,
 ].filter(Boolean) as string[]; // filtre les valeurs falsy (comme undefined)
 
