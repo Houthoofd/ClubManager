@@ -91,10 +91,10 @@ const AjouterProfesseur = () => {
         fetch(`${API_BASE_URL}api/utilisateurs`)
       ]);
       const coursData = await coursRes.json();
-      const usersData: Utilisateur[] = await usersRes.json();
+      const usersData = await usersRes.json();
 
       setCours(coursData);
-      setUtilisateurs(usersData);
+      setUtilisateurs(usersData.data);
 
       const allProfesseurs: string[] = coursData.flatMap((c: { professeurs: string[] }) =>
         c.professeurs.map((p: string) => p.trim())
@@ -183,7 +183,7 @@ const AjouterProfesseur = () => {
               </div>
             )}
 
-            <Button type="submit" variant="primary" style={{ marginTop: '1rem' }}>
+            <Button type="submit" variant="primary" onClick={() => onSubmit} style={{ marginTop: '1rem' }}>
               Ajouter
             </Button>
           </form>
