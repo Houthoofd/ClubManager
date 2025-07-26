@@ -21,11 +21,11 @@ export default class MysqlConnector {
 
   constructor() {
     this.connection = mysql.createConnection({
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
+      host: 'localhost', // Remplacez par votre endpoint RDS
+      port: 3306, // Le port par défaut pour MySQL
+      user: 'root', // Remplacez par votre nom d'utilisateur RDS
+      password: '', // Remplacez par votre mot de passe RDS
+      database: 'clubmanager',
     });
 
     this.connection.connect((err) => {
