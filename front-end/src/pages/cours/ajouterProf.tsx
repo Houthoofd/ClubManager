@@ -14,7 +14,7 @@ import {
   Button,
   Tooltip
 } from '@patternfly/react-core';
-import { ExclamationTriangleIcon, TrashIcon  } from '@patternfly/react-icons';
+import { ExclamationTriangleIcon, TrashIcon } from '@patternfly/react-icons';
 import { API_BASE_URL } from '../../../config';
 
 type CoursAvecProfesseurs = {
@@ -34,6 +34,8 @@ type Utilisateur = {
 const AjouterProfesseur = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [cours, setCours] = useState<CoursAvecProfesseurs[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -61,10 +63,15 @@ const AjouterProfesseur = () => {
     setFormData(prev => ({ ...prev, [key]: e.currentTarget.value }));
   };
 
-
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUsers.length || !formData.type_id) return;
+    setError('');
+    setMessage('');
+
+    if (!selectedUsers.length || !formData.type_id) {
+      setError("Veuillez sélectionner un type de cours et au moins un professeur.");
+      return;
+    }
 
     const nouveauCours: CoursAvecProfesseurs = {
       type_cours: formData.type_id,
@@ -74,14 +81,33 @@ const AjouterProfesseur = () => {
       professeurs: selectedUsers.map((u) => `${u.first_name} ${u.last_name}`)
     };
 
-    setCours(prev => [...prev, nouveauCours]);
-    setMessage(`Cours ajouté avec ${selectedUsers.length} professeur(s)`);
-    setFormData({ type_id: '' });
-    setSelectedUsers([]);
-  };
+    try {
+      setIsSending(true);
 
-  useEffect(() => {
-  if (activeTabKey !== 0 && activeTabKey !== 1) return;
+      const res = await fetch(`${API_BASE_URL}api/cours/ajouter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nouveauCours)
+      });
+
+      if (!res.ok) {
+        throw new Error(`Erreur API : ${res.status}`);
+      }
+
+      const data = await res.json();
+      setMessage(`Cours ajouté avec succès !`);
+      setFormData({ type_id: '' });
+      setSelectedUsers([]);
+
+      // Recharge les cours depuis l’API
+      fetchData();
+    } catch (err: any) {
+      console.error('Erreur lors de l’envoi :', err);
+      setError("Une erreur est survenue lors de l’enregistrement.");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -91,10 +117,10 @@ const AjouterProfesseur = () => {
         fetch(`${API_BASE_URL}api/utilisateurs`)
       ]);
       const coursData = await coursRes.json();
-      const usersData: Utilisateur[] = await usersRes.json();
+      const usersData = await usersRes.json();
 
       setCours(coursData);
-      setUtilisateurs(usersData);
+      setUtilisateurs(usersData.data);
 
       const allProfesseurs: string[] = coursData.flatMap((c: { professeurs: string[] }) =>
         c.professeurs.map((p: string) => p.trim())
@@ -108,12 +134,11 @@ const AjouterProfesseur = () => {
     }
   };
 
-  fetchData();
+  useEffect(() => {
+    if (activeTabKey === 0 || activeTabKey === 1) {
+      fetchData();
+    }
   }, [activeTabKey]);
-
-
-
-  console.log(professeursUniques)
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
@@ -134,12 +159,19 @@ const AjouterProfesseur = () => {
               ))}
             </FormSelect>
 
-            <label style={{ fontWeight: 'bold', margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{
+              fontWeight: 'bold',
+              margin: '1rem 0 0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
               Sélectionnez les utilisateurs :
               <Tooltip content="Maintenez Alt (ou Cmd sur Mac) pour en sélectionner plusieurs.">
                 <ExclamationTriangleIcon color="#f0ab00" />
               </Tooltip>
             </label>
+
             <FormSelect
               value={selectedUsers.map((u) => u.id.toString())}
               onChange={(e) => {
@@ -183,14 +215,17 @@ const AjouterProfesseur = () => {
               </div>
             )}
 
-            <Button type="submit" variant="primary" style={{ marginTop: '1rem' }}>
+            <Button type="submit" variant="primary" style={{ marginTop: '1rem' }} isLoading={isSending}>
               Ajouter
             </Button>
-          </form>
 
-          {message && (
-            <Alert title={message} variant="success" isInline style={{ marginTop: '1rem' }} />
-          )}
+            {message && (
+              <Alert title={message} variant="success" isInline style={{ marginTop: '1rem' }} />
+            )}
+            {error && (
+              <Alert title={error} variant="danger" isInline style={{ marginTop: '1rem' }} />
+            )}
+          </form>
         </div>
       </Tab>
 
@@ -225,7 +260,6 @@ const AjouterProfesseur = () => {
                           .filter(c => c.professeurs.length > 0);
                         setCours(updatedCours);
 
-                        // Met à jour la liste des professeurs uniques
                         const remainingProfesseurs = new Set(
                           updatedCours.flatMap(c => c.professeurs)
                         );
@@ -247,7 +281,6 @@ const AjouterProfesseur = () => {
           )}
         </div>
       </Tab>
-
     </Tabs>
   );
 };
