@@ -104,8 +104,10 @@ const AjouterProfesseur = () => {
         setCours(coursData);
         setUtilisateurs(usersData.data);
 
-        const allProfesseurs: string[] = coursData.flatMap((c: { professeurs: string[] }) =>
-          c.professeurs.map((p: string) => p.trim())
+        const allProfesseurs: string[] = coursData.flatMap((c: { professeurs: any }) =>
+          Array.isArray(c.professeurs)
+            ? c.professeurs.map((p: string) => p.trim())
+            : []
         );
         const uniques = Array.from(new Set(allProfesseurs));
         setProfesseursUniques(uniques);
@@ -118,6 +120,7 @@ const AjouterProfesseur = () => {
 
     fetchData();
   }, [activeTabKey]);
+
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
