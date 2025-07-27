@@ -14,7 +14,7 @@ import {
   Button,
   Tooltip
 } from '@patternfly/react-core';
-import { ExclamationTriangleIcon, TrashIcon  } from '@patternfly/react-icons';
+import { ExclamationTriangleIcon, TrashIcon } from '@patternfly/react-icons';
 import { API_BASE_URL } from '../../../config';
 
 type CoursAvecProfesseurs = {
@@ -38,7 +38,7 @@ const AjouterProfesseur = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<Utilisateur[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [professeursUniques, setProfesseursUniques] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({ type_id: '' });
@@ -61,59 +61,63 @@ const AjouterProfesseur = () => {
     setFormData(prev => ({ ...prev, [key]: e.currentTarget.value }));
   };
 
-
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUsers.length || !formData.type_id) return;
 
+    const selectedObjs = utilisateurs.filter((u) =>
+      selectedUsers.includes(u.id.toString())
+    );
+
     const nouveauCours: CoursAvecProfesseurs = {
       type_cours: formData.type_id,
-      jour: 'Lundi',
+      jour: 'Lundi', // Tu peux rendre ceci dynamique si besoin
       heure_debut: '18:00',
       heure_fin: '19:00',
-      professeurs: selectedUsers.map((u) => `${u.first_name} ${u.last_name}`)
+      professeurs: selectedObjs.map((u) => `${u.first_name} ${u.last_name}`)
     };
 
-    setCours(prev => [...prev, nouveauCours]);
-    setMessage(`Cours ajouté avec ${selectedUsers.length} professeur(s)`);
+    const updatedCours = [...cours, nouveauCours];
+    setCours(updatedCours);
+    setMessage(`Cours ajouté avec ${selectedObjs.length} professeur(s)`);
     setFormData({ type_id: '' });
     setSelectedUsers([]);
+
+    // Met à jour les profs uniques
+    const allProfs = updatedCours.flatMap(c => c.professeurs.map(p => p.trim()));
+    setProfesseursUniques(Array.from(new Set(allProfs)));
   };
 
   useEffect(() => {
-  if (activeTabKey !== 0 && activeTabKey !== 1) return;
+    if (activeTabKey !== 0 && activeTabKey !== 1) return;
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const [coursRes, usersRes] = await Promise.all([
-        fetch(`${API_BASE_URL}api/cours/informations/planning`),
-        fetch(`${API_BASE_URL}api/utilisateurs`)
-      ]);
-      const coursData = await coursRes.json();
-      const usersData = await usersRes.json();
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [coursRes, usersRes] = await Promise.all([
+          fetch(`${API_BASE_URL}api/cours/informations/planning`),
+          fetch(`${API_BASE_URL}api/utilisateurs`)
+        ]);
+        const coursData = await coursRes.json();
+        const usersData = await usersRes.json();
 
-      setCours(coursData);
-      setUtilisateurs(usersData.data);
+        setCours(coursData);
+        setUtilisateurs(usersData.data);
 
-      const allProfesseurs: string[] = coursData.flatMap((c: { professeurs: string[] }) =>
-        c.professeurs.map((p: string) => p.trim())
-      );
-      const uniques = Array.from(new Set(allProfesseurs));
-      setProfesseursUniques(uniques);
-    } catch (error) {
-      console.error('Erreur :', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        const allProfesseurs: string[] = coursData.flatMap((c: { professeurs: string[] }) =>
+          c.professeurs.map((p: string) => p.trim())
+        );
+        const uniques = Array.from(new Set(allProfesseurs));
+        setProfesseursUniques(uniques);
+      } catch (error) {
+        console.error('Erreur :', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  fetchData();
+    fetchData();
   }, [activeTabKey]);
-
-
-
-  console.log(professeursUniques)
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
@@ -134,56 +138,58 @@ const AjouterProfesseur = () => {
               ))}
             </FormSelect>
 
-            <label style={{ fontWeight: 'bold', margin: '1rem 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{
+              fontWeight: 'bold',
+              margin: '1rem 0 0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
               Sélectionnez les utilisateurs :
-              <Tooltip content="Maintenez Alt (ou Cmd sur Mac) pour en sélectionner plusieurs.">
+              <Tooltip content="Maintenez Ctrl (ou Cmd sur Mac) pour en sélectionner plusieurs.">
                 <ExclamationTriangleIcon color="#f0ab00" />
               </Tooltip>
             </label>
-            <FormSelect
-              value={selectedUsers.map((u) => u.id.toString())}
-              onChange={(e) => {
-                const selectedIds = Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value);
-                const selectedObjs = utilisateurs.filter((u) =>
-                  selectedIds.includes(u.id.toString())
-                );
-                setSelectedUsers(selectedObjs);
-              }}
+
+            <select
               multiple
-              aria-label="Sélection multiple"
-              style={{ height: '200px' }}
+              value={selectedUsers}
+              onChange={(e) => {
+                const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
+                setSelectedUsers(selectedIds);
+              }}
+              style={{ height: '200px', width: '100%' }}
             >
               {utilisateurs.map((user) => (
-                <FormSelectOption
-                  key={user.id}
-                  value={user.id.toString()}
-                  label={`${user.first_name} ${user.last_name}`}
-                />
+                <option key={user.id} value={user.id.toString()}>
+                  {user.first_name} {user.last_name}
+                </option>
               ))}
-            </FormSelect>
+            </select>
 
             {selectedUsers.length > 0 && (
               <div style={{ marginTop: '1rem' }}>
                 <strong>Utilisateurs sélectionnés :</strong>
                 <LabelGroup numLabels={5}>
-                  {selectedUsers.map((user) => (
-                    <Label
-                      key={user.id}
-                      onClose={() => {
-                        setSelectedUsers((prev) =>
-                          prev.filter((u) => u.id !== user.id)
-                        );
-                      }}
-                      closeBtnAriaLabel={`Retirer ${user.first_name} ${user.last_name}`}
-                    >
-                      {user.first_name} {user.last_name}
-                    </Label>
-                  ))}
+                  {utilisateurs
+                    .filter((u) => selectedUsers.includes(u.id.toString()))
+                    .map((user) => (
+                      <Label
+                        key={user.id}
+                        onClose={() =>
+                          setSelectedUsers(prev =>
+                            prev.filter(id => id !== user.id.toString())
+                          )
+                        }
+                      >
+                        {user.first_name} {user.last_name}
+                      </Label>
+                    ))}
                 </LabelGroup>
               </div>
             )}
 
-            <Button type="submit" variant="primary" onClick={() => onSubmit} style={{ marginTop: '1rem' }}>
+            <Button type="submit" variant="primary" style={{ marginTop: '1rem' }}>
               Ajouter
             </Button>
           </form>
@@ -198,7 +204,7 @@ const AjouterProfesseur = () => {
         <div style={{ marginTop: '1rem' }}>
           {isLoading ? (
             <Spinner size="xl" />
-          ) : cours.length > 0 ? (
+          ) : professeursUniques.length > 0 ? (
             <>
               <h2 style={{ marginTop: '2rem' }}>Professeurs enregistrés</h2>
               {professeursUniques.map((nomProf) => (
@@ -225,11 +231,10 @@ const AjouterProfesseur = () => {
                           .filter(c => c.professeurs.length > 0);
                         setCours(updatedCours);
 
-                        // Met à jour la liste des professeurs uniques
-                        const remainingProfesseurs = new Set(
+                        const remaining = new Set(
                           updatedCours.flatMap(c => c.professeurs)
                         );
-                        setProfesseursUniques(Array.from(remainingProfesseurs));
+                        setProfesseursUniques(Array.from(remaining));
                       }}
                     >
                       <TrashIcon />
@@ -241,13 +246,12 @@ const AjouterProfesseur = () => {
           ) : (
             <EmptyState>
               <EmptyStateBody>
-                Il n'y a actuellement aucun cours enregistré.
+                Il n'y a actuellement aucun professeur enregistré.
               </EmptyStateBody>
             </EmptyState>
           )}
         </div>
       </Tab>
-
     </Tabs>
   );
 };
