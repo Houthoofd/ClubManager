@@ -193,7 +193,7 @@ router.patch("/inscription/validation", async (req: any, res: any) => {
 
 
 
-router.delete("/annulation", async (req: any, res: any) => {
+router.patch("/annulation", async (req: any, res: any) => {
   try {
     // Validation des données entrantes
     const validatedData: DataAnnulation = datannulationSchema.parse(req.body);

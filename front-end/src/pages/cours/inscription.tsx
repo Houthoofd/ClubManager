@@ -134,7 +134,7 @@ const Inscription = () => {
         ? `${API_BASE_URL}api/annulation`
         : `${API_BASE_URL}api/cours/inscription`;
 
-      const method = isReserved ? "DELETE" : "POST";
+      const method = isReserved ? "PATCH" : "POST";
 
       const response = await fetch(url, {
         method,
