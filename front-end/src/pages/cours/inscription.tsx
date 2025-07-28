@@ -129,9 +129,11 @@ const Inscription = () => {
       utilisateur_prenom: userData.prenom,
     };
 
+    console.log(dataToSend)
+
     try {
       const url = isReserved
-        ? `${API_BASE_URL}api/annulation`
+        ? `${API_BASE_URL}api/cours/annulation`
         : `${API_BASE_URL}api/cours/inscription`;
 
       const method = isReserved ? "DELETE" : "POST";
