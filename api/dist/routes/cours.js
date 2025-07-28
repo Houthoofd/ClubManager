@@ -15,6 +15,7 @@ const router = express.Router();
 router.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { nom, prenom } = req.body;
+        console.log(nom, prenom);
         if (!nom || !prenom) {
             return res.status(400).json({ message: 'Nom et prénom requis.' });
         }

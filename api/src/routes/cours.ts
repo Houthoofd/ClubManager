@@ -22,6 +22,8 @@ router.post('/', async (req:any, res:any) => {
   try {
     const { nom, prenom } = req.body;
 
+    console.log(nom, prenom)
+
     if (!nom || !prenom) {
       return res.status(400).json({ message: 'Nom et prénom requis.' });
     }
