@@ -157,7 +157,7 @@ router.patch("/inscription/validation", (req, res) => __awaiter(void 0, void 0, 
         res.status(500).json({ message: "Erreur lors de la confirmation de la présence" });
     }
 }));
-router.patch("/annulation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.delete("/annulation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Validation des données entrantes
         const validatedData = datannulationSchema.parse(req.body);
