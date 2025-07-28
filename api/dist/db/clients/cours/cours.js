@@ -17,7 +17,7 @@ export class Cours {
         SELECT c.*
         FROM cours c
         JOIN inscriptions i ON i.cours_id = c.id
-        WHERE i.utilisateur_id = 154
+        WHERE i.utilisateur_id = ?
           AND c.date_cours >= CURRENT_DATE
         ORDER BY c.date_cours ASC
         LIMIT 12;
@@ -29,11 +29,59 @@ export class Cours {
                     reject(error);
                 }
                 else {
-                    console.log('Cours du participant récupérés avec succès :', results);
-                    resolve(results);
+                    // Map les résultats bruts en CoursData (selon ta structure)
+                    const cours = results.map(row => ({
+                        id: row.id,
+                        date_cours: row.date_cours, // vérifier que c’est un string ISO ou le formater si nécessaire
+                        type_cours: row.type_cours,
+                        heure_debut: row.heure_debut,
+                        heure_fin: row.heure_fin,
+                        // utilisateurs ne sera pas ici, à récupérer séparément
+                    }));
+                    console.log('Cours du participant récupérés avec succès :', cours);
+                    resolve(cours);
                 }
                 mysqlConnector.close();
             });
+        });
+    }
+    obtenirUtilisateursParCours(coursId) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            const sql = `
+        SELECT u.nom, u.prenom, i.presence
+        FROM utilisateurs u
+        JOIN inscriptions i ON i.utilisateur_id = u.id
+        WHERE i.cours_id = ?
+      `;
+            mysqlConnector.query(sql, [coursId], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des utilisateurs pour le cours : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    const utilisateurs = results.map(row => ({
+                        nom: row.nom,
+                        prenom: row.prenom,
+                        presence: row.presence
+                    }));
+                    resolve({ utilisateurs });
+                }
+                mysqlConnector.close();
+            });
+        });
+    }
+    obtenirCoursAvecUtilisateurs(participantId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const client = new Cours();
+            // Récupérer les cours du participant
+            const cours = yield client.obtenirLesCoursPourParticipant(participantId);
+            // Pour chaque cours, récupérer les utilisateurs associés
+            const coursAvecUtilisateurs = yield Promise.all(cours.map((cour) => __awaiter(this, void 0, void 0, function* () {
+                const { utilisateurs } = yield client.obtenirUtilisateursParCours(cour.id);
+                return Object.assign(Object.assign({}, cour), { utilisateurs });
+            })));
+            return coursAvecUtilisateurs;
         });
     }
     obtenirLesJoursDeCours() {
@@ -397,7 +445,7 @@ export class Cours {
             });
         });
     }
-    obtenirUtilisateursParCours(coursId) {
+    obtenirUtilisateursParticipantsParCours(coursId) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
             const sql = `

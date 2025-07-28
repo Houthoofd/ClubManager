@@ -15,24 +15,17 @@ const router = express.Router();
 router.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { nom, prenom } = req.body;
-        console.log(nom, prenom);
         if (!nom || !prenom) {
             return res.status(400).json({ message: 'Nom et prénom requis.' });
         }
         const client = new Cours();
-        // Récupérer l'ID du participant avec nom + prénom
+        // Récupérer l'ID du participant
         const participantId = yield client.obtenirIdParticipantParNomPrenom(nom, prenom);
-        // Récupérer les cours du participant
-        const cours = yield client.obtenirLesCoursPourParticipant(participantId);
-        if (!cours || cours.length === 0) {
+        // Utiliser ta nouvelle méthode
+        const coursAvecUtilisateurs = yield client.obtenirCoursAvecUtilisateurs(participantId);
+        if (!coursAvecUtilisateurs || coursAvecUtilisateurs.length === 0) {
             return res.status(404).json({ message: 'Aucun cours trouvé pour ce participant.' });
         }
-        // Récupérer les utilisateurs pour chaque cours (optionnel)
-        const coursAvecUtilisateurs = yield Promise.all(cours.map((cour) => __awaiter(void 0, void 0, void 0, function* () {
-            const utilisateursParCours = yield client.obtenirUtilisateursParCours(cour.id);
-            const utilisateurs = utilisateursParCours.utilisateurs || [];
-            return Object.assign(Object.assign({}, cour), { utilisateurs });
-        })));
         res.status(200).json(coursAvecUtilisateurs);
     }
     catch (error) {
@@ -45,7 +38,7 @@ router.get('/:coursId', (req, res) => __awaiter(void 0, void 0, void 0, function
         const client = new Cours();
         const { coursId } = req.params; // Récupère l'ID du cours depuis l'URL
         // Récupérer les utilisateurs associés à ce cours
-        const utilisateursParCours = yield client.obtenirUtilisateursParCours(coursId);
+        const utilisateursParCours = yield client.obtenirUtilisateursParticipantsParCours(coursId);
         // Ajouter les utilisateurs aux données du cours
         const coursAvecUtilisateurs = { Cours: utilisateursParCours };
         console.log('Cours récupéré avec utilisateurs:', coursAvecUtilisateurs);

@@ -1,6 +1,11 @@
 ## Exemple pour récupèrer les cours
-GET http://localhost:3000/cours
+POST http://localhost:3000/cours
+Content-Type: application/json
 
+{
+  "nom": "Houthoofd",
+  "prenom": "Benoit"
+}
 ###
 
 GET http://localhost:3000/cours/3?extended

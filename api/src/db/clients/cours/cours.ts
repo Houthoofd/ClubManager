@@ -3,21 +3,21 @@ import {
   AjoutCours,
   JourCours, 
   ConfirmationResult, 
-  CoursData, 
   DataReservation, 
   BookResult, 
   DataInscription, 
   UtilisateursParCours, 
   Utilisateur, 
   DataAnnulation, 
-  DataValidation
+  DataValidation,
+  CoursData,
 } from '@clubmanager/types';
 import MysqlConnector from '../../connector/mysqlconnector.js';
 
 export class Cours {
 
   // Récupérer les cours avec le participant //
-  obtenirLesCoursPourParticipant(participantId: number): Promise<Array<CoursData>> {
+  obtenirLesCoursPourParticipant(participantId: number): Promise<CoursData[]> {
     return new Promise((resolve, reject) => {
       const mysqlConnector = new MysqlConnector();
 
@@ -25,7 +25,7 @@ export class Cours {
         SELECT c.*
         FROM cours c
         JOIN inscriptions i ON i.cours_id = c.id
-        WHERE i.utilisateur_id = 154
+        WHERE i.utilisateur_id = ?
           AND c.date_cours >= CURRENT_DATE
         ORDER BY c.date_cours ASC
         LIMIT 12;
@@ -33,18 +33,78 @@ export class Cours {
 
       console.log("Exécution de la requête pour obtenir les cours du participant avec ID :", participantId);
 
-      mysqlConnector.query(sql, [participantId], (error, results) => {
+      mysqlConnector.query(sql, [participantId], (error, results: any[]) => {
         if (error) {
           console.error('Erreur lors de la récupération des cours du participant : ' + error.message);
           reject(error);
         } else {
-          console.log('Cours du participant récupérés avec succès :', results);
-          resolve(results);
+          // Map les résultats bruts en CoursData (selon ta structure)
+          const cours: CoursData[] = results.map(row => ({
+            id: row.id,
+            date_cours: row.date_cours,         // vérifier que c’est un string ISO ou le formater si nécessaire
+            type_cours: row.type_cours,
+            heure_debut: row.heure_debut,
+            heure_fin: row.heure_fin,
+            // utilisateurs ne sera pas ici, à récupérer séparément
+          }));
+
+          console.log('Cours du participant récupérés avec succès :', cours);
+          resolve(cours);
         }
 
         mysqlConnector.close();
       });
     });
+  }
+
+  obtenirUtilisateursParCours(coursId: number): Promise<{ utilisateurs: Utilisateur[] }> {
+    return new Promise((resolve, reject) => {
+      const mysqlConnector = new MysqlConnector();
+
+      const sql = `
+        SELECT u.nom, u.prenom, i.presence
+        FROM utilisateurs u
+        JOIN inscriptions i ON i.utilisateur_id = u.id
+        WHERE i.cours_id = ?
+      `;
+
+      mysqlConnector.query(sql, [coursId], (error, results: any[]) => {
+        if (error) {
+          console.error('Erreur lors de la récupération des utilisateurs pour le cours : ' + error.message);
+          reject(error);
+        } else {
+          const utilisateurs: Utilisateur[] = results.map(row => ({
+            nom: row.nom,
+            prenom: row.prenom,
+            presence: row.presence
+          }));
+
+          resolve({ utilisateurs });
+        }
+
+        mysqlConnector.close();
+      });
+    });
+  }
+
+  async obtenirCoursAvecUtilisateurs(participantId: number): Promise<(CoursData & { utilisateurs: Utilisateur[] })[]> {
+    const client = new Cours();
+
+    // Récupérer les cours du participant
+    const cours = await client.obtenirLesCoursPourParticipant(participantId);
+
+    // Pour chaque cours, récupérer les utilisateurs associés
+    const coursAvecUtilisateurs = await Promise.all(
+      cours.map(async (cour) => {
+        const { utilisateurs } = await client.obtenirUtilisateursParCours(cour.id);
+        return {
+          ...cour,
+          utilisateurs,
+        };
+      })
+    );
+
+    return coursAvecUtilisateurs;
   }
 
   obtenirLesJoursDeCours(): Promise<JourCours[]> {
@@ -469,7 +529,7 @@ export class Cours {
     });
   }
 
-  obtenirUtilisateursParCours(coursId: number): Promise<UtilisateursParCours> {
+  obtenirUtilisateursParticipantsParCours(coursId: number): Promise<UtilisateursParCours> {
     return new Promise<UtilisateursParCours>((resolve, reject) => {
       const mysqlConnector = new MysqlConnector();
       const sql = `

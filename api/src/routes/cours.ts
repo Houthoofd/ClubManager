@@ -21,33 +21,21 @@ const router = express.Router();
 router.post('/', async (req:any, res:any) => {
   try {
     const { nom, prenom } = req.body;
-
-    console.log(nom, prenom)
-
     if (!nom || !prenom) {
       return res.status(400).json({ message: 'Nom et prénom requis.' });
     }
 
     const client = new Cours();
 
-    // Récupérer l'ID du participant avec nom + prénom
+    // Récupérer l'ID du participant
     const participantId = await client.obtenirIdParticipantParNomPrenom(nom, prenom);
 
-    // Récupérer les cours du participant
-    const cours = await client.obtenirLesCoursPourParticipant(participantId);
+    // Utiliser ta nouvelle méthode
+    const coursAvecUtilisateurs = await client.obtenirCoursAvecUtilisateurs(participantId);
 
-    if (!cours || cours.length === 0) {
+    if (!coursAvecUtilisateurs || coursAvecUtilisateurs.length === 0) {
       return res.status(404).json({ message: 'Aucun cours trouvé pour ce participant.' });
     }
-
-    // Récupérer les utilisateurs pour chaque cours (optionnel)
-    const coursAvecUtilisateurs = await Promise.all(
-      cours.map(async (cour) => {
-        const utilisateursParCours = await client.obtenirUtilisateursParCours(cour.id);
-        const utilisateurs = utilisateursParCours.utilisateurs || [];
-        return { ...cour, utilisateurs };
-      })
-    );
 
     res.status(200).json(coursAvecUtilisateurs);
   } catch (error) {
@@ -59,6 +47,8 @@ router.post('/', async (req:any, res:any) => {
 
 
 
+
+
 router.get('/:coursId', async (req: any, res: any) => {
   try {
     const client = new Cours();
@@ -66,7 +56,7 @@ router.get('/:coursId', async (req: any, res: any) => {
 
 
     // Récupérer les utilisateurs associés à ce cours
-    const utilisateursParCours: UtilisateursParCours = await client.obtenirUtilisateursParCours(coursId);
+    const utilisateursParCours: UtilisateursParCours = await client.obtenirUtilisateursParticipantsParCours(coursId);
 
     // Ajouter les utilisateurs aux données du cours
     const coursAvecUtilisateurs = { Cours: utilisateursParCours };
