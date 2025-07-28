@@ -21,16 +21,16 @@ router.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const client = new Cours();
         // Récupérer l'ID du participant
         const participantId = yield client.obtenirIdParticipantParNomPrenom(nom, prenom);
-        // Utiliser ta nouvelle méthode
-        const coursAvecUtilisateurs = yield client.obtenirCoursAvecUtilisateurs(participantId);
-        if (!coursAvecUtilisateurs || coursAvecUtilisateurs.length === 0) {
+        // Récupérer les cours du participant
+        const cours = yield client.obtenirLesCoursPourParticipant(participantId);
+        if (!cours || cours.length === 0) {
             return res.status(404).json({ message: 'Aucun cours trouvé pour ce participant.' });
         }
-        res.status(200).json(coursAvecUtilisateurs);
+        res.status(200).json(cours);
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des cours avec utilisateurs :', error);
-        res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours et des utilisateurs.' });
+        console.error('Erreur lors de la récupération des cours du participant :', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
     }
 }));
 router.get('/:coursId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {

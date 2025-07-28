@@ -18,9 +18,10 @@ import { z } from 'zod';
 
 const router = express.Router();
 
-router.post('/', async (req:any, res:any) => {
+router.post('/', async (req: any, res: any) => {
   try {
     const { nom, prenom } = req.body;
+
     if (!nom || !prenom) {
       return res.status(400).json({ message: 'Nom et prénom requis.' });
     }
@@ -30,19 +31,20 @@ router.post('/', async (req:any, res:any) => {
     // Récupérer l'ID du participant
     const participantId = await client.obtenirIdParticipantParNomPrenom(nom, prenom);
 
-    // Utiliser ta nouvelle méthode
-    const coursAvecUtilisateurs = await client.obtenirCoursAvecUtilisateurs(participantId);
+    // Récupérer les cours du participant
+    const cours = await client.obtenirLesCoursPourParticipant(participantId);
 
-    if (!coursAvecUtilisateurs || coursAvecUtilisateurs.length === 0) {
+    if (!cours || cours.length === 0) {
       return res.status(404).json({ message: 'Aucun cours trouvé pour ce participant.' });
     }
 
-    res.status(200).json(coursAvecUtilisateurs);
+    res.status(200).json(cours);
   } catch (error) {
-    console.error('Erreur lors de la récupération des cours avec utilisateurs :', error);
-    res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours et des utilisateurs.' });
+    console.error('Erreur lors de la récupération des cours du participant :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
   }
 });
+
 
 
 
