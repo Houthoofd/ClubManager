@@ -61,6 +61,7 @@ const Inscription = () => {
         const parsed = JSON.parse(stored);
         const nom = parsed?.data?.nom;
         const prenom = parsed?.data?.prenom;
+        console.log(parsed.data)
 
         if (!nom || !prenom) {
           console.warn("Nom ou prénom manquant dans les données utilisateur");
