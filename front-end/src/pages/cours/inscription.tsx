@@ -84,6 +84,8 @@ const Inscription = () => {
         const reservedIds = reservedCours.map((c) => c.id);
         setReservations(reservedIds);
 
+        console.log(reservations)
+
         // 2️⃣ GET classique de tous les cours
         const allCoursesResponse = await fetch(`${API_BASE_URL}api/cours`);
         if (!allCoursesResponse.ok) {
