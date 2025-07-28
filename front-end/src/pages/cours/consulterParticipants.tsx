@@ -44,6 +44,8 @@ const ParticipantsPage = () => {
 
         const data: CoursApiResponse = await response.json();
 
+        console.log(data);
+        
         if (data.data && data.data.Cours) {
           setCours(data.data.Cours);
           setParticipants(Array.isArray(data.data.Cours.utilisateurs) ? data.data.Cours.utilisateurs : []);
