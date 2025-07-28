@@ -21,6 +21,8 @@ import RightSidePanel from '../../components/panel/rightSidePanel';
 // Import des types
 import type { Article, Categorie } from '@clubmanager/types';
 
+import { API_BASE_URL } from '../../../config';
+
 const Magasin = () => {
   const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article[]>>({});
   const [categories, setCategories] = useState<Categorie[]>([]);
@@ -34,8 +36,8 @@ const Magasin = () => {
     const fetchData = async () => {
       try {
         const [resArticles, resCategories] = await Promise.all([
-          fetch('http://localhost:3000/magasin/articles'),
-          fetch('http://localhost:3000/magasin/articles/categories'),
+          fetch(`${API_BASE_URL}api/magasin/articles`),
+          fetch(`${API_BASE_URL}api/magasin/articles/categories`),
         ]);
 
         if (!resArticles.ok || !resCategories.ok) {
