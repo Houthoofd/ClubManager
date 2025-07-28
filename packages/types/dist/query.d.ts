@@ -20,9 +20,13 @@ export interface ConfirmationResult {
     isConfirm: boolean;
     message: string;
 }
-export type CoursApiResponse = VerifyResultWithData<{
-    Cours: CoursData;
-}>;
+export type CoursApiResponse = {
+    success: boolean;
+    data: {
+        Cours: CoursData;
+    };
+    message: string;
+};
 export type UtilisateurApiResponse = VerifyResultWithData<{
     utilisateurs: Utilisateur[];
 }>;

@@ -12,10 +12,8 @@ import {
   Label
 } from '@patternfly/react-core';
 import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
-import type { CoursData, DataAnnulation, Utilisateur, VerifyResultWithData } from '@clubmanager/types';
+import type { CoursData, DataAnnulation, Utilisateur, CoursApiResponse} from '@clubmanager/types';
 import { API_BASE_URL } from '../../../config';
-
-type CoursApiResponse = VerifyResultWithData<{ Cours: CoursData }>;
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -44,13 +42,13 @@ const ParticipantsPage = () => {
 
         const data: CoursApiResponse = await response.json();
 
-        console.log(data);
-        
-        if (data.data && data.data.Cours) {
+        console.log("Réponse API :", data);
+
+        if (data.success && data.data && data.data.Cours) {
           setCours(data.data.Cours);
-          setParticipants(Array.isArray(data.data.Cours.utilisateurs) ? data.data.Cours.utilisateurs : []);
+          setParticipants(data.data.Cours.utilisateurs || []);
         } else {
-          console.warn("Aucun cours trouvé");
+          console.warn("Cours non trouvé ou réponse inattendue");
           setCours(null);
           setParticipants([]);
         }
@@ -61,6 +59,7 @@ const ParticipantsPage = () => {
 
     fetchCours();
   }, [coursId]);
+
 
 
 

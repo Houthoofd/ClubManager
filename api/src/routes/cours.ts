@@ -67,23 +67,30 @@ router.get('/', async (req:any, res:any) => {
 router.get('/:coursId', async (req: any, res: any) => {
   try {
     const client = new Cours();
-    const { coursId } = req.params; // Récupère l'ID du cours depuis l'URL
-
+    const { coursId } = req.params;
 
     // Récupérer les utilisateurs associés à ce cours
     const utilisateursParCours: UtilisateursParCours = await client.obtenirUtilisateursParticipantsParCours(coursId);
 
-    // Ajouter les utilisateurs aux données du cours
-    const coursAvecUtilisateurs = { Cours: utilisateursParCours };
-
-    console.log('Cours récupéré avec utilisateurs:', coursAvecUtilisateurs);
-    res.status(200).json(coursAvecUtilisateurs);
+    // Réponse structurée
+    res.status(200).json({
+      success: true,
+      data: {
+        Cours: utilisateursParCours
+      },
+      message: 'Cours récupéré avec succès'
+    });
 
   } catch (error) {
     console.error('Erreur lors de la récupération du cours avec utilisateurs :', error);
-    res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
+
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.'
+    });
   }
 });
+
 
 
 

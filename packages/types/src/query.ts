@@ -35,5 +35,13 @@ export interface ConfirmationResult {
 }
 
 
-export type CoursApiResponse = VerifyResultWithData<{ Cours: CoursData }>;
+export type CoursApiResponse = {
+  success: boolean;
+  data: {
+    Cours: CoursData;  // correspond à ta structure complète incluant utilisateurs
+  };
+  message: string;
+};
+
+
 export type UtilisateurApiResponse = VerifyResultWithData<{ utilisateurs: Utilisateur[] }>;
