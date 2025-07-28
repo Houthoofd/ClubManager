@@ -427,19 +427,33 @@ export class Cours {
             });
         });
     }
+    // Récupérer tous les cours à partir d'aujourd'hui (limités à 12)
     obtenirTousLesCours() {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
-            const sql = `SELECT * FROM cours`;
-            console.log("Exécution de la requête pour obtenir les cours");
+            const sql = `
+        SELECT *
+        FROM cours
+        WHERE date_cours >= CURRENT_DATE
+        ORDER BY date_cours ASC
+        LIMIT 12;
+      `;
+            console.log("Exécution de la requête pour obtenir tous les cours à venir.");
             mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
-                    console.error('Erreur lors de la récupération des cours : ' + error.message);
+                    console.error('Erreur lors de la récupération de tous les cours : ' + error.message);
                     reject(error);
                 }
                 else {
-                    console.log('cours récupérés avec succès :', results);
-                    resolve(results);
+                    const cours = results.map(row => ({
+                        id: row.id,
+                        date_cours: row.date_cours,
+                        type_cours: row.type_cours,
+                        heure_debut: row.heure_debut,
+                        heure_fin: row.heure_fin,
+                    }));
+                    console.log('Cours à venir récupérés avec succès :', cours);
+                    resolve(cours);
                 }
                 mysqlConnector.close();
             });

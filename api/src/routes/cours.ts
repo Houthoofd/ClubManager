@@ -18,7 +18,7 @@ import { z } from 'zod';
 
 const router = express.Router();
 
-router.post('/', async (req: any, res: any) => {
+router.post('/participant', async (req: any, res: any) => {
   try {
     const { nom, prenom } = req.body;
 
@@ -46,8 +46,21 @@ router.post('/', async (req: any, res: any) => {
 });
 
 
+router.get('/', async (req:any, res:any) => {
+  try {
+    const client = new Cours();
+    const cours = await client.obtenirTousLesCours();
 
+    if (!cours || cours.length === 0) {
+      return res.status(404).json({ message: 'Aucun cours à venir trouvé.' });
+    }
 
+    res.status(200).json(cours);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des cours à venir :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
+  }
+});
 
 
 

@@ -12,7 +12,7 @@ import { Cours } from '../db/clients/cours/cours.js';
 import { datareservationSchema, datannulationSchema, datavalidationSchema } from '@clubmanager/types';
 import { z } from 'zod';
 const router = express.Router();
-router.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/participant', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { nom, prenom } = req.body;
         if (!nom || !prenom) {
@@ -30,6 +30,20 @@ router.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         console.error('Erreur lors de la récupération des cours du participant :', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
+    }
+}));
+router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const client = new Cours();
+        const cours = yield client.obtenirTousLesCours();
+        if (!cours || cours.length === 0) {
+            return res.status(404).json({ message: 'Aucun cours à venir trouvé.' });
+        }
+        res.status(200).json(cours);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des cours à venir :', error);
         res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
     }
 }));
