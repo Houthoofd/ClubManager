@@ -18,39 +18,44 @@ import { z } from 'zod';
 
 const router = express.Router();
 
-router.get('/', async (req: any, res: any) => {
+router.post('/', async (req:any, res:any) => {
   try {
-    const client = new Cours();
+    const { nom, prenom } = req.body;
 
-    // Récupérer tous les cours
-    const cours: CoursData[] = await client.obtenirLesCours();
-
-    if (!cours || cours.length === 0) {
-      console.log('Aucun cours trouvé.');
-      return res.status(404).json({ message: 'Aucun cours trouvé.' });
+    if (!nom || !prenom) {
+      return res.status(400).json({ message: 'Nom et prénom requis.' });
     }
 
-    // Ajouter les utilisateurs pour chaque cours
-    const coursAvecUtilisateurs: CoursData[] = await Promise.all(
+    const client = new Cours();
+
+    // Récupérer l'ID du participant avec nom + prénom
+    const participantId = await client.obtenirIdParticipantParNomPrenom(nom, prenom);
+
+    // Récupérer les cours du participant
+    const cours = await client.obtenirLesCoursPourParticipant(participantId);
+
+    if (!cours || cours.length === 0) {
+      return res.status(404).json({ message: 'Aucun cours trouvé pour ce participant.' });
+    }
+
+    // Récupérer les utilisateurs pour chaque cours (optionnel)
+    const coursAvecUtilisateurs = await Promise.all(
       cours.map(async (cour) => {
-        // Récupérer les utilisateurs pour chaque cours
-        const utilisateursParCours: UtilisateursParCours = await client.obtenirUtilisateursParCours(cour.id);
-
-        // Extraire la liste des utilisateurs
-        const utilisateurs: Utilisateur[] = utilisateursParCours.utilisateurs; // Assure-toi d'extraire uniquement les utilisateurs ici
-
-        // Retourner le cours avec les utilisateurs
-        return { ...cour, utilisateurs: utilisateurs || [] }; // Si aucun utilisateur, on retourne un tableau vide
+        const utilisateursParCours = await client.obtenirUtilisateursParCours(cour.id);
+        const utilisateurs = utilisateursParCours.utilisateurs || [];
+        return { ...cour, utilisateurs };
       })
     );
 
-    console.log('Cours récupérés avec utilisateurs:', cours);
-    res.status(200).json(cours); // Renvoie les cours avec les utilisateurs
+    res.status(200).json(coursAvecUtilisateurs);
   } catch (error) {
     console.error('Erreur lors de la récupération des cours avec utilisateurs :', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours et des utilisateurs.' });
   }
 });
+
+
+
 
 router.get('/:coursId', async (req: any, res: any) => {
   try {

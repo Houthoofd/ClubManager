@@ -1,18 +1,35 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Cours {
-    // Récupérer les cours
-    obtenirLesCours() {
+    // Récupérer les cours avec le participant //
+    obtenirLesCoursPourParticipant(participantId) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
-            const sql = `SELECT * FROM cours LIMIT 12`;
-            console.log("Exécution de la requête pour obtenir les cours");
-            mysqlConnector.query(sql, [], (error, results) => {
+            const sql = `
+        SELECT c.*
+        FROM cours c
+        JOIN inscriptions i ON i.cours_id = c.id
+        WHERE i.utilisateur_id = 154
+          AND c.date_cours >= CURRENT_DATE
+        ORDER BY c.date_cours ASC
+        LIMIT 12;
+      `;
+            console.log("Exécution de la requête pour obtenir les cours du participant avec ID :", participantId);
+            mysqlConnector.query(sql, [participantId], (error, results) => {
                 if (error) {
-                    console.error('Erreur lors de la récupération des cours : ' + error.message);
+                    console.error('Erreur lors de la récupération des cours du participant : ' + error.message);
                     reject(error);
                 }
                 else {
-                    console.log('cours récupérés avec succès :', results);
+                    console.log('Cours du participant récupérés avec succès :', results);
                     resolve(results);
                 }
                 mysqlConnector.close();
@@ -621,6 +638,38 @@ export class Cours {
                     resolve({ isConfirm: true, message: `L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été annulée.` });
                 }
             });
+        });
+    }
+    obtenirIdParticipantParNomPrenom(nom, prenom) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            const sql = `SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ?`;
+            mysqlConnector.query(sql, [nom, prenom], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération de l\'ID de l\'utilisateur : ' + error.message);
+                    reject(error);
+                }
+                else if (results.length === 0) {
+                    reject(new Error('Aucun utilisateur trouvé avec ce nom et prénom'));
+                }
+                else {
+                    resolve(results[0].id);
+                }
+                mysqlConnector.close();
+            });
+        });
+    }
+    verifierParticipant(data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const participantId = yield this.obtenirIdParticipantParNomPrenom(data.nom, data.prenom);
+                const cours = yield this.obtenirLesCoursPourParticipant(participantId);
+                return cours;
+            }
+            catch (error) {
+                console.error('Erreur dans verifierParticipant:', error);
+                throw error;
+            }
         });
     }
 }

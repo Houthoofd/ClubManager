@@ -12,26 +12,27 @@ import { Cours } from '../db/clients/cours/cours.js';
 import { datareservationSchema, datannulationSchema, datavalidationSchema } from '@clubmanager/types';
 import { z } from 'zod';
 const router = express.Router();
-router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const client = new Cours();
-        // Récupérer tous les cours
-        const cours = yield client.obtenirLesCours();
-        if (!cours || cours.length === 0) {
-            console.log('Aucun cours trouvé.');
-            return res.status(404).json({ message: 'Aucun cours trouvé.' });
+        const { nom, prenom } = req.body;
+        if (!nom || !prenom) {
+            return res.status(400).json({ message: 'Nom et prénom requis.' });
         }
-        // Ajouter les utilisateurs pour chaque cours
+        const client = new Cours();
+        // Récupérer l'ID du participant avec nom + prénom
+        const participantId = yield client.obtenirIdParticipantParNomPrenom(nom, prenom);
+        // Récupérer les cours du participant
+        const cours = yield client.obtenirLesCoursPourParticipant(participantId);
+        if (!cours || cours.length === 0) {
+            return res.status(404).json({ message: 'Aucun cours trouvé pour ce participant.' });
+        }
+        // Récupérer les utilisateurs pour chaque cours (optionnel)
         const coursAvecUtilisateurs = yield Promise.all(cours.map((cour) => __awaiter(void 0, void 0, void 0, function* () {
-            // Récupérer les utilisateurs pour chaque cours
             const utilisateursParCours = yield client.obtenirUtilisateursParCours(cour.id);
-            // Extraire la liste des utilisateurs
-            const utilisateurs = utilisateursParCours.utilisateurs; // Assure-toi d'extraire uniquement les utilisateurs ici
-            // Retourner le cours avec les utilisateurs
-            return Object.assign(Object.assign({}, cour), { utilisateurs: utilisateurs || [] }); // Si aucun utilisateur, on retourne un tableau vide
+            const utilisateurs = utilisateursParCours.utilisateurs || [];
+            return Object.assign(Object.assign({}, cour), { utilisateurs });
         })));
-        console.log('Cours récupérés avec utilisateurs:', cours);
-        res.status(200).json(cours); // Renvoie les cours avec les utilisateurs
+        res.status(200).json(coursAvecUtilisateurs);
     }
     catch (error) {
         console.error('Erreur lors de la récupération des cours avec utilisateurs :', error);

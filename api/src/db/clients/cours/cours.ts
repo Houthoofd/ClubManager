@@ -16,23 +16,32 @@ import MysqlConnector from '../../connector/mysqlconnector.js';
 
 export class Cours {
 
-  // Récupérer les cours
-  obtenirLesCours(): Promise<Array<CoursData>> {
+  // Récupérer les cours avec le participant //
+  obtenirLesCoursPourParticipant(participantId: number): Promise<Array<CoursData>> {
     return new Promise((resolve, reject) => {
       const mysqlConnector = new MysqlConnector();
-      const sql = `SELECT * FROM cours LIMIT 12`;
-  
-      console.log("Exécution de la requête pour obtenir les cours");
-  
-      mysqlConnector.query(sql, [], (error, results) => {
+
+      const sql = `
+        SELECT c.*
+        FROM cours c
+        JOIN inscriptions i ON i.cours_id = c.id
+        WHERE i.utilisateur_id = 154
+          AND c.date_cours >= CURRENT_DATE
+        ORDER BY c.date_cours ASC
+        LIMIT 12;
+      `;
+
+      console.log("Exécution de la requête pour obtenir les cours du participant avec ID :", participantId);
+
+      mysqlConnector.query(sql, [participantId], (error, results) => {
         if (error) {
-          console.error('Erreur lors de la récupération des cours : ' + error.message);
+          console.error('Erreur lors de la récupération des cours du participant : ' + error.message);
           reject(error);
         } else {
-          console.log('cours récupérés avec succès :', results);
+          console.log('Cours du participant récupérés avec succès :', results);
           resolve(results);
         }
-  
+
         mysqlConnector.close();
       });
     });
@@ -724,5 +733,39 @@ export class Cours {
         });
     });
   }
+
+  obtenirIdParticipantParNomPrenom(nom: string, prenom: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const mysqlConnector = new MysqlConnector();
+
+    const sql = `SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ?`;
+
+    mysqlConnector.query(sql, [nom, prenom], (error, results) => {
+      if (error) {
+        console.error('Erreur lors de la récupération de l\'ID de l\'utilisateur : ' + error.message);
+        reject(error);
+      } else if (results.length === 0) {
+        reject(new Error('Aucun utilisateur trouvé avec ce nom et prénom'));
+      } else {
+        resolve(results[0].id);
+      }
+
+      mysqlConnector.close();
+    });
+  });
+}
+
+
+  async verifierParticipant(data: { nom: string; prenom: string }): Promise<Array<CoursData>> {
+  try {
+    const participantId = await this.obtenirIdParticipantParNomPrenom(data.nom, data.prenom);
+    const cours = await this.obtenirLesCoursPourParticipant(participantId);
+    return cours;
+  } catch (error) {
+    console.error('Erreur dans verifierParticipant:', error);
+    throw error;
+  }
+}
+
 }
 
