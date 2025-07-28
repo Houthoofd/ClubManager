@@ -51,35 +51,52 @@ const Inscription = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Récupérer les infos utilisateur depuis le localStorage
+        const stored = localStorage.getItem("userData");
+        if (!stored) {
+          console.warn("Aucune donnée utilisateur trouvée dans le localStorage");
+          return;
+        }
+
+        const parsed = JSON.parse(stored);
+        const nom = parsed?.data?.nom;
+        const prenom = parsed?.data?.prenom;
+
+        if (!nom || !prenom) {
+          console.warn("Nom ou prénom manquant dans les données utilisateur");
+          return;
+        }
+
+        setUserData(parsed.data);
+
+        // Ensuite, récupérer les cours
         const response = await fetch(`${API_BASE_URL}api/cours`);
-        if (!response.ok) throw new Error('Erreur lors de la récupération des cours');
+        if (!response.ok) {
+          throw new Error('Erreur lors de la récupération des cours');
+        }
+
         const data: CoursData[] = await response.json();
         setCours(data);
 
-        const stored = localStorage.getItem("userData");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed?.data?.nom && parsed?.data?.prenom) {
-            const nom = parsed.data.nom;
-            const prenom = parsed.data.prenom;
-            const reservedIds = data
-              .filter((cours) =>
-                cours.utilisateurs?.some(
-                  (u) => u.nom === nom && u.prenom === prenom
-                )
-              )
-              .map((c) => c.id);
-            setReservations(reservedIds);
-            setUserData(parsed.data);
-          }
-        }
+        // Filtrer les cours réservés par l'utilisateur
+        const reservedIds = data
+          .filter((cours) =>
+            cours.utilisateurs?.some(
+              (u) => u.nom === nom && u.prenom === prenom
+            )
+          )
+          .map((c) => c.id);
+
+        setReservations(reservedIds);
+
       } catch (err) {
-        console.error(err);
+        console.error("Erreur lors du chargement des cours :", err);
       }
     };
 
     fetchData();
   }, []);
+
 
   const showParticipants = async (coursId: number) => {
     try {
