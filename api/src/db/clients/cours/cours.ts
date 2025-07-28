@@ -62,7 +62,7 @@ export class Cours {
       const mysqlConnector = new MysqlConnector();
 
       const sql = `
-        SELECT u.nom, u.prenom, i.presence
+        SELECT u.last_name, u.first_name, i.presence
         FROM utilisateurs u
         JOIN inscriptions i ON i.utilisateur_id = u.id
         WHERE i.cours_id = ?
