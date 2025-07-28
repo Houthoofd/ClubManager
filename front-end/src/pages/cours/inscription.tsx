@@ -51,7 +51,7 @@ const Inscription = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Récupérer les infos utilisateur depuis le localStorage
+        // Récupérer les infos utilisateur
         const stored = localStorage.getItem("userData");
         if (!stored) {
           console.warn("Aucune donnée utilisateur trouvée dans le localStorage");
@@ -61,7 +61,6 @@ const Inscription = () => {
         const parsed = JSON.parse(stored);
         const nom = parsed?.data?.nom;
         const prenom = parsed?.data?.prenom;
-        console.log(parsed.data.nom, parsed.data.prenom)
 
         if (!nom || !prenom) {
           console.warn("Nom ou prénom manquant dans les données utilisateur");
@@ -70,25 +69,29 @@ const Inscription = () => {
 
         setUserData(parsed.data);
 
-        // Ensuite, récupérer les cours
-        const response = await fetch(`${API_BASE_URL}api/cours`);
-        if (!response.ok) {
-          throw new Error('Erreur lors de la récupération des cours');
+        // 1️⃣ POST vers l'API pour obtenir les cours réservés par l'utilisateur
+        const reservedResponse = await fetch(`${API_BASE_URL}api/cours`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nom, prenom }),
+        });
+
+        if (!reservedResponse.ok) {
+          throw new Error("Erreur lors de la récupération des réservations utilisateur");
         }
 
-        const data: CoursData[] = await response.json();
-        setCours(data);
-
-        // Filtrer les cours réservés par l'utilisateur
-        const reservedIds = data
-          .filter((cours) =>
-            cours.utilisateurs?.some(
-              (u) => u.nom === nom && u.prenom === prenom
-            )
-          )
-          .map((c) => c.id);
-
+        const reservedCours: CoursData[] = await reservedResponse.json();
+        const reservedIds = reservedCours.map((c) => c.id);
         setReservations(reservedIds);
+
+        // 2️⃣ GET classique de tous les cours
+        const allCoursesResponse = await fetch(`${API_BASE_URL}api/cours`);
+        if (!allCoursesResponse.ok) {
+          throw new Error("Erreur lors de la récupération des cours");
+        }
+
+        const allCours: CoursData[] = await allCoursesResponse.json();
+        setCours(allCours);
 
       } catch (err) {
         console.error("Erreur lors du chargement des cours :", err);
@@ -97,6 +100,7 @@ const Inscription = () => {
 
     fetchData();
   }, []);
+
 
 
   const showParticipants = async (coursId: number) => {
