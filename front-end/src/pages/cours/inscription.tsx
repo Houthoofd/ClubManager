@@ -83,6 +83,7 @@ const Inscription = () => {
         }
 
         const reservedCours: CoursData[] = await reservedResponse.json();
+        console.log(reservedCours)
         const reservedIds = reservedCours.map((c) => c.id);
         setReservations(reservedIds);
 
