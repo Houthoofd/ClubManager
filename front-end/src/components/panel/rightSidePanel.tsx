@@ -23,7 +23,7 @@ import PaymentForm from '../form/paymentForm';
 // Import des types (à ajuster selon ton arborescence)
 import type { Article, Taille } from '@clubmanager/types';
 
-type RightSidePanelProps = {
+export type RightSidePanelProps = {
   isExpanded: boolean;
   onClose: () => void;
   articles: Article[];

@@ -12,8 +12,9 @@
     "lint": "eslint .",
     "test": "jest --watchAll",
     "build": "npx webpack --config webpack.config.js --no-cache",
-    "start:api": "node ./bin/www"
-  },
+    "start:api": "node ./bin/www",
+    "start:test": "node run-all-test.js"
+},
   "jest": {
     "preset": "react-native",
     "setupFilesAfterEnv": [
