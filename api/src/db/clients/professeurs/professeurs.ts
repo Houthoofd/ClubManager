@@ -57,6 +57,47 @@ export class Professeurs {
     });
   }
 
+  // Récupérer un professeur par son ID
+  async obtenirProfesseurParId(id: number): Promise<Professeur | null> {
+    const mysqlConnector = new MysqlConnector();
+  
+    const sql = `
+      SELECT * FROM utilisateurs
+      WHERE id = ? AND status_id = 5;
+    `;
+  
+    return new Promise<Professeur | null>((resolve, reject) => {
+      mysqlConnector.query(sql, [id], (error, results) => {
+        if (error) {
+          console.error(`Erreur lors de la récupération du professeur avec ID ${id} : ${error.message}`);
+          reject(error);
+          return;
+        }
+  
+        if (results.length > 0) {
+          console.log('Professeur trouvé avec succès.');
+          
+          // Convertir le résultat en objet Professeur
+          const professeur: Professeur = {
+            id: results[0].id,
+            nom: results[0].first_name,
+            prenom: results[0].last_name,
+            nom_utilisateur: results[0].nom_utilisateur,
+            email: results[0].email,
+            genre_id: results[0].genre_id,
+            date_naissance: results[0].date_of_birth,
+            grade_id: results[0].grade_id,
+          };
+          
+          resolve(professeur);
+        } else {
+          console.log(`Aucun professeur trouvé avec l'ID ${id}.`);
+          resolve(null);
+        }
+      });
+    });
+  }
+
   async ajouterUnProfesseur(userData: any): Promise<ConfirmationResult> {
     const mysqlConnector = new MysqlConnector();
 

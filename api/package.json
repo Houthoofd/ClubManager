@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node ./dist/index.js",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@clubmanager/types": "file:../packages/types",
@@ -23,9 +26,11 @@
     "multer": "^2.0.0",
     "mysql": "^2.18.1",
     "node-fetch": "^3.3.2",
+    "pg": "^8.16.3",
     "socket.io": "^4.8.1",
     "streamifier": "^0.1.1",
     "stripe": "^17.7.0",
+    "supertest": "^7.1.4",
     "svg-loader": "^0.0.2",
     "zod": "^3.25.64"
   },
@@ -34,9 +39,15 @@
     "@types/cors": "^2.8.17",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.0",
+    "@types/jest": "^29.0.0",
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.12",
     "@types/node": "^24.0.15",
+    "@types/pg": "^8.15.5",
+    "@types/supertest": "^2.0.12",
+    "jest": "^29.0.0",
+    "supertest": "^6.3.0",
+    "ts-jest": "^29.0.0",
     "typescript": "^5.8.3"
   }
 }

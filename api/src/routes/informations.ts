@@ -1,11 +1,9 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { Informations } from '../db/clients/informations/informations.js';
 
 const router = express.Router();
 
-router.get('/grades', async (req, res) => {
-
-
+router.get('/grades', async (req: Request, res: Response) => {
   try {
     const client = new Informations();
     
@@ -25,9 +23,7 @@ router.get('/grades', async (req, res) => {
   }
 });
 
-router.get('/genres', async (req, res) => {
-
-
+router.get('/genres', async (req: Request, res: Response) => {
   try {
     const client = new Informations();
     
@@ -47,8 +43,7 @@ router.get('/genres', async (req, res) => {
   }
 });
 
-router.get('/status', async (req, res) => {
-
+router.get('/status', async (req: Request, res: Response) => {
   try {
     const client = new Informations();
     
@@ -68,8 +63,7 @@ router.get('/status', async (req, res) => {
   }
 });
 
-router.get('/abonnements', async (req, res) => {
-
+router.get('/abonnements', async (req: Request, res: Response) => {
   try {
     const client = new Informations();
     
@@ -88,5 +82,6 @@ router.get('/abonnements', async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des plans tarifaires.' });
   }
 });
+
 
 export default router;
