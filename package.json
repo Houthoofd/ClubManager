@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A club management application",
   "main": "expo-router/entry",
+  "type": "module",
   "scripts": {
     "start:web": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -13,7 +14,8 @@
     "test": "jest --watchAll",
     "build": "npx webpack --config webpack.config.js --no-cache",
     "start:api": "node ./bin/www",
-    "start:test": "node run-all-test.js"
+    "start:test": "node run-all-test.js",
+    "view:logs": "node view-test-logs.js"
 },
   "jest": {
     "preset": "react-native",

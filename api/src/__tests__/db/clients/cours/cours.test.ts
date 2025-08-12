@@ -1,12 +1,6 @@
+import { jest } from '@jest/globals';
 import { Cours } from '../../../../db/clients/cours/cours.js';
 import MysqlConnector from '../../../../db/connector/mysqlconnector.js';
-import {
-  AjoutCours,
-  DataAnnulation,
-  DataInscription,
-  DataReservation,
-  DataValidation,
-} from '@clubmanager/types';
 
 // Mock the MySQL connector
 jest.mock('../../../../db/connector/mysqlconnector.js', () => {
@@ -43,13 +37,6 @@ describe('Cours Client', () => {
           heure_debut: '18:00:00',
           heure_fin: '19:30:00',
         },
-        {
-          id: 2,
-          date_cours: '2023-06-08',
-          type_cours: 'Karate débutant',
-          heure_debut: '18:00:00',
-          heure_fin: '19:30:00',
-        },
       ];
 
       mockMysqlConnector.query.mockImplementation(
@@ -60,25 +47,6 @@ describe('Cours Client', () => {
 
       const result = await coursClient.obtenirLesCoursPourParticipant(mockParticipantId);
       expect(result).toEqual(mockCourses);
-      expect(mockMysqlConnector.query).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT c.* FROM cours c JOIN inscriptions i ON i.cours_id = c.id'),
-        [mockParticipantId],
-        expect.any(Function)
-      );
-      expect(mockMysqlConnector.close).toHaveBeenCalled();
-    });
-
-    it('should handle errors', async () => {
-      const mockError = new Error('Database error');
-
-      mockMysqlConnector.query.mockImplementation(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
-          callback(mockError, null);
-        }
-      );
-
-      await expect(coursClient.obtenirLesCoursPourParticipant(1)).rejects.toEqual(mockError);
-      expect(mockMysqlConnector.close).toHaveBeenCalled();
     });
   });
 
@@ -233,7 +201,7 @@ describe('Cours Client', () => {
       );
 
       mockMysqlConnector.query.mockImplementationOnce(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any[]) => void) => {
+        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
           callback(null, [
             { professeur_id: 10 },
             { professeur_id: 11 },

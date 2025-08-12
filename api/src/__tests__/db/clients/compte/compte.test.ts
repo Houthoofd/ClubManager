@@ -1,25 +1,25 @@
+import { jest } from '@jest/globals';
 import { Compte } from '../../../../db/clients/compte/compte.js';
-import { Pool } from 'pg';
+import MysqlConnector from '../../../../db/connector/mysqlconnector.js';
 
-// Mock the PostgreSQL Pool
-jest.mock('pg', () => {
-  const mockPool = {
-    query: jest.fn(),
-    connect: jest.fn(),
-    end: jest.fn(),
-    on: jest.fn(),
-  };
-  return { Pool: jest.fn(() => mockPool) };
+// Mock the MySQL connector
+jest.mock('../../../../db/connector/mysqlconnector.js', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      query: jest.fn(),
+      close: jest.fn(),
+    };
+  });
 });
 
 describe('Compte Client', () => {
   let compteClient: Compte;
-  let mockPool: any;
+  let mockMysqlConnector: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     compteClient = new Compte();
-    mockPool = ((Pool as unknown) as jest.Mock).mock.results[0].value;
+    mockMysqlConnector = (MysqlConnector as jest.Mock).mock.instances[0];
   });
 
   describe('obtenirUnUtilisateurParSonNomEtPrenom', () => {
@@ -31,10 +31,11 @@ describe('Compte Client', () => {
         email: 'john.doe@example.com',
       };
 
-      mockPool.query.mockResolvedValue({
-        rows: [mockUser],
-        rowCount: 1,
-      });
+      mockMysqlConnector.query.mockImplementation(
+        (_sql: string, _values: any[], callback: (error: Error | null, results?: any[]) => void) => {
+          callback(null, [mockUser]);
+        }
+      );
 
       const result = await compteClient.obtenirUnUtilisateurParSonNomEtPrenom('John', 'Doe');
 
@@ -42,17 +43,20 @@ describe('Compte Client', () => {
         isFind: true,
         data: mockUser,
       });
-      expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM utilisateurs WHERE prenom = $1 AND nom = $2'),
-        ['John', 'Doe']
+      expect(mockMysqlConnector.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT * FROM utilisateurs WHERE prenom = ? AND nom = ?'),
+        ['John', 'Doe'],
+        expect.any(Function)
       );
+      expect(mockMysqlConnector.close).toHaveBeenCalled();
     });
 
     it('should return isFind false when user not found', async () => {
-      mockPool.query.mockResolvedValue({
-        rows: [],
-        rowCount: 0,
-      });
+      mockMysqlConnector.query.mockImplementation(
+        (_sql: string, _values: any[], callback: (error: Error | null, results?: any[]) => void) => {
+          callback(null, []);
+        }
+      );
 
       const result = await compteClient.obtenirUnUtilisateurParSonNomEtPrenom('Unknown', 'User');
 
@@ -64,13 +68,13 @@ describe('Compte Client', () => {
 
     it('should handle database errors', async () => {
       const dbError = new Error('Database connection failed');
-      mockPool.query.mockRejectedValue(dbError);
+      mockMysqlConnector.query.mockImplementation(
+        (_sql: string, _values: any[], callback: (error: Error | null, results?: any[]) => void) => {
+          callback(dbError, undefined);
+        }
+      );
 
-      await expect(
-        compteClient.obtenirUnUtilisateurParSonNomEtPrenom('John', 'Doe')
-      ).rejects.toThrow('Database connection failed');
-
-      expect(mockPool.query).toHaveBeenCalled();
+      await expect(compteClient.obtenirUnUtilisateurParSonNomEtPrenom('John', 'Doe')).rejects.toEqual(dbError);
     });
   });
 });

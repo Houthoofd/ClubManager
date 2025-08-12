@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import express, { Request, Response } from 'express';
 import indexRouter from '../../routes/index.js';

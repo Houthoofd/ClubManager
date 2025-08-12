@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { Pool } from 'pg';
 
 // Mock the pg module

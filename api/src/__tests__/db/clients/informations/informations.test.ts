@@ -1,19 +1,13 @@
+import { jest } from '@jest/globals';
 import { Informations } from '../../../../db/clients/informations/informations.js';
 import MysqlConnector from '../../../../db/connector/mysqlconnector.js';
 
-// Mock the MySQL connector
-jest.mock('../../../../db/connector/mysqlconnector.js', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      query: jest.fn(),
-      close: jest.fn()
-    };
-  });
-});
+// Mock MySQL Connector
+jest.mock('../../../../db/connector/mysqlconnector.js');
 
 describe('Informations Client', () => {
-  let informationsClient: Informations;
-  let mockMysqlConnector: any;
+  let informationsClient;
+  let mockMysqlConnector;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -115,28 +109,50 @@ describe('Informations Client', () => {
   });
 
   describe('obtenirLesPlansTarifaires', () => {
-    it('should return all pricing plans', async () => {
-      // Mock data
+    it('should return all price plans', async () => {
       const mockPlans = [
-        { id: 1, nom_plan: 'Basic', prix: 50.00 },
-        { id: 2, nom_plan: 'Premium', prix: 100.00 }
+        { id: 1, nom: 'Basique', description: 'Accès de base', prix: 29.99 },
+        { id: 2, nom: 'Premium', description: 'Accès complet', prix: 49.99 }
       ];
-
-      // Setup mock implementation with proper type annotations
-      mockMysqlConnector.query.mockImplementation(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any[]) => void) => {
-          callback(null, mockPlans);
-        }
-      );
-
+      
+      mockMysqlConnector.query.mockImplementation((sql, callback) => {
+        callback(null, mockPlans);
+      });
+      
       const result = await informationsClient.obtenirLesPlansTarifaires();
-
-      expect(result).toEqual(mockPlans);
-      expect(mockMysqlConnector.query).toHaveBeenCalledWith(
-        'SELECT * FROM plans_tarifaires',
-        [],
-        expect.any(Function)
-      );
+      
+      expect(result).toEqual({
+        isFind: true,
+        message: 'Plans tarifaires trouvés avec succès',
+        plans: mockPlans
+      });
+      expect(mockMysqlConnector.query).toHaveBeenCalled();
+      expect(mockMysqlConnector.close).toHaveBeenCalled();
+    });
+    
+    it('should handle empty result', async () => {
+      mockMysqlConnector.query.mockImplementation((sql, callback) => {
+        callback(null, []);
+      });
+      
+      const result = await informationsClient.obtenirLesPlansTarifaires();
+      
+      expect(result).toEqual({
+        isFind: false,
+        message: 'Aucun plan tarifaire trouvé',
+        plans: []
+      });
+      expect(mockMysqlConnector.close).toHaveBeenCalled();
+    });
+    
+    it('should handle database errors', async () => {
+      const mockError = new Error('Database error');
+      
+      mockMysqlConnector.query.mockImplementation((sql, callback) => {
+        callback(mockError);
+      });
+      
+      await expect(informationsClient.obtenirLesPlansTarifaires()).rejects.toEqual(mockError);
       expect(mockMysqlConnector.close).toHaveBeenCalled();
     });
   });

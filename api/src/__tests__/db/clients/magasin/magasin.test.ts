@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { Magasin } from '../../../../db/clients/magasin/magasin.js';
 import { Pool } from 'pg';
 

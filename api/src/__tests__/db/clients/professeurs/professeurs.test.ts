@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { Professeurs } from '../../../../db/clients/professeurs/professeurs.js';
 import MysqlConnector from '../../../../db/connector/mysqlconnector.js';
 

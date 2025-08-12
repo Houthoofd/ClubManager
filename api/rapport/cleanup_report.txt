@@ -1,0 +1,21 @@
+RAPPORT DE NETTOYAGE - 12/08/2025 06:37:44
+==================================
+
+FICHIERS SUPPRIMÉS (10):
+----------------------------------
+1. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\create-database-xampp.js
+2. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\create-database.js
+3. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\delete-config.js
+4. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\diagnose-tests.js
+5. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\run-specific-test.js
+6. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\setup-local-db.js
+7. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\start-mysql-xampp.js
+8. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\test-diagnostic.js
+9. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\verify-db-connection-xampp.js
+10. C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\scripts\verify-db-connection.js
+
+SCRIPTS RETIRÉS (0):
+----------------------------------
+Aucun script retiré
+
+Ce nettoyage a été effectué automatiquement par le script cleanup.js
