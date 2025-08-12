@@ -14,7 +14,7 @@
     "test": "jest --watchAll",
     "build": "npx webpack --config webpack.config.js --no-cache",
     "start:api": "node ./bin/www",
-    "start:test": "node run-all-test.js",
+    "start:test": "node scripts/run-all-tests.js",
     "view:logs": "node view-test-logs.js"
 },
   "jest": {
