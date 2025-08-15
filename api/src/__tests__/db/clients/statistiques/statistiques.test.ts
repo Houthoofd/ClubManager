@@ -1,16 +1,10 @@
 import { jest } from '@jest/globals';
 import { Statistiques } from '../../../../db/clients/statistiques/statistiques.js';
 import MysqlConnector from '../../../../db/connector/mysqlconnector.js';
+import { MysqlError } from 'mysql';
 
-// Mock the MySQL connector
-jest.mock('../../../../db/connector/mysqlconnector.js', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      query: jest.fn(),
-      close: jest.fn()
-    };
-  });
-});
+// Mock MySQL Connector
+jest.mock('../../../../db/connector/mysqlconnector.js');
 
 describe('Statistiques Client', () => {
   let statistiquesClient: Statistiques;
@@ -30,25 +24,32 @@ describe('Statistiques Client', () => {
         { cours_id: 2, titre: 'Karate Avancé', frequentation: 70 },
       ];
       
-      // Mettre à jour pour qu'il corresponde au format renvoyé par la fonction
       const mockParMoisResult = [
         { cours_id: 1, titre: 'Karate Débutant', frequentation: 50 },
         { cours_id: 2, titre: 'Karate Avancé', frequentation: 70 },
       ];
 
-      // Première requête - total
-      mockMysqlConnector.query.mockImplementationOnce((sql, callback) => {
-        callback(null, [{ total: mockTotalResult }]);
-      });
-
-      // Deuxième requête - par cours
-      mockMysqlConnector.query.mockImplementationOnce((sql, callback) => {
-        callback(null, mockParCoursResult);
-      });
-
-      // Troisième requête - par mois
-      mockMysqlConnector.query.mockImplementationOnce((sql, callback) => {
-        callback(null, mockParMoisResult);
+      // Utiliser la séquence correcte pour les mocks
+      let queryCount = 0;
+      mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
+        queryCount++;
+        
+        // Pour la première requête (total)
+        if (queryCount === 1) {
+          // S'assurer que le format correspond exactement à ce que le code attend
+          callback(null, [{ total: mockTotalResult }]);
+        }
+        // Pour la deuxième requête (par cours)
+        else if (queryCount === 2) {
+          callback(null, mockParCoursResult);
+        }
+        // Pour la troisième requête (par mois)
+        else if (queryCount === 3) {
+          callback(null, mockParMoisResult);
+        }
+        else {
+          callback(null, []);
+        }
       });
 
       const result = await statistiquesClient.obtenirStatistiquesFrequentation();
@@ -63,11 +64,10 @@ describe('Statistiques Client', () => {
     });
 
     it('should handle errors', async () => {
-      mockMysqlConnector.query.mockImplementation(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
-          callback(new Error('Database error'), undefined);
-        }
-      );
+      // Utiliser la signature correcte pour le mock
+      mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
+        callback(new Error('Database error'), undefined);
+      });
 
       await expect(statistiquesClient.obtenirStatistiquesFrequentation()).rejects.toThrow('Database error');
       expect(mockMysqlConnector.close).toHaveBeenCalled();
@@ -83,13 +83,15 @@ describe('Statistiques Client', () => {
         { cours_id: 2, titre: 'Karate Avancé', cours_suivis: 5, progression: 40 }
       ];
 
-      // Setup mock implementation
+      // Setup mock implementation with correct signature
       mockMysqlConnector.query.mockImplementation(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
+        (_sql: string, _values: any[], callback: Function) => {
           if (_sql.includes('COUNT(*) as total')) {
             callback(null, [{ total: mockCoursSuivisResult }]);
           } else if (_sql.includes('COUNT(uc.id) as cours_suivis')) {
             callback(null, mockProgressionResult);
+          } else {
+            callback(null, []);
           }
         }
       );
@@ -107,13 +109,13 @@ describe('Statistiques Client', () => {
     });
 
     it('should set correct level based on courses taken', async () => {
-      // Test for "Débutant" level
+      // Test for "Débutant" level - using correct mock signature
       mockMysqlConnector.query.mockImplementationOnce(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
+        (_sql: string, _values: any[], callback: Function) => {
           callback(null, [{ total: 5 }]);
         }
       ).mockImplementationOnce(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
+        (_sql: string, _values: any[], callback: Function) => {
           callback(null, []);
         }
       );
@@ -124,13 +126,13 @@ describe('Statistiques Client', () => {
       jest.clearAllMocks();
       mockMysqlConnector = (MysqlConnector as jest.Mock).mock.instances[0];
 
-      // Test for "Avancé" level
+      // Test for "Avancé" level - using correct mock signature
       mockMysqlConnector.query.mockImplementationOnce(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
+        (_sql: string, _values: any[], callback: Function) => {
           callback(null, [{ total: 35 }]);
         }
       ).mockImplementationOnce(
-        (_sql: string, _values: any[], callback: (error: Error | null, results?: any) => void) => {
+        (_sql: string, _values: any[], callback: Function) => {
           callback(null, []);
         }
       );
@@ -148,19 +150,21 @@ describe('Statistiques Client', () => {
         { mois: 2, annee: 2023, nombre_presences: 8 },
       ];
 
-      mockMysqlConnector.query.mockImplementation((sql, values, callback) => {
+      // Utiliser la signature correcte avec valeurs et callback
+      mockMysqlConnector.query.mockImplementation((_sql: string, values: number[], callback: Function) => {
+        expect(values).toEqual([userId]);
         callback(null, mockPresenceData);
       });
 
       const result = await statistiquesClient.obtenirPresenceParMois(userId);
 
       expect(result).toEqual(mockPresenceData);
-      // Modifier pour utiliser une approche plus flexible qui ne dépend pas du format exact de la requête SQL
       expect(mockMysqlConnector.query).toHaveBeenCalledWith(
         expect.any(String),
         [1],
         expect.any(Function)
       );
+      expect(mockMysqlConnector.close).toHaveBeenCalled();
     });
   });
 
@@ -178,4 +182,4 @@ describe('Statistiques Client', () => {
     });
   });
 });
-});
+

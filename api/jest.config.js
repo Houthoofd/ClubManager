@@ -3,14 +3,10 @@ export default {
   testEnvironment: 'node',
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
-    // Add explicit mapping for mysqlconnector.js
     ".*mysqlconnector.js$": "<rootDir>/src/db/connector/mysqlconnector.js",
-    // Mappings for other problematic modules
     "bignumber.js": "<rootDir>/node_modules/bignumber.js/bignumber.js",
     "ipaddr.js": "<rootDir>/node_modules/ipaddr.js/lib/ipaddr.js",
-    // Regular .js imports
     "^(.*)\\.js$": "$1",
-    // Package imports
     "@clubmanager/(.*)": "<rootDir>/../packages/$1/src"
   },
   transform: {
@@ -18,24 +14,21 @@ export default {
       'ts-jest',
       {
         useESM: true,
-        tsconfig: '<rootDir>/tsconfig.json'
+        tsconfig: '<rootDir>/tsconfig.json',
       },
     ],
   },
   transformIgnorePatterns: [
     "node_modules/(?!(zod|pg|ipaddr.js|bignumber.js))"
   ],
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/'
-  ],
+  moduleDirectories: ['node_modules', 'src'], // plus pratique pour les imports
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   rootDir: '.',
   verbose: true,
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest-setup-improved.ts'],
   injectGlobals: true,
   testTimeout: 30000,
   clearMocks: true,
-}
-
+};

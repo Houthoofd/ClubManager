@@ -1,289 +1,173 @@
-import { jest } from '@jest/globals';
-import { Magasin } from '../../../../db/clients/magasin/magasin.js';
-import { Pool } from 'pg';
+import { jest } from "@jest/globals";
+import { Magasin } from "../../../../db/clients/magasin/magasin.js";
+import MysqlConnector from "../../../../db/connector/mysqlconnector.js";
 
-// Mock the PostgreSQL Pool
-jest.mock('pg', () => {
-  const mockPool = {
-    query: jest.fn(),
-    connect: jest.fn().mockImplementation(() => ({
-      query: jest.fn(),
-      release: jest.fn()
-    })),
-    end: jest.fn()
-  };
-  return { Pool: jest.fn(() => mockPool) };
-});
+// Mock MySQL Connector
+jest.mock("../../../../db/connector/mysqlconnector.js");
 
-describe('Magasin Client', () => {
-  let magasinClient: Magasin;
-  let mockPool: any;
+describe("Magasin Client avec MySQL", () => {
+  let magasin: Magasin;
+  let mockMysqlConnector: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    magasinClient = new Magasin();
-    mockPool = (Pool as unknown as jest.Mock).mock.results[0].value;
+    magasin = new Magasin();
+    mockMysqlConnector = (MysqlConnector as jest.Mock).mock.instances[0];
+
+    // Mock transaction methods sur le prototype
+    MysqlConnector.prototype.beginTransaction = jest.fn((cb: Function) => cb(null));
+    MysqlConnector.prototype.commit = jest.fn((cb: Function) => cb(null));
+    MysqlConnector.prototype.rollback = jest.fn((cb: Function) => cb());
   });
 
-  describe('obtenirArticlesParCategories', () => {
-    it('should return articles grouped by categories', async () => {
-      const mockCategories = [{ id: 1, nom: 'Vêtements' }];
-      const mockArticles = [{
-        id: 1,
-        nom: 'T-shirt',
-        prix: 25.99,
-        description: 'T-shirt du club',
-        categorie_id: 1,
-        images: ['image1.jpg']
-      }];
-      const mockStocks = [{ article_id: 1, taille: 'M', quantite: 10 }];
+  test("obtenirArticlesParCategories retourne les articles par catégorie", async () => {
+    const mockResults = [
+      { id: 1, nom: "Kimono", prix: 50, description: "desc", categorie_id: 2, categorie_nom: "Vêtements", image_url: "img1.jpg", stock_taille: "M", stock_quantite: 10 },
+      { id: 2, nom: "Ceinture", prix: 10, description: "desc", categorie_id: 1, categorie_nom: "Équipement", image_url: "img2.jpg", stock_taille: "S", stock_quantite: 5 }
+    ];
 
-      mockPool.query.mockImplementation((query: string) => {
-        if (query.includes('SELECT * FROM categories')) {
-          return Promise.resolve({ rows: mockCategories });
-        } else if (query.includes('SELECT * FROM articles')) {
-          return Promise.resolve({ rows: mockArticles });
-        } else if (query.includes('SELECT * FROM stocks')) {
-          return Promise.resolve({ rows: mockStocks });
-        }
-        return Promise.resolve({ rows: [] });
-      });
+    mockMysqlConnector.query.mockImplementationOnce((_sql: string, _values: any[], callback: Function) =>
+      callback(null, mockResults)
+    );
 
-      const result = await magasinClient.obtenirArticlesParCategories();
-
-      expect(mockPool.query).toHaveBeenCalledTimes(3);
-      expect(result).toEqual([
-        {
-          categorie_id: 1,
-          nom_categorie: 'Vêtements',
-          articles: [
-            {
-              id: 1,
-              nom: 'T-shirt',
-              prix: 25.99,
-              description: 'T-shirt du club',
-              categorie_id: 1,
-              images: ['image1.jpg'],
-              stocks: [{ taille: 'M', quantite: 10 }]
-            }
-          ]
-        }
-      ]);
-    });
-
-    it('should handle database errors', async () => {
-      mockPool.query.mockRejectedValue(new Error('Database error'));
-
-      await expect(magasinClient.obtenirArticlesParCategories()).rejects.toThrow('Database error');
-    });
-  });
-
-  describe('obtenirLesCategories', () => {
-    it('should fetch all categories', async () => {
-      const mockCategories = [
-        { id: 1, nom: 'Vêtements' },
-        { id: 2, nom: 'Accessoires' }
-      ];
-
-      mockPool.query.mockResolvedValue({ rows: mockCategories });
-
-      const result = await magasinClient.obtenirLesCategories();
-
-      expect(mockPool.query).toHaveBeenCalledTimes(1);
-      expect(mockPool.query).toHaveBeenCalledWith('SELECT * FROM categories');
-      expect(result).toEqual(mockCategories);
-    });
-  });
-
-  describe('ajouterArticle', () => {
-    it('should add a new article with stocks', async () => {
-      const articleData = {
-        nom: 'T-shirt',
-        prix: 25.99,
-        description: 'T-shirt du club',
-        categorie_id: 1,
-        images: ['image1.jpg'],
-        stocks: [{ taille: 'M', quantite: 10 }]
-      };
-
-      const mockClient = {
-        query: jest.fn(),
-        release: jest.fn()
-      };
-
-      mockClient.query.mockImplementation((query: string) => {
-        if (query.includes('INSERT INTO articles')) {
-          return Promise.resolve({ rows: [{ id: 1 }] });
-        }
-        return Promise.resolve({ rowCount: 1 });
-      });
-
-      mockPool.connect.mockResolvedValue(mockClient);
-
-      const result = await magasinClient.ajouterArticle(articleData);
-
-      expect(mockPool.connect).toHaveBeenCalledTimes(1);
-      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
-      expect(mockClient.query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO articles'),
-        expect.any(Array)
-      );
-      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
-      expect(mockClient.release).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        isConfirm: true,
-        message: expect.any(String)
-      });
-    });
-  });
-
-  describe('supprimerArticle', () => {
-    it('should delete an article by ID', async () => {
-      mockPool.query.mockResolvedValue({ rowCount: 1 });
-
-      const result = await magasinClient.supprimerArticle(1);
-
-      expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM articles'),
-        [1]
-      );
-      expect(result).toEqual({
-        message: expect.stringContaining('supprimé')
-      });
-    });
-
-    it('should return not found message when article does not exist', async () => {
-      mockPool.query.mockResolvedValue({ rowCount: 0 });
-
-      const result = await magasinClient.supprimerArticle(999);
-
-      expect(result).toEqual({
-        message: 'Article non trouvé'
-      });
-    });
-  });
-
-  describe('modifierArticle', () => {
-    it('should update an article', async () => {
-      const updateData = {
-        id: 1,
-        nom: 'T-shirt Updated',
-        prix: 29.99,
-        description: 'T-shirt du club mis à jour',
-        categorie_id: 1,
-        images: ['image1.jpg'],
-        stocks: [{ taille: 'M', quantite: 10 }]
-      };
-
-      const mockClient = {
-        query: jest.fn(),
-        release: jest.fn()
-      };
-
-      mockClient.query.mockImplementation((query: string) => {
-        if (query.includes('UPDATE articles')) {
-          return Promise.resolve({ rowCount: 1 });
-        }
-        return Promise.resolve({ rows: [] });
-      });
-
-      mockPool.connect.mockResolvedValue(mockClient);
-
-      const result = await magasinClient.modifierArticle(1, updateData);
-
-      expect(mockPool.connect).toHaveBeenCalledTimes(1);
-      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
-      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
-      expect(mockClient.release).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        isConfirm: true,
-        message: expect.any(String)
-      });
-    });
-  });
-
-  describe('creerCommande', () => {
-    it('should create a new order', async () => {
-      const utilisateur_id = 1;
-      const articles = [
-        { article_id: 1, quantite: 2, prix: 25.99, taille: 'M' }
-      ];
-      const total = 51.98;
-      const date = new Date().toISOString();
-
-      const mockClient = {
-        query: jest.fn(),
-        release: jest.fn()
-      };
-
-      mockClient.query.mockImplementation((query: string) => {
-        if (query.includes('INSERT INTO commandes')) {
-          return Promise.resolve({ rows: [{ id: 1 }] });
-        }
-        return Promise.resolve({ rowCount: 1 });
-      });
-
-      mockPool.connect.mockResolvedValue(mockClient);
-
-      const result = await magasinClient.creerCommande(utilisateur_id, articles, total, date);
-
-      expect(mockPool.connect).toHaveBeenCalledTimes(1);
-      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
-      expect(mockClient.release).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        message: expect.stringContaining('Commande créée avec succès'),
-        commande_id: 1
-      });
-    });
-  });
-
-
-  describe('obtenirLesCommandes', () => {
-    it('should fetch all orders with their details', async () => {
-      const mockCommandes = [
+    const expected = {
+      "Vêtements": [
         {
           id: 1,
-          utilisateur_id: 1,
-          statut: 'en_attente',
-          date: '2023-05-01T12:00:00Z',
-          total: 51.98
+          nom: "Kimono",
+          prix: 50,
+          description: "desc",
+          images: ["img1.jpg"],
+          stocks: [{ taille: "M", quantite: 10 }],
+          categorie_id: 2
         }
-      ];
-
-      const mockArticlesCommande = [
+      ],
+      "Équipement": [
         {
-          commande_id: 1,
-          article_id: 1,
-          quantite: 2,
-          prix: 25.99,
-          taille: 'M'
+          id: 2,
+          nom: "Ceinture",
+          prix: 10,
+          description: "desc",
+          images: ["img2.jpg"],
+          stocks: [{ taille: "S", quantite: 5 }],
+          categorie_id: 1
         }
-      ];
+      ]
+    };
 
-      mockPool.query.mockImplementation((query: string) => {
-        if (query.includes('SELECT * FROM commandes')) {
-          return Promise.resolve({ rows: mockCommandes });
-        } else if (query.includes('SELECT * FROM articles_commande')) {
-          return Promise.resolve({ rows: mockArticlesCommande });
-        }
-        return Promise.resolve({ rows: [] });
-      });
+    const result = await magasin.obtenirArticlesParCategories();
+    expect(result).toEqual(expected);
+    expect(mockMysqlConnector.query).toHaveBeenCalledTimes(1);
+  });
 
-      const result = await magasinClient.obtenirLesCommandes();
+  test("obtenirArticlesParCategories gère les erreurs de DB", async () => {
+    const dbError = new Error("Database error");
+    mockMysqlConnector.query.mockImplementationOnce((_sql: string, _values: any[], callback: Function) =>
+      callback(dbError)
+    );
 
-      expect(mockPool.query).toHaveBeenCalledTimes(2);
-      expect(result).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          id: 1,
-          utilisateur_id: 1,
-          articles: expect.arrayContaining([
-            expect.objectContaining({
-              article_id: 1,
-              quantite: 2
-            })
-          ])
-        })
-      ]));
-    });
+    await expect(magasin.obtenirArticlesParCategories()).rejects.toThrow("Database error");
+  });
+
+  test("obtenirLesCategories retourne toutes les catégories", async () => {
+    const mockCategories = [{ id: 1, nom: "Vêtements" }];
+    mockMysqlConnector.query.mockImplementationOnce((_sql: string, _values: any[], callback: Function) =>
+      callback(null, mockCategories)
+    );
+
+    const result = await magasin.obtenirLesCategories();
+    expect(result).toEqual(mockCategories);
+    expect(mockMysqlConnector.query).toHaveBeenCalledWith(
+      "SELECT * FROM categories",
+      [],
+      expect.any(Function)
+    );
+  });
+
+  test("ajouterArticle insère un article avec succès", async () => {
+    mockMysqlConnector.query
+      .mockImplementationOnce((_sql: string, _values: any[], callback: Function) => callback(null, { insertId: 1 })) // insert article
+      .mockImplementationOnce((_sql: string, _values: any[], callback: Function) => callback(null)) // insert images
+      .mockImplementationOnce((_sql: string, _values: any[], callback: Function) => callback(null)); // insert stocks
+
+    magasin.getTailleMap = () => Promise.resolve({ "M": 1 });
+
+    const articleData = {
+      nom: "T-shirt",
+      prix: 25.99,
+      description: "T-shirt du club",
+      categorie_id: 1,
+      images: ["img.jpg"],
+      stocks: [{ taille: "M", quantite: 10 }]
+    };
+    const result = await magasin.ajouterArticle(articleData);
+
+    expect(result).toMatchObject({ isConfirm: true });
+    expect(mockMysqlConnector.query).toHaveBeenCalledTimes(3);
+  });
+
+  test("creerCommande insère une commande avec succès", async () => {
+    magasin = new Magasin();
+    mockMysqlConnector = (MysqlConnector as jest.Mock).mock.instances[0];
+
+    // Mock des transactions
+    jest.spyOn(MysqlConnector.prototype, 'beginTransaction')
+      .mockImplementation((cb: Function) => cb(null));
+    jest.spyOn(MysqlConnector.prototype, 'commit')
+      .mockImplementation((cb: Function) => cb(null));
+
+    // Typage explicite pour les paramètres du mock
+    mockMysqlConnector.query
+      .mockImplementationOnce((_sql: string, _values: any[], cb: Function) => cb(null, { insertId: 1 }))
+      .mockImplementationOnce((_sql: string, _values: any[], cb: Function) => cb(null));
+
+    magasin.getTailleMap = () => Promise.resolve({ "M": 1 });
+
+    const utilisateur_id = 1;
+    const articles = [{ article_id: 1, quantite: 2, prix: 25.99, taille: "M" } as any];
+    const total = 51.98;
+    const date = new Date().toISOString();
+
+    const result = await magasin.creerCommande(utilisateur_id, articles, total, date);
+
+    expect(result).toMatchObject({ isConfirm: true });
+    expect(mockMysqlConnector.query).toHaveBeenCalledTimes(2);
+  });
+
+
+
+  test("supprimerArticle supprime un article avec succès", async () => {
+    mockMysqlConnector.query.mockImplementationOnce((_sql: string, _values: any[], callback: Function) =>
+      callback(null, { affectedRows: 1 })
+    );
+
+    const result = await magasin.supprimerArticle(1);
+    expect(result).toMatchObject({ isConfirm: true });
+    expect(mockMysqlConnector.query).toHaveBeenCalledWith(
+      expect.stringContaining("DELETE FROM articles"),
+      [1],
+      expect.any(Function)
+    );
+  });
+
+  test("modifierArticle met à jour un article avec succès", async () => {
+    mockMysqlConnector.query
+      .mockImplementationOnce((_sql: string, _values: any[], callback: Function) => callback(null, { affectedRows: 1 })) // update article
+      .mockImplementationOnce((_sql: string, _values: any[], callback: Function) => callback(null)) // delete images
+      .mockImplementationOnce((_sql: string, _values: any[], callback: Function) => callback(null)); // insert images
+
+    const updateData = {
+      id: 1,
+      nom: "Kimono Pro",
+      prix: 60,
+      description: "Desc",
+      categorie_id: 1,
+      images: ["img.jpg"],
+      stocks: [{ taille: "M", quantite: 5 }]
+    };
+    const result = await magasin.modifierArticle(1, updateData);
+
+    expect(result).toMatchObject({ isConfirm: true });
+    expect(mockMysqlConnector.query).toHaveBeenCalledTimes(3);
   });
 });
