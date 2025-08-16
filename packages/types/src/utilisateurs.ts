@@ -1,5 +1,5 @@
-// Oui, ce fichier est en CommonJS : il utilise require et module.exports.
-const { z } = require("zod");
+// Pour compatibilité ESM : utilisez import au lieu de require
+import { z } from "zod";
 
 
 export type UserData = {

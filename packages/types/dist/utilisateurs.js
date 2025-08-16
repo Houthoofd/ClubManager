@@ -1,5 +1,5 @@
-// Oui, ce fichier est en CommonJS : il utilise require et module.exports.
-const { z } = require("zod");
+// Pour compatibilité ESM : utilisez import au lieu de require
+import { z } from "zod";
 // Schéma Zod pour valider les données d'Abonnement
 export const abonnementSchema = z.object({
     id: z.number().positive("L'ID de l'abonnement doit être un nombre positif"),
