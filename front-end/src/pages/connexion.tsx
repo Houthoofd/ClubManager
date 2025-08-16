@@ -38,15 +38,15 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     e.preventDefault();
     setError(null);
 
-
-    console.log("aeznfzkeg")
-    console.log(API_BASE_URL)
-
     try {
+      // Correction : vérifie le slash pour éviter une mauvaise URL
       const url =
         API_BASE_URL.endsWith('/')
           ? `${API_BASE_URL}api/utilisateurs/connexion`
           : `${API_BASE_URL}/api/utilisateurs/connexion`;
+
+      // Affiche l'URL pour debug
+      console.log("URL utilisée pour la connexion:", url);
 
       const response = await fetch(url, {
         method: 'POST',
