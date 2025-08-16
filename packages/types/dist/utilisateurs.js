@@ -1,41 +1,35 @@
-// user.ts
-import { z } from "zod";
-// Schémas Zod
+// Oui, ce fichier est en CommonJS : il utilise require et module.exports.
+const { z } = require("zod");
+// Schéma Zod pour valider les données d'Abonnement
 export const abonnementSchema = z.object({
-    id: z.number().positive(),
-    nom_plan: z.string().min(1)
+    id: z.number().positive("L'ID de l'abonnement doit être un nombre positif"),
+    nom_plan: z.string().min(1, "Le nom du plan est requis")
 });
+// Schéma Zod pour valider les données de Grade
 export const gradeSchema = z.object({
-    id: z.number().positive(),
-    grade_id: z.string().min(1)
+    id: z.number().positive("L'ID du grade doit être un nombre positif"),
+    grade_id: z.string().min(1, "Le grade ID est requis")
 });
+// Schéma Zod pour valider les données de Genres
 export const genresSchema = z.object({
-    id: z.number().positive(),
-    genre_name: z.string().min(1)
+    id: z.number().positive("L'ID du genre doit être un nombre positif"),
+    genre_name: z.string().min(1, "Le nom du genre est requis")
 });
+// Schéma Zod pour valider les données de Genres
 export const userDataLoginSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6)
+    email: z.string().email("L'email est invalide"),
+    password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
 });
+// Schéma Zod pour valider les données d'inscription utilisateur
 export const userSchema = z.object({
-    prenom: z.string().min(1),
-    nom: z.string().min(1),
-    nom_utilisateur: z.string().min(1),
-    email: z.string().email(),
-    genre_id: z.number().positive().nullable(),
-    date_naissance: z.string().refine(val => !isNaN(Date.parse(val))),
-    password: z.string().min(6),
-    status_id: z.number().positive(),
-    grade_id: z.number().positive().nullable(),
-    abonnement_id: z.number().positive().nullable(),
+    prenom: z.string().min(1, "Le prénom est requis"),
+    nom: z.string().min(1, "Le nom est requis"),
+    nom_utilisateur: z.string().min(1, "Le nom d'utilisateur est requis"),
+    email: z.string().email("L'email est invalide"),
+    genre_id: z.number().positive("Le genre ID doit être un nombre positif").nullable(), // Autorise null
+    date_naissance: z.string().refine((val) => !isNaN(Date.parse(val)), "La date de naissance est invalide"),
+    password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+    status_id: z.number().positive("Le status ID doit être un nombre positif"),
+    grade_id: z.number().positive("Le grade ID doit être un nombre positif").nullable(), // Autorise null
+    abonnement_id: z.number().positive("L'abonnement ID doit être un nombre positif").nullable(), // Autorise null
 });
-// Hack pour CommonJS
-const exported = {
-    abonnementSchema,
-    gradeSchema,
-    genresSchema,
-    userDataLoginSchema,
-    userSchema
-};
-module.exports = exported;
-export default exported;

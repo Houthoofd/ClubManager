@@ -30,6 +30,4 @@ export type CoursApiResponse = {
 export type UtilisateurApiResponse = VerifyResultWithData<{
     utilisateurs: Utilisateur[];
 }>;
-declare const exported: {};
-export default exported;
 //# sourceMappingURL=query.d.ts.map
