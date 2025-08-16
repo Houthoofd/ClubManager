@@ -43,7 +43,12 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     console.log(API_BASE_URL)
 
     try {
-      const response = await fetch(`${API_BASE_URL}api/utilisateurs/connexion`, {
+      const url =
+        API_BASE_URL.endsWith('/')
+          ? `${API_BASE_URL}api/utilisateurs/connexion`
+          : `${API_BASE_URL}/api/utilisateurs/connexion`;
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import express from 'express';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
@@ -26,12 +17,12 @@ if (!process.env.STRIPE_SECRET_KEY) {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2025-02-24.acacia',
 });
-router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/', async (req, res) => {
     try {
         // Création d'une instance de Paiements
         let paiements = new Paiements();
         // Appel de la méthode pour obtenir les paiements
-        let result = yield paiements.obtenirLesTousLesPaiements();
+        let result = await paiements.obtenirLesTousLesPaiements();
         // Envoi des résultats sous forme de JSON
         res.status(200).json(result); // Renvoie les paiements obtenus
     }
@@ -39,11 +30,11 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         console.error(error); // Affiche l'erreur dans la console
         res.status(500).json({ message: 'Erreur lors de la récupération des paiements', error }); // Envoie une réponse d'erreur
     }
-}));
-router.post('/stripe', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.post('/stripe', async (req, res) => {
     const { amount, currency } = req.body;
     try {
-        const paymentIntent = yield stripe.paymentIntents.create({
+        const paymentIntent = await stripe.paymentIntents.create({
             amount,
             currency,
             automatic_payment_methods: { enabled: true },
@@ -56,6 +47,6 @@ router.post('/stripe', (req, res) => __awaiter(void 0, void 0, void 0, function*
     catch (error) {
         res.status(500).json({ error: error || error });
     }
-}));
+});
 // Utilisation de export default pour le routeur
 export default router;

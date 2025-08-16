@@ -1,18 +1,9 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import express from 'express';
 import { Cours } from '../db/clients/cours/cours.js';
 import { datareservationSchema, datannulationSchema, datavalidationSchema } from '@clubmanager/types';
 import { z } from 'zod';
 const router = express.Router();
-router.post('/participant', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/participant', async (req, res) => {
     try {
         const { nom, prenom } = req.body;
         if (!nom || !prenom) {
@@ -20,9 +11,9 @@ router.post('/participant', (req, res) => __awaiter(void 0, void 0, void 0, func
         }
         const client = new Cours();
         // Récupérer l'ID du participant
-        const participantId = yield client.obtenirIdParticipantParNomPrenom(nom, prenom);
+        const participantId = await client.obtenirIdParticipantParNomPrenom(nom, prenom);
         // Récupérer les cours du participant
-        const cours = yield client.obtenirLesCoursPourParticipant(participantId);
+        const cours = await client.obtenirLesCoursPourParticipant(participantId);
         if (!cours || cours.length === 0) {
             return res.status(404).json({ message: 'Aucun cours trouvé pour ce participant.' });
         }
@@ -32,11 +23,11 @@ router.post('/participant', (req, res) => __awaiter(void 0, void 0, void 0, func
         console.error('Erreur lors de la récupération des cours du participant :', error);
         res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
     }
-}));
-router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.get('/', async (req, res) => {
     try {
         const client = new Cours();
-        const cours = yield client.obtenirTousLesCours();
+        const cours = await client.obtenirTousLesCours();
         if (!cours || cours.length === 0) {
             return res.status(404).json({ message: 'Aucun cours à venir trouvé.' });
         }
@@ -46,13 +37,13 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         console.error('Erreur lors de la récupération des cours à venir :', error);
         res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours.' });
     }
-}));
-router.get('/:coursId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.get('/:coursId', async (req, res) => {
     try {
         const client = new Cours();
         const { coursId } = req.params;
         // Récupérer les utilisateurs associés à ce cours
-        const utilisateursParCours = yield client.obtenirUtilisateursParticipantsParCours(coursId);
+        const utilisateursParCours = await client.obtenirUtilisateursParticipantsParCours(coursId);
         // Réponse structurée
         res.status(200).json({
             success: true,
@@ -69,15 +60,15 @@ router.get('/:coursId', (req, res) => __awaiter(void 0, void 0, void 0, function
             message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.'
         });
     }
-}));
-router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.post('/inscription', async (req, res) => {
     try {
         // Validation des données entrantes
         const validatedData = datareservationSchema.parse(req.body);
         console.log("Données validées :", validatedData);
         const client = new Cours();
         // Vérification si l'utilisateur est déjà inscrit
-        const verifInscriptionUtilisateur = yield client.verifierInscriptionUtilisateur(validatedData);
+        const verifInscriptionUtilisateur = await client.verifierInscriptionUtilisateur(validatedData);
         console.log("Résultat de la vérification de l'utilisateur :", verifInscriptionUtilisateur);
         if (verifInscriptionUtilisateur.isBooked === false) {
             // Vérification de l'ID utilisateur avant l'inscription
@@ -92,7 +83,7 @@ router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, func
             };
             console.log("Objet dataToSend :", dataToSend);
             // Inscription de l'utilisateur au cours
-            const result = yield client.inscrireUtilisateurAuCours(dataToSend);
+            const result = await client.inscrireUtilisateurAuCours(dataToSend);
             console.log("Résultat de l'inscription :", result);
             if (result.isConfirm === true) {
                 // Utilisateur inscrit avec succès
@@ -123,15 +114,15 @@ router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, func
             res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
         }
     }
-}));
-router.patch("/inscription/annulation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.patch("/inscription/annulation", async (req, res) => {
     try {
         // Validation des données entrantes
         console.log("annulation" + req.body);
         const validatedData = datannulationSchema.parse(req.body);
         console.log("Données validées :", validatedData);
         const client = new Cours();
-        const annulationReussie = yield client.annulerUtilisateurAuCours(validatedData);
+        const annulationReussie = await client.annulerUtilisateurAuCours(validatedData);
         if (annulationReussie) {
             res.status(200).json({ message: "Présence annulée avec succès." });
         }
@@ -143,15 +134,15 @@ router.patch("/inscription/annulation", (req, res) => __awaiter(void 0, void 0, 
         console.error("Erreur lors de l'annulation :", error);
         res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
     }
-}));
-router.patch("/inscription/validation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.patch("/inscription/validation", async (req, res) => {
     try {
         // Validation des données entrantes
         console.log("validation" + req.body);
         const validatedData = datavalidationSchema.parse(req.body);
         console.log("Données validées :", validatedData);
         const client = new Cours();
-        const validationReussie = yield client.validerUtilisateurAuCours(validatedData);
+        const validationReussie = await client.validerUtilisateurAuCours(validatedData);
         if (validationReussie) {
             res.status(200).json({ message: "Présence validée avec succès." });
         }
@@ -163,14 +154,14 @@ router.patch("/inscription/validation", (req, res) => __awaiter(void 0, void 0, 
         console.error("Erreur lors de la confirmation de la présence :", error);
         res.status(500).json({ message: "Erreur lors de la confirmation de la présence" });
     }
-}));
-router.delete("/annulation", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.delete("/annulation", async (req, res) => {
     try {
         // Validation des données entrantes
         const validatedData = datannulationSchema.parse(req.body);
         console.log("Données validées :", validatedData);
         const client = new Cours();
-        const annulationReussie = yield client.desinscrireUtilisateurDuCours(validatedData);
+        const annulationReussie = await client.desinscrireUtilisateurDuCours(validatedData);
         if (annulationReussie) {
             res.status(200).json({ message: "Réservation annulée avec succès." });
         }
@@ -182,12 +173,12 @@ router.delete("/annulation", (req, res) => __awaiter(void 0, void 0, void 0, fun
         console.error("Erreur lors de l'annulation :", error);
         res.status(500).json({ message: "Erreur serveur lors de l'annulation de la réservation." });
     }
-}));
-router.get('/informations/planning', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.get('/informations/planning', async (req, res) => {
     try {
         const client = new Cours();
         console.log('Appel pour obtenir les jours de cours');
-        const result = yield client.obtenirLesJoursDeCours();
+        const result = await client.obtenirLesJoursDeCours();
         console.log('Résultat des jours de cours:', result); // Log du résultat
         res.status(200).json(result);
     }
@@ -195,22 +186,22 @@ router.get('/informations/planning', (req, res) => __awaiter(void 0, void 0, voi
         console.error('Erreur lors de la récupération des jours de cours :', error);
         res.status(500).json({ message: "Erreur serveur lors de la récupération des jours de cours" });
     }
-}));
-router.post('/ajouter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.post('/ajouter', async (req, res) => {
     const data = req.body;
     console.log(data);
     try {
         const client = new Cours();
         // Insertion du cours récurrent
-        yield client.ajouterCoursRecurrentAvecProfesseurs(data);
+        await client.ajouterCoursRecurrentAvecProfesseurs(data);
         res.status(200).json({ message: 'Cours récurrent ajouté avec succès' });
     }
     catch (error) {
         console.error('Erreur lors de l\'ajout du cours récurrent:', error);
         res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
     }
-}));
-router.delete('/supprimer', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.delete('/supprimer', async (req, res) => {
     const joursDeSemaine = {
         lundi: 2,
         mardi: 3,
@@ -223,18 +214,18 @@ router.delete('/supprimer', (req, res) => __awaiter(void 0, void 0, void 0, func
     const jourRecu = req.body;
     console.log("Body reçu :", req.body);
     const jourTexte = jourRecu.jourSemaine;
-    const jourNum = joursDeSemaine[jourTexte === null || jourTexte === void 0 ? void 0 : jourTexte.toLowerCase().trim()];
+    const jourNum = joursDeSemaine[jourTexte?.toLowerCase().trim()];
     if (!jourNum) {
         return res.status(400).json({ message: 'Jour invalide. Veuillez fournir un jour valide (ex: lundi, mardi...)' });
     }
     try {
         const client = new Cours();
-        yield client.supprimerJourDeCours(jourNum);
+        await client.supprimerJourDeCours(jourNum);
         res.status(200).json({ message: `Cours du ${jourTexte} supprimé avec succès` });
     }
     catch (error) {
         console.error('Erreur lors de la suppression du cours:', error);
         res.status(500).json({ message: 'Erreur serveur lors de la suppression' });
     }
-}));
+});
 export default router;

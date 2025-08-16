@@ -7,11 +7,11 @@ import paiementRouter from './paiements.js';
 import statistiquesRouter from './statistiques.js';
 import magasinRouter from './magasin.js';
 const router = express.Router();
-// Assurez-vous que la route pour "/utilisateurs" est correctement définie
+// Correction : montez statistiquesRouter sur /statistiques AVANT les autres routes
+router.use('/statistiques', statistiquesRouter);
 router.use('/utilisateurs', utilisateursRouter);
 router.use('/informations', informationsRouter);
 router.use('/cours', coursRouter);
-router.use('/cours/statistiques', statistiquesRouter);
 router.use('/paiements', paiementRouter);
 router.use('/magasin', magasinRouter);
 export default router;

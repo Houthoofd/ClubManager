@@ -11,6 +11,7 @@ console.log('DB_HOST:', process.env.DB_HOST);
 console.log('DB_USER:', process.env.DB_USER);
 console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
 export default class MysqlConnector {
+    connection;
     constructor() {
         this.connection = mysql.createConnection({
             host: process.env.DB_HOST,

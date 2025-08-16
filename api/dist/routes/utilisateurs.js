@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import express from 'express';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import { z } from 'zod';
@@ -22,14 +13,14 @@ function convertToNumber(value) {
     return isNaN(convertedValue) ? 0 : convertedValue;
 }
 // Route de vérification de l'existence d'un utilisateur
-router.post('/connexion', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/connexion', async (req, res) => {
     try {
         // Validate incoming data with Zod
         const validatedData = userDataLoginSchema.parse(req.body);
         console.log("Données validées :", validatedData);
         const client = new Utilisateurs();
         // Check if the user exists
-        const result = yield client.validerConnexion(validatedData);
+        const result = await client.validerConnexion(validatedData);
         if (result.isFind) {
             res.status(200).json({ message: result.message, data: result.dataToStore });
         }
@@ -41,19 +32,19 @@ router.post('/connexion', (req, res) => __awaiter(void 0, void 0, void 0, functi
         console.error('Erreur lors de la vérification de l\'utilisateur :', error);
         res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'utilisateur.' });
     }
-}));
+});
 // Route d'inscription d'un utilisateur
-router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/inscription', async (req, res) => {
     try {
         // Validation des données reçues avec Zod
         const validatedData = userSchema.parse(req.body);
         console.log("Données validées :", validatedData);
         const client = new Utilisateurs();
         // Vérification si l'utilisateur existe déjà
-        const verifUtilisateur = yield client.verifierUtilisateur(validatedData);
+        const verifUtilisateur = await client.verifierUtilisateur(validatedData);
         if (verifUtilisateur.isFind === false) {
             // L'utilisateur n'existe pas, on peut l'inscrire
-            const result = yield client.inscrireUtilisateur(validatedData);
+            const result = await client.inscrireUtilisateur(validatedData);
             if (result.affectedRows > 0) {
                 res.status(201).json({ message: 'Utilisateur inscrit avec succès.', userId: result.insertId });
             }
@@ -77,12 +68,12 @@ router.post('/inscription', (req, res) => __awaiter(void 0, void 0, void 0, func
             res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
         }
     }
-}));
-router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.get('/', async (req, res) => {
     try {
         const client = new Utilisateurs();
         // Attendre la résolution de la méthode obtenirTousLesUtilisateurs
-        const utilisateurs = yield client.obtenirTousLesUtilisateurs();
+        const utilisateurs = await client.obtenirTousLesUtilisateurs();
         // Vérifier si des utilisateurs ont été trouvés et renvoyer une réponse appropriée
         if (utilisateurs.isFind) {
             res.status(200).json(utilisateurs); // Renvoyer la liste des utilisateurs
@@ -95,8 +86,8 @@ router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         console.error("Erreur : ", error);
         res.status(500).send("Erreur serveur");
     }
-}));
-router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.get('/:id', async (req, res) => {
     let utilisateurId = req.params.id;
     if (isNaN(Number(utilisateurId))) {
         return res.status(400).json({ message: "ID invalide, il doit être un nombre." });
@@ -106,7 +97,7 @@ router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
     try {
         const client = new Utilisateurs();
-        const utilisateur = yield client.obtenirUnUtilisateur(utilisateurId);
+        const utilisateur = await client.obtenirUnUtilisateur(utilisateurId);
         if (utilisateur.isFind) {
             res.status(200).json(utilisateur.data); // Renvoie les données de l'utilisateur trouvé
         }
@@ -118,14 +109,14 @@ router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         console.error("Erreur : ", error);
         res.status(500).send("Erreur serveur");
     }
-}));
-router.post('/ajouter', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.post('/ajouter', async (req, res) => {
     try {
         const client = new Utilisateurs();
         const data = req.body;
         console.log(data);
         // Récupérer les utilisateurs associés à ce cours
-        const result = yield client.inscrireUtilisateur(data);
+        const result = await client.inscrireUtilisateur(data);
         console.log('Professeur ajouté avec succès:', result);
         res.status(200).json(result);
     }
@@ -133,14 +124,14 @@ router.post('/ajouter', (req, res) => __awaiter(void 0, void 0, void 0, function
         console.error("Erreur lors de l'ajout ou de la modification :", error);
         res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
     }
-}));
-router.delete('/supprimer', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.delete('/supprimer', async (req, res) => {
     try {
         const client = new Utilisateurs();
         const data = req.body;
         console.log(data);
         // Récupérer les utilisateurs associés à ce cours
-        const result = yield client.supprimerUtilisateur(data.utilisateurId);
+        const result = await client.supprimerUtilisateur(data.utilisateurId);
         console.log('Professeur ajouté avec succès:', result);
         res.status(200).json(result);
     }
@@ -148,5 +139,5 @@ router.delete('/supprimer', (req, res) => __awaiter(void 0, void 0, void 0, func
         console.error("Erreur lors de l'ajout ou de la modification :", error);
         res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
     }
-}));
+});
 export default router;

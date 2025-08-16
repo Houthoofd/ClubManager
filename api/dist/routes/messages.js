@@ -1,27 +1,18 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import express from 'express';
 import { Message } from '../db/clients/messages/messages.js';
 const router = express.Router();
-router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get('/', async (req, res) => {
     try {
         let client = new Message();
-        const types = yield client.obtenirTousLesTypesDeMessages();
+        const types = await client.obtenirTousLesTypesDeMessages();
         res.json(types); // ✅ On envoie la liste simple côté front
     }
     catch (error) {
         console.error('Erreur lors de la récupération des messages :', error);
         res.status(500).json({ error: 'Erreur serveur.' });
     }
-}));
-router.post('/envoie', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.post('/envoie', async (req, res) => {
     const { destinataires, message } = req.body;
     // Validation simple
     if (!Array.isArray(destinataires) || destinataires.length === 0) {
@@ -33,9 +24,9 @@ router.post('/envoie', (req, res) => __awaiter(void 0, void 0, void 0, function*
     let client = new Message();
     try {
         // On envoie le message pour chaque destinataire
-        const results = yield Promise.all(destinataires.map((id) => __awaiter(void 0, void 0, void 0, function* () {
-            return yield client.envoyerMessage(id, message);
-        })));
+        const results = await Promise.all(destinataires.map(async (id) => {
+            return await client.envoyerMessage(id, message);
+        }));
         return res.json({
             success: true,
             message_sent_count: destinataires.length,
@@ -49,8 +40,8 @@ router.post('/envoie', (req, res) => __awaiter(void 0, void 0, void 0, function*
             error: 'Erreur serveur lors de l\'envoi des messages',
         });
     }
-}));
-router.post('/creer', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+});
+router.post('/creer', async (req, res) => {
     const { title, content } = req.body;
     // Validation simple
     if (!title || !content) {
@@ -58,12 +49,12 @@ router.post('/creer', (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     try {
         const client = new Message();
-        const result = yield client.creerTypeMessage(title, content); // <- Ici on attend la Promise
+        const result = await client.creerTypeMessage(title, content); // <- Ici on attend la Promise
         return res.json(result); // <- On envoie la confirmation en réponse
     }
     catch (error) {
         console.error('Erreur lors de la création du message :', error);
         return res.status(500).json({ error: 'Erreur serveur.' });
     }
-}));
+});
 export default router;

@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Magasin {
     obtenirLesArticles() {
@@ -141,79 +132,75 @@ export class Magasin {
             });
         });
     }
-    getTailleMap() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new Promise((resolve, reject) => {
-                const mysqlConnector = new MysqlConnector();
-                const sql = `SELECT id, nom FROM tailles`;
-                mysqlConnector.query(sql, [], (error, results) => {
-                    mysqlConnector.close();
-                    if (error)
-                        return reject(error);
-                    const map = {};
-                    for (const row of results) {
-                        map[row.nom] = row.id;
-                    }
-                    resolve(map);
-                });
+    async getTailleMap() {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            const sql = `SELECT id, nom FROM tailles`;
+            mysqlConnector.query(sql, [], (error, results) => {
+                mysqlConnector.close();
+                if (error)
+                    return reject(error);
+                const map = {};
+                for (const row of results) {
+                    map[row.nom] = row.id;
+                }
+                resolve(map);
             });
         });
     }
-    ajouterArticle(data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const mysqlConnector = new MysqlConnector();
-            const articleSql = `
+    async ajouterArticle(data) {
+        const mysqlConnector = new MysqlConnector();
+        const articleSql = `
       INSERT INTO articles (nom, description, prix, categorie_id)
       VALUES (?, ?, ?, ?)
     `;
-            const articleValues = [
-                data.nom,
-                data.description,
-                data.prix,
-                data.categorie_id,
-            ];
-            return new Promise((resolve, reject) => {
-                mysqlConnector.query(articleSql, articleValues, (err, results) => __awaiter(this, void 0, void 0, function* () {
-                    if (err) {
+        const articleValues = [
+            data.nom,
+            data.description,
+            data.prix,
+            data.categorie_id,
+        ];
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(articleSql, articleValues, async (err, results) => {
+                if (err) {
+                    mysqlConnector.close();
+                    return reject({ isConfirm: false, message: 'Erreur article: ' + err.message });
+                }
+                const articleId = results.insertId;
+                // Insertion des images
+                const imageSql = `INSERT INTO images (article_id, url) VALUES ?`;
+                const imageValues = (data.images || []).map((url) => [articleId, url]);
+                mysqlConnector.query(imageSql, [imageValues], async (errImg) => {
+                    if (errImg) {
                         mysqlConnector.close();
-                        return reject({ isConfirm: false, message: 'Erreur article: ' + err.message });
+                        return reject({ isConfirm: false, message: 'Erreur image: ' + errImg.message });
                     }
-                    const articleId = results.insertId;
-                    // Insertion des images
-                    const imageSql = `INSERT INTO images (article_id, url) VALUES ?`;
-                    const imageValues = (data.images || []).map((url) => [articleId, url]);
-                    mysqlConnector.query(imageSql, [imageValues], (errImg) => __awaiter(this, void 0, void 0, function* () {
-                        if (errImg) {
+                    try {
+                        // Récupération de la map des tailles
+                        const tailleMap = await this.getTailleMap();
+                        const stockSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES ?`;
+                        const stockValues = (data.stocks || []).map(({ taille, quantite }) => {
+                            const tailleId = tailleMap[taille];
+                            if (!tailleId)
+                                throw new Error(`Taille inconnue : ${taille}`);
+                            return [articleId, tailleId, quantite];
+                        });
+                        mysqlConnector.query(stockSql, [stockValues], (errStock) => {
                             mysqlConnector.close();
-                            return reject({ isConfirm: false, message: 'Erreur image: ' + errImg.message });
-                        }
-                        try {
-                            // Récupération de la map des tailles
-                            const tailleMap = yield this.getTailleMap();
-                            const stockSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES ?`;
-                            const stockValues = (data.stocks || []).map(({ taille, quantite }) => {
-                                const tailleId = tailleMap[taille];
-                                if (!tailleId)
-                                    throw new Error(`Taille inconnue : ${taille}`);
-                                return [articleId, tailleId, quantite];
+                            if (errStock) {
+                                return reject({ isConfirm: false, message: 'Erreur stock: ' + errStock.message });
+                            }
+                            resolve({
+                                isConfirm: true,
+                                message: 'Article, images et stocks ajoutés avec succès',
                             });
-                            mysqlConnector.query(stockSql, [stockValues], (errStock) => {
-                                mysqlConnector.close();
-                                if (errStock) {
-                                    return reject({ isConfirm: false, message: 'Erreur stock: ' + errStock.message });
-                                }
-                                resolve({
-                                    isConfirm: true,
-                                    message: 'Article, images et stocks ajoutés avec succès',
-                                });
-                            });
-                        }
-                        catch (errStockMap) {
-                            mysqlConnector.close();
-                            return reject({ isConfirm: false, message: 'Erreur taille/stock : ' + Error });
-                        }
-                    }));
-                }));
+                        });
+                    }
+                    catch (errStockMap) {
+                        mysqlConnector.close();
+                        return reject({ isConfirm: false, message: 'Erreur taille/stock : ' + Error });
+                    }
+                });
             });
         });
     }
@@ -338,79 +325,77 @@ export class Magasin {
             });
         });
     }
-    ajouterCommande(data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const mysqlConnector = new MysqlConnector();
-            try {
-                // Récupérer la map tailleNom -> tailleId
-                const tailleMap = yield this.getTailleMap();
-                // Début de transaction
-                yield new Promise((resolve, reject) => {
-                    mysqlConnector.beginTransaction(err => {
-                        if (err)
-                            reject(err);
-                        else
-                            resolve();
-                    });
+    async ajouterCommande(data) {
+        const mysqlConnector = new MysqlConnector();
+        try {
+            // Récupérer la map tailleNom -> tailleId
+            const tailleMap = await this.getTailleMap();
+            // Début de transaction
+            await new Promise((resolve, reject) => {
+                mysqlConnector.beginTransaction(err => {
+                    if (err)
+                        reject(err);
+                    else
+                        resolve();
                 });
-                // Insertion commande
-                const result = yield new Promise((resolve, reject) => {
-                    const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, statut, date_commande) VALUES (?, ?, ?)`;
-                    mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id, data.statut, data.date], (err, res) => {
-                        if (err)
-                            reject(err);
-                        else
-                            resolve(res);
-                    });
+            });
+            // Insertion commande
+            const result = await new Promise((resolve, reject) => {
+                const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, statut, date_commande) VALUES (?, ?, ?)`;
+                mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id, data.statut, data.date], (err, res) => {
+                    if (err)
+                        reject(err);
+                    else
+                        resolve(res);
                 });
-                const commandeId = result.insertId;
-                console.log("commandeId:", commandeId);
-                // Construire valeursArticlesFinales *après* avoir la commandeId
-                const valeursArticlesFinales = data.articles.map(article => [
-                    commandeId,
-                    article.article_id,
-                    article.taille ? tailleMap[article.taille] || null : null,
-                    article.quantite || 1,
-                    article.prix,
-                ]);
-                console.log("valeursArticlesFinales:", valeursArticlesFinales);
-                // Insertion articles commande
-                yield new Promise((resolve, reject) => {
-                    const sqlInsertArticles = `
+            });
+            const commandeId = result.insertId;
+            console.log("commandeId:", commandeId);
+            // Construire valeursArticlesFinales *après* avoir la commandeId
+            const valeursArticlesFinales = data.articles.map(article => [
+                commandeId,
+                article.article_id,
+                article.taille ? tailleMap[article.taille] || null : null,
+                article.quantite || 1,
+                article.prix,
+            ]);
+            console.log("valeursArticlesFinales:", valeursArticlesFinales);
+            // Insertion articles commande
+            await new Promise((resolve, reject) => {
+                const sqlInsertArticles = `
         INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
         VALUES ?
       `;
-                    mysqlConnector.query(sqlInsertArticles, [valeursArticlesFinales], (err) => {
-                        if (err)
-                            reject(err);
-                        else
-                            resolve();
-                    });
-                });
-                // Commit
-                yield new Promise((resolve, reject) => {
-                    mysqlConnector.commit(err => {
-                        if (err)
-                            reject(err);
-                        else
-                            resolve();
-                    });
-                });
-                mysqlConnector.close();
-                return { isConfirm: true, message: "Commande créée avec succès, en attente de paiement" };
-            }
-            catch (error) {
-                console.error("Erreur dans ajouterCommande:", error);
-                // Rollback si erreur
-                yield new Promise((resolve) => {
-                    mysqlConnector.rollback(() => {
-                        mysqlConnector.close();
+                mysqlConnector.query(sqlInsertArticles, [valeursArticlesFinales], (err) => {
+                    if (err)
+                        reject(err);
+                    else
                         resolve();
-                    });
                 });
-                return { isConfirm: false, message: "Erreur lors de la création de la commande" };
-            }
-        });
+            });
+            // Commit
+            await new Promise((resolve, reject) => {
+                mysqlConnector.commit(err => {
+                    if (err)
+                        reject(err);
+                    else
+                        resolve();
+                });
+            });
+            mysqlConnector.close();
+            return { isConfirm: true, message: "Commande créée avec succès, en attente de paiement" };
+        }
+        catch (error) {
+            console.error("Erreur dans ajouterCommande:", error);
+            // Rollback si erreur
+            await new Promise((resolve) => {
+                mysqlConnector.rollback(() => {
+                    mysqlConnector.close();
+                    resolve();
+                });
+            });
+            return { isConfirm: false, message: "Erreur lors de la création de la commande" };
+        }
     }
     supprimerArticle(articleId) {
         return new Promise((resolve, reject) => {
@@ -471,36 +456,34 @@ export class Magasin {
             });
         });
     }
-    modifierStock(articleId, tailleId, quantite) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const mysqlConnector = new MysqlConnector();
-            const sql = `
+    async modifierStock(articleId, tailleId, quantite) {
+        const mysqlConnector = new MysqlConnector();
+        const sql = `
     UPDATE stocks 
     SET quantite = ?
     WHERE article_id = ? AND taille_id = ?
   `;
-            return new Promise((resolve, reject) => {
-                mysqlConnector.query(sql, [quantite, articleId, tailleId], (error, result) => {
-                    mysqlConnector.close();
-                    if (error) {
-                        reject({
-                            isConfirm: false,
-                            message: `Erreur lors de la modification du stock : ${error.message}`
-                        });
-                    }
-                    else if (result.affectedRows === 0) {
-                        resolve({
-                            isConfirm: false,
-                            message: "Aucune ligne modifiée : l'article ou la taille est introuvable"
-                        });
-                    }
-                    else {
-                        resolve({
-                            isConfirm: true,
-                            message: "Stock mis à jour avec succès"
-                        });
-                    }
-                });
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, [quantite, articleId, tailleId], (error, result) => {
+                mysqlConnector.close();
+                if (error) {
+                    reject({
+                        isConfirm: false,
+                        message: `Erreur lors de la modification du stock : ${error.message}`
+                    });
+                }
+                else if (result.affectedRows === 0) {
+                    resolve({
+                        isConfirm: false,
+                        message: "Aucune ligne modifiée : l'article ou la taille est introuvable"
+                    });
+                }
+                else {
+                    resolve({
+                        isConfirm: true,
+                        message: "Stock mis à jour avec succès"
+                    });
+                }
             });
         });
     }

@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Cours {
     // Récupérer les cours avec le participant //
@@ -71,18 +62,19 @@ export class Cours {
             });
         });
     }
-    obtenirCoursAvecUtilisateurs(participantId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const client = new Cours();
-            // Récupérer les cours du participant
-            const cours = yield client.obtenirLesCoursPourParticipant(participantId);
-            // Pour chaque cours, récupérer les utilisateurs associés
-            const coursAvecUtilisateurs = yield Promise.all(cours.map((cour) => __awaiter(this, void 0, void 0, function* () {
-                const { utilisateurs } = yield client.obtenirUtilisateursParCours(cour.id);
-                return Object.assign(Object.assign({}, cour), { utilisateurs });
-            })));
-            return coursAvecUtilisateurs;
-        });
+    async obtenirCoursAvecUtilisateurs(participantId) {
+        const client = new Cours();
+        // Récupérer les cours du participant
+        const cours = await client.obtenirLesCoursPourParticipant(participantId);
+        // Pour chaque cours, récupérer les utilisateurs associés
+        const coursAvecUtilisateurs = await Promise.all(cours.map(async (cour) => {
+            const { utilisateurs } = await client.obtenirUtilisateursParCours(cour.id);
+            return {
+                ...cour,
+                utilisateurs,
+            };
+        }));
+        return coursAvecUtilisateurs;
     }
     obtenirLesJoursDeCours() {
         return new Promise((resolve, reject) => {
@@ -721,17 +713,15 @@ export class Cours {
             });
         });
     }
-    verifierParticipant(data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const participantId = yield this.obtenirIdParticipantParNomPrenom(data.nom, data.prenom);
-                const cours = yield this.obtenirLesCoursPourParticipant(participantId);
-                return cours;
-            }
-            catch (error) {
-                console.error('Erreur dans verifierParticipant:', error);
-                throw error;
-            }
-        });
+    async verifierParticipant(data) {
+        try {
+            const participantId = await this.obtenirIdParticipantParNomPrenom(data.nom, data.prenom);
+            const cours = await this.obtenirLesCoursPourParticipant(participantId);
+            return cours;
+        }
+        catch (error) {
+            console.error('Erreur dans verifierParticipant:', error);
+            throw error;
+        }
     }
 }

@@ -1,292 +1,312 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Utilisateurs {
     verifierUtilisateur(utilisateurData) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
-            // Requête SQL pour vérifier l'existence d'un utilisateur basé sur son email ou son nom d'utilisateur
             const sql = `
-                SELECT * FROM utilisateurs
-                WHERE email = ? OR nom_utilisateur = ?
-            `;
+        SELECT * FROM utilisateurs
+        WHERE email = ? OR nom_utilisateur = ?
+      `;
             const values = [
                 utilisateurData.email,
                 utilisateurData.nom_utilisateur
             ];
-            console.log("Éxécution de la requête :");
-            console.log(sql, values);
-            // Exécution de la requête
+            console.log("Exécution de la requête :", sql, values);
             mysqlConnector.query(sql, values, (error, results) => {
+                mysqlConnector.close(); // fermer connexion ici, une fois la requête finie
                 if (error) {
-                    console.error('Erreur lors de l\'exécution de la requête : ' + error.message);
+                    console.error('Erreur lors de l\'exécution de la requête :', error.message);
                     reject(error);
+                    return;
+                }
+                if (results.length > 0) {
+                    console.log('Utilisateur trouvé :', results);
+                    resolve({ isFind: true, message: "Utilisateur trouvé" });
                 }
                 else {
-                    if (results.length > 0) {
-                        console.log('Utilisateur trouvé :', results);
-                        resolve({ isFind: true, message: "utilisateur trouvé" }); // Utilisateur trouvé
-                    }
-                    else {
-                        console.log('Aucun utilisateur trouvé.');
-                        resolve({ isFind: false, message: "utilisateur non trouvé" }); // Aucun utilisateur trouvé
-                    }
+                    console.log('Aucun utilisateur trouvé.');
+                    resolve({ isFind: false, message: "Utilisateur non trouvé" });
                 }
             });
-            // Fermez la connexion après avoir traité les résultats ou en cas d'erreur
-            mysqlConnector.close();
         });
     }
-    inscrireUtilisateur(utilisateurData // Paramètre unique de type UtilisateurData
-    ) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const mysqlConnector = new MysqlConnector();
-                // Si password est vide, on le remplace par un mot de passe par défaut
-                if (!utilisateurData.password || utilisateurData.password.trim() === "") {
-                    utilisateurData.password = "password123"; // mot de passe par défaut
+    async inscrireUtilisateur(utilisateurData) {
+        const mysqlConnector = new MysqlConnector();
+        if (!utilisateurData.password || utilisateurData.password.trim() === "") {
+            utilisateurData.password = "password123";
+        }
+        const sql = `
+      INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+        const values = [
+            utilisateurData.prenom,
+            utilisateurData.nom,
+            utilisateurData.nom_utilisateur,
+            utilisateurData.email,
+            utilisateurData.genre_id,
+            utilisateurData.date_naissance,
+            utilisateurData.password,
+            utilisateurData.status_id,
+            utilisateurData.grade_id,
+            utilisateurData.abonnement_id,
+        ];
+        console.log("Insertion utilisateur :", utilisateurData);
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, values, (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    console.error('Erreur lors de l\'insertion de l\'utilisateur :', error.message);
+                    reject(error);
+                    return;
                 }
-                const sql = `
-              INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-          `;
-                const values = [
-                    utilisateurData.first_name,
-                    utilisateurData.last_name,
-                    utilisateurData.nom_utilisateur,
-                    utilisateurData.email,
-                    utilisateurData.genre_id,
-                    utilisateurData.date_of_birth,
-                    utilisateurData.password,
-                    utilisateurData.status_id,
-                    utilisateurData.grade_id,
-                    utilisateurData.abonnement_id,
-                ];
-                console.log(utilisateurData);
-                return new Promise((resolve, reject) => {
-                    mysqlConnector.query(sql, values, (error, results) => {
-                        if (error) {
-                            console.error('Erreur lors de l\'insertion de l\'utilisateur : ' + error.message);
-                            reject(error);
-                        }
-                        else {
-                            if (results.affectedRows === 0) {
-                                console.log("Aucun utilisateur inséré, vérifier les correspondances des valeurs.");
-                            }
-                            else {
-                                console.log('Utilisateur inséré avec succès, ID:', results.insertId);
-                            }
-                            resolve({
-                                insertId: results.insertId,
-                                affectedRows: results.affectedRows,
-                            });
-                        }
-                    });
+                if (results.affectedRows === 0) {
+                    console.log("Aucun utilisateur inséré, vérifier les données.");
+                }
+                else {
+                    console.log('Utilisateur inséré avec succès, ID:', results.insertId);
+                }
+                resolve({
+                    insertId: results.insertId,
+                    affectedRows: results.affectedRows,
                 });
-            }
-            catch (error) {
-                console.error("Erreur dans l'inscription de l'utilisateur:", error);
-                throw error;
-            }
+            });
         });
     }
-    validerConnexion(utilisateurData // Paramètre unique de type UtilisateurData
-    ) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const mysqlConnector = new MysqlConnector();
-                const sql = `
-                SELECT id, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id
-                FROM utilisateurs
-                WHERE email = ? AND password = ?
-            `;
-                const values = [
-                    utilisateurData.email,
-                    utilisateurData.password
-                ];
-                console.log(utilisateurData);
-                return new Promise((resolve, reject) => {
-                    mysqlConnector.query(sql, values, (error, results) => {
-                        if (error) {
-                            console.error("Erreur lors de la vérification de l'utilisateur : " + error.message);
-                            reject(error);
-                        }
-                        else {
-                            if (results.length > 0) {
-                                console.log('Utilisateur trouvé avec succès.');
-                                const utilisateur = results[0];
-                                resolve({
-                                    isFind: true,
-                                    message: 'Utilisateur trouvé avec succès.',
-                                    dataToStore: {
-                                        id: utilisateur.id,
-                                        prenom: utilisateur.first_name,
-                                        nom: utilisateur.last_name,
-                                        nom_utilisateur: utilisateur.nom_utilisateur,
-                                        email: utilisateur.email,
-                                        date_naissance: utilisateur.date_of_birth,
-                                        status_id: utilisateur.status_id,
-                                        grade_id: utilisateur.grade_id,
-                                        abonnement_id: utilisateur.abonnement_id,
-                                    },
-                                });
-                            }
-                            else {
-                                console.log('Aucun utilisateur trouvé avec ces identifiants');
-                                resolve({
-                                    isFind: false,
-                                    message: 'Aucun utilisateur trouvé avec ces identifiants.',
-                                    dataToStore: {
-                                        id: null,
-                                        prenom: '',
-                                        nom: '',
-                                        nom_utilisateur: '',
-                                        email: '',
-                                        date_naissance: '',
-                                        status_id: 0,
-                                        grade_id: null,
-                                        abonnement_id: null,
-                                    },
-                                });
-                            }
-                        }
+    async validerConnexion(utilisateurData) {
+        const mysqlConnector = new MysqlConnector();
+        const sql = `
+      SELECT id, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id
+      FROM utilisateurs
+      WHERE email = ? AND password = ?
+    `;
+        const values = [
+            utilisateurData.email,
+            utilisateurData.password
+        ];
+        console.log("Validation connexion pour :", utilisateurData.email);
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, values, (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    console.error("Erreur lors de la vérification de l'utilisateur :", error.message);
+                    reject(error);
+                    return;
+                }
+                if (results.length > 0) {
+                    const utilisateur = results[0];
+                    console.log('Utilisateur trouvé avec succès.');
+                    resolve({
+                        isFind: true,
+                        message: 'Utilisateur trouvé avec succès.',
+                        dataToStore: {
+                            id: utilisateur.id,
+                            prenom: utilisateur.first_name,
+                            nom: utilisateur.last_name,
+                            nom_utilisateur: utilisateur.nom_utilisateur,
+                            email: utilisateur.email,
+                            date_naissance: utilisateur.date_of_birth,
+                            status_id: utilisateur.status_id,
+                            grade_id: utilisateur.grade_id,
+                            abonnement_id: utilisateur.abonnement_id,
+                        },
                     });
-                });
-            }
-            catch (error) {
-                console.error("Erreur lors de la connexion de l'utilisateur:", error);
-                throw error;
-            }
+                }
+                else {
+                    console.log('Aucun utilisateur trouvé avec ces identifiants');
+                    resolve({
+                        isFind: false,
+                        message: 'Aucun utilisateur trouvé avec ces identifiants.',
+                        dataToStore: {
+                            id: null,
+                            prenom: '',
+                            nom: '',
+                            nom_utilisateur: '',
+                            email: '',
+                            date_naissance: '',
+                            status_id: 0,
+                            grade_id: null,
+                            abonnement_id: null,
+                        },
+                    });
+                }
+            });
         });
     }
     obtenirTousLesUtilisateurs() {
-        try {
+        return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
-            const sql = `
-            SELECT * FROM utilisateurs
-          `;
-            return new Promise((resolve, reject) => {
-                mysqlConnector.query(sql, [], (error, results) => {
-                    if (error) {
-                        console.error("Erreur lors de la récupération des utilisateurs : " + error.message);
-                        reject(error); // Rejeter la promesse en cas d'erreur
-                    }
-                    else {
-                        if (results.length > 0) {
-                            console.log('Utilisateurs trouvés avec succès.');
-                            // Mapper les résultats pour correspondre au type UserData
-                            const utilisateurs = results.map((result) => ({
-                                id: result.id,
-                                first_name: result.first_name,
-                                last_name: result.last_name,
-                                nom_utilisateur: result.nom_utilisateur,
-                                email: result.email,
-                                genre_id: result.genre_id,
-                                date_of_birth: result.date_of_birth,
-                                status_id: result.status_id,
-                                grade_id: result.grade_id,
-                                abonnement_id: result.abonnement_id
-                            }));
-                            resolve({
-                                isFind: true,
-                                message: "Utilisateurs trouvés",
-                                data: utilisateurs // Utilisez le tableau mappé ici
-                            });
-                        }
-                        else {
-                            console.log('Aucun utilisateur trouvé.');
-                            resolve({
-                                isFind: false,
-                                message: "Aucun utilisateur trouvé",
-                                data: [] // Retourner un tableau vide si aucun utilisateur n'est trouvé
-                            });
-                        }
-                    }
-                });
+            const sql = `SELECT * FROM utilisateurs`;
+            mysqlConnector.query(sql, [], (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    console.error("Erreur lors de la récupération des utilisateurs :", error.message);
+                    reject(error);
+                    return;
+                }
+                if (results.length > 0) {
+                    console.log('Utilisateurs trouvés avec succès.');
+                    const utilisateurs = results.map((result) => ({
+                        id: result.id,
+                        first_name: result.first_name,
+                        last_name: result.last_name,
+                        nom_utilisateur: result.nom_utilisateur,
+                        email: result.email,
+                        genre_id: result.genre_id,
+                        date_of_birth: result.date_of_birth,
+                        status_id: result.status_id,
+                        grade_id: result.grade_id,
+                        abonnement_id: result.abonnement_id
+                    }));
+                    resolve({
+                        isFind: true,
+                        message: "Utilisateurs trouvés",
+                        data: utilisateurs
+                    });
+                }
+                else {
+                    console.log('Aucun utilisateur trouvé.');
+                    resolve({
+                        isFind: false,
+                        message: "Aucun utilisateur trouvé",
+                        data: []
+                    });
+                }
             });
-        }
-        catch (error) {
-            console.error("Erreur lors de la récupération des utilisateurs:", error);
-            throw error; // Lever l'erreur pour que l'appelant puisse la gérer
-        }
+        });
     }
     obtenirUnUtilisateur(id) {
-        try {
+        return new Promise((resolve, reject) => {
+            if (!id) {
+                reject(new Error("L'identifiant est requis pour récupérer un utilisateur."));
+                return;
+            }
             const mysqlConnector = new MysqlConnector();
-            // Construire la requête SQL en fonction des paramètres fournis
-            let sql = 'SELECT * FROM utilisateurs WHERE id = ?';
-            const values = [
-                id
-            ];
-            return new Promise((resolve, reject) => {
-                mysqlConnector.query(sql, values, (error, results) => {
-                    if (error) {
-                        console.error("Erreur lors de la récupération de l'utilisateur : " + error.message);
-                        reject(error); // Rejeter la promesse en cas d'erreur
-                    }
-                    else {
-                        if (results.length > 0) {
-                            console.log('Utilisateur trouvé avec succès.');
-                            // Mapper les résultats pour correspondre au type UserData
-                            const utilisateur = results.map((result) => ({
-                                id: result.id,
-                                first_name: result.first_name,
-                                last_name: result.last_name,
-                                nom_utilisateur: result.nom_utilisateur,
-                                email: result.email,
-                                genre_id: result.genre_id,
-                                date_of_birth: result.date_of_birth,
-                                status_id: result.status_id,
-                                grade_id: result.grade_id,
-                                abonnement_id: result.abonnement_id
-                            }));
-                            resolve({
-                                isFind: true,
-                                message: "Utilisateur trouvé",
-                                data: utilisateur // Utilisateur trouvé
-                            });
-                        }
-                        else {
-                            console.log('Aucun utilisateur trouvé.');
-                            resolve({
-                                isFind: false,
-                                message: "Aucun utilisateur trouvé",
-                                data: [] // Retourner un tableau vide si aucun utilisateur n'est trouvé
-                            });
-                        }
-                    }
-                });
+            const sql = 'SELECT * FROM utilisateurs WHERE id = ?';
+            const values = [id];
+            mysqlConnector.query(sql, values, (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    console.error("Erreur lors de la récupération de l'utilisateur :", error.message);
+                    reject(error);
+                    return;
+                }
+                if (results.length > 0) {
+                    console.log('Utilisateur trouvé avec succès.');
+                    const utilisateur = results.map((result) => ({
+                        id: result.id,
+                        first_name: result.first_name,
+                        last_name: result.last_name,
+                        nom_utilisateur: result.nom_utilisateur,
+                        email: result.email,
+                        genre_id: result.genre_id,
+                        date_of_birth: result.date_of_birth,
+                        status_id: result.status_id,
+                        grade_id: result.grade_id,
+                        abonnement_id: result.abonnement_id
+                    }));
+                    resolve({
+                        isFind: true,
+                        message: "Utilisateur trouvé",
+                        data: utilisateur
+                    });
+                }
+                else {
+                    console.log('Aucun utilisateur trouvé.');
+                    resolve({
+                        isFind: false,
+                        message: "Aucun utilisateur trouvé",
+                        data: []
+                    });
+                }
             });
-        }
-        catch (error) {
-            console.error("Erreur lors de la récupération de l'utilisateur:", error);
-            throw error; // Lever l'erreur pour que l'appelant puisse la gérer
-        }
+        });
     }
     supprimerUtilisateur(utilisateurId) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
-            console.log();
-            const deleteSql = `
-              DELETE FROM utilisateurs WHERE id = ?
-          `;
+            const deleteSql = `DELETE FROM utilisateurs WHERE id = ?`;
             mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
                 mysqlConnector.close();
                 if (error) {
-                    console.error('Erreur lors de la suppression de l\'utilisateur : ' + error.message);
+                    console.error('Erreur lors de la suppression de l\'utilisateur :', error.message);
                     reject(error);
+                    return;
                 }
-                else {
-                    console.log(`Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
-                    resolve({ isConfirm: true, message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès` });
+                console.log(`Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
+                resolve({ isConfirm: true, message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès` });
+            });
+        });
+    }
+    mettreAjourUtilisateur(utilisateurData) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            if (!utilisateurData.prenom || !utilisateurData.nom) {
+                reject(new Error("Le prénom et le nom de l'utilisateur sont requis pour la mise à jour."));
+                return;
+            }
+            // 1) Récupérer l'id utilisateur à partir du prénom et nom
+            const sqlSelect = `SELECT id FROM utilisateurs WHERE first_name = ? AND last_name = ? LIMIT 1`;
+            const valuesSelect = [utilisateurData.prenom, utilisateurData.nom];
+            mysqlConnector.query(sqlSelect, valuesSelect, (selectError, selectResults) => {
+                if (selectError) {
+                    mysqlConnector.close();
+                    console.error("Erreur lors de la recherche de l'utilisateur :", selectError.message);
+                    reject(selectError);
+                    return;
                 }
+                if (selectResults.length === 0) {
+                    mysqlConnector.close();
+                    console.log("Utilisateur introuvable avec ce prénom et nom.");
+                    resolve({ isConfirm: false, message: "Utilisateur introuvable avec ce prénom et nom." });
+                    return;
+                }
+                const userId = selectResults[0].id;
+                // 2) Mettre à jour l'utilisateur avec l'id trouvé
+                const sqlUpdate = `
+          UPDATE utilisateurs SET 
+            first_name = ?,
+            last_name = ?,
+            nom_utilisateur = ?,
+            email = ?,
+            genre_id = ?,
+            date_of_birth = ?,
+            password = ?,
+            status_id = ?,
+            grade_id = ?,
+            abonnement_id = ?
+          WHERE id = ?
+        `;
+                const valuesUpdate = [
+                    utilisateurData.prenom,
+                    utilisateurData.nom,
+                    utilisateurData.nom_utilisateur,
+                    utilisateurData.email,
+                    utilisateurData.genre_id,
+                    utilisateurData.date_naissance,
+                    utilisateurData.password,
+                    utilisateurData.status_id,
+                    utilisateurData.grade_id,
+                    utilisateurData.abonnement_id,
+                    userId
+                ];
+                console.log("Exécution de la requête de mise à jour :", sqlUpdate, valuesUpdate);
+                mysqlConnector.query(sqlUpdate, valuesUpdate, (updateError, updateResults) => {
+                    mysqlConnector.close();
+                    if (updateError) {
+                        console.error('Erreur lors de la mise à jour de l\'utilisateur :', updateError.message);
+                        reject(updateError);
+                        return;
+                    }
+                    if (updateResults.affectedRows === 0) {
+                        console.log("Aucun utilisateur mis à jour, vérifiez les données.");
+                        resolve({ isConfirm: false, message: "Aucun utilisateur mis à jour." });
+                    }
+                    else {
+                        console.log('Utilisateur mis à jour avec succès, ID:', userId);
+                        resolve({ isConfirm: true, message: `Utilisateur avec ID ${userId} mis à jour avec succès.` });
+                    }
+                });
             });
         });
     }
