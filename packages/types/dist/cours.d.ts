@@ -107,4 +107,48 @@ export declare const datavalidationSchema: z.ZodObject<{
     utilisateur_prenom: string;
     cours_id?: unknown;
 }>;
+export type CoursDataValidated = z.infer<typeof coursdataSchema>;
+export type DataReservationValidated = z.infer<typeof datareservationSchema>;
+export type DataAnnulationValidated = z.infer<typeof datannulationSchema>;
+export type DataValidationValidated = z.infer<typeof datavalidationSchema>;
+export declare const ajoutCoursSchema: z.ZodObject<{
+    heure_debut: z.ZodNullable<z.ZodString>;
+    heure_fin: z.ZodNullable<z.ZodString>;
+    jour_semaine: z.ZodString;
+    type_cours: z.ZodString;
+    professeurs: z.ZodArray<z.ZodString, "many">;
+}, "strip", z.ZodTypeAny, {
+    type_cours: string;
+    heure_debut: string | null;
+    heure_fin: string | null;
+    jour_semaine: string;
+    professeurs: string[];
+}, {
+    type_cours: string;
+    heure_debut: string | null;
+    heure_fin: string | null;
+    jour_semaine: string;
+    professeurs: string[];
+}>;
+export declare const jourCoursSchema: z.ZodObject<{
+    jour: z.ZodString;
+    type_cours: z.ZodString;
+    heure_debut: z.ZodNullable<z.ZodString>;
+    heure_fin: z.ZodNullable<z.ZodString>;
+    professeurs: z.ZodArray<z.ZodString, "many">;
+}, "strip", z.ZodTypeAny, {
+    type_cours: string;
+    heure_debut: string | null;
+    heure_fin: string | null;
+    professeurs: string[];
+    jour: string;
+}, {
+    type_cours: string;
+    heure_debut: string | null;
+    heure_fin: string | null;
+    professeurs: string[];
+    jour: string;
+}>;
+export type AjoutCoursValidated = z.infer<typeof ajoutCoursSchema>;
+export type JourCoursValidated = z.infer<typeof jourCoursSchema>;
 //# sourceMappingURL=cours.d.ts.map

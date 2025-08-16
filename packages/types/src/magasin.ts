@@ -9,7 +9,6 @@ export type Stock = {
 export type Taille = "S" | "M" | "L" | "XL";
 
 // === Articles ===
-// Article complet tel qu’en base ou affiché côté front
 export type Article = {
   id: number;
   nom: string;
@@ -18,12 +17,10 @@ export type Article = {
   images: string[];
   stocks: Stock[];
   categorie_id: number;
-  // propriétés optionnelles (ex: dans un panier)
   taille?: string;
   quantite?: number;
 };
 
-// Article simplifié ou spécifique à l’API (sans description complète ni stocks)
 export type ArticleAPI = {
   id: number;
   nom: string;
@@ -33,7 +30,6 @@ export type ArticleAPI = {
   stocks: Stock[];
 };
 
-// Articles regroupés par catégorie (clé = nom de la catégorie)
 export type ArticlesParCategorie = {
   [categorieNom: string]: Article[];
 };
@@ -45,20 +41,17 @@ export type Categorie = {
 };
 
 // === Commandes ===
-
-// Article dans une commande (données envoyées à la création)
 export interface ArticleCommande {
   article_id: number;
-  taille_id?: number;    // optionnel (ex: taille choisie)
+  taille_id?: number;
   quantite: number;
   prix: number;
 }
 
-// Commande complète avec articles, état, etc.
 export type Commande = {
   user_id: number;
   articles: {
-    id: number;          // article_id
+    id: number;
     nom: string;
     prix: number;
     quantite?: number;
@@ -66,12 +59,10 @@ export type Commande = {
   }[];
   total: number;
   statut: string;
-  date: string;          // date ISO
+  date: string;
 };
 
-// === Validation Zod (importés pour inférence automatique) ===
-
-// Schéma création d’article (sans id)
+// === Validation Zod ===
 export const articleCreationSchema = z.object({
   nom: z.string(),
   description: z.string(),
@@ -86,12 +77,10 @@ export const articleCreationSchema = z.object({
   )
 });
 
-// Schéma article complet (avec id)
 export const articleDataValidationSchema = articleCreationSchema.extend({
   id: z.number().int().positive(),
 });
 
-// Schéma création de commande
 export const nouvelleCommandeSchema = z.object({
   utilisateur_id: z.preprocess(val => Number(val), z.number().int().positive()),
   articles: z.array(
@@ -107,7 +96,6 @@ export const nouvelleCommandeSchema = z.object({
   total: z.preprocess(val => Number(val), z.number().nonnegative().optional()),
 });
 
-// Schéma ArticleCommande
 export const articleCommandeSchema = z.object({
   article_id: z.preprocess((val) => Number(val), z.number().int().positive()),
   taille_id: z.preprocess(
@@ -118,8 +106,12 @@ export const articleCommandeSchema = z.object({
   prix: z.preprocess((val) => Number(val), z.number().nonnegative()),
 });
 
-// === Types inférés depuis les schémas ===
-
+// === Types inférés ===
 export type ArticleCreationData = z.infer<typeof articleCreationSchema>;
 export type ArticleData = z.infer<typeof articleDataValidationSchema>;
 export type NouvelleCommande = z.infer<typeof nouvelleCommandeSchema>;
+
+// === Hack CommonJS pour importer les types et schémas ===
+const exported = {};
+module.exports = exported;
+export default exported;

@@ -16,7 +16,7 @@
     "start:api": "node ./bin/www",
     "start:test": "node scripts/run-all-tests3.js",
     "view:logs": "node view-test-logs.js"
-},
+  },
   "jest": {
     "preset": "react-native",
     "setupFilesAfterEnv": [

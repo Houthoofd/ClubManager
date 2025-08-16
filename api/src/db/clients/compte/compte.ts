@@ -1,5 +1,5 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
-import { UserData, VerifyResultWithData } from '@clubmanager/types';
+import type { UserData, VerifyResultWithData } from '@clubmanager/types';
 
 export class Compte{
   obtenirUnUtilisateurParSonNomEtPrenom(prenom: string, nom: string): Promise<VerifyResultWithData> {

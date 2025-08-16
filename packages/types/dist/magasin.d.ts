@@ -190,4 +190,6 @@ export declare const articleCommandeSchema: z.ZodObject<{
 export type ArticleCreationData = z.infer<typeof articleCreationSchema>;
 export type ArticleData = z.infer<typeof articleDataValidationSchema>;
 export type NouvelleCommande = z.infer<typeof nouvelleCommandeSchema>;
+declare const exported: {};
+export default exported;
 //# sourceMappingURL=magasin.d.ts.map

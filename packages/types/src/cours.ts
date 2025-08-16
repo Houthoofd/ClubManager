@@ -1,20 +1,21 @@
+// schemas.ts
 import { z } from 'zod';
-import type { Professeur} from './utilisateurs.js'
+import type { Professeur } from './utilisateurs.js';
 
-
+// === Types principaux ===
 export type CoursData = {
   id: number;
   date_cours: string;
   type_cours: string;
   heure_debut: string;
   heure_fin: string;
-  utilisateurs ?: Utilisateur[]
+  utilisateurs?: Utilisateur[];
 };
 
 export type Utilisateur = {
   nom: string;
   prenom: string;
-  presence: number
+  presence: number;
 };
 
 export type UtilisateursParCours = CoursData & {
@@ -22,47 +23,46 @@ export type UtilisateursParCours = CoursData & {
 };
 
 export type DataReservation = {
-  cours_id : number,
-  utilisateur_nom: string,
-  utilisateur_prenom: string
-}
-
-export type DataAnnulation = {
-  cours_id : number,
-  utilisateur_nom: string,
-  utilisateur_prenom: string
-}
-
-export type DataValidation = {
-  cours_id : number,
-  utilisateur_nom: string,
-  utilisateur_prenom: string
-}
-
-export type DataInscription = {
-  cours_id : number,
-  utilisateur_id: number,
-  status_id : number
-}
-
-export type JourCours = {
-  jour : string,
-  type_cours : string,
-  heure_debut: string | null; // Ex: '19:00:00'
-  heure_fin: string | null;
-  professeurs: string[];
-}
-
-export type AjoutCours = {
-  heure_debut: string | null; // Ex: '19:00:00'
-  heure_fin: string | null;   // Ex: '21:30:00'
-  jour_semaine: string;
-  type_cours: string;
-  professeurs: string[]; // Array of professor IDs
+  cours_id: number;
+  utilisateur_nom: string;
+  utilisateur_prenom: string;
 };
 
+export type DataAnnulation = {
+  cours_id: number;
+  utilisateur_nom: string;
+  utilisateur_prenom: string;
+};
 
-// Schéma Zod pour valider les données d'Abonnement
+export type DataValidation = {
+  cours_id: number;
+  utilisateur_nom: string;
+  utilisateur_prenom: string;
+};
+
+export type DataInscription = {
+  cours_id: number;
+  utilisateur_id: number;
+  status_id: number;
+};
+
+export type JourCours = {
+  jour: string;
+  type_cours: string;
+  heure_debut: string | null;
+  heure_fin: string | null;
+  professeurs: string[];
+};
+
+export type AjoutCours = {
+  heure_debut: string | null;
+  heure_fin: string | null;
+  jour_semaine: string;
+  type_cours: string;
+  professeurs: string[];
+};
+
+// === Schémas Zod ===
 export const coursdataSchema = z.object({
   id: z.number().positive("L'ID du cours doit être un nombre positif"),
   date_cours: z.string().min(1, "La date du cours doit être requis"),
@@ -71,7 +71,6 @@ export const coursdataSchema = z.object({
   heure_fin: z.string().min(1, "L'heure de fin du cours doit être requis")
 });
 
-// Schéma Zod pour valider les données d'Abonnement
 export const datareservationSchema = z.object({
   cours_id: z.preprocess((val) => Number(val), z.number().positive("L'ID du cours doit être un nombre positif")),
   utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
@@ -89,3 +88,42 @@ export const datavalidationSchema = z.object({
   utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
   utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
 });
+
+// === Types inférés depuis les schémas ===
+export type CoursDataValidated = z.infer<typeof coursdataSchema>;
+export type DataReservationValidated = z.infer<typeof datareservationSchema>;
+export type DataAnnulationValidated = z.infer<typeof datannulationSchema>;
+export type DataValidationValidated = z.infer<typeof datavalidationSchema>;
+
+// === Schémas Zod pour AjoutCours et JourCours ===
+export const ajoutCoursSchema = z.object({
+  heure_debut: z.string().min(1, "L'heure de début du cours doit être requis").nullable(),
+  heure_fin: z.string().min(1, "L'heure de fin du cours doit être requis").nullable(),
+  jour_semaine: z.string().min(1, "Le jour de la semaine doit être requis"),
+  type_cours: z.string().min(1, "Le type de cours doit être requis"),
+  professeurs: z.array(z.string().min(1, "Chaque professeur doit avoir un ID"))
+});
+
+export const jourCoursSchema = z.object({
+  jour: z.string().min(1, "Le jour doit être requis"),
+  type_cours: z.string().min(1, "Le type de cours doit être requis"),
+  heure_debut: z.string().nullable(),
+  heure_fin: z.string().nullable(),
+  professeurs: z.array(z.string().min(1, "Chaque professeur doit avoir un ID"))
+});
+
+// === Types inférés depuis les schémas ===
+export type AjoutCoursValidated = z.infer<typeof ajoutCoursSchema>;
+export type JourCoursValidated = z.infer<typeof jourCoursSchema>;
+
+// === Hack CommonJS ===
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    coursdataSchema,
+    datareservationSchema,
+    datannulationSchema,
+    datavalidationSchema,
+    ajoutCoursSchema,
+    jourCoursSchema
+  };
+}

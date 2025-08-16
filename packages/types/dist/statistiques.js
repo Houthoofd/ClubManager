@@ -1,4 +1,5 @@
 import { z } from "zod";
+// Schémas Zod
 export const frequentationParCoursSchema = z.object({
     cours_id: z.preprocess(val => Number(val), z.number().int().positive()),
     titre: z.string(),
@@ -24,3 +25,13 @@ export const statistiquesProgressionUtilisateurSchema = z.object({
     progressionParCours: z.array(progressionParCoursSchema),
     niveauActuel: z.string(),
 });
+// Hack pour CommonJS
+const exported = {
+    frequentationParCoursSchema,
+    frequentationParMoisSchema,
+    statistiquesFrequentationSchema,
+    progressionParCoursSchema,
+    statistiquesProgressionUtilisateurSchema,
+};
+module.exports = exported;
+export default exported;
