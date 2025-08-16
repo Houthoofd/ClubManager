@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020",  // Version de JavaScript vers laquelle le code sera compilé
-    "module": "ESNext", // Passez en ESM pour des exports compatibles import/export
-    "moduleResolution": "Node",  // Résolution des modules de manière compatible avec Node.js
+    "module": "NodeNext", // Passez en ESM pour des exports compatibles import/export
+    "moduleResolution": "NodeNext",  // Résolution des modules de manière compatible avec Node.js
     "esModuleInterop": true,  // Permet l'importation de modules CommonJS via des importations ES6
     "skipLibCheck": true,  // Ignore la vérification des fichiers de type dans les bibliothèques (améliore la vitesse de compilation)
     "forceConsistentCasingInFileNames": true,  // Force une casse cohérente pour les noms de fichiers

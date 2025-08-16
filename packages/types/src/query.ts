@@ -1,5 +1,5 @@
 // Types spécifiques de réponse API
-import type { CoursData, Utilisateur } from './cours'; // à adapter selon ton arborescence
+import type { CoursData, Utilisateur } from './cours.js'; // à adapter selon ton arborescence
 
 // Résultat d'insertion dans la DB
 export interface InsertResult {

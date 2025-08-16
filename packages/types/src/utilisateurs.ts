@@ -1,4 +1,5 @@
-import { z } from "zod";
+// Oui, ce fichier est en CommonJS : il utilise require et module.exports.
+const { z } = require("zod");
 
 
 export type UserData = {
@@ -86,7 +87,7 @@ export const gradeSchema = z.object({
 });
 
 // Schéma Zod pour valider les données de Genres
-export const genresSchema = z.object({
+export const  genresSchema = z.object({
   id: z.number().positive("L'ID du genre doit être un nombre positif"),
   genre_name: z.string().min(1, "Le nom du genre est requis")
 });
@@ -104,7 +105,7 @@ export const userSchema = z.object({
   nom_utilisateur: z.string().min(1, "Le nom d'utilisateur est requis"),
   email: z.string().email("L'email est invalide"),
   genre_id: z.number().positive("Le genre ID doit être un nombre positif").nullable(),  // Autorise null
-  date_naissance: z.string().refine((val) => !isNaN(Date.parse(val)), "La date de naissance est invalide"),
+  date_naissance: z.string().refine((val: string) => !isNaN(Date.parse(val)), "La date de naissance est invalide"),
   password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
   status_id: z.number().positive("Le status ID doit être un nombre positif"),
   grade_id: z.number().positive("Le grade ID doit être un nombre positif").nullable(),  // Autorise null

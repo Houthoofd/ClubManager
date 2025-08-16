@@ -1,4 +1,4 @@
-import type { CoursData, Utilisateur } from './cours';
+import type { CoursData, Utilisateur } from './cours.js';
 export interface InsertResult {
     insertId: number;
     affectedRows: number;

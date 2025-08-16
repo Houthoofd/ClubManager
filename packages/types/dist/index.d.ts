@@ -1,6 +1,6 @@
-export * from './utilisateurs';
-export * from './query';
-export * from './cours';
-export * from './magasin';
-export * from './statistiques';
+export * from './cours.js';
+export * from './query.js';
+export * from './cours.js';
+export * from './magasin.js';
+export * from './statistiques.js';
 //# sourceMappingURL=index.d.ts.map

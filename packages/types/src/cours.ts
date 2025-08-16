@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Professeur} from './utilisateurs'
+import type { Professeur} from './utilisateurs.js'
 
 
 export type CoursData = {
