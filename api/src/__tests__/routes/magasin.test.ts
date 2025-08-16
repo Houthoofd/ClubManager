@@ -7,6 +7,9 @@ import { Magasin } from '../../db/clients/magasin/magasin.js';
 // Mock la classe Magasin entière
 jest.mock('../../db/clients/magasin/magasin.js');
 
+// Ajoutez ce mock global avant les tests
+global.articleCreationSchema = { parse: jest.fn() };
+
 const app = express();
 app.use(express.json());
 app.use('/magasin', magasinRouter);

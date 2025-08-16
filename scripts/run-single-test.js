@@ -52,8 +52,12 @@ function runSingleTest(testFilePath) {
     process.exit(1);
   }
   
-  // Chemin vers la configuration Jest du projet
-  const configPath = path.join(projectRoot, projectName, 'jest.config.js');
+  // Correction : utilisez le bon fichier de config Jest selon le mode ESM/CJS
+  // Préférez jest.config.cjs si présent pour le projet api
+  let configPath = path.join(projectRoot, projectName, 'jest.config.cjs');
+  if (!fs.existsSync(configPath)) {
+    configPath = path.join(projectRoot, projectName, 'jest.config.js');
+  }
   
   // Options pour l'exécution de Jest
   const options = [];

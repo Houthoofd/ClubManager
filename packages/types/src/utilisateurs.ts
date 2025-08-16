@@ -67,6 +67,12 @@ export type Genres = {
   genre_name: string;
 };
 
+// Type Genres
+export type Status = {
+  id: number;
+  status_name: string;
+};
+
 // Schéma Zod pour valider les données d'Abonnement
 export const abonnementSchema = z.object({
   id: z.number().positive("L'ID de l'abonnement doit être un nombre positif"),

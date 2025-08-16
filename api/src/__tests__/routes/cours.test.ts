@@ -1,22 +1,16 @@
 import { jest } from '@jest/globals';
+
+// Mock global des schémas Zod utilisés dans les routes
+global.coursdataSchema = { parse: jest.fn() };
+global.datareservationSchema = { parse: jest.fn() };
+global.datannulationSchema = { parse: jest.fn() };
+global.datavalidationSchema = { parse: jest.fn() };
+
 import request from 'supertest';
 import express, { Request, Response } from 'express';
 import coursRouter from '../../routes/cours.js';
 import { Cours } from '../../db/clients/cours/cours.js';
-import { z } from 'zod';
 
-// Mock zod schemas and validation
-jest.mock('@clubmanager/types', () => ({
-  datareservationSchema: {
-    parse: jest.fn((data) => data)
-  },
-  datannulationSchema: {
-    parse: jest.fn((data) => data)
-  },
-  datavalidationSchema: {
-    parse: jest.fn((data) => data)
-  }
-}));
 
 // Mock the Cours class
 jest.mock('../../db/clients/cours/cours.js');
@@ -26,6 +20,20 @@ app.use(express.json());
 app.use('/', coursRouter);
 
 describe('Cours Routes', () => {
+  beforeAll(() => {
+    // Correction : utilisez les types uniquement pour l'annotation, pas comme valeur
+    Cours.prototype.obtenirTousLesCours = jest.fn(async (): Promise<CoursData[]> => []);
+    Cours.prototype.obtenirIdParticipantParNomPrenom = jest.fn(async (): Promise<number> => 0);
+    Cours.prototype.obtenirLesCoursPourParticipant = jest.fn(async (): Promise<any[]> => []);
+    Cours.prototype.obtenirUtilisateursParticipantsParCours = jest.fn(async (): Promise<any> => ({}));
+    Cours.prototype.verifierInscriptionUtilisateur = jest.fn(async (): Promise<any> => ({}));
+    Cours.prototype.inscrireUtilisateurAuCours = jest.fn(async (): Promise<any> => ({}));
+    // Correction : annulerUtilisateurAuCours et desinscrireUtilisateurDuCours doivent retourner Promise<ConfirmationResult>
+    Cours.prototype.annulerUtilisateurAuCours = jest.fn(async (): Promise<ConfirmationResult> => ({ isConfirm: true, message: '' }));
+    Cours.prototype.desinscrireUtilisateurDuCours = jest.fn(async (): Promise<ConfirmationResult> => ({ isConfirm: true, message: '' }));
+    Cours.prototype.obtenirLesJoursDeCours = jest.fn(async (): Promise<any[]> => []);
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -206,3 +214,12 @@ describe('Cours Routes', () => {
     });
   });
 });
+
+// Ajoutez une déclaration globale pour éviter l'erreur TS(7017)
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  var coursdataSchema: any;
+  var datareservationSchema: any;
+  var datannulationSchema: any;
+  var datavalidationSchema: any;
+}

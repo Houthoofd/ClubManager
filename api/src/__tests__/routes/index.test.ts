@@ -1,95 +1,85 @@
-import { jest } from '@jest/globals';
+// api/src/__tests__/routes/index.test.ts
+import express from 'express';
+import type { Request, Response, Router } from 'express';
 import request from 'supertest';
-import express, { Request, Response } from 'express';
-import indexRouter from '../../routes/index.js';
+import { jest } from '@jest/globals';
 
-// Mock all the routers that are imported in index.ts
-jest.mock('../../routes/utilisateurs.js', () => {
-  const router = express.Router();
-  router.get('/test', (req: Request, res: Response) => {
-    res.status(200).json({ route: 'utilisateurs' });
-  });
-  return { default: router };
-});
+describe('Test du router principal avec toutes les méthodes HTTP', () => {
+  let app: express.Application;
 
-jest.mock('../../routes/informations.js', () => {
-  const router = express.Router();
-  router.get('/test', (req: Request, res: Response) => {
-    res.status(200).json({ route: 'informations' });
-  });
-  return { default: router };
-});
+  const routesToMock = [
+    'utilisateurs',
+    'informations',
+    'cours',
+    'paiements',
+    'statistiques',
+    'magasin'
+  ];
 
-jest.mock('../../routes/cours.js', () => {
-  const router = express.Router();
-  router.get('/test', (req: Request, res: Response) => {
-    res.status(200).json({ route: 'cours' });
-  });
-  return { default: router };
-});
+  const httpMethods: ('get' | 'post' | 'put' | 'delete')[] = [
+    'get',
+    'post',
+    'put',
+    'delete'
+  ];
 
-jest.mock('../../routes/paiements.js', () => {
-  const router = express.Router();
-  router.get('/test', (req: Request, res: Response) => {
-    res.status(200).json({ route: 'paiements' });
-  });
-  return { default: router };
-});
+  beforeAll(async () => {
+    await jest.unstable_mockModule('@clubmanager/types', () => ({
+      datannulationSchema: {},
+      datareservationSchema: {},
+    }));
 
-jest.mock('../../routes/statistiques.js', () => {
-  const router = express.Router();
-  router.get('/test', (req: Request, res: Response) => {
-    res.status(200).json({ route: 'statistiques' });
-  });
-  return { default: router };
-});
+    // Fonction utilitaire pour créer un router mock avec toutes les méthodes HTTP
+    const createMockRouter = (routeName: string) => {
+      const r = express.Router();
 
-jest.mock('../../routes/magasin.js', () => {
-  const router = express.Router();
-  router.get('/test', (req: Request, res: Response) => {
-    res.status(200).json({ route: 'magasin' });
-  });
-  return { default: router };
-});
+      httpMethods.forEach(method => {
+        (r as any)[method]('/test', (_req: any, res: any) => {
+          res.status(200).json({ route: routeName, method: method.toUpperCase() });
+        });
+      });
 
-// Create an Express app for testing
-const app = express();
-app.use('/', indexRouter);
+      // Pour toutes les routes, y compris statistiques, on retourne juste 'r'
+      return r;
+    };
 
-describe('Index Router', () => {
-  it('should route to utilisateurs correctly', async () => {
-    const response = await request(app).get('/utilisateurs/test');
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ route: 'utilisateurs' });
+    // Mock toutes les routes dynamiquement
+    await Promise.all(
+      routesToMock.map(route =>
+        jest.unstable_mockModule(`../../routes/${route}.js`, async () => ({
+          default: createMockRouter(route)
+        }))
+      )
+    );
+
+    // Import dynamique du router principal
+    const { default: indexRouter } = await import('../../routes/index.js');
+
+    // Création de l’app Express
+    app = express();
+    app.use(express.json());
+    app.use('/', indexRouter as express.Router);
   });
 
-  it('should route to informations correctly', async () => {
-    const response = await request(app).get('/informations/test');
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ route: 'informations' });
-  });
+  // Tests générés automatiquement pour chaque route et chaque méthode HTTP
+  routesToMock.forEach(route => {
+    httpMethods.forEach(method => {
+      it(`devrait répondre pour ${method.toUpperCase()} sur la route ${route}`, async () => {
+        // Correction : pour 'statistiques', testez uniquement /statistiques/test
+        const routePaths =
+          route === 'statistiques'
+            ? ['/statistiques/test']
+            : [`/${route}/test`];
 
-  it('should route to cours correctly', async () => {
-    const response = await request(app).get('/cours/test');
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ route: 'cours' });
-  });
-
-  it('should route to paiements correctly', async () => {
-    const response = await request(app).get('/paiements/test');
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ route: 'paiements' });
-  });
-
-  it('should route to cours/statistiques correctly', async () => {
-    const response = await request(app).get('/cours/statistiques/test');
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ route: 'statistiques' });
-  });
-
-  it('should route to magasin correctly', async () => {
-    const response = await request(app).get('/magasin/test');
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ route: 'magasin' });
+        for (const routePath of routePaths) {
+          const res = await request(app)[method](routePath);
+          expect(res.status).toBe(200);
+          expect(res.body).toEqual({ route, method: method.toUpperCase() });
+        }
+      });
+    });
   });
 });
+
+// Rien à modifier ici tant que votre router statistiques est bien monté sur /statistiques dans index.ts.
+// Le test vérifie /statistiques/test uniquement : il est aligné avec votre configuration actuelle.

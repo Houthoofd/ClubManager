@@ -1,13 +1,19 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
+import type {
+  StatistiquesFrequentation,
+  FrequentationParCours,
+  FrequentationParMois,
+  StatistiquesProgressionUtilisateur,
+  ProgressionParCours
+} from '@clubmanager/types';
 
 export class Statistiques {
   /**
    * Obtient les statistiques de fréquentation globales
    * @returns Les statistiques de fréquentation
    */
-  async obtenirStatistiquesFrequentation() {
+  async obtenirStatistiquesFrequentation(): Promise<StatistiquesFrequentation> {
     const mysqlConnector = new MysqlConnector();
-    
     try {
       // Obtenir le total de la fréquentation
       const totalQuery = `
@@ -15,13 +21,6 @@ export class Statistiques {
         FROM utilisateur_cours
         WHERE status_id = 3; -- Status 3 = présence validée
       `;
-      
-      const totalResult = await new Promise((resolve, reject) => {
-        mysqlConnector.query(totalQuery, [], (error, results) => {
-          if (error) reject(error);
-          else resolve(results[0].total);
-        });
-      });
       
       // Obtenir la fréquentation par cours
       const parCoursQuery = `
@@ -31,13 +30,6 @@ export class Statistiques {
         GROUP BY c.id, c.titre
         ORDER BY frequentation DESC;
       `;
-      
-      const parCoursResult = await new Promise((resolve, reject) => {
-        mysqlConnector.query(parCoursQuery, [], (error, results) => {
-          if (error) reject(error);
-          else resolve(results);
-        });
-      });
       
       // Obtenir la fréquentation par mois
       const parMoisQuery = `
@@ -50,10 +42,24 @@ export class Statistiques {
         ORDER BY MONTH(c.date);
       `;
       
-      const parMoisResult = await new Promise((resolve, reject) => {
+      const totalResult = await new Promise<number>((resolve, reject) => {
+        mysqlConnector.query(totalQuery, [], (error, results) => {
+          if (error) reject(error);
+          else resolve(Number(results[0].total));
+        });
+      });
+
+      const parCoursResult = await new Promise<FrequentationParCours[]>((resolve, reject) => {
+        mysqlConnector.query(parCoursQuery, [], (error, results) => {
+          if (error) reject(error);
+          else resolve(results as FrequentationParCours[]);
+        });
+      });
+
+      const parMoisResult = await new Promise<FrequentationParMois[]>((resolve, reject) => {
         mysqlConnector.query(parMoisQuery, [], (error, results) => {
           if (error) reject(error);
-          else resolve(results);
+          else resolve(results as FrequentationParMois[]);
         });
       });
       
@@ -75,7 +81,7 @@ export class Statistiques {
    * @param utilisateurId - L'ID de l'utilisateur
    * @returns Les statistiques de progression de l'utilisateur
    */
-  async obtenirProgressionUtilisateur(utilisateurId: number) {
+  async obtenirProgressionUtilisateur(utilisateurId: number): Promise<StatistiquesProgressionUtilisateur> {
     const mysqlConnector = new MysqlConnector();
     
     try {
@@ -85,13 +91,6 @@ export class Statistiques {
         FROM utilisateur_cours
         WHERE utilisateur_id = ? AND status_id = 3;
       `;
-      
-      const coursSuivisResult = await new Promise<number>((resolve, reject) => {
-        mysqlConnector.query(coursSuivisQuery, [utilisateurId], (error, results) => {
-          if (error) reject(error);
-          else resolve(results[0].total);
-        });
-      });
       
       // Progression par cours
       const progressionQuery = `
@@ -107,10 +106,17 @@ export class Statistiques {
         GROUP BY c.id, c.titre, c.cours_parent_id;
       `;
       
-      const progressionResult = await new Promise((resolve, reject) => {
+      const coursSuivisResult = await new Promise<number>((resolve, reject) => {
+        mysqlConnector.query(coursSuivisQuery, [utilisateurId], (error, results) => {
+          if (error) reject(error);
+          else resolve(Number(results[0].total));
+        });
+      });
+
+      const progressionResult = await new Promise<ProgressionParCours[]>((resolve, reject) => {
         mysqlConnector.query(progressionQuery, [utilisateurId], (error, results) => {
           if (error) reject(error);
-          else resolve(results);
+          else resolve(results as ProgressionParCours[]);
         });
       });
       

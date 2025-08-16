@@ -52,6 +52,10 @@ export type Genres = {
     id: number;
     genre_name: string;
 };
+export type Status = {
+    id: number;
+    status_name: string;
+};
 export declare const abonnementSchema: z.ZodObject<{
     id: z.ZodNumber;
     nom_plan: z.ZodString;

@@ -3,6 +3,7 @@ import request from 'supertest';
 import express from 'express';
 import compteRouter from '../../routes/compte.js';
 import { Compte } from '../../db/clients/compte/compte.js';
+import type { VerifyResultWithData } from 'node_modules/@clubmanager/types/dist/index.js';
 
 // Mock de la classe Compte
 jest.mock('../../db/clients/compte/compte.js');
@@ -10,6 +11,17 @@ jest.mock('../../db/clients/compte/compte.js');
 const app = express();
 app.use(express.json());
 app.use('/', compteRouter);
+
+beforeAll(() => {
+  // Correction : donnez à la méthode mockée la bonne signature pour éviter l'erreur TS(2322)
+  Compte.prototype.obtenirUnUtilisateurParSonNomEtPrenom = jest.fn(
+    async (_prenom: string, _nom: string): Promise<VerifyResultWithData<any>> => ({
+      isFind: false,
+      data: null,
+      message: 'Utilisateur non trouvé'
+    })
+  );
+});
 
 describe('Compte Routes', () => {
   beforeEach(() => {
@@ -25,9 +37,11 @@ describe('Compte Routes', () => {
         email: 'john.doe@example.com'
       };
 
-      (Compte.prototype.obtenirUnUtilisateurParSonNomEtPrenom as jest.Mock).mockResolvedValue({
+      // Correction : forcez le type du mock à any pour éviter l'erreur TS(2345)
+      (Compte.prototype.obtenirUnUtilisateurParSonNomEtPrenom as any).mockResolvedValue({
         isFind: true,
-        data: mockUser
+        data: mockUser,
+        message: 'Utilisateur trouvé'
       });
 
       const response = await request(app)
@@ -40,9 +54,11 @@ describe('Compte Routes', () => {
     });
 
     it('should return 404 when user is not found', async () => {
-      (Compte.prototype.obtenirUnUtilisateurParSonNomEtPrenom as jest.Mock).mockResolvedValue({
+      // Correction : forcez le type du mock à any pour éviter l'erreur TS(2345)
+      (Compte.prototype.obtenirUnUtilisateurParSonNomEtPrenom as any).mockResolvedValue({
         isFind: false,
-        data: []
+        data: [],
+        message: 'Aucun utilisateur trouvé.'
       });
 
       const response = await request(app)
@@ -63,7 +79,8 @@ describe('Compte Routes', () => {
     });
 
     it('should handle server errors', async () => {
-      (Compte.prototype.obtenirUnUtilisateurParSonNomEtPrenom as jest.Mock).mockRejectedValue(
+      // Correction : forcez le type du mock à any pour éviter l'erreur TS(2345)
+      (Compte.prototype.obtenirUnUtilisateurParSonNomEtPrenom as any).mockRejectedValue(
         new Error('Database connection failed')
       );
 

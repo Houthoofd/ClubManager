@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",  // Version de JavaScript vers laquelle le code sera compilé
-    "module": "CommonJS",  // Utilisation de CommonJS (adapté pour Node.js)
+    "module": "ESNext", // Passez en ESM pour des exports compatibles import/export
     "moduleResolution": "Node",  // Résolution des modules de manière compatible avec Node.js
     "esModuleInterop": true,  // Permet l'importation de modules CommonJS via des importations ES6
     "skipLibCheck": true,  // Ignore la vérification des fichiers de type dans les bibliothèques (améliore la vitesse de compilation)
@@ -16,7 +16,8 @@
     "resolveJsonModule": true,  // Permet d'importer des fichiers JSON en tant que modules
     "lib": ["es2020", "dom"],  // Spécifie les bibliothèques à inclure lors de la compilation (ajoutez "dom" si vous interagissez avec des API Web dans Node.js, sinon omettez-le)
     "declaration": true,  // Crée les fichiers de déclaration `.d.ts` lors de la compilation
-    "declarationMap": true  // Crée les cartes de déclaration pour le débogage des fichiers `.d.ts`
+    "declarationMap": true,  // Crée les cartes de déclaration pour le débogage des fichiers `.d.ts`
+    "verbatimModuleSyntax": true // (TS 4.7+) conserve l'extension .js dans les imports/exports ESM générés
   },
   "include": [
     "src/**/*",  // Inclut tous les fichiers dans le dossier src
@@ -27,3 +28,5 @@
     "dist"  // Exclut le dossier dist où la compilation se fait
   ]
 }
+// La configuration est correcte pour générer des imports/exports ESM avec .js
+// Rien à modifier ici.
