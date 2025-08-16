@@ -1,4 +1,3 @@
-
 # ClubManager
 
 > Plateforme de gestion de club : gestion des membres, des cours, des paiements, du magasin et plus encore.
@@ -71,3 +70,75 @@ Les contributions sont les bienvenues !
 
 ## Licence
 Ce projet est sous licence MIT.
+
+# Commandes pour nettoyer et recompiler le projet
+
+Dans chaque dossier : **clubmanager/types** et **clubmanager/api**
+
+1. Supprimez les dossiers et fichiers de cache :
+   ```
+   rm -rf node_modules
+   rm -rf .cache
+   rm -rf dist
+   rm -f package-lock.json
+   ```
+
+2. Nettoyez le cache npm :
+   ```
+   npm cache clean --force
+   ```
+
+3. Réinstallez les dépendances :
+   ```
+   npm install
+   ```
+
+4. Dans `clubmanager/types`, recompilez le package :
+   ```
+   npm run build
+   ```
+
+5. Nettoyez le cache Jest (dans le dossier api) :
+   ```
+   npx jest --clearCache
+   ```
+
+6. Relancez vos tests :
+   ```
+   npm run test
+   ```
+
+**Résumé :**
+- Nettoyez tout, réinstallez, recompilez, puis relancez les tests.
+
+# Problème de configuration Jest
+
+Pour résoudre l’erreur :
+
+> Multiple configurations found:
+> * jest.config.js
+> * jest.config.cjs
+
+**Solution :**
+1. Supprimez le fichier de configuration Jest que vous n’utilisez pas.
+   - Si vous utilisez `jest.config.cjs`, supprimez `jest.config.js` :
+     ```
+     rm jest.config.js
+     ```
+   - Si vous utilisez `jest.config.js`, supprimez `jest.config.cjs` :
+     ```
+     rm jest.config.cjs
+     ```
+
+2. Ou lancez Jest en précisant le fichier de config à utiliser :
+   ```
+   npx jest --config=jest.config.cjs
+   ```
+   ou
+   ```
+   npx jest --config=jest.config.js
+   ```
+
+**Résumé :**
+- Gardez un seul fichier de configuration Jest dans le dossier.
+- Précisez le fichier avec `--config` si besoin.

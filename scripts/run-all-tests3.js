@@ -17,7 +17,8 @@ const projectExists = {
 };
 
 const testCommands = {
-  api: 'npm run test:windows',
+  // Correction : utilisez npx pour Jest afin d'assurer la compatibilité Windows et Node
+  api: 'set NODE_ENV=test&& set NODE_OPTIONS=--experimental-vm-modules&& npx jest --config jest.config.cjs',
   frontend: 'npm test'
 };
 

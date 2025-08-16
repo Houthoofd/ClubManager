@@ -1,4 +1,6 @@
 // Correction : pour Jest en mode ESM, renommez ce fichier en jest.config.cjs et utilisez module.exports
+// Pour corriger l'erreur, modifiez votre script/package.json pour utiliser jest.config.cjs au lieu de jest.config.js :
+// Exemple : jest --config jest.config.cjs
 module.exports = {
   preset: 'ts-jest/presets/js-with-ts-esm',
   testEnvironment: 'node',

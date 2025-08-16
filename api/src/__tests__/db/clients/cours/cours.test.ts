@@ -1,7 +1,6 @@
 import { jest } from '@jest/globals';
 import { Cours } from '../../../../db/clients/cours/cours.js';
 import MysqlConnector from '../../../../db/connector/mysqlconnector.js';
-import type { AjoutCours } from '../../../../../../packages/types/dist/index.js';
 
 jest.mock('../../../../db/connector/mysqlconnector.js');
 
@@ -57,7 +56,7 @@ describe('Cours Client compact', () => {
   });
 
   describe('ajouterCoursRecurrentAvecProfesseurs', () => {
-    const baseData: AjoutCours = {
+    const baseData: any = {
       jour_semaine: 'lundi',
       type_cours: 'Karate débutant',
       heure_debut: '18:00:00',
