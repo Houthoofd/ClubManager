@@ -440,4 +440,57 @@ export class Utilisateurs {
       });
     });
   }
+
+
+  // Modifie uniquement le status, le grade et l'abonnement d'un utilisateur
+  async modifierInfosUtilisateur(data: { id: number, status_id?: number, grade_id?: number, abonnement_id?: number }): Promise<ConfirmationResult> {
+    const mysqlConnector = new MysqlConnector();
+
+    if (!data.id) {
+      throw new Error("L'identifiant de l'utilisateur est requis pour la modification.");
+    }
+
+    // Prépare la requête et les valeurs à mettre à jour
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (typeof data.status_id !== 'undefined') {
+      fields.push('status_id = ?');
+      values.push(data.status_id);
+    }
+    if (typeof data.grade_id !== 'undefined') {
+      fields.push('grade_id = ?');
+      values.push(data.grade_id);
+    }
+    if (typeof data.abonnement_id !== 'undefined') {
+      fields.push('abonnement_id = ?');
+      values.push(data.abonnement_id);
+    }
+
+    if (fields.length === 0) {
+      mysqlConnector.close();
+      return { isConfirm: false, message: "Aucune donnée à modifier." };
+    }
+
+    const sql = `UPDATE utilisateurs SET ${fields.join(', ')} WHERE id = ?`;
+    values.push(data.id);
+
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+      mysqlConnector.query(sql, values, (error, results) => {
+        mysqlConnector.close();
+
+        if (error) {
+          console.error('Erreur lors de la modification de l\'utilisateur :', error.message);
+          reject(error);
+          return;
+        }
+
+        if (results.affectedRows === 0) {
+          resolve({ isConfirm: false, message: "Aucun utilisateur modifié." });
+        } else {
+          resolve({ isConfirm: true, message: `Utilisateur avec ID ${data.id} modifié avec succès.` });
+        }
+      });
+    });
+  }
 }

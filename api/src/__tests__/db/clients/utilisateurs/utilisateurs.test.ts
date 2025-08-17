@@ -1,6 +1,7 @@
 import { Utilisateurs } from '../../../../db/clients/utilisateurs/utilisateurs.js';
 import { jest } from '@jest/globals';
 import MysqlConnector from '../../../../db/connector/mysqlconnector.js';
+import bcrypt from 'bcrypt';
 
 console.log('📌 utilisateurs.test.ts chargé'); // log au début du fichier
 
@@ -25,36 +26,26 @@ describe('Utilisateurs Client', () => {
   let utilisateursClient: Utilisateurs;
   let mockMysqlConnector: any;
 
-  // Helpers
-  const createMockUser = (overrides: Partial<UserData> = {}): UserData => {
-    console.log('createMockUser called with overrides:', overrides);
-    return {
-      id: 1,
-      prenom: 'John',
-      nom: 'Doe',
-      nom_utilisateur: 'johndoe',
-      email: 'john.doe@example.com',
-      genre_id: 1,
-      date_naissance: '1990-01-01',
-      password: 'password123',
-      status_id: 1,
-      grade_id: 1,
-      abonnement_id: 1,
-      ...overrides,
-    };
-  };
+  // Mock bcrypt.compare pour éviter l'erreur et le timeout
+  beforeAll(() => {
+    jest.spyOn(bcrypt, 'compare').mockImplementation(async (data, hash) => {
+      // Simule un match si le mot de passe est 'password123' et le hash est celui attendu
+      // Pour le test "should return user data when credentials are valid", le hash doit correspondre à ce qui est retourné par la requête mockée
+      return data === 'password123' && hash === '$2b$10$saltsaltsaltsaltsaltsaltsaltsaltsaltsalt1234567890';
+    });
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
 
   beforeEach(() => {
-    console.log('🔄 beforeEach: initialisation du client et reset des mocks');
     jest.clearAllMocks();
     utilisateursClient = new Utilisateurs();
     mockMysqlConnector = (MysqlConnector as jest.Mock).mock.instances[0];
 
     // S'assurer que close ne bloque pas
-    mockMysqlConnector.close.mockImplementation(() => {
-      console.log('Mock close called');
-      return Promise.resolve(true);
-    });
+    mockMysqlConnector.close.mockImplementation(() => Promise.resolve(true));
   });
 
   describe('verifierUtilisateur', () => {
@@ -193,31 +184,30 @@ describe('Utilisateurs Client', () => {
 
   describe('validerConnexion', () => {
     it('should return user data when credentials are valid', async () => {
-      console.log('▶ Test validerConnexion: credentials valid');
       const loginData = { email: 'john.doe@example.com', password: 'password123' };
-      
-      // Ici, je garde délibérément l'objet mock intact pour examiner sa transformation
+      const mockUser = {
+        id: 1,
+        first_name: 'John',
+        last_name: 'Doe',
+        nom_utilisateur: 'johndoe',
+        email: 'john.doe@example.com',
+        date_of_birth: '1990-01-01',
+        status_id: 1,
+        grade_id: 1,
+        abonnement_id: 1,
+        password: '$2b$10$saltsaltsaltsaltsaltsaltsaltsaltsaltsalt1234567890'
+      };
+
       mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
-        callback(null, [{
-          id: 1,
-          prenom: 'John',
-          nom: 'Doe',
-          nom_utilisateur: 'johndoe',
-          email: 'john.doe@example.com',
-          date_naissance: '1990-01-01',
-          status_id: 1,
-          grade_id: 1,
-          abonnement_id: 1,
-        }]);
+        callback(null, [mockUser]);
       });
 
-      const result = await utilisateursClient.validerConnexion(loginData);
-      console.log('Result validerConnexion (valid):', result);
+      // Patch bcrypt.compare to return true for this test
+      jest.spyOn(bcrypt, 'compare').mockImplementationOnce(async (data, hash) => true);
 
-      // Ajuster nos attentes pour correspondre au comportement réel de l'implémentation
+      const result = await utilisateursClient.validerConnexion(loginData);
+
       expect(result.isFind).toBe(true);
-      
-      // Utiliser une assertion moins stricte pour la structure
       expect(result.dataToStore).toMatchObject({
         id: 1,
         nom_utilisateur: 'johndoe',
@@ -225,13 +215,10 @@ describe('Utilisateurs Client', () => {
         status_id: 1,
         grade_id: 1,
         abonnement_id: 1,
+        prenom: 'John',
+        nom: 'Doe',
+        date_naissance: '1990-01-01'
       });
-      
-      // Vérification des propriétés spécifiques qui semblent poser problème
-      const { dataToStore } = result;
-      expect(dataToStore).toHaveProperty('prenom');
-      expect(dataToStore).toHaveProperty('nom');
-      expect(dataToStore).toHaveProperty('date_naissance');
     });
 
     it('should return isFind false when credentials are invalid', async () => {
@@ -260,4 +247,90 @@ describe('Utilisateurs Client', () => {
       });
     });
   });
+
+  describe('modifierInfosUtilisateur', () => {
+    it('should update status, grade, and abonnement and return confirmation', async () => {
+      const mockUserId = 1;
+      const mockResult = { affectedRows: 1 };
+      const updateData = { id: mockUserId, status_id: 2, grade_id: 3, abonnement_id: 4 };
+
+      mockMysqlConnector.query.mockImplementation((sql: string, values: any[], callback: Function) => {
+        expect(sql).toContain('UPDATE utilisateurs SET');
+        expect(values).toEqual([2, 3, 4, mockUserId]);
+        callback(null, mockResult);
+      });
+
+      const client = new Utilisateurs();
+      const result = await client.modifierInfosUtilisateur(updateData);
+
+      expect(result).toEqual({ isConfirm: true, message: `Utilisateur avec ID ${mockUserId} modifié avec succès.` });
+      expect(mockMysqlConnector.query).toHaveBeenCalled();
+    });
+
+    it('should update only provided fields', async () => {
+      const mockUserId = 2;
+      const mockResult = { affectedRows: 1 };
+      const updateData = { id: mockUserId, status_id: 5 };
+
+      mockMysqlConnector.query.mockImplementation((sql: string, values: any[], callback: Function) => {
+        expect(sql).toContain('status_id = ?');
+        expect(sql).not.toContain('grade_id = ?');
+        expect(sql).not.toContain('abonnement_id = ?');
+        expect(values).toEqual([5, mockUserId]);
+        callback(null, mockResult);
+      });
+
+      const client = new Utilisateurs();
+      const result = await client.modifierInfosUtilisateur(updateData);
+
+      expect(result).toEqual({ isConfirm: true, message: `Utilisateur avec ID ${mockUserId} modifié avec succès.` });
+      expect(mockMysqlConnector.query).toHaveBeenCalled();
+    });
+
+    it('should return no modification if no fields provided', async () => {
+      const mockUserId = 3;
+      const client = new Utilisateurs();
+      const result = await client.modifierInfosUtilisateur({ id: mockUserId });
+
+      expect(result).toEqual({ isConfirm: false, message: "Aucune donnée à modifier." });
+    });
+
+    it('should reject with error if query fails', async () => {
+      const mockUserId = 4;
+      const mockError = new Error('Update error');
+      const updateData = { id: mockUserId, grade_id: 10 };
+
+      mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
+        callback(mockError, undefined);
+      });
+
+      const client = new Utilisateurs();
+      await expect(client.modifierInfosUtilisateur(updateData)).rejects.toEqual(mockError);
+    });
+
+    it('should throw error if id is missing', async () => {
+      const client = new Utilisateurs();
+      // Ajoute un id manquant pour tester l'erreur
+      // @ts-expect-error: test volontaire d'un appel sans id
+      await expect(client.modifierInfosUtilisateur({ status_id: 1 })).rejects.toThrow("L'identifiant de l'utilisateur est requis pour la modification.");
+    });
+  });
 });
+
+// Helpers
+const createMockUser = (overrides: Partial<UserData> = {}): UserData => {
+  return {
+    id: 1,
+    prenom: 'John',
+    nom: 'Doe',
+    nom_utilisateur: 'johndoe',
+    email: 'john.doe@example.com',
+    genre_id: 1,
+    date_naissance: '1990-01-01',
+    password: 'password123',
+    status_id: 1,
+    grade_id: 1,
+    abonnement_id: 1,
+    ...overrides,
+  };
+};

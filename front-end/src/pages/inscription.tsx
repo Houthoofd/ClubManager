@@ -33,6 +33,7 @@ export const InscriptionPage: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  // Ajoutez les états pour les options
   const [abonnementOptions, setAbonnementOptions] = useState<
     { value: string; label: string; disabled?: boolean }[]
   >([

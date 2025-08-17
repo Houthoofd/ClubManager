@@ -140,4 +140,26 @@ router.delete('/supprimer', async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
     }
 });
+// Nouvelle route pour modifier uniquement le status, le grade et l'abonnement d'un utilisateur
+router.put('/modifier', async (req, res) => {
+    try {
+        const { id, status_id, grade_id, abonnement_id } = req.body;
+        if (!id) {
+            return res.status(400).json({ message: "L'identifiant de l'utilisateur est requis." });
+        }
+        const client = new Utilisateurs();
+        // Appel à la méthode du client qui gère la modification
+        const result = await client.modifierInfosUtilisateur({ id, status_id, grade_id, abonnement_id });
+        if (result.isConfirm) {
+            res.status(200).json({ message: 'Utilisateur modifié avec succès.' });
+        }
+        else {
+            res.status(400).json({ message: 'Aucune modification effectuée.' });
+        }
+    }
+    catch (error) {
+        console.error("Erreur lors de la modification de l'utilisateur :", error);
+        res.status(500).json({ message: 'Erreur serveur lors de la modification de l\'utilisateur.' });
+    }
+});
 export default router;

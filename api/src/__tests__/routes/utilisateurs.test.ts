@@ -42,6 +42,15 @@ beforeAll(() => {
     isConfirm: true,
     message: 'Utilisateur supprimé'
   }));
+  Utilisateurs.prototype.modifierInfosUtilisateur = jest.fn(async (data: { id: number, status_id?: number, grade_id?: number, abonnement_id?: number }): Promise<ConfirmationResult> => {
+    if (!data.id) {
+      throw new Error("L'identifiant de l'utilisateur est requis pour la modification.");
+    }
+    if (typeof data.status_id !== 'undefined' || typeof data.grade_id !== 'undefined' || typeof data.abonnement_id !== 'undefined') {
+      return { isConfirm: true, message: `Utilisateur avec ID ${data.id} modifié avec succès.` };
+    }
+    return { isConfirm: false, message: "Aucune donnée à modifier." };
+  });
 });
 
 describe('Routes Utilisateurs', () => {
@@ -209,6 +218,49 @@ describe('Routes Utilisateurs', () => {
 
       expect(response.status).toBe(404);
       expect([{}, { message: 'Utilisateur non trouvé' }]).toContainEqual(response.body);
+    });
+  });
+
+  describe('PUT /utilisateurs/modifier', () => {
+    it('devrait modifier le status, le grade et l\'abonnement', async () => {
+      const updateData = { id: 1, status_id: 2, grade_id: 3, abonnement_id: 4 };
+
+      const response = await request(app).put('/utilisateurs/modifier').send(updateData);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ message: 'Utilisateur modifié avec succès.' });
+      expect(Utilisateurs.prototype.modifierInfosUtilisateur).toHaveBeenCalledWith(updateData);
+    });
+
+    it('devrait retourner une erreur si id manquant', async () => {
+      const updateData = { status_id: 2, grade_id: 3, abonnement_id: 4 };
+
+      const response = await request(app).put('/utilisateurs/modifier').send(updateData);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ message: "L'identifiant de l'utilisateur est requis." });
+    });
+
+    it('devrait retourner aucune modification si aucun champ à modifier', async () => {
+      const updateData = { id: 2 };
+
+      const response = await request(app).put('/utilisateurs/modifier').send(updateData);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ message: 'Aucune modification effectuée.' });
+    });
+
+    it('devrait retourner une erreur serveur si exception', async () => {
+      (Utilisateurs.prototype.modifierInfosUtilisateur as jest.Mock).mockImplementationOnce(() => {
+        throw new Error('Erreur serveur');
+      });
+
+      const updateData = { id: 3, status_id: 2 };
+
+      const response = await request(app).put('/utilisateurs/modifier').send(updateData);
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({ message: 'Erreur serveur lors de la modification de l\'utilisateur.' });
     });
   });
 });
