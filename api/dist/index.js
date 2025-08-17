@@ -13,14 +13,12 @@ import { default as paiementRouter } from './routes/paiements.js';
 import { default as statistiquesRouter } from './routes/statistiques.js';
 import { default as magasinRouter } from './routes/magasin.js';
 import { default as professeursRouter } from './routes/professeurs.js';
-import { default as chatRouter } from './routes/chat.js';
 import { default as messagesRouter } from './routes/messages.js';
 import { default as uploadRouter } from './routes/upload.js';
 import { default as inscriptionRouter } from './routes/inscription.js';
 import dotenv from 'dotenv';
 import http from 'http';
 import { Server } from 'socket.io';
-import socketHandler from './sockets/chatSocket.js'; // Assure-toi que le handler est correctement importé
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, 'public');
@@ -54,7 +52,6 @@ app.use('/compte', compteRouter);
 app.use('/paiements', paiementRouter);
 app.use('/magasin', magasinRouter);
 app.use('/professeurs', professeursRouter);
-app.use('/chat', chatRouter);
 app.use('/messages', messagesRouter);
 app.use('/upload', uploadRouter);
 app.use('/inscription', inscriptionRouter);
@@ -71,8 +68,6 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
-// Lier le gestionnaire des événements Socket.io
-socketHandler(io);
 console.log(server);
 // Démarrer le serveur Express et Socket.io
 server.listen(3000, () => {

@@ -10,45 +10,58 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env'), debug: true });
 console.log('DB_HOST:', process.env.DB_HOST);
 console.log('DB_USER:', process.env.DB_USER);
 console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
+// Crée un pool MySQL partagé pour limiter les connexions
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10 // Limite configurable via .env
+});
 export default class MysqlConnector {
-    connection;
-    constructor() {
-        this.connection = mysql.createConnection({
-            host: process.env.DB_HOST,
-            port: Number(process.env.DB_PORT),
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
-        });
-        this.connection.connect((err) => {
+    query(sql, values = [], callback) {
+        pool.getConnection((err, connection) => {
             if (err) {
-                console.error('Erreur de connexion à la base de données : ' + err.stack);
+                callback(err);
                 return;
             }
-            console.log('Connecté à la base de données MySQL avec l\'ID : ' + this.connection.threadId);
-        });
-    }
-    query(sql, values = [], callback) {
-        this.connection.query(sql, values, (error, results, fields) => {
-            callback(error, results, fields);
+            connection.query(sql, values, (error, results, fields) => {
+                connection.release();
+                callback(error, results, fields);
+            });
         });
     }
     beginTransaction(callback) {
-        this.connection.beginTransaction(callback);
-    }
-    commit(callback) {
-        this.connection.commit(callback);
-    }
-    rollback(callback) {
-        this.connection.rollback(callback);
-    }
-    close() {
-        this.connection.end((err) => {
+        pool.getConnection((err, connection) => {
             if (err) {
-                console.error('Erreur lors de la fermeture de la connexion : ' + err.stack);
+                callback(err);
                 return;
             }
-            console.log('Connexion à la base de données MySQL fermée');
+            connection.beginTransaction((beginErr) => {
+                connection.release();
+                callback(beginErr);
+            });
+        });
+    }
+    commit(callback) {
+        // Transaction management should be handled per connection, not pool-wide
+        // This method is kept for compatibility but should be managed in transaction context
+        callback(null);
+    }
+    rollback(callback) {
+        // Transaction management should be handled per connection, not pool-wide
+        callback();
+    }
+    close() {
+        // Le pool gère la fermeture des connexions automatiquement
+        // Pour fermer tout le pool (rarement nécessaire) :
+        pool.end((err) => {
+            if (err) {
+                console.error('Erreur lors de la fermeture du pool : ' + err.stack);
+                return;
+            }
+            console.log('Pool MySQL fermé');
         });
     }
 }

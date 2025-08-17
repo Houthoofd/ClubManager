@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { UserData, VerifyResultWithData } from '@clubmanager/types';
+import React, { useState, useEffect } from 'react';
+import type { UserData } from '@clubmanager/types';
 import {
   Tabs,
   Tab,
@@ -11,32 +11,41 @@ import {
   PageSection,
   Grid,
   GridItem,
+  Spinner
 } from '@patternfly/react-core';
 
 import { API_BASE_URL } from '../../config';
 
-
-function formatDateForInput(isoDateString: string | undefined) {
-  if (!isoDateString) return '';
-  const date = new Date(isoDateString);
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD
-}
-
 const Compte = () => {
-  const [compte, setCompte] = useState<UserData | null>(null);
   const [activeTabKey, setActiveTabKey] = useState(0);
+  const [loading, setLoading] = useState(true); // nouvel état
+
+  const [form, setForm] = useState({
+    prenom: '',
+    nom: '',
+    email: '',
+    date_of_birth: '',
+    abonnement: '',
+    genres: '',
+    grades: '',
+    nom_utilisateur: '',
+    status: '',
+  });
 
   useEffect(() => {
     const storedData = localStorage.getItem('userData');
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        if (parsedData.data?.prenom && parsedData.data?.nom) {
-          fetchData(parsedData.data.prenom, parsedData.data.nom);
-        }
-      } catch (error) {
-        console.error("Erreur lors du parsing de l'utilisateur :", error);
+    if (!storedData) return;
+
+    try {
+      const parsedData = JSON.parse(storedData);
+      if (parsedData.data?.prenom && parsedData.data?.nom) {
+        fetchData(parsedData.data.prenom, parsedData.data.nom);
+      } else {
+        setLoading(false);
       }
+    } catch (error) {
+      console.error("Erreur lors du parsing de l'utilisateur :", error);
+      setLoading(false);
     }
   }, []);
 
@@ -44,21 +53,44 @@ const Compte = () => {
     try {
       const response = await fetch(`${API_BASE_URL}api/compte/informations`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prenom, nom })
       });
-      if (!response.ok) {
-        throw new Error('Erreur réseau lors de la récupération des informations du compte');
-      }
-      const result: VerifyResultWithData = await response.json();
-      setCompte(result.data);
-      console.log(result);
+
+      if (!response.ok) throw new Error('Erreur réseau');
+
+      const result = await response.json();
+      const utilisateur: UserData = result.utilisateur;
+      console.log(utilisateur)
+      // setForm({
+      //   prenom: utilisateur.prenom || '',
+      //   nom: utilisateur.nom || '',
+      //   email: utilisateur.email || '',
+      //   date_of_birth: utilisateur.date_naissance || '',
+      //   abonnement: utilisateur.abonnement || utilisateur.abonnement_id || '',
+      //   genres: utilisateur.genre_id || utilisateur.genre_id || '',
+      //   grades: utilisateur.grade_id || utilisateur.grade_id || '',
+      //   nom_utilisateur: utilisateur.nom_utilisateur || '',
+      //   status: utilisateur.status_id || utilisateur.status_id || '',
+      // });
     } catch (error) {
       console.error('Erreur lors de la récupération des données:', error);
+    } finally {
+      setLoading(false); // on arrête le loading une fois terminé
     }
   };
+
+  const handleChange = (value: string, name: string) => {
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  if (loading) {
+    return (
+      <PageSection variant="default" style={{ textAlign: 'center', padding: '2rem' }}>
+        <Spinner size="xl" />
+      </PageSection>
+    );
+  }
 
   return (
     <>
@@ -71,16 +103,16 @@ const Compte = () => {
           <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
             <Form isHorizontal>
               <FormGroup label="Prénom" fieldId="first-name">
-                <TextInput id="first-name" value={compte?.prenom || ''} onChange={() => {}} readOnly />
+                <TextInput id="first-name" value={form.prenom} onChange={e => handleChange(e.currentTarget.value, 'prenom')} />
               </FormGroup>
               <FormGroup label="Nom" fieldId="last-name">
-                <TextInput id="last-name" value={compte?.nom || ''} onChange={() => {}} readOnly />
+                <TextInput id="last-name" value={form.nom} onChange={e => handleChange(e.currentTarget.value, 'nom')} />
               </FormGroup>
               <FormGroup label="Nom d'utilisateur" fieldId="username">
-                <TextInput id="username" value={compte?.nom_utilisateur || ''} onChange={() => {}} readOnly />
+                <TextInput id="username" value={form.nom_utilisateur} onChange={e => handleChange(e.currentTarget.value, 'nom_utilisateur')} />
               </FormGroup>
               <FormGroup label="Date de naissance" fieldId="dob">
-                <TextInput id="dob" type="date" value={formatDateForInput(compte?.date_naissance)} onChange={() => {}} readOnly />
+                <TextInput id="dob" type="date" value={form.date_of_birth.slice(0, 10)} onChange={e => handleChange(e.currentTarget.value, 'date_of_birth')} />
               </FormGroup>
             </Form>
           </Tab>
@@ -88,13 +120,13 @@ const Compte = () => {
           <Tab eventKey={1} title={<TabTitleText>Informations supplémentaires</TabTitleText>}>
             <Form isHorizontal>
               <FormGroup label="Grade" fieldId="grade">
-                <TextInput id="grade" value={compte?.grade_id || ''} onChange={() => {}} readOnly />
+                <TextInput id="grade" value={form.grades} onChange={e => handleChange(e.currentTarget.value, 'grades')} />
               </FormGroup>
               <FormGroup label="Genre" fieldId="genre">
-                <TextInput id="genre" value={compte?.genre_id || ''} onChange={() => {}} readOnly />
+                <TextInput id="genre" value={form.genres} onChange={e => handleChange(e.currentTarget.value, 'genres')} />
               </FormGroup>
               <FormGroup label="Abonnement" fieldId="abonnement">
-                <TextInput id="abonnement" value={compte?.abonnement_id || ''} onChange={() => {}} readOnly />
+                <TextInput id="abonnement" value={form.abonnement} onChange={e => handleChange(e.currentTarget.value, 'abonnement')} />
               </FormGroup>
             </Form>
           </Tab>
@@ -102,7 +134,7 @@ const Compte = () => {
           <Tab eventKey={2} title={<TabTitleText>Rôle et statut</TabTitleText>}>
             <Form isHorizontal>
               <FormGroup label="Rôle" fieldId="role">
-                <TextInput id="role" value={compte?.status_id || ''} onChange={() => {}} readOnly />
+                <TextInput id="role" value={form.status} onChange={e => handleChange(e.currentTarget.value, 'status')} />
               </FormGroup>
             </Form>
           </Tab>
