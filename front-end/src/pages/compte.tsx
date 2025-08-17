@@ -54,7 +54,7 @@ const Compte = () => {
       }
       const result: VerifyResultWithData = await response.json();
       setCompte(result.data);
-      console.log(result.data);
+      console.log(result);
     } catch (error) {
       console.error('Erreur lors de la récupération des données:', error);
     }
