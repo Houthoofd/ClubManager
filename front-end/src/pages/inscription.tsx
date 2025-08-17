@@ -19,6 +19,29 @@ import { API_BASE_URL } from '../../config';
 import type { UserDataInscription, Abonnement, Genres } from '../../../packages/types/dist/index';
 import { userInscriptionSchema } from '../../../packages/types/dist/index';
 
+// Utilitaire pour fetch et filtrer les doublons
+async function fetchOptions<T>(url: string, key: (item: T) => string): Promise<T[]> {
+  try {
+    const res = await fetch(url);
+    const data: T[] = await res.json();
+    // Filtre les doublons par clé
+    const unique = Array.from(new Map(data.map(item => [key(item), item])).values());
+    return unique;
+  } catch {
+    return [];
+  }
+}
+
+function apiUrl(path: string) {
+  const isProd = import.meta.env.MODE === 'production';
+  const base = isProd
+    ? API_BASE_URL.endsWith('/api/')
+      ? API_BASE_URL
+      : API_BASE_URL.replace(/\/?$/, '/api/')
+    : API_BASE_URL;
+  return `${base}${path.replace(/^\/+/, '')}`;
+}
+
 // Page d'inscription
 export const InscriptionPage: React.FC = () => {
   // Utilise le type UserDataInscription pour le state
@@ -48,54 +71,31 @@ export const InscriptionPage: React.FC = () => {
   const [modalMessage, setModalMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Chargement des options abonnements et genres, filtrage des doublons
   useEffect(() => {
-    const url = API_BASE_URL.endsWith('/')
-      ? `${API_BASE_URL}api/informations/abonnements`
-      : `${API_BASE_URL}/api/informations/abonnements`;
-
-    fetch(url)
-      .then(res => res.json())
-      .then((data: Abonnement[]) => {
-        // Utilise uniquement setAbonnementOptions, retire abonnementOptionsRaw
-        const options = [
-          { value: '', label: 'Sélectionner un abonnement', disabled: true },
-          ...data.map(item => ({
-            value: String(item.id), // Utilise l'id comme value
-            label: `${item.nom_plan}`,
-            disabled: false
-          }))
-        ];
-        setAbonnementOptions(options);
-      })
-      .catch(() => {
-        setAbonnementOptions([
-          { value: '', label: 'Erreur de chargement', disabled: true }
-        ]);
-      });
-
-    // Fetch genres
-    const genreUrl = API_BASE_URL.endsWith('/')
-      ? `${API_BASE_URL}api/informations/genres`
-      : `${API_BASE_URL}/api/informations/genres`;
-
-    fetch(genreUrl)
-      .then(res => res.json())
-      .then((data: Genres[]) => {
-        const options = [
-          { value: '', label: 'Sélectionner un genre', disabled: true },
-          ...data.map(item => ({
-            value: String(item.id),
-            label: item.genre_name,
-            disabled: false
-          }))
-        ];
-        setGenreOptions(options);
-      })
-      .catch(() => {
-        setGenreOptions([
-          { value: '', label: 'Erreur de chargement', disabled: true }
-        ]);
-      });
+    // Utilise Promise.all pour paralléliser et garantir un seul appel par endpoint
+    Promise.all([
+      // Utilisez uniquement nom_plan comme clé unique pour Abonnement
+      fetchOptions<Abonnement>(apiUrl('informations/abonnements'), item => item.nom_plan),
+      fetchOptions<Genres>(apiUrl('informations/genres'), item => item.genre_name)
+    ]).then(([abos, genres]) => {
+      setAbonnementOptions([
+        { value: '', label: 'Sélectionner un abonnement', disabled: true },
+        ...abos.map(item => ({
+          value: String(item.id),
+          label: item.nom_plan,
+          disabled: false
+        }))
+      ]);
+      setGenreOptions([
+        { value: '', label: 'Sélectionner un genre', disabled: true },
+        ...genres.map(item => ({
+          value: String(item.id),
+          label: item.genre_name,
+          disabled: false
+        }))
+      ]);
+    });
   }, []);
 
   const handleChange = (value: string, name: string) => {
@@ -164,10 +164,7 @@ export const InscriptionPage: React.FC = () => {
 
     try {
       // Vérifie si l'utilisateur existe déjà
-      const checkUrl = API_BASE_URL.endsWith('/')
-        ? `${API_BASE_URL}api/inscription/verification`
-        : `${API_BASE_URL}/api/inscription/verification`;
-
+      const checkUrl = apiUrl('inscription/verification');
       const checkRes = await fetch(checkUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,11 +178,7 @@ export const InscriptionPage: React.FC = () => {
       }
       console.log(form)
       // Inscription
-      const registerUrl = API_BASE_URL.endsWith('/')
-        ? `${API_BASE_URL}api/inscription/validation`
-        : `${API_BASE_URL}/api/inscription/validation`;
-
-      // Ici, on envoie l'id directement
+      const registerUrl = apiUrl('inscription/validation');
       const abonnementId = form.abonnement;
       console.log({ ...form, abonnement: abonnementId })
       const registerRes = await fetch(registerUrl, {

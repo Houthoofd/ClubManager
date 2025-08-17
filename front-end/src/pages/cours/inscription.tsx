@@ -16,7 +16,21 @@ import {
   FlexItem
 } from '@patternfly/react-core';
 import { API_BASE_URL } from '../../config';
-console.log(API_BASE_URL)
+
+// Helper pour préfixer 'api/' uniquement si l'URL ne contient pas déjà 'api/'
+function apiUrl(path: string) {
+  const isProd = import.meta.env.MODE === 'production';
+  console.log('Mode:', isProd ? 'production' : 'development');
+  const base = isProd
+    ? API_BASE_URL.endsWith('/api/')
+      ? API_BASE_URL
+      : API_BASE_URL.replace(/\/?$/, '/api/') // assure un slash et ajoute 'api/'
+    : API_BASE_URL;
+
+  console.log(`API URL: ${base}${path.replace(/^\/+/, '')}`);
+  return `${base}${path.replace(/^\/+/, '')}`; // retire les slashs en début de path
+}
+
 
 function convertToNumber(value: any): number | null {
   const parsedValue = Number(value);
@@ -73,7 +87,7 @@ const Inscription = () => {
         console.log(nom, prenom)
 
         // 1️⃣ POST vers l'API pour obtenir les cours réservés par l'utilisateur
-        const reservedResponse = await fetch(`${API_BASE_URL}cours/participant`, {
+        const reservedResponse = await fetch(apiUrl('cours/participant'), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nom, prenom }),
@@ -91,12 +105,13 @@ const Inscription = () => {
         console.log(reservations)
 
         // 2️⃣ GET classique de tous les cours
-        const allCoursesResponse = await fetch(`${API_BASE_URL}cours`);
+        const allCoursesResponse = await fetch(apiUrl('cours'));
         if (!allCoursesResponse.ok) {
           throw new Error("Erreur lors de la récupération des cours");
         }
 
         const allCours: CoursData[] = await allCoursesResponse.json();
+        console.log(allCours)
         setCours(allCours);
 
       } catch (err) {
@@ -111,7 +126,7 @@ const Inscription = () => {
 
   const showParticipants = async (coursId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}api/cours/${coursId}/`);
+      const response = await fetch(apiUrl(`cours/${coursId}/`));
       if (!response.ok) throw new Error('Erreur récupération participants');
       const cours = await response.json();
       navigate(`/pages/cours/${coursId}/participants`, { state: { cours } });
@@ -134,8 +149,8 @@ const Inscription = () => {
 
     try {
       const url = isReserved
-        ? `${API_BASE_URL}api/cours/annulation`
-        : `${API_BASE_URL}api/cours/inscription`;
+        ? apiUrl('cours/annulation')
+        : apiUrl('cours/inscription');
 
       const method = isReserved ? "DELETE" : "POST";
 
@@ -164,6 +179,8 @@ const Inscription = () => {
       console.error("Erreur API :", error);
     }
   };
+
+  console.log(cours)
 
   return (
     <Provider store={store}>
