@@ -128,8 +128,8 @@ export const InscriptionPage: React.FC = () => {
     try {
       // Vérifie si l'utilisateur existe déjà
       const checkUrl = API_BASE_URL.endsWith('/')
-        ? `${API_BASE_URL}inscription/verification`
-        : `${API_BASE_URL}/inscription/verification`;
+        ? `${API_BASE_URL}api/inscription/verification`
+        : `${API_BASE_URL}/api/inscription/verification`;
 
       const checkRes = await fetch(checkUrl, {
         method: 'POST',
@@ -145,8 +145,8 @@ export const InscriptionPage: React.FC = () => {
 
       // Inscription
       const registerUrl = API_BASE_URL.endsWith('/')
-        ? `${API_BASE_URL}inscription/validation`
-        : `${API_BASE_URL}/inscription/validation`;
+        ? `${API_BASE_URL}api/inscription/validation`
+        : `${API_BASE_URL}/api/inscription/validation`;
 
       const registerRes = await fetch(registerUrl, {
         method: 'POST',
