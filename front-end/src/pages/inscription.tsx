@@ -147,7 +147,7 @@ export const InscriptionPage: React.FC = () => {
         setIsLoading(false);
         return;
       }
-
+      console.log(form)
       // Inscription
       const registerUrl = API_BASE_URL.endsWith('/')
         ? `${API_BASE_URL}api/inscription/validation`
