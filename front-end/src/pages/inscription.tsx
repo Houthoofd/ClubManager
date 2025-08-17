@@ -49,10 +49,11 @@ export const InscriptionPage: React.FC = () => {
     fetch(url)
       .then(res => res.json())
       .then((data: Abonnement[]) => {
+        // Utilise uniquement setAbonnementOptions, retire abonnementOptionsRaw
         const options = [
           { value: '', label: 'Sélectionner un abonnement', disabled: true },
           ...data.map(item => ({
-            value: item.nom_plan,
+            value: String(item.id), // Utilise l'id comme value
             label: `${item.nom_plan}`,
             disabled: false
           }))
@@ -153,10 +154,13 @@ export const InscriptionPage: React.FC = () => {
         ? `${API_BASE_URL}api/inscription/validation`
         : `${API_BASE_URL}/api/inscription/validation`;
 
+      // Ici, on envoie l'id directement
+      const abonnementId = form.abonnement;
+      console.log({ ...form, abonnement: abonnementId })
       const registerRes = await fetch(registerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, abonnement: abonnementId })
       });
       const registerData = await registerRes.json();
 
