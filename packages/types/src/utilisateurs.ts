@@ -76,7 +76,8 @@ export type Status = {
 
 // Type spécial pour l'inscription simplifiée
 export type UserDataInscription = {
-  username: string;
+  nom: string;
+  prenom: string
   email: string;
   password: string;
   date: string;
@@ -123,7 +124,8 @@ export const userSchema = z.object({
 
 // Schéma Zod pour valider les données d'inscription simplifiée
 export const userInscriptionSchema = z.object({
-  username: z.string().min(1, "Le nom d'utilisateur est requis"),
+  nom: z.string().min(1, "Le nom est requis"),
+  prenom: z.string().min(1, "Le prénom est requis"),
   email: z.string().email("L'email est invalide"),
   password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
   date: z.string().refine((val: string) => !isNaN(Date.parse(val)), "La date est invalide"),

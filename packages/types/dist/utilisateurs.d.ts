@@ -57,7 +57,8 @@ export type Status = {
     status_name: string;
 };
 export type UserDataInscription = {
-    username: string;
+    nom: string;
+    prenom: string;
     email: string;
     password: string;
     date: string;
@@ -138,7 +139,8 @@ export declare const userSchema: z.ZodObject<{
     abonnement_id: number | null;
 }>;
 export declare const userInscriptionSchema: z.ZodObject<{
-    username: z.ZodString;
+    nom: z.ZodString;
+    prenom: z.ZodString;
     email: z.ZodString;
     password: z.ZodString;
     date: z.ZodEffects<z.ZodString, string, string>;
@@ -146,14 +148,16 @@ export declare const userInscriptionSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     email: string;
     password: string;
+    prenom: string;
+    nom: string;
     date: string;
-    username: string;
     abonnement: string | number;
 }, {
     email: string;
     password: string;
+    prenom: string;
+    nom: string;
     date: string;
-    username: string;
     abonnement: string | number;
 }>;
 //# sourceMappingURL=utilisateurs.d.ts.map

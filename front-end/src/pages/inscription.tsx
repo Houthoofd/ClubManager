@@ -23,7 +23,8 @@ import { userInscriptionSchema } from '../../../packages/types/dist/index';
 export const InscriptionPage: React.FC = () => {
   // Utilise le type UserDataInscription pour le state
   const [form, setForm] = useState<UserDataInscription>({
-    username: '',
+    prenom: '',
+    nom: '', // Remplace username par nom
     email: '',
     password: '',
     date: '',
@@ -82,8 +83,12 @@ export const InscriptionPage: React.FC = () => {
     }
 
     // Validation des champs
-    if (!form.username) {
+    if (!form.nom) {
       setError("Le nom d'utilisateur est obligatoire.");
+      return;
+    }
+    if (!form.prenom) {
+      setError("Le prénom est obligatoire.");
       return;
     }
     if (!form.email) {
@@ -138,7 +143,7 @@ export const InscriptionPage: React.FC = () => {
       });
 
       if (checkRes.status === 409) {
-        setModalMessage("Utilisateur déjà existant.");
+        setModalMessage("Cet utilisateur existe déjà. Veuillez utiliser une autre adresse email.");
         setIsLoading(false);
         return;
       }
@@ -186,14 +191,24 @@ export const InscriptionPage: React.FC = () => {
     <div style={{ maxWidth: 400, margin: 'auto', padding: 32 }}>
       <Title headingLevel="h1">Inscription</Title>
       <Form onSubmit={handleSubmit}>
-        <FormGroup label="Nom d'utilisateur" isRequired fieldId="username">
+        <FormGroup label="Prénom" isRequired fieldId="prenom">
           <TextInput
             isRequired
             type="text"
-            id="username"
-            name="username"
-            value={form.username}
-            onChange={e => handleChange(e.currentTarget.value, 'username')}
+            id="prenom"
+            name="prenom"
+            value={form.prenom}
+            onChange={e => handleChange(e.currentTarget.value, 'prenom')}
+          />
+        </FormGroup>
+        <FormGroup label="Nom" isRequired fieldId="nom">
+          <TextInput
+            isRequired
+            type="text"
+            id="nom"
+            name="nom"
+            value={form.nom}
+            onChange={e => handleChange(e.currentTarget.value, 'nom')}
           />
         </FormGroup>
         <FormGroup label="Email" isRequired fieldId="email">
@@ -297,7 +312,8 @@ export const InscriptionPage: React.FC = () => {
           }
         />
         <ModalBody id="recap-modal-body" style={{ minHeight: 400 }}>
-          <p><strong>Nom d'utilisateur :</strong> {form.username}</p>
+          <p><strong>Prénom :</strong> {form.prenom}</p>
+          <p><strong>Nom :</strong> {form.nom}</p>
           <p><strong>Email :</strong> {form.email}</p>
           <p><strong>Date d'inscription :</strong> {form.date}</p>
           <p>
@@ -310,7 +326,7 @@ export const InscriptionPage: React.FC = () => {
           {isLoading && <p>Chargement...</p>}
           {modalMessage && (
             <Alert
-              variant={modalMessage === "Inscription réussie !" ? "success" : "warning"}
+              variant={modalMessage === "Inscription réussie !" ? "success" : "danger"}
               title={modalMessage}
               isInline
             />

@@ -24,20 +24,21 @@ export class Utilisateurs {
 
   // Inscription d'un utilisateur (version simple, à adapter selon tes besoins)
   async inscriptionUtilisateurSimple(data: {
-    username: string;
+    nom: string;
+    prenom: string;
     email: string;
     password: string;
     date: string;
-    abonnement: string;
+    abonnement: string | number;
   }): Promise<InsertResult> {
     const mysqlConnector = new MysqlConnector();
     const sql = `
-      INSERT INTO utilisateurs (nom_utilisateur, email, password, date_of_birth, abonnement_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO utilisateurs (first_name, last_name, email, password, date_of_birth, abonnement_id)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
-    // Remarque : abonnement doit être l'id, ici on suppose que tu passes le bon id
     const values = [
-      data.username,
+      data.prenom,
+      data.nom,
       data.email,
       data.password,
       data.date,
