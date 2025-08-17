@@ -5,7 +5,7 @@ import mysql from 'mysql';
 // Pour __dirname dans ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Va chercher .env à la racine du projet (../.. depuis /src/db/connector/)
+// Va chercher .env à la racine du projet
 dotenv.config({ path: path.resolve(__dirname, '../../../.env'), debug: true });
 console.log('DB_HOST:', process.env.DB_HOST);
 console.log('DB_USER:', process.env.DB_USER);
@@ -17,9 +17,12 @@ const pool = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10 // Limite configurable via .env
+    connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10,
 });
 export default class MysqlConnector {
+    /**
+     * Exécuter une requête SQL (hors transaction)
+     */
     query(sql, values = [], callback) {
         pool.getConnection((err, connection) => {
             if (err) {
@@ -32,6 +35,10 @@ export default class MysqlConnector {
             });
         });
     }
+    /**
+     * Démarrer une transaction
+     * On renvoie la connexion pour exécuter les requêtes à l'intérieur
+     */
     beginTransaction(callback) {
         pool.getConnection((err, connection) => {
             if (err) {
@@ -39,23 +46,46 @@ export default class MysqlConnector {
                 return;
             }
             connection.beginTransaction((beginErr) => {
-                connection.release();
-                callback(beginErr);
+                if (beginErr) {
+                    connection.release();
+                    callback(beginErr);
+                    return;
+                }
+                callback(null, connection);
             });
         });
     }
-    commit(callback) {
-        // Transaction management should be handled per connection, not pool-wide
-        // This method is kept for compatibility but should be managed in transaction context
-        callback(null);
+    /**
+     * Commit la transaction et libère la connexion
+     */
+    commit(connection, callback) {
+        connection.commit((err) => {
+            if (err) {
+                return connection.rollback(() => {
+                    connection.release();
+                    if (callback)
+                        callback(err);
+                });
+            }
+            connection.release();
+            if (callback)
+                callback(null);
+        });
     }
-    rollback(callback) {
-        // Transaction management should be handled per connection, not pool-wide
-        callback();
+    /**
+     * Rollback la transaction et libère la connexion
+     */
+    rollback(connection, callback) {
+        connection.rollback(() => {
+            connection.release();
+            if (callback)
+                callback();
+        });
     }
+    /**
+     * Fermer le pool manuellement
+     */
     close() {
-        // Le pool gère la fermeture des connexions automatiquement
-        // Pour fermer tout le pool (rarement nécessaire) :
         pool.end((err) => {
             if (err) {
                 console.error('Erreur lors de la fermeture du pool : ' + err.stack);

@@ -255,31 +255,28 @@ export class Cours {
     supprimerJourDeCours(joursSemaine) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
-            mysqlConnector.beginTransaction((beginError) => {
-                if (beginError) {
-                    console.error('Erreur lors de la création de la transaction : ' + beginError.message);
+            mysqlConnector.beginTransaction((beginError, connection) => {
+                if (beginError || !connection) {
+                    console.error('Erreur lors de la création de la transaction : ' + beginError?.message);
                     mysqlConnector.close();
                     reject(beginError);
                 }
                 else {
-                    // Supprimer dans cours_recurrent : le reste est géré par ON DELETE CASCADE
                     const deleteRecurrentSql = `
-                    DELETE FROM cours_recurrent WHERE jour_semaine = ?
-                `;
+            DELETE FROM cours_recurrent WHERE jour_semaine = ?
+          `;
                     mysqlConnector.query(deleteRecurrentSql, [joursSemaine], (recurrentError) => {
                         if (recurrentError) {
                             console.error('Erreur lors de la suppression des cours récurrents : ' + recurrentError.message);
-                            mysqlConnector.rollback(() => {
+                            mysqlConnector.rollback(connection, () => {
                                 mysqlConnector.close();
                             });
                             reject(recurrentError);
                         }
                         else {
-                            // Valider la transaction
-                            mysqlConnector.commit((commitError) => {
+                            mysqlConnector.commit(connection, (commitError) => {
                                 if (commitError) {
-                                    console.error('Erreur lors de la validation de la transaction : ' + commitError.message);
-                                    mysqlConnector.rollback(() => {
+                                    mysqlConnector.rollback(connection, () => {
                                         mysqlConnector.close();
                                     });
                                     reject(commitError);

@@ -7,14 +7,12 @@ import mysql from 'mysql';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Va chercher .env à la racine du projet (../.. depuis /src/db/connector/)
+// Va chercher .env à la racine du projet
 dotenv.config({ path: path.resolve(__dirname, '../../../.env'), debug: true });
-
 
 console.log('DB_HOST:', process.env.DB_HOST);
 console.log('DB_USER:', process.env.DB_USER);
 console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
-
 
 // Crée un pool MySQL partagé pour limiter les connexions
 const pool = mysql.createPool({
@@ -23,10 +21,13 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10 // Limite configurable via .env
+  connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10,
 });
 
 export default class MysqlConnector {
+  /**
+   * Exécuter une requête SQL (hors transaction)
+   */
   public query(
     sql: string,
     values: any[] = [],
@@ -44,33 +45,62 @@ export default class MysqlConnector {
     });
   }
 
-  public beginTransaction(callback: (err: mysql.MysqlError | null) => void): void {
+  /**
+   * Démarrer une transaction
+   * On renvoie la connexion pour exécuter les requêtes à l'intérieur
+   */
+  public beginTransaction(
+    callback: (err: mysql.MysqlError | null, connection?: mysql.PoolConnection) => void
+  ): void {
     pool.getConnection((err, connection) => {
       if (err) {
         callback(err);
         return;
       }
       connection.beginTransaction((beginErr) => {
-        connection.release();
-        callback(beginErr);
+        if (beginErr) {
+          connection.release();
+          callback(beginErr);
+          return;
+        }
+        callback(null, connection);
       });
     });
   }
 
-  public commit(callback: (err: mysql.MysqlError | null) => void): void {
-    // Transaction management should be handled per connection, not pool-wide
-    // This method is kept for compatibility but should be managed in transaction context
-    callback(null);
+  /**
+   * Commit la transaction et libère la connexion
+   */
+  public commit(
+    connection: mysql.PoolConnection,
+    callback?: (err: mysql.MysqlError | null) => void
+  ): void {
+    connection.commit((err) => {
+      if (err) {
+        return connection.rollback(() => {
+          connection.release();
+          if (callback) callback(err);
+        });
+      }
+      connection.release();
+      if (callback) callback(null);
+    });
   }
 
-  public rollback(callback: () => void): void {
-    // Transaction management should be handled per connection, not pool-wide
-    callback();
+  /**
+   * Rollback la transaction et libère la connexion
+   */
+  public rollback(connection: mysql.PoolConnection, callback?: () => void): void {
+    connection.rollback(() => {
+      connection.release();
+      if (callback) callback();
+    });
   }
 
+  /**
+   * Fermer le pool manuellement
+   */
   public close(): void {
-    // Le pool gère la fermeture des connexions automatiquement
-    // Pour fermer tout le pool (rarement nécessaire) :
     pool.end((err) => {
       if (err) {
         console.error('Erreur lors de la fermeture du pool : ' + err.stack);

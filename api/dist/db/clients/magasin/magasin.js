@@ -332,11 +332,14 @@ export class Magasin {
             const tailleMap = await this.getTailleMap();
             // Début de transaction
             await new Promise((resolve, reject) => {
-                mysqlConnector.beginTransaction(err => {
+                mysqlConnector.beginTransaction((err, connection) => {
                     if (err)
                         reject(err);
-                    else
+                    else {
+                        // Stocke la connexion pour commit/rollback
+                        global.transactionConnection = connection;
                         resolve();
+                    }
                 });
             });
             // Insertion commande
@@ -375,7 +378,7 @@ export class Magasin {
             });
             // Commit
             await new Promise((resolve, reject) => {
-                mysqlConnector.commit(err => {
+                mysqlConnector.commit(global.transactionConnection, (err) => {
                     if (err)
                         reject(err);
                     else
@@ -389,7 +392,7 @@ export class Magasin {
             console.error("Erreur dans ajouterCommande:", error);
             // Rollback si erreur
             await new Promise((resolve) => {
-                mysqlConnector.rollback(() => {
+                mysqlConnector.rollback(global.transactionConnection, () => {
                     mysqlConnector.close();
                     resolve();
                 });

@@ -61,18 +61,18 @@ const Compte = () => {
 
       const result = await response.json();
       const utilisateur: UserData = result.utilisateur;
-      console.log(utilisateur)
-      // setForm({
-      //   prenom: utilisateur.prenom || '',
-      //   nom: utilisateur.nom || '',
-      //   email: utilisateur.email || '',
-      //   date_of_birth: utilisateur.date_naissance || '',
-      //   abonnement: utilisateur.abonnement || utilisateur.abonnement_id || '',
-      //   genres: utilisateur.genre_id || utilisateur.genre_id || '',
-      //   grades: utilisateur.grade_id || utilisateur.grade_id || '',
-      //   nom_utilisateur: utilisateur.nom_utilisateur || '',
-      //   status: utilisateur.status_id || utilisateur.status_id || '',
-      // });
+      console.log(utilisateur.abonnement_id)
+      setForm({
+        prenom: utilisateur.first_name || '',
+        nom: utilisateur.last_name || '',
+        email: utilisateur.email || '',
+        date_naissance: utilisateur.date_of_birth || '',
+        abonnement: String(utilisateur.abonnement_id ?? ''), // Cast en string
+        genres: String(utilisateur.genre_id ?? ''),          // Cast en string
+        grades: String(utilisateur.grade_id ?? ''),          // Cast en string
+        nom_utilisateur: utilisateur.nom_utilisateur || '',
+        status: String(utilisateur.status_id ?? ''),         // Cast en string
+      });
     } catch (error) {
       console.error('Erreur lors de la récupération des données:', error);
     } finally {
@@ -112,7 +112,12 @@ const Compte = () => {
                 <TextInput id="username" value={form.nom_utilisateur} onChange={e => handleChange(e.currentTarget.value, 'nom_utilisateur')} />
               </FormGroup>
               <FormGroup label="Date de naissance" fieldId="dob">
-                <TextInput id="dob" type="date" value={form.date_of_birth.slice(0, 10)} onChange={e => handleChange(e.currentTarget.value, 'date_of_birth')} />
+                <TextInput
+                  id="dob"
+                  type="date"
+                  value={form.date_naissance ? form.date_naissance.slice(0, 10) : ''}
+                  onChange={e => handleChange(e.currentTarget.value, 'date_naissance')}
+                />
               </FormGroup>
             </Form>
           </Tab>

@@ -404,9 +404,13 @@ obtenirLesCommandes(): Promise<any[]> {
 
     // Début de transaction
     await new Promise<void>((resolve, reject) => {
-      mysqlConnector.beginTransaction(err => {
+      mysqlConnector.beginTransaction((err, connection) => {
         if (err) reject(err);
-        else resolve();
+        else {
+          // Stocke la connexion pour commit/rollback
+          (global as any).transactionConnection = connection;
+          resolve();
+        }
       });
     });
 
@@ -447,7 +451,7 @@ obtenirLesCommandes(): Promise<any[]> {
 
     // Commit
     await new Promise<void>((resolve, reject) => {
-      mysqlConnector.commit(err => {
+      mysqlConnector.commit((global as any).transactionConnection, (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -461,7 +465,7 @@ obtenirLesCommandes(): Promise<any[]> {
 
     // Rollback si erreur
     await new Promise<void>((resolve) => {
-      mysqlConnector.rollback(() => {
+      mysqlConnector.rollback((global as any).transactionConnection, () => {
         mysqlConnector.close();
         resolve();
       });
