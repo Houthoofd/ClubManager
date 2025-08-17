@@ -1,5 +1,6 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
 import { UserData, InsertResult, UserDataLogin, UserDataSession, VerifyResult, VerifyResultWithData, ConfirmationResult } from '@clubmanager/types';
+import bcrypt from 'bcrypt';
 
 export class Utilisateurs {
   // Vérifie si un utilisateur existe par email
@@ -153,20 +154,19 @@ export class Utilisateurs {
     const mysqlConnector = new MysqlConnector();
 
     const sql = `
-      SELECT id, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id
+      SELECT id, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id, password
       FROM utilisateurs
-      WHERE email = ? AND password = ?
+      WHERE email = ?
     `;
 
     const values = [
-      utilisateurData.email,
-      utilisateurData.password
+      utilisateurData.email
     ];
 
     console.log("Validation connexion pour :", utilisateurData.email);
 
     return new Promise<UserDataSession>((resolve, reject) => {
-      mysqlConnector.query(sql, values, (error, results) => {
+      mysqlConnector.query(sql, values, async (error, results) => {
         mysqlConnector.close();
 
         if (error) {
@@ -177,27 +177,48 @@ export class Utilisateurs {
 
         if (results.length > 0) {
           const utilisateur = results[0];
-          console.log('Utilisateur trouvé avec succès.');
-          resolve({
-            isFind: true,
-            message: 'Utilisateur trouvé avec succès.',
-            dataToStore: {
-              id: utilisateur.id,
-              prenom: utilisateur.first_name,
-              nom: utilisateur.last_name,
-              nom_utilisateur: utilisateur.nom_utilisateur,
-              email: utilisateur.email,
-              date_naissance: utilisateur.date_of_birth,
-              status_id: utilisateur.status_id,
-              grade_id: utilisateur.grade_id,
-              abonnement_id: utilisateur.abonnement_id,
-            },
-          });
+          // Vérifie le mot de passe hashé
+          const isMatch = await bcrypt.compare(utilisateurData.password, utilisateur.password);
+          if (isMatch) {
+            console.log('Utilisateur trouvé avec succès.');
+            resolve({
+              isFind: true,
+              message: 'Utilisateur trouvé avec succès.',
+              dataToStore: {
+                id: utilisateur.id,
+                prenom: utilisateur.first_name,
+                nom: utilisateur.last_name,
+                nom_utilisateur: utilisateur.nom_utilisateur,
+                email: utilisateur.email,
+                date_naissance: utilisateur.date_of_birth,
+                status_id: utilisateur.status_id,
+                grade_id: utilisateur.grade_id,
+                abonnement_id: utilisateur.abonnement_id,
+              },
+            });
+          } else {
+            console.log('Mot de passe incorrect');
+            resolve({
+              isFind: false,
+              message: 'Mot de passe incorrect.',
+              dataToStore: {
+                id: null,
+                prenom: '',
+                nom: '',
+                nom_utilisateur: '',
+                email: '',
+                date_naissance: '',
+                status_id: 0,
+                grade_id: null,
+                abonnement_id: null,
+              },
+            });
+          }
         } else {
-          console.log('Aucun utilisateur trouvé avec ces identifiants');
+          console.log('Aucun utilisateur trouvé avec cet email');
           resolve({
             isFind: false,
-            message: 'Aucun utilisateur trouvé avec ces identifiants.',
+            message: 'Aucun utilisateur trouvé avec cet email.',
             dataToStore: {
               id: null,
               prenom: '',
