@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mysql from 'mysql';
@@ -7,17 +8,44 @@ import mysql from 'mysql';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Va chercher .env à la racine du projet
-dotenv.config({ path: path.resolve(__dirname, '../../../.env'), debug: true });
+console.log(path.resolve(__dirname, '../../../'))
 
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
+// Détermine quel fichier env charger
+const envFile = process.env.NODE_ENV === 'production' 
+  ? '.env.production' 
+  : '.env.development';
 
-// Crée un pool MySQL partagé pour limiter les connexions
+// Chemin racine du projet (remonte depuis api/src/db/connector)
+const rootDir = path.resolve(__dirname, '../../../');
+const envPath = path.resolve(rootDir, envFile);
+
+// Vérifie si le fichier env existe
+if (!fs.existsSync(envPath)) {
+  console.warn(`⚠️  Fichier env introuvable : ${envPath}`);
+} else {
+  dotenv.config({ path: envPath });
+  console.log(`✅  Fichier env chargé : ${envPath}`);
+}
+
+// Liste des variables critiques
+const requiredVars = ['DB_HOST', 'DB_USER', 'DB_NAME', 'STRIPE_SECRET_KEY'];
+
+// En production, DB_PASSWORD devient obligatoire
+if (process.env.NODE_ENV === 'production') {
+  requiredVars.push('DB_PASSWORD');
+}
+
+// Vérifie que toutes les variables critiques sont bien définies
+requiredVars.forEach(v => {
+  if (!process.env[v]) {
+    console.error(`❌ Variable d'environnement manquante : ${v}`);
+  }
+});
+
+// Crée un pool MySQL
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
+  port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -25,19 +53,13 @@ const pool = mysql.createPool({
 });
 
 export default class MysqlConnector {
-  /**
-   * Exécuter une requête SQL (hors transaction)
-   */
   public query(
     sql: string,
     values: any[] = [],
     callback: (error: mysql.MysqlError | null, results?: any, fields?: mysql.FieldInfo[]) => void
   ): void {
     pool.getConnection((err, connection) => {
-      if (err) {
-        callback(err);
-        return;
-      }
+      if (err) return callback(err);
       connection.query(sql, values, (error, results, fields) => {
         connection.release();
         callback(error, results, fields);
@@ -45,37 +67,25 @@ export default class MysqlConnector {
     });
   }
 
-  /**
-   * Démarrer une transaction
-   * On renvoie la connexion pour exécuter les requêtes à l'intérieur
-   */
   public beginTransaction(
     callback: (err: mysql.MysqlError | null, connection?: mysql.PoolConnection) => void
   ): void {
+    // Test rapide de connexion au démarrage
     pool.getConnection((err, connection) => {
       if (err) {
-        callback(err);
-        return;
+        console.error('❌ Impossible de se connecter à la base de données :', err.message);
+      } else {
+        console.log(`✅ Connecté à MySQL sur ${process.env.DB_HOST}/${process.env.DB_NAME}`);
+        connection.release();
       }
-      connection.beginTransaction((beginErr) => {
-        if (beginErr) {
-          connection.release();
-          callback(beginErr);
-          return;
-        }
-        callback(null, connection);
-      });
     });
   }
 
-  /**
-   * Commit la transaction et libère la connexion
-   */
   public commit(
     connection: mysql.PoolConnection,
     callback?: (err: mysql.MysqlError | null) => void
   ): void {
-    connection.commit((err) => {
+    connection.commit(err => {
       if (err) {
         return connection.rollback(() => {
           connection.release();
@@ -87,9 +97,6 @@ export default class MysqlConnector {
     });
   }
 
-  /**
-   * Rollback la transaction et libère la connexion
-   */
   public rollback(connection: mysql.PoolConnection, callback?: () => void): void {
     connection.rollback(() => {
       connection.release();
@@ -97,13 +104,16 @@ export default class MysqlConnector {
     });
   }
 
-  /**
-   * Fermer le pool manuellement
-   * ⚠️ N'utilise pool.close() dans les requêtes courantes, seulement à l'arrêt du serveur !
-   */
   public close(): void {
-    // Ne rien faire ici pour les usages courants
-    // Pour fermer le pool à l'arrêt du serveur, appelle pool.end() explicitement
-    // Exemple : process.on('SIGINT', () => pool.end(...))
+    // Ne fermez le pool que lors de l'arrêt du serveur (ex: dans un handler SIGINT/SIGTERM)
+    // Retirez l'appel automatique ici pour éviter "Pool is closed" lors des requêtes
+    // Exemple d'utilisation correcte :
+    // process.on('SIGINT', () => {
+    //   pool.end(err => { 
+    //     if(err) console.error(err); 
+    //     else console.log('✅ Pool MySQL fermé'); 
+    //     process.exit();
+    //   });
+    // });
   }
 }

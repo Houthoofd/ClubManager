@@ -73,7 +73,7 @@ const Inscription = () => {
         console.log(nom, prenom)
 
         // 1️⃣ POST vers l'API pour obtenir les cours réservés par l'utilisateur
-        const reservedResponse = await fetch(`${API_BASE_URL}api/cours/participant`, {
+        const reservedResponse = await fetch(`${API_BASE_URL}cours/participant`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nom, prenom }),
@@ -91,7 +91,7 @@ const Inscription = () => {
         console.log(reservations)
 
         // 2️⃣ GET classique de tous les cours
-        const allCoursesResponse = await fetch(`${API_BASE_URL}api/cours`);
+        const allCoursesResponse = await fetch(`${API_BASE_URL}cours`);
         if (!allCoursesResponse.ok) {
           throw new Error("Erreur lors de la récupération des cours");
         }
