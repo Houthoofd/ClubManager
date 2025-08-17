@@ -24,8 +24,8 @@ export class Utilisateurs {
     async inscriptionUtilisateurSimple(data) {
         const mysqlConnector = new MysqlConnector();
         const sql = `
-      INSERT INTO utilisateurs (first_name, last_name, email, password, date_of_birth, abonnement_id)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO utilisateurs (first_name, last_name, email, password, date_of_birth, abonnement_id, genre_id, grade_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
         const values = [
             data.prenom,
@@ -33,7 +33,9 @@ export class Utilisateurs {
             data.email,
             data.password,
             data.date,
-            data.abonnement
+            data.abonnement,
+            data.genre,
+            1 // grade_id = 1 (ceinture blanche)
         ];
         return new Promise((resolve, reject) => {
             mysqlConnector.query(sql, values, (error, results) => {

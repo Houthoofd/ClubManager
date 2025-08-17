@@ -40,5 +40,6 @@ export const userInscriptionSchema = z.object({
     email: z.string().email("L'email est invalide"),
     password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
     date: z.string().refine((val) => !isNaN(Date.parse(val)), "La date est invalide"),
-    abonnement: z.union([z.string().min(1), z.number().positive()]),
+    abonnement: z.preprocess(val => typeof val === "string" && /^\d+$/.test(val) ? parseInt(val, 10) : val, z.union([z.string().min(1), z.number().positive()])),
+    genre: z.preprocess(val => typeof val === "string" && /^\d+$/.test(val) ? parseInt(val, 10) : val, z.union([z.string().min(1), z.number().positive()])),
 });

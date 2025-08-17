@@ -136,11 +136,13 @@ describe('Utilisateurs Client', () => {
   describe('inscriptionUtilisateurSimple', () => {
     it('should insert user and return insertId and affectedRows', async () => {
       const data = {
-        username: 'newuser',
+        nom: 'Doe',
+        prenom: 'John',
         email: 'newuser@example.com',
         password: 'securepass',
         date: '2024-06-01',
-        abonnement: '1'
+        abonnement: 1,
+        genre: 1
       };
       const mockResult = { insertId: 2, affectedRows: 1 };
 
@@ -155,11 +157,14 @@ describe('Utilisateurs Client', () => {
       expect(mockMysqlConnector.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO utilisateurs'),
         expect.arrayContaining([
-          data.username,
+          data.prenom,
+          data.nom,
           data.email,
           data.password,
           data.date,
-          data.abonnement
+          data.abonnement,
+          data.genre,
+          1 // grade_id
         ]),
         expect.any(Function)
       );
@@ -167,11 +172,13 @@ describe('Utilisateurs Client', () => {
 
     it('should reject with error if query fails', async () => {
       const data = {
-        username: 'failuser',
+        nom: 'Doe',
+        prenom: 'John',
         email: 'fail@example.com',
         password: 'failpass',
         date: '2024-06-01',
-        abonnement: '1'
+        abonnement: 1,
+        genre: 1
       };
       const mockError = new Error('Insert error');
 

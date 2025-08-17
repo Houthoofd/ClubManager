@@ -77,11 +77,12 @@ export type Status = {
 // Type spécial pour l'inscription simplifiée
 export type UserDataInscription = {
   nom: string;
-  prenom: string
+  prenom: string;
   email: string;
   password: string;
   date: string;
   abonnement: string | number;
+  genre: string | number;
 };
 
 // Schéma Zod pour valider les données d'Abonnement
@@ -129,5 +130,12 @@ export const userInscriptionSchema = z.object({
   email: z.string().email("L'email est invalide"),
   password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
   date: z.string().refine((val: string) => !isNaN(Date.parse(val)), "La date est invalide"),
-  abonnement: z.union([z.string().min(1), z.number().positive()]),
+  abonnement: z.preprocess(
+    val => typeof val === "string" && /^\d+$/.test(val) ? parseInt(val, 10) : val,
+    z.union([z.string().min(1), z.number().positive()])
+  ),
+  genre: z.preprocess(
+    val => typeof val === "string" && /^\d+$/.test(val) ? parseInt(val, 10) : val,
+    z.union([z.string().min(1), z.number().positive()])
+  ),
 });

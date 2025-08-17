@@ -26,7 +26,7 @@ router.post('/validation', async (req, res) => {
     if (!parseResult.success) {
         return res.status(400).json({ message: parseResult.error.errors[0]?.message || "Données invalides" });
     }
-    const { nom, prenom, email, password, date, abonnement } = parseResult.data;
+    const { nom, prenom, email, password, date, abonnement, genre } = parseResult.data;
     try {
         const client = new Utilisateurs();
         // Vérifie si l'utilisateur existe déjà
@@ -43,7 +43,8 @@ router.post('/validation', async (req, res) => {
             email,
             password: hashedPassword,
             date,
-            abonnement
+            abonnement,
+            genre
         });
         if (result.affectedRows > 0) {
             return res.status(201).json({ message: "Inscription réussie", userId: result.insertId });

@@ -16,7 +16,7 @@ import {
 } from '@patternfly/react-core';
 import HelpIcon from '@patternfly/react-icons/dist/esm/icons/help-icon';
 import { API_BASE_URL } from '../../config';
-import type { UserDataInscription, Abonnement } from '../../../packages/types/dist/index';
+import type { UserDataInscription, Abonnement, Genres } from '../../../packages/types/dist/index';
 import { userInscriptionSchema } from '../../../packages/types/dist/index';
 
 // Page d'inscription
@@ -24,11 +24,12 @@ export const InscriptionPage: React.FC = () => {
   // Utilise le type UserDataInscription pour le state
   const [form, setForm] = useState<UserDataInscription>({
     prenom: '',
-    nom: '', // Remplace username par nom
+    nom: '',
     email: '',
     password: '',
     date: '',
-    abonnement: ''
+    abonnement: '',
+    genre: '' // Ajoute le champ genre
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -37,6 +38,11 @@ export const InscriptionPage: React.FC = () => {
   >([
     { value: '', label: 'Sélectionner un abonnement', disabled: true }
   ]);
+  const [genreOptions, setGenreOptions] = useState<{ value: string; label: string; disabled?: boolean }[]>(
+    [
+      { value: '', label: 'Sélectionner un genre', disabled: true }
+    ]
+  );
   const [showRecap, setShowRecap] = useState(false);
   const [modalMessage, setModalMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +68,30 @@ export const InscriptionPage: React.FC = () => {
       })
       .catch(() => {
         setAbonnementOptions([
+          { value: '', label: 'Erreur de chargement', disabled: true }
+        ]);
+      });
+
+    // Fetch genres
+    const genreUrl = API_BASE_URL.endsWith('/')
+      ? `${API_BASE_URL}api/informations/genres`
+      : `${API_BASE_URL}/api/informations/genres`;
+
+    fetch(genreUrl)
+      .then(res => res.json())
+      .then((data: Genres[]) => {
+        const options = [
+          { value: '', label: 'Sélectionner un genre', disabled: true },
+          ...data.map(item => ({
+            value: String(item.id),
+            label: item.genre_name,
+            disabled: false
+          }))
+        ];
+        setGenreOptions(options);
+      })
+      .catch(() => {
+        setGenreOptions([
           { value: '', label: 'Erreur de chargement', disabled: true }
         ]);
       });
@@ -287,6 +317,22 @@ export const InscriptionPage: React.FC = () => {
             ))}
           </FormSelect>
         </FormGroup>
+        <FormGroup label="Genre" isRequired fieldId="genre">
+          <FormSelect
+            value={form.genre ?? ''}
+            onChange={(_event, value) => handleChange(value, 'genre')}
+            aria-label="Genre"
+          >
+            {genreOptions.map(option => (
+              <FormSelectOption
+                key={option.value}
+                value={option.value}
+                label={option.label}
+                isDisabled={option.disabled}
+              />
+            ))}
+          </FormSelect>
+        </FormGroup>
         {error && <Alert variant="danger" title={error} />}
         {success && <Alert variant="success" title="Inscription réussie !" />}
         <Button type="submit" variant="primary">S'inscrire</Button>
@@ -319,13 +365,11 @@ export const InscriptionPage: React.FC = () => {
           <p><strong>Prénom :</strong> {form.prenom}</p>
           <p><strong>Nom :</strong> {form.nom}</p>
           <p><strong>Email :</strong> {form.email}</p>
+          <p><strong>Genre :</strong> {genreOptions.find(opt => opt.value === form.genre)?.label || ''}</p>
           <p><strong>Date d'inscription :</strong> {form.date}</p>
           <p>
             <strong>Type d'abonnement :</strong>{' '}
-            {
-              abonnementOptions.find(opt => opt.value === form.abonnement)?.label ||
-              form.abonnement
-            }
+            {abonnementOptions.find(opt => opt.value === form.abonnement)?.label || form.abonnement}
           </p>
           {isLoading && <p>Chargement...</p>}
           {modalMessage && (
