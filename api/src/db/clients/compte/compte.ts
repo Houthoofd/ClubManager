@@ -89,13 +89,13 @@ export class Compte{
         FROM 
           utilisateurs u
         JOIN 
-          genres g ON u.genre_name = g.id  
+          genres g ON u.genre_id = g.id  
         JOIN 
-          status s ON u.nom_role = s.id  
+          status s ON u.status_id = s.id  
         JOIN 
           grades gr ON u.grade_id = gr.id  
         JOIN 
-          plans_tarifaires a ON u.nom_plan = a.id  
+          plans_tarifaires a ON u.abonnement_id = a.id  
         WHERE 
           u.first_name = ? AND u.last_name = ?
       `;
