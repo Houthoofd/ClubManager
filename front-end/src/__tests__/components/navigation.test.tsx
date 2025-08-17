@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import MainLayout from '../components/mainLayout';
+import MainLayout from '../../components/mainLayout';
 import * as reactRedux from 'react-redux';
 import type { Dispatch, AnyAction} from 'redux';
 import type { TypedUseSelectorHook } from 'react-redux';

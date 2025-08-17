@@ -91,26 +91,96 @@ describe('Utilisateurs Client', () => {
     });
   });
 
-  describe('inscrireUtilisateur', () => {
-    it('should insert user and use default password if empty', async () => {
-      console.log('▶ Test inscrireUtilisateur: password empty');
-      const mockUser = createMockUser({ password: '' });
-      const mockResult = { insertId: 1, affectedRows: 1 };
+  describe('checkUtilisateurByEmail', () => {
+    it('should return isFind true if user exists', async () => {
+      const email = 'john.doe@example.com';
+      mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
+        callback(null, [{ id: 1 }]);
+      });
+
+      const client = new Utilisateurs();
+      const result = await client.checkUtilisateurByEmail(email);
+
+      expect(result).toEqual({ isFind: true, message: "Utilisateur déjà existant" });
+      expect(mockMysqlConnector.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT id FROM utilisateurs'),
+        [email],
+        expect.any(Function)
+      );
+    });
+
+    it('should return isFind false if user does not exist', async () => {
+      const email = 'notfound@example.com';
+      mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
+        callback(null, []);
+      });
+
+      const client = new Utilisateurs();
+      const result = await client.checkUtilisateurByEmail(email);
+
+      expect(result).toEqual({ isFind: false, message: "Utilisateur non trouvé" });
+    });
+
+    it('should reject with error if query fails', async () => {
+      const email = 'error@example.com';
+      const mockError = new Error('DB error');
+      mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
+        callback(mockError, undefined);
+      });
+
+      const client = new Utilisateurs();
+      await expect(client.checkUtilisateurByEmail(email)).rejects.toEqual(mockError);
+    });
+  });
+
+  describe('inscriptionUtilisateurSimple', () => {
+    it('should insert user and return insertId and affectedRows', async () => {
+      const data = {
+        username: 'newuser',
+        email: 'newuser@example.com',
+        password: 'securepass',
+        date: '2024-06-01',
+        abonnement: '1'
+      };
+      const mockResult = { insertId: 2, affectedRows: 1 };
 
       mockMysqlConnector.query.mockImplementation((_sql: string, values: any[], callback: Function) => {
-        console.log('Mock query called with values:', values);
         callback(null, mockResult);
       });
 
-      const result = await utilisateursClient.inscrireUtilisateur(mockUser);
-      console.log('Result inscrireUtilisateur:', result);
+      const client = new Utilisateurs();
+      const result = await client.inscriptionUtilisateurSimple(data);
 
       expect(result).toEqual(mockResult);
       expect(mockMysqlConnector.query).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.arrayContaining(['password123']),
-        expect.any(Function),
+        expect.stringContaining('INSERT INTO utilisateurs'),
+        expect.arrayContaining([
+          data.username,
+          data.email,
+          data.password,
+          data.date,
+          data.abonnement
+        ]),
+        expect.any(Function)
       );
+    });
+
+    it('should reject with error if query fails', async () => {
+      const data = {
+        username: 'failuser',
+        email: 'fail@example.com',
+        password: 'failpass',
+        date: '2024-06-01',
+        abonnement: '1'
+      };
+      const mockError = new Error('Insert error');
+
+      mockMysqlConnector.query.mockImplementation((_sql: string, _values: any[], callback: Function) => {
+        callback(mockError, undefined);
+      });
+
+      const client = new Utilisateurs();
+      await expect(client.inscriptionUtilisateurSimple(data)).rejects.toEqual(mockError);
     });
   });
 

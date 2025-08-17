@@ -6,6 +6,7 @@ import coursRouter from './cours.js';
 import paiementRouter from './paiements.js';
 import statistiquesRouter from './statistiques.js';
 import magasinRouter from './magasin.js';
+import inscriptionRouter from './inscription.js'
 
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.use('/informations', informationsRouter);
 router.use('/cours', coursRouter);
 router.use('/paiements', paiementRouter);
 router.use('/magasin', magasinRouter);
+router.use('/inscription', inscriptionRouter);
 
 export default router;

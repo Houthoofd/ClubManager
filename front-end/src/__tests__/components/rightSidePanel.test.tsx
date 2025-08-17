@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import RightSidePanel from '../components/panel/rightSidePanel';
-import type { RightSidePanelProps } from '../components/panel/rightSidePanel';
+import RightSidePanel from '../../components/panel/rightSidePanel';
+import type { RightSidePanelProps } from '../../components/panel/rightSidePanel';
 
 // Mock du composant PaymentForm avec types
 jest.mock('../components/form/paymentForm', () => ({

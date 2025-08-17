@@ -74,6 +74,15 @@ export type Status = {
   status_name: string;
 };
 
+// Type spécial pour l'inscription simplifiée
+export type UserDataInscription = {
+  username: string;
+  email: string;
+  password: string;
+  date: string;
+  abonnement: string | number;
+};
+
 // Schéma Zod pour valider les données d'Abonnement
 export const abonnementSchema = z.object({
   id: z.number().positive("L'ID de l'abonnement doit être un nombre positif"),
@@ -110,4 +119,13 @@ export const userSchema = z.object({
   status_id: z.number().positive("Le status ID doit être un nombre positif"),
   grade_id: z.number().positive("Le grade ID doit être un nombre positif").nullable(),  // Autorise null
   abonnement_id: z.number().positive("L'abonnement ID doit être un nombre positif").nullable(),  // Autorise null
+});
+
+// Schéma Zod pour valider les données d'inscription simplifiée
+export const userInscriptionSchema = z.object({
+  username: z.string().min(1, "Le nom d'utilisateur est requis"),
+  email: z.string().email("L'email est invalide"),
+  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+  date: z.string().refine((val: string) => !isNaN(Date.parse(val)), "La date est invalide"),
+  abonnement: z.union([z.string().min(1), z.number().positive()]),
 });

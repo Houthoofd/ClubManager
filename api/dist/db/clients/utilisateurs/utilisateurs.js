@@ -1,5 +1,54 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Utilisateurs {
+    // Vérifie si un utilisateur existe par email
+    async checkUtilisateurByEmail(email) {
+        const mysqlConnector = new MysqlConnector();
+        const sql = `SELECT id FROM utilisateurs WHERE email = ? LIMIT 1`;
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, [email], (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                if (results.length > 0) {
+                    resolve({ isFind: true, message: "Utilisateur déjà existant" });
+                }
+                else {
+                    resolve({ isFind: false, message: "Utilisateur non trouvé" });
+                }
+            });
+        });
+    }
+    // Inscription d'un utilisateur (version simple, à adapter selon tes besoins)
+    async inscriptionUtilisateurSimple(data) {
+        const mysqlConnector = new MysqlConnector();
+        const sql = `
+      INSERT INTO utilisateurs (nom_utilisateur, email, password, date_of_birth, abonnement_id)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+        // Remarque : abonnement doit être l'id, ici on suppose que tu passes le bon id
+        const values = [
+            data.username,
+            data.email,
+            data.password,
+            data.date,
+            data.abonnement
+        ];
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, values, (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve({
+                    insertId: results.insertId,
+                    affectedRows: results.affectedRows,
+                });
+            });
+        });
+    }
     verifierUtilisateur(utilisateurData) {
         return new Promise((resolve, reject) => {
             const mysqlConnector = new MysqlConnector();

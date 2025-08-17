@@ -26,11 +26,17 @@ import Paiements from './pages/paiements';
 
 import Messages from './pages/messages';
 
+import InscriptionPage from './pages/inscription';
+
 const router = createBrowserRouter([
   // Route publique pour la page de connexion
   {
     path: '/pages/connexion',
     element: <LoginPage />,
+  },
+  {
+    path: '/pages/inscription',
+    element: <InscriptionPage />,
   },
   // Route principale avec layout protégé
   {

@@ -1,21 +1,20 @@
-
 ## Exemple pour récupèrer les grades
-GET http://localhost:3000/informations/grades
+GET https://clubmanagment.com/api/informations/grades
 
 ###
 
 ## Exemple pour récupèrer les status
-GET http://localhost:3000/informations/status
+GET https://clubmanagment.com/api/informations/status
 
 ###
 
 ## Exemple pour récupèrer les status
-GET http://localhost:3000/informations/abonnements
+GET https://clubmanagment.com/api/informations/abonnements
 
 ###
 
 ## Exemple pour récupèrer les status
-GET http://localhost:3000/informations/genres
+GET https://clubmanagment.com/api/informations/genres
 
 
 

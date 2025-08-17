@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import DualListSelectorGeneric from '../components/dualListSelector';
+import DualListSelectorGeneric from '../../components/dualListSelector';
 import type { ReactNode } from 'react';
 
 type Item = {

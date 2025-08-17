@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import MainLayout from '../components/mainLayout';
+import MainLayout from '../../components/mainLayout';
 import * as reactRedux from 'react-redux';
 import type { Dispatch, AnyAction } from 'redux';
 

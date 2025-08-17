@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import MultiImageUpload from '../components/fileUploader';
+import MultiImageUpload from '../../components/fileUploader';
 
 describe('MultiImageUpload Component', () => {
   const mockOnImageUrlsChange = jest.fn();

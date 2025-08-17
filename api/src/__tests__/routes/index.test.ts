@@ -13,7 +13,8 @@ describe('Test du router principal avec toutes les méthodes HTTP', () => {
     'cours',
     'paiements',
     'statistiques',
-    'magasin'
+    'magasin',
+    'inscription'
   ];
 
   const httpMethods: ('get' | 'post' | 'put' | 'delete')[] = [

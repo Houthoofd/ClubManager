@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import ArticleCard from '../components/card';
+import ArticleCard from '../../components/card';
 
 // Mock des props pour les tests
 const mockProps = {

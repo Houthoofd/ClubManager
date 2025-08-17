@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import GenericForm from '../components/genericForm';
+import GenericForm from '../../components/genericForm';
 
 type FormData = {
   id: number;

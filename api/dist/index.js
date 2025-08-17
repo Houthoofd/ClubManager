@@ -16,6 +16,7 @@ import { default as professeursRouter } from './routes/professeurs.js';
 import { default as chatRouter } from './routes/chat.js';
 import { default as messagesRouter } from './routes/messages.js';
 import { default as uploadRouter } from './routes/upload.js';
+import { default as inscriptionRouter } from './routes/inscription.js';
 import dotenv from 'dotenv';
 import http from 'http';
 import { Server } from 'socket.io';
@@ -56,6 +57,7 @@ app.use('/professeurs', professeursRouter);
 app.use('/chat', chatRouter);
 app.use('/messages', messagesRouter);
 app.use('/upload', uploadRouter);
+app.use('/inscription', inscriptionRouter);
 app.use('/public', express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 // Routes secondaires

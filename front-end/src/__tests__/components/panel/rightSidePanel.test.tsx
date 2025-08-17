@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import RightSidePanel from '../../components/panel/rightSidePanel';
+import RightSidePanel from '../../../components/panel/rightSidePanel';
 
 // Mock du composant PaymentForm
 jest.mock('../../components/form/paymentForm', () => ({
