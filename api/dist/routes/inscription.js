@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import bcrypt from 'bcrypt';
 const router = Router();
-router.post('/inscription/verification', async (req, res) => {
+router.post('/verification', async (req, res) => {
     const { email } = req.body;
     if (!email) {
         return res.status(400).json({ message: "Email requis" });
@@ -19,7 +19,7 @@ router.post('/inscription/verification', async (req, res) => {
         return res.status(500).json({ message: "Erreur serveur", error });
     }
 });
-router.post('/inscription/validation', async (req, res) => {
+router.post('validation', async (req, res) => {
     const { username, email, password, date, abonnement } = req.body;
     if (!username || !email || !password || !date || !abonnement) {
         return res.status(400).json({ message: "Champs requis manquants" });

@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 
 const router = Router();
 
-router.post('/inscription/verification', async (req:any, res:any) => {
+router.post('/verification', async (req:any, res:any) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ message: "Email requis" });
@@ -23,7 +23,7 @@ router.post('/inscription/verification', async (req:any, res:any) => {
   }
 });
 
-router.post('/inscription/validation', async (req:any, res:any) => {
+router.post('validation', async (req:any, res:any) => {
   const { username, email, password, date, abonnement } = req.body;
   if (!username || !email || !password || !date || !abonnement) {
     return res.status(400).json({ message: "Champs requis manquants" });
