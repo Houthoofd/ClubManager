@@ -15,7 +15,8 @@ import {
   Flex,
   FlexItem
 } from '@patternfly/react-core';
-import { API_BASE_URL } from '../../../config';
+import { API_BASE_URL } from '../../config';
+console.log(API_BASE_URL)
 
 function convertToNumber(value: any): number | null {
   const parsedValue = Number(value);
