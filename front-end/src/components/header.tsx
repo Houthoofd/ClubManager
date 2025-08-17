@@ -150,7 +150,7 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout }: AppPanelHeaderProps) => {
                 <Menu onSelect={handleSelect}>
                   <MenuContent>
                     <MenuList>
-                      <MenuItem to="/pages/profile" component="a">Profil</MenuItem>
+                      <MenuItem to="/pages/compte" component="a">Profil</MenuItem>
                       <MenuItem to="/pages/settings" component="a">Paramètres</MenuItem>
                       <MenuItem onClick={handleLogout}>Déconnexion</MenuItem>
                     </MenuList>
