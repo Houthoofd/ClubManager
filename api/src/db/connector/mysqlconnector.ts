@@ -99,14 +99,11 @@ export default class MysqlConnector {
 
   /**
    * Fermer le pool manuellement
+   * ⚠️ N'utilise pool.close() dans les requêtes courantes, seulement à l'arrêt du serveur !
    */
   public close(): void {
-    pool.end((err) => {
-      if (err) {
-        console.error('Erreur lors de la fermeture du pool : ' + err.stack);
-        return;
-      }
-      console.log('Pool MySQL fermé');
-    });
+    // Ne rien faire ici pour les usages courants
+    // Pour fermer le pool à l'arrêt du serveur, appelle pool.end() explicitement
+    // Exemple : process.on('SIGINT', () => pool.end(...))
   }
 }
