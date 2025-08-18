@@ -26,6 +26,7 @@ import {
   Cell,
   Legend
 } from 'recharts';
+//import { apiUrl } from './apiUrl';
 
 // Données fictives de graphique (tu peux les remplacer plus tard)
 const paiementsParMois = [

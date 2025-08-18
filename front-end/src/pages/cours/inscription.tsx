@@ -15,21 +15,7 @@ import {
   Flex,
   FlexItem
 } from '@patternfly/react-core';
-import { API_BASE_URL } from '../../config';
-
-// Helper pour préfixer 'api/' uniquement si l'URL ne contient pas déjà 'api/'
-function apiUrl(path: string) {
-  const isProd = import.meta.env.MODE === 'production';
-  console.log('Mode:', isProd ? 'production' : 'development');
-  const base = isProd
-    ? API_BASE_URL.endsWith('/api/')
-      ? API_BASE_URL
-      : API_BASE_URL.replace(/\/?$/, '/api/') // assure un slash et ajoute 'api/'
-    : API_BASE_URL;
-
-  console.log(`API URL: ${base}${path.replace(/^\/+/, '')}`);
-  return `${base}${path.replace(/^\/+/, '')}`; // retire les slashs en début de path
-}
+import { apiUrl } from '../apiUrl';
 
 
 function convertToNumber(value: any): number | null {

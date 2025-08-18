@@ -9,7 +9,7 @@ import {
 } from '@patternfly/react-table';
 import { TextInput, Title, Spinner, FormSelect, FormSelectOption } from '@patternfly/react-core';
 
-import { API_BASE_URL } from '../../../config';
+import { apiUrl } from '../apiUrl';
 
 interface Article {
   article: string;
@@ -50,7 +50,7 @@ const Commandes = () => {
   const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | undefined>(undefined);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}api/magasin/commandes`)
+    fetch(apiUrl('magasin/commandes'))
       .then(res => res.json())
       .then(json => setData(json.commandes))
       .catch(console.error)

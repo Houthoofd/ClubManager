@@ -15,7 +15,7 @@ import {
   Popover
 } from '@patternfly/react-core';
 import HelpIcon from '@patternfly/react-icons/dist/esm/icons/help-icon';
-import { API_BASE_URL } from '../../config';
+import { apiUrl } from './apiUrl';
 import type { UserDataInscription, Abonnement, Genres } from '../../../packages/types/dist/index';
 import { userInscriptionSchema } from '../../../packages/types/dist/index';
 
@@ -30,16 +30,6 @@ async function fetchOptions<T>(url: string, key: (item: T) => string): Promise<T
   } catch {
     return [];
   }
-}
-
-function apiUrl(path: string) {
-  const isProd = import.meta.env.MODE === 'production';
-  const base = isProd
-    ? API_BASE_URL.endsWith('/api/')
-      ? API_BASE_URL
-      : API_BASE_URL.replace(/\/?$/, '/api/')
-    : API_BASE_URL;
-  return `${base}${path.replace(/^\/+/, '')}`;
 }
 
 // Page d'inscription
@@ -176,11 +166,9 @@ export const InscriptionPage: React.FC = () => {
         setIsLoading(false);
         return;
       }
-      console.log(form)
       // Inscription
       const registerUrl = apiUrl('inscription/validation');
       const abonnementId = form.abonnement;
-      console.log({ ...form, abonnement: abonnementId })
       const registerRes = await fetch(registerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

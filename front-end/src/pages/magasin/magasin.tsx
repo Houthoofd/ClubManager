@@ -17,11 +17,10 @@ import {
 } from '@patternfly/react-core';
 import ArticleCard from '../../components/card';
 import RightSidePanel from '../../components/panel/rightSidePanel';
+import { apiUrl } from '../apiUrl';
 
 // Import des types
 import type { Article, Categorie } from '@clubmanager/types';
-
-import { API_BASE_URL } from '../../../config';
 
 const Magasin = () => {
   const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article[]>>({});
@@ -36,8 +35,8 @@ const Magasin = () => {
     const fetchData = async () => {
       try {
         const [resArticles, resCategories] = await Promise.all([
-          fetch(`${API_BASE_URL}api/magasin/articles`),
-          fetch(`${API_BASE_URL}api/magasin/articles/categories`),
+          fetch(apiUrl('magasin/articles')),
+          fetch(apiUrl('magasin/articles/categories')),
         ]);
 
         if (!resArticles.ok || !resCategories.ok) {

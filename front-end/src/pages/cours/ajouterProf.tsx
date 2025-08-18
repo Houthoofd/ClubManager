@@ -15,7 +15,7 @@ import {
   Tooltip
 } from '@patternfly/react-core';
 import { ExclamationTriangleIcon, TrashIcon } from '@patternfly/react-icons';
-import { API_BASE_URL } from '../../../config';
+import { apiUrl } from '../apiUrl';
 
 type CoursAvecProfesseurs = {
   heure_debut: string;
@@ -95,8 +95,8 @@ const AjouterProfesseur = () => {
       setIsLoading(true);
       try {
         const [coursRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE_URL}api/cours/informations/planning`),
-          fetch(`${API_BASE_URL}api/utilisateurs`)
+          fetch(apiUrl('cours/informations/planning')),
+          fetch(apiUrl('utilisateurs'))
         ]);
         const coursData = await coursRes.json();
         const usersData = await usersRes.json();

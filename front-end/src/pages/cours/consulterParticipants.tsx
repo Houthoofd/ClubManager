@@ -13,7 +13,7 @@ import {
 } from '@patternfly/react-core';
 import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
 import type { CoursData, DataAnnulation, Utilisateur, CoursApiResponse} from '@clubmanager/types';
-import { API_BASE_URL } from '../../../config';
+import { apiUrl } from '../apiUrl';
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -37,7 +37,7 @@ const ParticipantsPage = () => {
 
     const fetchCours = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}api/cours/${coursId}`);
+        const response = await fetch(apiUrl(`cours/${coursId}`));
         if (!response.ok) throw new Error("Erreur lors du chargement du cours");
 
         const data: CoursApiResponse = await response.json();
@@ -71,10 +71,9 @@ const ParticipantsPage = () => {
       utilisateur_nom: data.nom,
       utilisateur_prenom: data.prenom
     };
-    console.log(dataToSend)
     const endpoint = status === "annuler"
-      ? `${API_BASE_URL}api/cours/inscription/annulation`
-      : `${API_BASE_URL}api/cours/inscription/validation`;
+      ? apiUrl('cours/inscription/annulation')
+      : apiUrl('cours/inscription/validation');
 
     try {
       const response = await fetch(endpoint, {

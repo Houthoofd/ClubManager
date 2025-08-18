@@ -20,7 +20,7 @@ import {
 } from '@patternfly/react-core';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
 
-import { API_BASE_URL } from '../../config';
+import { apiUrl } from './apiUrl';
 
 // Définition d'un type spécial pour les infos du compte
 type CompteUserInfo = {
@@ -102,7 +102,7 @@ const Compte = () => {
 
   useEffect(() => {
     // Fetch abonnements pour le select
-    fetch(`${API_BASE_URL}api/informations/abonnements`)
+    fetch(apiUrl('informations/abonnements'))
       .then(res => res.json())
       .then(data => setAbonnements(data))
       .catch(() => setAbonnements([]));
@@ -110,7 +110,7 @@ const Compte = () => {
 
   useEffect(() => {
     // Fetch grades pour le select
-    fetch(`${API_BASE_URL}api/informations/grades`)
+    fetch(apiUrl('informations/grades'))
       .then(res => res.json())
       .then(data => setGradesList(data))
       .catch(() => setGradesList([]));
@@ -118,7 +118,7 @@ const Compte = () => {
 
   useEffect(() => {
     // Fetch status pour le select
-    fetch(`${API_BASE_URL}api/informations/status`)
+    fetch(apiUrl('informations/status'))
       .then(res => res.json())
       .then(data => setStatusList(data))
       .catch(() => setStatusList([]));
@@ -126,7 +126,7 @@ const Compte = () => {
 
   const fetchData = async (prenom: string, nom: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}api/compte/informations`, {
+      const response = await fetch(apiUrl('compte/informations'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prenom, nom })
@@ -217,7 +217,7 @@ const Compte = () => {
     };
     console.log(body)
     try {
-      const response = await fetch(`${API_BASE_URL}api/utilisateurs/modifier`, {
+      const response = await fetch(apiUrl('utilisateurs/modifier'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

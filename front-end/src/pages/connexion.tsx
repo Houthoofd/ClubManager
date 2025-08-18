@@ -10,9 +10,7 @@ import {
 } from '@patternfly/react-core';
 import type { UserDataLogin } from '@clubmanager/types';
 
-import { API_BASE_URL } from '../../config';
-
-console.log(API_BASE_URL)
+import { apiUrl } from './apiUrl';
 
 interface LoginPageProps {
   onSuccess?: (data: any) => void;
@@ -39,13 +37,8 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     setError(null);
 
     try {
-      // Correction : vérifie le slash pour éviter une mauvaise URL
-      const url =
-        API_BASE_URL.endsWith('/')
-          ? `${API_BASE_URL}api/utilisateurs/connexion`
-          : `${API_BASE_URL}/api/utilisateurs/connexion`;
-
-      // Affiche l'URL pour debug
+      // Utilisez apiUrl pour générer l'URL
+      const url = apiUrl('utilisateurs/connexion');
       console.log("URL utilisée pour la connexion:", url);
 
       const response = await fetch(url, {

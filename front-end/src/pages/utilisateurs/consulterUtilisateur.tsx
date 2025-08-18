@@ -14,7 +14,7 @@ import {
   Spinner,
   Alert,
 } from '@patternfly/react-core';
-import { API_BASE_URL } from '../../../config';
+import { apiUrl } from '../apiUrl';
 
 type UtilisateurType = {
   id: number;
@@ -45,7 +45,7 @@ const ConsulterUtilisateurPage = () => {
   useEffect(() => {
     const fetchUtilisateur = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}api/utilisateurs/${id}`);
+        const response = await fetch(apiUrl(`utilisateurs/${id}`));
         if (!response.ok) {
           throw new Error('Erreur lors du chargement des données.');
         }
