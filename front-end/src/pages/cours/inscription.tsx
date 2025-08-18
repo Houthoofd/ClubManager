@@ -51,7 +51,16 @@ const Inscription = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      // Petit fetch pour récupérer ce qu'il y a sur le endpoint /cours avec apiUrl
       try {
+        const coursEndpointResponse = await fetch(apiUrl('cours'));
+        if (coursEndpointResponse.ok) {
+          const coursEndpointData = await coursEndpointResponse.json();
+          console.log("Données du endpoint /cours :", coursEndpointData);
+        } else {
+          console.warn("Impossible de récupérer les données sur /cours");
+        }
+
         // Récupérer les infos utilisateur
         const stored = localStorage.getItem("userData");
         if (!stored) {
