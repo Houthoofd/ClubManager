@@ -1,2 +1,66 @@
-## Obtenir un utilisateur par son id
-GET http://localhost:3000/cours/statistiques/151
+### ClubManager - Statistiques API
+
+## Base URL
+@baseUrl = http://localhost:3000/statistiques
+
+---
+
+## 📊 Statistiques de Fréquentation Globales
+### Récupère les statistiques de fréquentation globales (nombre total de participations, par cours, par mois)
+GET {{baseUrl}}/frequentation/154
+
+---
+
+## 📈 Progression d'un Utilisateur
+### Récupère les statistiques de progression pour un utilisateur spécifique
+### Paramètres :
+### - `userId` : ID de l'utilisateur (ex: 151)
+GET {{baseUrl}}/progression/151
+
+---
+
+## 🗓️ Présences par Mois (Formatées)
+### Récupère les présences par mois pour un utilisateur, formatées pour un affichage graphique
+### Paramètres :
+### - `userId` : ID de l'utilisateur (ex: 151)
+GET {{baseUrl}}/presence/151
+
+---
+
+## 📄 Présences par Mois (Brutes)
+### Récupère les présences par mois pour un utilisateur, sans formatage
+### Paramètres :
+### - `userId` : ID de l'utilisateur (ex: 151)
+GET {{baseUrl}}/presence-raw/151
+
+---
+
+### Exemples d'Utilisation
+
+## Exemple 1 : Statistiques de fréquentation globales
+GET {{baseUrl}}/frequentation
+Accept: application/json
+
+## Exemple 2 : Progression de l'utilisateur 151
+GET {{baseUrl}}/progression/151
+Accept: application/json
+
+## Exemple 3 : Présences formatées de l'utilisateur 151
+GET {{baseUrl}}/presence/151
+Accept: application/json
+
+## Exemple 4 : Présences brutes de l'utilisateur 151
+GET {{baseUrl}}/presence-raw/151
+Accept: application/json
+
+---
+
+### Tests d'Erreurs
+
+## Test : ID utilisateur invalide
+GET {{baseUrl}}/progression/abc
+Accept: application/json
+
+## Test : Utilisateur inexistant
+GET {{baseUrl}}/progression/999999
+Accept: application/json

@@ -1,68 +1,68 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Statistiques {
     /**
-     * Obtient les statistiques de fréquentation globales
-     * @returns Les statistiques de fréquentation
+     * Obtient les statistiques de fréquentation pour un utilisateur spécifique
      */
-    async obtenirStatistiquesFrequentation() {
+    async obtenirStatistiquesFrequentation(utilisateurId) {
         const mysqlConnector = new MysqlConnector();
         try {
-            // Obtenir le total de la fréquentation
-            const totalQuery = `
-        SELECT COUNT(*) as total
-        FROM utilisateur_cours
-        WHERE status_id = 3; -- Status 3 = présence validée
+            const query = `
+        WITH
+        cours_recurrents_actifs AS (
+          SELECT COUNT(*) AS total_cours_recurrents_actifs
+          FROM cours_recurrent
+          WHERE active = 1
+        ),
+        cours_par_mois AS (
+          SELECT
+            MONTHNAME(c.date_cours) as mois,
+            MONTH(c.date_cours) as mois_num,
+            YEAR(c.date_cours) as annee,
+            (SELECT total_cours_recurrents_actifs FROM cours_recurrents_actifs) * 4 as total_cours_mois
+          FROM cours c
+          GROUP BY YEAR(c.date_cours), MONTH(c.date_cours)
+        ),
+        presences_par_mois AS (
+          SELECT
+            MONTHNAME(c.date_cours) as mois,
+            MONTH(c.date_cours) as mois_num,
+            YEAR(c.date_cours) as annee,
+            COUNT(DISTINCT DATE(c.date_cours)) as presences_validees
+          FROM inscriptions i
+          JOIN cours c ON i.cours_id = c.id
+          WHERE i.utilisateur_id = ?
+          AND i.status_id = 1
+          GROUP BY YEAR(c.date_cours), MONTH(c.date_cours)
+        ),
+        total_frequentation AS (
+          SELECT COUNT(*) as total FROM inscriptions WHERE utilisateur_id = ? AND status_id = 1
+        )
+        SELECT
+          COALESCE(p.mois, c.mois) as mois,
+          COALESCE(p.presences_validees, 0) as frequentation,
+          c.total_cours_mois as nombres_total_de_cours_du_mois,
+          ROUND(COALESCE(p.presences_validees, 0) * 100.0 / NULLIF(c.total_cours_mois, 0), 2) as pourcentage_de_cours_valides,
+          (SELECT total FROM total_frequentation) as totalFrequentation
+        FROM cours_par_mois c
+        LEFT JOIN presences_par_mois p ON c.annee = p.annee AND c.mois_num = p.mois_num
+        ORDER BY c.annee, c.mois_num;
       `;
-            // Obtenir la fréquentation par cours
-            const parCoursQuery = `
-        SELECT c.id as cours_id, c.titre, COUNT(uc.utilisateur_id) as frequentation
-        FROM cours c
-        LEFT JOIN utilisateur_cours uc ON c.id = uc.cours_id AND uc.status_id = 3
-        GROUP BY c.id, c.titre
-        ORDER BY frequentation DESC;
-      `;
-            // Obtenir la fréquentation par mois
-            const parMoisQuery = `
-        SELECT 
-          MONTHNAME(c.date) as mois, 
-          COUNT(uc.utilisateur_id) as frequentation
-        FROM cours c
-        LEFT JOIN utilisateur_cours uc ON c.id = uc.cours_id AND uc.status_id = 3
-        GROUP BY MONTH(c.date), mois
-        ORDER BY MONTH(c.date);
-      `;
-            const totalResult = await new Promise((resolve, reject) => {
-                mysqlConnector.query(totalQuery, [], (error, results) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(Number(results[0].total));
-                });
-            });
-            const parCoursResult = await new Promise((resolve, reject) => {
-                mysqlConnector.query(parCoursQuery, [], (error, results) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(results);
-                });
-            });
-            const parMoisResult = await new Promise((resolve, reject) => {
-                mysqlConnector.query(parMoisQuery, [], (error, results) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(results);
-                });
-            });
+            const results = await this.executerRequete(mysqlConnector, query, [utilisateurId, utilisateurId], (rows) => rows);
+            // On extrait le totalFrequentation du premier résultat (identique pour chaque ligne)
+            const totalFrequentation = results.length > 0 ? Number(results[0].totalFrequentation) : 0;
+            const frequentationParMois = results.map((row) => ({
+                mois: row.mois,
+                frequentation: Number(row.frequentation),
+                nombres_total_de_cours_du_mois: Number(row.nombres_total_de_cours_du_mois),
+                pourcentage_de_cours_valides: Number(row.pourcentage_de_cours_valides)
+            }));
             return {
-                totalFrequentation: totalResult,
-                frequentationParCours: parCoursResult,
-                frequentationParMois: parMoisResult
+                totalFrequentation,
+                frequentationParMois
             };
         }
         catch (error) {
-            console.error("Erreur lors de l'obtention des statistiques:", error);
+            console.error(`Erreur lors de l'obtention des statistiques pour l'utilisateur ${utilisateurId}:`, error);
             throw error;
         }
         finally {
@@ -70,59 +70,51 @@ export class Statistiques {
         }
     }
     /**
+     * Exécute une requête SQL et retourne le résultat transformé
+     */
+    async executerRequete(connector, query, params, transformer) {
+        return new Promise((resolve, reject) => {
+            connector.query(query, params, (error, results) => {
+                if (error) {
+                    reject(error);
+                }
+                else {
+                    resolve(transformer(results));
+                }
+            });
+        });
+    }
+    /**
      * Obtient les statistiques de progression pour un utilisateur spécifique
-     * @param utilisateurId - L'ID de l'utilisateur
-     * @returns Les statistiques de progression de l'utilisateur
      */
     async obtenirProgressionUtilisateur(utilisateurId) {
         const mysqlConnector = new MysqlConnector();
         try {
-            // Nombre total de cours suivis
-            const coursSuivisQuery = `
-        SELECT COUNT(*) as total
-        FROM utilisateur_cours
-        WHERE utilisateur_id = ? AND status_id = 3;
-      `;
-            // Progression par cours
-            const progressionQuery = `
-        SELECT 
-          c.id as cours_id, 
-          c.titre,
-          COUNT(uc.id) as cours_suivis,
-          (COUNT(uc.id) * 100 / (
-            SELECT COUNT(*) FROM cours WHERE cours_parent_id = c.cours_parent_id
-          )) as progression
-        FROM cours c
-        JOIN utilisateur_cours uc ON c.id = uc.cours_id AND uc.utilisateur_id = ? AND uc.status_id = 3
-        GROUP BY c.id, c.titre, c.cours_parent_id;
-      `;
-            const coursSuivisResult = await new Promise((resolve, reject) => {
-                mysqlConnector.query(coursSuivisQuery, [utilisateurId], (error, results) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(Number(results[0].total));
-                });
-            });
-            const progressionResult = await new Promise((resolve, reject) => {
-                mysqlConnector.query(progressionQuery, [utilisateurId], (error, results) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(results);
-                });
-            });
-            // Niveau actuel (basé sur le nombre de cours suivis)
+            const [coursSuivis, progression] = await Promise.all([
+                this.executerRequete(mysqlConnector, `SELECT COUNT(*) as total FROM inscriptions WHERE utilisateur_id = ? AND status_id = 1;`, [utilisateurId], (results) => Number(results[0].total)),
+                this.executerRequete(mysqlConnector, `
+            SELECT
+              c.id as cours_id,
+              c.type_cours as titre,
+              COUNT(i.id) as cours_suivis,
+              (COUNT(i.id) * 100 / (
+                SELECT COUNT(*) FROM cours WHERE cours_recurrent_id = c.cours_recurrent_id
+              )) as progression
+            FROM cours c
+            JOIN inscriptions i ON c.id = i.cours_id AND i.utilisateur_id = ? AND i.status_id = 1
+            GROUP BY c.id, c.type_cours, c.cours_recurrent_id;
+          `, [utilisateurId], (results) => results),
+            ]);
             let niveauActuel = 'Débutant';
-            if (coursSuivisResult > 30)
+            if (coursSuivis > 30)
                 niveauActuel = 'Avancé';
-            else if (coursSuivisResult > 10)
+            else if (coursSuivis > 10)
                 niveauActuel = 'Intermédiaire';
             return {
                 utilisateur_id: utilisateurId,
-                coursSuivis: coursSuivisResult,
-                progressionParCours: progressionResult,
-                niveauActuel
+                coursSuivis,
+                progressionParCours: progression,
+                niveauActuel,
             };
         }
         catch (error) {
@@ -135,55 +127,125 @@ export class Statistiques {
     }
     /**
      * Obtient les présences par mois pour un utilisateur
-     * @param userId - L'ID de l'utilisateur
-     * @returns Les données de présence par mois
      */
     async obtenirPresenceParMois(userId) {
         const mysqlConnector = new MysqlConnector();
         try {
             const query = `
-        SELECT 
-          MONTH(c.date) as mois,
-          YEAR(c.date) as annee,
-          COUNT(*) as nombre_presences
-        FROM utilisateur_cours uc
-        JOIN cours c ON uc.cours_id = c.id
-        WHERE uc.utilisateur_id = ? AND uc.status_id = 3
-        GROUP BY YEAR(c.date), MONTH(c.date)
-        ORDER BY annee, mois;
+        SELECT
+          u.last_name, u.first_name, MONTH(c.date_cours) AS mois,
+          CASE MONTH(c.date_cours)
+            WHEN 1 THEN 'Janvier'
+            WHEN 2 THEN 'Février'
+            WHEN 3 THEN 'Mars'
+            WHEN 4 THEN 'Avril'
+            WHEN 5 THEN 'Mai'
+            WHEN 6 THEN 'Juin'
+            WHEN 7 THEN 'Juillet'
+            WHEN 8 THEN 'Août'
+            WHEN 9 THEN 'Septembre'
+            WHEN 10 THEN 'Octobre'
+            WHEN 11 THEN 'Novembre'
+            WHEN 12 THEN 'Décembre'
+          END AS nom_mois,
+          c.type_cours, COUNT(i.id) AS total_presences
+        FROM inscriptions i
+        JOIN cours c ON i.cours_id = c.id
+        JOIN utilisateurs u ON i.utilisateur_id = u.id
+        WHERE i.status_id = 1
+          AND i.utilisateur_id = ?
+        GROUP BY u.last_name, u.first_name, mois, c.type_cours
+        ORDER BY u.last_name, u.first_name, mois, c.type_cours;
       `;
-            return new Promise((resolve, reject) => {
-                mysqlConnector.query(query, [userId], (error, results) => {
-                    if (error) {
-                        console.error(`Erreur lors de la récupération des présences pour l'utilisateur ${userId}:`, error);
-                        reject(error);
-                    }
-                    else {
-                        resolve(results);
-                    }
-                    mysqlConnector.close();
-                });
-            });
+            return this.executerRequete(mysqlConnector, query, [userId], (results) => results);
         }
         catch (error) {
-            console.error(`Erreur générale lors de la récupération des présences:`, error);
+            console.error(`Erreur lors de la récupération des présences pour l'utilisateur ${userId}:`, error);
             throw error;
+        }
+        finally {
+            mysqlConnector.close();
         }
     }
     /**
-     * Formate les données de présence pour l'affichage
-     * @param data - Les données brutes de présence par mois
-     * @returns Les données formatées
+     * Obtient les présences non validées par mois pour un utilisateur
+     */
+    async obtenirPresencesNonValideesParMois(userId) {
+        const mysqlConnector = new MysqlConnector();
+        try {
+            const query = `
+        SELECT
+          u.last_name, u.first_name, MONTH(c.date_cours) AS mois,
+          CASE MONTH(c.date_cours)
+            WHEN 1 THEN 'Janvier'
+            WHEN 2 THEN 'Février'
+            WHEN 3 THEN 'Mars'
+            WHEN 4 THEN 'Avril'
+            WHEN 5 THEN 'Mai'
+            WHEN 6 THEN 'Juin'
+            WHEN 7 THEN 'Juillet'
+            WHEN 8 THEN 'Août'
+            WHEN 9 THEN 'Septembre'
+            WHEN 10 THEN 'Octobre'
+            WHEN 11 THEN 'Novembre'
+            WHEN 12 THEN 'Décembre'
+          END AS nom_mois,
+          c.type_cours, COUNT(i.id) AS total_presences
+        FROM inscriptions i
+        JOIN cours c ON i.cours_id = c.id
+        JOIN utilisateurs u ON i.utilisateur_id = u.id
+        WHERE i.status_id IS NULL
+          AND i.utilisateur_id = ?
+        GROUP BY u.last_name, u.first_name, mois, c.type_cours
+        ORDER BY u.last_name, u.first_name, mois, c.type_cours;
+      `;
+            return this.executerRequete(mysqlConnector, query, [userId], (results) => results);
+        }
+        catch (error) {
+            console.error(`Erreur lors de la récupération des présences non validées pour l'utilisateur ${userId}:`, error);
+            throw error;
+        }
+        finally {
+            mysqlConnector.close();
+        }
+    }
+    /**
+     * Obtient les statistiques de fréquentation par mois pour tous les utilisateurs
+     */
+    async obtenirStatistiquesPresenceParMois() {
+        const mysqlConnector = new MysqlConnector();
+        try {
+            const query = `
+        SELECT
+          MONTHNAME(c.date_cours) as mois,
+          COUNT(DISTINCT i.utilisateur_id) as frequentation
+        FROM cours c
+        LEFT JOIN inscriptions i ON c.id = i.cours_id AND i.status_id = 1
+        GROUP BY MONTH(c.date_cours), mois
+        ORDER BY MONTH(c.date_cours);
+      `;
+            return this.executerRequete(mysqlConnector, query, [], (results) => results);
+        }
+        catch (error) {
+            console.error("Erreur lors de l'obtention des statistiques de présence par mois:", error);
+            throw error;
+        }
+        finally {
+            mysqlConnector.close();
+        }
+    }
+    /**
+     * Formate les résultats de présence pour affichage graphique
      */
     formatPresenceData(data) {
-        const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        // Transformer les données en un format adapté pour les graphiques
-        return data.map(item => ({
-            mois: moisNoms[item.mois - 1],
-            annee: item.annee,
-            nombre_presences: item.nombre_presences,
-            label: `${moisNoms[item.mois - 1]} ${item.annee}`
-        }));
+        const formatted = {};
+        data.forEach((item) => {
+            const { nom_mois, type_cours, total_presences } = item;
+            if (!formatted[nom_mois]) {
+                formatted[nom_mois] = {};
+            }
+            formatted[nom_mois][type_cours] = total_presences;
+        });
+        return formatted;
     }
 }

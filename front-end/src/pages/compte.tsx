@@ -17,8 +17,12 @@ import {
   ModalHeader,
   ModalFooter,
   ModalVariant,
+  Alert
 } from '@patternfly/react-core';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 
 import { apiUrl } from './apiUrl';
 
@@ -62,6 +66,8 @@ const Compte = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({});
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState<string>('');
+  const [showDbLog, setShowDbLog] = useState(false);
 
   const [form, setForm] = useState<CompteUserInfo>({
     prenom: '',
@@ -79,6 +85,15 @@ const Compte = () => {
   const [abonnements, setAbonnements] = useState<AbonnementInfo[]>([]);
   const [gradesList, setGradesList] = useState<GradeInfo[]>([]);
   const [statusList, setStatusList] = useState<StatusInfo[]>([]);
+  const [statFrequentation, setStatFrequentation] = useState<{
+    totalFrequentation: number;
+    frequentationParMois: {
+      mois: string;
+      frequentation: number;
+      nombres_total_de_cours_du_mois: number;
+      pourcentage_de_cours_valides: number;
+    }[];
+  } | null>(null);
 
   // Ajoutez un état pour l'id utilisateur
   const [userId, setUserId] = useState<number | null>(null);
@@ -224,16 +239,32 @@ const Compte = () => {
       });
       const result = await response.json();
       if (response.ok) {
-        alert(result.message || 'Modifications enregistrées.');
+        setModalMessage(result.message || 'Modifications enregistrées.');
+        setShowDbLog(true);
+        setTimeout(() => {
+          setShowDbLog(false);
+          setIsModalOpen(false);
+        }, 1800);
       } else {
-        alert(result.message || 'Erreur lors de la modification.');
+        setModalMessage(result.message || 'Erreur lors de la modification.');
+        setShowDbLog(true);
       }
     } catch (error) {
-      alert('Erreur réseau ou serveur.');
+      setModalMessage('Erreur réseau ou serveur.');
+      setShowDbLog(true);
     } finally {
-      setIsModalOpen(false);
+      setIsModalOpen(true);
     }
   };
+
+  useEffect(() => {
+    if (userId) {
+      fetch(apiUrl(`statistiques/frequentation/${userId}`))
+        .then(res => res.json())
+        .then(data => setStatFrequentation(data))
+        .catch(() => setStatFrequentation(null));
+    }
+  }, [userId]);
 
   if (loading) {
     return (
@@ -336,6 +367,24 @@ const Compte = () => {
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {/* Affiche le log de succès ou d'échec uniquement si showDbLog est true */}
+                  {showDbLog && modalMessage && (
+                    <div
+                      style={{
+                        background: '#e6f4ea',
+                        color: '#20744a',
+                        border: '1px solid #b7e4c7',
+                        borderRadius: '6px',
+                        padding: '1rem',
+                        marginTop: '1rem',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {modalMessage}
+                    </div>
                   )}
                 </div>
               </ModalBody>
@@ -535,7 +584,30 @@ const Compte = () => {
           <Tab eventKey={4} title={<TabTitleText>Statistiques</TabTitleText>}>
             <Grid hasGutter>
               <GridItem span={12}>
-                {/* <Graph title="Présence par mois" data={data} /> */}
+                {/* Graphique de fréquentation par mois */}
+                {statFrequentation && statFrequentation.frequentationParMois.length > 0 ? (
+                  <div style={{ background: '#fff', padding: '1rem', borderRadius: 8 }}>
+                    <Title headingLevel="h2" style={{ marginBottom: 16 }}>Fréquentation par mois</Title>
+                    <ResponsiveContainer width="100%" height={350}>
+                      <LineChart
+                        data={statFrequentation.frequentationParMois}
+                        margin={{ top: 20, right: 30, left: 0, bottom: 50 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="mois" angle={-45} textAnchor="end" interval={0} />
+                        <YAxis yAxisId="left" label={{ value: 'Présences / Cours', angle: -90, position: 'insideLeft' }} />
+                        <YAxis yAxisId="right" orientation="right" label={{ value: '% validés', angle: -90, position: 'insideRight' }} />
+                        <Tooltip />
+                        <Legend verticalAlign="top" height={36} />
+                        <Line yAxisId="left" type="monotone" dataKey="frequentation" name="Présences validées" stroke="#007bff" />
+                        <Line yAxisId="left" type="monotone" dataKey="nombres_total_de_cours_du_mois" name="Cours total/mois" stroke="#28a745" strokeDasharray="5 5" />
+                        <Line yAxisId="right" type="monotone" dataKey="pourcentage_de_cours_valides" name="% cours validés" stroke="#ffc107" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p>Aucune statistique de fréquentation disponible.</p>
+                )}
               </GridItem>
             </Grid>
           </Tab>
