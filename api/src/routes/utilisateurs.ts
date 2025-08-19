@@ -174,7 +174,8 @@ router.delete('/supprimer', async (req: any, res: any) => {
 // Nouvelle route pour modifier uniquement le status, le grade et l'abonnement d'un utilisateur
 router.put('/modifier', async (req:any, res:any) => {
   try {
-    const { id, status_id, grade_id, abonnement_id } = req.body;
+    const { id, email, date_naissance, genres, grades, abonnement, status } = req.body;
+    console.log(req.body);
 
     if (!id) {
       return res.status(400).json({ message: "L'identifiant de l'utilisateur est requis." });
@@ -182,8 +183,17 @@ router.put('/modifier', async (req:any, res:any) => {
 
     const client = new Utilisateurs();
 
+    // Prépare les données à modifier
+    const dataToUpdate: any = { id };
+    if (typeof email !== 'undefined') dataToUpdate.email = email;
+    if (typeof date_naissance !== 'undefined') dataToUpdate.date_naissance = date_naissance;
+    if (typeof genres !== 'undefined') dataToUpdate.genres = genres;
+    if (typeof grades !== 'undefined') dataToUpdate.grades = grades;
+    if (typeof abonnement !== 'undefined') dataToUpdate.abonnement = abonnement;
+    if (typeof status !== 'undefined') dataToUpdate.status = status;
+
     // Appel à la méthode du client qui gère la modification
-    const result = await client.modifierInfosUtilisateur({ id, status_id, grade_id, abonnement_id });
+    const result = await client.modifierInfosUtilisateur(dataToUpdate);
 
     if (result.isConfirm) {
       res.status(200).json({ message: 'Utilisateur modifié avec succès.' });
@@ -193,6 +203,23 @@ router.put('/modifier', async (req:any, res:any) => {
   } catch (error) {
     console.error("Erreur lors de la modification de l'utilisateur :", error);
     res.status(500).json({ message: 'Erreur serveur lors de la modification de l\'utilisateur.' });
+  }
+});
+
+// Endpoint pour vérifier si une adresse email est déjà utilisée
+router.post('/verifier-email', async (req:any, res:any) => {
+  const { email, id } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "L'email est requis." });
+  }
+  try {
+    const client = new Utilisateurs();
+    // Appel à la méthode dédiée pour vérifier l'email
+    const exists = await client.verifierEmailExiste(email, id);
+    return res.json({ exists });
+  } catch (error) {
+    console.error('Erreur lors de la vérification de l\'email :', error);
+    return res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'email.' });
   }
 });
 

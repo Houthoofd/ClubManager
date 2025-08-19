@@ -383,7 +383,7 @@ export class Utilisateurs {
             });
         });
     }
-    // Modifie uniquement le status, le grade et l'abonnement d'un utilisateur
+    // Modifie les informations d'un utilisateur selon les champs reçus
     async modifierInfosUtilisateur(data) {
         const mysqlConnector = new MysqlConnector();
         if (!data.id) {
@@ -392,17 +392,29 @@ export class Utilisateurs {
         // Prépare la requête et les valeurs à mettre à jour
         const fields = [];
         const values = [];
-        if (typeof data.status_id !== 'undefined') {
-            fields.push('status_id = ?');
-            values.push(data.status_id);
+        if (typeof data.email !== 'undefined') {
+            fields.push('email = ?');
+            values.push(data.email);
         }
-        if (typeof data.grade_id !== 'undefined') {
-            fields.push('grade_id = ?');
-            values.push(data.grade_id);
+        if (typeof data.date_naissance !== 'undefined') {
+            fields.push('date_of_birth = ?');
+            values.push(data.date_naissance);
         }
-        if (typeof data.abonnement_id !== 'undefined') {
-            fields.push('abonnement_id = ?');
-            values.push(data.abonnement_id);
+        if (typeof data.genres !== 'undefined') {
+            fields.push('genre_id = (SELECT id FROM genres WHERE genre_name = ? LIMIT 1)');
+            values.push(data.genres);
+        }
+        if (typeof data.grades !== 'undefined') {
+            fields.push('grade_id = (SELECT id FROM grades WHERE grade_id = ? LIMIT 1)');
+            values.push(data.grades);
+        }
+        if (typeof data.abonnement !== 'undefined') {
+            fields.push('abonnement_id = (SELECT id FROM plans_tarifaires WHERE nom_plan = ? LIMIT 1)');
+            values.push(data.abonnement);
+        }
+        if (typeof data.status !== 'undefined') {
+            fields.push('status_id = (SELECT id FROM status WHERE nom_role = ? LIMIT 1)');
+            values.push(data.status);
         }
         if (fields.length === 0) {
             mysqlConnector.close();
@@ -424,6 +436,25 @@ export class Utilisateurs {
                 else {
                     resolve({ isConfirm: true, message: `Utilisateur avec ID ${data.id} modifié avec succès.` });
                 }
+            });
+        });
+    }
+    verifierEmailExiste(email, id) {
+        const mysqlConnector = new MysqlConnector();
+        let sql = 'SELECT id FROM utilisateurs WHERE email = ?';
+        let params = [email];
+        if (id) {
+            sql += ' AND id != ?';
+            params.push(id);
+        }
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, params, (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve(results.length > 0);
             });
         });
     }

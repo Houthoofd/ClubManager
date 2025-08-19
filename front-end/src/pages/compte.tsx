@@ -1,42 +1,58 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Tabs,
   Tab,
   TabTitleText,
-  TextInput,
   Form,
   FormGroup,
-  Title,
+  TextInput,
   PageSection,
-  Grid,
-  GridItem,
+  Title,
   Spinner,
+  Alert,
   Button,
   Modal,
-  ModalBody,
   ModalHeader,
+  ModalBody,
   ModalFooter,
   ModalVariant,
 } from '@patternfly/react-core';
-import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
-
 import { apiUrl } from './apiUrl';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
 
-// Définition d'un type spécial pour les infos du compte
-type CompteUserInfo = {
-  prenom: string;
-  nom: string;
-  email: string;
-  date_naissance: string;
-  abonnement: string;
-  genres: string;
-  grades: string;
+type UtilisateurType = {
+  id: number;
+  first_name: string;
+  last_name: string;
   nom_utilisateur: string;
+  email: string;
+  password: string;
+  genres: string;
   status: string;
-  mot_de_passe: string;
+  grades: string;
+  abonnement: string;
+  date_of_birth: string;
+};
+
+type StatFrequentationType = {
+  totalFrequentation: number;
+  frequentationParMois: {
+    mois: string;
+    frequentation: number;
+    nombres_total_de_cours_du_mois: number;
+    pourcentage_de_cours_valides: number;
+  }[];
 };
 
 type AbonnementInfo = {
@@ -58,17 +74,44 @@ type StatusInfo = {
   description: string;
 };
 
+function formatDateForInput(isoDateString: string): string {
+  const date = new Date(isoDateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const Compte = () => {
-  const [activeTabKey, setActiveTabKey] = useState(0);
+  const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTabKey, setActiveTabKey] = useState(0);
+  const [statFrequentation, setStatFrequentation] = useState<StatFrequentationType | null>(null);
   const [editingFields, setEditingFields] = useState<{ [key: string]: boolean }>({});
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({});
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [showDbLog, setShowDbLog] = useState(false);
-
-  const [form, setForm] = useState<CompteUserInfo>({
+  const [abonnements, setAbonnements] = useState<AbonnementInfo[]>([]);
+  const [gradesList, setGradesList] = useState<GradeInfo[]>([]);
+  const [statusList, setStatusList] = useState<StatusInfo[]>([]);
+  const [emailCheckMessage, setEmailCheckMessage] = useState<string>('');
+  const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [form, setForm] = useState<{
+    id: number | null;
+    prenom: string;
+    nom: string;
+    email: string;
+    date_naissance: string;
+    abonnement: string;
+    genres: string;
+    grades: string;
+    nom_utilisateur: string;
+    status: string;
+    mot_de_passe: string;
+  }>({
+    id: null,
     prenom: '',
     nom: '',
     email: '',
@@ -81,105 +124,142 @@ const Compte = () => {
     mot_de_passe: '',
   });
 
-  const [abonnements, setAbonnements] = useState<AbonnementInfo[]>([]);
-  const [gradesList, setGradesList] = useState<GradeInfo[]>([]);
-  const [statusList, setStatusList] = useState<StatusInfo[]>([]);
-  const [statFrequentation, setStatFrequentation] = useState<{
-    totalFrequentation: number;
-    frequentationParMois: {
-      mois: string;
-      frequentation: number;
-      nombres_total_de_cours_du_mois: number;
-      pourcentage_de_cours_valides: number;
-    }[];
-  } | null>(null);
-
-  // Ajoutez un état pour l'id utilisateur
-  const [userId, setUserId] = useState<number | null>(null);
-
   useEffect(() => {
-    const storedData = localStorage.getItem('userData');
-    if (!storedData) return;
+    // Récupère les infos utilisateur depuis le endpoint 'compte/informations'
+    const fetchCompteInfo = async () => {
+      try {
+        // Récupère les infos de l'utilisateur depuis le localStorage ou autre source
+        const storedData = localStorage.getItem('userData');
+        let prenom = '';
+        let nom = '';
+        let userId = id;
+        if (storedData) {
+          try {
+            const parsedData = JSON.parse(storedData);
+            prenom = parsedData.data?.prenom || '';
+            nom = parsedData.data?.nom || '';
+            userId = parsedData.data?.id || id;
+          } catch (e) {}
+        }
 
-    try {
-      const parsedData = JSON.parse(storedData);
-      if (parsedData.data?.prenom && parsedData.data?.nom) {
-        fetchData(parsedData.data.prenom, parsedData.data.nom);
-      } else {
+        const response = await fetch(apiUrl('compte/informations'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prenom, nom })
+        });
+
+        if (!response.ok) throw new Error('Erreur réseau');
+
+        const result = await response.json();
+        const utilisateur = result.utilisateur;
+
+        let mot_de_passe = '';
+        if (utilisateur.password) {
+          mot_de_passe = '[Mot de passe non affichable : hash bcrypt]';
+        }
+
+        setForm({
+          id: utilisateur.id ?? null,
+          prenom: utilisateur.first_name || '',
+          nom: utilisateur.last_name || '',
+          email: utilisateur.email || '',
+          date_naissance: utilisateur.date_of_birth || '',
+          abonnement: String(utilisateur.abonnement ?? ''),
+          genres: String(utilisateur.genres ?? ''),
+          grades: String(utilisateur.grades ?? ''),
+          nom_utilisateur: utilisateur.nom_utilisateur || '',
+          status: String(utilisateur.status ?? ''),
+          mot_de_passe,
+        });
+      } catch (error) {
+        setError('Erreur lors de la récupération des données');
+      } finally {
         setLoading(false);
       }
-    } catch (error) {
-      console.error("Erreur lors du parsing de l'utilisateur :", error);
-      setLoading(false);
-    }
-  }, []);
+    };
 
-  useEffect(() => {
-    // Fetch abonnements pour le select
-    fetch(apiUrl('informations/abonnements'))
-      .then(res => res.json())
-      .then(data => setAbonnements(data))
-      .catch(() => setAbonnements([]));
-  }, []);
+    fetchCompteInfo();
 
-  useEffect(() => {
-    // Fetch grades pour le select
-    fetch(apiUrl('informations/grades'))
-      .then(res => res.json())
-      .then(data => setGradesList(data))
-      .catch(() => setGradesList([]));
-  }, []);
-
-  useEffect(() => {
-    // Fetch status pour le select
-    fetch(apiUrl('informations/status'))
-      .then(res => res.json())
-      .then(data => setStatusList(data))
-      .catch(() => setStatusList([]));
-  }, []);
-
-  const fetchData = async (prenom: string, nom: string) => {
-    try {
-      const response = await fetch(apiUrl('compte/informations'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prenom, nom })
-      });
-
-      if (!response.ok) throw new Error('Erreur réseau');
-
-      const result = await response.json();
-      const utilisateur = result.utilisateur;
-  
-      let mot_de_passe = '';
-      if (utilisateur.password) {
-        mot_de_passe = '[Mot de passe non affichable : hash bcrypt]';
+    // Récupération des statistiques de fréquentation
+    const fetchStatistiques = async () => {
+      try {
+        // Récupère l'id utilisateur depuis le localStorage
+        let userId = id;
+        const storedData = localStorage.getItem('userData');
+        if (storedData) {
+          try {
+            const parsedData = JSON.parse(storedData);
+            userId = parsedData.data?.id || id;
+          } catch (e) {}
+        }
+        const response = await fetch(apiUrl(`statistiques/frequentation/${userId}`));
+        if (!response.ok) throw new Error('Erreur réseau');
+        const data = await response.json();
+        setStatFrequentation(data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des statistiques:', error);
       }
+    };
 
-      setForm({
-        prenom: utilisateur.first_name || '',
-        nom: utilisateur.last_name || '',
-        email: utilisateur.email || '',
-        date_naissance: utilisateur.date_of_birth || '',
-        abonnement: String(utilisateur.abonnement ?? ''),
-        genres: String(utilisateur.genres ?? ''),
-        grades: String(utilisateur.grades ?? ''),
-        nom_utilisateur: utilisateur.nom_utilisateur || '',
-        status: String(utilisateur.status ?? ''),
-        mot_de_passe,
-      });
+    // Récupération des abonnements
+    const fetchAbonnements = async () => {
+      try {
+        const response = await fetch(apiUrl('informations/abonnements'));
+        if (!response.ok) throw new Error('Erreur réseau');
+        const data = await response.json();
+        setAbonnements(data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des abonnements:', error);
+      }
+    };
 
-      // Stocke l'id utilisateur pour la modification
-      if (utilisateur.id) setUserId(utilisateur.id);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des données:', error);
-    } finally {
-      setLoading(false);
-    }
+    // Récupération des grades
+    const fetchGrades = async () => {
+      try {
+        const response = await fetch(apiUrl('informations/grades'));
+        if (!response.ok) throw new Error('Erreur réseau');
+        const data = await response.json();
+        setGradesList(data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des grades:', error);
+      }
+    };
+
+    // Récupération des statuts
+    const fetchStatus = async () => {
+      try {
+        const response = await fetch(apiUrl('informations/status'));
+        if (!response.ok) throw new Error('Erreur réseau');
+        const data = await response.json();
+        setStatusList(data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des statuts:', error);
+      }
+    };
+
+    fetchStatistiques();
+    fetchAbonnements();
+    fetchGrades();
+    fetchStatus();
+  }, [id]);
+
+  const handleTabClick = (
+    _event: React.MouseEvent<HTMLElement, MouseEvent>,
+    eventKey: string | number
+  ) => {
+    setActiveTabKey(Number(eventKey));
   };
 
-  const handleChange = (value: string, name: string) => {
-    setForm(prev => ({ ...prev, [name]: value }));
+  const getChangesSummary = () => {
+    const changes: { [key: string]: string } = {};
+    // Utilise les clés du form pour éviter l'erreur
+    Object.keys(editingFields).forEach(field => {
+      if (editingFields[field]) {
+        // @ts-ignore
+        changes[field] = form[field];
+      }
+    });
+    return changes;
   };
 
   const handleEditClick = (field: string) => {
@@ -188,60 +268,52 @@ const Compte = () => {
 
   const handleModalToggle = () => {
     setIsModalOpen(!isModalOpen);
-    setIsDropdownOpen(false);
   };
 
-  const onEscapePress = () => {
-    if (isDropdownOpen) {
-      setIsDropdownOpen(false);
-      // Supprime l'appel à onFocus, car il n'est pas utilisé
-    } else {
-      handleModalToggle();
-    }
-  };
-
-  // Fonction pour détecter les changements
-  const getChangesSummary = () => {
-    const changes: { [key: string]: string } = {};
-    Object.keys(editingFields).forEach(field => {
-      if (editingFields[field]) {
-        changes[field] = form[field as keyof typeof form];
-      }
-    });
-    return changes;
-  };
-
-  // Fonction pour envoyer la modification au backend
   const handleValidateChanges = async () => {
-    if (!userId) {
-      alert("Impossible de trouver l'id utilisateur.");
-      return;
-    }
-    if (editingFields['email'] && (!form.email || !form.email.includes('@'))) {
-      setModalMessage("L'email doit contenir '@'.");
-      setShowDbLog(true);
-      setIsModalOpen(true);
-      return;
+    if (!form.id) return;
+
+    // Vérification du format email
+    if (editingFields['email']) {
+      const email = form.email;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        setModalMessage("Veuillez entrer une adresse email valide.");
+        setIsModalOpen(true);
+        return;
+      }
+      // Vérification si l'email existe déjà dans la base
+      const checkResponse = await fetch(apiUrl(`utilisateurs/verifier-email`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, id: form.id })
+      });
+      const checkResult = await checkResponse.json();
+      if (checkResult.exists) {
+        setModalMessage("Cette adresse email est déjà utilisée par un autre utilisateur.");
+        setIsModalOpen(true);
+        return;
+      }
     }
 
-    // Trouver les bons ids pour les valeurs sélectionnées
-    const abonnementObj = abonnements.find(a => a.nom_plan === form.abonnement);
-    const gradeObj = gradesList.find(g => g.grade_id === form.grades);
-    const statusObj = statusList.find(s => s.nom_role === form.status);
-
-    const body = {
-      id: userId,
-      abonnement_id: abonnementObj ? abonnementObj.id : null,
-      grade_id: gradeObj ? gradeObj.id : null,
-      status_id: statusObj ? statusObj.id : null,
+    // Prépare le body avec toutes les valeurs du formulaire (modifiées ou non)
+    const body: any = {
+      id: form.id,
+      email: form.email,
+      date_naissance: form.date_naissance,
+      genres: form.genres,
+      grades: form.grades,
+      abonnement: form.abonnement,
+      status: form.status
     };
     console.log(body)
     try {
-      const response = await fetch(apiUrl('utilisateurs/modifier'), {
+      const response = await fetch(apiUrl(`utilisateurs/modifier`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+
       const result = await response.json();
       if (response.ok) {
         setModalMessage(result.message || 'Modifications enregistrées.');
@@ -257,418 +329,366 @@ const Compte = () => {
     } catch (error) {
       setModalMessage('Erreur réseau ou serveur.');
       setShowDbLog(true);
-    } finally {
-      setIsModalOpen(true);
     }
   };
 
-  useEffect(() => {
-    if (userId) {
-      fetch(apiUrl(`statistiques/frequentation/${userId}`))
-        .then(res => res.json())
-        .then(data => setStatFrequentation(data))
-        .catch(() => setStatFrequentation(null));
-    }
-  }, [userId]);
+  const handleEmailChange = (value: string) => {
+    if (emailCheckTimeout) clearTimeout(emailCheckTimeout);
+    setForm(prev => ({ ...prev, email: value }));
+    setEmailCheckMessage('');
+    // Lance la vérification après un court délai (user stop typing)
+    const timeout = setTimeout(() => {
+      checkEmailAvailability(value);
+    }, 700);
+    setEmailCheckTimeout(timeout);
+  };
 
-  if (loading) {
-    return (
-      <PageSection variant="default" style={{ textAlign: 'center', padding: '2rem' }}>
-        <Spinner size="xl" />
-      </PageSection>
-    );
-  }
+  const checkEmailAvailability = async (email: string) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !form.id) {
+      setEmailCheckMessage('');
+      return;
+    }
+    const response = await fetch(apiUrl(`utilisateurs/verifier-email`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, id: form.id })
+    });
+    const result = await response.json();
+    if (result.exists) {
+      setEmailCheckMessage("Cette adresse email est déjà utilisée par un autre utilisateur.");
+    } else {
+      setEmailCheckMessage("Cette adresse email est disponible.");
+    }
+  };
+
+  if (loading) return <Spinner size="xl" />;
+  if (error) return <Alert variant="danger" title={error} />;
+  if (!form) return null;
 
   return (
-    <>
-      <PageSection variant="default">
-        <Title headingLevel="h1">Compte</Title>
-      </PageSection>
-
-      <PageSection>
-        <Tabs activeKey={activeTabKey} onSelect={(_, key) => setActiveTabKey(Number(key))}>
-          <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
-            <Form isHorizontal>
-              <FormGroup label="Prénom" fieldId="first-name">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <TextInput
-                    id="first-name"
-                    value={form.prenom}
-                    isDisabled
-                    style={{ background: '#fff' }}
-                  />
-                </div>
-              </FormGroup>
-              <FormGroup label="Nom" fieldId="last-name">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <TextInput
-                    id="last-name"
-                    value={form.nom}
-                    isDisabled
-                    style={{ background: '#fff' }}
-                  />
-                </div>
-              </FormGroup>
-              <FormGroup label="Email" fieldId="email">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <TextInput
-                    id="email"
-                    value={form.email || ''}
-                    onChange={e => handleChange(e.currentTarget.value, 'email')}
-                    isDisabled={!editingFields['email']}
-                    style={{ background: '#fff' }}
-                  />
-                  <Button
-                    variant="plain"
-                    onClick={() => handleEditClick('email')}
-                    style={{ marginLeft: '1rem' }}
-                    aria-label={editingFields['email'] ? "Terminer" : "Editer"}
-                  >
-                    {editingFields['email'] ? (
-                      <CheckIcon
-                        color="var(--pf-global--success-color--100)"
-                        style={{
-                          background: '#d4f5e9',
-                          borderRadius: '50%',
-                          padding: '6px',
-                          fontSize: '1.5rem'
-                        }}
-                      />
-                    ) : (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#f0f0f0',
-                        borderRadius: '50%',
-                        padding: '6px',
-                        fontSize: '1.5rem'
-                      }}>
-                        <PencilAltIcon style={{ fontSize: '1.5rem' }} />
-                      </span>
-                    )}
-                  </Button>
-                </div>
-                {/* Vérification du format email */}
-                {editingFields['email'] && form.email && !form.email.includes('@') && (
-                  <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
-                    Veuillez entrer une adresse email valide contenant '@'
-                  </div>
-                )}
-              </FormGroup>
-              <FormGroup label="Nom d'utilisateur" fieldId="username">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <TextInput
-                    id="username"
-                    value={form.nom_utilisateur}
-                    isDisabled
-                    style={{ background: '#fff' }}
-                  />
-                </div>
-              </FormGroup>
-              <FormGroup label="Date de naissance" fieldId="dob">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <TextInput
-                    id="dob"
-                    type="date"
-                    value={form.date_naissance ? form.date_naissance.slice(0, 10) : ''}
-                    isDisabled
-                    style={{ background: '#fff' }}
-                  />
-                </div>
-              </FormGroup>
-              <FormGroup label="Mot de passe" fieldId="mot-de-passe">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <TextInput
-                    id="mot-de-passe"
-                    value={form.mot_de_passe}
-                    isDisabled
-                    style={{ background: '#fff' }}
-                  />
-                </div>
-              </FormGroup>
+    <PageSection>
+      <Title headingLevel="h1" size="xl">
+        Mon compte
+      </Title>
+      <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
+        <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
+          <Form isHorizontal>
+            <FormGroup label="Nom :" fieldId="last-name">
+              <TextInput
+                id="last-name"
+                value={form.nom}
+                isDisabled
+              />
+            </FormGroup>
+            <FormGroup label="Prénom :" fieldId="first-name">
+              <TextInput
+                id="first-name"
+                value={form.prenom}
+                isDisabled
+              />
+            </FormGroup>
+            <FormGroup label="Nom d'utilisateur :" fieldId="nom-utilisateur">
+              <TextInput
+                id="nom-utilisateur"
+                value={form.nom_utilisateur}
+                isDisabled
+              />
+            </FormGroup>
+            <FormGroup label="Email :" fieldId="email">
+              <TextInput
+                id="email"
+                value={form.email || ''}
+                isDisabled={!editingFields['email']}
+                onChange={(_event, value) => handleEmailChange(value)}
+              />
               <Button
-                variant="primary"
-                style={{ marginTop: '1rem' }}
-                onClick={() => {
-                  setPendingChanges(getChangesSummary());
-                  setIsModalOpen(true);
+                variant="plain"
+                onClick={() => handleEditClick('email')}
+                style={{ marginLeft: '1rem' }}
+                aria-label={editingFields['email'] ? "Terminer" : "Editer"}
+              >
+                {editingFields['email'] ? (
+                  <CheckIcon color="var(--pf-global--success-color--100)" />
+                ) : (
+                  <PencilAltIcon />
+                )}
+              </Button>
+              {editingFields['email'] && form.email && !form.email.includes('@') && (
+                <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
+                  Veuillez entrer une adresse email valide contenant '@'
+                </div>
+              )}
+              {editingFields['email'] && form.email && emailCheckMessage && (
+                <div style={{
+                  color: emailCheckMessage.includes('disponible') ? 'green' : 'red',
+                  fontSize: '0.95rem',
+                  marginTop: 4
+                }}>
+                  {emailCheckMessage}
+                </div>
+              )}
+            </FormGroup>
+            <FormGroup label="Date de naissance :" fieldId="dob">
+              <TextInput
+                id="dob"
+                type="date"
+                value={formatDateForInput(form.date_naissance)}
+                onChange={(_event, value) =>
+                  setForm({ ...form, date_naissance: value })
+                }
+                isDisabled={!editingFields['date_naissance']}
+              />
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('date_naissance')}
+                style={{ marginLeft: '1rem' }}
+                aria-label={editingFields['date_naissance'] ? "Terminer" : "Editer"}
+              >
+                {editingFields['date_naissance'] ? (
+                  <CheckIcon color="var(--pf-global--success-color--100)" />
+                ) : (
+                  <PencilAltIcon />
+                )}
+              </Button>
+            </FormGroup>
+            <Button
+              variant="primary"
+              style={{ marginTop: '1rem' }}
+              onClick={() => {
+                setPendingChanges(getChangesSummary());
+                setIsModalOpen(true);
+              }}
+            >
+              Voir les changements éffectués
+            </Button>
+          </Form>
+        </Tab>
+        <Tab eventKey={1} title={<TabTitleText>Informations supplémentaires</TabTitleText>}>
+          <Form isHorizontal>
+            <FormGroup label="Genre" fieldId="genre">
+              <select
+                id="genre"
+                value={form.genres}
+                onChange={e => setForm({ ...form, genres: e.target.value })}
+                disabled={!editingFields['genres']}
+                style={{
+                  minWidth: 180,
+                  padding: '6px',
+                  borderRadius: 4,
+                  background: editingFields['genres'] ? '#fff' : '#f0f0f0'
                 }}
               >
-                Voir les changements effectués
-              </Button>
-            </Form>
-            <Modal
-              variant={ModalVariant.small}
-              isOpen={isModalOpen}
-              onClose={handleModalToggle}
-              onEscapePress={onEscapePress}
-              aria-labelledby="modal-with-changes"
-              aria-describedby="modal-box-body-with-changes"
-            >
-              <ModalHeader title="Résumé des changements" labelId="modal-with-changes" />
-              <ModalBody id="modal-box-body-with-changes">
-                <div>
-                  {Object.keys(pendingChanges).length === 0 ? (
-                    <p>Aucun changement détecté.</p>
-                  ) : (
-                    <ul>
-                      {Object.entries(pendingChanges).map(([field, value]) => (
-                        <li key={field}>
-                          <strong>{field} :</strong> {value}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {/* Affiche le log de succès ou d'échec uniquement si showDbLog est true */}
-                  {showDbLog && modalMessage && (
-                    <div
-                      style={{
-                        background: '#e6f4ea',
-                        color: '#20744a',
-                        border: '1px solid #b7e4c7',
-                        borderRadius: '6px',
-                        padding: '1rem',
-                        marginTop: '1rem',
-                        fontWeight: 600,
-                        fontSize: '1rem',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {modalMessage}
-                    </div>
-                  )}
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button key="confirm" variant="primary" onClick={handleValidateChanges}>
-                  Valider
-                </Button>
-                <Button key="cancel" variant="secondary" onClick={handleModalToggle}>
-                  Annuler
-                </Button>
-              </ModalFooter>
-            </Modal>
-          </Tab>
-          <Tab eventKey={1} title={<TabTitleText>Informations supplémentaires</TabTitleText>}>
-            <Form isHorizontal>
-              <FormGroup label="Grade" fieldId="grade">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <select
-                    id="grade"
-                    value={form.grades}
-                    onChange={e => handleChange(e.target.value, 'grades')}
-                    disabled={!editingFields['grades']}
-                    style={{
-                      minWidth: 180,
-                      padding: '6px',
-                      borderRadius: 4,
-                      background: editingFields['grades'] ? '#fff' : '#fff'
-                    }}
-                  >
-                    <option value="">Sélectionner un grade</option>
-                    {gradesList.map(grade => (
-                      <option key={grade.id} value={grade.grade_id}>
-                        {grade.grade_id}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    variant="plain"
-                    onClick={() => handleEditClick('grades')}
-                    style={{ marginLeft: '1rem' }}
-                    aria-label={editingFields['grades'] ? "Terminer" : "Editer"}
-                  >
-                    {editingFields['grades'] ? (
-                      <CheckIcon
-                        color="var(--pf-global--success-color--100)"
-                        style={{
-                          background: '#d4f5e9',
-                          borderRadius: '50%',
-                          padding: '6px',
-                          fontSize: '1.5rem'
-                        }}
-                      />
-                    ) : (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#f0f0f0',
-                        borderRadius: '50%',
-                        padding: '6px',
-                        fontSize: '1.5rem'
-                      }}>
-                        <PencilAltIcon style={{ fontSize: '1.5rem' }} />
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              </FormGroup>
-              <FormGroup label="Genre" fieldId="genre">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <TextInput
-                    id="genre"
-                    value={form.genres}
-                    isDisabled
-                    style={{ background: '#fff' }}
-                  />
-                </div>
-              </FormGroup>
-              <FormGroup label="Abonnement" fieldId="abonnement">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <select
-                    id="abonnement"
-                    value={form.abonnement}
-                    onChange={e => handleChange(e.target.value, 'abonnement')}
-                    disabled={!editingFields['abonnement']}
-                    style={{
-                      minWidth: 180,
-                      padding: '6px',
-                      borderRadius: 4,
-                      background: editingFields['abonnement'] ? '#fff' : '#fff'
-                    }}
-                  >
-                    <option value="">Sélectionner un abonnement</option>
-                    {abonnements.map(ab => (
-                      <option key={ab.id} value={ab.nom_plan}>
-                        {ab.nom_plan} ({ab.prix}€/{ab.periode})
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    variant="plain"
-                    onClick={() => handleEditClick('abonnement')}
-                    style={{ marginLeft: '1rem' }}
-                    aria-label={editingFields['abonnement'] ? "Terminer" : "Editer"}
-                  >
-                    {editingFields['abonnement'] ? (
-                      <CheckIcon
-                        color="var(--pf-global--success-color--100)"
-                        style={{
-                          background: '#d4f5e9',
-                          borderRadius: '50%',
-                          padding: '6px',
-                          fontSize: '1.5rem'
-                        }}
-                      />
-                    ) : (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#f0f0f0',
-                        borderRadius: '50%',
-                        padding: '6px',
-                        fontSize: '1.5rem'
-                      }}>
-                        <PencilAltIcon style={{ fontSize: '1.5rem' }} />
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              </FormGroup>
-            </Form>
-          </Tab>
-
-          <Tab eventKey={2} title={<TabTitleText>Rôle et statut</TabTitleText>}>
-            <Form isHorizontal>
-              <FormGroup label="Rôle" fieldId="role">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <select
-                    id="role"
-                    value={form.status}
-                    onChange={e => handleChange(e.target.value, 'status')}
-                    disabled={!editingFields['status']}
-                    style={{
-                      minWidth: 180,
-                      padding: '6px',
-                      borderRadius: 4,
-                      background: editingFields['status'] ? '#fff' : '#fff'
-                    }}
-                  >
-                    <option value="">Sélectionner un rôle</option>
-                    {statusList.map(role => (
-                      <option key={role.id} value={role.nom_role}>
-                        {role.nom_role}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    variant="plain"
-                    onClick={() => handleEditClick('status')}
-                    style={{ marginLeft: '1rem' }}
-                    aria-label={editingFields['status'] ? "Terminer" : "Editer"}
-                  >
-                    {editingFields['status'] ? (
-                      <CheckIcon
-                        color="var(--pf-global--success-color--100)"
-                        style={{
-                          background: '#d4f5e9',
-                          borderRadius: '50%',
-                          padding: '6px',
-                          fontSize: '1.5rem'
-                        }}
-                      />
-                    ) : (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#f0f0f0',
-                        borderRadius: '50%',
-                        padding: '6px',
-                        fontSize: '1.5rem'
-                      }}>
-                        <PencilAltIcon style={{ fontSize: '1.5rem' }} />
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              </FormGroup>
-            </Form>
-          </Tab>
-
-          <Tab eventKey={3} title={<TabTitleText>Paiements</TabTitleText>}>
-            {/* À compléter */}
-          </Tab>
-
-          <Tab eventKey={4} title={<TabTitleText>Statistiques</TabTitleText>}>
-            <Grid hasGutter>
-              <GridItem span={12}>
-                {/* Graphique de fréquentation par mois */}
-                {statFrequentation && statFrequentation.frequentationParMois.length > 0 ? (
-                  <div style={{ background: '#fff', padding: '1rem', borderRadius: 8 }}>
-                    <Title headingLevel="h2" style={{ marginBottom: 16 }}>Fréquentation par mois</Title>
-                    <ResponsiveContainer width="100%" height={350}>
-                      <LineChart
-                        data={statFrequentation.frequentationParMois}
-                        margin={{ top: 20, right: 30, left: 0, bottom: 50 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="mois" angle={-45} textAnchor="end" interval={0} />
-                        <YAxis yAxisId="left" label={{ value: 'Présences / Cours', angle: -90, position: 'insideLeft' }} />
-                        <YAxis yAxisId="right" orientation="right" label={{ value: '% validés', angle: -90, position: 'insideRight' }} />
-                        <Tooltip />
-                        <Legend verticalAlign="top" height={36} />
-                        <Line yAxisId="left" type="monotone" dataKey="frequentation" name="Présences validées" stroke="#007bff" />
-                        <Line yAxisId="left" type="monotone" dataKey="nombres_total_de_cours_du_mois" name="Cours total/mois" stroke="#28a745" strokeDasharray="5 5" />
-                        <Line yAxisId="right" type="monotone" dataKey="pourcentage_de_cours_valides" name="% cours validés" stroke="#ffc107" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                <option value="">Sélectionner un genre</option>
+                <option value="Masculin">Masculin</option>
+                <option value="Féminin">Féminin</option>
+                <option value="Autre">Autre</option>
+              </select>
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('genres')}
+                style={{ marginLeft: '1rem' }}
+                aria-label={editingFields['genres'] ? "Terminer" : "Editer"}
+              >
+                {editingFields['genres'] ? (
+                  <CheckIcon color="var(--pf-global--success-color--100)" />
                 ) : (
-                  <p>Aucune statistique de fréquentation disponible.</p>
+                  <PencilAltIcon />
                 )}
-              </GridItem>
-            </Grid>
-          </Tab>
-        </Tabs>
-      </PageSection>
-    </>
+              </Button>
+            </FormGroup>
+            <FormGroup label="Grade" fieldId="grade">
+              <select
+                id="grade"
+                value={form.grades}
+                onChange={e => setForm({ ...form, grades: e.target.value })}
+                disabled={!editingFields['grades']}
+                style={{
+                  minWidth: 180,
+                  padding: '6px',
+                  borderRadius: 4,
+                  background: editingFields['grades'] ? '#fff' : '#f0f0f0'
+                }}
+              >
+                <option value="">Sélectionner un grade</option>
+                {gradesList.map(grade => (
+                  <option key={grade.id} value={grade.grade_id}>
+                    {grade.grade_id}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('grades')}
+                style={{ marginLeft: '1rem' }}
+                aria-label={editingFields['grades'] ? "Terminer" : "Editer"}
+              >
+                {editingFields['grades'] ? (
+                  <CheckIcon color="var(--pf-global--success-color--100)" />
+                ) : (
+                  <PencilAltIcon />
+                )}
+              </Button>
+            </FormGroup>
+            <FormGroup label="Abonnement" fieldId="abonnement">
+              <select
+                id="abonnement"
+                value={form.abonnement}
+                onChange={e => setForm({ ...form, abonnement: e.target.value })}
+                disabled={!editingFields['abonnement']}
+                style={{
+                  minWidth: 180,
+                  padding: '6px',
+                  borderRadius: 4,
+                  background: editingFields['abonnement'] ? '#fff' : '#f0f0f0'
+                }}
+              >
+                <option value="">Sélectionner un abonnement</option>
+                {abonnements.map(ab => (
+                  <option key={ab.id} value={ab.nom_plan}>
+                    {ab.nom_plan} ({ab.prix}€/{ab.periode})
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('abonnement')}
+                style={{ marginLeft: '1rem' }}
+                aria-label={editingFields['abonnement'] ? "Terminer" : "Editer"}
+              >
+                {editingFields['abonnement'] ? (
+                  <CheckIcon color="var(--pf-global--success-color--100)" />
+                ) : (
+                  <PencilAltIcon />
+                )}
+              </Button>
+            </FormGroup>
+          </Form>
+        </Tab>
+        <Tab eventKey={2} title={<TabTitleText>Rôles et Statut</TabTitleText>}>
+          <Form isHorizontal>
+            <FormGroup label="Rôle" fieldId="role">
+              <select
+                id="role"
+                value={form.status}
+                onChange={e => setForm({ ...form, status: e.target.value })}
+                disabled={!editingFields['status']}
+                style={{
+                  minWidth: 180,
+                  padding: '6px',
+                  borderRadius: 4,
+                  background: editingFields['status'] ? '#fff' : '#f0f0f0'
+                }}
+              >
+                <option value="">Sélectionner un rôle</option>
+                {statusList.map(role => (
+                  <option key={role.id} value={role.nom_role}>
+                    {role.nom_role}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('status')}
+                style={{ marginLeft: '1rem' }}
+                aria-label={editingFields['status'] ? "Terminer" : "Editer"}
+              >
+                {editingFields['status'] ? (
+                  <CheckIcon color="var(--pf-global--success-color--100)" />
+                ) : (
+                  <PencilAltIcon />
+                )}
+              </Button>
+            </FormGroup>
+          </Form>
+        </Tab>
+        {/* Tab Paiements */}
+        <Tab eventKey={3} title={<TabTitleText>Paiements</TabTitleText>}>
+          <p>Contenu à venir pour les paiements.</p>
+        </Tab>
+
+        {/* Tab Statistiques */}
+        <Tab eventKey={4} title={<TabTitleText>Statistiques</TabTitleText>}>
+          <div>
+            {statFrequentation && statFrequentation.frequentationParMois.length > 0 ? (
+              <div style={{ background: '#fff', padding: '1rem', borderRadius: 8 }}>
+                <Title headingLevel="h2" style={{ marginBottom: 16 }}>Fréquentation par mois</Title>
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart
+                    data={statFrequentation.frequentationParMois}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 50 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="mois" angle={-45} textAnchor="end" interval={0} />
+                    <YAxis yAxisId="left" label={{ value: 'Présences / Cours', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" label={{ value: '% validés', angle: -90, position: 'insideRight' }} />
+                    <Tooltip />
+                    <Legend verticalAlign="top" height={36} />
+                    <Line yAxisId="left" type="monotone" dataKey="frequentation" name="Présences validées" stroke="#007bff" />
+                    <Line yAxisId="left" type="monotone" dataKey="nombres_total_de_cours_du_mois" name="Cours total/mois" stroke="#28a745" strokeDasharray="5 5" />
+                    <Line yAxisId="right" type="monotone" dataKey="pourcentage_de_cours_valides" name="% cours validés" stroke="#ffc107" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p>Aucune statistique de fréquentation disponible.</p>
+            )}
+          </div>
+        </Tab>
+      </Tabs>
+      {/* Modal doit être inclus dans un seul parent */}
+      <Modal
+        variant={ModalVariant.small}
+        isOpen={isModalOpen}
+        onClose={handleModalToggle}
+        aria-labelledby="modal-with-changes"
+        aria-describedby="modal-box-body-with-changes"
+      >
+        <ModalHeader title="Résumé des changements" labelId="modal-with-changes" />
+        <ModalBody id="modal-box-body-with-changes">
+          <div>
+            {Object.keys(pendingChanges).length === 0 ? (
+              <p>Aucun changement détecté.</p>
+            ) : (
+              <ul>
+                {Object.entries(pendingChanges).map(([field, value]) => (
+                  <li key={field}>
+                    <strong>{field} :</strong> {value}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {showDbLog && modalMessage && (
+              <div
+                style={{
+                  background: '#e6f4ea',
+                  color: '#20744a',
+                  border: '1px solid #b7e4c7',
+                  borderRadius: '6px',
+                  padding: '1rem',
+                  marginTop: '1rem',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textAlign: 'center'
+                }}
+              >
+                {modalMessage}
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button key="confirm" variant="primary" onClick={handleValidateChanges}>
+            Valider
+          </Button>
+          <Button key="cancel" variant="secondary" onClick={handleModalToggle}>
+            Annuler
+          </Button>
+        </ModalFooter>
+      </Modal>
+    </PageSection>
   );
 };
 
-export default Compte;
 
+export default Compte;
 

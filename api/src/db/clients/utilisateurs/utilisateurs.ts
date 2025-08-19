@@ -442,8 +442,16 @@ export class Utilisateurs {
   }
 
 
-  // Modifie uniquement le status, le grade et l'abonnement d'un utilisateur
-  async modifierInfosUtilisateur(data: { id: number, status_id?: number, grade_id?: number, abonnement_id?: number }): Promise<ConfirmationResult> {
+  // Modifie les informations d'un utilisateur selon les champs reçus
+  async modifierInfosUtilisateur(data: {
+    id: number,
+    email?: string,
+    date_naissance?: string,
+    genres?: string,
+    grades?: string,
+    abonnement?: string,
+    status?: string
+  }): Promise<ConfirmationResult> {
     const mysqlConnector = new MysqlConnector();
 
     if (!data.id) {
@@ -454,17 +462,29 @@ export class Utilisateurs {
     const fields: string[] = [];
     const values: any[] = [];
 
-    if (typeof data.status_id !== 'undefined') {
-      fields.push('status_id = ?');
-      values.push(data.status_id);
+    if (typeof data.email !== 'undefined') {
+      fields.push('email = ?');
+      values.push(data.email);
     }
-    if (typeof data.grade_id !== 'undefined') {
-      fields.push('grade_id = ?');
-      values.push(data.grade_id);
+    if (typeof data.date_naissance !== 'undefined') {
+      fields.push('date_of_birth = ?');
+      values.push(data.date_naissance);
     }
-    if (typeof data.abonnement_id !== 'undefined') {
-      fields.push('abonnement_id = ?');
-      values.push(data.abonnement_id);
+    if (typeof data.genres !== 'undefined') {
+      fields.push('genre_id = (SELECT id FROM genres WHERE genre_name = ? LIMIT 1)');
+      values.push(data.genres);
+    }
+    if (typeof data.grades !== 'undefined') {
+      fields.push('grade_id = (SELECT id FROM grades WHERE grade_id = ? LIMIT 1)');
+      values.push(data.grades);
+    }
+    if (typeof data.abonnement !== 'undefined') {
+      fields.push('abonnement_id = (SELECT id FROM plans_tarifaires WHERE nom_plan = ? LIMIT 1)');
+      values.push(data.abonnement);
+    }
+    if (typeof data.status !== 'undefined') {
+      fields.push('status_id = (SELECT id FROM status WHERE nom_role = ? LIMIT 1)');
+      values.push(data.status);
     }
 
     if (fields.length === 0) {
@@ -490,6 +510,26 @@ export class Utilisateurs {
         } else {
           resolve({ isConfirm: true, message: `Utilisateur avec ID ${data.id} modifié avec succès.` });
         }
+      });
+    });
+  }
+
+  verifierEmailExiste(email: string, id?: number): Promise<boolean> {
+    const mysqlConnector = new MysqlConnector();
+    let sql = 'SELECT id FROM utilisateurs WHERE email = ?';
+    let params: any[] = [email];
+    if (id) {
+      sql += ' AND id != ?';
+      params.push(id);
+    }
+    return new Promise<boolean>((resolve, reject) => {
+      mysqlConnector.query(sql, params, (error, results) => {
+        mysqlConnector.close();
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(results.length > 0);
       });
     });
   }
