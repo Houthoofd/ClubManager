@@ -17,7 +17,6 @@ import {
   ModalHeader,
   ModalFooter,
   ModalVariant,
-  Alert
 } from '@patternfly/react-core';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
 import {
