@@ -98,6 +98,7 @@ const ConsulterUtilisateurPage = () => {
         const result = await response.json();
         // Adaptation : la donnée est dans result.utilisateur
         const data = result.utilisateur;
+        console.log(data)
         if (data) {
           setUtilisateur(data);
         } else {
