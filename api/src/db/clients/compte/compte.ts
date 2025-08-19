@@ -133,5 +133,38 @@ export class Compte{
     }
   };
 
+  // Ajoute ou modifie le mot de passe d'un utilisateur
+  async mettreAJourMotDePasse(id: number, hash: string, isCreation: boolean): Promise<{ isConfirm: boolean; message: string }> {
+    const mysqlConnector = new MysqlConnector();
+    if (!id || !hash) {
+      return { isConfirm: false, message: "Id et mot de passe requis." };
+    }
+    // Si création, on ne modifie que si le mot de passe est vide
+    let sql: string;
+    let values: any[];
+    if (isCreation) {
+      sql = 'UPDATE utilisateurs SET password = ? WHERE id = ? AND (password IS NULL OR password = "")';
+      values = [hash, id];
+    } else {
+      sql = 'UPDATE utilisateurs SET password = ? WHERE id = ?';
+      values = [hash, id];
+    }
+    return new Promise((resolve, reject) => {
+      mysqlConnector.query(sql, values, (error, result) => {
+        mysqlConnector.close();
+        if (error) {
+          console.error('Erreur lors de la mise à jour du mot de passe :', error.message);
+          reject({ isConfirm: false, message: error.message });
+          return;
+        }
+        if (result.affectedRows > 0) {
+          resolve({ isConfirm: true, message: "Mot de passe mis à jour." });
+        } else {
+          resolve({ isConfirm: false, message: "Aucune modification effectuée." });
+        }
+      });
+    });
+  }
+
   
 }

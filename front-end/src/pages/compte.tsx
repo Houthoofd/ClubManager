@@ -30,6 +30,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
+import { Alert as PfAlert } from '@patternfly/react-core';
 
 type UtilisateurType = {
   id: number;
@@ -123,6 +124,11 @@ const Compte = () => {
     status: '',
     mot_de_passe: '',
   });
+  const [showPasswordEdit, setShowPasswordEdit] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState<number>(0);
+  const [passwordError, setPasswordError] = useState<string>('');
 
   useEffect(() => {
     // Récupère les infos utilisateur depuis le endpoint 'compte/informations'
@@ -361,6 +367,69 @@ const Compte = () => {
     }
   };
 
+  // Fonction de calcul de la fiabilité du mot de passe (simple)
+  function getPasswordStrength(password: string): number {
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    return score;
+  }
+
+  // Ajoute la gestion du changement de mot de passe (déplace la fonction avant le render)
+  const handlePasswordChange = (value: string) => {
+    setNewPassword(value);
+    setPasswordStrength(getPasswordStrength(value));
+    setPasswordError('');
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    setPasswordError('');
+  };
+
+  // Ajoute la gestion du changement/création de mot de passe
+  const handleSavePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    if (passwordStrength < 3) {
+      setPasswordError("Le mot de passe n'est pas assez sécurisé.");
+      return;
+    }
+    try {
+      let endpoint = '';
+      if (!form.mot_de_passe || form.mot_de_passe === '') {
+        endpoint = apiUrl('compte/creer-mot-de-passe');
+      } else {
+        endpoint = apiUrl('compte/changer-mot-de-passe');
+      }
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: form.id, password: newPassword }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setModalMessage(result.message || 'Mot de passe enregistré.');
+        setIsModalOpen(true); // Affiche la modal pour signaler le succès
+        setShowPasswordEdit(false);
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordStrength(0);
+        setPasswordError('');
+        // Optionnel: refetch user info
+      } else {
+        setPasswordError(result.message || 'Erreur lors de la modification.');
+      }
+    } catch (error) {
+      setPasswordError('Erreur réseau ou serveur.');
+    }
+  };
+
   if (loading) return <Spinner size="xl" />;
   if (error) return <Alert variant="danger" title={error} />;
   if (!form) return null;
@@ -451,6 +520,128 @@ const Compte = () => {
                 )}
               </Button>
             </FormGroup>
+            <FormGroup label="Mot de passe :" fieldId="mot-de-passe">
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <TextInput
+                  id="mot-de-passe"
+                  value={form.mot_de_passe ? '********' : ''}
+                  isDisabled
+                  type="password"
+                  style={{ width: 220 }}
+                />
+                {!form.mot_de_passe && (
+                  <Button
+                    variant="primary"
+                    style={{ marginLeft: '1rem' }}
+                    onClick={() => setShowPasswordEdit(true)}
+                  >
+                    Créer mot de passe
+                  </Button>
+                )}
+                {form.mot_de_passe && !showPasswordEdit && (
+                  <Button
+                    variant="secondary"
+                    style={{ marginLeft: '1rem' }}
+                    onClick={() => setShowPasswordEdit(true)}
+                  >
+                    Changer mot de passe
+                  </Button>
+                )}
+              </div>
+              {!form.mot_de_passe && (
+                <PfAlert
+                  variant="warning"
+                  title="Ce compte n'est pas sécurisé, aucun mot de passe n'est défini."
+                  style={{ marginTop: 8 }}
+                  isInline
+                />
+              )}
+            </FormGroup>
+            {showPasswordEdit && (
+              <div style={{ marginTop: 12 }}>
+                <FormGroup label="Nouveau mot de passe" fieldId="new-password">
+                  <TextInput
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(_e, v) => handlePasswordChange(v)}
+                    style={{ width: 220 }}
+                  />
+                  {/* Jauge de fiabilité */}
+                  <div style={{ marginTop: 6 }}>
+                    <div
+                      style={{
+                        height: 8,
+                        width: 220,
+                        background: '#eee',
+                        borderRadius: 4,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: 8,
+                          width: `${passwordStrength * 44}px`,
+                          background:
+                            passwordStrength <= 2
+                              ? '#ff9800'
+                              : passwordStrength === 3
+                              ? '#ffc107'
+                              : passwordStrength === 4
+                              ? '#8bc34a'
+                              : '#4caf50',
+                          transition: 'width 0.3s'
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: '#888', marginTop: 2 }}>
+                      {passwordStrength <= 2
+                        ? 'Faible'
+                        : passwordStrength === 3
+                        ? 'Moyen'
+                        : passwordStrength === 4
+                        ? 'Bon'
+                        : 'Excellent'}
+                    </div>
+                  </div>
+                </FormGroup>
+                <FormGroup label="Confirmer le mot de passe" fieldId="confirm-password">
+                  <TextInput
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(_e, v) => handleConfirmPasswordChange(v)}
+                    style={{ width: 220 }}
+                  />
+                </FormGroup>
+                {passwordError && (
+                  <PfAlert
+                    variant="danger"
+                    title={passwordError}
+                    style={{ marginTop: 8 }}
+                    isInline
+                  />
+                )}
+                <div style={{ marginTop: 8 }}>
+                  <Button variant="primary" onClick={handleSavePassword}>
+                    Enregistrer le mot de passe
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    style={{ marginLeft: 8 }}
+                    onClick={() => {
+                      setShowPasswordEdit(false);
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      setPasswordStrength(0);
+                      setPasswordError('');
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
             <Button
               variant="primary"
               style={{ marginTop: '1rem' }}
@@ -688,7 +879,6 @@ const Compte = () => {
     </PageSection>
   );
 };
-
 
 export default Compte;
 
