@@ -357,9 +357,11 @@ const ConsulterUtilisateurPage = () => {
                     background: editingFields['grade_id'] ? '#fff' : '#f0f0f0'
                   }}
                 >
-                  {utilisateur.grade_id && !gradesList.some(g => String(g.id) === String(utilisateur.grade_id)) && (
-                    <option value={utilisateur.grade_id}>{utilisateur.grade_id}</option>
-                  )}
+                  {/* Affiche la valeur actuelle si elle n'est pas dans la liste */}
+                  {utilisateur.grade_id &&
+                    !gradesList.some(g => String(g.id) === String(utilisateur.grade_id)) &&
+                    <option value={utilisateur.grade_id}>{gradesList.find(g => String(g.id) === String(utilisateur.grade_id))?.grade_id || utilisateur.grade_id} (actuel)</option>
+                  }
                   <option value="">Sélectionner un grade</option>
                   {gradesList.map(grade => (
                     <option key={grade.id} value={grade.id}>
@@ -381,7 +383,6 @@ const ConsulterUtilisateurPage = () => {
                 </Button>
               </div>
             </FormGroup>
-
             <FormGroup label="Abonnement" fieldId="abonnement">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <select
@@ -396,11 +397,13 @@ const ConsulterUtilisateurPage = () => {
                     background: editingFields['abonnement_id'] ? '#fff' : '#f0f0f0'
                   }}
                 >
-                  {utilisateur.abonnement_id && !abonnements.some(a => String(a.id) === String(utilisateur.abonnement_id)) && (
+                  {/* Affiche la valeur actuelle si elle n'est pas dans la liste */}
+                  {utilisateur.abonnement_id &&
+                    !abonnements.some(a => String(a.id) === String(utilisateur.abonnement_id)) &&
                     <option value={utilisateur.abonnement_id}>
-                      {utilisateur.abonnement_id} (actuel)
+                      {abonnements.find(a => String(a.id) === String(utilisateur.abonnement_id))?.nom_plan || utilisateur.abonnement_id} (actuel)
                     </option>
-                  )}
+                  }
                   <option value="">Sélectionner un abonnement</option>
                   {abonnements.map(ab => (
                     <option key={ab.id} value={ab.id}>
@@ -424,8 +427,6 @@ const ConsulterUtilisateurPage = () => {
             </FormGroup>
           </Form>
         </Tab>
-
-        {/* Tab Rôles et Statut */}
         <Tab eventKey={2} title={<TabTitleText>Rôles et Statut</TabTitleText>}>
           <Form isHorizontal>
             <FormGroup label="Rôle" fieldId="role">
@@ -442,11 +443,13 @@ const ConsulterUtilisateurPage = () => {
                     background: editingFields['role_id'] ? '#fff' : '#f0f0f0'
                   }}
                 >
-                  {utilisateur.role_id && !statusList.some(s => String(s.id) === String(utilisateur.role_id)) && (
+                  {/* Affiche la valeur actuelle si elle n'est pas dans la liste */}
+                  {utilisateur.role_id &&
+                    !statusList.some(s => String(s.id) === String(utilisateur.role_id)) &&
                     <option value={utilisateur.role_id}>
-                      {utilisateur.role_id} (actuel)
+                      {statusList.find(s => String(s.id) === String(utilisateur.role_id))?.nom_role || utilisateur.role_id} (actuel)
                     </option>
-                  )}
+                  }
                   <option value="">Sélectionner un rôle</option>
                   {statusList.map(role => (
                     <option key={role.id} value={role.id}>
@@ -470,7 +473,6 @@ const ConsulterUtilisateurPage = () => {
             </FormGroup>
           </Form>
         </Tab>
-
         {/* Tab Paiements */}
         <Tab eventKey={3} title={<TabTitleText>Paiements</TabTitleText>}>
           <p>Contenu à venir pour les paiements.</p>
