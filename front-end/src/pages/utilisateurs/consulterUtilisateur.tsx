@@ -22,7 +22,14 @@ import {
 } from '@patternfly/react-core';
 import { apiUrl } from '../apiUrl';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
 
@@ -31,6 +38,7 @@ type UtilisateurType = {
   first_name: string;
   last_name: string;
   date_of_birth: string;
+  email: string;
   genre_id: string;
   abonnement_id: string;
   grade_id: string;
@@ -54,17 +62,19 @@ type AbonnementInfo = {
   periode: string;
   description: string;
 };
+
 type GradeInfo = {
   id: number;
   grade_id: string;
 };
+
 type StatusInfo = {
   id: number;
   nom_role: string;
   description: string;
 };
 
-function formatDateForInput(isoDateString: string) {
+function formatDateForInput(isoDateString: string): string {
   const date = new Date(isoDateString);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -73,7 +83,7 @@ function formatDateForInput(isoDateString: string) {
 }
 
 const ConsulterUtilisateurPage = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [utilisateur, setUtilisateur] = useState<UtilisateurType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,9 +106,8 @@ const ConsulterUtilisateurPage = () => {
           throw new Error('Erreur lors du chargement des données.');
         }
         const result = await response.json();
-        // Adaptation : la donnée est dans result.utilisateur
         const data = result.utilisateur;
-        console.log(data)
+        console.log(data);
         if (data) {
           setUtilisateur(data);
         } else {
@@ -113,7 +122,7 @@ const ConsulterUtilisateurPage = () => {
 
     fetchUtilisateur();
 
-    // Ajout fetch statistiques de fréquentation
+    // Fetch statistiques de fréquentation
     if (id) {
       fetch(apiUrl(`statistiques/frequentation/${id}`))
         .then(res => res.json())
@@ -121,15 +130,17 @@ const ConsulterUtilisateurPage = () => {
         .catch(() => setStatFrequentation(null));
     }
 
-    // Ajout fetch abonnements, grades, status
+    // Fetch abonnements, grades, status
     fetch(apiUrl('informations/abonnements'))
       .then(res => res.json())
       .then(data => setAbonnements(data))
       .catch(() => setAbonnements([]));
+
     fetch(apiUrl('informations/grades'))
       .then(res => res.json())
       .then(data => setGradesList(data))
       .catch(() => setGradesList([]));
+
     fetch(apiUrl('informations/status'))
       .then(res => res.json())
       .then(data => setStatusList(data))
@@ -140,15 +151,16 @@ const ConsulterUtilisateurPage = () => {
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
     eventKey: string | number
   ) => {
-    setActiveTabKey(Number(eventKey)); // forcer en number
+    setActiveTabKey(Number(eventKey));
   };
 
-  // Fonction pour détecter les changements
   const getChangesSummary = () => {
     const changes: { [key: string]: string } = {};
+    if (!utilisateur) return changes;
+
     Object.keys(editingFields).forEach(field => {
-      if (editingFields[field] && utilisateur) {
-        changes[field] = utilisateur[field as keyof UtilisateurType] as string;
+      if (editingFields[field]) {
+        changes[field] = utilisateur[field as keyof UtilisateurType] as unknown as string;
       }
     });
     return changes;
@@ -162,24 +174,32 @@ const ConsulterUtilisateurPage = () => {
     setIsModalOpen(!isModalOpen);
   };
 
-  // Fonction pour envoyer la modification au backend
   const handleValidateChanges = async () => {
     if (!id || !utilisateur) return;
 
-    // Récupère les bons ids pour grade, abonnement, role
+    // Validation de l'email
+    if (editingFields['email'] && (!utilisateur.email || !utilisateur.email.includes('@'))) {
+      setModalMessage("L'email doit contenir '@'.");
+      setIsModalOpen(true);
+      return;
+    }
+
     const abonnementObj = abonnements.find(a => String(a.id) === String(utilisateur.abonnement_id));
-    const gradeObj = gradesList.find(g => String(g.grade_id) === String(utilisateur.grade_id));
+    const gradeObj = gradesList.find(g => String(g.id) === String(utilisateur.grade_id));
     const statusObj = statusList.find(s => String(s.id) === String(utilisateur.role_id));
 
     const body: any = { id: utilisateur.id };
-    if (editingFields['abonnement_id']) {
-      body.abonnement_id = abonnementObj ? abonnementObj.id : null;
+
+    if (editingFields['abonnement_id'] && abonnementObj) {
+      body.abonnement_id = abonnementObj.id;
     }
-    if (editingFields['grade_id']) {
-      body.grade_id = gradeObj ? gradeObj.id : null;
+
+    if (editingFields['grade_id'] && gradeObj) {
+      body.grade_id = gradeObj.id;
     }
-    if (editingFields['role_id']) {
-      body.status_id = statusObj ? statusObj.id : null;
+
+    if (editingFields['role_id'] && statusObj) {
+      body.status_id = statusObj.id;
     }
 
     try {
@@ -188,6 +208,7 @@ const ConsulterUtilisateurPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+
       const result = await response.json();
       if (response.ok) {
         setModalMessage(result.message || 'Modifications enregistrées.');
@@ -203,8 +224,6 @@ const ConsulterUtilisateurPage = () => {
     } catch (error) {
       setModalMessage('Erreur réseau ou serveur.');
       setShowDbLog(true);
-    } finally {
-      setIsModalOpen(true);
     }
   };
 
@@ -219,6 +238,7 @@ const ConsulterUtilisateurPage = () => {
       </Title>
 
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
+        {/* Tab Informations personnelles */}
         <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
           <Form isHorizontal>
             <FormGroup label="Nom :" fieldId="last-name">
@@ -245,6 +265,7 @@ const ConsulterUtilisateurPage = () => {
                 </Button>
               </div>
             </FormGroup>
+
             <FormGroup label="Prénom :" fieldId="first-name">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <TextInput
@@ -269,6 +290,17 @@ const ConsulterUtilisateurPage = () => {
                 </Button>
               </div>
             </FormGroup>
+
+            <FormGroup label="Email :" fieldId="email">
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <TextInput
+                  id="email"
+                  value={utilisateur.email || ''}
+                  isDisabled
+                />
+              </div>
+            </FormGroup>
+
             <FormGroup label="Date de naissance :" fieldId="dob">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <TextInput
@@ -294,6 +326,7 @@ const ConsulterUtilisateurPage = () => {
                 </Button>
               </div>
             </FormGroup>
+
             <Button
               variant="primary"
               style={{ marginTop: '1rem' }}
@@ -304,58 +337,10 @@ const ConsulterUtilisateurPage = () => {
             >
               Voir les changements effectués
             </Button>
-            <Modal
-              variant={ModalVariant.small}
-              isOpen={isModalOpen}
-              onClose={handleModalToggle}
-              aria-labelledby="modal-with-changes"
-              aria-describedby="modal-box-body-with-changes"
-            >
-              <ModalHeader title="Résumé des changements" labelId="modal-with-changes" />
-              <ModalBody id="modal-box-body-with-changes">
-                <div>
-                  {Object.keys(pendingChanges).length === 0 ? (
-                    <p>Aucun changement détecté.</p>
-                  ) : (
-                    <ul>
-                      {Object.entries(pendingChanges).map(([field, value]) => (
-                        <li key={field}>
-                          <strong>{field} :</strong> {value}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {showDbLog && modalMessage && (
-                    <div
-                      style={{
-                        background: '#e6f4ea',
-                        color: '#20744a',
-                        border: '1px solid #b7e4c7',
-                        borderRadius: '6px',
-                        padding: '1rem',
-                        marginTop: '1rem',
-                        fontWeight: 600,
-                        fontSize: '1rem',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {modalMessage}
-                    </div>
-                  )}
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button key="confirm" variant="primary" onClick={handleValidateChanges}>
-                  Valider
-                </Button>
-                <Button key="cancel" variant="secondary" onClick={handleModalToggle}>
-                  Annuler
-                </Button>
-              </ModalFooter>
-            </Modal>
           </Form>
         </Tab>
 
+        {/* Tab Informations supplémentaires */}
         <Tab eventKey={1} title={<TabTitleText>Informations supplémentaires</TabTitleText>}>
           <Form isHorizontal>
             <FormGroup label="Grade" fieldId="grade">
@@ -369,12 +354,15 @@ const ConsulterUtilisateurPage = () => {
                     minWidth: 180,
                     padding: '6px',
                     borderRadius: 4,
-                    background: editingFields['grade_id'] ? '#fff' : '#fff'
+                    background: editingFields['grade_id'] ? '#fff' : '#f0f0f0'
                   }}
                 >
+                  {utilisateur.grade_id && !gradesList.some(g => String(g.id) === String(utilisateur.grade_id)) && (
+                    <option value={utilisateur.grade_id}>{utilisateur.grade_id}</option>
+                  )}
                   <option value="">Sélectionner un grade</option>
                   {gradesList.map(grade => (
-                    <option key={grade.id} value={grade.grade_id}>
+                    <option key={grade.id} value={grade.id}>
                       {grade.grade_id}
                     </option>
                   ))}
@@ -388,21 +376,12 @@ const ConsulterUtilisateurPage = () => {
                   {editingFields['grade_id'] ? (
                     <CheckIcon color="var(--pf-global--success-color--100)" />
                   ) : (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: '#f0f0f0',
-                      borderRadius: '50%',
-                      padding: '6px',
-                      fontSize: '1.5rem'
-                    }}>
-                      <PencilAltIcon style={{ fontSize: '1.5rem' }} />
-                    </span>
+                    <PencilAltIcon />
                   )}
                 </Button>
               </div>
             </FormGroup>
+
             <FormGroup label="Abonnement" fieldId="abonnement">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <select
@@ -414,9 +393,14 @@ const ConsulterUtilisateurPage = () => {
                     minWidth: 180,
                     padding: '6px',
                     borderRadius: 4,
-                    background: editingFields['abonnement_id'] ? '#fff' : '#fff'
+                    background: editingFields['abonnement_id'] ? '#fff' : '#f0f0f0'
                   }}
                 >
+                  {utilisateur.abonnement_id && !abonnements.some(a => String(a.id) === String(utilisateur.abonnement_id)) && (
+                    <option value={utilisateur.abonnement_id}>
+                      {utilisateur.abonnement_id} (actuel)
+                    </option>
+                  )}
                   <option value="">Sélectionner un abonnement</option>
                   {abonnements.map(ab => (
                     <option key={ab.id} value={ab.id}>
@@ -433,17 +417,7 @@ const ConsulterUtilisateurPage = () => {
                   {editingFields['abonnement_id'] ? (
                     <CheckIcon color="var(--pf-global--success-color--100)" />
                   ) : (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: '#f0f0f0',
-                      borderRadius: '50%',
-                      padding: '6px',
-                      fontSize: '1.5rem'
-                    }}>
-                      <PencilAltIcon style={{ fontSize: '1.5rem' }} />
-                    </span>
+                    <PencilAltIcon />
                   )}
                 </Button>
               </div>
@@ -451,6 +425,7 @@ const ConsulterUtilisateurPage = () => {
           </Form>
         </Tab>
 
+        {/* Tab Rôles et Statut */}
         <Tab eventKey={2} title={<TabTitleText>Rôles et Statut</TabTitleText>}>
           <Form isHorizontal>
             <FormGroup label="Rôle" fieldId="role">
@@ -464,9 +439,14 @@ const ConsulterUtilisateurPage = () => {
                     minWidth: 180,
                     padding: '6px',
                     borderRadius: 4,
-                    background: editingFields['role_id'] ? '#fff' : '#fff'
+                    background: editingFields['role_id'] ? '#fff' : '#f0f0f0'
                   }}
                 >
+                  {utilisateur.role_id && !statusList.some(s => String(s.id) === String(utilisateur.role_id)) && (
+                    <option value={utilisateur.role_id}>
+                      {utilisateur.role_id} (actuel)
+                    </option>
+                  )}
                   <option value="">Sélectionner un rôle</option>
                   {statusList.map(role => (
                     <option key={role.id} value={role.id}>
@@ -483,17 +463,7 @@ const ConsulterUtilisateurPage = () => {
                   {editingFields['role_id'] ? (
                     <CheckIcon color="var(--pf-global--success-color--100)" />
                   ) : (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: '#f0f0f0',
-                      borderRadius: '50%',
-                      padding: '6px',
-                      fontSize: '1.5rem'
-                    }}>
-                      <PencilAltIcon style={{ fontSize: '1.5rem' }} />
-                    </span>
+                    <PencilAltIcon />
                   )}
                 </Button>
               </div>
@@ -501,10 +471,12 @@ const ConsulterUtilisateurPage = () => {
           </Form>
         </Tab>
 
+        {/* Tab Paiements */}
         <Tab eventKey={3} title={<TabTitleText>Paiements</TabTitleText>}>
           <p>Contenu à venir pour les paiements.</p>
         </Tab>
 
+        {/* Tab Statistiques */}
         <Tab eventKey={4} title={<TabTitleText>Statistiques</TabTitleText>}>
           <div>
             {statFrequentation && statFrequentation.frequentationParMois.length > 0 ? (
@@ -533,6 +505,57 @@ const ConsulterUtilisateurPage = () => {
           </div>
         </Tab>
       </Tabs>
+
+      {/* Modal */}
+      <Modal
+        variant={ModalVariant.small}
+        isOpen={isModalOpen}
+        onClose={handleModalToggle}
+        aria-labelledby="modal-with-changes"
+        aria-describedby="modal-box-body-with-changes"
+      >
+        <ModalHeader title="Résumé des changements" labelId="modal-with-changes" />
+        <ModalBody id="modal-box-body-with-changes">
+          <div>
+            {Object.keys(pendingChanges).length === 0 ? (
+              <p>Aucun changement détecté.</p>
+            ) : (
+              <ul>
+                {Object.entries(pendingChanges).map(([field, value]) => (
+                  <li key={field}>
+                    <strong>{field} :</strong> {value}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {showDbLog && modalMessage && (
+              <div
+                style={{
+                  background: '#e6f4ea',
+                  color: '#20744a',
+                  border: '1px solid #b7e4c7',
+                  borderRadius: '6px',
+                  padding: '1rem',
+                  marginTop: '1rem',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  textAlign: 'center'
+                }}
+              >
+                {modalMessage}
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button key="confirm" variant="primary" onClick={handleValidateChanges}>
+            Valider
+          </Button>
+          <Button key="cancel" variant="secondary" onClick={handleModalToggle}>
+            Annuler
+          </Button>
+        </ModalFooter>
+      </Modal>
     </PageSection>
   );
 };

@@ -217,6 +217,12 @@ const Compte = () => {
       alert("Impossible de trouver l'id utilisateur.");
       return;
     }
+    if (editingFields['email'] && (!form.email || !form.email.includes('@'))) {
+      setModalMessage("L'email doit contenir '@'.");
+      setShowDbLog(true);
+      setIsModalOpen(true);
+      return;
+    }
 
     // Trouver les bons ids pour les valeurs sélectionnées
     const abonnementObj = abonnements.find(a => a.nom_plan === form.abonnement);
@@ -302,6 +308,53 @@ const Compte = () => {
                     style={{ background: '#fff' }}
                   />
                 </div>
+              </FormGroup>
+              <FormGroup label="Email" fieldId="email">
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <TextInput
+                    id="email"
+                    value={form.email || ''}
+                    onChange={e => handleChange(e.currentTarget.value, 'email')}
+                    isDisabled={!editingFields['email']}
+                    style={{ background: '#fff' }}
+                  />
+                  <Button
+                    variant="plain"
+                    onClick={() => handleEditClick('email')}
+                    style={{ marginLeft: '1rem' }}
+                    aria-label={editingFields['email'] ? "Terminer" : "Editer"}
+                  >
+                    {editingFields['email'] ? (
+                      <CheckIcon
+                        color="var(--pf-global--success-color--100)"
+                        style={{
+                          background: '#d4f5e9',
+                          borderRadius: '50%',
+                          padding: '6px',
+                          fontSize: '1.5rem'
+                        }}
+                      />
+                    ) : (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#f0f0f0',
+                        borderRadius: '50%',
+                        padding: '6px',
+                        fontSize: '1.5rem'
+                      }}>
+                        <PencilAltIcon style={{ fontSize: '1.5rem' }} />
+                      </span>
+                    )}
+                  </Button>
+                </div>
+                {/* Vérification du format email */}
+                {editingFields['email'] && form.email && !form.email.includes('@') && (
+                  <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
+                    Veuillez entrer une adresse email valide contenant '@'
+                  </div>
+                )}
               </FormGroup>
               <FormGroup label="Nom d'utilisateur" fieldId="username">
                 <div style={{ display: 'flex', alignItems: 'center' }}>
