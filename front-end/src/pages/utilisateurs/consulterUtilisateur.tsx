@@ -47,6 +47,23 @@ type StatFrequentationType = {
   }[];
 };
 
+type AbonnementInfo = {
+  id: number;
+  nom_plan: string;
+  prix: number;
+  periode: string;
+  description: string;
+};
+type GradeInfo = {
+  id: number;
+  grade_id: string;
+};
+type StatusInfo = {
+  id: number;
+  nom_role: string;
+  description: string;
+};
+
 function formatDateForInput(isoDateString: string) {
   const date = new Date(isoDateString);
   const year = date.getFullYear();
@@ -67,6 +84,9 @@ const ConsulterUtilisateurPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [showDbLog, setShowDbLog] = useState(false);
+  const [abonnements, setAbonnements] = useState<AbonnementInfo[]>([]);
+  const [gradesList, setGradesList] = useState<GradeInfo[]>([]);
+  const [statusList, setStatusList] = useState<StatusInfo[]>([]);
 
   useEffect(() => {
     const fetchUtilisateur = async () => {
@@ -75,10 +95,11 @@ const ConsulterUtilisateurPage = () => {
         if (!response.ok) {
           throw new Error('Erreur lors du chargement des données.');
         }
-        const data = await response.json();
-        console.log(data[0])
-        if (Array.isArray(data) && data.length > 0) {
-          setUtilisateur(data[0]);
+        const result = await response.json();
+        // Adaptation : la donnée est dans result.utilisateur
+        const data = result.utilisateur;
+        if (data) {
+          setUtilisateur(data);
         } else {
           throw new Error('Utilisateur non trouvé.');
         }
@@ -98,6 +119,20 @@ const ConsulterUtilisateurPage = () => {
         .then(data => setStatFrequentation(data))
         .catch(() => setStatFrequentation(null));
     }
+
+    // Ajout fetch abonnements, grades, status
+    fetch(apiUrl('informations/abonnements'))
+      .then(res => res.json())
+      .then(data => setAbonnements(data))
+      .catch(() => setAbonnements([]));
+    fetch(apiUrl('informations/grades'))
+      .then(res => res.json())
+      .then(data => setGradesList(data))
+      .catch(() => setGradesList([]));
+    fetch(apiUrl('informations/status'))
+      .then(res => res.json())
+      .then(data => setStatusList(data))
+      .catch(() => setStatusList([]));
   }, [id]);
 
   const handleTabClick = (
@@ -129,13 +164,22 @@ const ConsulterUtilisateurPage = () => {
   // Fonction pour envoyer la modification au backend
   const handleValidateChanges = async () => {
     if (!id || !utilisateur) return;
-    // Prépare le body avec les champs modifiés
+
+    // Récupère les bons ids pour grade, abonnement, role
+    const abonnementObj = abonnements.find(a => String(a.id) === String(utilisateur.abonnement_id));
+    const gradeObj = gradesList.find(g => String(g.grade_id) === String(utilisateur.grade_id));
+    const statusObj = statusList.find(s => String(s.id) === String(utilisateur.role_id));
+
     const body: any = { id: utilisateur.id };
-    Object.keys(editingFields).forEach(field => {
-      if (editingFields[field]) {
-        body[field] = utilisateur[field as keyof UtilisateurType];
-      }
-    });
+    if (editingFields['abonnement_id']) {
+      body.abonnement_id = abonnementObj ? abonnementObj.id : null;
+    }
+    if (editingFields['grade_id']) {
+      body.grade_id = gradeObj ? gradeObj.id : null;
+    }
+    if (editingFields['role_id']) {
+      body.status_id = statusObj ? statusObj.id : null;
+    }
 
     try {
       const response = await fetch(apiUrl(`utilisateurs/modifier`), {
@@ -313,64 +357,27 @@ const ConsulterUtilisateurPage = () => {
 
         <Tab eventKey={1} title={<TabTitleText>Informations supplémentaires</TabTitleText>}>
           <Form isHorizontal>
-            <FormGroup label="Genre :" fieldId="genre">
+            <FormGroup label="Grade" fieldId="grade">
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
-                  id="genre"
-                  value={utilisateur.genre_id}
-                  onChange={(_event, value) =>
-                    setUtilisateur({ ...utilisateur, genre_id: value })
-                  }
-                  isDisabled={!editingFields['genre_id']}
-                />
-                <Button
-                  variant="plain"
-                  onClick={() => handleEditClick('genre_id')}
-                  style={{ marginLeft: '1rem' }}
-                  aria-label={editingFields['genre_id'] ? "Terminer" : "Editer"}
-                >
-                  {editingFields['genre_id'] ? (
-                    <CheckIcon color="var(--pf-global--success-color--100)" />
-                  ) : (
-                    <PencilAltIcon />
-                  )}
-                </Button>
-              </div>
-            </FormGroup>
-            <FormGroup label="Abonnement :" fieldId="abonnement">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
-                  id="abonnement"
-                  value={utilisateur.abonnement_id}
-                  onChange={(_event, value) =>
-                    setUtilisateur({ ...utilisateur, abonnement_id: value })
-                  }
-                  isDisabled={!editingFields['abonnement_id']}
-                />
-                <Button
-                  variant="plain"
-                  onClick={() => handleEditClick('abonnement_id')}
-                  style={{ marginLeft: '1rem' }}
-                  aria-label={editingFields['abonnement_id'] ? "Terminer" : "Editer"}
-                >
-                  {editingFields['abonnement_id'] ? (
-                    <CheckIcon color="var(--pf-global--success-color--100)" />
-                  ) : (
-                    <PencilAltIcon />
-                  )}
-                </Button>
-              </div>
-            </FormGroup>
-            <FormGroup label="Grade :" fieldId="grade">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
+                <select
                   id="grade"
                   value={utilisateur.grade_id}
-                  onChange={(_event, value) =>
-                    setUtilisateur({ ...utilisateur, grade_id: value })
-                  }
-                  isDisabled={!editingFields['grade_id']}
-                />
+                  onChange={e => setUtilisateur({ ...utilisateur, grade_id: e.target.value })}
+                  disabled={!editingFields['grade_id']}
+                  style={{
+                    minWidth: 180,
+                    padding: '6px',
+                    borderRadius: 4,
+                    background: editingFields['grade_id'] ? '#fff' : '#fff'
+                  }}
+                >
+                  <option value="">Sélectionner un grade</option>
+                  {gradesList.map(grade => (
+                    <option key={grade.id} value={grade.grade_id}>
+                      {grade.grade_id}
+                    </option>
+                  ))}
+                </select>
                 <Button
                   variant="plain"
                   onClick={() => handleEditClick('grade_id')}
@@ -380,7 +387,62 @@ const ConsulterUtilisateurPage = () => {
                   {editingFields['grade_id'] ? (
                     <CheckIcon color="var(--pf-global--success-color--100)" />
                   ) : (
-                    <PencilAltIcon />
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f0f0f0',
+                      borderRadius: '50%',
+                      padding: '6px',
+                      fontSize: '1.5rem'
+                    }}>
+                      <PencilAltIcon style={{ fontSize: '1.5rem' }} />
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </FormGroup>
+            <FormGroup label="Abonnement" fieldId="abonnement">
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <select
+                  id="abonnement"
+                  value={utilisateur.abonnement_id}
+                  onChange={e => setUtilisateur({ ...utilisateur, abonnement_id: e.target.value })}
+                  disabled={!editingFields['abonnement_id']}
+                  style={{
+                    minWidth: 180,
+                    padding: '6px',
+                    borderRadius: 4,
+                    background: editingFields['abonnement_id'] ? '#fff' : '#fff'
+                  }}
+                >
+                  <option value="">Sélectionner un abonnement</option>
+                  {abonnements.map(ab => (
+                    <option key={ab.id} value={ab.id}>
+                      {ab.nom_plan} ({ab.prix}€/{ab.periode})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="plain"
+                  onClick={() => handleEditClick('abonnement_id')}
+                  style={{ marginLeft: '1rem' }}
+                  aria-label={editingFields['abonnement_id'] ? "Terminer" : "Editer"}
+                >
+                  {editingFields['abonnement_id'] ? (
+                    <CheckIcon color="var(--pf-global--success-color--100)" />
+                  ) : (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f0f0f0',
+                      borderRadius: '50%',
+                      padding: '6px',
+                      fontSize: '1.5rem'
+                    }}>
+                      <PencilAltIcon style={{ fontSize: '1.5rem' }} />
+                    </span>
                   )}
                 </Button>
               </div>
@@ -390,16 +452,27 @@ const ConsulterUtilisateurPage = () => {
 
         <Tab eventKey={2} title={<TabTitleText>Rôles et Statut</TabTitleText>}>
           <Form isHorizontal>
-            <FormGroup label="Rôle :" fieldId="role">
+            <FormGroup label="Rôle" fieldId="role">
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
+                <select
                   id="role"
                   value={utilisateur.role_id}
-                  onChange={(_event, value) =>
-                    setUtilisateur({ ...utilisateur, role_id: value })
-                  }
-                  isDisabled={!editingFields['role_id']}
-                />
+                  onChange={e => setUtilisateur({ ...utilisateur, role_id: e.target.value })}
+                  disabled={!editingFields['role_id']}
+                  style={{
+                    minWidth: 180,
+                    padding: '6px',
+                    borderRadius: 4,
+                    background: editingFields['role_id'] ? '#fff' : '#fff'
+                  }}
+                >
+                  <option value="">Sélectionner un rôle</option>
+                  {statusList.map(role => (
+                    <option key={role.id} value={role.id}>
+                      {role.nom_role}
+                    </option>
+                  ))}
+                </select>
                 <Button
                   variant="plain"
                   onClick={() => handleEditClick('role_id')}
@@ -409,7 +482,17 @@ const ConsulterUtilisateurPage = () => {
                   {editingFields['role_id'] ? (
                     <CheckIcon color="var(--pf-global--success-color--100)" />
                   ) : (
-                    <PencilAltIcon />
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f0f0f0',
+                      borderRadius: '50%',
+                      padding: '6px',
+                      fontSize: '1.5rem'
+                    }}>
+                      <PencilAltIcon style={{ fontSize: '1.5rem' }} />
+                    </span>
                   )}
                 </Button>
               </div>

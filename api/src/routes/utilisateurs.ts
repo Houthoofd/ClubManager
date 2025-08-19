@@ -100,21 +100,30 @@ router.get('/', async (req: any, res: any) => {
   }
 });
 
-router.get('/:id', async (req:any, res:any) => {
+router.get('/:id', async (req: any, res: any) => {
   let utilisateurId = req.params.id;
-  
+
   if (isNaN(Number(utilisateurId))) {
     return res.status(400).json({ message: "ID invalide, il doit être un nombre." });
-  } else {
-    utilisateurId = Number(utilisateurId);
   }
 
   try {
     const client = new Utilisateurs();
-    const utilisateur: VerifyResultWithData = await client.obtenirUnUtilisateur(utilisateurId);
+
+    // Récupère le prénom et le nom de l'utilisateur à partir de l'id
+    const utilisateurSimple = await client.obtenirUnUtilisateur(Number(utilisateurId));
+    if (!utilisateurSimple.isFind || !utilisateurSimple.data || utilisateurSimple.data.length === 0) {
+      return res.status(404).json({ message: "Aucun utilisateur trouvé.", data: [] });
+    }
+    const utilisateurData = utilisateurSimple.data[0];
+    const prenom = utilisateurData.first_name;
+    const nom = utilisateurData.last_name;
+
+    // Utilise la méthode obtenirInformationsUtilisateur pour enrichir les données
+    const utilisateur: VerifyResultWithData = await client.obtenirInformationsUtilisateur(prenom, nom);
 
     if (utilisateur.isFind) {
-      res.status(200).json(utilisateur.data);  // Renvoie les données de l'utilisateur trouvé
+      res.status(200).json({ utilisateur: utilisateur.data });  // Renvoie les données enrichies de l'utilisateur
     } else {
       res.status(404).json({ message: "Aucun utilisateur trouvé.", data: [] });
     }
