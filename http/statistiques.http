@@ -7,7 +7,7 @@
 
 ## 📊 Statistiques de Fréquentation Globales
 ### Récupère les statistiques de fréquentation globales (nombre total de participations, par cours, par mois)
-GET {{baseUrl}}/frequentation/154
+GET {{baseUrl}}/frequentation/1
 
 ---
 
