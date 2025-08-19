@@ -32,20 +32,6 @@ import {
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
 import { Alert as PfAlert } from '@patternfly/react-core';
 
-type UtilisateurType = {
-  id: number;
-  first_name: string;
-  last_name: string;
-  nom_utilisateur: string;
-  email: string;
-  password: string;
-  genres: string;
-  status: string;
-  grades: string;
-  abonnement: string;
-  date_of_birth: string;
-};
-
 type StatFrequentationType = {
   totalFrequentation: number;
   frequentationParMois: {
@@ -138,13 +124,11 @@ const Compte = () => {
         const storedData = localStorage.getItem('userData');
         let prenom = '';
         let nom = '';
-        let userId = id;
         if (storedData) {
           try {
             const parsedData = JSON.parse(storedData);
             prenom = parsedData.data?.prenom || '';
             nom = parsedData.data?.nom || '';
-            userId = parsedData.data?.id || id;
           } catch (e) {}
         }
 

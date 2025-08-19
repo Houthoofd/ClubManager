@@ -33,19 +33,6 @@ import {
 } from 'recharts';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
 
-type UtilisateurType = {
-  id: number;
-  first_name: string;
-  last_name: string;
-  nom_utilisateur: string;
-  email: string;
-  password: string;
-  genres: string;
-  status: string;
-  grades: string;
-  abonnement: string;
-  date_of_birth: string;
-};
 
 type StatFrequentationType = {
   totalFrequentation: number;
