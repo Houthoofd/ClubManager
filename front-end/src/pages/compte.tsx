@@ -150,7 +150,7 @@ const Compte = () => {
 
       const result = await response.json();
       const utilisateur = result.utilisateur;
-      console.log(utilisateur);
+  
       let mot_de_passe = '';
       if (utilisateur.password) {
         mot_de_passe = '[Mot de passe non affichable : hash bcrypt]';

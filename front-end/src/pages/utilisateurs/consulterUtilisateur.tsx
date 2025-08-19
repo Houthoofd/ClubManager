@@ -76,6 +76,7 @@ const ConsulterUtilisateurPage = () => {
           throw new Error('Erreur lors du chargement des données.');
         }
         const data = await response.json();
+        console.log(data[0])
         if (Array.isArray(data) && data.length > 0) {
           setUtilisateur(data[0]);
         } else {
