@@ -82,9 +82,10 @@ const Utilisateur = () => {
       const res = await fetch(apiUrl('utilisateurs'));
       const data = await res.json();
       setUtilisateurs(data.data);
-      setResultModalMessage('Utilisateurs chargés.');
+      setResultModalOpen(false); // ferme la modal si succès
     } catch (error) {
       setResultModalMessage("Erreur lors de la récupération des utilisateurs.");
+      setResultModalOpen(true);
     }
     setResultModalLoading(false);
   };
@@ -99,9 +100,10 @@ const Utilisateur = () => {
       const res = await fetch(apiUrl(`informations/${pluralApiName}`));
       const data = await res.json();
       setSelectOptions((prev: any) => ({ ...prev, [key]: data }));
-      setResultModalMessage(`Options pour ${key} chargées.`);
+      setResultModalOpen(false); // ferme la modal si succès
     } catch (error) {
       setResultModalMessage(`Erreur lors de la récupération des options pour ${key}`);
+      setResultModalOpen(true);
     }
     setResultModalLoading(false);
   };
@@ -190,45 +192,36 @@ const Utilisateur = () => {
     }
   };
 
-  // Ajoute une fonction pour vérifier tous les champs critiques avant soumission
-  const checkAllFieldsExistence = async () => {
-    const checks = [
-      { key: 'email', endpoint: 'verification/verifier-email', body: { email: formData.email } },
-      { key: 'nom_utilisateur', endpoint: 'verification/verifier-nom-utilisateur', body: { nom_utilisateur: formData.nom_utilisateur } },
-      { key: 'first_name', endpoint: 'verification/verifier-prenom', body: { prenom: formData.first_name } },
-      { key: 'last_name', endpoint: 'verification/verifier-nom', body: { nom: formData.last_name } }
-    ];
-    for (const check of checks) {
-      if (formData[check.key]) {
-        const response = await fetch(apiUrl(check.endpoint), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(check.body),
-        });
-        const result = await response.json();
-        console.log(`[${check.endpoint}]`, result);
-        if (result.exists === true) {
-          setResultModalMessage(result.message || `Ce champ existe déjà : ${formData[check.key]}`);
-          setResultModalOpen(true);
-          return false;
-        }
-      }
+  // Ajoute une fonction pour vérifier uniquement l'unicité de l'utilisateur via l'email
+  const checkEmailUniqueness = async (email: string): Promise<boolean> => {
+    if (!email) return false;
+    try {
+      const response = await fetch(apiUrl('verification/verifier-email'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const result = await response.json();
+      return !result.exists; // true si email n'existe pas
+    } catch {
+      return false;
     }
-    return true;
   };
 
+  // Modifie handleSubmit pour ne pas ouvrir la modal en cas de succès
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setResultModalLoading(true);
     setResultModalMessage('Ajout en cours...');
-    setResultModalOpen(true);
+    setResultModalOpen(false);
 
-    const canProceed = await checkAllFieldsExistence();
-    if (!canProceed) {
+    const isEmailUnique = await checkEmailUniqueness(formData.email);
+    if (!isEmailUnique) {
       setResultModalLoading(false);
-      setResultModalMessage('Certains champs existent déjà.');
-      return;
+      setResultModalMessage('Cet email est déjà utilisé.');
+      setResultModalOpen(true);
+      return false;
     }
     try {
       const response = await fetch(apiUrl('utilisateurs/ajouter'), {
@@ -239,15 +232,22 @@ const Utilisateur = () => {
       const data = await response.json();
       if (response.ok) {
         setUtilisateur(data.data);
-        setResultModalMessage("L'utilisateur a bien été ajouté.");
+        // Ne pas ouvrir la modal en cas de succès
         await fetchUtilisateurs();
+        setResultModalLoading(false);
+        return true;
       } else {
         setResultModalMessage("Erreur lors de l'ajout.");
+        setResultModalOpen(true);
+        setResultModalLoading(false);
+        return false;
       }
     } catch (error) {
       setResultModalMessage("Erreur lors de l'envoi.");
+      setResultModalOpen(true);
+      setResultModalLoading(false);
+      return false;
     }
-    setResultModalLoading(false);
   };
 
   const formatLabel = (label: string) => {
@@ -375,7 +375,7 @@ const Utilisateur = () => {
           </Button>
         </ModalFooter>
       </PfModal>
-      {/* Modal pour chargement et résultat */}
+      {/* Modal pour erreur de chargement uniquement */}
       <PfModal
         variant="small"
         isOpen={resultModalOpen}
@@ -383,7 +383,7 @@ const Utilisateur = () => {
         aria-labelledby="result-modal-title"
         aria-describedby="result-modal-body"
       >
-        <ModalHeader title="Information" labelId="result-modal-title" />
+        <ModalHeader title="Erreur" labelId="result-modal-title" />
         <ModalBody id="result-modal-body">
           {resultModalLoading ? (
             <span>Chargement...</span>
@@ -400,6 +400,7 @@ const Utilisateur = () => {
     </PageSection>
   );
 };
+
 
 
 export default Utilisateur;
