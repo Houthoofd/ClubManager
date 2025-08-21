@@ -131,19 +131,30 @@ router.post('/ajouter', async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
     }
 });
-router.delete('/supprimer', async (req, res) => {
+router.delete('/supprimer/:id', async (req, res) => {
     try {
+        const utilisateurId = Number(req.params.id);
+        if (!utilisateurId || isNaN(utilisateurId)) {
+            return res.status(400).json({ isConfirm: false, message: "ID utilisateur invalide." });
+        }
         const client = new Utilisateurs();
-        const data = req.body;
-        console.log(data);
-        // Récupérer les utilisateurs associés à ce cours
-        const result = await client.supprimerUtilisateur(data.utilisateurId);
-        console.log('Professeur ajouté avec succès:', result);
-        res.status(200).json(result);
+        // Vérifie si l'utilisateur existe avant suppression
+        const utilisateurSimple = await client.obtenirUnUtilisateur(utilisateurId);
+        if (!utilisateurSimple.isFind || !utilisateurSimple.data || utilisateurSimple.data.length === 0) {
+            return res.status(404).json({ isConfirm: false, message: "Utilisateur introuvable." });
+        }
+        // Supprime l'utilisateur
+        const result = await client.supprimerUtilisateur(utilisateurId);
+        if (result.isConfirm) {
+            res.status(200).json({ isConfirm: true, message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès.` });
+        }
+        else {
+            res.status(400).json({ isConfirm: false, message: "La suppression a échoué." });
+        }
     }
     catch (error) {
-        console.error("Erreur lors de l'ajout ou de la modification :", error);
-        res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
+        console.error("Erreur lors de la suppression de l'utilisateur :", error);
+        res.status(500).json({ isConfirm: false, message: 'Erreur serveur lors de la suppression de l\'utilisateur.' });
     }
 });
 // Nouvelle route pour modifier uniquement le status, le grade et l'abonnement d'un utilisateur

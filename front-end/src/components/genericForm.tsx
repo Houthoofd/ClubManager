@@ -22,6 +22,7 @@ interface GenericFormProps {
   onSelectToggle: (key: string, isOpen: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   formatLabel?: (label: string) => string;
+  existenceMessages?: { [key: string]: string }; // <-- Ajout ici
 }
 
 
@@ -40,7 +41,8 @@ const GenericForm: React.FC<GenericFormProps> = ({
   selectOpenStates,
   onChange,
   onSelectToggle,
-  onSubmit
+  onSubmit,
+  existenceMessages // <-- Ajout ici
 }) => {
   const renderToggle = (key: string) => (toggleRef: React.Ref<MenuToggleElement>) => (
     <MenuToggle
@@ -101,6 +103,23 @@ const GenericForm: React.FC<GenericFormProps> = ({
               value={formData[key]}
               onChange={(_event, value) => onChange(value, key)}
             />
+            {/* Vérification du format email */}
+            {key === 'email' && formData[key] && formData[key].length > 0 && !formData[key].includes('@') && (
+              <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
+                Le champ email doit contenir '@'
+              </div>
+            )}
+            {existenceMessages && formData[key] && formData[key].length > 0 && existenceMessages[key] && (
+              <div
+                style={{
+                  color: existenceMessages[key].toLowerCase().includes('disponible') ? 'green' : 'red',
+                  fontSize: '0.95rem',
+                  marginTop: 4
+                }}
+              >
+                {existenceMessages[key]}
+              </div>
+            )}
           </FormGroup>
         );
       })}

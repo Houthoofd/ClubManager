@@ -7,6 +7,7 @@ import paiementRouter from './paiements.js';
 import statistiquesRouter from './statistiques.js';
 import magasinRouter from './magasin.js';
 import inscriptionRouter from './inscription.js'
+import verificationRouter from './verification.js'
 
 const router = express.Router();
 
@@ -19,5 +20,6 @@ router.use('/cours', coursRouter);
 router.use('/paiements', paiementRouter);
 router.use('/magasin', magasinRouter);
 router.use('/inscription', inscriptionRouter);
+router.use('/verification', verificationRouter);
 
 export default router;

@@ -16,6 +16,7 @@ import { default as professeursRouter } from './routes/professeurs.js';
 import { default as messagesRouter } from './routes/messages.js';
 import {default as uploadRouter } from './routes/upload.js';
 import {default as inscriptionRouter } from './routes/inscription.js';
+import {default as verificationRouter } from './routes/verification.js';
 
 import dotenv from 'dotenv';
 

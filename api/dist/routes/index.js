@@ -7,6 +7,7 @@ import paiementRouter from './paiements.js';
 import statistiquesRouter from './statistiques.js';
 import magasinRouter from './magasin.js';
 import inscriptionRouter from './inscription.js';
+import verificationRouter from './verification.js';
 const router = express.Router();
 // Correction : montez statistiquesRouter sur /statistiques AVANT les autres routes
 router.use('/statistiques', statistiquesRouter);
@@ -16,4 +17,5 @@ router.use('/cours', coursRouter);
 router.use('/paiements', paiementRouter);
 router.use('/magasin', magasinRouter);
 router.use('/inscription', inscriptionRouter);
+router.use('/verification', verificationRouter);
 export default router;

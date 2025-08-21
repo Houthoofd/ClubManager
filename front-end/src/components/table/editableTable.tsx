@@ -2,29 +2,31 @@ import {
   Table, Thead, Tr, Th, Tbody, Td,
 } from '@patternfly/react-table';
 import {
-  TextInput, Button, Dropdown, DropdownItem, MenuToggle, DropdownList
+  Button, Dropdown, DropdownItem, MenuToggle, DropdownList
 } from '@patternfly/react-core';
 import {
-  PencilAltIcon, CheckIcon, TimesIcon, EllipsisVIcon
+  EllipsisVIcon
 } from '@patternfly/react-icons';
-import { css } from '@patternfly/react-styles';
-import inlineEditStyles from '@patternfly/react-styles/css/components/InlineEdit/inline-edit';
+import { Modal as PfModal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core';
 
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-interface EditableTableProps<T> {
+import { apiUrl } from '../../pages/apiUrl';
+
+interface EditableTableProps<T extends Record<string, unknown>> {
   data: T[];
   columns?: { title: string; dataKey: string }[];
+  onDeleteRequest?: (row: T) => void;
 }
 
 
-export function EditableTable<T extends Record<string, any>>({ data }: EditableTableProps<T>) {
+export function EditableTable<T extends Record<string, unknown>>({ data }: EditableTableProps<T>) {
   const [rows, setRows] = useState(data);
-  const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [editedData, setEditedData] = useState<T | null>(null);
   const [dropdownOpenIndex, setDropdownOpenIndex] = useState<number | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [rowToDelete, setRowToDelete] = useState<T | null>(null);
+  const [deleteResult, setDeleteResult] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,157 +38,140 @@ export function EditableTable<T extends Record<string, any>>({ data }: EditableT
   const maxVisibleColumns = 5;
   const columns = Object.keys(data[0]).slice(0, maxVisibleColumns);
 
-  const handleChange = (key: string, value: any) => {
-    if (editedData) {
-      setEditedData({ ...editedData, [key]: value });
-    }
-  };
-
-  const handleSave = async (index: number) => {
-    const updated = [...rows];
-    if (!editedData || !editedData.id) return;
-
-    updated[index] = editedData;
-    setRows(updated);
-    setEditIndex(null);
-    setEditedData(null);
-    setDropdownOpenIndex(null);
-
-    try {
-      const res = await fetch(`http://localhost:3000/utilisateurs/${editedData.id}/modifier`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editedData),
-      });
-      if (!res.ok) alert("Erreur lors de la mise à jour");
-    } catch {
-      alert("Erreur réseau");
-    }
-  };
-
+  // Supprime la confirmation via window.confirm dans handleDelete
   const handleDelete = async (row: T) => {
-    if (!window.confirm("Confirmer la suppression ?")) return;
-
-    const filtered = rows.filter(r => r.id !== row.id);
-    setRows(filtered);
-
     try {
-      await fetch(`http://localhost:3000/utilisateurs/${row.id}`, {
+      const response = await fetch(apiUrl(`utilisateurs/supprimer/${row.id}`), {
         method: 'DELETE',
       });
+      let apiMessage = '';
+      if (response.ok) {
+        const result = await response.json();
+        apiMessage = result.message || `L'utilisateur ${row.first_name} ${row.last_name} a bien été supprimé.`;
+        setRows(rows.filter(r => r.id !== row.id));
+      } else {
+        const result = await response.json().catch(() => null);
+        apiMessage = result?.message || "Erreur lors de la suppression de l'utilisateur.";
+      }
+      setDeleteResult(apiMessage);
     } catch {
-      alert("Erreur lors de la suppression");
+      setDeleteResult("Erreur lors de la suppression.");
     }
   };
 
-  const handleEdit = (index: number) => {
-    setEditIndex(index);
-    setEditedData(rows[index]);
-    setDropdownOpenIndex(null);
+  const handleDeleteClick = (row: T) => {
+    setRowToDelete(row);
+    setConfirmDeleteOpen(true);
   };
 
-  const handleCancel = () => {
-    setEditIndex(null);
-    setEditedData(null);
-    setDropdownOpenIndex(null);
-  };
-
-  const renderCell = (row: T, key: string, rowIndex: number) => {
-    const value = row[key];
-    if (editIndex === rowIndex) {
-      return (
-        <TextInput
-          ref={inputRef}
-          value={editedData?.[key] || ''}
-          onChange={(e) => handleChange(key, e.currentTarget.value)}
-        />
-      );
+  const confirmDelete = async () => {
+    if (rowToDelete) {
+      await handleDelete(rowToDelete);
     }
-    return value;
+    // Ne ferme pas la modal tout de suite, affiche le résultat
+    // setConfirmDeleteOpen(false);
+    setRowToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setConfirmDeleteOpen(false);
+    setRowToDelete(null);
+    setDeleteResult(null);
+  };
+
+  // Affichage des cellules (readonly)
+  const renderCell = (row: T, key: string): React.ReactNode => {
+    return row[key] as React.ReactNode;
   };
 
   return (
     <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
       <Table aria-label="Editable table">
-      <Thead>
-        <Tr>
-          {columns.map((col) => <Th key={col}>{col}</Th>)}
-          <Th />
-        </Tr>
-      </Thead>
-      <Tbody>
-        {rows.map((row, index) => (
-          <Tr
-            key={index}
-            className={css(
-              inlineEditStyles.inlineEdit,
-              editIndex === index && inlineEditStyles.modifiers.inlineEditable
-            )}
-          >
-            {columns.map((col) => (
-              <Td onClick={() => navigate(`/pages/utilisateurs/consulter/${row.id}`)} key={col}>{renderCell(row, col, index)}</Td>
-            ))}
-
-            <Td
-              style={{
-                position: 'sticky',
-                right: 0,
-                background: 'white',
-                zIndex: 1,
-                overflow: 'visible',
-              }} // ← Pour voir le menu
-              className={css(
-                inlineEditStyles.inlineEditAction,
-                inlineEditStyles.modifiers.iconGroup
-              )}
-            >
-              <Button
-                variant="plain"
-                onClick={() => handleEdit(index)}
-                aria-label="Edit row"
-              >
-                <PencilAltIcon />
-              </Button>
-
-              <Dropdown
-                isOpen={dropdownOpenIndex === index}
-                onSelect={() => setDropdownOpenIndex(null)}
-                onOpenChange={(isOpen) => setDropdownOpenIndex(isOpen ? index : null)}
-                toggle={(toggleRef) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    variant="plain"
-                    onClick={() => setDropdownOpenIndex(dropdownOpenIndex === index ? null : index)}
-                    aria-label="Actions"
-                    className="pf-m-plain"
-                    style={{ padding: '6px' }} // ← Ajoute un padding
-                  >
-                    <EllipsisVIcon />
-                  </MenuToggle>
-
-                )}
-              >
-                <DropdownList>
-                  {editIndex === index ? (
-                    <>
-                      <DropdownItem onClick={() => handleSave(index)}>
-                        <CheckIcon /> Sauvegarder
-                      </DropdownItem>
-                      <DropdownItem onClick={handleCancel}>
-                        <TimesIcon /> Annuler
-                      </DropdownItem>
-                    </>
-                  ) : (
-                    <DropdownItem onClick={() => handleEdit(index)}>Modifier</DropdownItem>
-                  )}
-                  <DropdownItem onClick={() => handleDelete(row)}>Supprimer</DropdownItem>
-                </DropdownList>
-              </Dropdown>
-            </Td>
+        <Thead>
+          <Tr>
+            {columns.map((col) => <Th key={col}>{col}</Th>)}
+            <Th />
           </Tr>
-        ))}
-      </Tbody>
-    </Table>
+        </Thead>
+        <Tbody>
+          {rows.map((row, index) => (
+            <Tr key={index}>
+              {columns.map((col) => (
+                <Td onClick={() => navigate(`/pages/utilisateurs/consulter/${row.id}`)} key={col}>{renderCell(row, col)}</Td>
+              ))}
+              <Td
+                style={{
+                  position: 'sticky',
+                  right: 0,
+                  background: 'white',
+                  zIndex: 1,
+                  overflow: 'visible',
+                }}
+              >
+                <Dropdown
+                  isOpen={dropdownOpenIndex === index}
+                  onSelect={() => setDropdownOpenIndex(null)}
+                  onOpenChange={(isOpen) => setDropdownOpenIndex(isOpen ? index : null)}
+                  toggle={(toggleRef) => (
+                    <MenuToggle
+                      ref={toggleRef}
+                      variant="plain"
+                      onClick={() => setDropdownOpenIndex(dropdownOpenIndex === index ? null : index)}
+                      aria-label="Actions"
+                      className="pf-m-plain"
+                      style={{ padding: '6px' }}
+                    >
+                      <EllipsisVIcon />
+                    </MenuToggle>
+                  )}
+                >
+                  <DropdownList>
+                    <DropdownItem onClick={() => handleDeleteClick(row)}>Supprimer</DropdownItem>
+                  </DropdownList>
+                </Dropdown>
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+      {/* Modal de confirmation de suppression */}
+      <PfModal
+        variant="small"
+        isOpen={confirmDeleteOpen}
+        onClose={cancelDelete}
+        aria-labelledby="confirm-delete-modal-title"
+        aria-describedby="confirm-delete-modal-body"
+      >
+        <ModalHeader title="Confirmer la suppression" labelId="confirm-delete-modal-title" />
+        <ModalBody id="confirm-delete-modal-body">
+          {deleteResult ? (
+            <span>{deleteResult}</span>
+          ) : rowToDelete ? (
+            <span>
+              Êtes-vous sûr de vouloir supprimer l'utilisateur&nbsp;
+              <strong>
+                {String((rowToDelete as Record<string, unknown>).first_name)} {String((rowToDelete as Record<string, unknown>).last_name)}
+              </strong> ?
+            </span>
+          ) : null}
+        </ModalBody>
+        <ModalFooter>
+          {!deleteResult ? (
+            <>
+              <Button variant="danger" onClick={confirmDelete}>
+                Supprimer
+              </Button>
+              <Button variant="link" onClick={cancelDelete}>
+                Annuler
+              </Button>
+            </>
+          ) : (
+            <Button variant="primary" onClick={cancelDelete}>
+              OK
+            </Button>
+          )}
+        </ModalFooter>
+      </PfModal>
     </div>
   );
 }

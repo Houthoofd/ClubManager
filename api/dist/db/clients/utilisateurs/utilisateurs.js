@@ -84,6 +84,13 @@ export class Utilisateurs {
     }
     async inscrireUtilisateur(utilisateurData) {
         const mysqlConnector = new MysqlConnector();
+        // Correction : supporte les deux formats de UserData (prénom/nom ou first_name/last_name)
+        // Utilise 'prenom' et 'nom' si présents, sinon fallback sur 'first_name' et 'last_name'
+        const firstName = utilisateurData.prenom || utilisateurData.first_name || '';
+        const lastName = utilisateurData.nom || utilisateurData.last_name || '';
+        if (!firstName || !lastName) {
+            throw new Error("Le prénom et le nom sont requis pour l'inscription.");
+        }
         if (!utilisateurData.password || utilisateurData.password.trim() === "") {
             utilisateurData.password = "password123";
         }
@@ -92,18 +99,18 @@ export class Utilisateurs {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
         const values = [
-            utilisateurData.prenom,
-            utilisateurData.nom,
+            firstName,
+            lastName,
             utilisateurData.nom_utilisateur,
             utilisateurData.email,
             utilisateurData.genre_id,
-            utilisateurData.date_naissance,
+            utilisateurData.date_naissance || utilisateurData.date_of_birth || '',
             utilisateurData.password,
             utilisateurData.status_id,
             utilisateurData.grade_id,
             utilisateurData.abonnement_id,
         ];
-        console.log("Insertion utilisateur :", utilisateurData);
+        console.log("Insertion utilisateur :", values);
         return new Promise((resolve, reject) => {
             mysqlConnector.query(sql, values, (error, results) => {
                 mysqlConnector.close();
@@ -296,18 +303,33 @@ export class Utilisateurs {
         });
     }
     supprimerUtilisateur(utilisateurId) {
+        const mysqlConnector = new MysqlConnector();
+        const deleteSql = `DELETE FROM utilisateurs WHERE id = ?`;
         return new Promise((resolve, reject) => {
-            const mysqlConnector = new MysqlConnector();
-            const deleteSql = `DELETE FROM utilisateurs WHERE id = ?`;
             mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
                 mysqlConnector.close();
                 if (error) {
                     console.error('Erreur lors de la suppression de l\'utilisateur :', error.message);
-                    reject(error);
+                    resolve({
+                        isConfirm: false,
+                        message: `Erreur lors de la suppression de l'utilisateur : ${error.message}`
+                    });
                     return;
                 }
-                console.log(`Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
-                resolve({ isConfirm: true, message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès` });
+                if (result.affectedRows > 0) {
+                    console.log(`Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
+                    resolve({
+                        isConfirm: true,
+                        message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès`
+                    });
+                }
+                else {
+                    console.log(`Aucun utilisateur supprimé pour l'ID ${utilisateurId}`);
+                    resolve({
+                        isConfirm: false,
+                        message: `Aucun utilisateur supprimé pour l'ID ${utilisateurId}`
+                    });
+                }
             });
         });
     }
