@@ -117,10 +117,13 @@ const Utilisateur = () => {
   };
 
   const genererColonnes = (keys: string[]) => {
-    return keys.map((key) => ({
-      title: formatLabel(key),
-      dataKey: key,
-    }));
+    // Ne pas afficher la colonne 'id'
+    return keys
+      .filter((key) => key !== 'id')
+      .map((key) => ({
+        title: formatLabel(key),
+        dataKey: key,
+      }));
   };
 
   const pluralize = (word: string) => {
@@ -208,7 +211,6 @@ const Utilisateur = () => {
     }
   };
 
-  // Modifie handleSubmit pour ne pas ouvrir la modal en cas de succès
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -219,9 +221,8 @@ const Utilisateur = () => {
     const isEmailUnique = await checkEmailUniqueness(formData.email);
     if (!isEmailUnique) {
       setResultModalLoading(false);
-      setResultModalMessage('Cet email est déjà utilisé.');
-      setResultModalOpen(true);
-      return false;
+      // Ne pas ouvrir la modal ici, le GenericForm gère déjà l'affichage du message
+      return 'Cet email est déjà utilisé.';
     }
     try {
       const response = await fetch(apiUrl('utilisateurs/ajouter'), {
@@ -232,9 +233,9 @@ const Utilisateur = () => {
       const data = await response.json();
       if (response.ok) {
         setUtilisateur(data.data);
-        // Ne pas ouvrir la modal en cas de succès
         await fetchUtilisateurs();
         setResultModalLoading(false);
+        // Ne pas ouvrir la modal ici, le GenericForm gère déjà le succès
         return true;
       } else {
         setResultModalMessage("Erreur lors de l'ajout.");
@@ -268,12 +269,6 @@ const Utilisateur = () => {
     ((u as any).first_name && String((u as any).first_name).toLowerCase().includes(searchTerm.toLowerCase())) ||
     ((u as any).last_name && String((u as any).last_name).toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  // Ouvre la modal de confirmation avant suppression
-  const handleRequestDeleteUtilisateur = (utilisateur: UserData) => {
-    setUtilisateurToDelete(utilisateur);
-    setConfirmDeleteOpen(true);
-  };
 
   // Supprime l'utilisateur après confirmation
   const confirmDeleteUtilisateur = async () => {
@@ -319,8 +314,7 @@ const Utilisateur = () => {
             <EditableTable
               data={filteredUtilisateurs}
               columns={columns}
-              // Passe la fonction de demande de suppression à la table
-              onDeleteRequest={handleRequestDeleteUtilisateur}
+              // Supprime la prop onDeleteRequest qui n'est pas supportée
             />
           ) : (
             <Bullseye>Chargement...</Bullseye>
@@ -400,7 +394,4 @@ const Utilisateur = () => {
     </PageSection>
   );
 };
-
-
-
 export default Utilisateur;

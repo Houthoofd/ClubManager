@@ -8,13 +8,10 @@ import {
   SelectList,
   SelectOption,
   MenuToggle,
-  Button,
-  Modal as PfModal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader
+  Button
 } from '@patternfly/react-core';
 import type { MenuToggleElement } from '@patternfly/react-core';
+import { apiUrl } from '../pages/apiUrl';
 
 interface GenericFormProps {
   formData: any;
@@ -64,118 +61,128 @@ const GenericForm: React.FC<GenericFormProps> = ({
     </MenuToggle>
   );
 
-  const [modalOpen, setModalOpen] = React.useState(false);
-  const [modalMessage, setModalMessage] = React.useState<string>('');
+  // Supprime la gestion de la modal ici
+  // const [modalOpen, setModalOpen] = React.useState(false);
+  // const [modalMessage, setModalMessage] = React.useState<string>('');
 
-  // Réinitialise les champs après succès
-  const resetForm = () => {
-    Object.keys(formData).forEach((key) => {
-      if (key !== 'id') onChange('', key);
-    });
-  };
+  // Supprime la fonction inutilisée
+  // const resetForm = () => {
+  //   Object.keys(formData).forEach((key) => {
+  //     if (key !== 'id') onChange('', key);
+  //   });
+  // };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = await onSubmit(e);
-    // On considère que le succès est signalé par le retour de la fonction (pas besoin de === true)
-    setModalMessage(
-      result === undefined
-        ? "L'utilisateur a bien été enregistrée avec succès"
-        : typeof result === 'string'
-          ? result
-          : "Erreur lors de l'ajout de l'utilisateur"
-    );
-    setModalOpen(true);
-    if (result === undefined) {
-      resetForm();
-    }
+    // On ne gère plus la modal ici, juste retourne le résultat
+    return result;
   };
 
-  return (
-    <>
-      <Form onSubmit={handleFormSubmit}>
-        {Object.keys(formData).map((key) => {
-          if (key === 'id') return null;
+  // Ajoute un état pour bloquer le bouton si email déjà utilisé
+  const isEmailUsed =
+    formData.email &&
+    existenceMessages &&
+    existenceMessages.email &&
+    existenceMessages.email.toLowerCase().includes('déjà utilisé');
 
-          if (key.endsWith('_id')) {
-            return (
-              <FormGroup label={formatLabel(key)} fieldId={key} key={key}>
-                <Select
-                  id={key}
-                  isOpen={selectOpenStates[key] || false}
-                  selected={formData[key]}
-                  onSelect={(_e, value) => {
-                    onChange(value as string, key);
-                    onSelectToggle(key, false);
-                  }}
-                  onOpenChange={(isOpen: boolean) => onSelectToggle(key, isOpen)}
-                  toggle={renderToggle(key)}
-                  shouldFocusToggleOnSelect
-                >
-                  <SelectList>
-                    {(selectOptions[key] || []).map((option: any) => (
-                      <SelectOption key={option.id} value={option.id}>
-                        {option.nom_plan || option.nom_role || option.grade_id || option.genre_name || `ID ${option.id}`}
-                      </SelectOption>
-                    ))}
-                  </SelectList>
-                </Select>
-              </FormGroup>
-            );
+  // Vérifie l'existence dès que nom, prénom et email sont remplis
+  React.useEffect(() => {
+    const nom = formData.last_name || formData.nom;
+    const prenom = formData.first_name || formData.prenom;
+    const email = formData.email;
+
+    if (nom && prenom && email) {
+      // Utilise directement apiUrl importé
+      fetch(apiUrl('verification/verifier-email'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.exists) {
+            if (typeof existenceMessages !== 'undefined') {
+              existenceMessages.email = result.message || 'Cet email est déjà utilisé par un utilisateur.';
+            }
           }
+        });
+    }
+  }, [formData.last_name, formData.first_name, formData.email, existenceMessages]);
 
-          const inputType = key.toLowerCase().includes('email') ? 'email' : 'text';
+  return (
+    <Form onSubmit={handleFormSubmit}>
+      {Object.keys(formData).map((key) => {
+        if (key === 'id') return null;
+
+        // Le champ grade n'est pas requis
+        const isRequired = key !== 'grade_id';
+
+        if (key.endsWith('_id')) {
           return (
             <FormGroup label={formatLabel(key)} fieldId={key} key={key}>
-              <TextInput
-                isRequired
-                type={inputType}
+              <Select
                 id={key}
-                name={key}
-                value={formData[key]}
-                onChange={(_event, value) => onChange(value, key)}
-              />
-              {/* Vérification du format email */}
-              {key === 'email' && formData[key] && formData[key].length > 0 && !formData[key].includes('@') && (
-                <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
-                  Le champ email doit contenir '@'
-                </div>
-              )}
-              {/* Affiche le message d'unicité uniquement pour l'email */}
-              {key === 'email' && formData[key] && formData[key].length > 0 && existenceMessages && existenceMessages[key] && (
-                existenceMessages[key].toLowerCase().includes('déjà utilisé') ? (
-                  <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
-                    {existenceMessages[key]}
-                  </div>
-                ) : null
-              )}
-              {/* Ne bloque pas l'inscription si le nom de famille existe déjà */}
-              {/* Aucun message bloquant pour le champ 'last_name' */}
+                isOpen={selectOpenStates[key] || false}
+                selected={formData[key]}
+                onSelect={(_e, value) => {
+                  onChange(value as string, key);
+                  onSelectToggle(key, false);
+                }}
+                onOpenChange={(isOpen: boolean) => onSelectToggle(key, isOpen)}
+                toggle={renderToggle(key)}
+                shouldFocusToggleOnSelect
+                // Retire la prop 'required' qui n'est pas supportée
+              >
+                <SelectList>
+                  {(selectOptions[key] || []).map((option: any) => (
+                    <SelectOption key={option.id} value={option.id}>
+                      {option.nom_plan || option.nom_role || option.grade_id || option.genre_name || `ID ${option.id}`}
+                    </SelectOption>
+                  ))}
+                </SelectList>
+              </Select>
             </FormGroup>
           );
-        })}
-        <Button type="submit" variant="primary">Ajouter</Button>
-      </Form>
-      <PfModal
-        variant="small"
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        aria-labelledby="ajout-utilisateur-modal-title"
-        aria-describedby="ajout-utilisateur-modal-body"
-      >
-        <ModalHeader title="Information" labelId="ajout-utilisateur-modal-title" />
-        <ModalBody id="ajout-utilisateur-modal-body">
-          <span>{modalMessage}</span>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="primary" onClick={() => setModalOpen(false)}>
-            OK
-          </Button>
-        </ModalFooter>
-      </PfModal>
-    </>
+        }
+
+        const inputType = key.toLowerCase().includes('email') ? 'email' : 'text';
+        return (
+          <FormGroup label={formatLabel(key)} fieldId={key} key={key}>
+            <TextInput
+              isRequired={isRequired}
+              type={inputType}
+              id={key}
+              name={key}
+              value={formData[key]}
+              onChange={(_event, value) => onChange(value, key)}
+            />
+            {/* Vérification du format email */}
+            {key === 'email' && formData[key] && formData[key].length > 0 && !formData[key].includes('@') && (
+              <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
+                Le champ email doit contenir '@'
+              </div>
+            )}
+            {/* Affiche le message d'unicité uniquement pour l'email */}
+            {key === 'email' && formData[key] && formData[key].length > 0 && existenceMessages && existenceMessages[key] && (
+              existenceMessages[key].toLowerCase().includes('déjà utilisé') ? (
+                <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
+                  {existenceMessages[key]}
+                </div>
+              ) : null
+            )}
+            {/* Ne bloque pas l'inscription si le nom de famille existe déjà */}
+            {/* Aucun message bloquant pour le champ 'last_name' */}
+          </FormGroup>
+        );
+      })}
+      <Button type="submit" variant="primary" isDisabled={isEmailUsed}>
+        Ajouter
+      </Button>
+    </Form>
   );
 };
 
 
 export default GenericForm;
+

@@ -64,5 +64,18 @@ router.post('/verifier-prenom-nom', async (req:any, res:any) => {
   }
 });
 
+// Ajoute un endpoint pour vérifier via email, prénom et nom
+router.post('/verifier-email-prenom-nom', async (req: any, res: any) => {
+  const { email, prenom, nom } = req.body;
+  if (!email || !prenom || !nom) return res.status(400).json({ message: "Email, prénom et nom requis." });
+  try {
+    const client = new Verifiation();
+    const result = await client.checkUtilisateurByEmailPrenomNom(email, prenom, nom);
+    res.json({ exists: result.isFind, message: result.message });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur." });
+  }
+});
+
 
 export default router;

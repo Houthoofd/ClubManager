@@ -81,4 +81,23 @@ export class Verifiation {
       });
     });
   }
+
+  // Vérifie si un utilisateur existe via email, prénom et nom
+  async checkUtilisateurByEmailPrenomNom(email: string, prenom: string, nom: string): Promise<VerifyResult> {
+    const mysqlConnector = new MysqlConnector();
+    const sql = `
+      SELECT id FROM utilisateurs
+      WHERE email = ? AND first_name = ? AND last_name = ? LIMIT 1
+    `;
+    return new Promise((resolve, reject) => {
+      mysqlConnector.query(sql, [email, prenom, nom], (error, results) => {
+        mysqlConnector.close();
+        if (error) return reject(error);
+        resolve({
+          isFind: results.length > 0,
+          message: results.length > 0 ? "Utilisateur déjà existant avec cet email, prénom et nom." : "Utilisateur disponible."
+        });
+      });
+    });
+  }
 }

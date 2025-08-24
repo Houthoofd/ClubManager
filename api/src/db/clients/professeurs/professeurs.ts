@@ -98,69 +98,91 @@ export class Professeurs {
     });
   }
 
-  async ajouterUnProfesseur(userData: any): Promise<ConfirmationResult> {
+  async modifierStatutProfesseur(id: number, status_id: number): Promise<ConfirmationResult> {
     const mysqlConnector = new MysqlConnector();
-
-    console.log(userData.first_name)
-  
-    // 1. Vérifier si l'utilisateur existe déjà
-    const selectSql = `SELECT * FROM utilisateurs WHERE email = ?`;
     return new Promise<ConfirmationResult>((resolve, reject) => {
-      mysqlConnector.query(selectSql, [userData.email], (error, results) => {
+      const updateSql = `UPDATE utilisateurs SET status_id = ? WHERE id = ?`;
+      mysqlConnector.query(updateSql, [status_id, id], (error) => {
         if (error) {
-          console.error("Erreur lors de la vérification : " + error.message);
-          return reject({ success: false, message: "Erreur lors de la vérification." });
+          console.error("Erreur lors de la modification du statut : " + error.message);
+          return reject({ isConfirm: false, message: "Erreur lors de la modification du statut." });
         }
-  
-        if (results.length > 0) {
-          const utilisateur = results[0];
-  
-          // 2. Il existe déjà
-          if (utilisateur.status_id === 5) {
-            console.log('Utilisateur est déjà professeur.');
-            return resolve({ isConfirm: true, message: "Utilisateur déjà professeur." });
-          } else {
-            // 3. Mettre à jour le status
-            const updateSql = `UPDATE utilisateurs SET status_id = 5 WHERE id = ?`;
-            mysqlConnector.query(updateSql, [utilisateur.id], (updateError) => {
-              if (updateError) {
-                console.error("Erreur lors de la mise à jour : " + updateError.message);
-                return reject({ success: false, message: "Erreur lors de la mise à jour." });
-              }
-  
-              console.log('Utilisateur mis à jour en professeur.');
-              return resolve({ isConfirm: true, message: "Utilisateur mis à jour en professeur." });
-            });
-          }
-  
-        } else {
-          // 4. Il n'existe pas, donc on l'ajoute
-          const insertSql = `
-            INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, status_id, grade_id, abonnement_id)
-            VALUES (?, ?, ?, ?, ?, ?, 5, ?, ?)
-          `;
-  
-          mysqlConnector.query(insertSql, [
-            userData.first_name,
-            userData.last_name,
-            userData.nom_utilisateur,
-            userData.email,
-            userData.genre_id,
-            userData.date_of_birth,
-            userData.grade_id,
-            userData.abonnement_id
-          ], (insertError) => {
-            if (insertError) {
-              console.error("Erreur lors de l'ajout : " + insertError.message);
-              return reject({ isConfirm: false, message: "Erreur lors de l'ajout." });
-            }
-  
-            console.log('Nouvel utilisateur ajouté en tant que professeur.');
-            return resolve({ isConfirm: true, message: "Professeur ajouté avec succès." });
-          });
-        }
+        resolve({ isConfirm: true, message: "Statut modifié avec succès." });
       });
     });
   }  
+
+  async retirerPromotionProfesseur(id: number): Promise<ConfirmationResult> {
+    const mysqlConnector = new MysqlConnector();
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+      // Met à jour le status à 1 (utilisateur normal)
+      const updateSql = `UPDATE utilisateurs SET status_id = 1 WHERE id = ?`;
+      mysqlConnector.query(updateSql, [id], (error) => {
+        if (error) {
+          console.error("Erreur lors du retrait de la promotion : " + error.message);
+          return reject({ isConfirm: false, message: "Erreur lors du retrait de la promotion." });
+        }
+        resolve({ isConfirm: true, message: "Promotion retirée avec succès." });
+      });
+    });
+  }
+
+  async ajouterUnProfesseur(userData: any): Promise<ConfirmationResult> {
+    const mysqlConnector = new MysqlConnector();
+
+    // Si on reçoit un tableau, traiter chaque utilisateur
+    const users = Array.isArray(userData.utilisateurs) ? userData.utilisateurs : [userData];
+
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+      let processed = 0;
+      let errors: string[] = [];
+      let successCount = 0;
+
+      users.forEach((user: any) => {
+        const selectSql = `SELECT * FROM utilisateurs WHERE id = ?`;
+        mysqlConnector.query(selectSql, [user.id], (error, results) => {
+          if (error) {
+            errors.push(`Erreur vérification id ${user.id}: ${error.message}`);
+            checkDone();
+            return;
+          }
+
+          if (results.length > 0) {
+            const utilisateur = results[0];
+            if (utilisateur.status_id === 5) {
+              successCount++;
+              checkDone();
+            } else {
+              const updateSql = `UPDATE utilisateurs SET status_id = 5 WHERE id = ?`;
+              mysqlConnector.query(updateSql, [utilisateur.id], (updateError) => {
+                if (updateError) {
+                  errors.push(`Erreur update id ${user.id}: ${updateError.message}`);
+                } else {
+                  successCount++;
+                }
+                checkDone();
+              });
+            }
+          } else {
+            errors.push(`Utilisateur id ${user.id} non trouvé, ajout impossible.`);
+            checkDone();
+          }
+        });
+      });
+
+      function checkDone() {
+        processed++;
+        if (processed === users.length) {
+          if (errors.length === 0) {
+            resolve({ isConfirm: true, message: "Tous les utilisateurs ont été promus professeurs." });
+          } else if (successCount > 0) {
+            resolve({ isConfirm: true, message: `Promotion partielle. Erreurs: ${errors.join('; ')}` });
+          } else {
+            resolve({ isConfirm: false, message: `Aucune promotion. Erreurs: ${errors.join('; ')}` });
+          }
+        }
+      }
+    });
+  }
 }
 

@@ -44,4 +44,21 @@ router.post('/ajouter', async (req: any, res: any) => {
   }
 });
 
+// endpoint pour modifier le statut d'un professeur (anciennement retirer)
+router.post('/modifier', async (req: any, res: any) => {
+  try {
+    const { id, status_id } = req.body;
+    if (!id || !status_id) {
+      return res.status(400).json({ success: false, message: "ID et status_id requis." });
+    }
+    const client = new Professeurs();
+    // Mettre à jour le status à la valeur choisie
+    const result = await client.modifierStatutProfesseur(id, status_id);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Erreur lors de la modification du statut :", error);
+    res.status(500).json({ message: "Erreur serveur lors de la modification du statut." });
+  }
+});
+
 export default router;
