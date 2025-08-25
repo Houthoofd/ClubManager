@@ -845,26 +845,33 @@ INSERT INTO types_messages_personnalises (title, content, created_at, updated_at
  NOW(), NOW());
 
 
--- Insérer les utilisateurs dont status_id = 5 dans la table professeur
+-- 1️⃣ Supprimer la contrainte FK qui bloque le DROP
+--ALTER TABLE cours_recurrent_professeur
+--DROP FOREIGN KEY cours_recurrent_professeur_ibfk_2;
+
+-- 2️⃣ Supprimer et recréer la table professeurs
+--DROP TABLE IF EXISTS professeurs;
+
+CREATE TABLE professeurs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(255) NOT NULL,
+    prenom VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    grade_id INT,
+    status_id INT
+);
+
+-- 3️⃣ Réinsérer les utilisateurs avec status_id = 5
 INSERT INTO professeurs (nom, prenom, email, grade_id, status_id)
-SELECT last_name, first_name , email, grade_id, status_id
+SELECT last_name, first_name, email, grade_id, status_id
 FROM utilisateurs
 WHERE status_id = 5;
 
--- Désactive la vérification des clés étrangères
-SET foreign_key_checks = 0;
+-- 4️⃣ Réactiver la contrainte FK sur cours_recurrent_professeur
+--ALTER TABLE cours_recurrent_professeur
+--ADD CONSTRAINT cours_recurrent_professeur_ibfk_2
+--FOREIGN KEY (professeur_id) REFERENCES professeurs(id);
 
--- Insère des relations aléatoires entre les professeurs et les cours récurrents
-INSERT INTO cours_recurrent_professeur (professeur_id, cours_recurrent_id)
-SELECT 
-    professeur.id,  -- L'id du professeur
-    cours_recurrent.id -- L'id d'un cours récurrent aléatoire
-FROM professeurs professeur
-JOIN cours_recurrent cours_recurrent
-ORDER BY RAND();
-
--- Réactive la vérification des clés étrangères
-SET foreign_key_checks = 1;
 
 
 

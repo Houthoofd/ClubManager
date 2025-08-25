@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   DualListSelector,
   DualListSelectorPane,
@@ -27,9 +27,11 @@ interface DualListSelectorGenericProps<T> {
   onChange?: (newAssignedItems: T[]) => void;
   fieldId?: string;
   getText: (item: T) => string;
+  getKey?: (item: T) => string | number;
   renderItem?: (item: T) => React.ReactNode;
   availableTitle?: string;
   assignedTitle?: string;
+  resetKey?: number; // Ajoute la prop pour le reset
 }
 
 function DualListSelectorGeneric<T>({
@@ -39,93 +41,103 @@ function DualListSelectorGeneric<T>({
   onChange = () => {},
   fieldId = 'dual-list',
   getText,
+  getKey = (item: T) => getText(item),
   renderItem,
   availableTitle = 'Disponibles',
-  assignedTitle = 'Assignés'
+  assignedTitle = 'Assignés',
+  resetKey = 0, // valeur par défaut
 }: DualListSelectorGenericProps<T>) {
-  const [availableOptions, setAvailableOptions] = useState<Option<T>[]>(
-    availableItems.map((item) => ({
-      value: item,
-      text: getText(item),
-      selected: false,
-      isVisible: true
-    }))
-  );
+  const [availableOptions, setAvailableOptions] = useState<Option<T>[]>([]);
+  const [chosenOptions, setChosenOptions] = useState<Option<T>[]>([]);
+  const prevAvailableItems = useRef<T[]>([]);
+  const prevAssignedItems = useRef<T[]>([]);
 
-  const [chosenOptions, setChosenOptions] = useState<Option<T>[]>(
-    assignedItems.map((item) => ({
-      value: item,
-      text: getText(item),
-      selected: false,
-      isVisible: true
-    }))
-  );
-
-  console.log(availableOptions)
-
-  const moveSelected = (fromAvailable: boolean) => {
-    const source = fromAvailable ? availableOptions : chosenOptions;
-    const destination = fromAvailable ? chosenOptions : availableOptions;
-    const movedItems: Option<T>[] = [];
-
-    const remaining = source.filter((item) => {
-      if (item.selected && item.isVisible) {
-        movedItems.push({ ...item, selected: false });
-        return false;
-      }
-      return true;
-    });
-
-    if (fromAvailable) {
-      setAvailableOptions(remaining);
-      const updated = [...destination, ...movedItems];
-      setChosenOptions(updated);
-      onChange(updated.map((o) => o.value));
-    } else {
-      setChosenOptions(remaining);
-      const updated = [...destination, ...movedItems];
-      setAvailableOptions(updated);
-      onChange(remaining.map((o) => o.value));
-    }
-  };
-
-  // Met à jour les options quand availableItems change
   useEffect(() => {
-    const chosenIds = new Set(chosenOptions.map(opt => getText(opt.value)));
+    // Vérifiez si les props ont réellement changé
+    const availableItemsChanged = JSON.stringify(prevAvailableItems.current) !== JSON.stringify(availableItems);
+    const assignedItemsChanged = JSON.stringify(prevAssignedItems.current) !== JSON.stringify(assignedItems);
 
-    const newAvailableOptions = availableItems
-      .filter(item => !chosenIds.has(getText(item))) // exclure les déjà assignés
-      .map((item) => ({
+    if (availableItemsChanged || assignedItemsChanged) {
+      const assignedKeys = new Set(assignedItems.map(item => getKey(item)));
+
+      const newAvailableOptions = availableItems
+        .filter(item => !assignedKeys.has(getKey(item)))
+        .map((item) => ({
+          value: item,
+          text: getText(item),
+          selected: false,
+          isVisible: true
+        }));
+
+      const newChosenOptions = assignedItems.map((item) => ({
         value: item,
         text: getText(item),
         selected: false,
         isVisible: true
       }));
 
-    setAvailableOptions(newAvailableOptions);
-  }, [availableItems, getText, chosenOptions]);
+      setAvailableOptions(newAvailableOptions);
+      setChosenOptions(newChosenOptions);
 
+      // Mettre à jour les références précédentes
+      prevAvailableItems.current = availableItems;
+      prevAssignedItems.current = assignedItems;
+    }
 
-  const moveAll = (fromAvailable: boolean) => {
-    const source = fromAvailable ? availableOptions : chosenOptions;
-    const destination = fromAvailable ? chosenOptions : availableOptions;
+    // Réinitialise les options si les items sont vides (cas de reset du formulaire)
+    if (availableItems.length === 0 && assignedItems.length === 0) {
+      setAvailableOptions([]);
+      setChosenOptions([]);
+      prevAvailableItems.current = [];
+      prevAssignedItems.current = [];
+    }
+  }, [availableItems, assignedItems, getText, getKey]);
 
-    const movingItems = source.filter((item) => item.isVisible).map((item) => ({
-      ...item,
-      selected: false
-    }));
-    const remainingItems = source.filter((item) => !item.isVisible);
+  // Ajoute un effet pour reset quand resetKey change
+  useEffect(() => {
+    setAvailableOptions([]);
+    setChosenOptions([]);
+    prevAvailableItems.current = [];
+    prevAssignedItems.current = [];
+  }, [resetKey]);
+
+  const moveSelected = (fromAvailable: boolean) => {
+    const source = fromAvailable ? [...availableOptions] : [...chosenOptions];
+    const destination = fromAvailable ? [...chosenOptions] : [...availableOptions];
+
+    const movedItems = source.filter(item => item.selected && item.isVisible);
+    const remainingItems = source.filter(item => !(item.selected && item.isVisible));
 
     if (fromAvailable) {
+      const updatedDestination = [...destination, ...movedItems.map(item => ({ ...item, selected: false }))];
       setAvailableOptions(remainingItems);
-      const updated = [...destination, ...movingItems];
-      setChosenOptions(updated);
-      onChange(updated.map((o) => o.value));
+      setChosenOptions(updatedDestination);
+      onChange(updatedDestination.map(o => o.value));
     } else {
+      const updatedDestination = [...destination, ...movedItems.map(item => ({ ...item, selected: false }))];
       setChosenOptions(remainingItems);
-      const updated = [...destination, ...movingItems];
-      setAvailableOptions(updated);
-      onChange(remainingItems.map((o) => o.value));
+      setAvailableOptions(updatedDestination);
+      onChange(remainingItems.map(o => o.value));
+    }
+  };
+
+  const moveAll = (fromAvailable: boolean) => {
+    const source = fromAvailable ? [...availableOptions] : [...chosenOptions];
+    const destination = fromAvailable ? [...chosenOptions] : [...availableOptions];
+
+    const movingItems = source.filter(item => item.isVisible).map(item => ({ ...item, selected: false }));
+    const remainingItems = source.filter(item => !item.isVisible);
+
+    if (fromAvailable) {
+      const updatedDestination = [...destination, ...movingItems];
+      setAvailableOptions(remainingItems);
+      setChosenOptions(updatedDestination);
+      onChange(updatedDestination.map(o => o.value));
+    } else {
+      const updatedDestination = [...destination, ...movingItems];
+      setChosenOptions(remainingItems);
+      setAvailableOptions(updatedDestination);
+      onChange(remainingItems.map(o => o.value));
     }
   };
 
@@ -149,21 +161,18 @@ function DualListSelectorGeneric<T>({
           } sélectionné(s)`}
         >
           <DualListSelectorList>
-            {availableOptions.map((option, index) =>
-              option.isVisible ? (
-                <DualListSelectorListItem
-                  key={getText(option.value)}
-                  isSelected={option.selected}
-                  id={`disponible-${getText(option.value)}`}
-                  onOptionSelect={(e) => onOptionSelect(e, index, false)}
-                >
-                  {renderItem ? renderItem(option.value) : option.text}
-                </DualListSelectorListItem>
-              ) : null
-            )}
+            {availableOptions.map((option, index) => (
+              <DualListSelectorListItem
+                key={getKey(option.value)}
+                isSelected={option.selected}
+                id={`disponible-${getKey(option.value)}`}
+                onOptionSelect={(e) => onOptionSelect(e, index, false)}
+              >
+                {renderItem ? renderItem(option.value) : option.text}
+              </DualListSelectorListItem>
+            ))}
           </DualListSelectorList>
         </DualListSelectorPane>
-
         <DualListSelectorControlsWrapper>
           <DualListSelectorControl
             isDisabled={!availableOptions.some((opt) => opt.selected)}
@@ -190,7 +199,6 @@ function DualListSelectorGeneric<T>({
             icon={<AngleLeftIcon />}
           />
         </DualListSelectorControlsWrapper>
-
         <DualListSelectorPane
           title={assignedTitle}
           isChosen
@@ -199,18 +207,16 @@ function DualListSelectorGeneric<T>({
           } sélectionné(s)`}
         >
           <DualListSelectorList>
-            {chosenOptions.map((option, index) =>
-              option.isVisible ? (
-                <DualListSelectorListItem
-                  key={getText(option.value)}
-                  isSelected={option.selected}
-                  id={`assigne-${getText(option.value)}`}
-                  onOptionSelect={(e) => onOptionSelect(e, index, true)}
-                >
-                  {renderItem ? renderItem(option.value) : option.text}
-                </DualListSelectorListItem>
-              ) : null
-            )}
+            {chosenOptions.map((option, index) => (
+              <DualListSelectorListItem
+                key={getKey(option.value)}
+                isSelected={option.selected}
+                id={`assigne-${getKey(option.value)}`}
+                onOptionSelect={(e) => onOptionSelect(e, index, true)}
+              >
+                {renderItem ? renderItem(option.value) : option.text}
+              </DualListSelectorListItem>
+            ))}
           </DualListSelectorList>
         </DualListSelectorPane>
       </DualListSelector>

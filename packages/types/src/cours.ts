@@ -55,6 +55,7 @@ export type JourCours = {
 };
 
 export type AjoutCours = {
+  nom: string;
   heure_debut: string | null;
   heure_fin: string | null;
   jour_semaine: string;

@@ -77,5 +77,21 @@ router.post('/verifier-email-prenom-nom', async (req: any, res: any) => {
   }
 });
 
+// Vérification d'un cours récurrent dans le planning (jour, heure, type)
+router.post('/planning', async (req: any, res: any) => {
+  const { jour, heure_debut, heure_fin, type_cours } = req.body;
+  if (!jour || !heure_debut || !heure_fin || !type_cours) {
+    return res.status(400).json({ message: "Jour, heure_debut, heure_fin et type_cours requis." });
+  }
+  try {
+    const client = new Verifiation();
+    // Méthode à créer dans la classe Verifiation
+    const result = await client.checkCoursPlanning(jour, heure_debut, heure_fin, type_cours);
+    res.json({ exists: result.exists, message: result.message });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur lors de la vérification du planning." });
+  }
+});
+
 
 export default router;

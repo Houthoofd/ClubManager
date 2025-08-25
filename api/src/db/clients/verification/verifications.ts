@@ -100,4 +100,40 @@ export class Verifiation {
       });
     });
   }
+
+  // Vérifie si un cours existe déjà dans le planning (jour, heure, type)
+  async checkCoursPlanning(jour: string, heure_debut: string, heure_fin: string, type_cours: string): Promise<{ exists: boolean; message: string }> {
+    const mysqlConnector = new MysqlConnector();
+    // Normalise le jour pour gérer les majuscules/accents
+    const normalizeString = (str: string) => str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    const joursDeSemaine: Record<string, number> = {
+      lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6, dimanche: 7
+    };
+    const jourNum = joursDeSemaine[normalizeString(jour)];
+
+    const sql = `
+      SELECT id FROM cours_recurrent
+      WHERE jour_semaine = ?
+        AND heure_debut = ?
+        AND heure_fin = ?
+        AND type_cours = ?
+      LIMIT 1
+    `;
+    return new Promise((resolve, reject) => {
+      mysqlConnector.query(sql, [jourNum, heure_debut, heure_fin, type_cours], (error, results) => {
+        mysqlConnector.close();
+        if (error) return reject(error);
+        if (results.length > 0) {
+          resolve({ exists: true, message: "Ce créneau de cours existe déjà dans le planning." });
+        } else {
+          resolve({ exists: false, message: "Ce créneau est disponible." });
+        }
+      });
+    });
+  }
 }

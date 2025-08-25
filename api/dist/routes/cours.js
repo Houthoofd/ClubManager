@@ -189,11 +189,20 @@ router.get('/informations/planning', async (req, res) => {
 });
 router.post('/ajouter', async (req, res) => {
     const data = req.body;
-    console.log(data);
+    console.log("Données reçues pour ajout de cours :", data);
     try {
         const client = new Cours();
-        // Insertion du cours récurrent
-        await client.ajouterCoursRecurrentAvecProfesseurs(data);
+        // On prépare l'objet AjoutCours pour le backend
+        const ajoutCours = {
+            nom: data.nom,
+            type_cours: data.type_cours,
+            jour_semaine: data.jour, // le backend gère la conversion
+            heure_debut: data.heure_debut,
+            heure_fin: data.heure_fin,
+            // On transmet les noms des professeurs (nom complet)
+            professeurs: Array.isArray(data.professeurs) ? data.professeurs : []
+        };
+        await client.ajouterCoursRecurrentAvecProfesseurs(ajoutCours);
         res.status(200).json({ message: 'Cours récurrent ajouté avec succès' });
     }
     catch (error) {
@@ -203,13 +212,13 @@ router.post('/ajouter', async (req, res) => {
 });
 router.delete('/supprimer', async (req, res) => {
     const joursDeSemaine = {
-        lundi: 2,
-        mardi: 3,
-        mercredi: 4,
-        jeudi: 5,
-        vendredi: 6,
-        samedi: 7,
-        dimanche: 1
+        lundi: 1,
+        mardi: 2,
+        mercredi: 3,
+        jeudi: 4,
+        vendredi: 5,
+        samedi: 6,
+        dimanche: 7
     };
     const jourRecu = req.body;
     console.log("Body reçu :", req.body);
@@ -226,6 +235,50 @@ router.delete('/supprimer', async (req, res) => {
     catch (error) {
         console.error('Erreur lors de la suppression du cours:', error);
         res.status(500).json({ message: 'Erreur serveur lors de la suppression' });
+    }
+});
+// Endpoint pour retirer un ou plusieurs professeurs d'un cours récurrent (par nom et jour)
+router.post('/retirer-professeur', async (req, res) => {
+    const { professeursNoms, jour } = req.body;
+    console.log('Données reçues pour retirer un professeur :', req.body);
+    if (!Array.isArray(professeursNoms) || professeursNoms.length === 0 || !jour) {
+        return res.status(400).json({ message: "professeursNoms (array) et jour requis." });
+    }
+    try {
+        const client = new Cours();
+        // Nouvelle méthode à créer dans la classe Cours
+        const result = await client.supprimerProfesseursParNomEtJour(professeursNoms, jour);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        console.error("Erreur lors du retrait des professeurs :", error);
+        res.status(500).json({ message: "Erreur serveur lors du retrait des professeurs." });
+    }
+});
+// Endpoint pour modifier un cours récurrent
+router.patch('/modifier', async (req, res) => {
+    try {
+        const { nom, type_cours, jour, heure_debut, heure_fin, professeurs } = req.body;
+        // Vérifie qu'au moins un champ est présent
+        if (!nom && !type_cours && !jour && !heure_debut && !heure_fin && !professeurs) {
+            return res.status(400).json({ message: "Au moins un champ à modifier doit être fourni." });
+        }
+        const client = new Cours();
+        const modifCours = {
+            ...(nom !== undefined && { nom }),
+            ...(type_cours !== undefined && { type_cours }),
+            ...(jour !== undefined && { jour_semaine: jour }),
+            ...(heure_debut !== undefined && { heure_debut }),
+            ...(heure_fin !== undefined && { heure_fin }),
+            ...(professeurs !== undefined && { professeurs: Array.isArray(professeurs) ? professeurs : [] })
+        };
+        // Retourne le résultat de type ConfirmationResult
+        const result = await client.modifierCoursRecurrentAvecProfesseurs(modifCours);
+        res.status(200).json({ isConfirm: true, message: "Cours modifié avec succès." });
+    }
+    catch (error) {
+        console.error("Erreur lors de la modification du cours :", error);
+        res.status(500).json({ isConfirm: false, message: "Erreur serveur lors de la modification du cours." });
     }
 });
 export default router;
