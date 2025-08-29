@@ -91,14 +91,16 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
     <p>Veuillez choisir une taille :</p>
     <FormSelect value={selectedSize} onChange={onChange} aria-label="Choix de la taille">
       <FormSelectOption key="placeholder" value="" label="Sélectionnez une taille" isDisabled />
-      {stocks.map((stock) => (
-        <FormSelectOption
-          key={stock.taille}
-          value={stock.taille}
-          label={`${stock.taille}${stock.quantite === 0 ? ' (Rupture de stock)' : ''}`}
-          isDisabled={stock.quantite === 0}
-        />
-      ))}
+      {/* Affiche chaque taille une seule fois et uniquement si la quantité > 0 */}
+      {[...new Map(stocks.map(stock => [stock.taille, stock])).values()]
+        .filter(stock => stock.quantite > 0)
+        .map((stock) => (
+          <FormSelectOption
+            key={stock.taille}
+            value={stock.taille}
+            label={stock.taille}
+          />
+        ))}
     </FormSelect>
   </div>
 

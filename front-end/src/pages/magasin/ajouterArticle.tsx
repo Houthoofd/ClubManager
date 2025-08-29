@@ -31,6 +31,9 @@ import {
 import type { MenuToggleElement } from '@patternfly/react-core';
 import { MultiImageUpload } from '../../components/fileUploader';
 import { PriceInput } from '../../components/input/numberInput';
+import { ModalWithHelp } from '../../components/modal/modalwithhelp';
+import { Popover } from '@patternfly/react-core';
+import HelpIcon from '@patternfly/react-icons/dist/esm/icons/help-icon';
 
 import { apiUrl } from '../apiUrl';
 
@@ -49,6 +52,9 @@ const AjouterArticle = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [categories, setCategories] = useState<{ id: number; nom: string }[]>([]);
   const [articleEnEdition, setArticleEnEdition] = useState<any | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editChanges, setEditChanges] = useState<any | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const tailles = ['S', 'M', 'L', 'XL'];
 
@@ -72,10 +78,54 @@ const AjouterArticle = () => {
     setActiveTabKey(parsedIndex);
   };
 
+  // Fonction pour comparer les changements
+  const getArticleChanges = (original: any, edited: any) => {
+    const changes: any = {};
+    if (!original) return changes;
+    if (original.nom !== edited.nom) changes.nom = { before: original.nom, after: edited.nom };
+    if (original.description !== edited.description) changes.description = { before: original.description, after: edited.description };
+    if (original.prix !== edited.prix) changes.prix = { before: original.prix, after: edited.prix };
+    if (original.categorie_id !== edited.categorie_id) {
+      const beforeCat = categories.find(c => c.id === Number(original.categorie_id))?.nom;
+      const afterCat = categories.find(c => c.id === Number(edited.categorie_id))?.nom;
+      changes.categorie = { before: beforeCat, after: afterCat };
+    }
+    // Stocks comparison (simple: compare JSON)
+    if (JSON.stringify(original.stocks) !== JSON.stringify(edited.stocks)) {
+      changes.stocks = { before: original.stocks, after: edited.stocks };
+    }
+    // Images comparison
+    if (JSON.stringify(original.images) !== JSON.stringify(edited.images)) {
+      changes.images = { before: original.images, after: edited.images };
+    }
+    return changes;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nom || !categorieId || !prix) return;
 
+    if (articleEnEdition) {
+      // Prépare les changements à afficher
+      const edited = {
+        nom,
+        description,
+        prix,
+        categorie_id: categorieId,
+        images: imageUrls,
+        stocks,
+      };
+      setEditChanges(getArticleChanges(articleEnEdition, edited));
+      setIsEditModalOpen(true);
+      return;
+    }
+
+    // Ajout : affiche la modal de confirmation avant d'ajouter
+    setIsAddModalOpen(true);
+  };
+
+  // Fonction pour confirmer l'ajout
+  const confirmAdd = async () => {
     const articlePayload = {
       nom,
       description,
@@ -86,13 +136,9 @@ const AjouterArticle = () => {
     };
 
     try {
-      const url = articleEnEdition
-        ? apiUrl(`magasin/articles/${articleEnEdition.id}`)
-        : apiUrl('magasin/articles/ajouter');
-      const method = articleEnEdition ? 'PUT' : 'POST';
-
+      const url = apiUrl('magasin/articles/ajouter');
       const res = await fetch(url, {
-        method,
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(articlePayload),
       });
@@ -100,26 +146,60 @@ const AjouterArticle = () => {
       if (!res.ok) throw new Error("Erreur lors de l'envoi");
 
       const data = await res.json();
-
-      if (articleEnEdition) {
-        setArticles((prev) =>
-          prev.map((a) => (a.id === articleEnEdition.id ? data : a))
-        );
-        setMessage('Article mis à jour');
-      } else {
-        setArticles((prev) => [...prev, data]);
-        setMessage('Article ajouté');
-      }
-
+      setArticles((prev) => [...prev, data]);
+      setMessage('Article ajouté');
       setNom('');
       setDescription('');
       setPrix('0');
       setCategorieId(null);
       setStocks([{ taille: 'S', quantite: 0 }]);
       setArticleEnEdition(null);
+      setIsAddModalOpen(false);
     } catch (err) {
       console.error(err);
-      setMessage("Erreur lors de l'ajout / mise à jour.");
+      setMessage("Erreur lors de l'ajout.");
+      setIsAddModalOpen(false);
+    }
+  };
+
+  // Fonction pour confirmer la modification
+  const confirmEdit = async () => {
+    if (!articleEnEdition) return;
+    const articlePayload = {
+      nom,
+      description,
+      prix,
+      categorie_id: categorieId,
+      images: imageUrls,
+      stocks,
+    };
+    try {
+      const url = apiUrl(`magasin/articles/${articleEnEdition.id}`);
+      const method = 'PUT';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(articlePayload),
+      });
+      if (!res.ok) throw new Error("Erreur lors de l'envoi");
+      const data = await res.json();
+      setArticles((prev) =>
+        prev.map((a) => (a.id === articleEnEdition.id ? data : a))
+      );
+      setMessage('Article mis à jour');
+      setNom('');
+      setDescription('');
+      setPrix('0');
+      setCategorieId(null);
+      setStocks([{ taille: 'S', quantite: 0 }]);
+      setArticleEnEdition(null);
+      setIsEditModalOpen(false);
+      setEditChanges(null);
+    } catch (err) {
+      console.error(err);
+      setMessage("Erreur lors de la mise à jour.");
+      setIsEditModalOpen(false);
+      setEditChanges(null);
     }
   };
 
@@ -201,6 +281,8 @@ const AjouterArticle = () => {
     setCategorieId(article.categorie_id?.toString());
     setStocks(article.stocks || []);
     setActiveTabKey(0);
+    setEditChanges(null);
+    setIsEditModalOpen(false); // S'assure que la modal est fermée au départ
   };
 
   return (
@@ -394,6 +476,114 @@ const AjouterArticle = () => {
           )}
         </div>
       </Tab>
+
+      {/* Modal de confirmation modification */}
+      {isEditModalOpen && (
+        <ModalWithHelp
+          isOpen={isEditModalOpen}
+          onClose={() => { setIsEditModalOpen(false); setEditChanges(null); }}
+          title="Confirmer la modification"
+          help={
+            <Popover
+              headerContent={<div>Aide</div>}
+              bodyContent={<div>Vérifiez les changements avant de confirmer la modification de l'article.</div>}
+              footerContent="Popover Footer"
+            >
+              <Button variant="plain" aria-label="Help" icon={<HelpIcon />} />
+            </Popover>
+          }
+          footer={
+            <>
+              <Button variant="primary" onClick={confirmEdit}>
+                Oui, modifier
+              </Button>
+              <Button variant="link" onClick={() => { setIsEditModalOpen(false); setEditChanges(null); }}>
+                Annuler
+              </Button>
+            </>
+          }
+        >
+          <div>
+            <strong>Changements détectés :</strong>
+            {editChanges && Object.keys(editChanges).length > 0 ? (
+              <ul>
+                {Object.entries(editChanges).map(([key, value]: any) => (
+                  <li key={key}>
+                    <strong>{key} :</strong>
+                    <div>
+                      <span style={{ color: 'red' }}>Avant : {JSON.stringify(value.before)}</span>
+                      <br />
+                      <span style={{ color: 'green' }}>Après : {JSON.stringify(value.after)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div>Aucun changement détecté.</div>
+            )}
+            <div style={{ marginTop: '1rem' }}>
+              Êtes-vous sûr de vouloir modifier cet article ?
+            </div>
+          </div>
+        </ModalWithHelp>
+      )}
+
+      {/* Modal de confirmation ajout */}
+      {isAddModalOpen && (
+        <ModalWithHelp
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          title="Confirmer l'ajout"
+          help={
+            <Popover
+              headerContent={<div>Aide</div>}
+              bodyContent={<div>Confirmez l'ajout de cet article au magasin.</div>}
+              footerContent="Popover Footer"
+            >
+              <Button variant="plain" aria-label="Help" icon={<HelpIcon />} />
+            </Popover>
+          }
+          footer={
+            <>
+              <Button variant="primary" onClick={confirmAdd}>
+                Oui, ajouter
+              </Button>
+              <Button variant="link" onClick={() => setIsAddModalOpen(false)}>
+                Annuler
+              </Button>
+            </>
+          }
+        >
+          <div>
+            <strong>Résumé de l'article à ajouter :</strong>
+            <ul>
+              <li><strong>Nom :</strong> {nom}</li>
+              <li><strong>Description :</strong> {description}</li>
+              <li><strong>Prix :</strong> {prix} €</li>
+              <li><strong>Catégorie :</strong> {categories.find(c => c.id.toString() === categorieId)?.nom || ''}</li>
+              <li>
+                <strong>Stocks :</strong>
+                <ul>
+                  {stocks.map((stock, idx) => (
+                    <li key={idx}>{stock.taille} : {stock.quantite}</li>
+                  ))}
+                </ul>
+              </li>
+              <li>
+                <strong>Images :</strong>
+                <ul>
+                  {imageUrls.map((url, idx) => (
+                    <li key={idx}>{url}</li>
+                  ))}
+                </ul>
+              </li>
+            </ul>
+            <div style={{ marginTop: '1rem' }}>
+              Êtes-vous sûr de vouloir ajouter cet article ?
+            </div>
+          </div>
+        </ModalWithHelp>
+      )}
     </Tabs>
   );
 };
