@@ -14,22 +14,32 @@ import {
   Spinner,
   Bullseye,
   Alert,
+  Select,
+  SelectOption,
+  SelectList,
 } from '@patternfly/react-core';
 import ArticleCard from '../../components/card';
 import RightSidePanel from '../../components/panel/rightSidePanel';
 import { apiUrl } from '../apiUrl';
+import ModalWithHelp from '../../components/modal';
+import { Popover, Label } from '@patternfly/react-core';
+import HelpIcon from '@patternfly/react-icons/dist/esm/icons/help-icon';
 
 // Import des types
 import type { Article, Categorie } from '@clubmanager/types';
 
 const Magasin = () => {
-  const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article[]>>({});
+  const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article>>({});
   const [categories, setCategories] = useState<Categorie[]>([]);
   const [panier, setPanier] = useState<Article[]>([]);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
+  const [selectedTaille, setSelectedTaille] = useState<string | null>(null);
+  const [isTailleOpen, setIsTailleOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -93,6 +103,25 @@ const Magasin = () => {
     }));
   };
 
+  // Fonction pour ouvrir la modal d'informations
+  const openInfoModal = (article: any) => {
+    setSelectedArticle(article);
+    setIsInfoModalOpen(true);
+  };
+
+  // Fonction pour fermer la modal
+  const closeInfoModal = () => {
+    setIsInfoModalOpen(false);
+    setSelectedArticle(null);
+  };
+
+  // Reset la taille sélectionnée à chaque ouverture de modal
+  useEffect(() => {
+    if (isInfoModalOpen && selectedArticle?.stocks?.length > 0) {
+      setSelectedTaille(selectedArticle.stocks[0].taille);
+    }
+  }, [isInfoModalOpen, selectedArticle]);
+
   return (
     <RightSidePanel
       isExpanded={isPanelOpen}
@@ -152,6 +181,11 @@ const Magasin = () => {
                             prix={article.prix}
                             stocks={article.stocks}
                             onAddToCart={(taille) => ajouterAuPanier(article, taille)}
+                            extraActions={
+                              <Button variant="info" onClick={() => openInfoModal(article)}>
+                                Plus d'informations
+                              </Button>
+                            }
                           />
                         </GalleryItem>
                       ))}
@@ -165,6 +199,99 @@ const Magasin = () => {
           })
         )}
       </PageSection>
+
+      {/* ModalWithHelp pour afficher les infos d'un article */}
+      <ModalWithHelp
+        isOpen={isInfoModalOpen}
+        onClose={closeInfoModal}
+        title={selectedArticle?.nom || "Informations sur l'article"}
+        help={
+          <Popover
+            headerContent={<div>Help Popover</div>}
+            bodyContent={
+              <div>
+                Affiche toutes les informations détaillées sur l'article sélectionné.
+              </div>
+            }
+            footerContent="Popover Footer"
+          >
+            <Button variant="plain" aria-label="Help" icon={<HelpIcon />} />
+          </Popover>
+        }
+        footer={
+          <>
+            <Button variant="primary" onClick={() => {
+              if (selectedArticle && selectedTaille) {
+                ajouterAuPanier(selectedArticle, selectedTaille);
+                closeInfoModal();
+              }
+            }} isDisabled={!selectedTaille}>
+              Ajouter au panier
+            </Button>
+            <Button variant="link" onClick={closeInfoModal}>
+              Annuler
+            </Button>
+          </>
+        }
+      >
+        {selectedArticle ? (
+          <div>
+            {selectedArticle.images?.length > 0 && (
+              <img
+                src={selectedArticle.images[0]}
+                alt={selectedArticle.nom}
+                style={{ width: '100%', borderRadius: '4px', marginBottom: '0.5rem' }}
+              />
+            )}
+            <div><strong>Prix :</strong> {selectedArticle.prix} €</div>
+            <div><strong>Description :</strong> {selectedArticle.description || '—'}</div>
+            <div style={{ marginTop: '0.5rem' }}>
+              <strong>Stocks :</strong>
+              <ul style={{ paddingLeft: '1rem', margin: 0 }}>
+                {selectedArticle.stocks?.map((stock:any, i:any) => (
+                  <li key={i}>
+                    Taille <Label color="blue">{stock.taille}</Label> : {stock.quantite}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Dropdown pour sélectionner la taille */}
+            <div style={{ marginTop: '1rem' }}>
+              <strong>Choisir la taille :</strong>
+              <Select
+                isOpen={isTailleOpen}
+                selected={selectedTaille}
+                onSelect={(_e, value) => {
+                  setSelectedTaille(value as string);
+                  setIsTailleOpen(false);
+                }}
+                onOpenChange={setIsTailleOpen}
+                toggle={(toggleRef) => (
+                  <Button
+                    ref={toggleRef}
+                    variant="secondary"
+                    onClick={() => setIsTailleOpen(prev => !prev)}
+                    style={{ width: '100%', marginTop: '0.5rem' }}
+                  >
+                    {selectedTaille || 'Sélectionner une taille'}
+                  </Button>
+                )}
+                shouldFocusToggleOnSelect
+              >
+                <SelectList>
+                  {selectedArticle.stocks?.map((stock:any, i:any) => (
+                    <SelectOption key={i} value={stock.taille}>
+                      {stock.taille} ({stock.quantite} en stock)
+                    </SelectOption>
+                  ))}
+                </SelectList>
+              </Select>
+            </div>
+          </div>
+        ) : (
+          <div>Aucun article sélectionné.</div>
+        )}
+      </ModalWithHelp>
     </RightSidePanel>
   );
 };

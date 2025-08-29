@@ -51,11 +51,16 @@ const Inscription = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Petit fetch pour récupérer ce qu'il y a sur le endpoint /cours avec apiUrl
+      // Petit fetch GET pour récupérer ce qu'il y a sur le endpoint /cours avec apiUrl
       try {
-        const coursEndpointResponse = await fetch(apiUrl('cours'));
+        const coursEndpointResponse = await fetch(apiUrl('cours'), {
+          method: "GET",
+          headers: { "Content-Type": "application/json" }
+        });
         if (coursEndpointResponse.ok) {
           const coursEndpointData = await coursEndpointResponse.json();
+          setCours(coursEndpointData); // Sauvegarde les cours dans l'état pour affichage
+          console.log(coursEndpointData)
           console.log("Données du endpoint /cours :", coursEndpointData);
         } else {
           console.warn("Impossible de récupérer les données sur /cours");

@@ -37,6 +37,7 @@ import { apiUrl } from '../apiUrl';
 const AjouterArticle = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [categorieId, setCategorieId] = useState<string | null>(null);
+  const [categorieNom, setCategorieNom] = useState<string | null>(null);
   const [isCategorieOpen, setIsCategorieOpen] = useState(false);
   const [nom, setNom] = useState('');
   const [description, setDescription] = useState('');
@@ -143,6 +144,13 @@ const AjouterArticle = () => {
     fetchArticles();
   }, []);
 
+  const handleCategorieSelect = (_e: any, value: string) => {
+    setCategorieId(value);
+    const selected = categories.find(c => c.id.toString() === value);
+    setCategorieNom(selected ? selected.nom : null);
+    setIsCategorieOpen(false);
+  };
+
   const toggleCategorie = (toggleRef: React.Ref<MenuToggleElement>) => (
     <MenuToggle
       ref={toggleRef}
@@ -150,7 +158,7 @@ const AjouterArticle = () => {
       isExpanded={isCategorieOpen}
       style={{ width: '100%' }}
     >
-      {categorieId || 'Sélectionner une catégorie'}
+      {categorieNom || 'Sélectionner une catégorie'}
     </MenuToggle>
   );
 
@@ -204,10 +212,7 @@ const AjouterArticle = () => {
               id="categorie-id"
               isOpen={isCategorieOpen}
               selected={categorieId}
-              onSelect={(_e, value) => {
-                setCategorieId(value as string);
-                setIsCategorieOpen(false);
-              }}
+              onSelect={handleCategorieSelect}
               onOpenChange={setIsCategorieOpen}
               toggle={toggleCategorie}
               shouldFocusToggleOnSelect

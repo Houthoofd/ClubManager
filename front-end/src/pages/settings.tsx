@@ -5,26 +5,43 @@ import {
   Title,
   Form,
   FormGroup,
-  TextInput,
   Switch,
   Divider,
   Button,
   FormSelect,
-  FormSelectOption
+  FormSelectOption,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter
 } from '@patternfly/react-core';
 
 const Settings = () => {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [notifications, setNotifications] = useState(true);
   const [theme, setTheme] = useState('light');
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
+  // Ajoute une fonction pour sauvegarder et afficher une modal
   const handleSave = () => {
-    console.log('Mot de passe:', newPassword);
     console.log('Notifications activées:', notifications);
     console.log('Thème:', theme);
-    alert('Paramètres sauvegardés !');
+    setModalMessage('Paramètres sauvegardés !');
+    setShowModal(true);
   };
+
+  // Ajoute un effet pour appliquer le thème choisi
+  React.useEffect(() => {
+    // Ici, on change la classe sur le body selon le thème
+    document.body.classList.remove('theme-light', 'theme-dark', 'theme-system');
+    if (theme === 'system') {
+      // Utilise le thème du système (dark ou light)
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
+    } else {
+      document.body.classList.add(`theme-${theme}`);
+    }
+  }, [theme]);
 
   return (
     <>
@@ -36,30 +53,6 @@ const Settings = () => {
 
       <PageSection variant={PageSectionVariants.default}>
         <Form isWidthLimited maxWidth="600px">
-          {/* Mot de passe */}
-          <FormGroup label="Mot de passe actuel" fieldId="current-password">
-            <TextInput
-              isRequired
-              type="password"
-              id="current-password"
-              name="current-password"
-              value={currentPassword}
-              onChange={(_event, value) => setCurrentPassword(value)}
-            />
-          </FormGroup>
-          <FormGroup label="Nouveau mot de passe" fieldId="new-password">
-            <TextInput
-              isRequired
-              type="password"
-              id="new-password"
-              name="new-password"
-              value={newPassword}
-              onChange={(_event, value) => setNewPassword(value)}
-            />
-          </FormGroup>
-
-          <Divider className="my-4" />
-
           {/* Notifications */}
           <FormGroup label="Notifications par e‑mail" fieldId="notifications">
             <Switch
@@ -90,6 +83,23 @@ const Settings = () => {
           </Button>
         </Form>
       </PageSection>
+      {/* Modal de notification */}
+      <Modal
+        variant="small"
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        aria-labelledby="settings-modal-title"
+      >
+        <ModalHeader title="Notification" />
+        <ModalBody>
+          {modalMessage}
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="primary" onClick={() => setShowModal(false)}>
+            OK
+          </Button>
+        </ModalFooter>
+      </Modal>
     </>
   );
 };
