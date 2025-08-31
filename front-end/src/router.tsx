@@ -28,6 +28,8 @@ import Messages from './pages/messages';
 
 import InscriptionPage from './pages/inscription';
 
+import StatistiquesPage from './pages/statistiques';
+
 const router = createBrowserRouter([
   // Route publique pour la page de connexion
   {
@@ -165,6 +167,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Paiements />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'pages/statistiques',
+        element: (
+          <ProtectedRoute>
+            <StatistiquesPage />
           </ProtectedRoute>
         ),
       },

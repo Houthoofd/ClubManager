@@ -88,7 +88,10 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
             <TachometerAltIcon style={iconStyle} />
             Accueil
           </NavItem>
-
+          <NavItem itemId="statistiques" to="/pages/statistiques">
+            <ClipboardCheckIcon style={iconStyle} />
+            Statistiques avancées
+          </NavItem>
           <Divider />
 
           {/* Paiements */}

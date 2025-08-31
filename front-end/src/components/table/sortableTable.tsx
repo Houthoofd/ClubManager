@@ -12,23 +12,34 @@ import type { ThProps } from '@patternfly/react-table';
 interface AutoTableProps<T> {
   data: T[];
   ariaLabel?: string;
+  columns?: { key: string; label: string }[];
 }
 
 export function SortableTable<T extends Record<string, any>>({
   data,
-  ariaLabel = 'Table automatique'
+  ariaLabel = 'Table automatique',
+  columns: customColumns
 }: AutoTableProps<T>) {
   const [activeSortIndex, setActiveSortIndex] = useState<number | null>(null);
   const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | null>(null);
 
   if (!data || data.length === 0) return <div>Aucune donnée à afficher.</div>;
 
-  // Récupère dynamiquement les colonnes à partir du premier objet
-  const columns = Object.keys(data[0]);
+  // Colonnes par défaut pour les paiements
+  const defaultPaiementColumns = [
+    { key: 'last_name', label: 'Nom' },
+    { key: 'first_name', label: 'Prénom' },
+    { key: 'nom_plan', label: "Type d'abonnement" },
+    { key: 'periode_debut', label: 'Période début' },
+    { key: 'periode_fin', label: 'Période fin' }
+  ];
+
+  // Utilise les colonnes passées en props ou celles par défaut
+  const columns = customColumns ?? defaultPaiementColumns;
 
   let sortedData = [...data];
   if (activeSortIndex !== null) {
-    const key = columns[activeSortIndex];
+    const key = columns[activeSortIndex].key;
     sortedData.sort((a, b) => {
       const aValue = a[key];
       const bValue = b[key];
@@ -56,13 +67,20 @@ export function SortableTable<T extends Record<string, any>>({
     columnIndex
   });
 
+  // Helper pour formater les dates
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString();
+  };
+
   return (
     <PfTable aria-label={ariaLabel} variant="compact">
       <Thead>
         <Tr>
           {columns.map((col, i) => (
             <Th key={i} sort={getSortParams(i)}>
-              {col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+              {col.label}
             </Th>
           ))}
         </Tr>
@@ -71,8 +89,10 @@ export function SortableTable<T extends Record<string, any>>({
         {sortedData.map((row, rowIndex) => (
           <Tr key={rowIndex}>
             {columns.map((col, colIndex) => (
-              <Td key={colIndex} dataLabel={col}>
-                {String(row[col])}
+              <Td key={colIndex} dataLabel={col.label}>
+                {['periode_debut', 'periode_fin'].includes(col.key)
+                  ? formatDate(row[col.key])
+                  : String(row[col.key])}
               </Td>
             ))}
           </Tr>

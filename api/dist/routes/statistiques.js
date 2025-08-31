@@ -99,4 +99,225 @@ router.get('/presence-raw/:userId', async (req, res) => {
         });
     }
 });
+/**
+ * @route   GET /statistiques/membres/count
+ * @desc    Nombre total de membres
+ */
+router.get('/membres/count', async (_req, res) => {
+    try {
+        const count = await statistiques.getNombreMembres();
+        res.json({ count });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors du comptage des membres' });
+    }
+});
+/**
+ * @route   GET /statistiques/paiements/mois
+ * @desc    Total encaissé ce mois-ci
+ */
+router.get('/paiements/mois', async (_req, res) => {
+    try {
+        const total = await statistiques.getTotalPaiementsMois();
+        res.json({ total });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors du calcul du total du mois' });
+    }
+});
+/**
+ * @route   GET /statistiques/paiements/recents
+ * @desc    Nombre de paiements sur les 7 derniers jours
+ */
+router.get('/paiements/recents', async (_req, res) => {
+    try {
+        const count = await statistiques.getPaiementsRecents();
+        res.json({ count });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors du comptage des paiements récents' });
+    }
+});
+/**
+ * @route   GET /statistiques/paiements/en-attente
+ * @desc    Nombre de membres avec paiements en attente
+ */
+router.get('/paiements/en-attente', async (_req, res) => {
+    try {
+        const count = await statistiques.getPaiementsEnAttente();
+        res.json({ count });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors du comptage des paiements en attente' });
+    }
+});
+/**
+ * @route   GET /statistiques/plans/actifs
+ * @desc    Nombre de plans d’abonnement actifs
+ */
+router.get('/plans/actifs', async (_req, res) => {
+    try {
+        const count = await statistiques.getPlansActifs();
+        res.json({ count });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors du comptage des plans actifs' });
+    }
+});
+/**
+ * @route   GET /statistiques/plans/taux-renouvellement
+ * @desc    Taux de renouvellement des abonnements
+ */
+router.get('/plans/taux-renouvellement', async (_req, res) => {
+    try {
+        const taux = await statistiques.getTauxRenouvellement();
+        res.json({ taux });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors du calcul du taux de renouvellement' });
+    }
+});
+/**
+ * @route   GET /statistiques/paiements/par-mois
+ * @desc    Évolution des paiements par mois (pour le graphique)
+ */
+router.get('/paiements/par-mois', async (_req, res) => {
+    try {
+        const data = await statistiques.getPaiementsParMois();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des paiements par mois' });
+    }
+});
+/**
+ * @route   GET /statistiques/membres/par-plan
+ * @desc    Répartition des membres par plan (pour le graphique)
+ */
+router.get('/membres/par-plan', async (_req, res) => {
+    try {
+        const data = await statistiques.getMembresParPlan();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des membres par plan' });
+    }
+});
+/**
+ * @route   GET /statistiques/paiements/derniers
+ * @desc    Retourne les 10 derniers paiements effectués
+ */
+router.get('/paiements/derniers', async (_req, res) => {
+    try {
+        const data = await statistiques.getDerniersPaiements();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des derniers paiements' });
+    }
+});
+/**
+ * @route   GET /statistiques/paiements/echus
+ * @desc    Retourne les paiements échus (fin de période < aujourd'hui)
+ */
+router.get('/paiements/echus', async (_req, res) => {
+    try {
+        const data = await statistiques.getPaiementsEchus();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des paiements échus' });
+    }
+});
+/**
+ * @route   GET /statistiques/membres/nouveaux
+ * @desc    Retourne les membres inscrits dans les 7 derniers jours
+ */
+router.get('/membres/nouveaux', async (_req, res) => {
+    try {
+        const data = await statistiques.getNouveauxMembres();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des nouveaux membres' });
+    }
+});
+/**
+ * @route   GET /statistiques/membres/assidus
+ * @desc    Top 5 membres les plus assidus (présences validées)
+ */
+router.get('/membres/assidus', async (_req, res) => {
+    try {
+        const data = await statistiques.getTopMembresAssidus();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des membres assidus' });
+    }
+});
+/**
+ * @route   GET /statistiques/membres/par-grade
+ * @desc    Répartition des membres par grade
+ */
+router.get('/membres/par-grade', async (_req, res) => {
+    try {
+        const data = await statistiques.getMembresParGrade();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des membres par grade' });
+    }
+});
+/**
+ * @route   GET /statistiques/membres/par-genre
+ * @desc    Répartition des membres par genre
+ */
+router.get('/membres/par-genre', async (_req, res) => {
+    try {
+        const data = await statistiques.getMembresParGenre();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des membres par genre' });
+    }
+});
+/**
+ * @route   GET /statistiques/membres/anniversaires
+ * @desc    Prochains anniversaires des membres (dans les 30 jours)
+ */
+router.get('/membres/anniversaires', async (_req, res) => {
+    try {
+        const data = await statistiques.getProchainsAnniversaires();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des anniversaires' });
+    }
+});
+/**
+ * @route   GET /statistiques/articles/plus-vendus
+ * @desc    Articles les plus vendus
+ */
+router.get('/articles/plus-vendus', async (_req, res) => {
+    try {
+        const data = await statistiques.getArticlesPlusVendus();
+        res.json(data);
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des articles vendus' });
+    }
+});
+/**
+ * @route   GET /statistiques/cours/semaine
+ * @desc    Nombre de cours à venir cette semaine
+ */
+router.get('/cours/semaine', async (_req, res) => {
+    try {
+        const data = await statistiques.getCoursSemaine();
+        res.json({ count: data });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des cours de la semaine' });
+    }
+});
 export default router;

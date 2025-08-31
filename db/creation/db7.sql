@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS groupes (
 CREATE TABLE IF NOT EXISTS utilisateurs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NOT NULL,
     nom_utilisateur VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
     genre_id INT,
@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
     status_id INT DEFAULT 1,
     grade_id INT DEFAULT 1,
     abonnement_id INT,
+    date_inscription TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (genre_id) REFERENCES genres(id),
     FOREIGN KEY (status_id) REFERENCES status(id),
     FOREIGN KEY (grade_id) REFERENCES grades(id),
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
     INDEX idx_email (email),
     INDEX idx_status (status_id)
 ) ENGINE=InnoDB;
+
 
 CREATE TABLE IF NOT EXISTS professeurs (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -190,6 +192,21 @@ CREATE TABLE IF NOT EXISTS paiements (
     INDEX idx_utilisateur_statut (utilisateur_id, statut)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS echeances_paiements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    abonnement_id INT NOT NULL,
+    date_echeance DATE NOT NULL,
+    montant DECIMAL(10, 2) NOT NULL,
+    statut ENUM('payé', 'en attente', 'échu') DEFAULT 'en attente',
+    date_paiement DATE,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    FOREIGN KEY (abonnement_id) REFERENCES plans_tarifaires(id) ON DELETE CASCADE,
+    INDEX idx_utilisateur_echeance (utilisateur_id, date_echeance),
+    INDEX idx_abonnement_echeance (abonnement_id, date_echeance)
+) ENGINE=InnoDB;
+
+
 CREATE TABLE IF NOT EXISTS groupes_utilisateurs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     groupe_id INT NOT NULL,
@@ -281,7 +298,6 @@ CREATE INDEX idx_utilisateurs_status ON utilisateurs(status_id);
 CREATE INDEX idx_cours_type ON cours(type_cours);
 CREATE INDEX idx_commandes_statut ON commandes(statut);
 
--- PROCÉDURE UPSERT UTILISATEUR
 DELIMITER //
 CREATE PROCEDURE upsert_utilisateur(
     IN p_first_name VARCHAR(100),
@@ -293,15 +309,15 @@ CREATE PROCEDURE upsert_utilisateur(
     IN p_status_id INT,
     IN p_grade_id INT,
     IN p_abonnement_id INT,
-    IN p_password VARCHAR(255)
+    IN p_password VARCHAR(255),
+    IN p_date_inscription TIMESTAMP
 )
 BEGIN
     DECLARE v_count INT;
     SELECT COUNT(*) INTO v_count FROM utilisateurs WHERE email = p_email;
-
     IF v_count = 0 THEN
-        INSERT INTO utilisateurs (first_name, last_name, email, genre_id, date_of_birth, nom_utilisateur, status_id, grade_id, abonnement_id, password)
-        VALUES (p_first_name, p_last_name, p_email, p_genre_id, p_date_of_birth, p_nom_utilisateur, p_status_id, p_grade_id, p_abonnement_id, p_password);
+        INSERT INTO utilisateurs (first_name, last_name, email, genre_id, date_of_birth, nom_utilisateur, status_id, grade_id, abonnement_id, password, date_inscription)
+        VALUES (p_first_name, p_last_name, p_email, p_genre_id, p_date_of_birth, p_nom_utilisateur, p_status_id, p_grade_id, p_abonnement_id, p_password, p_date_inscription);
     ELSE
         UPDATE utilisateurs
         SET first_name = p_first_name,
@@ -312,11 +328,13 @@ BEGIN
             status_id = p_status_id,
             grade_id = p_grade_id,
             abonnement_id = p_abonnement_id,
-            password = p_password
+            password = p_password,
+            date_inscription = p_date_inscription
         WHERE email = p_email;
     END IF;
 END //
 DELIMITER ;
+
 
 DELIMITER //
 CREATE TRIGGER ajouter_professeur_apres_insert
@@ -726,6 +744,21 @@ CALL upsert_utilisateur('Rachid', 'Belhoui', 'rachid.belhoui@gmail.com', 1, '198
 CALL upsert_utilisateur('Benoit', 'Houthoofd', 'houthoofd.benoit48@gmail.com', 1, '1993-08-12', 'benoit_houthoofd', 4, 13, 2, '$2y$10$...');
 
 
+-- Défibit aléatoirement des dates d'inscription
+-- Définir les bornes de la saison
+SET @season_start = STR_TO_DATE('2025-09-01', '%Y-%m-%d');
+SET @season_end   = STR_TO_DATE('2026-08-31', '%Y-%m-%d');
+
+-- Mettre à jour la date d'inscription de tous les utilisateurs avec une date aléatoire dans la saison
+UPDATE utilisateurs
+SET date_inscription = DATE_ADD(
+    @season_start,
+    INTERVAL FLOOR(RAND() * DATEDIFF(@season_end, @season_start)) DAY
+)
+WHERE id > 0;  -- Met à jour tous les utilisateurs existants
+
+
+
 INSERT INTO professeurs (nom, prenom, email, grade_id, status_id)
 SELECT last_name, first_name, email, grade_id, status_id
 FROM utilisateurs
@@ -737,12 +770,22 @@ ON DUPLICATE KEY UPDATE
   status_id = VALUES(status_id);
 
 
-INSERT INTO paiements (utilisateur_id, montant, date_paiement, statut, abonnement_id, periode_debut, periode_fin) VALUES
-(1, 300.00, '2025-01-01', 'validé', 3, '2025-01-01', '2025-12-31'),
-(2, 300.00, '2025-01-01', 'validé', 3, '2025-01-01', '2025-12-31'),
-(3, 300.00, '2025-01-01', 'validé', 3, '2025-01-01', '2025-12-31'),
-(4, 300.00, '2025-01-01', 'validé', 3, '2025-01-01', '2025-12-31');
-
+-- Génère aléatoirement des paiements pour les utilisateurs existants
+INSERT INTO paiements (utilisateur_id, montant, date_paiement, statut, abonnement_id, periode_debut, periode_fin)
+SELECT
+  u.id,
+  CASE FLOOR(RAND() * 3) + 1
+    WHEN 1 THEN 25.00
+    WHEN 2 THEN 100.00
+    ELSE 300.00
+  END AS montant,
+  DATE_ADD('2025-01-01', INTERVAL FLOOR(RAND() * 365) DAY) AS date_paiement,
+  'validé' AS statut,
+  FLOOR(RAND() * 3) + 1 AS abonnement_id,
+  DATE_ADD('2025-01-01', INTERVAL FLOOR(RAND() * 365) DAY) AS periode_debut,
+  DATE_ADD('2025-01-01', INTERVAL FLOOR(RAND() * 730) DAY) AS periode_fin
+FROM utilisateurs u
+WHERE u.id <= 50;
 
 INSERT INTO commandes (utilisateur_id, statut) VALUES
 (1, 'en attente'), (1, 'payée');

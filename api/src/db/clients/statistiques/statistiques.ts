@@ -310,4 +310,334 @@ export class Statistiques {
     });
     return formatted;
   }
+
+  /**
+   * Obtient le nombre total de membres actifs
+   */
+  async getNombreMembres(): Promise<number> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `SELECT COUNT(*) AS count FROM utilisateurs WHERE status_id IN (1,2,3,4,5)`;
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      return result[0]?.count ?? 0;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Obtient le montant total des paiements du mois en cours
+   */
+  async getTotalPaiementsMois(): Promise<number> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT COALESCE(SUM(montant), 0) AS total
+        FROM paiements
+        WHERE MONTH(date_paiement) = MONTH(CURRENT_DATE())
+          AND YEAR(date_paiement) = YEAR(CURRENT_DATE())
+          AND statut = 'validé'
+      `;
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      return result[0]?.total ?? 0;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Obtient le nombre de paiements récents (effectués au cours des 7 derniers jours)
+   */
+  async getPaiementsRecents(): Promise<number> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT COUNT(*) AS count
+        FROM paiements
+        WHERE date_paiement >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+          AND statut = 'validé'
+      `;
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      return result[0]?.count ?? 0;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Obtient le nombre de paiements en attente
+   */
+  async getPaiementsEnAttente(): Promise<number> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT COUNT(DISTINCT utilisateur_id) AS count
+        FROM paiements
+        WHERE statut = 'en attente'
+      `;
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      return result[0]?.count ?? 0;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Obtient le nombre total de plans actifs
+   */
+  async getPlansActifs(): Promise<number> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `SELECT COUNT(*) AS count FROM plans_tarifaires`;
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      return result[0]?.count ?? 0;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Obtient le taux de renouvellement des abonnements
+   */
+  async getTauxRenouvellement(): Promise<number> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      // Si tu as une table "statistiques" ou "renouvellements", adapte ici
+      const sql = `
+        SELECT
+          ROUND(
+            (SELECT COUNT(*) FROM paiements WHERE statut = 'validé' AND periode_fin >= CURRENT_DATE()) * 100.0 /
+            NULLIF((SELECT COUNT(*) FROM paiements WHERE periode_fin >= CURRENT_DATE()), 0), 2
+          ) AS taux
+      `;
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      return result[0]?.taux ?? 0;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Obtient les paiements par mois (12 derniers mois)
+   */
+  async getPaiementsParMois(): Promise<{ mois: string, total: number }[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT
+          DATE_FORMAT(date_paiement, '%b') AS mois,
+          SUM(montant) AS total
+        FROM paiements
+        WHERE statut = 'validé'
+        GROUP BY YEAR(date_paiement), MONTH(date_paiement)
+        ORDER BY YEAR(date_paiement) DESC, MONTH(date_paiement) DESC
+        LIMIT 12
+      `;
+      return await this.executerRequete<{ mois: string, total: number }[]>(
+        mysqlConnector, sql, [], rows => rows
+      );
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Obtient le nombre de membres par plan
+   */
+  async getMembresParPlan(): Promise<{ plan: string, value: number }[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT pt.nom_plan AS plan, COUNT(u.id) AS value
+        FROM utilisateurs u
+        JOIN plans_tarifaires pt ON u.abonnement_id = pt.id
+        WHERE u.status_id IN (1,2,3,4,5)
+        GROUP BY pt.nom_plan
+      `;
+      return await this.executerRequete<{ plan: string, value: number }[]>(
+        mysqlConnector, sql, [], rows => rows
+      );
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  async getDerniersPaiements(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT p.*, u.nom_utilisateur
+        FROM paiements p
+        JOIN utilisateurs u ON p.utilisateur_id = u.id
+        ORDER BY p.date_paiement DESC
+        LIMIT 10
+      `;
+      return await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  async getPaiementsEchus(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT p.*, u.nom_utilisateur
+        FROM paiements p
+        JOIN utilisateurs u ON p.utilisateur_id = u.id
+        WHERE p.periode_fin < CURRENT_DATE()
+        ORDER BY p.periode_fin DESC
+        LIMIT 10
+      `;
+      return await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  async getNouveauxMembres(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      // Correction : la colonne d'inscription est 'date_inscription' dans la table utilisateurs
+      const sql = `
+        SELECT u.first_name, u.last_name, u.date_inscription
+        FROM utilisateurs u
+        WHERE u.date_inscription >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+        ORDER BY u.date_inscription DESC
+        LIMIT 10
+      `;
+      console.log('[getNouveauxMembres] SQL:', sql);
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      console.log('[getNouveauxMembres] Result:', result);
+      if (!Array.isArray(result)) {
+        console.error('[getNouveauxMembres] Résultat inattendu:', result);
+        throw new Error('Résultat inattendu pour getNouveauxMembres');
+      }
+      return result;
+    } catch (error) {
+      console.error('[getNouveauxMembres] Erreur:', error);
+      throw error;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Top 5 membres les plus assidus (présences validées)
+   */
+  async getTopMembresAssidus(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT u.first_name, u.last_name, COUNT(i.id) AS total_presences_validees
+        FROM utilisateurs u
+        LEFT JOIN inscriptions i ON u.id = i.utilisateur_id AND i.status_id = 1
+        GROUP BY u.id, u.first_name, u.last_name
+        ORDER BY total_presences_validees DESC
+        LIMIT 5
+      `;
+      return await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Répartition des membres par grade
+   */
+  async getMembresParGrade(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT g.grade_id, COUNT(u.id) AS count
+        FROM utilisateurs u
+        JOIN grades g ON u.grade_id = g.id
+        GROUP BY g.grade_id
+        ORDER BY count DESC
+      `;
+      return await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Répartition des membres par genre
+   */
+  async getMembresParGenre(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT ge.genre_name, COUNT(u.id) AS count
+        FROM utilisateurs u
+        JOIN genres ge ON u.genre_id = ge.id
+        GROUP BY ge.genre_name
+        ORDER BY count DESC
+      `;
+      return await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Prochains anniversaires des membres (dans les 30 jours)
+   */
+  async getProchainsAnniversaires(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT first_name, last_name, date_of_birth
+        FROM utilisateurs
+        WHERE
+          DATE_FORMAT(date_of_birth, '%m-%d') BETWEEN DATE_FORMAT(CURRENT_DATE(), '%m-%d')
+          AND DATE_FORMAT(DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY), '%m-%d')
+        ORDER BY DATE_FORMAT(date_of_birth, '%m-%d')
+        LIMIT 10
+      `;
+      return await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Articles les plus vendus
+   */
+  async getArticlesPlusVendus(): Promise<any[]> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT a.nom, SUM(ca.quantite) AS total_vendu
+        FROM commande_articles ca
+        JOIN articles a ON ca.article_id = a.id
+        GROUP BY a.nom
+        ORDER BY total_vendu DESC
+        LIMIT 10
+      `;
+      return await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+    } finally {
+      mysqlConnector.close();
+    }
+  }
+
+  /**
+   * Nombre de cours à venir cette semaine
+   */
+  async getCoursSemaine(): Promise<number> {
+    const mysqlConnector = new MysqlConnector();
+    try {
+      const sql = `
+        SELECT COUNT(*) AS count
+        FROM cours
+        WHERE WEEK(date_cours, 1) = WEEK(CURRENT_DATE(), 1)
+          AND YEAR(date_cours) = YEAR(CURRENT_DATE())
+          AND date_cours >= CURRENT_DATE()
+      `;
+      const result = await this.executerRequete<any[]>(mysqlConnector, sql, [], rows => rows);
+      return result[0]?.count ?? 0;
+    } finally {
+      mysqlConnector.close();
+    }
+  }
 }
