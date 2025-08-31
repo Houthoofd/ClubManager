@@ -87,8 +87,11 @@ router.put('/articles/:id', async (req, res) => {
         return res.status(400).json({ message: 'ID invalide.' });
     }
     try {
-        // Valide les données sans l'id (car id vient de req.params)
-        const validatedData = articleDataValidationSchema.parse(req.body);
+        // Ajoute l'id dans le body pour la validation Zod
+        const validatedData = articleDataValidationSchema.parse({
+            ...req.body,
+            id: articleId
+        });
         // Puis passe l'id séparément
         const result = await client.modifierArticle(articleId, validatedData);
         if (result.isConfirm) {
@@ -135,6 +138,40 @@ router.get('/commandes', async (req, res) => {
     catch (error) {
         console.error("Erreur lors de la récupération des commandes :", error);
         res.status(500).json({ message: "Erreur serveur lors de la récupération des commandes." });
+    }
+});
+router.put('/modifier/article/:id', async (req, res) => {
+    const articleId = parseInt(req.params.id);
+    const magasinClient = new Magasin();
+    if (isNaN(articleId)) {
+        return res.status(400).json({ message: 'ID invalide.' });
+    }
+    try {
+        // Valide et prépare les données selon la structure attendue
+        const validatedData = articleDataValidationSchema.parse({
+            ...req.body,
+            id: articleId
+        });
+        console.log(articleId);
+        // Appel avec la bonne structure
+        const result = await magasinClient.modifierArticle(articleId, validatedData);
+        if (result && typeof result === 'object' && 'isConfirm' in result) {
+            if (result.isConfirm) {
+                return res.status(200).json({ message: result.message ?? "Modification réussie." });
+            }
+            else {
+                return res.status(500).json({ message: result.message ?? "Erreur lors de la modification de l'article." });
+            }
+        }
+        else {
+            return res.status(500).json({ message: "Erreur inconnue lors de la modification de l'article." });
+        }
+    }
+    catch (error) {
+        if (error instanceof z.ZodError) {
+            return res.status(400).json({ message: 'Erreur de validation', errors: error.errors });
+        }
+        return res.status(500).json({ message: error || "Erreur serveur lors de la modification de l'article." });
     }
 });
 export default router;

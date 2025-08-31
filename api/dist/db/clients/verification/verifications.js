@@ -134,4 +134,36 @@ export class Verifiation {
             });
         });
     }
+    // Vérifie si un article magasin existe déjà par son nom
+    async checkArticleByNom(nom) {
+        const mysqlConnector = new MysqlConnector();
+        const sql = `SELECT id FROM articles WHERE nom = ? LIMIT 1`;
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, [nom], (error, results) => {
+                mysqlConnector.close();
+                if (error)
+                    return reject(error);
+                resolve({
+                    isFind: results.length > 0,
+                    message: results.length > 0 ? "Article déjà existant." : "Article disponible."
+                });
+            });
+        });
+    }
+    // Vérifie si un article magasin existe déjà par son nom ET sa catégorie
+    async checkArticleByNomAndCategorie(nom, categorie_id) {
+        const mysqlConnector = new MysqlConnector();
+        const sql = `SELECT id FROM articles WHERE nom = ? AND categorie_id = ? LIMIT 1`;
+        return new Promise((resolve, reject) => {
+            mysqlConnector.query(sql, [nom, categorie_id], (error, results) => {
+                mysqlConnector.close();
+                if (error)
+                    return reject(error);
+                resolve({
+                    isFind: results.length > 0,
+                    message: results.length > 0 ? "Article déjà existant dans cette catégorie." : "Article disponible dans cette catégorie."
+                });
+            });
+        });
+    }
 }

@@ -93,5 +93,33 @@ router.post('/planning', async (req: any, res: any) => {
   }
 });
 
+// Vérification d'un article magasin par nom
+router.get('/magasin/article', async (req: any, res: any) => {
+  const { nom } = req.query;
+  if (!nom) return res.status(400).json({ message: "Nom de l'article requis." });
+  try {
+    const client = new Verifiation();
+    // Méthode à créer dans la classe Verifiation : checkArticleByNom
+    const result = await client.checkArticleByNom(nom);
+    res.json({ exists: result.isFind, message: result.message });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur lors de la vérification de l'article." });
+  }
+});
+
+// Vérification d'un article magasin par nom et catégorie
+router.get('/magasin/article/categorie', async (req: any, res: any) => {
+  const { nom, categorie_id } = req.query;
+  if (!nom || !categorie_id) return res.status(400).json({ message: "Nom et catégorie requis." });
+  try {
+    const client = new Verifiation();
+    // Méthode à créer dans la classe Verifiation : checkArticleByNomAndCategorie
+    const result = await client.checkArticleByNomAndCategorie(nom, Number(categorie_id));
+    res.json({ exists: result.isFind, message: result.message });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur lors de la vérification de l'article dans la catégorie." });
+  }
+});
+
 
 export default router;

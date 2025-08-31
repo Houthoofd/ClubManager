@@ -416,7 +416,7 @@ export class Magasin {
         });
     }
     modifierArticle(id, data) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             const mysqlConnector = new MysqlConnector();
             const sql = `
         UPDATE articles 
@@ -430,30 +430,82 @@ export class Magasin {
                 data.categorie_id,
                 id
             ];
-            mysqlConnector.query(sql, values, (error, result) => {
+            mysqlConnector.query(sql, values, async (error, result) => {
                 if (error) {
                     mysqlConnector.close();
                     return reject({ isConfirm: false, message: "Erreur lors de la mise à jour de l'article" });
                 }
                 // Supprimer les anciennes images
-                const deleteSql = `DELETE FROM images WHERE article_id = ?`;
-                mysqlConnector.query(deleteSql, [id], (deleteError) => {
+                const deleteImagesSql = `DELETE FROM images WHERE article_id = ?`;
+                mysqlConnector.query(deleteImagesSql, [id], (deleteError) => {
                     if (deleteError) {
                         mysqlConnector.close();
                         return reject({ isConfirm: false, message: "Erreur lors de la suppression des images" });
                     }
-                    // Réinsérer les nouvelles images
-                    const insertSql = `INSERT INTO images (article_id, url) VALUES ?`;
+                    // Réinsérer les nouvelles images seulement si non vide
                     const imageValues = (data.images || []).map((url) => [id, url]);
-                    mysqlConnector.query(insertSql, [imageValues], (insertError) => {
-                        mysqlConnector.close();
-                        if (insertError) {
-                            return reject({ isConfirm: false, message: "Erreur lors de l'insertion des images" });
-                        }
-                        resolve({
-                            isConfirm: true,
-                            message: "Article et images mis à jour avec succès"
+                    const insertImages = () => {
+                        if (imageValues.length === 0)
+                            return Promise.resolve();
+                        return new Promise((resolveImg, rejectImg) => {
+                            const insertSql = `INSERT INTO images (article_id, url) VALUES ?`;
+                            mysqlConnector.query(insertSql, [imageValues], (insertError) => {
+                                if (insertError)
+                                    rejectImg(insertError);
+                                else
+                                    resolveImg(true);
+                            });
                         });
+                    };
+                    // Supprimer les anciens stocks
+                    const deleteStocksSql = `DELETE FROM stocks WHERE article_id = ?`;
+                    mysqlConnector.query(deleteStocksSql, [id], async (deleteStockError) => {
+                        if (deleteStockError) {
+                            mysqlConnector.close();
+                            return reject({ isConfirm: false, message: "Erreur lors de la suppression des stocks" });
+                        }
+                        // Réinsérer les nouveaux stocks
+                        try {
+                            // Typage explicite pour éviter l'erreur TS
+                            const tailleMap = await this.getTailleMap();
+                            const stockValues = (data.stocks || []).map(({ taille, quantite }) => {
+                                const tailleId = tailleMap[taille];
+                                if (!tailleId)
+                                    throw new Error(`Taille inconnue : ${taille}`);
+                                return [id, tailleId, quantite];
+                            });
+                            const insertStocks = () => {
+                                if (stockValues.length === 0)
+                                    return Promise.resolve();
+                                return new Promise((resolveStock, rejectStock) => {
+                                    const insertStockSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES ?`;
+                                    mysqlConnector.query(insertStockSql, [stockValues], (insertStockError) => {
+                                        if (insertStockError)
+                                            rejectStock(insertStockError);
+                                        else
+                                            resolveStock(true);
+                                    });
+                                });
+                            };
+                            // Exécute l'insertion des images puis des stocks
+                            insertImages()
+                                .then(() => insertStocks())
+                                .then(() => {
+                                mysqlConnector.close();
+                                resolve({
+                                    isConfirm: true,
+                                    message: "Article, images et stocks mis à jour avec succès"
+                                });
+                            })
+                                .catch((err) => {
+                                mysqlConnector.close();
+                                reject({ isConfirm: false, message: "Erreur lors de l'insertion des images ou stocks : " + err.message });
+                            });
+                        }
+                        catch (errStockMap) {
+                            mysqlConnector.close();
+                            return reject({ isConfirm: false, message: 'Erreur taille/stock : ' + errStockMap });
+                        }
                     });
                 });
             });

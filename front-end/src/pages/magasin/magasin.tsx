@@ -21,16 +21,14 @@ import {
 import ArticleCard from '../../components/card';
 import RightSidePanel from '../../components/panel/rightSidePanel';
 import { apiUrl } from '../apiUrl';
-import ModalWithHelp from '../../components/modal';
-import { Popover, Label } from '@patternfly/react-core';
-import HelpIcon from '@patternfly/react-icons/dist/esm/icons/help-icon';
+import { ModalWithHelp } from '../../components/modal/modalwithhelp';
+import { Label } from '@patternfly/react-core';
 
 // Import des types
 import type { Article, Categorie } from '@clubmanager/types';
 
 const Magasin = () => {
-  const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article>>({});
-  const [categories, setCategories] = useState<Categorie[]>([]);
+  const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article[]>>({});
   const [panier, setPanier] = useState<Article[]>([]);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -57,7 +55,6 @@ const Magasin = () => {
         const categoriesData: Categorie[] = await resCategories.json();
 
         setArticlesParCategorie(articlesData);
-        setCategories(categoriesData);
 
         const initExpanded: Record<string, boolean> = {};
         categoriesData.forEach((cat) => {
@@ -154,49 +151,43 @@ const Magasin = () => {
         ) : error ? (
           <Alert variant="danger" title={error} />
         ) : (
-          categories.map((categorie) => {
-            const articles = articlesParCategorie[categorie.nom] || [];
-
-            return (
-              <div key={categorie.id}>
-                <Divider />
-                <Title headingLevel="h2" size="xl" style={{ marginTop: '1rem' }}>
-                  {categorie.nom}
-                </Title>
-                <ExpandableSection
-                  toggleText={
-                    expandedCategories[categorie.nom] ? 'Réduire' : 'Voir les articles'
-                  }
-                  onToggle={() => toggleCategorie(categorie.nom)}
-                  isExpanded={expandedCategories[categorie.nom]}
-                >
-                  {articles.length > 0 ? (
-                    <Gallery hasGutter minWidths={{ default: '300px' }}>
-                      {articles.map((article) => (
-                        <GalleryItem key={article.id}>
-                          <ArticleCard
-                            title={article.nom}
-                            description={article.description}
-                            imageUrl={article.images[0]}
-                            prix={article.prix}
-                            stocks={article.stocks}
-                            onAddToCart={(taille) => ajouterAuPanier(article, taille)}
-                            extraActions={
-                              <Button variant="info" onClick={() => openInfoModal(article)}>
-                                Plus d'informations
-                              </Button>
-                            }
-                          />
-                        </GalleryItem>
-                      ))}
-                    </Gallery>
-                  ) : (
-                    <p>Aucun article dans cette catégorie.</p>
-                  )}
-                </ExpandableSection>
-              </div>
-            );
-          })
+          Object.entries(articlesParCategorie).map(([categorie, articles]) => (
+            <div key={categorie}>
+              <Divider />
+              <Title headingLevel="h2" size="xl" style={{ marginTop: '1rem' }}>
+                {categorie}
+              </Title>
+              <ExpandableSection
+                toggleText={
+                  expandedCategories[categorie] ? 'Réduire' : 'Voir les articles'
+                }
+                onToggle={() => toggleCategorie(categorie)}
+                isExpanded={expandedCategories[categorie]}
+              >
+                {Array.isArray(articles) && articles.length > 0 ? (
+                  <Gallery hasGutter minWidths={{ default: '300px' }}>
+                    {articles.map((article: Article) => (
+                      <GalleryItem key={article.id}>
+                        <ArticleCard
+                          title={article.nom}
+                          description={article.description}
+                          imageUrl={article.images?.[0] || ''}
+                          prix={article.prix}
+                          stocks={article.stocks}
+                          onAddToCart={(taille: string) => ajouterAuPanier(article, taille)}
+                        />
+                        <Button variant="secondary" onClick={() => openInfoModal(article)}>
+                          Info
+                        </Button>
+                      </GalleryItem>
+                    ))}
+                  </Gallery>
+                ) : (
+                  <div>Aucun article</div>
+                )}
+              </ExpandableSection>
+            </div>
+          ))
         )}
       </PageSection>
 
@@ -205,19 +196,6 @@ const Magasin = () => {
         isOpen={isInfoModalOpen}
         onClose={closeInfoModal}
         title={selectedArticle?.nom || "Informations sur l'article"}
-        help={
-          <Popover
-            headerContent={<div>Help Popover</div>}
-            bodyContent={
-              <div>
-                Affiche toutes les informations détaillées sur l'article sélectionné.
-              </div>
-            }
-            footerContent="Popover Footer"
-          >
-            <Button variant="plain" aria-label="Help" icon={<HelpIcon />} />
-          </Popover>
-        }
         footer={
           <>
             <Button variant="primary" onClick={() => {

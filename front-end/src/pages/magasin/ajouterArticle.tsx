@@ -55,6 +55,11 @@ const AjouterArticle = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editChanges, setEditChanges] = useState<any | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addModalError, setAddModalError] = useState<string | null>(null);
+  const [addModalSuccess, setAddModalSuccess] = useState<string | null>(null);
+  const [resetImageUploadKey, setResetImageUploadKey] = useState(0);
+  const [editModalError, setEditModalError] = useState<string | null>(null);
+  const [editModalSuccess, setEditModalSuccess] = useState<string | null>(null);
 
   const tailles = ['S', 'M', 'L', 'XL'];
 
@@ -64,7 +69,11 @@ const AjouterArticle = () => {
         const res = await fetch(apiUrl('magasin/articles/categories'));
         if (!res.ok) throw new Error('Erreur lors du chargement des catégories');
         const data = await res.json();
-        setCategories(data);
+        // Si data est un objet, transforme-le en tableau
+        const categoriesArray = Array.isArray(data)
+          ? data
+          : Object.values(data).flat();
+        setCategories(categoriesArray);
       } catch (err) {
         console.error('Erreur de chargement des catégories :', err);
       }
@@ -136,6 +145,19 @@ const AjouterArticle = () => {
     };
 
     try {
+      // Vérification si l'article existe déjà dans la catégorie
+      const checkRes = await fetch(
+        apiUrl(`verification/magasin/article/categorie?nom=${encodeURIComponent(nom)}&categorie_id=${categorieId}`)
+      );
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.exists) {
+          setAddModalError("Un article avec ce nom existe déjà dans cette catégorie");
+          setAddModalSuccess(null);
+          return;
+        }
+      }
+
       const url = apiUrl('magasin/articles/ajouter');
       const res = await fetch(url, {
         method: 'POST',
@@ -143,22 +165,32 @@ const AjouterArticle = () => {
         body: JSON.stringify(articlePayload),
       });
 
-      if (!res.ok) throw new Error("Erreur lors de l'envoi");
-
       const data = await res.json();
+
+      if (!res.ok) {
+        setAddModalError(data.message || "Erreur lors de l'ajout.");
+        setAddModalSuccess(null);
+        return;
+      }
+
       setArticles((prev) => [...prev, data]);
-      setMessage('Article ajouté');
+      setAddModalSuccess(data.message || 'Article ajouté');
+      setAddModalError(null);
+
+      // Réinitialise le formulaire après succès
       setNom('');
       setDescription('');
       setPrix('0');
       setCategorieId(null);
+      setCategorieNom(null);
       setStocks([{ taille: 'S', quantite: 0 }]);
+      setImageUrls([]);
       setArticleEnEdition(null);
-      setIsAddModalOpen(false);
+      setResetImageUploadKey(prev => prev + 1); // force le reset du fileUploader
     } catch (err) {
       console.error(err);
-      setMessage("Erreur lors de l'ajout.");
-      setIsAddModalOpen(false);
+      setAddModalError("Erreur lors de l'ajout.");
+      setAddModalSuccess(null);
     }
   };
 
@@ -173,60 +205,100 @@ const AjouterArticle = () => {
       images: imageUrls,
       stocks,
     };
+
     try {
-      const url = apiUrl(`magasin/articles/${articleEnEdition.id}`);
+      // Vérification si le nom ou la catégorie sont modifiés
+      if (
+        (nom !== articleEnEdition.nom) ||
+        (categorieId && categorieId !== String(articleEnEdition.categorie_id))
+      ) {
+        const checkRes = await fetch(
+          apiUrl(`verification/magasin/article/categorie?nom=${encodeURIComponent(nom)}&categorie_id=${categorieId}`)
+        );
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          // Si un autre article existe dans cette catégorie avec ce nom
+          if (checkData.exists && (!articleEnEdition.id || checkData.id !== articleEnEdition.id)) {
+            setEditModalError("Un article avec ce nom existe déjà dans cette catégorie.");
+            return;
+          }
+        }
+      }
+
+      const url = apiUrl(`magasin/modifier/article/${articleEnEdition.id}`);
       const method = 'PUT';
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(articlePayload),
       });
-      if (!res.ok) throw new Error("Erreur lors de l'envoi");
       const data = await res.json();
-      setArticles((prev) =>
-        prev.map((a) => (a.id === articleEnEdition.id ? data : a))
-      );
-      setMessage('Article mis à jour');
+
+      if (!res.ok) {
+        setEditModalError(data.message || "Erreur lors de la mise à jour.");
+        setEditModalSuccess(null);
+        return;
+      }
+
+      setEditModalSuccess(data.message || "Article mis à jour");
+      setEditModalError(null);
+
+      // Rafraîchir la liste des articles après modification
+      await fetchArticles();
+
       setNom('');
       setDescription('');
       setPrix('0');
       setCategorieId(null);
       setStocks([{ taille: 'S', quantite: 0 }]);
       setArticleEnEdition(null);
-      setIsEditModalOpen(false);
       setEditChanges(null);
+      // Ne ferme pas la modal tout de suite, laisse le message affiché
+      // setIsEditModalOpen(false);
     } catch (err) {
-      console.error(err);
-      setMessage("Erreur lors de la mise à jour.");
+      setEditModalError("Erreur lors de la mise à jour.");
+      setEditModalSuccess(null);
       setIsEditModalOpen(false);
       setEditChanges(null);
     }
   };
 
+  const fetchArticles = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(apiUrl('magasin/articles'));
+      if (!res.ok) throw new Error('Erreur de chargement des articles');
+      const data = await res.json();
+
+      // Correction : data est un objet { catégorie: Array }
+      // On reconstruit le tableau d'articles avec la catégorie associée
+      const articlesArray: any[] = [];
+      Object.entries(data).forEach(([categorieNom, articles]) => {
+        if (Array.isArray(articles)) {
+          articles.forEach((article: any) => {
+            articlesArray.push({
+              ...article,
+              categorie_nom: categorieNom
+            });
+          });
+        }
+      });
+      setArticles(articlesArray);
+    } catch (err) {
+      console.error('Erreur lors du fetch des articles :', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchArticles = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch(apiUrl('magasin/articles'));
-        if (!res.ok) throw new Error('Erreur de chargement des articles');
-        const data = await res.json();
-
-        // Transformer l'objet en tableau
-        const articlesArray = Object.values(data).flat();
-        setArticles(articlesArray);
-      } catch (err) {
-        console.error('Erreur lors du fetch des articles :', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchArticles();
   }, []);
 
-  const handleCategorieSelect = (_e: any, value: string) => {
-    setCategorieId(value);
-    const selected = categories.find(c => c.id.toString() === value);
+  const handleCategorieSelect = (_e: any, value?: string | number) => {
+    const valueStr = value ? value.toString() : '';
+    setCategorieId(valueStr);
+    const selected = categories.find(c => c.id.toString() === valueStr);
     setCategorieNom(selected ? selected.nom : null);
     setIsCategorieOpen(false);
   };
@@ -245,6 +317,10 @@ const AjouterArticle = () => {
   const updateQuantite = (index: number, value: number) => {
     const updated = [...stocks];
     updated[index].quantite = value;
+    // Si la quantité devient 0, retire la taille du tableau
+    if (value === 0) {
+      updated.splice(index, 1);
+    }
     setStocks(updated);
   };
 
@@ -279,11 +355,41 @@ const AjouterArticle = () => {
     setDescription(article.description);
     setPrix(article.prix);
     setCategorieId(article.categorie_id?.toString());
+    const cat = categories.find(c => c.id === article.categorie_id);
+    setCategorieNom(cat ? cat.nom : null);
     setStocks(article.stocks || []);
+    setImageUrls(article.images || []); // affiche les images existantes dans l'upload
     setActiveTabKey(0);
     setEditChanges(null);
     setIsEditModalOpen(false); // S'assure que la modal est fermée au départ
   };
+
+  // Helper pour afficher les erreurs Zod
+  function renderError(error: any) {
+    if (!error) return null;
+    if (typeof error === 'string') return <Alert title={error} variant="danger" isInline style={{ marginTop: '1rem' }} />;
+    if (error.issues && Array.isArray(error.issues)) {
+      return (
+        <Alert title="Erreur de validation" variant="danger" isInline style={{ marginTop: '1rem' }}>
+          <ul>
+            {error.issues.map((issue: any, idx: number) => (
+              <li key={idx}>{issue.message}</li>
+            ))}
+          </ul>
+        </Alert>
+      );
+    }
+    return <Alert title={JSON.stringify(error)} variant="danger" isInline style={{ marginTop: '1rem' }} />;
+  }
+
+  // Fusionne les stocks par taille (additionne les quantités)
+  function getStocksFusionnes(stocks: { taille: string; quantite: number }[]) {
+    const map = new Map<string, number>();
+    stocks.forEach(({ taille, quantite }) => {
+      map.set(taille, (map.get(taille) || 0) + quantite);
+    });
+    return Array.from(map.entries()).map(([taille, quantite]) => ({ taille, quantite }));
+  }
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
@@ -336,7 +442,10 @@ const AjouterArticle = () => {
 
 
           <FormGroup label="Image (texte ou fichier)" fieldId="image-upload">
-            <MultiImageUpload onImageUrlsChange={setImageUrls} />
+            <MultiImageUpload
+              onImageUrlsChange={setImageUrls}
+              resetTrigger={resetImageUploadKey}
+            />
           </FormGroup>
 
 
@@ -349,20 +458,17 @@ const AjouterArticle = () => {
             >
               <NumberInput
                 id={`taille-${stock.taille}-${index}`}
-                value={stock.quantite}  // un nombre
+                value={stock.quantite}
                 min={0}
                 onChange={(event) => {
                   const valueAsString = event.currentTarget.value;
-
                   // On autorise la chaîne vide pour permettre effacement
                   if (valueAsString === '') {
                     updateQuantite(index, 0);
                     return;
                   }
-
                   // On nettoie la chaîne pour ne garder que des chiffres
                   const cleaned = valueAsString.replace(',', '.').replace(/[^\d]/g, '');
-
                   const parsed = parseInt(cleaned, 10);
                   if (!isNaN(parsed)) {
                     updateQuantite(index, parsed);
@@ -417,11 +523,20 @@ const AjouterArticle = () => {
             <Spinner size="xl" />
           ) : (
             categories.map((category, index) => {
-              const categoryArticles = articles.filter(article => article.categorie_id === category.id);
+              // Filtre les articles par catégorie (en utilisant le nom si id non fiable)
+              const categoryArticles = articles.filter(
+                article =>
+                  article.categorie_id === category.id ||
+                  article.categorie_nom === category.nom
+              );
 
               return (
                 <div key={category.id}>
-                  <ExpandableSection toggleText={category.nom}>
+                  <ExpandableSection
+                    toggleText={
+                      `${category.nom} (${categoryArticles.length} article${categoryArticles.length > 1 ? 's' : ''})`
+                    }
+                  >
                     {categoryArticles.length > 0 ? (
                       <Gallery hasGutter>
                         {categoryArticles.map((article, idx) => (
@@ -441,7 +556,7 @@ const AjouterArticle = () => {
                                 <div style={{ marginTop: '0.5rem' }}>
                                   <strong>Stocks :</strong>
                                   <ul style={{ paddingLeft: '1rem', margin: 0 }}>
-                                    {article.stocks?.map((stock:any, i:any) => (
+                                    {getStocksFusionnes(article.stocks || []).map((stock: any, i: any) => (
                                       <li key={i}>
                                         Taille <Label color="blue">{stock.taille}</Label> : {stock.quantite}
                                       </li>
@@ -481,7 +596,7 @@ const AjouterArticle = () => {
       {isEditModalOpen && (
         <ModalWithHelp
           isOpen={isEditModalOpen}
-          onClose={() => { setIsEditModalOpen(false); setEditChanges(null); }}
+          onClose={() => { setIsEditModalOpen(false); setEditChanges(null); setEditModalError(null); setEditModalSuccess(null); }}
           title="Confirmer la modification"
           help={
             <Popover
@@ -494,11 +609,13 @@ const AjouterArticle = () => {
           }
           footer={
             <>
-              <Button variant="primary" onClick={confirmEdit}>
-                Oui, modifier
-              </Button>
-              <Button variant="link" onClick={() => { setIsEditModalOpen(false); setEditChanges(null); }}>
-                Annuler
+              {!editModalSuccess && (
+                <Button variant="primary" onClick={confirmEdit}>
+                  Modifier
+                </Button>
+              )}
+              <Button variant="link" onClick={() => { setIsEditModalOpen(false); setEditChanges(null); setEditModalError(null); setEditModalSuccess(null); }}>
+                Fermer
               </Button>
             </>
           }
@@ -524,6 +641,33 @@ const AjouterArticle = () => {
             <div style={{ marginTop: '1rem' }}>
               Êtes-vous sûr de vouloir modifier cet article ?
             </div>
+            <Title headingLevel="h4" style={{ marginTop: '1rem' }}>Stocks modifiés</Title>
+            <ul>
+              {getStocksFusionnes(stocks).map((stock, idx) => (
+                <li key={idx}>
+                  Taille <Label color="blue">{stock.taille}</Label> : {stock.quantite}
+                </li>
+              ))}
+            </ul>
+            {imageUrls && imageUrls.length > 0 && (
+              <div style={{ marginTop: '1rem' }}>
+                <strong>Images ajoutées :</strong>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                  {imageUrls.map((url, idx) => (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`image-${idx}`}
+                      style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '4px', objectFit: 'cover' }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {renderError(editModalError)}
+            {editModalSuccess && (
+              <Alert title={editModalSuccess} variant="success" isInline style={{ marginTop: '1rem' }} />
+            )}
           </div>
         </ModalWithHelp>
       )}
@@ -532,7 +676,11 @@ const AjouterArticle = () => {
       {isAddModalOpen && (
         <ModalWithHelp
           isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setAddModalError(null);
+            setAddModalSuccess(null);
+          }}
           title="Confirmer l'ajout"
           help={
             <Popover
@@ -545,11 +693,17 @@ const AjouterArticle = () => {
           }
           footer={
             <>
-              <Button variant="primary" onClick={confirmAdd}>
-                Oui, ajouter
-              </Button>
-              <Button variant="link" onClick={() => setIsAddModalOpen(false)}>
-                Annuler
+              {!addModalSuccess && (
+                <Button variant="primary" onClick={confirmAdd}>
+                  Ajouter
+                </Button>
+              )}
+              <Button variant="link" onClick={() => {
+                setIsAddModalOpen(false);
+                setAddModalError(null);
+                setAddModalSuccess(null);
+              }}>
+                Fermer
               </Button>
             </>
           }
@@ -571,16 +725,26 @@ const AjouterArticle = () => {
               </li>
               <li>
                 <strong>Images :</strong>
-                <ul>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                  {imageUrls.length === 0 && <span>Aucune image</span>}
                   {imageUrls.map((url, idx) => (
-                    <li key={idx}>{url}</li>
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`image-${idx}`}
+                      style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '4px', objectFit: 'cover' }}
+                    />
                   ))}
-                </ul>
+                </div>
               </li>
             </ul>
             <div style={{ marginTop: '1rem' }}>
               Êtes-vous sûr de vouloir ajouter cet article ?
             </div>
+            {renderError(addModalError)}
+            {addModalSuccess && (
+              <Alert title={addModalSuccess} variant="success" isInline style={{ marginTop: '1rem' }} />
+            )}
           </div>
         </ModalWithHelp>
       )}

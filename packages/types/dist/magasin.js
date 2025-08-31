@@ -1,4 +1,9 @@
 import { z } from 'zod';
+// Schéma Zod pour la vérification d'un nom d'article dans une catégorie
+export const articleNomCategorieSchema = z.object({
+    nom: z.string(),
+    categorie_id: z.preprocess((val) => Number(val), z.number().int().positive()),
+});
 // === Validation Zod (importés pour inférence automatique) ===
 // Schéma création d’article (sans id)
 export const articleCreationSchema = z.object({

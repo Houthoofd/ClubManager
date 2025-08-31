@@ -1,25 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FileUpload, Button } from '@patternfly/react-core';
 import type { DropEvent } from '@patternfly/react-core';
 import { TimesIcon } from '@patternfly/react-icons';
+import { apiUrl } from '../pages/apiUrl';
 
-export const MultiImageUpload: React.FunctionComponent<{ onImageUrlsChange?: (urls: string[]) => void }> = ({ onImageUrlsChange }) => {
+export const MultiImageUpload: React.FunctionComponent<{ onImageUrlsChange?: (urls: string[]) => void; resetTrigger?: any }> = ({ onImageUrlsChange, resetTrigger }) => {
   const [imageList, setImageList] = useState<{ name: string; url: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const uploadToBackend = async (file: File): Promise<string | null> => {
     const formData = new FormData();
-    formData.append('files', file); // <-- ici on respecte ce que le backend attend
-
+    formData.append('files', file);
 
     try {
-      const res = await fetch('http://localhost:3000/upload', {
+      // Utilise apiUrl pour l'upload
+      const res = await fetch(apiUrl('upload'), {
         method: 'POST',
         body: formData,
       });
 
       const data = await res.json();
-      console.log(data)
       return data.files?.[0]?.url ?? null;
     } catch (err) {
       console.error('Erreur lors de l’envoi de l’image :', err);
@@ -63,8 +63,13 @@ export const MultiImageUpload: React.FunctionComponent<{ onImageUrlsChange?: (ur
     }
   };
 
-
-
+  // Ajoute un effet pour réinitialiser le composant quand resetTrigger change
+  useEffect(() => {
+    if (resetTrigger !== undefined) {
+      setImageList([]);
+      onImageUrlsChange?.([]);
+    }
+  }, [resetTrigger]);
 
   const handleClearAll = () => {
     setImageList([]);

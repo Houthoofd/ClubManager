@@ -35,7 +35,7 @@ export type ArticleAPI = {
 
 // Articles regroupés par catégorie (clé = nom de la catégorie)
 export type ArticlesParCategorie = {
-  [categorieNom: string]: Article[];
+  [categorieNom: string]: Article[]; // Chaque article doit avoir un id (obligatoire)
 };
 
 // === Catégories ===
@@ -68,6 +68,17 @@ export type Commande = {
   statut: string;
   date: string;          // date ISO
 };
+
+export type ArticleNomCategorie = {
+  nom: string;
+  categorie_id: number;
+};
+
+// Schéma Zod pour la vérification d'un nom d'article dans une catégorie
+export const articleNomCategorieSchema = z.object({
+  nom: z.string(),
+  categorie_id: z.preprocess((val) => Number(val), z.number().int().positive()),
+});
 
 // === Validation Zod (importés pour inférence automatique) ===
 
