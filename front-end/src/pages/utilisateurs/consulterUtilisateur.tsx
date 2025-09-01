@@ -63,6 +63,14 @@ type StatusInfo = {
   description: string;
 };
 
+type PaiementEcheance = {
+  id: number;
+  montant: number;
+  date_echeance: string;
+  statut: string;
+  abonnement_id?: number;
+};
+
 function formatDateForInput(isoDateString: string): string {
   const date = new Date(isoDateString);
   const year = date.getFullYear();
@@ -87,6 +95,7 @@ const ConsulterUtilisateurPage = () => {
   const [statusList, setStatusList] = useState<StatusInfo[]>([]);
   const [emailCheckMessage, setEmailCheckMessage] = useState<string>('');
   const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [paiementsEcheances, setPaiementsEcheances] = useState<PaiementEcheance[]>([]);
   const [form, setForm] = useState<{
     id: number | null;
     prenom: string;
@@ -175,7 +184,20 @@ const ConsulterUtilisateurPage = () => {
       .then(res => res.json())
       .then(data => setStatusList(data))
       .catch(() => setStatusList([]));
+
+    // Récupérer les échéances de paiement pour l'utilisateur
+    if (id) {
+      fetch(apiUrl(`paiements/echeances/${id}`))
+        .then(res => res.json())
+        .then(data => {
+          // Correction : s'assurer que c'est toujours un tableau
+          setPaiementsEcheances(Array.isArray(data) ? data : []);
+        })
+        .catch(() => setPaiementsEcheances([]));
+    }
   }, [id]);
+
+  console.log(paiementsEcheances)
 
   const handleTabClick = (
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
@@ -546,7 +568,36 @@ const ConsulterUtilisateurPage = () => {
         </Tab>
         {/* Tab Paiements */}
         <Tab eventKey={3} title={<TabTitleText>Paiements</TabTitleText>}>
-          <p>Contenu à venir pour les paiements.</p>
+          <Title headingLevel="h2" style={{ marginBottom: 16 }}>Échéances de paiement</Title>
+          {paiementsEcheances.length === 0 ? (
+            <p>Aucune échéance trouvée pour cet utilisateur.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+              <thead>
+                <tr style={{ background: '#f5f5f5' }}>
+                  <th style={{ padding: '8px', border: '1px solid #ddd' }}>Montant (€)</th>
+                  <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date d'échéance</th>
+                  <th style={{ padding: '8px', border: '1px solid #ddd' }}>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paiementsEcheances.map((p, idx) => {
+                  const formatDate = (dateStr: string) => {
+                    if (!dateStr) return '';
+                    const d = new Date(dateStr);
+                    return d.toLocaleDateString();
+                  };
+                  return (
+                    <tr key={idx}>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.montant}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{formatDate(p.date_echeance)}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.statut}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </Tab>
 
         {/* Tab Statistiques */}

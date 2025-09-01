@@ -63,5 +63,24 @@ router.post('/stripe', async (req, res) => {
 });
 
 
+/**
+ * GET /paiements/echeances/:utilisateurId
+ * Retourne les échéances de paiement pour un utilisateur donné
+ */
+router.get('/echeances/:utilisateurId', async (req: any, res: any) => {
+  const utilisateurId = Number(req.params.utilisateurId);
+  if (isNaN(utilisateurId)) {
+    return res.status(400).json({ error: 'ID utilisateur invalide' });
+  }
+  try {
+    const paiements = new Paiements();
+    const result = await paiements.obtenirEcheancesPourUtilisateur(utilisateurId);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des échéances', error });
+  }
+});
+
 // Utilisation de export default pour le routeur
 export default router;

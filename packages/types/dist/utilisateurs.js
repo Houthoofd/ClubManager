@@ -32,6 +32,7 @@ export const userSchema = z.object({
     status_id: z.number().positive("Le status ID doit être un nombre positif"),
     grade_id: z.number().positive("Le grade ID doit être un nombre positif").nullable(), // Autorise null
     abonnement_id: z.number().positive("L'abonnement ID doit être un nombre positif").nullable(), // Autorise null
+    date_inscription: z.string().refine((val) => !isNaN(Date.parse(val)), "La date d'inscription est invalide"),
 });
 // Schéma Zod pour valider les données d'inscription simplifiée
 export const userInscriptionSchema = z.object({

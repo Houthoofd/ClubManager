@@ -1,5 +1,6 @@
 import { Modal, ModalBody, ModalFooter, ModalHeader, ModalVariant, Button } from '@patternfly/react-core';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface ModalSizeProps {
   isOpen: boolean;
@@ -22,12 +23,19 @@ const ModalSize: React.FC<ModalSizeProps> = ({
   cancelLabel = 'Fermer',
   onConfirm,
 }) => {
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    onClose();
+    navigate('/pages/connexion');
+  };
+
   return (
     <Modal
       variant={variant}
       title={title}
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       aria-labelledby="modal-title"
       aria-describedby="modal-body"
     >
@@ -39,7 +47,7 @@ const ModalSize: React.FC<ModalSizeProps> = ({
             {confirmLabel}
           </Button>
         )}
-        <Button variant="link" onClick={onClose}>
+        <Button variant="link" onClick={handleClose}>
           {cancelLabel}
         </Button>
       </ModalFooter>

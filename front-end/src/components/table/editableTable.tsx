@@ -2,8 +2,18 @@ import {
   Table, Thead, Tr, Th, Tbody, Td,
 } from '@patternfly/react-table';
 import {
-  Button, Dropdown, DropdownItem, MenuToggle, DropdownList, DropdownGroup, Alert, Popover
+  Button, Dropdown, DropdownItem, MenuToggle, DropdownList, DropdownGroup, Alert, Popover,
+  Pagination,
+  PaginationVariant,
+  Toolbar,
+  ToolbarContent,
+  ToolbarItem,
+  Select,
+  SelectGroup,
+  SelectList,
+  SelectOption,
 } from '@patternfly/react-core';
+import SortAmountDownIcon from '@patternfly/react-icons/dist/esm/icons/sort-amount-down-icon';
 import {
   EllipsisVIcon,
   LockIcon,
@@ -11,7 +21,7 @@ import {
 } from '@patternfly/react-icons';
 import { Modal as PfModal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { apiUrl } from '../../pages/apiUrl';
@@ -30,6 +40,14 @@ export function EditableTable<T extends Record<string, unknown>>({ data }: Edita
   const [secureAlert, setSecureAlert] = useState<string | null>(null); // état pour l'alerte sécurité
   const [messageTypes, setMessageTypes] = useState<string[]>([]); // Ajoute le state pour les types de messages
   const [showMessagePopoverIndex, setShowMessagePopoverIndex] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
+  // Sorting state
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [activeSortIndex, setActiveSortIndex] = useState<number | null>(null);
+  const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | null>(null);
+
   const navigate = useNavigate();
 
   // Récupère les types de messages disponibles au montage
@@ -77,10 +95,62 @@ export function EditableTable<T extends Record<string, unknown>>({ data }: Edita
     { title: 'Nom', dataKey: 'last_name' },
     { title: 'Prénom', dataKey: 'first_name' },
     { title: 'Abonnement', dataKey: 'abonnement' },
-    { title: 'Genre', dataKey: 'genres' }, // <-- utilise 'genres' pour le genre
+    { title: 'Genre', dataKey: 'genres' },
     { title: 'Date de naissance', dataKey: 'date_of_birth' },
+    { title: "Date d'inscription", dataKey: 'date_inscription' },
     { title: 'Sécurité', dataKey: 'password' }
   ];
+
+  // Sorting logic
+  const getSortableRowValues = (row: any): (string | number)[] => {
+    return columns.map(col => row[col.dataKey]);
+  };
+
+  let sortedRows = rows;
+  if (activeSortIndex !== null) {
+    sortedRows = [...rows].sort((a, b) => {
+      const aValue = getSortableRowValues(a)[activeSortIndex];
+      const bValue = getSortableRowValues(b)[activeSortIndex];
+      if (typeof aValue === 'number') {
+        return activeSortDirection === 'asc'
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
+      } else {
+        return activeSortDirection === 'asc'
+          ? String(aValue).localeCompare(String(bValue))
+          : String(bValue).localeCompare(String(aValue));
+      }
+    });
+  }
+
+  // Pagination logic
+  const paginatedRows = sortedRows.slice((page - 1) * perPage, page * perPage);
+
+  const onSetPage = (_event: React.MouseEvent | React.KeyboardEvent | MouseEvent, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const onPerPageSelect = (
+    _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
+    newPerPage: number,
+    newPage: number
+  ) => {
+    setPerPage(newPerPage);
+    setPage(newPage);
+  };
+
+  // Sort params for PatternFly Table
+  const getSortParams = (columnIndex: number): LocalThPropsSort => ({
+    sortBy: {
+      index: activeSortIndex,
+      direction: activeSortDirection
+    },
+    onSort: (_event, index, direction) => {
+      setActiveSortIndex(index);
+      setActiveSortDirection(direction as 'desc' | 'asc');
+    },
+    columnIndex
+  });
 
   // Supprime la confirmation via window.confirm dans handleDelete
   const handleDelete = async (row: T) => {
@@ -136,7 +206,7 @@ export function EditableTable<T extends Record<string, unknown>>({ data }: Edita
 
   // Affichage des cellules (readonly)
   const renderCell = (row: any, key: string): React.ReactNode => {
-    if (key === 'date_of_birth' || key === 'date_naissance') {
+    if (key === 'date_of_birth' || key === 'date_naissance' || key === 'date_inscription') {
       return formatDate(row[key]);
     }
     if (key === 'password') {
@@ -155,81 +225,133 @@ export function EditableTable<T extends Record<string, unknown>>({ data }: Edita
   };
 
   return (
-    <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-      {secureAlert && (
-        <Alert variant="warning" title={secureAlert} isInline />
-      )}
-      <Table aria-label="Editable table">
-        <Thead>
-          <Tr>
-            {columns.map((col) => <Th key={col.dataKey}>{col.title}</Th>)}
-            <Th />
-          </Tr>
-        </Thead>
-        <Tbody>
-          {rows.map((row, index) => (
-            <Tr key={index}>
-              {columns.map((col) => (
-                <Td onClick={() => navigate(`/pages/utilisateurs/consulter/${row.id}`)} key={col.dataKey}>
-                  {renderCell(row, col.dataKey)}
-                </Td>
+    <Fragment>
+      <Toolbar id="toolbar">
+        <ToolbarContent>
+          <ToolbarItem>
+            <Select
+              isOpen={isSortDropdownOpen}
+              selected={[activeSortDirection, activeSortIndex]}
+              onOpenChange={(isOpen) => setIsSortDropdownOpen(isOpen)}
+              onSelect={(_event, value) => {
+                if (value === 'asc' || value === 'desc') {
+                  setActiveSortDirection(value as 'desc' | 'asc');
+                } else {
+                  setActiveSortIndex(value as number);
+                  setActiveSortDirection(activeSortDirection !== null ? activeSortDirection : 'asc');
+                }
+              }}
+              toggle={(toggleRef: React.Ref<any>) => (
+                <MenuToggle
+                  ref={toggleRef}
+                  onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                  isExpanded={isSortDropdownOpen}
+                  variant="plain"
+                  aria-label="Sort columns"
+                  icon={<SortAmountDownIcon />}
+                />
+              )}
+            >
+              <SelectGroup label="Trier par colonne">
+                <SelectList>
+                  {columns.map((col, columnIndex) => (
+                    <SelectOption key={col.dataKey} value={columnIndex} isSelected={activeSortIndex === columnIndex}>
+                      {col.title}
+                    </SelectOption>
+                  ))}
+                </SelectList>
+              </SelectGroup>
+              <SelectGroup label="Ordre de tri">
+                <SelectList>
+                  <SelectOption isSelected={activeSortDirection === 'asc'} value="asc" key="ascending">
+                    Ascendant
+                  </SelectOption>
+                  <SelectOption isSelected={activeSortDirection === 'desc'} value="desc" key="descending">
+                    Descendant
+                  </SelectOption>
+                </SelectList>
+              </SelectGroup>
+            </Select>
+          </ToolbarItem>
+        </ToolbarContent>
+      </Toolbar>
+      <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+        {secureAlert && (
+          <Alert variant="warning" title={secureAlert} isInline />
+        )}
+        <Table aria-label="Editable table">
+          <Thead>
+            <Tr>
+              {columns.map((col, idx) => (
+                <Th key={col.dataKey} sort={getSortParams(idx)}>{col.title}</Th>
               ))}
-              <Td
-                style={{
-                  position: 'sticky',
-                  right: 0,
-                  background: 'white',
-                  zIndex: 1,
-                  overflow: 'visible',
-                }}
-              >
-                <Dropdown
-                  isOpen={dropdownOpenIndex === index}
-                  onSelect={() => setDropdownOpenIndex(null)}
-                  onOpenChange={(isOpen) => setDropdownOpenIndex(isOpen ? index : null)}
-                  toggle={(toggleRef) => (
-                    <MenuToggle
-                      ref={toggleRef}
-                      variant="plain"
-                      onClick={() => setDropdownOpenIndex(dropdownOpenIndex === index ? null : index)}
-                      aria-label="Actions"
-                      className="pf-m-plain"
-                      style={{ padding: '6px' }}
-                    >
-                      <EllipsisVIcon />
-                    </MenuToggle>
-                  )}
+              <Th />
+            </Tr>
+          </Thead>
+          <Tbody>
+            {paginatedRows.map((row, index) => (
+              <Tr key={index}>
+                {columns.map((col) => (
+                  <Td onClick={() => navigate(`/pages/utilisateurs/consulter/${row.id}`)} key={col.dataKey}>
+                    {renderCell(row, col.dataKey)}
+                  </Td>
+                ))}
+                <Td
+                  style={{
+                    position: 'sticky',
+                    right: 0,
+                    background: 'white',
+                    zIndex: 1,
+                    overflow: 'visible',
+                  }}
                 >
-                  <DropdownList>
-                    <DropdownItem onClick={() => handleDeleteClick(row)}>Supprimer</DropdownItem>
-                    <div style={{ height: 8 }} />
-                    <DropdownGroup label="Messages">
-                      {!row.password && (
-                        <DropdownItem
-                          onClick={() => setShowMessagePopoverIndex(index)}
-                        >
-                          Messages
-                        </DropdownItem>
-                      )}
-                    </DropdownGroup>
-                  </DropdownList>
-                </Dropdown>
-                {/* Popover pour les types de messages */}
-                {showMessagePopoverIndex === index && (
-                  <Popover
-                    isVisible
-                    position="right"
-                    headerContent="Types de messages"
-                    bodyContent={
-                      <div>
-                        {messageTypes.map((type) => (
-                          <Button
-                            key={type}
-                            variant="link"
-                            style={{ display: 'block', marginBottom: 4 }}
-                            onClick={() => {
-                              setSecureAlert(`Message "${type}" envoyé à ${row.first_name} ${row.last_name}`);
-                              setShowMessagePopoverIndex(null);
+                  <Dropdown
+                    isOpen={dropdownOpenIndex === index}
+                    onSelect={() => setDropdownOpenIndex(null)}
+                    onOpenChange={(isOpen) => setDropdownOpenIndex(isOpen ? index : null)}
+                    toggle={(toggleRef) => (
+                      <MenuToggle
+                        ref={toggleRef}
+                        variant="plain"
+                        onClick={() => setDropdownOpenIndex(dropdownOpenIndex === index ? null : index)}
+                        aria-label="Actions"
+                        className="pf-m-plain"
+                        style={{ padding: '6px' }}
+                      >
+                        <EllipsisVIcon />
+                      </MenuToggle>
+                    )}
+                  >
+                    <DropdownList>
+                      <DropdownItem onClick={() => handleDeleteClick(row)}>Supprimer</DropdownItem>
+                      <div style={{ height: 8 }} />
+                      <DropdownGroup label="Messages">
+                        {!row.password && (
+                          <DropdownItem
+                            onClick={() => setShowMessagePopoverIndex(index)}
+                          >
+                            Messages
+                          </DropdownItem>
+                        )}
+                      </DropdownGroup>
+                    </DropdownList>
+                  </Dropdown>
+                  {/* Popover pour les types de messages */}
+                  {showMessagePopoverIndex === index && (
+                    <Popover
+                      isVisible
+                      position="right"
+                      headerContent="Types de messages"
+                      bodyContent={
+                        <div>
+                          {messageTypes.map((type) => (
+                            <Button
+                              key={type}
+                              variant="link"
+                              style={{ display: 'block', marginBottom: 4 }}
+                              onClick={() => {
+                                setSecureAlert(`Message "${type}" envoyé à ${row.first_name} ${row.last_name}`);
+                                setShowMessagePopoverIndex(null);
                             }}
                           >
                             Envoyer : {type}
@@ -243,50 +365,60 @@ export function EditableTable<T extends Record<string, unknown>>({ data }: Edita
                     <span />
                   </Popover>
                 )}
-              </Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
-      {/* Modal de confirmation de suppression */}
-      <PfModal
-        variant="small"
-        isOpen={confirmDeleteOpen}
-        onClose={cancelDelete}
-        aria-labelledby="confirm-delete-modal-title"
-        aria-describedby="confirm-delete-modal-body"
-      >
-        <ModalHeader title="Confirmer la suppression" labelId="confirm-delete-modal-title" />
-        <ModalBody id="confirm-delete-modal-body">
-          {deleteResult ? (
-            <span>{deleteResult}</span>
-          ) : rowToDelete ? (
-            <span>
-              Êtes-vous sûr de vouloir supprimer l'utilisateur&nbsp;
-              <strong>
-                {String((rowToDelete as Record<string, unknown>).first_name)} {String((rowToDelete as Record<string, unknown>).last_name)}
-              </strong> ?
-            </span>
-          ) : null}
-        </ModalBody>
-        <ModalFooter>
-          {!deleteResult ? (
-            <>
-              <Button variant="danger" onClick={confirmDelete}>
-                Supprimer
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+        <Pagination
+          itemCount={sortedRows.length}
+          widgetId="bottom-table-pagination"
+          perPage={perPage}
+          page={page}
+          variant={PaginationVariant.bottom}
+          onSetPage={onSetPage}
+          onPerPageSelect={onPerPageSelect}
+        />
+        {/* Modal de confirmation de suppression */}
+        <PfModal
+          variant="small"
+          isOpen={confirmDeleteOpen}
+          onClose={cancelDelete}
+          aria-labelledby="confirm-delete-modal-title"
+          aria-describedby="confirm-delete-modal-body"
+        >
+          <ModalHeader title="Confirmer la suppression" labelId="confirm-delete-modal-title" />
+          <ModalBody id="confirm-delete-modal-body">
+            {deleteResult ? (
+              <span>{deleteResult}</span>
+            ) : rowToDelete ? (
+              <span>
+                Êtes-vous sûr de vouloir supprimer l'utilisateur&nbsp;
+                <strong>
+                  {String((rowToDelete as Record<string, unknown>).first_name)} {String((rowToDelete as Record<string, unknown>).last_name)}
+                </strong> ?
+              </span>
+            ) : null}
+          </ModalBody>
+          <ModalFooter>
+            {!deleteResult ? (
+              <>
+                <Button variant="danger" onClick={confirmDelete}>
+                  Supprimer
+                </Button>
+                <Button variant="link" onClick={cancelDelete}>
+                  Annuler
+                </Button>
+              </>
+            ) : (
+              <Button variant="primary" onClick={cancelDelete}>
+                OK
               </Button>
-              <Button variant="link" onClick={cancelDelete}>
-                Annuler
-              </Button>
-            </>
-          ) : (
-            <Button variant="primary" onClick={cancelDelete}>
-              OK
-            </Button>
-          )}
-        </ModalFooter>
-      </PfModal>
-    </div>
+            )}
+          </ModalFooter>
+        </PfModal>
+      </div>
+    </Fragment>
   );
 }
 

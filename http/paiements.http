@@ -3,3 +3,7 @@ GET http://localhost:3000/paiements
 ###
 
 POST http://localhost:3000/paiements/stripe
+
+###
+
+GET http://localhost:3000/paiements/echeances/1

@@ -10,6 +10,7 @@ export type UserData = {
     status_id: number;
     grade_id: number | null;
     abonnement_id: number | null;
+    date_inscription: string;
 };
 export type UserDataSession = {
     isFind: boolean;
@@ -116,6 +117,7 @@ export declare const userSchema: z.ZodObject<{
     status_id: z.ZodNumber;
     grade_id: z.ZodNullable<z.ZodNumber>;
     abonnement_id: z.ZodNullable<z.ZodNumber>;
+    date_inscription: z.ZodEffects<z.ZodString, string, string>;
 }, "strip", z.ZodTypeAny, {
     grade_id: number | null;
     email: string;
@@ -127,6 +129,7 @@ export declare const userSchema: z.ZodObject<{
     date_naissance: string;
     status_id: number;
     abonnement_id: number | null;
+    date_inscription: string;
 }, {
     grade_id: number | null;
     email: string;
@@ -138,6 +141,7 @@ export declare const userSchema: z.ZodObject<{
     date_naissance: string;
     status_id: number;
     abonnement_id: number | null;
+    date_inscription: string;
 }>;
 export declare const userInscriptionSchema: z.ZodObject<{
     nom: z.ZodString;

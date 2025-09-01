@@ -236,7 +236,8 @@ export class Utilisateurs {
                         date_of_birth: result.date_of_birth,
                         status_id: result.status_id,
                         grade_id: result.grade_id,
-                        abonnement_id: result.abonnement_id
+                        abonnement_id: result.abonnement_id,
+                        date_inscription: result.date_inscription
                     }));
                     resolve({
                         isFind: true,

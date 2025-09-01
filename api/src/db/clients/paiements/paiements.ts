@@ -124,4 +124,39 @@ export class Paiements{
         });
       });
     }
+
+    /**
+     * Récupère les échéances de paiement pour un utilisateur spécifique
+     * @param utilisateurId - L'ID de l'utilisateur
+     * @returns Une promesse qui résout avec la liste des échéances
+     */
+    obtenirEcheancesPourUtilisateur(utilisateurId: number) {
+      return new Promise((resolve, reject) => {
+        const mysqlConnector = new MysqlConnector();
+        const sql = `
+          SELECT 
+            id,
+            abonnement_id,
+            date_echeance,
+            montant,
+            statut
+          FROM echeances_paiements
+          WHERE utilisateur_id = ?
+          ORDER BY date_echeance DESC;
+
+        `;
+        console.log('SQL pour échéances:', sql);
+        console.log('Param utilisateur_id:', utilisateurId);
+        mysqlConnector.query(sql, [utilisateurId], (error, results) => {
+          if (error) {
+            console.error('Erreur SQL échéances:', error);
+            reject(error);
+          } else {
+            console.log('Résultats échéances:', results);
+            resolve(results);
+          }
+          mysqlConnector.close();
+        });
+      });
+    }
 }
