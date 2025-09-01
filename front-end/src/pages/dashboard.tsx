@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   PageSection,
   Title,
@@ -25,123 +25,44 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
 } from 'recharts';
-import { apiUrl } from './apiUrl';
 import { useNavigate } from 'react-router-dom';
+import {
+  useMembresCount,
+  usePaiementsMois,
+  usePaiementsRecents,
+  usePaiementsEnAttente,
+  usePlansActifs,
+  useTauxRenouvellement,
+  usePaiementsParMois,
+  useMembresParPlan,
+  useDerniersPaiements,
+  usePaiementsEchus,
+  useNouveauxMembres,
+} from '../hooks/useDashboard';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
 const DashboardPage: React.FC = () => {
-  // États pour les données dynamiques
-  const [membresCount, setMembresCount] = useState<number>(0);
-  const [paiementsMois, setPaiementsMois] = useState<number>(0);
-  const [paiementsRecents, setPaiementsRecents] = useState<number>(0);
-  const [paiementsEnAttente, setPaiementsEnAttente] = useState<number>(0);
-  const [plansActifs, setPlansActifs] = useState<number>(0);
-  const [tauxRenouvellement, setTauxRenouvellement] = useState<number>(0);
-  const [paiementsParMois, setPaiementsParMois] = useState<any[]>([]);
-  const [membresParPlan, setMembresParPlan] = useState<any[]>([]);
-  const [lastPaiements, setLastPaiements] = useState<any[]>([]);
-  const [isPaiementsExpanded, setIsPaiementsExpanded] = useState(false);
-
-  const [echusPaiements, setEchusPaiements] = useState<any[]>([]);
-  const [isEchusExpanded, setIsEchusExpanded] = useState(false);
-
-  const [nouveauxMembres, setNouveauxMembres] = useState<any[]>([]);
-  const [isNouveauxExpanded, setIsNouveauxExpanded] = useState(false);
-
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetch(apiUrl('statistiques/membres/count'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('membresCount', data);
-        setMembresCount(data.count);
-      })
-      .catch(err => console.error('Erreur membresCount', err));
+  // Utilisation des hooks React Query
+  const { data: membresCount = 0 } = useMembresCount();
+  const { data: paiementsMois = 0 } = usePaiementsMois();
+  const { data: paiementsRecents = 0 } = usePaiementsRecents();
+  const { data: paiementsEnAttente = 0 } = usePaiementsEnAttente();
+  const { data: plansActifs = 0 } = usePlansActifs();
+  const { data: tauxRenouvellement = 0 } = useTauxRenouvellement();
+  const { data: paiementsParMois = [] } = usePaiementsParMois();
+  const { data: membresParPlan = [] } = useMembresParPlan();
+  const { data: derniersPaiements = [] } = useDerniersPaiements();
+  const { data: paiementsEchus = [] } = usePaiementsEchus();
+  const { data: nouveauxMembres = [] } = useNouveauxMembres();
 
-    fetch(apiUrl('statistiques/paiements/mois'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('paiementsMois', data);
-        setPaiementsMois(data.total);
-      })
-      .catch(err => console.error('Erreur paiementsMois', err));
-
-    fetch(apiUrl('statistiques/paiements/recents'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('paiementsRecents', data);
-        setPaiementsRecents(data.count);
-      })
-      .catch(err => console.error('Erreur paiementsRecents', err));
-
-    fetch(apiUrl('statistiques/paiements/en-attente'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('paiementsEnAttente', data);
-        setPaiementsEnAttente(data.count);
-      })
-      .catch(err => console.error('Erreur paiementsEnAttente', err));
-
-    fetch(apiUrl('statistiques/plans/actifs'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('plansActifs', data);
-        setPlansActifs(data.count);
-      })
-      .catch(err => console.error('Erreur plansActifs', err));
-
-    fetch(apiUrl('statistiques/plans/taux-renouvellement'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('tauxRenouvellement', data);
-        setTauxRenouvellement(data.taux);
-      })
-      .catch(err => console.error('Erreur tauxRenouvellement', err));
-
-    fetch(apiUrl('statistiques/paiements/par-mois'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('paiementsParMois', data);
-        setPaiementsParMois(data);
-      })
-      .catch(err => console.error('Erreur paiementsParMois', err));
-
-    fetch(apiUrl('statistiques/membres/par-plan'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('membresParPlan', data);
-        setMembresParPlan(data);
-      })
-      .catch(err => console.error('Erreur membresParPlan', err));
-
-    fetch(apiUrl('statistiques/paiements/derniers'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('lastPaiements', data);
-        setLastPaiements(data);
-      })
-      .catch(err => console.error('Erreur lastPaiements', err));
-
-    fetch(apiUrl('statistiques/paiements/echus'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('echusPaiements', data);
-        setEchusPaiements(data);
-      })
-      .catch(err => console.error('Erreur echusPaiements', err));
-
-    fetch(apiUrl('statistiques/membres/nouveaux'))
-      .then(res => res.json())
-      .then(data => {
-        console.log('nouveauxMembres', data);
-        setNouveauxMembres(data);
-      })
-      .catch(err => console.error('Erreur nouveauxMembres', err));
-  }, []);
+  const [isPaiementsExpanded, setIsPaiementsExpanded] = useState(false);
+  const [isEchusExpanded, setIsEchusExpanded] = useState(false);
+  const [isNouveauxExpanded, setIsNouveauxExpanded] = useState(false);
 
   return (
     <>
@@ -270,7 +191,7 @@ const DashboardPage: React.FC = () => {
           isExpanded={isPaiementsExpanded}
           onToggle={() => setIsPaiementsExpanded(prev => !prev)}
         >
-          {lastPaiements.length === 0 ? (
+          {derniersPaiements.length === 0 ? (
             <p>Aucun paiement récent.</p>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -284,7 +205,7 @@ const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {lastPaiements.map((p, idx) => {
+                  {derniersPaiements.map((p, idx) => {
                     const capitalize = (str: string) =>
                       str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
                     const formatDate = (dateStr: string) => {
@@ -320,7 +241,7 @@ const DashboardPage: React.FC = () => {
           isExpanded={isEchusExpanded}
           onToggle={() => setIsEchusExpanded(prev => !prev)}
         >
-          {echusPaiements.length === 0 ? (
+          {paiementsEchus.length === 0 ? (
             <p>Aucun paiement échu.</p>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -334,7 +255,7 @@ const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {echusPaiements.map((p, idx) => {
+                  {paiementsEchus.map((p, idx) => {
                     const capitalize = (str: string) =>
                       str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
                     const formatDate = (dateStr: string) => {
@@ -381,28 +302,19 @@ const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {nouveauxMembres.map((m, idx) => {
-                    const capitalize = (str: string) =>
-                      str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
-                    const formatDate = (dateStr: string) => {
-                      if (!dateStr) return '';
-                      const d = new Date(dateStr);
-                      return d.toLocaleDateString();
-                    };
-                    return (
-                      <tr key={idx}>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                          <strong>{capitalize(m.last_name)}</strong>
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                          <strong>{capitalize(m.first_name)}</strong>
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                          {formatDate(m.date_inscription)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {nouveauxMembres.map((m, idx) => (
+                    <tr key={idx}>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                        <strong>{capitalize(m.last_name)}</strong>
+                      </td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                        <strong>{capitalize(m.first_name)}</strong>
+                      </td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                        {formatDate(m.date_inscription)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

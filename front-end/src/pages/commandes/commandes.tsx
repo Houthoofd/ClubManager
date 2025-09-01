@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Table,
   Thead,
@@ -8,69 +8,32 @@ import {
   Td,
 } from '@patternfly/react-table';
 import { TextInput, Title, Spinner, FormSelect, FormSelectOption } from '@patternfly/react-core';
-
-import { apiUrl } from '../apiUrl';
-
-interface Article {
-  article: string;
-  taille: string;
-  quantite: number;
-  prix: number;
-}
-
-interface Commande {
-  commande_id: string;
-  date_commande: string;
-  statut: string;
-  articles: Article[];
-}
-
-// Couleurs associées au statut (inutile si on ne met plus le badge, mais je les laisse au cas où)
-// const statutCouleurs: Record<string, 'purple' | 'green' | 'orange' | 'red' | 'blue'> = {
-//   'En attente': 'orange',
-//   'Expédiée': 'green',
-//   'Annulée': 'red',
-//   'En cours': 'blue',
-// };
-
-// Options pour le FormSelect
-const statutOptions = [
-  { value: 'En attente', label: 'En attente' },
-  { value: 'Expédiée', label: 'Expédiée' },
-  { value: 'Annulée', label: 'Annulée' },
-  { value: 'En cours', label: 'En cours' },
-];
+import { useCommandes, useUpdateCommandeStatut } from '../../hooks/useCommandes';
 
 const Commandes = () => {
-  const [data, setData] = useState<Commande[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filterInput, setFilterInput] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [activeSortIndex, setActiveSortIndex] = useState<number | undefined>(undefined);
   const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | undefined>(undefined);
 
-  useEffect(() => {
-    fetch(apiUrl('magasin/commandes'))
-      .then(res => res.json())
-      .then(json => setData(json.commandes))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  // Utilisation des hooks React Query
+  const { data: commandes = [], isLoading, error } = useCommandes();
+  const updateCommandeStatut = useUpdateCommandeStatut();
 
   const filteredData = useMemo(() => {
-    if (!filterInput) return data;
-    return data.filter(c =>
+    if (!filterInput) return commandes;
+    return commandes.filter(c =>
       c.commande_id.toLowerCase().includes(filterInput.toLowerCase()) ||
       c.statut.toLowerCase().includes(filterInput.toLowerCase())
     );
-  }, [data, filterInput]);
+  }, [commandes, filterInput]);
 
-  const getSortableRowValues = (commande: Commande): (string | number)[] => [
+  const getSortableRowValues = (commande: any): (string | number)[] => [
     commande.commande_id,
     new Date(commande.date_commande).getTime(),
     commande.statut,
     commande.articles.length,
-    commande.articles.reduce((sum, a) => sum + a.prix * a.quantite, 0),
+    commande.articles.reduce((sum: number, a: any) => sum + a.prix * a.quantite, 0),
   ];
 
   const sortedData = useMemo(() => {
@@ -87,7 +50,6 @@ const Commandes = () => {
         : String(bValue).localeCompare(String(aValue));
     });
   }, [filteredData, activeSortIndex, activeSortDirection]);
-
 
   const columns = [
     { title: '', key: 'expander' }, // pour le bouton d'expansion
@@ -113,12 +75,12 @@ const Commandes = () => {
     setActiveSortDirection(direction);
   };
 
-  const onChangeStatut = (commandeId: string, newStatut: string) => {
-    setData(current =>
-      current.map(c =>
-        c.commande_id === commandeId ? { ...c, statut: newStatut } : c
-      )
-    );
+  const onChangeStatut = async (commandeId: string, newStatut: string) => {
+    try {
+      await updateCommandeStatut.mutateAsync({ commandeId, newStatut });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+    }
   };
 
   return (
@@ -136,8 +98,10 @@ const Commandes = () => {
         style={{ maxWidth: 300, marginBottom: 20 }}
       />
 
-      {loading ? (
+      {isLoading ? (
         <Spinner size="xl" />
+      ) : error ? (
+        <div>Erreur lors du chargement des commandes.</div>
       ) : (
         <Table aria-label="Table des commandes" variant="compact" borders>
           <Thead>
@@ -173,7 +137,7 @@ const Commandes = () => {
             )}
 
             {sortedData.map((commande, rowIndex) => {
-              const total = commande.articles.reduce((sum, a) => sum + a.prix * a.quantite, 0).toFixed(2);
+              const total = commande.articles.reduce((sum: number, a: any) => sum + a.prix * a.quantite, 0).toFixed(2);
               return (
                 <React.Fragment key={commande.commande_id}>
                   <Tr>
@@ -193,11 +157,10 @@ const Commandes = () => {
                         aria-label="Modifier le statut"
                         style={{ minWidth: 150 }}
                       >
-                        {statutOptions.map((option) => (
-                          <FormSelectOption key={option.value} value={option.value} label={option.label} />
+                        {['En attente', 'Expédiée', 'Annulée', 'En cours'].map((statut) => (
+                          <FormSelectOption key={statut} value={statut} label={statut} />
                         ))}
                       </FormSelect>
-                      {/* Badge retiré */}
                     </Td>
                     <Td dataLabel="Nombre d'articles">{commande.articles.length}</Td>
                     <Td dataLabel="Total (€)">{total}</Td>
@@ -219,7 +182,7 @@ const Commandes = () => {
                             </Tr>
                           </Thead>
                           <Tbody>
-                            {commande.articles.map((art, idx) => (
+                            {commande.articles.map((art: any, idx: number) => (
                               <Tr key={idx}>
                                 <Td dataLabel="Article">{art.article}</Td>
                                 <Td dataLabel="Taille">{art.taille}</Td>

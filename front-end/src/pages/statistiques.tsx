@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   PageSection,
   Title,
@@ -29,20 +29,26 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { apiUrl } from './apiUrl';
+import {
+  useTopAssidus,
+  useMembresParGrade,
+  useMembresParGenre,
+  useAnniversaires,
+  useArticlesVendus,
+  useCoursSemaine,
+} from '../hooks/useStatistiques';
 
 const COLORS_GRADES = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 const COLORS_GENRES = ['#0088FE', '#FFBB28', '#FF8042', '#00C49F'];
 
 const StatistiquesPage: React.FC = () => {
-  const [topAssidus, setTopAssidus] = useState<any[]>([]);
-  const [membresParGrade, setMembresParGrade] = useState<any[]>([]);
-  const [membresParGenre, setMembresParGenre] = useState<any[]>([]);
-  const [anniversaires, setAnniversaires] = useState<any[]>([]);
-  const [articlesVendus, setArticlesVendus] = useState<any[]>([]);
-  const [coursSemaine, setCoursSemaine] = useState<number>(0);
+  const { data: topAssidus = [] } = useTopAssidus();
+  const { data: membresParGrade = [] } = useMembresParGrade();
+  const { data: membresParGenre = [] } = useMembresParGenre();
+  const { data: anniversaires = [] } = useAnniversaires();
+  const { data: articlesVendus = [] } = useArticlesVendus();
+  const { data: coursSemaine = 0 } = useCoursSemaine();
 
-  // Ajout des états pour le choix graphique/tableau
   const [showAssidusChart, setShowAssidusChart] = useState<boolean>(true);
   const [showGradeChart, setShowGradeChart] = useState<boolean>(true);
   const [showGenreChart, setShowGenreChart] = useState<boolean>(true);
@@ -50,14 +56,10 @@ const StatistiquesPage: React.FC = () => {
   const [showArticlesChart, setShowArticlesChart] = useState<boolean>(true);
   const [activeTabKey, setActiveTabKey] = useState<number>(0);
 
-  const handleTabClick = (
-    _event: unknown,
-    tabIndex: string | number
-  ) => {
+  const handleTabClick = (_event: unknown, tabIndex: string | number) => {
     setActiveTabKey(Number(tabIndex));
   };
 
-  // Helper for switch links
   const renderSwitchLinks = (active: boolean, onSwitch: () => void, labelGraph: string, labelTable: string) => (
     <JumpLinks>
       <JumpLinksItem href="#" isActive={active} onClick={e => { e.preventDefault(); if (!active) onSwitch(); }}>
@@ -68,38 +70,6 @@ const StatistiquesPage: React.FC = () => {
       </JumpLinksItem>
     </JumpLinks>
   );
-
-  useEffect(() => {
-    fetch(apiUrl('statistiques/membres/assidus'))
-      .then(res => res.json())
-      .then(data => setTopAssidus(data))
-      .catch(err => console.error('Erreur topAssidus', err));
-
-    fetch(apiUrl('statistiques/membres/par-grade'))
-      .then(res => res.json())
-      .then(data => setMembresParGrade(data))
-      .catch(err => console.error('Erreur membresParGrade', err));
-
-    fetch(apiUrl('statistiques/membres/par-genre'))
-      .then(res => res.json())
-      .then(data => setMembresParGenre(data))
-      .catch(err => console.error('Erreur membresParGenre', err));
-
-    fetch(apiUrl('statistiques/membres/anniversaires'))
-      .then(res => res.json())
-      .then(data => setAnniversaires(data))
-      .catch(err => console.error('Erreur anniversaires', err));
-
-    fetch(apiUrl('statistiques/articles/plus-vendus'))
-      .then(res => res.json())
-      .then(data => setArticlesVendus(data))
-      .catch(err => console.error('Erreur articlesVendus', err));
-
-    fetch(apiUrl('statistiques/cours/semaine'))
-      .then(res => res.json())
-      .then(data => setCoursSemaine(data.count))
-      .catch(err => console.error('Erreur coursSemaine', err));
-  }, []);
 
   return (
     <>
@@ -115,12 +85,12 @@ const StatistiquesPage: React.FC = () => {
           aria-label="Tabs statistiques"
           role="region"
         >
+          {/* Membres assidus */}
           <Tab eventKey={0} title={<><TabTitleIcon><UsersIcon /></TabTitleIcon><TabTitleText>Membres assidus</TabTitleText></>}>
             <Title headingLevel="h2">Top 5 membres les plus assidus</Title>
             <div style={{ margin: '2.5rem 0 2rem 0' }}>
               {renderSwitchLinks(showAssidusChart, () => setShowAssidusChart(prev => !prev), 'Graphique', 'Tableau')}
             </div>
-            <div style={{ marginBottom: '1.5rem' }} />
             {topAssidus.length === 0 ? (
               <p>Aucun membre assidu trouvé.</p>
             ) : showAssidusChart ? (
@@ -153,6 +123,8 @@ const StatistiquesPage: React.FC = () => {
               </table>
             )}
           </Tab>
+
+          {/* Répartition par grade */}
           <Tab eventKey={1} title={<><TabTitleIcon><GraduationCapIcon /></TabTitleIcon><TabTitleText>Par grade</TabTitleText></>}>
             <Title headingLevel="h2">Répartition des membres par grade</Title>
             <div style={{ margin: '2.5rem 0 2rem 0' }}>
@@ -199,6 +171,8 @@ const StatistiquesPage: React.FC = () => {
               </table>
             )}
           </Tab>
+
+          {/* Répartition par genre */}
           <Tab eventKey={2} title={<><TabTitleIcon><VenusMarsIcon /></TabTitleIcon><TabTitleText>Par genre</TabTitleText></>}>
             <Title headingLevel="h2">Répartition des membres par genre</Title>
             <div style={{ margin: '2.5rem 0 2rem 0' }}>
@@ -245,6 +219,8 @@ const StatistiquesPage: React.FC = () => {
               </table>
             )}
           </Tab>
+
+          {/* Anniversaires */}
           <Tab eventKey={3} title={<><TabTitleIcon><BirthdayCakeIcon /></TabTitleIcon><TabTitleText>Anniversaires</TabTitleText></>}>
             <Title headingLevel="h2">Prochains anniversaires des membres</Title>
             <div style={{ margin: '2.5rem 0 2rem 0' }}>
@@ -290,6 +266,8 @@ const StatistiquesPage: React.FC = () => {
               </ResponsiveContainer>
             )}
           </Tab>
+
+          {/* Articles vendus */}
           <Tab eventKey={4} title={<><TabTitleIcon><ShoppingCartIcon /></TabTitleIcon><TabTitleText>Articles vendus</TabTitleText></>}>
             <Title headingLevel="h2">Articles les plus vendus</Title>
             <div style={{ margin: '2.5rem 0 2rem 0' }}>
@@ -326,6 +304,8 @@ const StatistiquesPage: React.FC = () => {
               </table>
             )}
           </Tab>
+
+          {/* Cours à venir */}
           <Tab eventKey={5} title={<><TabTitleIcon><CalendarAltIcon /></TabTitleIcon><TabTitleText>Cours à venir</TabTitleText></>}>
             <Title headingLevel="h2">Cours à venir cette semaine</Title>
             <Card isCompact>

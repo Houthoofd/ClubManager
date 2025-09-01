@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
 import store from '../../redux/store';
 import { useParams } from 'react-router-dom';
@@ -9,11 +8,12 @@ import {
   Flex,
   FlexItem,
   Button,
-  Label
+  Label,
+  Spinner,
+  Alert
 } from '@patternfly/react-core';
 import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
-import type { CoursData, DataAnnulation, Utilisateur, CoursApiResponse} from '@clubmanager/types';
-import { apiUrl } from '../apiUrl';
+import { useParticipants, useUpdatePresence } from '../../hooks/useParticipants';
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -27,79 +27,28 @@ const ParticipantsPage = () => {
   const { id } = useParams();
   const coursId = Number(id);
 
-  console.log(id)
+  // Utilisation des hooks React Query
+  const { data: cours, isLoading, error } = useParticipants(coursId);
+  const updatePresence = useUpdatePresence();
 
-  const [cours, setCours] = useState<CoursData | null>(null);
-  const [participants, setParticipants] = useState<Utilisateur[]>([]);
-
-  useEffect(() => {
-    if (!coursId || isNaN(coursId)) return;
-
-    const fetchCours = async () => {
-      try {
-        const response = await fetch(apiUrl(`cours/${coursId}`));
-        if (!response.ok) throw new Error("Erreur lors du chargement du cours");
-
-        const data: CoursApiResponse = await response.json();
-
-        console.log("Réponse API :", data);
-
-        if (data.success && data.data && data.data.Cours) {
-          setCours(data.data.Cours);
-          setParticipants(data.data.Cours.utilisateurs || []);
-        } else {
-          console.warn("Cours non trouvé ou réponse inattendue");
-          setCours(null);
-          setParticipants([]);
-        }
-      } catch (error) {
-        console.error("Erreur fetch cours:", error);
-      }
-    };
-
-    fetchCours();
-  }, [coursId]);
-
-
-
-
-  const handleStatus = async (data: Record<string, string>, status: string) => {
-    if (!cours?.id) return;
-
-    const dataToSend: DataAnnulation = {
-      cours_id: cours.id,
-      utilisateur_nom: data.nom,
-      utilisateur_prenom: data.prenom
-    };
-    const endpoint = status === "annuler"
-      ? apiUrl('cours/inscription/annulation')
-      : apiUrl('cours/inscription/validation');
-
+  const handleStatus = async (utilisateurId: number, action: 'valider' | 'annuler') => {
     try {
-      const response = await fetch(endpoint, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (response.ok) {
-        setParticipants((prev) =>
-          prev.map((u) =>
-            u.nom === data.nom && u.prenom === data.prenom
-              ? { ...u, presence: status === "valider" ? 1 : 0 }
-              : u
-          )
-        );
-      } else {
-        console.error("Erreur de mise à jour");
-      }
-    } catch (error) {
-      console.log(error);
+      await updatePresence.mutateAsync({ coursId, utilisateurId, action });
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour de la présence:', err);
     }
   };
 
+  if (isLoading) {
+    return <Spinner size="xl" />;
+  }
+
+  if (error) {
+    return <Alert variant="danger" title="Erreur lors du chargement des participants" />;
+  }
+
   if (!cours) {
-    return <p>Chargement en cours...</p>;
+    return <Alert variant="warning" title="Cours introuvable" />;
   }
 
   return (
@@ -109,19 +58,19 @@ const ParticipantsPage = () => {
           Cours du {cours.date_cours ? formatDateFromISO(cours.date_cours) : 'Inconnu'}
         </CardTitle>
         <CardBody>
-          <p>Nombre de participants : {cours.utilisateurs?.length}</p>
+          <p>Nombre de participants : {cours.utilisateurs?.length || 0}</p>
         </CardBody>
       </Card>
 
       <div style={{ marginTop: '1rem' }}>
-        {participants.map((utilisateur) => {
+        {cours.utilisateurs?.map((utilisateur) => {
           const presence = utilisateur.presence;
           let presenceColor = 'grey';
           if (presence === 1) presenceColor = 'green';
           else if (presence === 0) presenceColor = 'red';
 
           return (
-            <Card key={utilisateur.nom} style={{ marginBottom: '0.5rem' }}>
+            <Card key={utilisateur.id} style={{ marginBottom: '0.5rem' }}>
               <CardBody>
                 <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
                   <FlexItem>
@@ -138,14 +87,14 @@ const ParticipantsPage = () => {
                     <Button
                       variant="plain"
                       aria-label="Valider présence"
-                      onClick={() => handleStatus({ nom: utilisateur.nom, prenom: utilisateur.prenom }, 'valider')}
+                      onClick={() => handleStatus(utilisateur.id, 'valider')}
                     >
                       <CheckCircleIcon color="green" />
                     </Button>
                     <Button
                       variant="plain"
                       aria-label="Annuler présence"
-                      onClick={() => handleStatus({ nom: utilisateur.nom, prenom: utilisateur.prenom }, 'annuler')}
+                      onClick={() => handleStatus(utilisateur.id, 'annuler')}
                     >
                       <TimesCircleIcon color="red" />
                     </Button>
@@ -167,5 +116,6 @@ const Participants = () => {
     </Provider>
   );
 };
+
 
 export default Participants;

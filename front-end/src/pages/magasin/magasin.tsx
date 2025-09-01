@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Gallery,
   GalleryItem,
@@ -20,57 +20,36 @@ import {
 } from '@patternfly/react-core';
 import ArticleCard from '../../components/card';
 import RightSidePanel from '../../components/panel/rightSidePanel';
-import { apiUrl } from '../apiUrl';
 import { ModalWithHelp } from '../../components/modal/modalwithhelp';
 import { Label } from '@patternfly/react-core';
+import { useArticlesParCategorie, useCategoriesMagasin } from '../../hooks/useMagasin';
 
 // Import des types
-import type { Article, Categorie } from '@clubmanager/types';
+import type { Article } from '@clubmanager/types';
 
 const Magasin = () => {
-  const [articlesParCategorie, setArticlesParCategorie] = useState<Record<string, Article[]>>({});
   const [panier, setPanier] = useState<Article[]>([]);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [selectedTaille, setSelectedTaille] = useState<string | null>(null);
   const [isTailleOpen, setIsTailleOpen] = useState(false);
 
+  // Utilisation des hooks React Query
+  const { data: articlesParCategorie, isLoading: loadingArticles, error: errorArticles } = useArticlesParCategorie();
+  const { data: categories, isLoading: loadingCategories, error: errorCategories } = useCategoriesMagasin();
+
+  // Initialiser les catégories comme réduites
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [resArticles, resCategories] = await Promise.all([
-          fetch(apiUrl('magasin/articles')),
-          fetch(apiUrl('magasin/articles/categories')),
-        ]);
-
-        if (!resArticles.ok || !resCategories.ok) {
-          throw new Error('Erreur lors du chargement des données');
-        }
-
-        const articlesData: Record<string, Article[]> = await resArticles.json();
-        const categoriesData: Categorie[] = await resCategories.json();
-
-        setArticlesParCategorie(articlesData);
-
-        const initExpanded: Record<string, boolean> = {};
-        categoriesData.forEach((cat) => {
-          initExpanded[cat.nom] = false;
-        });
-        setExpandedCategories(initExpanded);
-      } catch (err) {
-        console.error(err);
-        setError("Impossible de charger les articles ou catégories.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+    if (categories) {
+      const initExpanded: Record<string, boolean> = {};
+      categories.forEach((cat: any) => {
+        initExpanded[cat.nom] = false;
+      });
+      setExpandedCategories(initExpanded);
+    }
+  }, [categories]);
 
   const ajouterAuPanier = (article: Article, taille: string) => {
     const nouvelArticle: Article = { ...article, taille, quantite: 1 };
@@ -119,6 +98,18 @@ const Magasin = () => {
     }
   }, [isInfoModalOpen, selectedArticle]);
 
+  if (loadingArticles || loadingCategories) {
+    return (
+      <Bullseye>
+        <Spinner size="xl" />
+      </Bullseye>
+    );
+  }
+
+  if (errorArticles || errorCategories) {
+    return <Alert variant="danger" title="Erreur lors du chargement des données" />;
+  }
+
   return (
     <RightSidePanel
       isExpanded={isPanelOpen}
@@ -144,51 +135,43 @@ const Magasin = () => {
       </PageSection>
 
       <PageSection>
-        {loading ? (
-          <Bullseye>
-            <Spinner size="xl" />
-          </Bullseye>
-        ) : error ? (
-          <Alert variant="danger" title={error} />
-        ) : (
-          Object.entries(articlesParCategorie).map(([categorie, articles]) => (
-            <div key={categorie}>
-              <Divider />
-              <Title headingLevel="h2" size="xl" style={{ marginTop: '1rem' }}>
-                {categorie}
-              </Title>
-              <ExpandableSection
-                toggleText={
-                  expandedCategories[categorie] ? 'Réduire' : 'Voir les articles'
-                }
-                onToggle={() => toggleCategorie(categorie)}
-                isExpanded={expandedCategories[categorie]}
-              >
-                {Array.isArray(articles) && articles.length > 0 ? (
-                  <Gallery hasGutter minWidths={{ default: '300px' }}>
-                    {articles.map((article: Article) => (
-                      <GalleryItem key={article.id}>
-                        <ArticleCard
-                          title={article.nom}
-                          description={article.description}
-                          imageUrl={article.images?.[0] || ''}
-                          prix={article.prix}
-                          stocks={article.stocks}
-                          onAddToCart={(taille: string) => ajouterAuPanier(article, taille)}
-                        />
-                        <Button variant="secondary" onClick={() => openInfoModal(article)}>
-                          Info
-                        </Button>
-                      </GalleryItem>
-                    ))}
-                  </Gallery>
-                ) : (
-                  <div>Aucun article</div>
-                )}
-              </ExpandableSection>
-            </div>
-          ))
-        )}
+        {Object.entries(articlesParCategorie || {}).map(([categorie, articles]) => (
+          <div key={categorie}>
+            <Divider />
+            <Title headingLevel="h2" size="xl" style={{ marginTop: '1rem' }}>
+              {categorie}
+            </Title>
+            <ExpandableSection
+              toggleText={
+                expandedCategories[categorie] ? 'Réduire' : 'Voir les articles'
+              }
+              onToggle={() => toggleCategorie(categorie)}
+              isExpanded={expandedCategories[categorie]}
+            >
+              {Array.isArray(articles) && articles.length > 0 ? (
+                <Gallery hasGutter minWidths={{ default: '300px' }}>
+                  {articles.map((article: Article) => (
+                    <GalleryItem key={article.id}>
+                      <ArticleCard
+                        title={article.nom}
+                        description={article.description}
+                        imageUrl={article.images?.[0] || ''}
+                        prix={article.prix}
+                        stocks={article.stocks}
+                        onAddToCart={(taille: string) => ajouterAuPanier(article, taille)}
+                      />
+                      <Button variant="secondary" onClick={() => openInfoModal(article)}>
+                        Info
+                      </Button>
+                    </GalleryItem>
+                  ))}
+                </Gallery>
+              ) : (
+                <div>Aucun article</div>
+              )}
+            </ExpandableSection>
+          </div>
+        ))}
       </PageSection>
 
       {/* ModalWithHelp pour afficher les infos d'un article */}

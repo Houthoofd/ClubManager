@@ -8,28 +8,17 @@ import {
   Alert,
   AlertVariant,
 } from '@patternfly/react-core';
-import type { UserDataLogin } from '@clubmanager/types';
+import { useConnexion } from '../hooks/useConnexion';
 
-import { apiUrl } from './apiUrl';
-
-interface LoginPageProps {
-  onSuccess?: (data: any) => void;
-}
-
-const LoginPage = ({ onSuccess }: LoginPageProps) => {
-  const [formData, setFormData] = useState<UserDataLogin>({
-    email: '',
-    password: '',
-  });
-
+const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleChange = (field: keyof UserDataLogin, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  const connexion = useConnexion();
+
+  const handleChange = (field: 'email' | 'password', value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,34 +26,17 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
     setError(null);
 
     try {
-      // Utilisez apiUrl pour générer l'URL
-      const url = apiUrl('utilisateurs/connexion');
-      console.log("URL utilisée pour la connexion:", url);
+      const data = await connexion.mutateAsync(formData);
+      const { message, ...dataToStore } = data;
+      localStorage.setItem('userData', JSON.stringify(dataToStore));
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        const { message, ...dataToStore } = data;
-        localStorage.setItem('userData', JSON.stringify(dataToStore));
-
-        if (onSuccess) {
-          onSuccess(dataToStore);
-        }
-
-        navigate('/pages/dashboard');
-      } else {
-        setError(data.message || 'Identifiants incorrects');
+      if (onSuccess) {
+        onSuccess(dataToStore);
       }
-    } catch (err) {
-      setError('Erreur lors de la tentative de connexion');
+
+      navigate('/pages/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la tentative de connexion');
     }
   };
 
@@ -90,16 +62,12 @@ const LoginPage = ({ onSuccess }: LoginPageProps) => {
       </FormGroup>
 
       {error && (
-        <Alert
-          variant={AlertVariant.danger}
-          title="Erreur"
-          isInline
-        >
+        <Alert variant={AlertVariant.danger} title="Erreur" isInline>
           {error}
         </Alert>
       )}
 
-      <Button type="submit" variant="primary">
+      <Button type="submit" variant="primary" isLoading={connexion.isLoading}>
         Se connecter
       </Button>
     </Form>

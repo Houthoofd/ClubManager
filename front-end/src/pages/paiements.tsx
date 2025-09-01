@@ -1,32 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Spinner, Bullseye, PageSection, Title } from '@patternfly/react-core';
 import { SortableTable } from '../components/table/sortableTable';
-import type { VerifyResultWithData } from '@clubmanager/types';
-import { apiUrl } from './apiUrl';
+import { usePaiements } from '../hooks/usePaiements';
 
 export const Paiements: React.FC = () => {
-  const [data, setData] = useState<VerifyResultWithData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch(apiUrl('paiements'));
-        if (!res.ok) throw new Error('Erreur de chargement');
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        setError('Impossible de charger les paiements');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  // Utilisation du hook React Query pour récupérer les paiements
+  const { data: paiements, isLoading, error } = usePaiements();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Bullseye>
         <Spinner />
@@ -35,7 +18,7 @@ export const Paiements: React.FC = () => {
   }
 
   if (error) {
-    return <Alert variant="danger" title={error} />;
+    return <Alert variant="danger" title="Impossible de charger les paiements" />;
   }
 
   // Colonnes personnalisées pour la table des paiements
@@ -49,12 +32,12 @@ export const Paiements: React.FC = () => {
 
   // Filtrage par recherche sur toutes les colonnes affichées
   const filteredData = search.trim()
-    ? data.filter(row =>
+    ? paiements.filter(row =>
         columns.some(col =>
           String((row as any)[col.key]).toLowerCase().includes(search.trim().toLowerCase())
         )
       )
-    : data;
+    : paiements;
 
   return (
     <PageSection>
@@ -79,3 +62,4 @@ export const Paiements: React.FC = () => {
 };
 
 export default Paiements;
+          

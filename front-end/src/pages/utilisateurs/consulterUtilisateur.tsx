@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { Provider } from 'react-redux';
-import store from '../../redux/store';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Tabs,
@@ -15,12 +13,9 @@ import {
   Alert,
   Button,
   Modal,
-  ModalHeader,
   ModalBody,
-  ModalFooter,
   ModalVariant,
 } from '@patternfly/react-core';
-import { apiUrl } from '../apiUrl';
 import {
   LineChart,
   Line,
@@ -32,7 +27,10 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
-
+import { useUtilisateurById, useUpdateUtilisateur, checkEmailExists } from '../../hooks/useUtilisateurs';
+import { useFrequentationByUserId } from '../../hooks/useStatistiques';
+import { useAbonnements, useGrades, useStatus } from '../../hooks/useInformations';
+import { useEcheancesByUserId } from '../../hooks/usePaiements';
 
 type StatFrequentationType = {
   totalFrequentation: number;
@@ -80,22 +78,36 @@ function formatDateForInput(isoDateString: string): string {
 }
 
 const ConsulterUtilisateurPage = () => {
-  const { id } = useParams<{ id: string }>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { id = '' } = useParams<{ id: string }>();
   const [activeTabKey, setActiveTabKey] = useState(0);
-  const [statFrequentation, setStatFrequentation] = useState<StatFrequentationType | null>(null);
   const [editingFields, setEditingFields] = useState<{ [key: string]: boolean }>({});
-  const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [showDbLog, setShowDbLog] = useState(false);
-  const [abonnements, setAbonnements] = useState<AbonnementInfo[]>([]);
-  const [gradesList, setGradesList] = useState<GradeInfo[]>([]);
-  const [statusList, setStatusList] = useState<StatusInfo[]>([]);
   const [emailCheckMessage, setEmailCheckMessage] = useState<string>('');
   const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [paiementsEcheances, setPaiementsEcheances] = useState<PaiementEcheance[]>([]);
+
+  // Utiliser les hooks React Query
+  const { 
+    data: userData, 
+    isLoading: loadingUser, 
+    error: userError 
+  } = useUtilisateurById(id);
+
+  const { 
+    data: statFrequentation, 
+    isLoading: loadingStats 
+  } = useFrequentationByUserId(id);
+
+  const { data: abonnements = [] } = useAbonnements();
+  const { data: gradesList = [] } = useGrades();
+  const { data: statusList = [] } = useStatus();
+  const { data: paiementsEcheances = [] } = useEcheancesByUserId(id);
+  
+  // Mutation pour mettre à jour l'utilisateur
+  const updateUtilisateur = useUpdateUtilisateur();
+
+  // État du formulaire
   const [form, setForm] = useState<{
     id: number | null;
     prenom: string;
@@ -122,100 +134,35 @@ const ConsulterUtilisateurPage = () => {
     mot_de_passe: '',
   });
 
-  useEffect(() => {
-    const fetchUtilisateur = async () => {
-      try {
-        const response = await fetch(apiUrl(`utilisateurs/${id}`));
-        if (!response.ok) {
-          throw new Error('Erreur lors du chargement des données.');
-        }
-        const result = await response.json();
-        const utilisateur = result.utilisateur;
-        if (utilisateur) {
-          let mot_de_passe = '';
-          if (utilisateur.password) {
-            mot_de_passe = '[Mot de passe non affichable : hash bcrypt]';
-          }
-          setForm({
-            id: utilisateur.id ?? null,
-            prenom: utilisateur.first_name || '',
-            nom: utilisateur.last_name || '',
-            email: utilisateur.email || '',
-            date_naissance: utilisateur.date_of_birth || '',
-            abonnement: String(utilisateur.abonnement ?? ''),
-            genres: String(utilisateur.genres ?? ''),
-            grades: String(utilisateur.grades ?? ''),
-            nom_utilisateur: utilisateur.nom_utilisateur || '',
-            status: String(utilisateur.status ?? ''),
-            mot_de_passe,
-          });
-        } else {
-          throw new Error('Utilisateur non trouvé.');
-        }
-      } catch (err: any) {
-        setError(err.message || 'Erreur inconnue');
-      } finally {
-        setLoading(false);
+  // Mettre à jour le formulaire quand les données utilisateur changent
+  React.useEffect(() => {
+    if (userData?.utilisateur) {
+      const utilisateur = userData.utilisateur;
+      let mot_de_passe = '';
+      if (utilisateur.password) {
+        mot_de_passe = '[Mot de passe non affichable : hash bcrypt]';
       }
-    };
-
-    fetchUtilisateur();
-
-    // Fetch statistiques de fréquentation
-    if (id) {
-      fetch(apiUrl(`statistiques/frequentation/${id}`))
-        .then(res => res.json())
-        .then(data => setStatFrequentation(data))
-        .catch(() => setStatFrequentation(null));
+      setForm({
+        id: utilisateur.id ?? null,
+        prenom: utilisateur.first_name || '',
+        nom: utilisateur.last_name || '',
+        email: utilisateur.email || '',
+        date_naissance: utilisateur.date_of_birth || '',
+        abonnement: String(utilisateur.abonnement ?? ''),
+        genres: String(utilisateur.genres ?? ''),
+        grades: String(utilisateur.grades ?? ''),
+        nom_utilisateur: utilisateur.nom_utilisateur || '',
+        status: String(utilisateur.status ?? ''),
+        mot_de_passe,
+      });
     }
-
-    // Fetch abonnements, grades, status
-    fetch(apiUrl('informations/abonnements'))
-      .then(res => res.json())
-      .then(data => setAbonnements(data))
-      .catch(() => setAbonnements([]));
-
-    fetch(apiUrl('informations/grades'))
-      .then(res => res.json())
-      .then(data => setGradesList(data))
-      .catch(() => setGradesList([]));
-
-    fetch(apiUrl('informations/status'))
-      .then(res => res.json())
-      .then(data => setStatusList(data))
-      .catch(() => setStatusList([]));
-
-    // Récupérer les échéances de paiement pour l'utilisateur
-    if (id) {
-      fetch(apiUrl(`paiements/echeances/${id}`))
-        .then(res => res.json())
-        .then(data => {
-          // Correction : s'assurer que c'est toujours un tableau
-          setPaiementsEcheances(Array.isArray(data) ? data : []);
-        })
-        .catch(() => setPaiementsEcheances([]));
-    }
-  }, [id]);
-
-  console.log(paiementsEcheances)
+  }, [userData]);
 
   const handleTabClick = (
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
     eventKey: string | number
   ) => {
     setActiveTabKey(Number(eventKey));
-  };
-
-  const getChangesSummary = () => {
-    const changes: { [key: string]: string } = {};
-    // Utilise les clés du form pour éviter l'erreur
-    Object.keys(editingFields).forEach(field => {
-      if (editingFields[field]) {
-        // @ts-ignore
-        changes[field] = form[field];
-      }
-    });
-    return changes;
   };
 
   const handleEditClick = (field: string) => {
@@ -238,22 +185,24 @@ const ConsulterUtilisateurPage = () => {
         setIsModalOpen(true);
         return;
       }
-      // Vérification si l'email existe déjà dans la base
-      const checkResponse = await fetch(apiUrl(`utilisateurs/verifier-email`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, id: form.id })
-      });
-      const checkResult = await checkResponse.json();
-      if (checkResult.exists) {
-        setModalMessage("Cette adresse email est déjà utilisée par un autre utilisateur.");
+      
+      // Vérifier si l'email existe
+      try {
+        const checkResult = await checkEmailExists(email, form.id);
+        if (checkResult.exists) {
+          setModalMessage("Cette adresse email est déjà utilisée par un autre utilisateur.");
+          setIsModalOpen(true);
+          return;
+        }
+      } catch (error) {
+        setModalMessage("Erreur lors de la vérification de l'email.");
         setIsModalOpen(true);
         return;
       }
     }
 
-    // Prépare le body avec toutes les valeurs du formulaire (modifiées ou non)
-    const body: any = {
+    // Prépare le body avec toutes les valeurs du formulaire
+    const body = {
       id: form.id,
       email: form.email,
       date_naissance: form.date_naissance,
@@ -262,29 +211,20 @@ const ConsulterUtilisateurPage = () => {
       abonnement: form.abonnement,
       status: form.status
     };
-    console.log(body)
+    
+    // Utiliser la mutation React Query
     try {
-      const response = await fetch(apiUrl(`utilisateurs/modifier`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setModalMessage(result.message || 'Modifications enregistrées.');
-        setShowDbLog(true);
-        setTimeout(() => {
-          setShowDbLog(false);
-          setIsModalOpen(false);
-        }, 1800);
-      } else {
-        setModalMessage(result.message || 'Erreur lors de la modification.');
-        setShowDbLog(true);
-      }
-    } catch (error) {
-      setModalMessage('Erreur réseau ou serveur.');
+      const result = await updateUtilisateur.mutateAsync(body);
+      setModalMessage(result.message || 'Modifications enregistrées.');
       setShowDbLog(true);
+      setTimeout(() => {
+        setShowDbLog(false);
+        setIsModalOpen(false);
+      }, 1800);
+    } catch (error: any) {
+      setModalMessage(error.message || 'Erreur lors de la modification.');
+      setShowDbLog(true);
+      setIsModalOpen(true);
     }
   };
 
@@ -292,140 +232,82 @@ const ConsulterUtilisateurPage = () => {
     if (emailCheckTimeout) clearTimeout(emailCheckTimeout);
     setForm(prev => ({ ...prev, email: value }));
     setEmailCheckMessage('');
-    // Lance la vérification après un court délai (user stop typing)
-    const timeout = setTimeout(() => {
-      checkEmailAvailability(value);
-    }, 700);
-    setEmailCheckTimeout(timeout);
   };
 
-  const checkEmailAvailability = async (email: string) => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !form.id) {
-      setEmailCheckMessage('');
-      return;
-    }
-    const response = await fetch(apiUrl(`utilisateurs/verifier-email`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, id: form.id })
-    });
-    const result = await response.json();
-    if (result.exists) {
-      setEmailCheckMessage("Cette adresse email est déjà utilisée par un autre utilisateur.");
-    } else {
-      setEmailCheckMessage("Cette adresse email est disponible.");
-    }
+  const handleInputChange = (value: string, event: React.FormEvent<HTMLInputElement>) => {
+    const name = event.currentTarget.name;
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  if (loading) return <Spinner size="xl" />;
-  if (error) return <Alert variant="danger" title={error} />;
-  if (!form) return null;
+  if (loadingUser) return <Spinner size="xl" />;
+  if (userError) return <Alert variant="danger" title={(userError as Error).message || "Une erreur est survenue"} />;
 
   return (
     <PageSection>
-      <Title headingLevel="h1" size="xl">
-        Informations de {form.prenom} {form.nom}
-      </Title>
+      <Title headingLevel="h1">Consulter Utilisateur</Title>
+      
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
         <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
-          <Form isHorizontal>
-            <FormGroup label="Nom :" fieldId="last-name">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
-                  id="last-name"
-                  value={form.nom}
-                  isDisabled
-                />
-              </div>
+          <Form>
+            <FormGroup label="Prénom" fieldId="prenom">
+              <TextInput
+                type="text"
+                id="prenom"
+                name="prenom"
+                value={form.prenom}
+                isDisabled={true}
+              />
             </FormGroup>
-            <FormGroup label="Prénom :" fieldId="first-name">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
-                  id="first-name"
-                  value={form.prenom}
-                  isDisabled
-                />
-              </div>
+            <FormGroup label="Nom" fieldId="nom">
+              <TextInput
+                type="text"
+                id="nom"
+                name="nom"
+                value={form.nom}
+                isDisabled={true}
+              />
             </FormGroup>
-            <FormGroup label="Email :" fieldId="email">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
-                  id="email"
-                  value={form.email || ''}
-                  isDisabled={!editingFields['email']}
-                  onChange={(_event, value) => handleEmailChange(value)}
-                />
-                <Button
-                  variant="plain"
-                  onClick={() => handleEditClick('email')}
-                  style={{ marginLeft: '1rem' }}
-                  aria-label={editingFields['email'] ? "Terminer" : "Editer"}
-                >
-                  {editingFields['email'] ? (
-                    <CheckIcon color="var(--pf-global--success-color--100)" />
-                  ) : (
-                    <PencilAltIcon />
-                  )}
-                </Button>
-              </div>
-              {editingFields['email'] && form.email && !form.email.includes('@') && (
-                <div style={{ color: 'red', fontSize: '0.95rem', marginTop: 4 }}>
-                  Veuillez entrer une adresse email valide contenant '@'
-                </div>
-              )}
-              {editingFields['email'] && form.email && emailCheckMessage && (
-                <div style={{
-                  color: emailCheckMessage.includes('disponible') ? 'green' : 'red',
-                  fontSize: '0.95rem',
-                  marginTop: 4
-                }}>
-                  {emailCheckMessage}
-                </div>
-              )}
-            </FormGroup>
-            <FormGroup label="Date de naissance :" fieldId="dob">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <TextInput
-                  id="dob"
-                  type="date"
-                  value={formatDateForInput(form.date_naissance)}
-                  onChange={(_event, value) =>
-                    setForm({ ...form, date_naissance: value })
-                  }
-                  isDisabled={!editingFields['date_naissance']}
-                />
-                <Button
-                  variant="plain"
-                  onClick={() => handleEditClick('date_naissance')}
-                  style={{ marginLeft: '1rem' }}
-                  aria-label={editingFields['date_naissance'] ? "Terminer" : "Editer"}
-                >
-                  {editingFields['date_naissance'] ? (
-                    <CheckIcon color="var(--pf-global--success-color--100)" />
-                  ) : (
-                    <PencilAltIcon />
-                  )}
-                </Button>
-              </div>
-            </FormGroup>
-            <Button
-              variant="primary"
-              style={{ marginTop: '1rem' }}
-              onClick={() => {
-                setPendingChanges(getChangesSummary());
-                setIsModalOpen(true);
-              }}
+            <FormGroup 
+              label="Email" 
+              fieldId="email" 
+              helperText={emailCheckMessage ? emailCheckMessage : undefined}
+              helperTextInvalid={emailCheckMessage && emailCheckMessage.includes("déjà utilisée")}
             >
-              Voir les changements effectués
-            </Button>
-          </Form>
-        </Tab>
-        <Tab eventKey={1} title={<TabTitleText>Informations supplémentaires</TabTitleText>}>
-          <Form isHorizontal>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <TextInput
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={form.email}
+                  isDisabled={!editingFields['email']}
+                  onChange={handleEmailChange}
+                  style={{ flexGrow: 1 }}
+                />
+                <Button 
+                  variant="plain" 
+                  aria-label={editingFields['email'] ? "Valider" : "Éditer"} 
+                  onClick={() => handleEditClick('email')}
+                  style={{ marginLeft: '10px' }}
+                >
+                  {editingFields['email'] ? <CheckIcon /> : <PencilAltIcon />}
+                </Button>
+              </div>
+            </FormGroup>
+            <FormGroup label="Date de naissance" fieldId="date_naissance">
+              <TextInput
+                type="date"
+                id="date_naissance"
+                name="date_naissance"
+                value={formatDateForInput(form.date_naissance)}
+                onChange={value => handleInputChange(value, { currentTarget: { name: 'date_naissance', value } })}
+                isDisabled={!editingFields['date_naissance']}
+              />
+            </FormGroup>
             <FormGroup label="Genre" fieldId="genre">
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <select
                   id="genre"
+                  name="genres"
                   value={form.genres}
                   onChange={e => setForm({ ...form, genres: e.target.value })}
                   disabled={!editingFields['genres']}
@@ -459,6 +341,7 @@ const ConsulterUtilisateurPage = () => {
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <select
                   id="grade"
+                  name="grades"
                   value={form.grades}
                   onChange={e => setForm({ ...form, grades: e.target.value })}
                   disabled={!editingFields['grades']}
@@ -494,6 +377,7 @@ const ConsulterUtilisateurPage = () => {
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <select
                   id="abonnement"
+                  name="abonnement"
                   value={form.abonnement}
                   onChange={e => setForm({ ...form, abonnement: e.target.value })}
                   disabled={!editingFields['abonnement']}
@@ -527,167 +411,91 @@ const ConsulterUtilisateurPage = () => {
             </FormGroup>
           </Form>
         </Tab>
-        <Tab eventKey={2} title={<TabTitleText>Rôles et Statut</TabTitleText>}>
-          <Form isHorizontal>
-            <FormGroup label="Rôle" fieldId="role">
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <select
-                  id="role"
-                  value={form.status}
-                  onChange={e => setForm({ ...form, status: e.target.value })}
-                  disabled={!editingFields['status']}
-                  style={{
-                    minWidth: 180,
-                    padding: '6px',
-                    borderRadius: 4,
-                    background: editingFields['status'] ? '#fff' : '#f0f0f0'
-                  }}
-                >
-                  <option value="">Sélectionner un rôle</option>
-                  {statusList.map(role => (
-                    <option key={role.id} value={role.nom_role}>
-                      {role.nom_role}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  variant="plain"
-                  onClick={() => handleEditClick('status')}
-                  style={{ marginLeft: '1rem' }}
-                  aria-label={editingFields['status'] ? "Terminer" : "Editer"}
-                >
-                  {editingFields['status'] ? (
-                    <CheckIcon color="var(--pf-global--success-color--100)" />
-                  ) : (
-                    <PencilAltIcon />
-                  )}
-                </Button>
-              </div>
-            </FormGroup>
-          </Form>
-        </Tab>
-        {/* Tab Paiements */}
-        <Tab eventKey={3} title={<TabTitleText>Paiements</TabTitleText>}>
-          <Title headingLevel="h2" style={{ marginBottom: 16 }}>Échéances de paiement</Title>
-          {paiementsEcheances.length === 0 ? (
-            <p>Aucune échéance trouvée pour cet utilisateur.</p>
+        
+        <Tab eventKey={1} title={<TabTitleText>Statistiques</TabTitleText>}>
+          {loadingStats ? (
+            <Spinner size="lg" />
+          ) : statFrequentation ? (
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={statFrequentation.frequentationParMois}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mois" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="pourcentage_de_cours_valides" stroke="#8884d8" name="% de présence" />
+                <Line type="monotone" dataKey="frequentation" stroke="#82ca9d" name="Nombre de présences" />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-              <thead>
-                <tr style={{ background: '#f5f5f5' }}>
-                  <th style={{ padding: '8px', border: '1px solid #ddd' }}>Montant (€)</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date d'échéance</th>
-                  <th style={{ padding: '8px', border: '1px solid #ddd' }}>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paiementsEcheances.map((p, idx) => {
-                  const formatDate = (dateStr: string) => {
-                    if (!dateStr) return '';
-                    const d = new Date(dateStr);
-                    return d.toLocaleDateString();
-                  };
-                  return (
-                    <tr key={idx}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.montant}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{formatDate(p.date_echeance)}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.statut}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <Alert variant="info" title="Aucune statistique disponible pour cet utilisateur." />
           )}
         </Tab>
-
-        {/* Tab Statistiques */}
-        <Tab eventKey={4} title={<TabTitleText>Statistiques</TabTitleText>}>
-          <div>
-            {statFrequentation && statFrequentation.frequentationParMois.length > 0 ? (
-              <div style={{ background: '#fff', padding: '1rem', borderRadius: 8 }}>
-                <Title headingLevel="h2" style={{ marginBottom: 16 }}>Fréquentation par mois</Title>
-                <ResponsiveContainer width="100%" height={350}>
-                  <LineChart
-                    data={statFrequentation.frequentationParMois}
-                    margin={{ top: 20, right: 30, left: 0, bottom: 50 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mois" angle={-45} textAnchor="end" interval={0} />
-                    <YAxis yAxisId="left" label={{ value: 'Présences / Cours', angle: -90, position: 'insideLeft' }} />
-                    <YAxis yAxisId="right" orientation="right" label={{ value: '% validés', angle: -90, position: 'insideRight' }} />
-                    <Tooltip />
-                    <Legend verticalAlign="top" height={36} />
-                    <Line yAxisId="left" type="monotone" dataKey="frequentation" name="Présences validées" stroke="#007bff" />
-                    <Line yAxisId="left" type="monotone" dataKey="nombres_total_de_cours_du_mois" name="Cours total/mois" stroke="#28a745" strokeDasharray="5 5" />
-                    <Line yAxisId="right" type="monotone" dataKey="pourcentage_de_cours_valides" name="% cours validés" stroke="#ffc107" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p>Aucune statistique de fréquentation disponible.</p>
-            )}
-          </div>
+        
+        <Tab eventKey={2} title={<TabTitleText>Paiements</TabTitleText>}>
+          {paiementsEcheances.length > 0 ? (
+            <div>
+              <h3>Échéances de paiement</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th>Montant</th>
+                    <th>Date d'échéance</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paiementsEcheances.map(paiement => (
+                    <tr key={paiement.id}>
+                      <td>{paiement.montant} €</td>
+                      <td>{new Date(paiement.date_echeance).toLocaleDateString()}</td>
+                      <td>{paiement.statut}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <Alert variant="info" title="Aucune échéance de paiement pour cet utilisateur." />
+          )}
         </Tab>
       </Tabs>
-      {/* Modal doit être inclus dans un seul parent */}
+
       <Modal
         variant={ModalVariant.small}
+        title="Message"
         isOpen={isModalOpen}
         onClose={handleModalToggle}
-        aria-labelledby="modal-with-changes"
-        aria-describedby="modal-box-body-with-changes"
+        actions={[
+          <Button key="confirm" variant="primary" onClick={handleModalToggle}>
+            OK
+          </Button>
+        ]}
       >
-        <ModalHeader title="Résumé des changements" labelId="modal-with-changes" />
-        <ModalBody id="modal-box-body-with-changes">
-          <div>
-            {Object.keys(pendingChanges).length === 0 ? (
-              <p>Aucun changement détecté.</p>
-            ) : (
-              <ul>
-                {Object.entries(pendingChanges).map(([field, value]) => (
-                  <li key={field}>
-                    <strong>{field} :</strong> {value}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {showDbLog && modalMessage && (
-              <div
-                style={{
-                  background: '#e6f4ea',
-                  color: '#20744a',
-                  border: '1px solid #b7e4c7',
-                  borderRadius: '6px',
-                  padding: '1rem',
-                  marginTop: '1rem',
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                  textAlign: 'center'
-                }}
-              >
-                {modalMessage}
-              </div>
-            )}
-          </div>
+        <ModalBody>
+          {modalMessage}
+          {showDbLog && updateUtilisateur.isSuccess && (
+            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px' }}>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                Modifications enregistrées avec succès.
+              </pre>
+            </div>
+          )}
         </ModalBody>
-        <ModalFooter>
-          <Button key="confirm" variant="primary" onClick={handleValidateChanges}>
-            Valider
-          </Button>
-          <Button key="cancel" variant="secondary" onClick={handleModalToggle}>
-            Annuler
-          </Button>
-        </ModalFooter>
       </Modal>
+
+      <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+        <Button 
+          variant="primary" 
+          onClick={handleValidateChanges} 
+          isDisabled={!Object.values(editingFields).some(Boolean) || updateUtilisateur.isPending}
+        >
+          {updateUtilisateur.isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}
+        </Button>
+      </div>
     </PageSection>
   );
 };
 
-const ConsulterUtilisateur = () => (
-  <Provider store={store}>
-    <ConsulterUtilisateurPage />
-  </Provider>
-);
-
-export default ConsulterUtilisateur;
+export default ConsulterUtilisateurPage;
 

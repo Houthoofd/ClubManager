@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   PageSection,
   Title,
@@ -18,111 +18,33 @@ import {
 } from '@patternfly/react-core';
 import { TimesIcon } from '@patternfly/react-icons';
 import GenericForm from '../components/genericForm';
-import { apiUrl } from './apiUrl';
-
-// Interfaces pour les types de données
-interface User {
-  id: number;
-  first_name: string;
-  last_name: string;
-}
-
-interface MessageType {
-  id: number;
-  title: string;
-  content: string;
-}
-
-interface FormData {
-  title: string;
-  content: string;
-}
-
-interface EditFormData {
-  title: string;
-  content: string;
-}
+import {
+  useUtilisateurs,
+  useTypesMessages,
+  useCreerTypeMessage,
+  useModifierTypeMessage,
+  useSupprimerTypeMessage,
+  useEnvoyerMessage,
+} from '../hooks/useMessages';
 
 const Messages: React.FC = () => {
-  // États
   const [activeTab, setActiveTab] = useState<number>(0);
-  const [utilisateurs, setUtilisateurs] = useState<User[]>([]);
-  const [typesMessages, setTypesMessages] = useState<MessageType[]>([]);
-  const [receivedMessages] = useState<{ type_title: string; sender_name: string; content: string }[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [modalMessage, setModalMessage] = useState<string>('');
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
-  const [formData, setFormData] = useState<FormData>({ title: '', content: '' });
-  const [selectOptions] = useState<Record<string, unknown>>({});
-  const [selectOpenStates, setSelectOpenStates] = useState<Record<string, boolean>>({});
+  const [formData, setFormData] = useState({ title: '', content: '' });
+  const [editFormData, setEditFormData] = useState({ title: '', content: '' });
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editFormData, setEditFormData] = useState<EditFormData>({ title: '', content: '' });
+  const [modalMessage, setModalMessage] = useState<string>('');
+  const [showModal, setShowModal] = useState<boolean>(false);
 
-  // Récupération des données au montage
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [usersRes, typesRes] = await Promise.all([
-          fetch(apiUrl('utilisateurs')),
-          fetch(apiUrl('messages')),
-        ]);
-        if (!usersRes.ok || !typesRes.ok) throw new Error('Erreur réseau');
-        const users = await usersRes.json();
-        const types = await typesRes.json();
-        setUtilisateurs(users.data);
-        setTypesMessages(types.data);
-      } catch (err) {
-        setError('Erreur lors de la récupération des données');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  // Utilisation des hooks React Query
+  const { data: utilisateurs = [], isLoading: loadingUsers, error: errorUsers } = useUtilisateurs();
+  const { data: typesMessages = [], isLoading: loadingTypes, error: errorTypes } = useTypesMessages();
+  const creerTypeMessage = useCreerTypeMessage();
+  const modifierTypeMessage = useModifierTypeMessage();
+  const supprimerTypeMessage = useSupprimerTypeMessage();
+  const envoyerMessage = useEnvoyerMessage();
 
-  // Suppression d'un type de message
-  const handleDeleteType = async (id: number) => {
-    try {
-      const response = await fetch(apiUrl(`messages/types/${id}`), {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Erreur lors de la suppression');
-      setTypesMessages(typesMessages.filter((t) => t.id !== id));
-      setModalMessage('Type de message supprimé.');
-      setShowModal(true);
-    } catch (err) {
-      console.error(err);
-      setModalMessage('Erreur lors de la suppression du type.');
-      setShowModal(true);
-    }
-  };
-
-  // Sauvegarde des modifications d'un type de message
-  const handleSaveEdit = async (id: number) => {
-    try {
-      const response = await fetch(apiUrl(`messages/types/${id}`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFormData),
-      });
-      if (!response.ok) throw new Error('Erreur lors de la mise à jour');
-      const updatedType = await response.json();
-      setTypesMessages(typesMessages.map((t) => (t.id === id ? updatedType.data : t)));
-      setEditingId(null);
-      setEditFormData({ title: '', content: '' });
-      setModalMessage('Type de message mis à jour avec succès.');
-      setShowModal(true);
-    } catch (err) {
-      console.error(err);
-      setModalMessage('Erreur lors de la mise à jour du type.');
-      setShowModal(true);
-    }
-  };
-
-  // Envoi d'un message
   const handleSendMessage = async () => {
     if (selectedUsers.length === 0 || selectedType === '') {
       setModalMessage('Veuillez sélectionner au moins un utilisateur et un type de message.');
@@ -130,79 +52,78 @@ const Messages: React.FC = () => {
       return;
     }
     try {
-      const response = await fetch(apiUrl('messages/envoie'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          destinataires: selectedUsers.map((u) => u.id),
-          type_message_id: selectedType,
-        }),
-      });
-      if (!response.ok) throw new Error('Erreur lors de l’envoi du message');
-      const selectedNames = selectedUsers.map((u) => `${u.first_name} ${u.last_name}`).join(', ');
-      setModalMessage(`Message "${getTypeTitle(selectedType)}" envoyé à : ${selectedNames}`);
+      await envoyerMessage.mutateAsync({ destinataires: selectedUsers, type_message_id: selectedType });
+      setModalMessage('Message envoyé avec succès.');
       setShowModal(true);
-      setSelectedType('');
       setSelectedUsers([]);
+      setSelectedType('');
     } catch (error) {
-      console.error(error);
-      setModalMessage('Erreur lors de l\'envoi du message.');
+      setModalMessage('Erreur lors de l’envoi du message.');
       setShowModal(true);
     }
   };
 
-  // Récupération du titre d'un type de message
-  const getTypeTitle = (id: string): string => {
-    const found = typesMessages.find((t) => t.id.toString() === id);
-    return found ? found.title : '';
-  };
-
-  // Gestion des changements de formulaire
-  const handleChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Soumission du formulaire de création de type de message
-  const handleSubmit = async () => {
+  const handleCreateType = async () => {
     try {
-      const response = await fetch(apiUrl('messages/types'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) throw new Error('Erreur lors de la création du type');
-      const newType = await response.json();
-      setTypesMessages([...typesMessages, newType.data]);
+      await creerTypeMessage.mutateAsync(formData);
       setFormData({ title: '', content: '' });
-      setModalMessage(`Type de message "${newType.data.title}" créé avec succès.`);
+      setModalMessage('Type de message créé avec succès.');
       setShowModal(true);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
       setModalMessage('Erreur lors de la création du type de message.');
       setShowModal(true);
     }
   };
 
-  // Formatage des labels
-  const formatLabel = (label: string): string =>
-    label.charAt(0).toUpperCase() + label.slice(1).replace(/_/g, ' ');
+  const handleEditType = async (id: number) => {
+    try {
+      await modifierTypeMessage.mutateAsync({ id, formData: editFormData });
+      setEditingId(null);
+      setEditFormData({ title: '', content: '' });
+      setModalMessage('Type de message mis à jour avec succès.');
+      setShowModal(true);
+    } catch (error) {
+      setModalMessage('Erreur lors de la mise à jour du type de message.');
+      setShowModal(true);
+    }
+  };
 
-  // Rendu
+  const handleDeleteType = async (id: number) => {
+    try {
+      await supprimerTypeMessage.mutateAsync(id);
+      setModalMessage('Type de message supprimé avec succès.');
+      setShowModal(true);
+    } catch (error) {
+      setModalMessage('Erreur lors de la suppression du type de message.');
+      setShowModal(true);
+    }
+  };
+
+  if (loadingUsers || loadingTypes) {
+    return (
+      <Bullseye>
+        <Spinner />
+      </Bullseye>
+    );
+  }
+
+  if (errorUsers || errorTypes) {
+    return <Alert variant="danger" title="Erreur lors du chargement des données" />;
+  }
+
   return (
     <PageSection>
       <Title headingLevel="h1">📨 Messagerie</Title>
-      {error && <Alert variant="danger" title={error} isInline />}
       <Tabs activeKey={activeTab} onSelect={(_, tabIndex) => setActiveTab(Number(tabIndex))}>
         {/* Onglet "Envoyer" */}
         <Tab eventKey={0} title={<TabTitleText>Envoyer</TabTitleText>}>
           <Form isHorizontal style={{ maxWidth: '600px', marginTop: '1rem' }}>
             <FormGroup label="Utilisateurs" fieldId="user-select">
               <FormSelect
-                value={selectedUsers.map((u) => u.id.toString())}
+                value={selectedUsers.map((u) => u.toString())}
                 onChange={(e) => {
                   const selected = Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value);
-                  const selectedObjs = utilisateurs.filter((u) => selected.includes(u.id.toString()));
-                  setSelectedUsers(selectedObjs);
+                  setSelectedUsers(selected.map((id) => Number(id)));
                 }}
                 multiple
                 aria-label="Sélection multiple"
@@ -220,19 +141,24 @@ const Messages: React.FC = () => {
               <div style={{ marginTop: '1rem' }}>
                 <strong>Utilisateurs sélectionnés :</strong>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  {selectedUsers.map((user) => (
-                    <Badge key={user.id} isRead>
-                      {user.first_name} {user.last_name}
-                      <Button
-                        variant="plain"
-                        aria-label="Retirer utilisateur"
-                        onClick={() => setSelectedUsers(selectedUsers.filter((u) => u.id !== user.id))}
-                        style={{ paddingLeft: 4 }}
-                      >
-                        <TimesIcon />
-                      </Button>
-                    </Badge>
-                  ))}
+                  {selectedUsers.map((userId) => {
+                    const user = utilisateurs.find((u) => u.id === userId);
+                    return (
+                      user && (
+                        <Badge key={user.id} isRead>
+                          {user.first_name} {user.last_name}
+                          <Button
+                            variant="plain"
+                            aria-label="Retirer utilisateur"
+                            onClick={() => setSelectedUsers(selectedUsers.filter((id) => id !== user.id))}
+                            style={{ paddingLeft: 4 }}
+                          >
+                            <TimesIcon />
+                          </Button>
+                        </Badge>
+                      )
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -250,39 +176,12 @@ const Messages: React.FC = () => {
           </Form>
         </Tab>
 
-        {/* Onglet "Messages reçus" */}
-        <Tab eventKey={1} title={<TabTitleText>Messages reçus</TabTitleText>}>
-          {isLoading ? (
-            <Bullseye><Spinner /></Bullseye>
-          ) : (
-            <ul style={{ marginTop: '1rem' }}>
-              {receivedMessages.length === 0 ? (
-                <li>Aucun message reçu.</li>
-              ) : (
-                receivedMessages.map((msg, i) => (
-                  <li key={i}>
-                    <strong>{msg.type_title}</strong> de {msg.sender_name} — {msg.content}
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </Tab>
-
         {/* Onglet "Créer un type de message" */}
         <Tab eventKey={2} title={<TabTitleText>Créer un type de message</TabTitleText>}>
           <GenericForm
             formData={formData}
             setFormData={setFormData}
-            selectOptions={selectOptions}
-            selectOpenStates={selectOpenStates}
-            setSelectOpenStates={setSelectOpenStates}
-            onSubmit={handleSubmit}
-            onChange={handleChange}
-            formatLabel={formatLabel}
-            onSelectToggle={(fieldName: string, isOpen: boolean) => {
-              setSelectOpenStates((prev) => ({ ...prev, [fieldName]: isOpen }));
-            }}
+            onSubmit={handleCreateType}
           />
         </Tab>
 
@@ -323,7 +222,7 @@ const Messages: React.FC = () => {
                       </Form>
                       <Button
                         variant="primary"
-                        onClick={() => handleSaveEdit(type.id)}
+                        onClick={() => handleEditType(type.id)}
                         style={{ marginRight: '0.5rem' }}
                       >
                         Sauvegarder

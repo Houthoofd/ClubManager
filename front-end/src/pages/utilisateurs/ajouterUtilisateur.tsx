@@ -6,11 +6,12 @@ import {
   Tab,
   TabTitleText,
   Bullseye,
-  Button
+  Button,
 } from '@patternfly/react-core';
 import type { UserData } from '@clubmanager/types';
 import GenericForm from '../../components/genericForm';
 import EditableTable from '../../components/table/editableTable';
+import { useUtilisateurs, useAjouterUtilisateur, useSupprimerUtilisateur } from '../../hooks/useUtilisateurs';
 
 import { apiUrl } from '../apiUrl';
 import { Modal as PfModal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core';
@@ -36,6 +37,11 @@ const Utilisateur = () => {
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [resultModalMessage, setResultModalMessage] = useState<string>('');
   const [resultModalLoading, setResultModalLoading] = useState(false);
+
+  // Utilisation des hooks React Query
+  const { data: utilisateursData = [], isLoading, error } = useUtilisateurs();
+  const ajouterUtilisateur = useAjouterUtilisateur();
+  const supprimerUtilisateur = useSupprimerUtilisateur();
 
   useEffect(() => {
     const initialiser = async () => {

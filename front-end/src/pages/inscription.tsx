@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Form,
   FormGroup,
@@ -15,84 +15,41 @@ import {
   Popover
 } from '@patternfly/react-core';
 import HelpIcon from '@patternfly/react-icons/dist/esm/icons/help-icon';
-import { apiUrl } from './apiUrl';
-import type { UserDataInscription, Abonnement, Genres } from '../../../packages/types/dist/index';
 import { userInscriptionSchema } from '../../../packages/types/dist/index';
-
-// Utilitaire pour fetch et filtrer les doublons
-async function fetchOptions<T>(url: string, key: (item: T) => string): Promise<T[]> {
-  try {
-    const res = await fetch(url);
-    const data: T[] = await res.json();
-    // Filtre les doublons par clé
-    const unique = Array.from(new Map(data.map(item => [key(item), item])).values());
-    return unique;
-  } catch {
-    return [];
-  }
-}
+import {
+  useAbonnementOptions,
+  useGenreOptions,
+  useVerifierUtilisateur,
+  useInscrireUtilisateur
+} from '../hooks/useInscriptions';
 
 // Page d'inscription
 export const InscriptionPage: React.FC = () => {
-  // Utilise le type UserDataInscription pour le state
-  const [form, setForm] = useState<UserDataInscription>({
+  const [form, setForm] = useState({
     prenom: '',
     nom: '',
     email: '',
     password: '',
     date: '',
     abonnement: '',
-    genre: '' // Ajoute le champ genre
+    genre: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  // Ajoutez les états pour les options
-  const [abonnementOptions, setAbonnementOptions] = useState<
-    { value: string; label: string; disabled?: boolean }[]
-  >([
-    { value: '', label: 'Sélectionner un abonnement', disabled: true }
-  ]);
-  const [genreOptions, setGenreOptions] = useState<{ value: string; label: string; disabled?: boolean }[]>(
-    [
-      { value: '', label: 'Sélectionner un genre', disabled: true }
-    ]
-  );
   const [showRecap, setShowRecap] = useState(false);
   const [modalMessage, setModalMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Chargement des options abonnements et genres, filtrage des doublons
-  useEffect(() => {
-    // Utilise Promise.all pour paralléliser et garantir un seul appel par endpoint
-    Promise.all([
-      // Utilisez uniquement nom_plan comme clé unique pour Abonnement
-      fetchOptions<Abonnement>(apiUrl('informations/abonnements'), item => item.nom_plan),
-      fetchOptions<Genres>(apiUrl('informations/genres'), item => item.genre_name)
-    ]).then(([abos, genres]) => {
-      setAbonnementOptions([
-        { value: '', label: 'Sélectionner un abonnement', disabled: true },
-        ...abos.map(item => ({
-          value: String(item.id),
-          label: item.nom_plan,
-          disabled: false
-        }))
-      ]);
-      setGenreOptions([
-        { value: '', label: 'Sélectionner un genre', disabled: true },
-        ...genres.map(item => ({
-          value: String(item.id),
-          label: item.genre_name,
-          disabled: false
-        }))
-      ]);
-    });
-  }, []);
+  // Utilisation des hooks React Query
+  const { data: abonnementOptions = [] } = useAbonnementOptions();
+  const { data: genreOptions = [] } = useGenreOptions();
+  const verifierUtilisateur = useVerifierUtilisateur();
+  const inscrireUtilisateur = useInscrireUtilisateur();
 
   const handleChange = (value: string, name: string) => {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
@@ -138,69 +95,33 @@ export const InscriptionPage: React.FC = () => {
       return;
     }
 
-    // Affiche la fenêtre de récapitulatif
-    setShowRecap(true);
+    try {
+      // Vérifie si l'utilisateur existe déjà
+      await verifierUtilisateur.mutateAsync(form.email);
+      // Affiche la fenêtre de récapitulatif
+      setShowRecap(true);
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   const handleCancelRecap = () => {
     setShowRecap(false);
     setModalMessage(null);
-    setIsLoading(false);
   };
 
   const handleConfirm = async () => {
-    setIsLoading(true);
     setModalMessage(null);
 
     try {
-      // Vérifie si l'utilisateur existe déjà
-      const checkUrl = apiUrl('inscription/verification');
-      const checkRes = await fetch(checkUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email })
-      });
-
-      if (checkRes.status === 409) {
-        setModalMessage("Cet utilisateur existe déjà. Veuillez utiliser une autre adresse email.");
-        setIsLoading(false);
-        return;
-      }
       // Inscription
-      const registerUrl = apiUrl('inscription/validation');
-      const abonnementId = form.abonnement;
-      const registerRes = await fetch(registerUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, abonnement: abonnementId })
-      });
-      const registerData = await registerRes.json();
-
-      if (registerRes.status === 201) {
-        setModalMessage("Inscription réussie !");
-        setSuccess(true);
-      } else {
-        setModalMessage(registerData.message || "Erreur lors de l'inscription.");
-      }
-    } catch {
-      setModalMessage("Erreur serveur lors de l'inscription.");
+      await inscrireUtilisateur.mutateAsync(form);
+      setModalMessage("Inscription réussie !");
+      setSuccess(true);
+      setShowRecap(false);
+    } catch (err: any) {
+      setModalMessage(err.message || "Erreur lors de l'inscription.");
     }
-    setIsLoading(false);
-  };
-
-  // Fonction pour calculer la fiabilité du mot de passe
-  const getPasswordStrength = (password: string) => {
-    let score = 0;
-    if (password.length >= 6) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    if (password.length >= 10) score++;
-    if (score <= 1) return { label: 'Faible', color: 'red', value: 20 };
-    if (score === 2) return { label: 'Moyen', color: 'orange', value: 40 };
-    if (score === 3) return { label: 'Bon', color: 'gold', value: 60 };
-    if (score === 4) return { label: 'Fort', color: 'green', value: 80 };
-    return { label: 'Excellent', color: 'darkgreen', value: 100 };
   };
 
   return (
@@ -246,32 +167,6 @@ export const InscriptionPage: React.FC = () => {
             value={form.password}
             onChange={e => handleChange(e.currentTarget.value, 'password')}
           />
-          {/* Jauge de fiabilité */}
-          {form.password && (
-            <div style={{ marginTop: 8 }}>
-              <div
-                style={{
-                  height: 8,
-                  width: '100%',
-                  background: '#eee',
-                  borderRadius: 4,
-                  overflow: 'hidden'
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%',
-                    width: `${getPasswordStrength(form.password).value}%`,
-                    background: getPasswordStrength(form.password).color,
-                    transition: 'width 0.3s'
-                  }}
-                />
-              </div>
-              <span style={{ fontSize: 12, color: getPasswordStrength(form.password).color }}>
-                Fiabilité : {getPasswordStrength(form.password).label}
-              </span>
-            </div>
-          )}
         </FormGroup>
         <FormGroup label="Date d'inscription" isRequired fieldId="date">
           <TextInput
@@ -289,28 +184,28 @@ export const InscriptionPage: React.FC = () => {
             onChange={(_event, value) => handleChange(value, 'abonnement')}
             aria-label="Type d'abonnement"
           >
+            <FormSelectOption value="" label="Sélectionner un abonnement" isDisabled />
             {abonnementOptions.map(option => (
               <FormSelectOption
                 key={option.value}
                 value={option.value}
                 label={option.label}
-                isDisabled={option.disabled}
               />
             ))}
           </FormSelect>
         </FormGroup>
         <FormGroup label="Genre" isRequired fieldId="genre">
           <FormSelect
-            value={form.genre ?? ''}
+            value={form.genre}
             onChange={(_event, value) => handleChange(value, 'genre')}
             aria-label="Genre"
           >
+            <FormSelectOption value="" label="Sélectionner un genre" isDisabled />
             {genreOptions.map(option => (
               <FormSelectOption
                 key={option.value}
                 value={option.value}
                 label={option.label}
-                isDisabled={option.disabled}
               />
             ))}
           </FormSelect>
@@ -324,36 +219,15 @@ export const InscriptionPage: React.FC = () => {
         isOpen={showRecap}
         onClose={handleCancelRecap}
         aria-labelledby="recap-modal-title"
-        aria-describedby="recap-modal-body"
       >
-        <ModalHeader
-          title="Récapitulatif de l'inscription"
-          labelId="recap-modal-title"
-          help={
-            <Popover
-              headerContent={<div>Aide sur le récapitulatif</div>}
-              bodyContent={
-                <div>
-                  Vérifiez vos informations avant de confirmer votre inscription.
-                </div>
-              }
-              footerContent="Contactez le support si besoin."
-            >
-              <Button variant="plain" aria-label="Help" icon={<HelpIcon />} />
-            </Popover>
-          }
-        />
-        <ModalBody id="recap-modal-body" style={{ minHeight: 400 }}>
+        <ModalHeader title="Récapitulatif de l'inscription" />
+        <ModalBody>
           <p><strong>Prénom :</strong> {form.prenom}</p>
           <p><strong>Nom :</strong> {form.nom}</p>
           <p><strong>Email :</strong> {form.email}</p>
-          <p><strong>Genre :</strong> {genreOptions.find(opt => opt.value === form.genre)?.label || ''}</p>
+          <p><strong>Genre :</strong> {form.genre}</p>
           <p><strong>Date d'inscription :</strong> {form.date}</p>
-          <p>
-            <strong>Type d'abonnement :</strong>{' '}
-            {abonnementOptions.find(opt => opt.value === form.abonnement)?.label || form.abonnement}
-          </p>
-          {isLoading && <p>Chargement...</p>}
+          <p><strong>Type d'abonnement :</strong> {form.abonnement}</p>
           {modalMessage && (
             <Alert
               variant={modalMessage === "Inscription réussie !" ? "success" : "danger"}
@@ -363,10 +237,10 @@ export const InscriptionPage: React.FC = () => {
           )}
         </ModalBody>
         <ModalFooter>
-          <Button key="confirm" variant="primary" onClick={handleConfirm} isDisabled={isLoading}>
+          <Button variant="primary" onClick={handleConfirm}>
             Confirmer
           </Button>
-          <Button key="cancel" variant="link" onClick={handleCancelRecap} isDisabled={isLoading}>
+          <Button variant="link" onClick={handleCancelRecap}>
             Annuler
           </Button>
         </ModalFooter>
