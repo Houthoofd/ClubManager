@@ -44,6 +44,19 @@ import {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
+// Fonction utilitaire pour capitaliser une chaîne de caractères
+const capitalize = (str: string): string => {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
+// Fonction utilitaire pour formater une date
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return 'N/A';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString(); // Format par défaut basé sur la locale
+};
+
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -109,27 +122,27 @@ const DashboardPage: React.FC = () => {
         <Gallery hasGutter>
           <Card isCompact>
             <CardTitle>Membres inscrits</CardTitle>
-            <CardBody>{membresCount}</CardBody>
+            <CardBody>{typeof membresCount === 'number' ? membresCount : 'N/A'}</CardBody>
           </Card>
           <Card isCompact>
             <CardTitle>Total encaissé ce mois-ci</CardTitle>
-            <CardBody>{paiementsMois} €</CardBody>
+            <CardBody>{typeof paiementsMois === 'number' ? `${paiementsMois} €` : 'N/A'}</CardBody>
           </Card>
           <Card isCompact>
             <CardTitle>Paiements récents (7j)</CardTitle>
-            <CardBody>{paiementsRecents} paiements</CardBody>
+            <CardBody>{typeof paiementsRecents === 'number' ? `${paiementsRecents} paiements` : 'N/A'}</CardBody>
           </Card>
           <Card isCompact>
             <CardTitle>Paiements en attente</CardTitle>
-            <CardBody>{paiementsEnAttente} membres</CardBody>
+            <CardBody>{typeof paiementsEnAttente === 'number' ? `${paiementsEnAttente} membres` : 'N/A'}</CardBody>
           </Card>
           <Card isCompact>
             <CardTitle>Plans d’abonnement actifs</CardTitle>
-            <CardBody>{plansActifs} plans</CardBody>
+            <CardBody>{typeof plansActifs === 'number' ? `${plansActifs} plans` : 'N/A'}</CardBody>
           </Card>
           <Card isCompact>
             <CardTitle>Taux de renouvellement</CardTitle>
-            <CardBody>{tauxRenouvellement} %</CardBody>
+            <CardBody>{typeof tauxRenouvellement === 'number' ? `${tauxRenouvellement} %` : 'N/A'}</CardBody>
           </Card>
         </Gallery>
       </PageSection>
@@ -142,7 +155,7 @@ const DashboardPage: React.FC = () => {
               <CardTitle>Évolution des paiements (€/mois)</CardTitle>
               <CardBody>
                 <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={paiementsParMois}>
+                  <LineChart data={Array.isArray(paiementsParMois) ? paiementsParMois : []}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="mois" />
                     <YAxis />
@@ -161,7 +174,7 @@ const DashboardPage: React.FC = () => {
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
-                      data={membresParPlan}
+                      data={Array.isArray(membresParPlan) ? membresParPlan : []}
                       dataKey="value"
                       nameKey="plan"
                       cx="50%"
@@ -170,9 +183,10 @@ const DashboardPage: React.FC = () => {
                       fill="#8884d8"
                       label
                     >
-                      {membresParPlan.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                      {Array.isArray(membresParPlan) &&
+                        membresParPlan.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
                     </Pie>
                     <Legend />
                   </PieChart>
@@ -191,9 +205,7 @@ const DashboardPage: React.FC = () => {
           isExpanded={isPaiementsExpanded}
           onToggle={() => setIsPaiementsExpanded(prev => !prev)}
         >
-          {derniersPaiements.length === 0 ? (
-            <p>Aucun paiement récent.</p>
-          ) : (
+          {Array.isArray(derniersPaiements) && derniersPaiements.length > 0 ? (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
                 <thead>
@@ -205,31 +217,21 @@ const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {derniersPaiements.map((p, idx) => {
-                    const capitalize = (str: string) =>
-                      str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
-                    const formatDate = (dateStr: string) => {
-                      if (!dateStr) return '';
-                      const d = new Date(dateStr);
-                      return d.toLocaleDateString();
-                    };
-                    const userDisplay = p.first_name && p.last_name
-                      ? `${capitalize(p.first_name)} ${capitalize(p.last_name)}`
-                      : p.nom_utilisateur?.replace(/_/g, ' ') || p.utilisateur_id;
-                    return (
-                      <tr key={idx}>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                          <strong>{userDisplay}</strong>
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.montant}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{formatDate(p.date_paiement)}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.statut}</td>
-                      </tr>
-                    );
-                  })}
+                  {derniersPaiements.map((p, idx) => (
+                    <tr key={idx}>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                        <strong>{p.first_name || p.last_name ? `${p.first_name} ${p.last_name}` : 'N/A'}</strong>
+                      </td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.montant || 'N/A'}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.date_paiement || 'N/A'}</td>
+                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.statut || 'N/A'}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
+          ) : (
+            <p>Aucun paiement récent.</p>
           )}
         </ExpandableSection>
       </PageSection>
@@ -256,13 +258,6 @@ const DashboardPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {paiementsEchus.map((p, idx) => {
-                    const capitalize = (str: string) =>
-                      str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
-                    const formatDate = (dateStr: string) => {
-                      if (!dateStr) return '';
-                      const d = new Date(dateStr);
-                      return d.toLocaleDateString();
-                    };
                     const userDisplay = p.first_name && p.last_name
                       ? `${capitalize(p.first_name)} ${capitalize(p.last_name)}`
                       : p.nom_utilisateur?.replace(/_/g, ' ') || p.utilisateur_id;
@@ -329,4 +324,3 @@ const DashboardPage: React.FC = () => {
 
 export default DashboardPage;
 
-      

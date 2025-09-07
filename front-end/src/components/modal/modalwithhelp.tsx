@@ -8,6 +8,10 @@ export interface ModalWithHelpProps {
   children?: ReactNode;
   help?: ReactNode;
   footer?: ReactNode;
+  description?: ReactNode; // Ajout pour compatibilité avec l'usage
+  onConfirm?: () => void;  // Ajout pour bouton confirmer
+  confirmText?: string;
+  cancelText?: string;
 }
 
 export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
@@ -17,6 +21,10 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
   children,
   help,
   footer,
+  description,
+  onConfirm,
+  confirmText = 'Confirmer',
+  cancelText = 'Annuler',
 }) => {
   return (
     <Modal
@@ -28,10 +36,22 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
     >
       <ModalHeader title={title} labelId="modal-with-help-title" help={help} />
       <ModalBody id="modal-with-help-body">
+        {description}
         {children}
       </ModalBody>
       <ModalFooter>
-        {footer ? footer : (
+        {footer ? (
+          footer
+        ) : onConfirm ? (
+          <>
+            <Button variant="primary" onClick={onConfirm}>
+              {confirmText}
+            </Button>
+            <Button variant="link" onClick={onClose}>
+              {cancelText}
+            </Button>
+          </>
+        ) : (
           <Button variant="link" onClick={onClose}>
             Fermer
           </Button>

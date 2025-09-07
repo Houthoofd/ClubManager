@@ -47,7 +47,7 @@ const StatistiquesPage: React.FC = () => {
   const { data: membresParGenre = [] } = useMembresParGenre();
   const { data: anniversaires = [] } = useAnniversaires();
   const { data: articlesVendus = [] } = useArticlesVendus();
-  const { data: coursSemaine = 0 } = useCoursSemaine();
+  const { data: coursSemaine = { count: 0 } } = useCoursSemaine(); // Exemple : coursSemaine est un objet avec une clé `count`
 
   const [showAssidusChart, setShowAssidusChart] = useState<boolean>(true);
   const [showGradeChart, setShowGradeChart] = useState<boolean>(true);
@@ -309,7 +309,9 @@ const StatistiquesPage: React.FC = () => {
           <Tab eventKey={5} title={<><TabTitleIcon><CalendarAltIcon /></TabTitleIcon><TabTitleText>Cours à venir</TabTitleText></>}>
             <Title headingLevel="h2">Cours à venir cette semaine</Title>
             <Card isCompact>
-              <CardBody>{coursSemaine} cours prévus</CardBody>
+              <CardBody>
+                {typeof coursSemaine.count === 'number' ? `${coursSemaine.count} cours prévus` : 'Données indisponibles'}
+              </CardBody>
             </Card>
           </Tab>
         </Tabs>

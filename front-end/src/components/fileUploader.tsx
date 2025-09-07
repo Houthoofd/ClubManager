@@ -4,7 +4,7 @@ import type { DropEvent } from '@patternfly/react-core';
 import { TimesIcon } from '@patternfly/react-icons';
 import { apiUrl } from '../pages/apiUrl';
 
-export const MultiImageUpload: React.FunctionComponent<{ onImageUrlsChange?: (urls: string[]) => void; resetTrigger?: any }> = ({ onImageUrlsChange, resetTrigger }) => {
+export const MultiImageUpload: React.FunctionComponent<{ onImageUrlsChange?: (urls: string[]) => void; resetTrigger?: any; initialImages?: { name: string; url: string }[] | string[] }> = ({ onImageUrlsChange, resetTrigger, initialImages }) => {
   const [imageList, setImageList] = useState<{ name: string; url: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -67,9 +67,25 @@ export const MultiImageUpload: React.FunctionComponent<{ onImageUrlsChange?: (ur
   useEffect(() => {
     if (resetTrigger !== undefined) {
       setImageList([]);
-      onImageUrlsChange?.([]);
+      if (onImageUrlsChange) {
+        onImageUrlsChange([]);
+      }
     }
-  }, [resetTrigger]);
+  }, [resetTrigger, onImageUrlsChange]);
+
+  // Ajoute un effet pour initialiser les images lors de l'édition
+  useEffect(() => {
+    if (initialImages && initialImages.length > 0) {
+      // Supporte à la fois un tableau de string (urls) ou d'objets {name, url}
+      const formatted =
+        typeof initialImages[0] === 'string'
+          ? (initialImages as string[]).map(url => ({ name: url.split('/').pop() || 'image', url }))
+          : (initialImages as { name: string; url: string }[]);
+      setImageList(formatted);
+      onImageUrlsChange?.(formatted.map(img => img.url));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialImages]);
 
   const handleClearAll = () => {
     setImageList([]);

@@ -546,4 +546,19 @@ export class Magasin {
         const commande = { utilisateur_id, articles, total, date, statut };
         return this.ajouterCommande(commande);
     }
+    async obtenirLesTailles() {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            const sql = `SELECT id, nom FROM tailles ORDER BY nom`;
+            mysqlConnector.query(sql, [], (error, results) => {
+                mysqlConnector.close();
+                if (error) {
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
+    }
 }

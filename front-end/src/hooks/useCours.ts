@@ -1,12 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
+// Hook pour récupérer les horaires des cours
+export const useCoursPlanning = () => {
+  return useQuery({
+    queryKey: ['coursPlanning'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl('cours/informations/planning'));
+      if (!response.ok) throw new Error('Erreur lors du chargement des horaires des cours');
+      return response.json();
+    }
+  });
+};
+
 // Hook pour récupérer tous les cours
 export const useCours = () => {
   return useQuery({
     queryKey: ['cours'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('cours/informations/planning'));
+      const response = await fetch(apiUrl('cours'));
       if (!response.ok) throw new Error('Erreur lors du chargement des cours');
       return response.json();
     }

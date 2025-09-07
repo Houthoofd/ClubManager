@@ -18,7 +18,7 @@ export const useReservationsUtilisateur = (userId: number) => {
   return useQuery({
     queryKey: ['reservations', userId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`cours/reservations/${userId}`));
+      const response = await fetch(apiUrl(`reservations/utilisateur/${userId}`)); // Nouveau endpoint
       if (!response.ok) throw new Error('Erreur lors du chargement des réservations');
       return response.json();
     },
@@ -26,7 +26,7 @@ export const useReservationsUtilisateur = (userId: number) => {
   });
 };
 
-// Hook pour inscrire un utilisateur à un cours (premier)
+// Hook pour inscrire un utilisateur à un cours
 export const useInscrireUtilisateurCours = () => {
   const queryClient = useQueryClient();
 

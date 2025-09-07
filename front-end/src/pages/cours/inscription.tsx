@@ -15,7 +15,8 @@ import {
   Spinner,
   Alert
 } from '@patternfly/react-core';
-import { useCoursDisponibles, useReservationsUtilisateur, useInscrireUtilisateurCours, useAnnulerInscription } from '../../hooks/useInscriptions';
+import { useCours, useCoursPlanning } from '../../hooks/useCours';
+import { useReservationsUtilisateur, useInscrireUtilisateurCours, useAnnulerInscription } from '../../hooks/useInscriptions';
 
 interface CoursData {
   id: number;
@@ -34,7 +35,8 @@ const Inscription = () => {
   const [modalMessage, setModalMessage] = useState<string>('');
 
   // Utilisation des hooks React Query
-  const { data: cours = [], isLoading: loadingCours, error: errorCours } = useCoursDisponibles();
+  const { data: cours = [], isLoading: loadingCours, error: errorCours } = useCours();
+  const { data: planning = [], isLoading: loadingPlanning, error: errorPlanning } = useCoursPlanning();
   const { data: reservations = [], isLoading: loadingReservations, error: errorReservations } = useReservationsUtilisateur(userData?.id);
   const inscrireUtilisateur = useInscrireUtilisateurCours();
   const annulerInscription = useAnnulerInscription();
@@ -63,11 +65,11 @@ const Inscription = () => {
     }
   };
 
-  if (loadingCours || loadingReservations) {
+  if (loadingCours || loadingPlanning || loadingReservations) {
     return <Spinner size="xl" />;
   }
 
-  if (errorCours || errorReservations) {
+  if (errorCours || errorPlanning || errorReservations) {
     return <Alert variant="danger" title="Erreur lors du chargement des données." />;
   }
 
@@ -97,6 +99,16 @@ const Inscription = () => {
                       )}
                     </FlexItem>
                   </Flex>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+          <div style={{ marginTop: '2rem' }}>
+            <Title headingLevel="h2">Planning des cours</Title>
+            {planning.map((p: any, index: number) => (
+              <Card key={index} style={{ marginBottom: '1rem' }}>
+                <CardBody>
+                  <p>{p.jour} - {p.heure_debut} à {p.heure_fin}</p>
                 </CardBody>
               </Card>
             ))}

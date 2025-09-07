@@ -209,6 +209,18 @@ router.put('/modifier/article/:id', async (req: any, res: any) => {
   }
 });
 
+// Endpoint pour obtenir les tailles existantes depuis la base de données
+router.get('/tailles', async (_req: any, res: any) => {
+  try {
+    const client = new Magasin();
+    const tailles = await client.obtenirLesTailles(); // Cette méthode doit retourner [{ id, nom }, ...]
+    res.status(200).json({ tailles });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des tailles :', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des tailles.' });
+  }
+});
+
 
 
 export default router;

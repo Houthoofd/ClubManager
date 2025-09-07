@@ -644,7 +644,21 @@ async modifierStock(articleId: number, tailleId: number, quantite: number): Prom
     return this.ajouterCommande(commande);
   }
 
+  async obtenirLesTailles(): Promise<{ id: number; nom: string }[]> {
+    return new Promise((resolve, reject) => {
+      const mysqlConnector = new MysqlConnector();
+      const sql = `SELECT id, nom FROM tailles ORDER BY nom`;
 
+      mysqlConnector.query(sql, [], (error, results) => {
+        mysqlConnector.close();
+        if (error) {
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      });
+    });
+  }
 
 }
 
