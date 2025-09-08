@@ -33,6 +33,10 @@ import {
   useCompteInfo,
   useStatFrequentation,
   useUpdateCompte,
+  useAbonnements,
+  useGrades,
+  useStatus,
+  useGenres
 } from '../hooks/useCompte';
 
 function formatDateForInput(isoDateString: string): string {
@@ -59,11 +63,38 @@ const Compte = () => {
     abonnement: '',
     status: ''
   });
+  const [userData, setUserData] = useState<any | null>(null);
 
   // Utilisation des hooks React Query
-  const { data: compteInfo, isLoading: loadingCompte, error: errorCompte } = useCompteInfo(id);
+  const { data: compteInfo, isLoading: loadingCompte, error: errorCompte } = useCompteInfo(userData?.prenom, userData?.nom);
   const { data: statFrequentation } = useStatFrequentation(id);
   const updateCompte = useUpdateCompte();
+  const abonnementsQuery = useAbonnements();
+  const gradesQuery = useGrades();
+  const statusQuery = useStatus();
+  const genresQuery = useGenres();
+
+  // Ajoute un champ pour le mot de passe si absent
+  const [password, setPassword] = useState('');
+  const [showPasswordField, setShowPasswordField] = useState(false);
+
+  // Récupère prénom et nom depuis localStorage
+  React.useEffect(() => {
+    const storedData = localStorage.getItem('userData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setUserData(parsedData.data);
+    }
+  }, []);
+
+  // Utilise le hook useCompteInfo avec prénom et nom
+  React.useEffect(() => {
+    if (compteInfo && !compteInfo.mot_de_passe) {
+      setShowPasswordField(true);
+    } else {
+      setShowPasswordField(false);
+    }
+  }, [compteInfo]);
 
   const handleTabClick = (_event: React.MouseEvent<HTMLElement, MouseEvent>, eventKey: string | number) => {
     setActiveTabKey(Number(eventKey));
@@ -87,8 +118,31 @@ const Compte = () => {
     return changes;
   };
 
+  // Fonction pour appliquer les changements (y compris le mot de passe)
+  const handleApplyChanges = () => {
+    const changes = getChangesSummary();
+    if (showPasswordField && password) {
+      changes['mot_de_passe'] = password;
+    }
+    setPendingChanges(changes);
+    setModalMessage(
+      Object.keys(changes).length > 0
+        ? Object.entries(changes)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join('\n')
+        : 'Aucun changement détecté.'
+    );
+    setIsModalOpen(true);
+
+    // Appel de la mutation pour mettre à jour le compte
+    if (Object.keys(changes).length > 0) {
+      updateCompte.mutate({ id, ...changes });
+    }
+  };
+
   if (loadingCompte) return <Spinner size="xl" />;
   if (errorCompte) return <Alert variant="danger" title={errorCompte.message} />;
+
 
   return (
     <PageSection>
@@ -101,21 +155,21 @@ const Compte = () => {
             <FormGroup label="Nom :" fieldId="last-name">
               <TextInput
                 id="last-name"
-                value={compteInfo?.nom || ''}
+                value={compteInfo?.utilisateur?.first_name || ''}
                 isDisabled
               />
             </FormGroup>
             <FormGroup label="Prénom :" fieldId="first-name">
               <TextInput
                 id="first-name"
-                value={compteInfo?.prenom || ''}
+                value={compteInfo?.utilisateur?.prenom || ''}
                 isDisabled
               />
             </FormGroup>
             <FormGroup label="Email :" fieldId="email">
               <TextInput
                 id="email"
-                value={form.email || compteInfo?.email || ''}
+                value={form.email || compteInfo?.utilisateur?.email || ''}
                 isDisabled={!editingFields['email']}
                 onChange={(_event, value) => handleEmailChange(value)}
               />
@@ -131,7 +185,7 @@ const Compte = () => {
               <TextInput
                 id="dob"
                 type="date"
-                value={formatDateForInput(form.date_naissance || compteInfo?.date_naissance)}
+                value={formatDateForInput(form.date_naissance || compteInfo?.utilisateur?.date_naissance)}
                 onChange={(_event, value) =>
                   setForm(prev => ({ ...prev, date_naissance: value }))
                 }
@@ -145,13 +199,28 @@ const Compte = () => {
                 {editingFields['date_naissance'] ? <CheckIcon /> : <PencilAltIcon />}
               </Button>
             </FormGroup>
+            <FormGroup label="Mot de passe :" fieldId="password">
+              {showPasswordField ? (
+                <TextInput
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(_event, value) => setPassword(value)}
+                  placeholder="Créer un mot de passe"
+                />
+              ) : (
+                <TextInput
+                  id="password"
+                  type="password"
+                  value="********"
+                  isDisabled
+                />
+              )}
+            </FormGroup>
             <Button
               variant="primary"
               style={{ marginTop: '1rem' }}
-              onClick={() => {
-                setPendingChanges(getChangesSummary());
-                setIsModalOpen(true);
-              }}
+              onClick={handleApplyChanges}
             >
               Voir les changements effectués
             </Button>
@@ -162,14 +231,14 @@ const Compte = () => {
             <FormGroup label="Genre" fieldId="genre">
               <select
                 id="genre"
-                value={form.genres || compteInfo?.genres || ''}
+                value={form.genres || compteInfo?.utilisateur?.genres || ''}
                 onChange={e => setForm(prev => ({ ...prev, genres: e.target.value }))}
                 disabled={!editingFields['genres']}
               >
                 <option value="">Sélectionner un genre</option>
-                <option value="Masculin">Masculin</option>
-                <option value="Féminin">Féminin</option>
-                <option value="Autre">Autre</option>
+                {genresQuery.data?.map((a: { id: number; genre_name: string }) => (
+                  <option key={a.id} value={a.genre_name}>{a.genre_name}</option>
+                ))}
               </select>
               <Button
                 variant="plain"
@@ -177,6 +246,66 @@ const Compte = () => {
                 style={{ marginLeft: '1rem' }}
               >
                 {editingFields['genres'] ? <CheckIcon /> : <PencilAltIcon />}
+              </Button>
+            </FormGroup>
+            <FormGroup label="Statut" fieldId="status">
+              <select
+                id="status"
+                value={form.status || compteInfo?.utilisateur?.status || ''}
+                onChange={e => setForm(prev => ({ ...prev, status: e.target.value }))}
+                disabled={!editingFields['status']}
+              >
+                <option value="">Sélectionner un statut</option>
+                {statusQuery.data?.map((a: { id: number; nom_role: string }) => (
+                  <option key={a.id} value={a.nom_role}>{a.nom_role}</option>
+                ))}
+              </select>
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('status')}
+                style={{ marginLeft: '1rem' }}
+              >
+                {editingFields['status'] ? <CheckIcon /> : <PencilAltIcon />}
+              </Button>
+            </FormGroup>
+            <FormGroup label="Grade" fieldId="grades">
+              <select
+                id="grades"
+                value={form.grades || compteInfo?.utilisateur?.grades || ''}
+                onChange={e => setForm(prev => ({ ...prev, grades: e.target.value }))}
+                disabled={!editingFields['grades']}
+              >
+                <option value="">Sélectionner un grade</option>
+                {gradesQuery.data?.map((a: { id: number; grade_id: string }) => (
+                  <option key={a.id} value={a.grade_id}>{a.grade_id}</option>
+                ))}
+              </select>
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('grades')}
+                style={{ marginLeft: '1rem' }}
+              >
+                {editingFields['grades'] ? <CheckIcon /> : <PencilAltIcon />}
+              </Button>
+            </FormGroup>
+            <FormGroup label="Abonnement" fieldId="abonnement">
+              <select
+                id="abonnement"
+                value={form.abonnement || compteInfo?.utilisateur?.abonnement || ''}
+                onChange={e => setForm(prev => ({ ...prev, abonnement: e.target.value }))}
+                disabled={!editingFields['abonnement']}
+              >
+                <option value="">Sélectionner un abonnement</option>
+                {abonnementsQuery.data?.map((a: { id: number; nom_plan: string }) => (
+                  <option key={a.id} value={a.nom_plan}>{a.nom_plan}</option>
+                ))}
+              </select>
+              <Button
+                variant="plain"
+                onClick={() => handleEditClick('abonnement')}
+                style={{ marginLeft: '1rem' }}
+              >
+                {editingFields['abonnement'] ? <CheckIcon /> : <PencilAltIcon />}
               </Button>
             </FormGroup>
           </Form>
@@ -225,7 +354,6 @@ const Compte = () => {
   );
 };
 
-
 export default Compte;
-               
+
 

@@ -36,3 +36,15 @@ export const useStatus = () => {
     }
   });
 };
+
+// Hook pour récupérer les statuts
+export const useGenres = () => {
+  return useQuery({
+    queryKey: ['genres'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl('informations/genres'));
+      if (!response.ok) throw new Error('Erreur lors du chargement des genres');
+      return response.json();
+    }
+  });
+};

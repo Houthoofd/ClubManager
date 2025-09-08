@@ -1,20 +1,20 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
-// Hook pour récupérer les informations utilisateur
-export const useCompteInfo = (userId: string | undefined) => {
+// Hook pour récupérer les informations utilisateur par prénom et nom
+export const useCompteInfo = (prenom: string | undefined, nom: string | undefined) => {
   return useQuery({
-    queryKey: ['compteInfo', userId],
+    queryKey: ['compteInfo', prenom, nom],
     queryFn: async () => {
       const response = await fetch(apiUrl(`compte/informations`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: userId }),
+        body: JSON.stringify({ prenom, nom }),
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des informations utilisateur');
       return response.json();
     },
-    enabled: !!userId,
+    enabled: !!prenom && !!nom,
   });
 };
 
@@ -82,5 +82,17 @@ export const useUpdateCompte = () => {
       }
       return response.json();
     },
+  });
+};
+
+// Hook pour récupérer les statuts
+export const useGenres = () => {
+  return useQuery({
+    queryKey: ['genres'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl('informations/genres'));
+      if (!response.ok) throw new Error('Erreur lors du chargement des genres');
+      return response.json();
+    }
   });
 };
