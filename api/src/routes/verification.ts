@@ -121,5 +121,21 @@ router.get('/magasin/article/categorie', async (req: any, res: any) => {
   }
 });
 
+// Vérification si un ou plusieurs utilisateurs sont déjà professeurs
+router.post('/verifier-professeurs', async (req: any, res: any) => {
+  const { utilisateurs } = req.body; // utilisateurs: tableau d'objets { nom, prenom }
+  if (!Array.isArray(utilisateurs) || utilisateurs.length === 0) {
+    return res.status(400).json({ message: "Liste d'utilisateurs requise." });
+  }
+  try {
+    const client = new Verifiation();
+    // Méthode à créer dans la classe Verifiation : checkUtilisateursSontProfesseurs
+    const result = await client.checkUtilisateursSontProfesseurs(utilisateurs);
+    res.json(result); // { professeurs: [{ nom, prenom, isProf }], message }
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur lors de la vérification des professeurs." });
+  }
+});
+
 
 export default router;

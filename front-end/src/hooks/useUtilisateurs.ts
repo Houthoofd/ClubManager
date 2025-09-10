@@ -105,3 +105,33 @@ export const useSupprimerUtilisateur = () => {
     }
   });
 };
+
+// Hook pour obtenir tous les utilisateurs (retourne l'objet complet du backend)
+export const useTousLesUtilisateurs = () => {
+  return useQuery({
+    queryKey: ['tousLesUtilisateurs'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl('utilisateurs'));
+      if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
+      return response.json(); // Retourne l'objet complet (isFind, data, etc.)
+    }
+  });
+};
+
+// Hook pour vérifier si un ou plusieurs utilisateurs sont déjà professeurs
+export const useVerifierProfesseurs = () => {
+  return useMutation({
+    mutationFn: async (utilisateurs: { nom: string; prenom: string }[]) => {
+      const response = await fetch(apiUrl('verification/verifier-professeurs'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ utilisateurs })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la vérification des professeurs');
+      }
+      return response.json(); // { professeurs: [...], message }
+    }
+  });
+};

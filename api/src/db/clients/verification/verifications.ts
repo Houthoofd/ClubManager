@@ -168,4 +168,28 @@ export class Verifiation {
       });
     });
   }
+
+  // Vérifie si un ou plusieurs utilisateurs sont déjà professeurs
+  async checkUtilisateursSontProfesseurs(utilisateurs: { nom: string; prenom: string }[]): Promise<{ professeurs: { nom: string; prenom: string; isProf: boolean }[], message: string }> {
+    const mysqlConnector = new MysqlConnector();
+    // On construit une requête pour tous les couples nom/prenom
+    const results: { nom: string; prenom: string; isProf: boolean }[] = [];
+    for (const utilisateur of utilisateurs) {
+      const sql = `SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? AND status_id = 5 LIMIT 1`;
+      // status_id = 5 pour professeur
+      // eslint-disable-next-line no-await-in-loop
+      const isProf = await new Promise<boolean>((resolve, reject) => {
+        mysqlConnector.query(sql, [utilisateur.nom, utilisateur.prenom], (error, rows) => {
+          if (error) return reject(error);
+          resolve(rows.length > 0);
+        });
+      });
+      results.push({ nom: utilisateur.nom, prenom: utilisateur.prenom, isProf });
+    }
+    mysqlConnector.close();
+    return {
+      professeurs: results,
+      message: 'Vérification des statuts professeurs effectuée.'
+    };
+  }
 }

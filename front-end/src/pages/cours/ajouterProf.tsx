@@ -8,19 +8,16 @@ import {
   EmptyStateBody,
   FormSelect,
   FormSelectOption,
-  Label,
-  LabelGroup,
   Button,
   Tooltip,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
-  Popover
 } from '@patternfly/react-core';
 import { ExclamationTriangleIcon, UserPlusIcon, TimesCircleIcon } from '@patternfly/react-icons';
-import HelpIcon from '@patternfly/react-icons/dist/esm/icons/help-icon';
 import { useProfesseurs, usePromouvoirProfesseurs, useRetirerPromotionProfesseur } from '../../hooks/useProfesseurs';
+import { useTousLesUtilisateurs, useVerifierProfesseurs } from '../../hooks/useUtilisateurs';
 
 const AjouterProfesseur = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
@@ -30,11 +27,14 @@ const AjouterProfesseur = () => {
   const [removeModalOpen, setRemoveModalOpen] = useState(false);
   const [profToRemove, setProfToRemove] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<number>(1);
+  const [promotionMessage, setPromotionMessage] = useState<string>('');
 
   // Utilisation des hooks React Query
   const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
+  const { data: utilisateursData, isLoading: loadingUtilisateurs } = useTousLesUtilisateurs();
   const promouvoirProfesseurs = usePromouvoirProfesseurs();
   const retirerPromotionProfesseur = useRetirerPromotionProfesseur();
+  const verifierProfesseurs = useVerifierProfesseurs();
 
   const handleTabClick = (_event: React.MouseEvent, tabIndex: string | number) => {
     if (typeof tabIndex === 'number') {
@@ -44,9 +44,9 @@ const AjouterProfesseur = () => {
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
-    const selectedObjs = professeurs
-      .filter(u => selectedIds.includes(u.id.toString()))
-      .map(u => ({
+    const selectedObjs = utilisateurs
+      .filter((u: any) => selectedIds.includes(u.id.toString()))
+      .map((u: any) => ({
         id: u.id,
         nom: u.last_name,
         prenom: u.first_name
@@ -56,11 +56,20 @@ const AjouterProfesseur = () => {
 
   const handlePromouvoir = async () => {
     try {
+      // Vérifier si les utilisateurs sont déjà professeurs
+      const toCheck = selectedUsers.map(u => ({ nom: u.nom, prenom: u.prenom }));
+      const verifResult = await verifierProfesseurs.mutateAsync(toCheck);
+      const dejaProfs = verifResult.professeurs.filter((p: any) => p.isProf);
+      if (dejaProfs.length > 0) {
+        setPromotionMessage(`Déjà professeurs : ${dejaProfs.map((p: any) => p.prenom + ' ' + p.nom).join(', ')}`);
+        return;
+      }
       await promouvoirProfesseurs.mutateAsync(selectedUsers);
+      setPromotionMessage('Promotion effectuée avec succès !');
       setSelectedUsers([]);
       setFormData({ type_id: '' });
-      setIsModalOpen(false);
     } catch (error) {
+      setPromotionMessage('Erreur lors de la promotion des professeurs.');
       console.error('Erreur lors de la promotion des professeurs:', error);
     }
   };
@@ -77,9 +86,11 @@ const AjouterProfesseur = () => {
     }
   };
 
-  if (loadingProfesseurs) {
+  if (loadingProfesseurs || loadingUtilisateurs) {
     return <Spinner size="xl" />;
   }
+
+  const utilisateurs = utilisateursData?.data || [];
 
   return (
     <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
@@ -119,22 +130,20 @@ const AjouterProfesseur = () => {
               onChange={handleSelectChange}
               style={{ height: '200px', width: '100%' }}
             >
-              {professeurs.map((user) => (
+              {utilisateurs.map((user: any) => (
                 <option key={user.id} value={user.id.toString()}>
                   {user.first_name} {user.last_name}
                 </option>
               ))}
             </select>
-            {selectedUsers.length > 0 && (
-              <Button
-                style={{ marginTop: '1rem' }}
-                icon={<UserPlusIcon />}
-                onClick={() => setIsModalOpen(true)}
-                disabled={selectedUsers.length === 0}
-              >
-                Ajouter
-              </Button>
-            )}
+            <Button
+              style={{ marginTop: '1rem' }}
+              icon={<UserPlusIcon />}
+              onClick={() => setIsModalOpen(true)}
+              disabled={selectedUsers.length === 0}
+            >
+              Ajouter
+            </Button>
           </form>
         </div>
 
@@ -142,17 +151,21 @@ const AjouterProfesseur = () => {
         <Modal
           variant="small"
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => { setIsModalOpen(false); setPromotionMessage(''); }}
         >
           <ModalHeader title="Confirmer la promotion" />
           <ModalBody>
-            Êtes-vous sûr de vouloir promouvoir ces utilisateurs en professeurs ?
+            {promotionMessage
+              ? promotionMessage
+              : 'Êtes-vous sûr de vouloir promouvoir ces utilisateurs en professeurs ?'}
           </ModalBody>
           <ModalFooter>
-            <Button variant="primary" onClick={handlePromouvoir}>
-              Confirmer
-            </Button>
-            <Button variant="link" onClick={() => setIsModalOpen(false)}>
+            {!promotionMessage && (
+              <Button variant="primary" onClick={handlePromouvoir}>
+                Confirmer
+              </Button>
+            )}
+            <Button variant="link" onClick={() => { setIsModalOpen(false); setPromotionMessage(''); }}>
               Annuler
             </Button>
           </ModalFooter>
@@ -167,19 +180,33 @@ const AjouterProfesseur = () => {
             </EmptyStateBody>
           </EmptyState>
         ) : (
-          <div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '1rem' }}>
             {professeurs.map((prof) => (
-              <div key={prof.id}>
-                <span>{prof.first_name} {prof.last_name}</span>
-                <Button
-                  variant="plain"
-                  onClick={() => {
-                    setProfToRemove(prof);
-                    setRemoveModalOpen(true);
-                  }}
-                >
-                  <TimesCircleIcon />
-                </Button>
+              <div key={prof.id} style={{
+                minWidth: 220,
+                background: '#f5f5f5',
+                borderRadius: 8,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: '0.5rem',
+                position: 'relative'
+              }}>
+                <span style={{ fontWeight: 'bold', fontSize: 16 }}>{prof.first_name} {prof.last_name}</span>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: 4 }}>
+                  <Button
+                    variant="plain"
+                    onClick={() => {
+                      setProfToRemove(prof);
+                      setRemoveModalOpen(true);
+                    }}
+                    aria-label="Retirer la promotion"
+                  >
+                    <TimesCircleIcon />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -210,5 +237,5 @@ const AjouterProfesseur = () => {
 };
 
 export default AjouterProfesseur;
-            
+
 
