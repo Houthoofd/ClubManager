@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
 // Hook pour récupérer les cours disponibles
@@ -10,19 +10,6 @@ export const useCoursDisponibles = () => {
       if (!response.ok) throw new Error('Erreur lors du chargement des cours');
       return response.json();
     }
-  });
-};
-
-// Hook pour récupérer les réservations d'un utilisateur
-export const useReservationsUtilisateur = (userId: number) => {
-  return useQuery({
-    queryKey: ['reservations', userId],
-    queryFn: async () => {
-      const response = await fetch(apiUrl(`reservations/utilisateur/${userId}`)); // Nouveau endpoint
-      if (!response.ok) throw new Error('Erreur lors du chargement des réservations');
-      return response.json();
-    },
-    enabled: !!userId // N'exécute pas la requête si userId est invalide
   });
 };
 
@@ -66,6 +53,29 @@ export const useAnnulerInscription = () => {
     },
     onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: ['reservations', userId] });
+    }
+  });
+};
+
+// Hook pour annuler une inscription (version body nom/prenom)
+export const useAnnulerInscriptionParNomPrenom = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { cours_id: number; utilisateur_nom: string; utilisateur_prenom: string }) => {
+      const response = await fetch(apiUrl('cours/annulation'), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erreur lors de l'annulation de l'inscription");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
     }
   });
 };
@@ -137,5 +147,74 @@ export const useInscrireUtilisateur = () => {
       }
       return response.json();
     },
+  });
+};
+
+// Hook pour inscrire un utilisateur à un cours (version DataReservation)
+export const useInscrireUtilisateurReservation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { cours_id: number; utilisateur_nom: string; utilisateur_prenom: string }) => {
+      const response = await fetch(apiUrl('cours/inscription'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erreur lors de l'inscription");
+      }
+      return response.json();
+    },
+    // Invalider les queries si besoin
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    }
+  });
+};
+
+// Hook pour récupérer les utilisateurs inscrits à un cours
+export const useUtilisateursParCours = (coursId: number) => {
+  return useQuery({
+    queryKey: ['utilisateursParCours', coursId],
+    queryFn: async () => {
+      const response = await fetch(apiUrl(`cours/${coursId}`));
+      if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs du cours');
+      const data = await response.json();
+      // On retourne toujours un tableau d'ID utilisateur pour simplifier l'utilisation dans le composant
+      if (Array.isArray(data.data.Cours)) {
+        // Si la structure est [{id, ...}], retourne un tableau d'id
+        if (data.data.Cours.length > 0 && typeof data.data.Cours[0] === 'object' && 'id' in data.data.Cours[0]) {
+          return data.data.Cours.map((u: any) => u.id);
+        }
+        // Sinon retourne le tableau tel quel
+        return data.data.Cours;
+      }
+      return [];
+    },
+    enabled: !!coursId
+  });
+};
+
+// Hook pour récupérer les utilisateurs inscrits à tous les cours (tableau de cours)
+export const useUtilisateursPourTousLesCours = (coursList: { id: number }[]) => {
+  return useQueries({
+    queries: coursList.map((c) => ({
+      queryKey: ['utilisateursParCours', c.id],
+      queryFn: async () => {
+        const response = await fetch(apiUrl(`cours/${c.id}`));
+        if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs du cours');
+        const data = await response.json();
+        if (Array.isArray(data.data.Cours)) {
+          if (data.data.Cours.length > 0 && typeof data.data.Cours[0] === 'object' && 'id' in data.data.Cours[0]) {
+            return data.data.Cours.map((u: { id: number }) => u.id);
+          }
+          return data.data.Cours;
+        }
+        return [];
+      },
+      enabled: !!c.id
+    }))
   });
 };

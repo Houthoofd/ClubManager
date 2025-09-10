@@ -13,7 +13,10 @@ import {
   Alert
 } from '@patternfly/react-core';
 import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
-import { useParticipants, useUpdatePresence } from '../../hooks/useParticipants';
+import { useParticipants} from '../../hooks/useParticipants';
+import { useAnnulerPresence, useValiderPresence } from '../../hooks/useCours';
+import ModalSize from '../../components/modal';
+import { useState } from 'react';
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -29,12 +32,29 @@ const ParticipantsPage = () => {
 
   // Utilisation des hooks React Query
   const { data: cours, isLoading, error } = useParticipants(coursId);
-  const updatePresence = useUpdatePresence();
+  const annulerPresence = useAnnulerPresence();
+  const validerPresence = useValiderPresence();
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [modalMessage, setModalMessage] = useState<string>('');
 
-  const handleStatus = async (utilisateurId: number, action: 'valider' | 'annuler') => {
+  const handleStatus = async (utilisateur: any, action: 'valider' | 'annuler') => {
     try {
-      await updatePresence.mutateAsync({ coursId, utilisateurId, action });
+      const data = {
+        cours_id: coursId,
+        utilisateur_nom: utilisateur.nom,
+        utilisateur_prenom: utilisateur.prenom
+      };
+      if (action === 'valider') {
+        await validerPresence.mutateAsync(data);
+        setModalMessage('Présence validée !');
+      } else {
+        await annulerPresence.mutateAsync(data);
+        setModalMessage('Présence annulée !');
+      }
+      setShowModal(true);
     } catch (err) {
+      setModalMessage("Erreur lors de la mise à jour de la présence.");
+      setShowModal(true);
       console.error('Erreur lors de la mise à jour de la présence:', err);
     }
   };
@@ -63,14 +83,14 @@ const ParticipantsPage = () => {
       </Card>
 
       <div style={{ marginTop: '1rem' }}>
-        {cours.utilisateurs?.map((utilisateur) => {
+        {cours.utilisateurs?.map((utilisateur:any, idx:any) => {
           const presence = utilisateur.presence;
           let presenceColor = 'grey';
           if (presence === 1) presenceColor = 'green';
           else if (presence === 0) presenceColor = 'red';
 
           return (
-            <Card key={utilisateur.id} style={{ marginBottom: '0.5rem' }}>
+            <Card key={utilisateur.id ? utilisateur.id : idx} style={{ marginBottom: '0.5rem' }}>
               <CardBody>
                 <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
                   <FlexItem>
@@ -87,14 +107,14 @@ const ParticipantsPage = () => {
                     <Button
                       variant="plain"
                       aria-label="Valider présence"
-                      onClick={() => handleStatus(utilisateur.id, 'valider')}
+                      onClick={() => handleStatus(utilisateur, 'valider')}
                     >
                       <CheckCircleIcon color="green" />
                     </Button>
                     <Button
                       variant="plain"
                       aria-label="Annuler présence"
-                      onClick={() => handleStatus(utilisateur.id, 'annuler')}
+                      onClick={() => handleStatus(utilisateur, 'annuler')}
                     >
                       <TimesCircleIcon color="red" />
                     </Button>
@@ -105,6 +125,14 @@ const ParticipantsPage = () => {
           );
         })}
       </div>
+
+      <ModalSize
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Notification"
+      >
+        {modalMessage}
+      </ModalSize>
     </div>
   );
 };

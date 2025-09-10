@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS plans_tarifaires (
     description TEXT
 ) ENGINE=InnoDB;
 
+
 CREATE TABLE IF NOT EXISTS tailles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(20) NOT NULL UNIQUE

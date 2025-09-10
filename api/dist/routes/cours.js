@@ -281,4 +281,20 @@ router.patch('/modifier', async (req, res) => {
         res.status(500).json({ isConfirm: false, message: "Erreur serveur lors de la modification du cours." });
     }
 });
+// Nouveau endpoint pour récupérer les cours à venir où l'utilisateur est inscrit
+router.get('/inscriptions/utilisateur/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const client = new Cours();
+        const cours = await client.obtenirCoursInscritsParUtilisateur(Number(userId));
+        if (!cours || cours.length === 0) {
+            return res.status(404).json({ message: 'Aucun cours trouvé pour cet utilisateur.' });
+        }
+        res.status(200).json(cours);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des cours inscrits de l\'utilisateur :', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours inscrits.' });
+    }
+});
 export default router;

@@ -940,4 +940,50 @@ export class Cours {
         mysqlConnector.close();
         return { isConfirm: true, message: "Cours récurrent modifié avec succès." };
     }
+    // Récupérer les cours à venir où l'utilisateur est inscrit (retourne aussi l'utilisateur)
+    obtenirCoursInscritsParUtilisateur(userId) {
+        return new Promise((resolve, reject) => {
+            const mysqlConnector = new MysqlConnector();
+            const sql = `
+        SELECT
+          c.id AS id,
+          DATE_FORMAT(c.date_cours, '%Y-%m-%dT%H:%i:%sZ') AS date_cours,
+          c.type_cours,
+          c.heure_debut,
+          c.heure_fin,
+          u.id AS utilisateurId,
+          u.last_name AS utilisateurNom,
+          u.first_name AS utilisateurPrenom
+        FROM cours c
+        INNER JOIN inscriptions i ON c.id = i.cours_id
+        INNER JOIN utilisateurs u ON i.utilisateur_id = u.id
+        WHERE u.id = ?
+          AND c.date_cours >= CURDATE()
+        ORDER BY c.date_cours ASC, c.heure_debut ASC
+        LIMIT 12;
+      `;
+            mysqlConnector.query(sql, [userId], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des cours inscrits : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    const cours = results.map(row => ({
+                        id: row.id,
+                        date_cours: row.date_cours,
+                        type_cours: row.type_cours,
+                        heure_debut: row.heure_debut,
+                        heure_fin: row.heure_fin,
+                        utilisateur: {
+                            id: row.utilisateurId,
+                            nom: row.utilisateurNom,
+                            prenom: row.utilisateurPrenom
+                        }
+                    }));
+                    resolve(cours);
+                }
+                mysqlConnector.close();
+            });
+        });
+    }
 }

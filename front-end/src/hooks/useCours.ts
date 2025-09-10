@@ -106,3 +106,60 @@ export const useProfesseurs = () => {
     }
   });
 };
+
+// Hook pour récupérer les cours à venir où l'utilisateur est inscrit
+export const useCoursInscritsUtilisateur = (userId: number) => {
+  return useQuery({
+    queryKey: ['coursInscritsUtilisateur', userId],
+    queryFn: async () => {
+      const response = await fetch(apiUrl(`cours/inscriptions/utilisateur/${userId}`));
+      if (!response.ok) throw new Error('Erreur lors du chargement des cours inscrits');
+      return response.json();
+    },
+    enabled: !!userId
+  });
+};
+
+// Hook pour annuler la présence d'un utilisateur à un cours (PATCH)
+export const useAnnulerPresence = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { cours_id: number; utilisateur_nom: string; utilisateur_prenom: string }) => {
+      const response = await fetch(apiUrl('cours/inscription/annulation'), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erreur lors de l'annulation de la présence");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    }
+  });
+};
+
+// Hook pour valider la présence d'un utilisateur à un cours (PATCH)
+export const useValiderPresence = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { cours_id: number; utilisateur_nom: string; utilisateur_prenom: string }) => {
+      const response = await fetch(apiUrl('cours/inscription/validation'), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Erreur lors de la validation de la présence");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    }
+  });
+};
