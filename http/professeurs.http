@@ -1,2 +1,0 @@
-## Exemple pour récupèrer les cours
-GET http://localhost:3000/professeurs

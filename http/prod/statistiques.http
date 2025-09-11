@@ -1,0 +1,25 @@
+### Statistiques endpoints
+
+# Récupérer les statistiques générales du club
+GET https://clubmanagment.com/api/statistiques/generales
+
+### Récupérer les statistiques des cours
+GET https://clubmanagment.com/api/statistiques/cours
+
+### Récupérer les statistiques des utilisateurs
+GET https://clubmanagment.com/api/statistiques/utilisateurs
+
+### Récupérer les statistiques de présence par cours
+GET https://clubmanagment.com/api/statistiques/presence/cours/1
+
+### Récupérer les statistiques de présence par utilisateur
+GET https://clubmanagment.com/api/statistiques/presence/utilisateur/1
+
+### Récupérer les statistiques du magasin
+GET https://clubmanagment.com/api/statistiques/magasin
+
+### Récupérer les statistiques de fréquentation par mois
+GET https://clubmanagment.com/api/statistiques/frequentation?annee=2024&mois=1
+
+### Récupérer les statistiques des revenus
+GET https://clubmanagment.com/api/statistiques/revenus?periode=mois&annee=2024

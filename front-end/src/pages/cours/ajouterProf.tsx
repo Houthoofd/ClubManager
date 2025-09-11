@@ -102,7 +102,7 @@ const AjouterProfesseur = () => {
             </label>
             <FormSelect
               value={formData.type_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, type_id: e.target.value }))}
+              onChange={(_event, value) => setFormData(prev => ({ ...prev, type_id: value }))}
               aria-label="Type de cours"
             >
               <FormSelectOption isDisabled value="" label="Sélectionnez un type" />

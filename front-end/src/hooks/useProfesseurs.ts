@@ -59,3 +59,94 @@ export const useRetirerPromotionProfesseur = () => {
     }
   });
 };
+
+// Hook pour ajouter un cours récurrent avec professeurs
+export const useAjouterCoursRecurrent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ajoutCours: any) => {
+      const response = await fetch(apiUrl('cours/ajouter'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ajoutCours)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de l\'ajout du cours récurrent');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
+    }
+  });
+};
+
+// Hook pour supprimer un cours récurrent par jour
+export const useSupprimerCoursRecurrent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (jourSemaine: string) => {
+      const response = await fetch(apiUrl('cours/supprimer'), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jourSemaine })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la suppression du cours récurrent');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
+    }
+  });
+};
+
+// Hook pour retirer un ou plusieurs professeurs d'un cours récurrent
+export const useRetirerProfesseursDuCours = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ professeursNoms, jour }: { professeursNoms: string[]; jour: string }) => {
+      const response = await fetch(apiUrl('cours/retirer-professeur'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ professeursNoms, jour })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors du retrait des professeurs du cours');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalide les queries pour rafraîchir les données
+      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+    }
+  });
+};
+
+// Hook pour modifier un cours récurrent
+export const useModifierCoursRecurrent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (modifCours: any) => {
+      const response = await fetch(apiUrl('cours/modifier'), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modifCours)
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la modification du cours récurrent');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
+    }
+  });
+};

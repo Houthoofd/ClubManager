@@ -1,0 +1,32 @@
+### Participants endpoints
+
+# Récupérer les participants d'un cours spécifique
+GET http://localhost:3000/participants/1
+
+### Inscrire un utilisateur à un cours
+POST http://localhost:3000/participants/inscrire
+Content-Type: application/json
+
+{
+  "cours_id": 1,
+  "utilisateur_id": 2
+}
+
+### Désinscrire un utilisateur d'un cours
+DELETE http://localhost:3000/participants/desinscrire
+Content-Type: application/json
+
+{
+  "cours_id": 1,
+  "utilisateur_id": 2
+}
+
+### Marquer la présence d'un participant
+PATCH http://localhost:3000/participants/presence
+Content-Type: application/json
+
+{
+  "cours_id": 1,
+  "utilisateur_id": 2,
+  "present": true
+}

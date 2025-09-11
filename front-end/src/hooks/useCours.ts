@@ -13,6 +13,18 @@ export const useCoursPlanning = () => {
   });
 };
 
+// Hook pour récupérer les jours de cours (planning)
+export const useJoursDeCours = () => {
+  return useQuery({
+    queryKey: ['joursDeCours'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl('cours/informations/planning'));
+      if (!response.ok) throw new Error('Erreur lors de la récupération des jours de cours');
+      return response.json();
+    }
+  });
+};
+
 // Hook pour récupérer tous les cours
 export const useCours = () => {
   return useQuery({

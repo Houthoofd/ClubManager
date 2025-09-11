@@ -1,0 +1,55 @@
+### Informations endpoints
+
+# Récupérer les informations générales du club
+GET http://localhost:3000/informations
+
+### Récupérer le planning des cours
+GET http://localhost:3000/informations/planning
+
+### Récupérer les actualités du club
+GET http://localhost:3000/informations/actualites
+
+### Ajouter une nouvelle actualité
+POST http://localhost:3000/informations/actualites/ajouterons endpoints
+
+# Récupérer les informations générales du club
+GET http://localhost:3000/api/informations
+
+### Récupérer le planning des cours
+GET http://localhost:3000/informations/planning
+
+### Récupérer les actualités du club
+GET http://localhost:3000/api/informations/actualites
+
+### Ajouter une nouvelle actualité
+POST http://localhost:3000/api/informations/actualites/ajouter
+Content-Type: application/json
+
+{
+  "titre": "Nouvelle session de cours",
+  "contenu": "Nous ouvrons une nouvelle session de cours de JJB pour débutants",
+  "date_publication": "2024-01-15",
+  "auteur_id": 1
+}
+
+### Modifier une actualité
+PUT http://localhost:3000/informations/actualites/1
+Content-Type: application/json
+
+{
+  "titre": "Session de cours mise à jour",
+  "contenu": "La nouvelle session de JJB aura lieu le mercredi",
+  "date_publication": "2024-01-15"
+}
+
+### Supprimer une actualité
+DELETE http://localhost:3000/informations/actualites/1
+
+### Récupérer les horaires d'ouverture
+GET http://localhost:3000/informations/horaires
+
+### Récupérer les tarifs
+GET http://localhost:3000/informations/tarifs
+
+
+
