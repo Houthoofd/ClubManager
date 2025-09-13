@@ -85,47 +85,56 @@ export const useAjouterCoursRecurrent = () => {
 // Hook pour supprimer un cours récurrent par jour
 export const useSupprimerCoursRecurrent = () => {
   const queryClient = useQueryClient();
+  
   return useMutation({
     mutationFn: async (jourSemaine: string) => {
       const response = await fetch(apiUrl('cours/supprimer'), {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jourSemaine })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jourSemaine }),
       });
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erreur lors de la suppression du cours récurrent');
+        throw new Error('Erreur lors de la suppression du cours');
       }
+
       return response.json();
     },
     onSuccess: () => {
+      // Invalide les queries pour forcer le rechargement des données
       queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+    },
   });
 };
 
 // Hook pour retirer un ou plusieurs professeurs d'un cours récurrent
 export const useRetirerProfesseursDuCours = () => {
   const queryClient = useQueryClient();
+  
   return useMutation({
-    mutationFn: async ({ professeursNoms, jour }: { professeursNoms: string[]; jour: string }) => {
+    mutationFn: async ({ professeursNoms, jour }: { professeursNoms: string[], jour: string }) => {
       const response = await fetch(apiUrl('cours/retirer-professeur'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ professeursNoms, jour })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ professeursNoms, jour }),
       });
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erreur lors du retrait des professeurs du cours');
+        throw new Error('Erreur lors du retrait des professeurs');
       }
+
       return response.json();
     },
     onSuccess: () => {
-      // Invalide les queries pour rafraîchir les données
+      // Invalide les queries pour forcer le rechargement des données
       queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
-      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+    },
   });
 };
 

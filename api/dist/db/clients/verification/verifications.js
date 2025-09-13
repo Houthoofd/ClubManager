@@ -99,10 +99,9 @@ export class Verifiation {
             });
         });
     }
-    // Vérifie si un cours existe déjà dans le planning (jour, heure, type)
-    async checkCoursPlanning(jour, heure_debut, heure_fin, type_cours) {
+    // Vérifie si un cours existe déjà dans le planning (jour, heure) 
+    async checkCoursPlanning(jour, heure_debut, heure_fin, type_cours, options) {
         const mysqlConnector = new MysqlConnector();
-        // Normalise le jour pour gérer les majuscules/accents
         const normalizeString = (str) => str
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
@@ -112,21 +111,43 @@ export class Verifiation {
             lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6, dimanche: 7
         };
         const jourNum = joursDeSemaine[normalizeString(jour)];
-        const sql = `
-      SELECT id FROM cours_recurrent
+        // Si type_cours est 'ANY' ou vide, on ignore le type dans la vérification
+        const ignoreType = !type_cours || type_cours === 'ANY';
+        let sql = `
+      SELECT id, type_cours FROM cours_recurrent
       WHERE jour_semaine = ?
-        AND heure_debut = ?
-        AND heure_fin = ?
-        AND type_cours = ?
-      LIMIT 1
+        AND (
+          (heure_debut <= ? AND heure_fin > ?) OR
+          (heure_debut < ? AND heure_fin >= ?) OR
+          (heure_debut >= ? AND heure_fin <= ?)
+        )
     `;
+        let params = [jourNum, heure_debut, heure_debut, heure_fin, heure_fin, heure_debut, heure_fin];
+        // Exclut le cours original si en mode modification
+        if (options?.excludeOriginal && options.originalJour && options.originalType && options.originalHeureDebut && options.originalHeureFin) {
+            const originalJourNum = joursDeSemaine[normalizeString(options.originalJour)];
+            const originalHeureDebut = options.originalHeureDebut.length === 5 ? options.originalHeureDebut + ':00' : options.originalHeureDebut;
+            const originalHeureFin = options.originalHeureFin.length === 5 ? options.originalHeureFin + ':00' : options.originalHeureFin;
+            sql += ` AND NOT (jour_semaine = ? AND type_cours = ? AND heure_debut = ? AND heure_fin = ?)`;
+            params.push(originalJourNum, options.originalType, originalHeureDebut, originalHeureFin);
+        }
+        // Ajoute la condition du type seulement si nécessaire
+        if (!ignoreType) {
+            sql += ` AND type_cours = ?`;
+            params.push(type_cours);
+        }
+        sql += ` LIMIT 1`;
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, [jourNum, heure_debut, heure_fin, type_cours], (error, results) => {
+            mysqlConnector.query(sql, params, (error, results) => {
                 mysqlConnector.close();
                 if (error)
                     return reject(error);
                 if (results.length > 0) {
-                    resolve({ exists: true, message: "Ce créneau de cours existe déjà dans le planning." });
+                    const coursExistant = results[0];
+                    resolve({
+                        exists: true,
+                        message: `Un cours ${coursExistant.type_cours} est déjà programmé à ce créneau horaire.`
+                    });
                 }
                 else {
                     resolve({ exists: false, message: "Ce créneau est disponible." });

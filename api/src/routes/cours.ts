@@ -233,23 +233,44 @@ router.get('/informations/planning', async (req: any, res: any) => {
   }
 });
 
-router.post('/ajouter', async (req, res) => {
+router.post('/ajouter', async (req:any, res:any) => {
   const data = req.body;
   console.log("Données reçues pour ajout de cours :", data);
 
   try {
     const client = new Cours();
 
+    // Mapping des jours pour convertir le nom en jour_semaine
+    const joursDeSemaine: { [key: string]: string } = {
+      'Lundi': 'lundi',
+      'Mardi': 'mardi', 
+      'Mercredi': 'mercredi',
+      'Jeudi': 'jeudi',
+      'Vendredi': 'vendredi',
+      'Samedi': 'samedi',
+      'Dimanche': 'dimanche'
+    };
+
+    // Convertit le jour reçu (ex: "Vendredi") en format attendu par la procédure (ex: "vendredi")
+    const jourNormalise = joursDeSemaine[data.jour_semaine];
+    if (!jourNormalise) {
+      return res.status(400).json({ message: `Jour invalide: ${data.jour_semaine}` });
+    }
+
+    console.log("Jour normalisé:", jourNormalise);
+
     // On prépare l'objet AjoutCours pour le backend
     const ajoutCours: AjoutCours = {
       nom: data.nom,
       type_cours: data.type_cours,
-      jour_semaine: data.jour, // le backend gère la conversion
+      jour_semaine: jourNormalise, // Utilise le jour normalisé
       heure_debut: data.heure_debut,
       heure_fin: data.heure_fin,
       // On transmet les noms des professeurs (nom complet)
       professeurs: Array.isArray(data.professeurs) ? data.professeurs : []
     };
+
+    console.log("Objet ajoutCours envoyé:", ajoutCours);
 
     await client.ajouterCoursRecurrentAvecProfesseurs(ajoutCours);
 
@@ -312,6 +333,7 @@ router.post('/retirer-professeur', async (req: any, res: any) => {
   }
 });
 
+
 // Endpoint pour modifier un cours récurrent
 router.patch('/modifier', async (req: any, res: any) => {
   try {
@@ -321,27 +343,160 @@ router.patch('/modifier', async (req: any, res: any) => {
       jour,
       heure_debut,
       heure_fin,
-      professeurs
+      professeurs,
+      jour_original,
+      type_cours_original,
+      heure_debut_original,
+      heure_fin_original
     } = req.body;
 
-    // Vérifie qu'au moins un champ est présent
-    if (!nom && !type_cours && !jour && !heure_debut && !heure_fin && !professeurs) {
-      return res.status(400).json({ message: "Au moins un champ à modifier doit être fourni." });
-    }
+    console.log("Données reçues pour modification :", req.body);
 
-    const client = new Cours();
-
-    const modifCours = {
-      ...(nom !== undefined && { nom }),
-      ...(type_cours !== undefined && { type_cours }),
-      ...(jour !== undefined && { jour_semaine: jour }),
-      ...(heure_debut !== undefined && { heure_debut }),
-      ...(heure_fin !== undefined && { heure_fin }),
-      ...(professeurs !== undefined && { professeurs: Array.isArray(professeurs) ? professeurs : [] })
+    const mysqlConnector = new (await import('../db/connector/mysqlconnector.js')).default();
+    
+    // Mapping des jours vers les numéros
+    const joursVersNumero: { [key: string]: number } = {
+      'lundi': 1, 'mardi': 2, 'mercredi': 3, 'jeudi': 4, 'vendredi': 5, 'samedi': 6, 'dimanche': 7
+    };
+    
+    const joursDeSemaine: { [key: string]: string } = {
+      'Lundi': 'lundi', 'Mardi': 'mardi', 'Mercredi': 'mercredi', 'Jeudi': 'jeudi', 
+      'Vendredi': 'vendredi', 'Samedi': 'samedi', 'Dimanche': 'dimanche'
     };
 
-    // Retourne le résultat de type ConfirmationResult
-    const result = await client.modifierCoursRecurrentAvecProfesseurs(modifCours as any);
+    const jourOriginalNormalise = joursDeSemaine[jour_original] || jour_original.toLowerCase();
+    const jourOriginalNum = joursVersNumero[jourOriginalNormalise];
+
+    // Trouve l'ID du cours récurrent - utilise les valeurs ACTUELLES dans la base
+    const findSql = `SELECT id FROM cours_recurrent WHERE type_cours = ? AND jour_semaine = ? LIMIT 1`;
+    
+    const coursRecurrentId = await new Promise<number>((resolve, reject) => {
+      mysqlConnector.query(findSql, [type_cours_original, jourOriginalNum], (error: any, results: any) => {
+        if (error) {
+          reject(error);
+        } else if (results.length === 0) {
+          reject(new Error('Cours récurrent non trouvé'));
+        } else {
+          resolve(results[0].id);
+        }
+      });
+    });
+
+    console.log("ID du cours récurrent trouvé:", coursRecurrentId);
+
+    // Prépare les champs à modifier
+    const nouveauJourNormalise = jour ? (joursDeSemaine[jour] || jour.toLowerCase()) : undefined;
+    const nouveauJourNum = nouveauJourNormalise ? joursVersNumero[nouveauJourNormalise] : undefined;
+    const nouvelleHeureDebut = heure_debut ? (heure_debut.length === 5 ? heure_debut + ':00' : heure_debut) : undefined;
+    const nouvelleHeureFin = heure_fin ? (heure_fin.length === 5 ? heure_fin + ':00' : heure_fin) : undefined;
+
+    // Modification directe dans la table cours_recurrent
+    const updateFields: string[] = [];
+    const updateValues: any[] = [];
+
+    if (type_cours !== undefined && type_cours !== type_cours_original) {
+      updateFields.push('type_cours = ?');
+      updateValues.push(type_cours);
+    }
+    if (nouveauJourNum !== undefined && nouveauJourNum !== jourOriginalNum) {
+      updateFields.push('jour_semaine = ?');
+      updateValues.push(nouveauJourNum);
+    }
+    if (nouvelleHeureDebut !== undefined) {
+      const currentHeureDebut = heure_debut_original.length === 5 ? heure_debut_original + ':00' : heure_debut_original;
+      if (nouvelleHeureDebut !== currentHeureDebut) {
+        updateFields.push('heure_debut = ?');
+        updateValues.push(nouvelleHeureDebut);
+      }
+    }
+    if (nouvelleHeureFin !== undefined) {
+      const currentHeureFin = heure_fin_original.length === 5 ? heure_fin_original + ':00' : heure_fin_original;
+      if (nouvelleHeureFin !== currentHeureFin) {
+        updateFields.push('heure_fin = ?');
+        updateValues.push(nouvelleHeureFin);
+      }
+    }
+
+    if (updateFields.length > 0) {
+      const updateSql = `UPDATE cours_recurrent SET ${updateFields.join(', ')} WHERE id = ?`;
+      updateValues.push(coursRecurrentId);
+
+      await new Promise<void>((resolve, reject) => {
+        mysqlConnector.query(updateSql, updateValues, (error: any) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+      console.log("Cours récurrent modifié avec succès");
+    }
+    
+    // Gestion des professeurs si modifiés
+    if (professeurs !== undefined && Array.isArray(professeurs)) {
+      console.log("Gestion des professeurs:", professeurs);
+      
+      // Supprime d'abord toutes les associations professeurs existantes pour ce cours
+      const deleteProfsSql = `DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ?`;
+      await new Promise<void>((resolve, reject) => {
+        mysqlConnector.query(deleteProfsSql, [coursRecurrentId], (error: any) => {
+          if (error) {
+            console.error("Erreur lors de la suppression des professeurs:", error);
+            reject(error);
+          } else {
+            console.log("Anciens professeurs supprimés");
+            resolve();
+          }
+        });
+      });
+
+      // Ajoute les nouveaux professeurs
+      if (professeurs.length > 0) {
+        // Récupère les IDs des professeurs par leurs noms
+        const profIds: number[] = [];
+        for (const profNom of professeurs) {
+          const getProfIdSql = `
+            SELECT id FROM professeurs 
+            WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = ? AND status_id = 5
+          `;
+          
+          const profId = await new Promise<number | null>((resolve, reject) => {
+            mysqlConnector.query(getProfIdSql, [profNom.trim()], (error: any, results: any) => {
+              if (error) {
+                reject(error);
+              } else if (results.length > 0) {
+                resolve(results[0].id);
+              } else {
+                console.warn(`Professeur non trouvé: ${profNom}`);
+                resolve(null);
+              }
+            });
+          });
+          
+          if (profId) {
+            profIds.push(profId);
+          }
+        }
+
+        // Insère les nouvelles associations
+        for (const profId of profIds) {
+          const insertProfSql = `INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id) VALUES (?, ?)`;
+          await new Promise<void>((resolve, reject) => {
+            mysqlConnector.query(insertProfSql, [coursRecurrentId, profId], (error: any) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
+          });
+        }
+        console.log(`${profIds.length} professeurs associés au cours`);
+      }
+    }
+
+    mysqlConnector.close();
 
     res.status(200).json({ isConfirm: true, message: "Cours modifié avec succès." });
   } catch (error) {

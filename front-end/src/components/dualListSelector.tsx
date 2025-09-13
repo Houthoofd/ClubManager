@@ -57,7 +57,7 @@ function DualListSelectorGeneric<T>({
     const availableItemsChanged = JSON.stringify(prevAvailableItems.current) !== JSON.stringify(availableItems);
     const assignedItemsChanged = JSON.stringify(prevAssignedItems.current) !== JSON.stringify(assignedItems);
 
-    if (availableItemsChanged || assignedItemsChanged) {
+    if (availableItemsChanged || assignedItemsChanged || resetKey !== 0) {
       const assignedKeys = new Set(assignedItems.map(item => getKey(item)));
 
       const newAvailableOptions = availableItems
@@ -83,23 +83,7 @@ function DualListSelectorGeneric<T>({
       prevAvailableItems.current = availableItems;
       prevAssignedItems.current = assignedItems;
     }
-
-    // Réinitialise les options si les items sont vides (cas de reset du formulaire)
-    if (availableItems.length === 0 && assignedItems.length === 0) {
-      setAvailableOptions([]);
-      setChosenOptions([]);
-      prevAvailableItems.current = [];
-      prevAssignedItems.current = [];
-    }
-  }, [availableItems, assignedItems, getText, getKey]);
-
-  // Ajoute un effet pour reset quand resetKey change
-  useEffect(() => {
-    setAvailableOptions([]);
-    setChosenOptions([]);
-    prevAvailableItems.current = [];
-    prevAssignedItems.current = [];
-  }, [resetKey]);
+  }, [availableItems, assignedItems, getText, getKey, resetKey]);
 
   const moveSelected = (fromAvailable: boolean) => {
     const source = fromAvailable ? [...availableOptions] : [...chosenOptions];

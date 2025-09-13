@@ -23,3 +23,40 @@ export function useCheckArticleByNom() {
     return !!data.exists;
   };
 }
+
+// Vérifie si un cours récurrent existe déjà dans le planning (retourne true/false)
+export function useCheckCoursPlanning() {
+  return async (
+    jour: string, 
+    heure_debut: string, 
+    heure_fin: string, 
+    type_cours: string = '',
+    options?: {
+      excludeOriginal?: boolean;
+      originalJour?: string;
+      originalType?: string;
+      originalHeureDebut?: string;
+      originalHeureFin?: string;
+    }
+  ): Promise<boolean> => {
+    if (!jour || !heure_debut || !heure_fin) return false;
+    
+    const res = await fetch(apiUrl('verification/planning'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        jour,
+        heure_debut,
+        heure_fin,
+        type_cours: type_cours || 'ANY',
+        ...options
+      })
+    });
+    
+    if (!res.ok) throw new Error('Erreur API');
+    const data = await res.json();
+    return !!data.exists;
+  };
+}

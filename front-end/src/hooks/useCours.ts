@@ -37,49 +37,59 @@ export const useCours = () => {
   });
 };
 
-// Hook pour ajouter un cours
-export const useAjouterCours = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (nouveauCours: any) => {
-      const response = await fetch(apiUrl('cours/ajouter'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(nouveauCours)
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Erreur lors de l'ajout du cours");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
-    }
-  });
-};
-
 // Hook pour modifier un cours
 export const useModifierCours = () => {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: async (modifCours: any) => {
+    mutationFn: async (coursData: any) => {
       const response = await fetch(apiUrl('cours/modifier'), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modifCours)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(coursData),
       });
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Erreur lors de la modification du cours");
+        throw new Error('Erreur lors de la modification du cours');
       }
+
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
-    }
+      // Invalide les queries pour forcer le rechargement des données
+      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+    },
+  });
+};
+
+// Hook pour ajouter un cours
+export const useAjouterCours = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (coursData: any) => {
+      const response = await fetch(apiUrl('cours/ajouter'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(coursData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'ajout du cours');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalide les queries pour forcer le rechargement des données
+      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+    },
   });
 };
 

@@ -174,141 +174,59 @@ export class Cours {
   ajouterCoursRecurrentAvecProfesseurs(data: AjoutCours): Promise<ConfirmationResult> {
     return new Promise<ConfirmationResult>(async (resolve, reject) => {
       const mysqlConnector = new MysqlConnector();
+      try {
+        console.log("Données reçues complètes:", data);
 
-      const joursDeSemaine: { [key: string]: number } = {
-        lundi: 1,
-        mardi: 2,
-        mercredi: 3,
-        jeudi: 4,
-        vendredi: 5,
-        samedi: 6,
-        dimanche: 7
-      };
-
-      // Correction: accepte aussi les jours avec majuscule
-      let jourSemaineRaw = data.jour_semaine;
-      if (!jourSemaineRaw || typeof jourSemaineRaw !== 'string') {
-        jourSemaineRaw = (data as any).jour;
-      }
-      if (!jourSemaineRaw || typeof jourSemaineRaw !== 'string') {
-        reject("Jour de la semaine invalide");
-        return;
-      }
-      const jourSemaineKey = jourSemaineRaw.toLowerCase().trim();
-      const jourSemaine = joursDeSemaine[jourSemaineKey];
-      if (!jourSemaine) {
-        reject("Jour de la semaine invalide");
-        return;
-      }
-
-      const start_date = new Date('2024-01-01');
-      const dayOfWeek = start_date.getDay();
-      const daysUntilTargetDay = (jourSemaine - dayOfWeek + 7) % 7;
-      start_date.setDate(start_date.getDate() + daysUntilTargetDay);
-
-      const end_date = new Date(start_date);
-      end_date.setFullYear(start_date.getFullYear() + 1);
-      end_date.setDate(31);
-      const formattedEndDate = end_date.toISOString().split('T')[0];
-
-      const insertRecurrentSql = `
-        INSERT INTO cours_recurrent (type_cours, jour_semaine, heure_debut, heure_fin)
-        VALUES (?, ?, ?, ?)
-      `;
-
-      mysqlConnector.query(
-        insertRecurrentSql,
-        [data.type_cours, jourSemaine, data.heure_debut, data.heure_fin],
-        async (error, results) => {
-          if (error) {
-            mysqlConnector.close();
-            reject(error);
-          } else {
-            const coursRecurrentId = results.insertId;
-
-            mysqlConnector.query(`SET @row := -1`, [], async (setVarError) => {
-              if (setVarError) {
-                mysqlConnector.close();
-                reject(setVarError);
-              } else {
-                const insertCoursSql = `
-                  INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin, cours_recurrent_id)
-                  SELECT 
-                    DATE_ADD(?, INTERVAL (7 * n) DAY) AS date_cours, 
-                    ?, 
-                    ?, 
-                    ?, 
-                    ?
-                  FROM 
-                    (SELECT @row := @row + 1 AS n FROM seq_0_to_52) t
-                  WHERE 
-                    DATE_ADD(?, INTERVAL (7 * n) DAY) BETWEEN ? AND ?
-                `;
-
-                const params = [
-                  start_date.toISOString().split('T')[0], data.type_cours, data.heure_debut, data.heure_fin, coursRecurrentId,
-                  start_date.toISOString().split('T')[0], start_date.toISOString().split('T')[0], formattedEndDate
-                ];
-
-                mysqlConnector.query(insertCoursSql, params, async (insertError, insertResults) => {
-                  if (insertError) {
-                    mysqlConnector.close();
-                    reject(insertError);
-                  } else {
-                    // 🔥 Gestion des professeurs (noms complets)
-                    const professeursNoms = data.professeurs;
-                    if (!professeursNoms || professeursNoms.length === 0) {
-                      mysqlConnector.close();
-                      resolve({ isConfirm: true, message: "Cours récurrent + cours générés (sans professeurs) ajoutés avec succès" });
-                    } else {
-                      // Récupère les IDs des professeurs à partir des noms complets
-                      const placeholders = professeursNoms.map(() => '?').join(',');
-                      const getProfIdsSql = `
-                        SELECT id FROM professeurs
-                        WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) IN (${placeholders})
-                      `;
-                      mysqlConnector.query(getProfIdsSql, professeursNoms, (getProfError, profRows) => {
-                        if (getProfError) {
-                          mysqlConnector.close();
-                          reject(getProfError);
-                        } else {
-                          const professeurIds = profRows.map((row: any) => row.id);
-                          if (professeurIds.length === 0) {
-                            mysqlConnector.close();
-                            resolve({ isConfirm: true, message: "Cours ajouté, mais aucun professeur correspondant trouvé." });
-                          } else {
-                            const values = professeurIds.map(() => '(?, ?)').join(', ');
-                            const profParams: any[] = [];
-                            professeurIds.forEach((profId: number) => {
-                              profParams.push(coursRecurrentId, profId);
-                            });
-
-                            const insertProfSql = `
-                              INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id)
-                              VALUES ${values}
-                            `;
-
-                            mysqlConnector.query(insertProfSql, profParams, (profError, profResults) => {
-                              mysqlConnector.close();
-                              if (profError) {
-                                reject({ isConfirm: false, message: "Erreur lors de l'association des professeurs." });
-                              } else {
-                                resolve({ isConfirm: true, message: "Cours récurrent + cours générés + professeurs associés avec succès" });
-                              }
-                            });
-                          }
-                        }
-                      });
-                    }
-                  }
-                });
-              }
-            });
-          }
+        // Vérification que jour_semaine existe
+        if (!data.jour_semaine) {
+          throw new Error(`jour_semaine manquant ou invalide: ${data.jour_semaine}`);
         }
-      );
+
+        const result = await new Promise<any>((res, rej) => {
+          const params = [
+            data.type_cours,
+            data.jour_semaine,
+            data.heure_debut,
+            data.heure_fin,
+            JSON.stringify(data.professeurs)
+          ];
+
+          console.log("Paramètres envoyés à la procédure:", params);
+
+          mysqlConnector.query(
+            'CALL ajouter_cours_recurrent_avec_professeurs(?, ?, ?, ?, ?)',
+            params,
+            (error, results) => {
+              if (error) {
+                console.error("Erreur SQL:", error);
+                rej(error);
+              } else {
+                res(results);
+              }
+            }
+          );
+        });
+        await mysqlConnector.close();
+        if (result && result.length > 0 && result[0].length > 0) {
+          resolve({
+            isConfirm: true,
+            message: result[0][0].message
+          });
+        } else {
+          resolve({
+            isConfirm: true,
+            message: "Cours récurrent ajouté avec succès"
+          });
+        }
+      } catch (error) {
+        await mysqlConnector.close();
+        reject(error);
+      }
     });
   }
+
+
+
 
   supprimerJourDeCours(joursSemaine: number): Promise<ConfirmationResult> {
     return new Promise<ConfirmationResult>((resolve, reject) => {
@@ -628,38 +546,78 @@ async supprimerProfesseursParNomEtJour(professeursNoms: string[], jour: string):
   obtenirTousLesCours(): Promise<CoursData[]> {
     return new Promise((resolve, reject) => {
       const mysqlConnector = new MysqlConnector();
-
       const sql = `
-        SELECT *
-        FROM cours
-        WHERE date_cours >= CURRENT_DATE
-        ORDER BY date_cours ASC
+        SELECT
+          c.id,
+          DATE_FORMAT(c.date_cours, '%Y-%m-%d') AS date_cours,
+          DAYNAME(c.date_cours) AS jour_cours,
+          (
+            SELECT CASE cr.jour_semaine
+              WHEN 1 THEN 'Lundi'
+              WHEN 2 THEN 'Mardi'
+              WHEN 3 THEN 'Mercredi'
+              WHEN 4 THEN 'Jeudi'
+              WHEN 5 THEN 'Vendredi'
+              WHEN 6 THEN 'Samedi'
+              WHEN 7 THEN 'Dimanche'
+            END
+            FROM cours_recurrent cr
+            WHERE cr.id = c.cours_recurrent_id
+          ) AS jour_semaine,
+          c.type_cours,
+          c.heure_debut,
+          c.heure_fin,
+          (
+            SELECT GROUP_CONCAT(CONCAT(p.id, ':', p.nom, ':', p.prenom) SEPARATOR ',')
+            FROM cours_recurrent_professeur crp
+            JOIN professeurs p ON crp.professeur_id = p.id
+            WHERE crp.cours_recurrent_id = c.cours_recurrent_id
+          ) AS professeurs
+        FROM cours c
+        JOIN cours_recurrent cr ON cr.id = c.cours_recurrent_id
+        WHERE c.date_cours >= CURRENT_DATE
+        ORDER BY c.date_cours ASC
         LIMIT 12;
       `;
-
       console.log("Exécution de la requête pour obtenir tous les cours à venir.");
-
-      mysqlConnector.query(sql, [],(error, results: any[]) => {
+      mysqlConnector.query(sql, [], (error, results: any[]) => {
         if (error) {
           console.error('Erreur lors de la récupération de tous les cours : ' + error.message);
+          mysqlConnector.close();
           reject(error);
         } else {
-          const cours: CoursData[] = results.map(row => ({
-            id: row.id,
-            date_cours: row.date_cours,
-            type_cours: row.type_cours,
-            heure_debut: row.heure_debut,
-            heure_fin: row.heure_fin,
-          }));
+          const cours: CoursData[] = results.map(row => {
+            let professeurs: Array<{ id: number; nom: string; prenom: string }> = [];
 
+            if (row.professeurs) {
+              professeurs = row.professeurs.split(',').map((profStr: string) => {
+                const [id, nom, prenom] = profStr.split(':');
+                return {
+                  id: parseInt(id),
+                  nom: nom || '',
+                  prenom: prenom || ''
+                };
+              });
+            }
+            return {
+              id: row.id,
+              date_cours: row.date_cours,
+              jour_cours: row.jour_cours, // Jour réel de la date du cours
+              jour_semaine: row.jour_semaine, // Jour de la semaine du cours récurrent
+              type_cours: row.type_cours,
+              heure_debut: row.heure_debut,
+              heure_fin: row.heure_fin,
+              professeurs
+            };
+          });
           console.log('Cours à venir récupérés avec succès :', cours);
+          mysqlConnector.close();
           resolve(cours);
         }
-
-        mysqlConnector.close();
       });
     });
   }
+
 
   obtenirUtilisateursParticipantsParCours(coursId: number): Promise<UtilisateursParCours> {
     return new Promise<UtilisateursParCours>((resolve, reject) => {

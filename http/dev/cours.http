@@ -6,7 +6,7 @@ GET http://localhost:3000/cours
 ### Ajouter un cours récurrent avec professeurs
 POST http://localhost:3000/cours/ajouterrs endpoints
 
-# Récupérer tous les cours
+### Récupérer tous les cours
 GET http://localhost:3000/cours
 
 ### Ajouter un cours récurrent avec professeurs
