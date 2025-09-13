@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModalWithHelp } from '../modal/modalwithhelp';
+import { ModalWithHelp } from './modalwithhelp';
 
 interface ModalConfirmationProps {
   isOpen: boolean;

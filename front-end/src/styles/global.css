@@ -1,0 +1,115 @@
+/* Masquer les barres de défilement */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+.main-content-scrollable {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.main-content-scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+/* Styles généraux pour les cartes */
+.modern-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.modern-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+/* Styles pour les gradients */
+.gradient-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  margin-bottom: 2rem;
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.gradient-toolbar {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #0056b3;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+}
+
+/* Classes pour les headers avec gradient */
+.gradient-header-title {
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
+.gradient-header-subtitle {
+  color: #6c757d;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Classes pour les titres de toolbar */
+.gradient-toolbar .gradient-header-title {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.gradient-toolbar .gradient-header-subtitle {
+  color: rgba(255,255,255,0.9);
+  font-size: 1.1rem;
+  margin: 0.5rem 0 0 0;
+}
+
+/* Classes pour les containers flexibles */
+.flex-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.flex-buttons-end {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Classes pour le spacing */
+.mb-1 {
+  margin-bottom: 1rem;
+}
+
+.mb-2 {
+  margin-bottom: 2rem;
+}
+
+.p-1 {
+  padding: 1rem;
+}
+
+.p-2 {
+  padding: 2rem;
+}
+
+/* Classe pour les onglets modernisés */
+.modern-tabs {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}

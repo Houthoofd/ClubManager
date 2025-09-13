@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { Tabs, Tab, TabTitleText, Spinner } from '@patternfly/react-core';
+import {
+  Tabs,
+  Tab,
+  TabTitleText,
+  Spinner,
+  PageSection,
+  Title,
+} from '@patternfly/react-core';
 import { useAjouterCours, useProfesseurs, useJoursDeCours, useModifierCours } from '../../hooks/useCours';
 import { useSupprimerCoursRecurrent, useRetirerProfesseursDuCours } from '../../hooks/useProfesseurs';
 import { useCheckCoursPlanning } from '../../hooks/useVerification';
-import FormulaireCours from '../../components/cours/FormulaireCours';
-import ListeCours from '../../components/cours/ListeCours';
-import ModalsCours from '../../components/cours/ModalsCours';
+import CoursForm from '../../components/cours/CoursForm';
+import CoursList from '../../components/cours/CoursList';
+import CoursModals from '../../components/cours/CoursModals';
 
 const AjouterCours = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
@@ -289,7 +296,7 @@ const AjouterCours = () => {
   const annulerDissociation = () => {
     setIsModalOpen(false);
     setProfesseurADissocier(null);
-    setSuccessMessage(null);
+    setSuccessMessage(null); // Réinitialiser le message de succès
   };
 
   const ouvrirModalSuppression = (cours: any) => {
@@ -330,14 +337,43 @@ const AjouterCours = () => {
   };
 
   if (loadingProfesseurs || loadingPlanning) {
-    return <Spinner size="xl" />;
+    return (
+      <PageSection>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '50vh' 
+        }}>
+          <Spinner size="xl" />
+        </div>
+      </PageSection>
+    );
   }
 
   return (
-    <>
-      <Tabs activeKey={activeTabKey} onSelect={(_e, key) => setActiveTabKey(key as number)}>
-        <Tab eventKey={0} title={<TabTitleText>Ajouter un cours</TabTitleText>}>
-          <FormulaireCours
+    <div className="cours-container">
+      {/* Header */}
+      <div className="cours-header">
+        <Title headingLevel="h1" size="2xl" className="cours-header-title">
+          Gestion des cours
+        </Title>
+        <p className="cours-header-subtitle">
+          Planifiez et gérez les cours du club
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <Tabs 
+        activeKey={activeTabKey} 
+        onSelect={(_e, key) => setActiveTabKey(key as number)}
+        className="modern-tabs"
+      >
+        <Tab 
+          eventKey={0} 
+          title={<TabTitleText>Ajouter un cours</TabTitleText>}
+        >
+          <CoursForm
             nom={nom} setNom={setNom}
             selectedType={selectedType} setSelectedType={setSelectedType}
             jour={jour} setJour={setJour}
@@ -348,8 +384,11 @@ const AjouterCours = () => {
             onSubmit={handleSubmit} onAnnulerModification={resetFormulaire}
           />
         </Tab>
-        <Tab eventKey={1} title={<TabTitleText>Voir les cours</TabTitleText>}>
-          <ListeCours
+        <Tab 
+          eventKey={1} 
+          title={<TabTitleText>Voir les cours</TabTitleText>}
+        >
+          <CoursList
             cours={planningCours}
             onModifierCours={ouvrirModalModification}
             onSupprimerCours={ouvrirModalSuppression}
@@ -358,18 +397,27 @@ const AjouterCours = () => {
         </Tab>
       </Tabs>
       
-      <ModalsCours
-        isModalOpen={isModalOpen} successMessage={successMessage} professeurADissocier={professeurADissocier}
-        onAnnulerDissociation={annulerDissociation} onConfirmerDissociation={confirmerDissociation}
-        showSupprimerModal={showSupprimerModal} coursASupprimer={coursASupprimer}
-        onAnnulerSuppression={annulerSuppression} onConfirmerSuppression={confirmerSuppression}
-        showAjoutModal={showAjoutModal} ajoutSuccess={ajoutSuccess} ajoutMessage={ajoutMessage}
+      <CoursModals
+        isModalOpen={isModalOpen} 
+        successMessage={successMessage} 
+        professeurADissocier={professeurADissocier}
+        onAnnulerDissociation={annulerDissociation} 
+        onConfirmerDissociation={confirmerDissociation}
+        showSupprimerModal={showSupprimerModal} 
+        coursASupprimer={coursASupprimer}
+        onAnnulerSuppression={annulerSuppression} 
+        onConfirmerSuppression={confirmerSuppression}
+        showAjoutModal={showAjoutModal} 
+        ajoutSuccess={ajoutSuccess} 
+        ajoutMessage={ajoutMessage}
         onFermerAjoutModal={fermerAjoutModal}
-        showConfirmModificationModal={showConfirmModificationModal} modificationsResume={modificationsResume}
-        originalCours={originalCours} onAnnulerConfirmationModification={annulerConfirmationModification}
+        showConfirmModificationModal={showConfirmModificationModal} 
+        modificationsResume={modificationsResume}
+        originalCours={originalCours} 
+        onAnnulerConfirmationModification={annulerConfirmationModification}
         onConfirmerModification={confirmerModification}
       />
-    </>
+    </div>
   );
 };
 

@@ -3,13 +3,15 @@ import settingsReducer from './reducers/settingsReducers';
 import notificationsReducer from './reducers/notificationsReducers';
 import navigationReducer from './reducers/navigationReducers';
 import messageReducer from './reducers/messageReducers';
+import panierReducer from './slices/panierSlice';
 
 const store = configureStore({
   reducer: {
     settings: settingsReducer,
     notifications: notificationsReducer,
     navigation: navigationReducer,
-    message: messageReducer
+    message: messageReducer,
+    panier: panierReducer,
   },
 });
 

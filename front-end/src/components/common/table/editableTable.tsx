@@ -24,7 +24,7 @@ import { Modal as PfModal, ModalBody, ModalFooter, ModalHeader } from '@patternf
 import { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { apiUrl } from '../../pages/apiUrl';
+import { apiUrl } from '../../../pages/apiUrl';
 
 interface EditableTableProps<T extends Record<string, unknown>> {
   data: T[];

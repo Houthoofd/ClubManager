@@ -83,62 +83,62 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
       <Nav aria-label="Primary navigation">
         <NavList>
           {/* Tableau de bord */}
-          <div style={sectionTitleStyle}>Tableau de bord</div>
+          <div className="sidebar-section-title">Tableau de bord</div>
           <NavItem itemId="dashboard" to="/pages/dashboard">
-            <TachometerAltIcon style={iconStyle} />
+            <TachometerAltIcon className="sidebar-icon" />
             Accueil
           </NavItem>
           <NavItem itemId="statistiques" to="/pages/statistiques">
-            <ClipboardCheckIcon style={iconStyle} />
+            <ClipboardCheckIcon className="sidebar-icon" />
             Statistiques avancées
           </NavItem>
-          <Divider />
+          <Divider className="sidebar-divider" />
 
           {/* Paiements */}
           {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
             <>
-              <div style={sectionTitleStyle}>Paiements</div>
+              <div className="sidebar-section-title">Paiements</div>
               <NavItem itemId="paiements" to="/pages/paiements">
-                <MoneyCheckAltIcon style={iconStyle} />
+                <MoneyCheckAltIcon className="sidebar-icon" />
                 Paiements
               </NavItem>
-              <Divider />
+              <Divider className="sidebar-divider" />
             </>
           )}
 
           {/* Gestion */}
           {(hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR])) && (
             <>
-              <div style={sectionTitleStyle}>Gestion</div>
+              <div className="sidebar-section-title">Gestion</div>
 
               {(hasRole(role, [ROLES.SUPER_ADMIN])) && (
                 <NavExpandable
-                  title={<span><UsersIcon style={iconStyle} /> Utilisateurs</span>}
+                  title={<span className="sidebar-nav-expandable-title"><UsersIcon className="sidebar-icon" /> Utilisateurs</span>}
                   itemID="users"
                 >
                   <NavItem to="/pages/utilisateurs/ajouter-utilisateur" itemId="ajouter-utilisateur">
-                    <PlusCircleIcon style={iconStyle} />
+                    <PlusCircleIcon className="sidebar-icon" />
                     Ajouter
                   </NavItem>
                 </NavExpandable>
               )}
 
               <NavExpandable
-                title={<span><BookIcon style={iconStyle} /> Cours</span>}
+                title={<span className="sidebar-nav-expandable-title"><BookIcon className="sidebar-icon" /> Cours</span>}
                 itemID="courses"
               >
                 <NavItem to="/pages/cours/inscription" data-item-id="inscription">
-                  <ClipboardCheckIcon style={iconStyle} />
+                  <ClipboardCheckIcon className="sidebar-icon" />
                   S'inscrire
                 </NavItem>
                 {hasRole(role, [ROLES.SUPER_ADMIN]) && (
                   <>
                     <NavItem to="/pages/cours/ajouter-professeur" itemId="ajouter-professeur">
-                      <GraduationCapIcon style={iconStyle} />
+                      <GraduationCapIcon className="sidebar-icon" />
                       Ajouter un professeur
                     </NavItem>
                     <NavItem to="/pages/cours/ajouter-cours" itemId="ajouter-cours">
-                      <EditIcon style={iconStyle} />
+                      <EditIcon className="sidebar-icon" />
                       Ajouter un cours
                     </NavItem>
                   </>
@@ -146,39 +146,39 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
               </NavExpandable>
 
               <NavExpandable
-                title={<span><StoreIcon style={iconStyle} /> Magasins</span>}
+                title={<span className="sidebar-nav-expandable-title"><StoreIcon className="sidebar-icon" /> Magasins</span>}
                 itemID="stores"
               >
                 <NavItem to="/pages/magasin/magasin" itemId="magasin">
-                  <StoreIcon style={iconStyle} />
+                  <StoreIcon className="sidebar-icon" />
                   Magasin
                 </NavItem>
                 {hasRole(role, [ROLES.SUPER_ADMIN]) && (
                   <>
                     <NavItem to="/pages/magasin/commandes" itemId="commandes">
-                      <PackageIcon style={iconStyle} />
+                      <PackageIcon className="sidebar-icon" />
                       Commandes
                     </NavItem>
                     <NavItem to="/pages/magasin/ajouter-article" itemId="ajouter-article">
-                      <ShoppingCartIcon style={iconStyle} />
+                      <ShoppingCartIcon className="sidebar-icon" />
                       Ajouter un article
                     </NavItem>
                   </>
                 )}
               </NavExpandable>
 
-              <Divider />
+              <Divider className="sidebar-divider" />
             </>
           )}
 
           {/* Paramètres */}
-          <div style={sectionTitleStyle}>Paramètres</div>
+          <div className="sidebar-section-title">Paramètres</div>
           <NavItem itemId="profile" to="/pages/compte">
-            <UserIcon style={iconStyle} />
+            <UserIcon className="sidebar-icon" />
             Compte
           </NavItem>
           <NavItem itemId="settings" to="/pages/settings">
-            <CogIcon style={iconStyle} />
+            <CogIcon className="sidebar-icon" />
             Paramètres
           </NavItem>
         </NavList>

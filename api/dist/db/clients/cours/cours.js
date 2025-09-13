@@ -144,7 +144,7 @@ export class Cours {
                         data.jour_semaine,
                         data.heure_debut,
                         data.heure_fin,
-                        JSON.stringify(data.professeurs)
+                        JSON.stringify(data.professeurs) // Remettre JSON.stringify car la procédure attend du JSON
                     ];
                     console.log("Paramètres envoyés à la procédure:", params);
                     mysqlConnector.query('CALL ajouter_cours_recurrent_avec_professeurs(?, ?, ?, ?, ?)', params, (error, results) => {

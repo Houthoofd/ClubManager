@@ -1,5 +1,5 @@
 import React from 'react';
-import ModalConfirmation from '../common/ModalConfirmation';
+import ModalConfirmation from '../common/modal/ModalConfirmation';
 
 interface ModalsCoursProps {
   // Modal dissociation

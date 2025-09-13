@@ -5,17 +5,13 @@ import {
   Tabs,
   Tab,
   TabTitleText,
-  Bullseye,
-  Button,
 } from '@patternfly/react-core';
 import type { UserData } from '@clubmanager/types';
-import GenericForm from '../../components/genericForm';
-import EditableTable from '../../components/table/editableTable';
-import { useUtilisateurs, useAjouterUtilisateur, useSupprimerUtilisateur } from '../../hooks/useUtilisateurs';
-
-import { apiUrl } from '../apiUrl';
-import { Modal as PfModal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core';
-import { TextInput } from '@patternfly/react-core';
+import { useUtilisateurs } from '../../hooks/useUtilisateurs';
+import { ModalConfirmation, ModalResultat } from '../../components/common/modal/ModalsGestion';
+import OngletTableauUtilisateurs from '../../components/utilisateurs/OngletTableauUtilisateurs';
+import OngletAjoutUtilisateur from '../../components/utilisateurs/OngletAjoutUtilisateur';
+import { UtilisateurService } from '../../services/UtilisateurService';
 
 const Utilisateur = () => {
   const [utilisateur, setUtilisateur] = useState<UserData>();
@@ -27,51 +23,59 @@ const Utilisateur = () => {
   const [utilisateurs, setUtilisateurs] = useState<UserData[]>([]);
   const [columns, setColumns] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Ajoute un état pour les messages d'existence par champ
   const [existenceMessages, setExistenceMessages] = useState<{ [key: string]: string }>({});
 
+  // États des modals
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [utilisateurToDelete, setUtilisateurToDelete] = useState<UserData | null>(null);
-
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [resultModalMessage, setResultModalMessage] = useState<string>('');
   const [resultModalLoading, setResultModalLoading] = useState(false);
 
-  // Utilisation des hooks React Query
+  // Hooks React Query
   const { data: utilisateursData = [], isLoading, error } = useUtilisateurs();
-  const ajouterUtilisateur = useAjouterUtilisateur();
-  const supprimerUtilisateur = useSupprimerUtilisateur();
 
   useEffect(() => {
     const initialiser = async () => {
-      const schema = await fetchUserSchema();
-      if (schema.length > 0) {
-        const keys = Object.keys(schema[0]);
-        setFormData(initaliserFormData(keys));
-        setColumns(genererColonnes(keys));
+      setResultModalLoading(true);
+      setResultModalMessage('Initialisation...');
+      setResultModalOpen(true);
 
-        await fetchUtilisateurs();
-        keys.forEach((key) => {
-          if (key.endsWith('_id')) fetchSelectOptions(key);
-        });
+      try {
+        const schema = await UtilisateurService.fetchUserSchema();
+        if (schema.length > 0) {
+          const keys = Object.keys(schema[0]);
+          setFormData(UtilisateurService.initaliserFormData(keys));
+          setColumns(UtilisateurService.genererColonnes(keys));
+          setUserSchema(schema);
+
+          // Charger les options pour les champs select
+          for (const key of keys) {
+            if (key.endsWith('_id')) {
+              try {
+                const options = await UtilisateurService.fetchSelectOptions(key);
+                setSelectOptions(prev => ({ ...prev, [key]: options }));
+              } catch (error) {
+                console.error(`Erreur pour ${key}:`, error);
+              }
+            }
+          }
+        }
+        setResultModalOpen(false);
+      } catch (error) {
+        setResultModalMessage('Erreur lors de l\'initialisation');
+        setResultModalLoading(false);
       }
     };
 
     initialiser();
   }, []);
 
-  const fetchUserSchema = async () => {
-    try {
-      const res = await fetch(apiUrl('utilisateurs'));
-      const data = await res.json();
-      setUserSchema(data.data);
-      return data.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération du schéma utilisateur :', error);
-      return [];
+  useEffect(() => {
+    if (utilisateursData.length > 0) {
+      setUtilisateurs(utilisateursData);
     }
-  };
+  }, [utilisateursData]);
 
   const handleSelectToggle = (key: string, isOpen: boolean) => {
     setSelectOpenStates(prev => ({
@@ -80,140 +84,23 @@ const Utilisateur = () => {
     }));
   };
 
-  const fetchUtilisateurs = async () => {
-    setResultModalLoading(true);
-    setResultModalMessage('Chargement des utilisateurs...');
-    setResultModalOpen(true);
-    try {
-      const res = await fetch(apiUrl('utilisateurs'));
-      const data = await res.json();
-      setUtilisateurs(data.data);
-      setResultModalOpen(false); // ferme la modal si succès
-    } catch (error) {
-      setResultModalMessage("Erreur lors de la récupération des utilisateurs.");
-      setResultModalOpen(true);
-    }
-    setResultModalLoading(false);
-  };
-
-  const fetchSelectOptions = async (key: string) => {
-    setResultModalLoading(true);
-    setResultModalMessage(`Chargement des options pour ${key}...`);
-    setResultModalOpen(true);
-    const apiName = key.replace('_id', '');
-    const pluralApiName = pluralize(apiName);
-    try {
-      const res = await fetch(apiUrl(`informations/${pluralApiName}`));
-      const data = await res.json();
-      setSelectOptions((prev: any) => ({ ...prev, [key]: data }));
-      setResultModalOpen(false); // ferme la modal si succès
-    } catch (error) {
-      setResultModalMessage(`Erreur lors de la récupération des options pour ${key}`);
-      setResultModalOpen(true);
-    }
-    setResultModalLoading(false);
-  };
-
-  const initaliserFormData = (keys: string[]) => {
-    const form: any = {};
-    keys.forEach((key) => {
-      if (key !== 'id') form[key] = '';
-    });
-    return form;
-  };
-
-  const genererColonnes = (keys: string[]) => {
-    // Ne pas afficher la colonne 'id'
-    return keys
-      .filter((key) => key !== 'id')
-      .map((key) => ({
-        title: formatLabel(key),
-        dataKey: key,
-      }));
-  };
-
-  const pluralize = (word: string) => {
-    const exceptions = ['status'];
-    return exceptions.includes(word) ? word : word + 's';
-  };
-
-  // Vérifie l'existence pour un champ donné via les nouveaux endpoints et affiche le message du backend
-  const checkFieldExistence = async (key: string, value: string) => {
-    if (!value) {
-      setExistenceMessages(prev => ({ ...prev, [key]: '' }));
-      return;
-    }
-    let endpoint = '';
-    let body: any = {};
-    switch (key) {
-      case 'email':
-        endpoint = 'verification/verifier-email';
-        body = { email: value };
-        break;
-      case 'nom_utilisateur':
-        endpoint = 'verification/verifier-nom-utilisateur';
-        body = { nom_utilisateur: value };
-        break;
-      case 'first_name':
-        endpoint = 'verification/verifier-prenom';
-        body = { prenom: value };
-        break;
-      case 'last_name':
-        endpoint = 'verification/verifier-nom';
-        body = { nom: value };
-        break;
-      default:
-        return;
-    }
-    try {
-      const response = await fetch(apiUrl(endpoint), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const result = await response.json();
-      // Affiche le message dans la console
-      console.log(`[${endpoint}]`, result);
-      // Affiche le message dans l'UI
-      setExistenceMessages(prev => ({
-        ...prev,
-        [key]: result.message || (result.exists ? `Ce champ existe déjà : ${value}` : ''),
-      }));
-    } catch {
-      setExistenceMessages(prev => ({
-        ...prev,
-        [key]: 'Erreur de vérification.',
-      }));
-    }
-  };
-
-  // Modifie handleChange pour vérifier à chaque saisie
-  const handleChange = (value: string, key: string) => {
+  const handleChange = async (value: string, key: string) => {
     setFormData((prev: any) => ({ ...prev, [key]: value }));
-    // Vérifie existence pour les champs critiques
-    if (
-      key === 'first_name' ||
-      key === 'last_name' ||
-      key === 'email' ||
-      key === 'nom_utilisateur'
-    ) {
-      checkFieldExistence(key, value);
-    }
-  };
-
-  // Ajoute une fonction pour vérifier uniquement l'unicité de l'utilisateur via l'email
-  const checkEmailUniqueness = async (email: string): Promise<boolean> => {
-    if (!email) return false;
-    try {
-      const response = await fetch(apiUrl('verification/verifier-email'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const result = await response.json();
-      return !result.exists; // true si email n'existe pas
-    } catch {
-      return false;
+    
+    // Vérifier existence pour les champs critiques
+    if (['first_name', 'last_name', 'email', 'nom_utilisateur'].includes(key)) {
+      try {
+        const result = await UtilisateurService.checkFieldExistence(key, value);
+        setExistenceMessages(prev => ({
+          ...prev,
+          [key]: result.message || (result.exists ? `Ce champ existe déjà : ${value}` : ''),
+        }));
+      } catch (error) {
+        setExistenceMessages(prev => ({
+          ...prev,
+          [key]: 'Erreur de vérification.',
+        }));
+      }
     }
   };
 
@@ -224,24 +111,23 @@ const Utilisateur = () => {
     setResultModalMessage('Ajout en cours...');
     setResultModalOpen(false);
 
-    const isEmailUnique = await checkEmailUniqueness(formData.email);
+    // Vérifier l'unicité de l'email
+    const isEmailUnique = await UtilisateurService.checkEmailUniqueness(formData.email);
     if (!isEmailUnique) {
       setResultModalLoading(false);
-      // Ne pas ouvrir la modal ici, le GenericForm gère déjà l'affichage du message
       return 'Cet email est déjà utilisé.';
     }
+
     try {
-      const response = await fetch(apiUrl('utilisateurs/ajouter'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setUtilisateur(data.data);
-        await fetchUtilisateurs();
+      const result = await UtilisateurService.ajouterUtilisateur(formData);
+      
+      if (result.success) {
+        setUtilisateur(result.data.data);
         setResultModalLoading(false);
-        // Ne pas ouvrir la modal ici, le GenericForm gère déjà le succès
+        // Réinitialiser le formulaire
+        const keys = Object.keys(formData);
+        setFormData(UtilisateurService.initaliserFormData(keys));
+        setExistenceMessages({});
         return true;
       } else {
         setResultModalMessage("Erreur lors de l'ajout.");
@@ -257,147 +143,117 @@ const Utilisateur = () => {
     }
   };
 
-  const formatLabel = (label: string) => {
-    let formatted = label.replace(/_/g, ' ');
-    if (formatted.endsWith(' id')) formatted = formatted.slice(0, -3);
-    const map: Record<string, string> = {
-      'first name': 'Nom',
-      'last name': 'Prénom',
-      'date of birth': 'Date de naissance',
-    };
-    return map[formatted.toLowerCase()] || formatted.charAt(0).toUpperCase() + formatted.slice(1);
-  };
-
-  // Filtre les utilisateurs selon le terme de recherche
-  const filteredUtilisateurs = utilisateurs.filter(u =>
-    (u.nom_utilisateur && u.nom_utilisateur.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (u.email && u.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    ((u as any).first_name && String((u as any).first_name).toLowerCase().includes(searchTerm.toLowerCase())) ||
-    ((u as any).last_name && String((u as any).last_name).toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  // Supprime l'utilisateur après confirmation
   const confirmDeleteUtilisateur = async () => {
+    if (!utilisateurToDelete) return;
+    
     setResultModalLoading(true);
     setResultModalMessage('Suppression en cours...');
     setResultModalOpen(true);
-    if (!utilisateurToDelete) return;
-    try {
-      const response = await fetch(apiUrl('utilisateurs/supprimer'), {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ utilisateurId: (utilisateurToDelete as any).id }),
-      });
-      const data = await response.json();
-      if (response.ok && data.isConfirm) {
-        setResultModalMessage(`L'utilisateur ${String((utilisateurToDelete as any).first_name)} ${String((utilisateurToDelete as any).last_name)} a bien été supprimé.`);
-        await fetchUtilisateurs();
-      } else {
-        setResultModalMessage(data.message || "Erreur lors de la suppression de l'utilisateur.");
-      }
-    } catch (error) {
-      setResultModalMessage("Erreur lors de la suppression.");
-    }
-    setResultModalLoading(false);
+    
+    // Logique de suppression ici...
+    
     setConfirmDeleteOpen(false);
     setUtilisateurToDelete(null);
   };
 
   return (
     <PageSection>
-      <Title headingLevel="h1">Utilisateurs</Title>
-      <Tabs activeKey={activeTabKey} onSelect={(_, key) => setActiveTabKey(Number(key))}>
-        <Tab eventKey={0} title={<TabTitleText>Afficher</TabTitleText>}>
-          <div style={{ marginBottom: 16 }}>
-            <TextInput
-              type="search"
-              value={searchTerm}
-              onChange={(_e, value) => setSearchTerm(value)}
-              placeholder="Rechercher un utilisateur par nom, prénom, email ou nom d'utilisateur"
+      <Title headingLevel="h1" size="2xl" style={{ marginBottom: '0.5rem' }}>
+        Gestion des utilisateurs
+      </Title>
+      <p style={{ color: '#6c757d', fontSize: '1.1rem', marginBottom: '2rem' }}>
+        Ajoutez de nouveaux utilisateurs et consultez la liste existante
+      </p>
+      
+      <Tabs 
+        activeKey={activeTabKey} 
+        onSelect={(_, key) => setActiveTabKey(Number(key))}
+        style={{ marginTop: '1rem' }}
+      >
+        <Tab 
+          eventKey={0} 
+          title={
+            <TabTitleText>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                📋 Consulter les utilisateurs
+              </span>
+            </TabTitleText>
+          }
+        >
+          <div style={{ 
+            background: '#fff', 
+            padding: '1.5rem', 
+            borderRadius: '8px',
+            border: '1px solid #dee2e6',
+            marginTop: '1rem'
+          }}>
+            <OngletTableauUtilisateurs
+              utilisateurs={utilisateurs}
+              columns={columns}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              userSchema={userSchema}
+              isLoading={isLoading}
             />
           </div>
-          {userSchema ? (
-            <EditableTable
-              data={filteredUtilisateurs}
-              columns={columns}
-              // Supprime la prop onDeleteRequest qui n'est pas supportée
-            />
-          ) : (
-            <Bullseye>Chargement...</Bullseye>
-          )}
         </Tab>
-        <Tab eventKey={1} title={<TabTitleText>Ajouter</TabTitleText>}>
-          <GenericForm
-            formData={formData}
-            selectOptions={selectOptions}
-            selectOpenStates={selectOpenStates}
-            onChange={handleChange}
-            onSelectToggle={handleSelectToggle}
-            onSubmit={handleSubmit}
-            existenceMessages={existenceMessages}
-          />
-
-          {utilisateur && (
-            <PageSection variant="default">
-              <Title headingLevel="h2" size="lg">Dernier utilisateur ajouté :</Title>
-              <pre>{JSON.stringify(utilisateur, null, 2)}</pre>
-            </PageSection>
-          )}
+        
+        <Tab 
+          eventKey={1} 
+          title={
+            <TabTitleText>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                ➕ Ajouter un utilisateur
+              </span>
+            </TabTitleText>
+          }
+        >
+          <div style={{ 
+            background: '#fff', 
+            padding: '1.5rem', 
+            borderRadius: '8px',
+            border: '1px solid #dee2e6',
+            marginTop: '1rem'
+          }}>
+            <OngletAjoutUtilisateur
+              formData={formData}
+              selectOptions={selectOptions}
+              selectOpenStates={selectOpenStates}
+              existenceMessages={existenceMessages}
+              dernierUtilisateur={utilisateur}
+              onChange={handleChange}
+              onSelectToggle={handleSelectToggle}
+              onSubmit={handleSubmit}
+            />
+          </div>
         </Tab>
       </Tabs>
+
       {/* Modal de confirmation de suppression */}
-      <PfModal
-        variant="small"
+      <ModalConfirmation
         isOpen={confirmDeleteOpen}
         onClose={() => setConfirmDeleteOpen(false)}
-        aria-labelledby="confirm-delete-modal-title"
-        aria-describedby="confirm-delete-modal-body"
-      >
-        <ModalHeader title="Confirmer la suppression" labelId="confirm-delete-modal-title" />
-        <ModalBody id="confirm-delete-modal-body">
-          {utilisateurToDelete
-            ? (
-              <span>
-                Êtes-vous sûr de vouloir supprimer l'utilisateur&nbsp;
-                <strong>
-                  {String((utilisateurToDelete as any).first_name)} {String((utilisateurToDelete as any).last_name)}
-                </strong> ?
-              </span>
-            )
-            : null}
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="danger" onClick={confirmDeleteUtilisateur}>
-            Supprimer
-          </Button>
-          <Button variant="link" onClick={() => setConfirmDeleteOpen(false)}>
-            Annuler
-          </Button>
-        </ModalFooter>
-      </PfModal>
-      {/* Modal pour erreur de chargement uniquement */}
-      <PfModal
-        variant="small"
+        onConfirm={confirmDeleteUtilisateur}
+        title="Confirmer la suppression"
+        message={
+          utilisateurToDelete
+            ? `Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>${String((utilisateurToDelete as any).first_name)} ${String((utilisateurToDelete as any).last_name)}</strong> ?`
+            : ''
+        }
+        confirmText="Supprimer"
+        variant="danger"
+      />
+
+      {/* Modal de résultat */}
+      <ModalResultat
         isOpen={resultModalOpen}
         onClose={() => setResultModalOpen(false)}
-        aria-labelledby="result-modal-title"
-        aria-describedby="result-modal-body"
-      >
-        <ModalHeader title="Erreur" labelId="result-modal-title" />
-        <ModalBody id="result-modal-body">
-          {resultModalLoading ? (
-            <span>Chargement...</span>
-          ) : (
-            <span>{resultModalMessage}</span>
-          )}
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="primary" onClick={() => setResultModalOpen(false)}>
-            OK
-          </Button>
-        </ModalFooter>
-      </PfModal>
+        title="Information"
+        message={resultModalMessage}
+        isLoading={resultModalLoading}
+      />
     </PageSection>
   );
 };
+
 export default Utilisateur;

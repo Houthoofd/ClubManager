@@ -1,14 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import {
-  Table,
-  Thead,
-  Tr,
-  Th,
-  Tbody,
-  Td,
-} from '@patternfly/react-table';
-import { TextInput, Title, Spinner, FormSelect, FormSelectOption } from '@patternfly/react-core';
+import { Title, Spinner, Alert, PageSection } from '@patternfly/react-core';
 import { useCommandes, useUpdateCommandeStatut } from '../../hooks/useCommandes';
+import TableauCommandes from '../../components/commandes/TableauCommandes';
+import FiltrageCommandes from '../../components/commandes/FiltrageCommandes';
+import StatistiquesCommandes from '../../components/commandes/StatistiquesCommandes';
 
 const Commandes = () => {
   const [filterInput, setFilterInput] = useState('');
@@ -51,15 +46,6 @@ const Commandes = () => {
     });
   }, [filteredData, activeSortIndex, activeSortDirection]);
 
-  const columns = [
-    { title: '', key: 'expander' }, // pour le bouton d'expansion
-    { title: 'ID', key: 'commande_id' },
-    { title: 'Date', key: 'date_commande' },
-    { title: 'Statut', key: 'statut' },
-    { title: "Nombre d'articles", key: 'nombre_articles' },
-    { title: 'Total (€)', key: 'total' },
-  ];
-
   const toggleRow = (rowIndex: number) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(rowIndex)) {
@@ -83,125 +69,56 @@ const Commandes = () => {
     }
   };
 
-  return (
-    <div style={{ padding: 20 }}>
-      <Title headingLevel="h1" size="2xl" style={{ marginBottom: 20 }}>
-        Commandes
-      </Title>
+  if (isLoading) {
+    return (
+      <PageSection>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <Spinner size="xl" />
+        </div>
+      </PageSection>
+    );
+  }
 
-      <TextInput
-        value={filterInput}
-        type="search"
-        onChange={(_e, value) => setFilterInput(value)}
-        aria-label="Filtrer les commandes"
-        placeholder="Filtrer par ID ou statut..."
-        style={{ maxWidth: 300, marginBottom: 20 }}
+  if (error) {
+    return (
+      <PageSection>
+        <Alert 
+          variant="danger" 
+          title="Erreur lors du chargement des commandes"
+          style={{ borderRadius: '8px' }}
+        />
+      </PageSection>
+    );
+  }
+
+  return (
+    <PageSection>
+      <Title headingLevel="h1" size="2xl" style={{ marginBottom: '0.5rem' }}>
+        Gestion des commandes
+      </Title>
+      <p style={{ color: '#6c757d', fontSize: '1.1rem', marginBottom: '2rem' }}>
+        Suivez et gérez toutes les commandes du magasin
+      </p>
+
+      <StatistiquesCommandes commandes={commandes} />
+
+      <FiltrageCommandes
+        filterInput={filterInput}
+        onFilterChange={setFilterInput}
+        totalCommandes={commandes.length}
+        commandesFiltrees={filteredData.length}
       />
 
-      {isLoading ? (
-        <Spinner size="xl" />
-      ) : error ? (
-        <div>Erreur lors du chargement des commandes.</div>
-      ) : (
-        <Table aria-label="Table des commandes" variant="compact" borders>
-          <Thead>
-            <Tr>
-              {columns.map((col, index) => (
-                <Th
-                  key={col.key}
-                  sort={
-                    col.key !== 'expander'
-                      ? {
-                          sortBy: {
-                            index: activeSortIndex,
-                            direction: activeSortDirection || 'asc',
-                          },
-                          onSort,
-                          columnIndex: index,
-                        }
-                      : undefined
-                  }
-                >
-                  {col.title}
-                </Th>
-              ))}
-            </Tr>
-          </Thead>
-          <Tbody>
-            {sortedData.length === 0 && (
-              <Tr>
-                <Td colSpan={columns.length} style={{ textAlign: 'center' }}>
-                  Aucune commande trouvée.
-                </Td>
-              </Tr>
-            )}
-
-            {sortedData.map((commande, rowIndex) => {
-              const total = commande.articles.reduce((sum: number, a: any) => sum + a.prix * a.quantite, 0).toFixed(2);
-              return (
-                <React.Fragment key={commande.commande_id}>
-                  <Tr>
-                    <Td
-                      expand={{
-                        rowIndex,
-                        isExpanded: expandedRows.has(rowIndex),
-                        onToggle: () => toggleRow(rowIndex),
-                      }}
-                    />
-                    <Td dataLabel="ID">{commande.commande_id}</Td>
-                    <Td dataLabel="Date">{new Date(commande.date_commande).toLocaleString()}</Td>
-                    <Td dataLabel="Statut" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <FormSelect
-                        value={commande.statut}
-                        onChange={(_event, value) => onChangeStatut(commande.commande_id, value)}
-                        aria-label="Modifier le statut"
-                        style={{ minWidth: 150 }}
-                      >
-                        {['En attente', 'Expédiée', 'Annulée', 'En cours'].map((statut) => (
-                          <FormSelectOption key={statut} value={statut} label={statut} />
-                        ))}
-                      </FormSelect>
-                    </Td>
-                    <Td dataLabel="Nombre d'articles">{commande.articles.length}</Td>
-                    <Td dataLabel="Total (€)">{total}</Td>
-                  </Tr>
-                  {expandedRows.has(rowIndex) && (
-                    <Tr isExpanded>
-                      <Td />
-                      <Td colSpan={columns.length - 1}>
-                        <Title headingLevel="h3" size="lg" style={{ marginBottom: 10 }}>
-                          Articles
-                        </Title>
-                        <Table variant="compact" borders>
-                          <Thead>
-                            <Tr>
-                              <Th>Article</Th>
-                              <Th>Taille</Th>
-                              <Th>Quantité</Th>
-                              <Th>Prix (€)</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {commande.articles.map((art: any, idx: number) => (
-                              <Tr key={idx}>
-                                <Td dataLabel="Article">{art.article}</Td>
-                                <Td dataLabel="Taille">{art.taille}</Td>
-                                <Td dataLabel="Quantité">{art.quantite}</Td>
-                                <Td dataLabel="Prix (€)">{art.prix.toFixed(2)}</Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </Td>
-                    </Tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </Tbody>
-        </Table>
-      )}
-    </div>
+      <TableauCommandes
+        commandes={sortedData}
+        expandedRows={expandedRows}
+        activeSortIndex={activeSortIndex}
+        activeSortDirection={activeSortDirection}
+        onToggleRow={toggleRow}
+        onSort={onSort}
+        onChangeStatut={onChangeStatut}
+      />
+    </PageSection>
   );
 };
 

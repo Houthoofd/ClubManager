@@ -2,25 +2,18 @@ import { useState } from 'react';
 import { Provider } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import store from '../../redux/store';
-import ModalSize from '../../components/modal';
 import {
-  Page,
-  PageSection,
   Title,
   Button,
-  Card,
-  CardTitle,
-  CardBody,
-  Flex,
-  FlexItem,
   Spinner,
   Alert,
-  Badge
 } from '@patternfly/react-core';
 import { CalendarAltIcon, ClockIcon, UserIcon } from '@patternfly/react-icons';
 import { useCours, useCoursPlanning, useCoursInscritsUtilisateur } from '../../hooks/useCours';
 import { useUtilisateursPourTousLesCours, useInscrireUtilisateurReservation, useAnnulerInscriptionParNomPrenom } from '../../hooks/useInscriptions';
 import { datareservationSchema } from '@clubmanager/types';
+import { ModalWithHelp } from '../../components/common/modal/modalwithhelp';
+import '../../styles/inscription.css';
 
 interface CoursData {
   id: number;
@@ -43,6 +36,7 @@ const Inscription = () => {
   });
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
+  const [modalSuccess, setModalSuccess] = useState<boolean>(false);
   const navigate = useNavigate();
 
   // Utilisation des hooks React Query
@@ -64,6 +58,7 @@ const Inscription = () => {
   const handleInscription = async (coursId: number) => {
     if (!userData?.nom || !userData?.prenom || !coursId || isNaN(coursId)) {
       setModalMessage('Utilisateur ou cours invalide.');
+      setModalSuccess(false);
       setShowModal(true);
       return;
     }
@@ -76,7 +71,8 @@ const Inscription = () => {
       });
 
       await inscrireUtilisateur.mutateAsync(validated);
-      setModalMessage('Inscription réussie !');
+      setModalMessage('Inscription réussie ! Vous êtes maintenant inscrit à ce cours.');
+      setModalSuccess(true);
       setShowModal(true);
       // Invalide les queries pour rafraîchir la liste des inscrits
       utilisateursCoursQueries.forEach((q) => q.refetch && q.refetch());
@@ -85,8 +81,9 @@ const Inscription = () => {
       if (error?.message?.includes('déjà inscrit')) {
         setModalMessage('Vous êtes déjà inscrit à ce cours.');
       } else {
-        setModalMessage('Erreur lors de l\'inscription.');
+        setModalMessage('Erreur lors de l\'inscription. Veuillez réessayer.');
       }
+      setModalSuccess(false);
       setShowModal(true);
     }
   };
@@ -94,20 +91,28 @@ const Inscription = () => {
   const handleAnnulation = async (coursId: number) => {
     if (!userData?.nom || !userData?.prenom || !coursId || isNaN(coursId)) {
       setModalMessage('Utilisateur ou cours invalide.');
+      setModalSuccess(false);
       setShowModal(true);
       return;
     }
     try {
       await annulerInscription.mutateAsync({ cours_id: coursId, utilisateur_nom: userData.nom, utilisateur_prenom: userData.prenom });
-      setModalMessage('Inscription annulée.');
+      setModalMessage('Désinscription réussie ! Vous n\'êtes plus inscrit à ce cours.');
+      setModalSuccess(true);
       setShowModal(true);
       // Invalide les queries pour rafraîchir la liste des inscrits et des coursInscrits
       utilisateursCoursQueries.forEach((q) => q.refetch && q.refetch());
     } catch (error) {
       console.error('Erreur lors de l\'annulation de l\'inscription:', error);
-      setModalMessage('Erreur lors de l\'annulation.');
+      setModalMessage('Erreur lors de la désinscription. Veuillez réessayer.');
+      setModalSuccess(false);
       setShowModal(true);
     }
+  };
+
+  // Fonction pour obtenir les classes CSS du badge selon le type de cours
+  const getTypeCoursClass = (typeCours: string) => {
+    return `inscription-type-badge ${typeCours.toLowerCase()}`;
   };
 
   // Fonction pour formater la date SANS le jour de la semaine calculé
@@ -122,187 +127,111 @@ const Inscription = () => {
     });
   };
 
-  // Fonction pour obtenir la couleur du badge selon le type de cours
-  const getTypeCoursColor = (typeCours: string) => {
-    const colors: { [key: string]: string } = {
-      'JJB': '#2e7d32',
-      'Grappling': '#f57c00',
-      'Judo': '#1565c0'
-    };
-    return colors[typeCours] || '#666';
-  };
-
   if (loadingCours || loadingPlanning) {
-    return <Spinner size="xl" />;
+    return (
+      <div className="inscription-loading">
+        <Spinner size="xl" />
+      </div>
+    );
   }
 
   if (errorCours || errorPlanning) {
-    return <Alert variant="danger" title="Erreur lors du chargement des données." />;
+    return (
+      <div className="inscription-container">
+        <div className="inscription-content">
+          <Alert variant="danger" title="Erreur lors du chargement des données." />
+        </div>
+      </div>
+    );
   }
-
-  console.log(cours)
 
   return (
     <Provider store={store}>
-      <Page>
-        <PageSection>
-          <Title headingLevel="h1" style={{ marginBottom: '2rem' }}>
-            Inscriptions aux cours
-          </Title>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
+      <div className="inscription-container">
+        <div className="inscription-content">
+          {/* Header */}
+          <div className="inscription-header">
+            <Title headingLevel="h1" size="2xl" className="inscription-header-title">
+              Inscriptions aux cours
+            </Title>
+            <p className="inscription-header-subtitle">
+              Inscrivez-vous aux cours disponibles et gérez vos participations
+            </p>
+          </div>
+
+          {/* Grid des cours */}
+          <div className="inscription-cards-grid">
             {cours?.map((c: any) => {
-              const typeColor = getTypeCoursColor(c.type_cours);
-              const typeBgColor = c.type_cours === 'JJB' ? '#e8f5e8' : 
-                                  c.type_cours === 'Grappling' ? '#fff3e0' : 
-                                  c.type_cours === 'Judo' ? '#e1f5fe' : '#e3f2fd';
-              
-              // Vérifier si l'utilisateur est déjà inscrit à ce cours
               const estInscrit = coursInscrits.some((ci: any) => ci.id === c.id);
 
               return (
-                <Card 
-                  key={c.id} 
-                  isHoverable 
-                  style={{ 
-                    border: `2px solid ${typeColor}`,
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    height: 'fit-content'
-                  }}
-                >
+                <div key={c.id} className="inscription-card">
                   {/* Header avec type de cours */}
-                  <div 
-                    style={{ 
-                      background: typeBgColor,
-                      padding: '0.75rem',
-                      borderBottom: `1px solid ${typeColor}`
-                    }}
-                  >
-                    <CardTitle>
-                      <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                        <FlexItem>
-                          <Badge 
-                            style={{ 
-                              backgroundColor: typeColor, 
-                              color: 'white',
-                              fontSize: '0.9rem',
-                              padding: '0.25rem 0.75rem'
-                            }}
-                          >
-                            {c.type_cours}
-                          </Badge>
-                        </FlexItem>
-                        {estInscrit && (
-                          <FlexItem>
-                            <Badge 
-                              style={{ 
-                                backgroundColor: '#28a745', 
-                                color: 'white',
-                                fontSize: '0.8rem',
-                                padding: '0.2rem 0.5rem',
-                                marginLeft: '0.5rem'
-                              }}
-                            >
-                              ✓ Inscrit
-                            </Badge>
-                          </FlexItem>
-                        )}
-                      </Flex>
-                    </CardTitle>
+                  <div className="inscription-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <span className={getTypeCoursClass(c.type_cours)}>
+                        {c.type_cours}
+                      </span>
+                      {estInscrit && (
+                        <span className="inscription-inscrit-badge">
+                          ✓ Inscrit
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   {/* Corps de la carte */}
-                  <CardBody style={{ padding: '1.25rem' }}>
-                    <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
-                      {/* Date et jour */}
-                      <FlexItem>
-                        <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                          <CalendarAltIcon 
-                            style={{ 
-                              marginRight: 10, 
-                              color: typeColor, 
-                              fontSize: '1.2rem' 
-                            }} 
-                          />
-                          <span style={{ fontWeight: 600, fontSize: '1.1rem', color: '#333' }}>
-                            {c.date_cours ? (
-                              <>
-                                {c.jour_semaine} - {formatDateSansJour(c.date_cours)}
-                              </>
-                            ) : (
-                              c.jour_semaine || c.jour
-                            )}
+                  <div className="inscription-card-body">
+                    {/* Date et jour */}
+                    <div className="inscription-info-item">
+                      <CalendarAltIcon className="inscription-info-icon" />
+                      <span className="inscription-date-text">
+                        {c.date_cours ? (
+                          <>
+                            {c.jour_semaine} - {formatDateSansJour(c.date_cours)}
+                          </>
+                        ) : (
+                          c.jour_semaine || c.jour
+                        )}
+                      </span>
+                    </div>
+                    
+                    {/* Horaires */}
+                    <div className="inscription-info-item">
+                      <ClockIcon className="inscription-info-icon" />
+                      <span className="inscription-info-text">
+                        {c.heure_debut} - {c.heure_fin}
+                      </span>
+                    </div>
+                    
+                    {/* Professeurs */}
+                    {c.professeurs && c.professeurs.length > 0 && (
+                      <div className="inscription-info-item">
+                        <UserIcon className="inscription-info-icon" />
+                        <div>
+                          <span className="inscription-info-text">
+                            Professeur{c.professeurs.length > 1 ? 's' : ''}:
                           </span>
-                        </Flex>
-                      </FlexItem>
-                      
-                      {/* Horaires */}
-                      <FlexItem>
-                        <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                          <ClockIcon 
-                            style={{ 
-                              marginRight: 10, 
-                              color: '#6a6e73', 
-                              fontSize: '1.1rem' 
-                            }} 
-                          />
-                          <span style={{ fontWeight: 500, fontSize: '1rem', color: '#555' }}>
-                            {c.heure_debut} - {c.heure_fin}
-                          </span>
-                        </Flex>
-                      </FlexItem>
-                      
-                      {/* Professeurs */}
-                      {c.professeurs && c.professeurs.length > 0 && (
-                        <FlexItem>
-                          <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsXs' }}>
-                            <UserIcon 
-                              style={{ 
-                                marginRight: 10, 
-                                color: '#6a6e73', 
-                                fontSize: '1.1rem' 
-                              }} 
-                            />
-                            <span style={{ fontWeight: 500, fontSize: '0.95rem', color: '#555' }}>
-                              Professeur{c.professeurs.length > 1 ? 's' : ''}:
-                            </span>
-                          </Flex>
-                          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div className="inscription-professeurs-container">
                             {c.professeurs.map((prof: any, idx: number) => (
-                              <Badge 
-                                key={idx}
-                                style={{ 
-                                  backgroundColor: '#f8f9fa',
-                                  color: '#495057',
-                                  border: '1px solid #dee2e6',
-                                  padding: '0.25rem 0.5rem',
-                                  borderRadius: '6px',
-                                  fontSize: '0.85rem'
-                                }}
-                              >
+                              <span key={idx} className="inscription-professeur-badge">
                                 {prof.prenom} {prof.nom}
-                              </Badge>
+                              </span>
                             ))}
                           </div>
-                        </FlexItem>
-                      )}
-                    </Flex>
-                  </CardBody>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Footer avec boutons d'action */}
-                  <div style={{ 
-                    padding: '1rem 1.25rem', 
-                    background: '#f8f9fa',
-                    borderTop: '1px solid #dee2e6'
-                  }}>
-                    <Flex spaceItems={{ default: 'spaceItemsSm' }} alignItems={{ default: 'alignItemsCenter' }}>
+                  <div className="inscription-card-footer">
+                    <div className="inscription-actions">
                       {estInscrit ? (
                         <Button 
                           variant="danger" 
                           size="sm"
                           onClick={() => handleAnnulation(c.id)}
-                          style={{ fontSize: '0.9rem' }}
                         >
                           Se désinscrire
                         </Button>
@@ -311,74 +240,58 @@ const Inscription = () => {
                           variant="primary" 
                           size="sm"
                           onClick={() => handleInscription(c.id)}
-                          style={{ 
-                            backgroundColor: typeColor,
-                            borderColor: typeColor,
-                            fontSize: '0.9rem'
-                          }}
                         >
                           S'inscrire
                         </Button>
                       )}
                       
-                      {/* Bouton pour voir les inscrits */}
                       <Button 
                         variant="secondary" 
                         size="sm"
                         onClick={() => navigate(`/pages/cours/${c.id}/participants`)}
-                        style={{ fontSize: '0.9rem' }}
                       >
                         Voir les participants
                       </Button>
-                      
-                      {/* Affichage du nombre d'inscrits si disponible */}
-                      {utilisateursCoursQueries[cours.indexOf(c)]?.data && (
-                        <FlexItem style={{ marginLeft: 'auto' }}>
-                          <span style={{ 
-                            fontSize: '0.85rem', 
-                            color: '#6c757d',
-                            fontStyle: 'italic'
-                          }}>
-                            {utilisateursCoursQueries[cours.indexOf(c)].data.length} inscrit{utilisateursCoursQueries[cours.indexOf(c)].data.length > 1 ? 's' : ''}
-                          </span>
-                        </FlexItem>
-                      )}
-                    </Flex>
+                    </div>
+                    
+                    {/* Affichage du nombre d'inscrits */}
+                    {utilisateursCoursQueries[cours.indexOf(c)]?.data && (
+                      <span className="inscription-participants-count">
+                        {utilisateursCoursQueries[cours.indexOf(c)].data.length} inscrit{utilisateursCoursQueries[cours.indexOf(c)].data.length > 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
           
           {cours?.length === 0 && (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '3rem',
-              background: '#f8f9fa',
-              borderRadius: '8px',
-              border: '1px solid #dee2e6'
-            }}>
+            <div className="inscription-empty-state">
               <Title headingLevel="h3" style={{ color: '#6c757d', marginBottom: '1rem' }}>
                 Aucun cours disponible
               </Title>
-              <p style={{ color: '#6c757d' }}>
+              <p>
                 Il n'y a actuellement aucun cours disponible pour l'inscription.
               </p>
             </div>
           )}
-        </PageSection>
+        </div>
         
-        <ModalSize
+        <ModalWithHelp
+          title={modalSuccess ? "Succès" : "Erreur"}
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          title="Notification"
         >
-          {modalMessage}
-        </ModalSize>
-      </Page>
+          <p style={{ color: modalSuccess ? 'green' : 'red', fontSize: '1rem', margin: '1rem 0' }}>
+            {modalMessage}
+          </p>
+        </ModalWithHelp>
+      </div>
     </Provider>
   );
 };
 
 export default Inscription;
+
 

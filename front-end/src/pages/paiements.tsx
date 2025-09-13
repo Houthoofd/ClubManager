@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Spinner, Bullseye, PageSection, Title } from '@patternfly/react-core';
-import { SortableTable } from '../components/table/sortableTable';
+import { SortableTable } from '../components/common/table/sortableTable';
 import { usePaiements } from '../hooks/usePaiements';
 
 export const Paiements: React.FC = () => {

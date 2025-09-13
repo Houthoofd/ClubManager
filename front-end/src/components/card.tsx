@@ -3,11 +3,7 @@ import {
   Card,
   CardTitle,
   CardBody,
-  CardFooter,
   Button,
-  Modal,
-  FormSelect,
-  FormSelectOption
 } from '@patternfly/react-core';
 
 type Stock = {
@@ -22,6 +18,7 @@ type ArticleCardProps = {
   prix: number;
   stocks: Stock[];
   onAddToCart: (taille: string) => void;
+  onOpenDetails?: () => void;
 };
 
 const ArticleCard: React.FC<ArticleCardProps> = ({
@@ -30,91 +27,106 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
   imageUrl,
   prix,
   stocks,
-  onAddToCart
+  onAddToCart,
+  onOpenDetails
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSize, setSelectedSize] = useState('');
 
-  const handleAddToCart = () => {
-    if (selectedSize) {
-      onAddToCart(selectedSize);
-      setIsModalOpen(false);
-      setSelectedSize('');
+  const handleQuickAddToCart = () => {
+    // Ajouter automatiquement la première taille disponible
+    const firstAvailableSize = stocks.find(stock => stock.quantite > 0)?.taille;
+    if (firstAvailableSize) {
+      onAddToCart(firstAvailableSize);
     }
-  };
-
-  const onChange = (_event: React.FormEvent<HTMLSelectElement>, value: string) => {
-    setSelectedSize(value);
   };
 
   return (
     <>
-      <Card style={{ height: '100%' }}>
-        <img
-          src={imageUrl}
-          alt={title}
-          style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-        />
-        <CardTitle>{title}</CardTitle>
-        <CardBody>
-          <div className="pf-v5-c-content">
-            <p>{description.slice(0, 100)}...</p>
-            <p><strong>{prix} €</strong></p>
+      <Card className="article-card" isHoverable>
+        <div style={{ position: 'relative' }}>
+          <img
+            src={imageUrl}
+            alt={title}
+            className="article-card-image"
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          />
+          <div className="article-card-price-badge">
+            {prix} €
+          </div>
+        </div>
+        
+        <CardTitle className="article-card-title">
+          {title}
+        </CardTitle>
+        
+        <CardBody style={{ padding: '0 1rem 1rem' }}>
+          <p className="article-card-description">
+            {description || 'Aucune description disponible'}
+          </p>
+          
+          <div style={{ marginBottom: '1rem' }}>
+            <div className="form-section-title">
+              Tailles disponibles :
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+              {stocks
+                .filter(stock => stock.quantite > 0)
+                .map((stock, index) => (
+                  <span
+                    key={index}
+                    className="article-card-size-badge"
+                  >
+                    {stock.taille}
+                  </span>
+                ))}
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button 
+              variant="primary" 
+              onClick={handleQuickAddToCart}
+              className="article-card-button"
+              style={{ flex: 1 }}
+              isDisabled={stocks.filter(s => s.quantite > 0).length === 0}
+            >
+              {stocks.filter(s => s.quantite > 0).length === 0 ? 'Rupture de stock' : 'Ajouter'}
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={onOpenDetails}
+              className="article-card-button"
+              style={{ minWidth: '100px' }}
+              isDisabled={stocks.filter(s => s.quantite > 0).length === 0}
+            >
+              Détails
+            </Button>
           </div>
         </CardBody>
-        <CardFooter>
-          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-            Plus d'informations
-          </Button>
-        </CardFooter>
       </Card>
 
-      <Modal
-  title="Choisir une taille"
-  variant="large"
-  isOpen={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
->
-  {/* Contenu du modal */}
-  <img
-    src={imageUrl}
-    alt={title}
-    style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', marginBottom: '1rem' }}
-  />
-  <div className="pf-v5-c-content">
-    <h2>{title}</h2>
-    <p>{description}</p>
-    <p><strong>Prix : {prix} €</strong></p>
-  </div>
-
-  <div style={{ marginTop: '1rem' }}>
-    <p>Veuillez choisir une taille :</p>
-    <FormSelect value={selectedSize} onChange={onChange} aria-label="Choix de la taille">
-      <FormSelectOption key="placeholder" value="" label="Sélectionnez une taille" isDisabled />
-      {/* Affiche chaque taille une seule fois et uniquement si la quantité > 0 */}
-      {[...new Map(stocks.map(stock => [stock.taille, stock])).values()]
-        .filter(stock => stock.quantite > 0)
-        .map((stock) => (
-          <FormSelectOption
-            key={stock.taille}
-            value={stock.taille}
-            label={stock.taille}
+      {/* <Modal
+        title="Sélectionner une taille"
+        variant="medium"
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        className="modern-card"
+      >
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <img
+            src={imageUrl}
+            alt={title}
+            className="modal-article-image"
           />
-        ))}
-    </FormSelect>
-  </div>
-
-  {/* Actions */}
-  <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-    <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Annuler</Button>
-    <Button variant="primary" onClick={handleAddToCart} isDisabled={!selectedSize}>
-      Ajouter au panier
-    </Button>
-  </div>
-</Modal>
-
+        </div>
+        
+        {/* ...existing code... */}
+      {/* </Modal> */}
     </>
   );
 };
 
 export default ArticleCard;
+              
+             

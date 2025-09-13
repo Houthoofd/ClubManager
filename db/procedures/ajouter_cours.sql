@@ -81,10 +81,11 @@ BEGIN
     WHILE i < v_professeur_count DO
         SET v_professeur_nom = JSON_UNQUOTE(JSON_EXTRACT(p_professeurs, CONCAT('$[', i, ']')));
 
-        -- Recherche de l'ID du professeur en utilisant uniquement le nom (sans prénom)
+        -- Recherche de l'ID du professeur en utilisant le nom complet (prénom + nom)
         SELECT id INTO v_professeur_id
         FROM professeurs
-        WHERE nom = v_professeur_nom
+        WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = TRIM(v_professeur_nom)
+        AND status_id = 5  -- Seulement les professeurs actifs
         LIMIT 1;
 
         -- Si un professeur est trouvé, on l'associe au cours récurrent

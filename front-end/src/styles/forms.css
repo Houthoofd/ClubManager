@@ -1,0 +1,49 @@
+/* Styles pour les formulaires */
+.form-section {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  margin-bottom: 1.5rem;
+}
+
+.form-section-title {
+  margin-bottom: 1rem;
+  color: #495057;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.form-field {
+  border-radius: 6px;
+}
+
+.form-stock-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.form-stock-label {
+  min-width: 80px;
+  font-weight: bold;
+  color: #495057;
+}
+
+.form-submit-section {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.form-submit-button {
+  padding: 0.75rem 2rem;
+}

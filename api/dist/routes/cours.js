@@ -189,7 +189,9 @@ router.get('/informations/planning', async (req, res) => {
 });
 router.post('/ajouter', async (req, res) => {
     const data = req.body;
-    console.log("Données reçues pour ajout de cours :", data);
+    console.log("Données reçues complètes:", data);
+    console.log("Type de data.professeurs:", typeof data.professeurs);
+    console.log("Valeur de data.professeurs:", data.professeurs);
     try {
         const client = new Cours();
         // Mapping des jours pour convertir le nom en jour_semaine
@@ -208,15 +210,35 @@ router.post('/ajouter', async (req, res) => {
             return res.status(400).json({ message: `Jour invalide: ${data.jour_semaine}` });
         }
         console.log("Jour normalisé:", jourNormalise);
+        // Gestion des professeurs - correction pour gérer les chaînes JSON
+        let professeurs = [];
+        if (Array.isArray(data.professeurs)) {
+            professeurs = data.professeurs;
+        }
+        else if (typeof data.professeurs === 'string') {
+            try {
+                // Tenter de parser si c'est une chaîne JSON
+                professeurs = JSON.parse(data.professeurs);
+            }
+            catch (parseError) {
+                console.error("Erreur lors du parsing des professeurs:", parseError);
+                // Si ce n'est pas du JSON valide, traiter comme un seul nom
+                professeurs = [data.professeurs];
+            }
+        }
+        else if (data.professeurs) {
+            // Autres cas, convertir en tableau
+            professeurs = [data.professeurs];
+        }
+        console.log("Professeurs traités:", professeurs);
         // On prépare l'objet AjoutCours pour le backend
         const ajoutCours = {
             nom: data.nom,
             type_cours: data.type_cours,
-            jour_semaine: jourNormalise, // Utilise le jour normalisé
+            jour_semaine: jourNormalise,
             heure_debut: data.heure_debut,
             heure_fin: data.heure_fin,
-            // On transmet les noms des professeurs (nom complet)
-            professeurs: Array.isArray(data.professeurs) ? data.professeurs : []
+            professeurs: professeurs
         };
         console.log("Objet ajoutCours envoyé:", ajoutCours);
         await client.ajouterCoursRecurrentAvecProfesseurs(ajoutCours);

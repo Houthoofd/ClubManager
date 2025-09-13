@@ -20,10 +20,14 @@ import {
 import {
   BarsIcon,
   BellIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  ShoppingCartIcon
 } from '@patternfly/react-icons';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState } from '../redux/store';
+import { ouvrirPanier } from '../redux/slices/panierSlice';
 
 interface AppPanelHeaderProps {
   username: string; 
@@ -56,6 +60,8 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout }: AppPanelHeaderProps) => {
   const [roleLabel, setRoleLabel] = useState('');
   const toggleRef = useRef(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const panierCount = useSelector((state: RootState) => state.panier.articles.length);
 
   useEffect(() => {
     const storedData = localStorage.getItem('userData');
@@ -81,6 +87,11 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout }: AppPanelHeaderProps) => {
     navigate('/pages/connexion');
   };
 
+  const handleOuvrirPanier = () => {
+    dispatch(ouvrirPanier());
+    navigate('/pages/magasin/magasin');
+  };
+
   return (
     <Masthead id="app-header">
       <MastheadMain>
@@ -104,6 +115,38 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout }: AppPanelHeaderProps) => {
           style={{ width: '100%' }}
         >
           <FlexItem grow={{ default: 'grow' }} />
+
+          <FlexItem>
+            <Tooltip content="Panier">
+              <Button 
+                variant="plain" 
+                aria-label="Panier"
+                style={{ position: 'relative' }}
+                onClick={handleOuvrirPanier}
+              >
+                <ShoppingCartIcon />
+                {panierCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    fontSize: '0.75rem',
+                    minWidth: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    {panierCount}
+                  </span>
+                )}
+              </Button>
+            </Tooltip>
+          </FlexItem>
 
           <FlexItem>
             <Link to="/pages/notifications">

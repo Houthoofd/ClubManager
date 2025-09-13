@@ -188,7 +188,7 @@ export class Cours {
             data.jour_semaine,
             data.heure_debut,
             data.heure_fin,
-            JSON.stringify(data.professeurs)
+            JSON.stringify(data.professeurs) // Remettre JSON.stringify car la procédure attend du JSON
           ];
 
           console.log("Paramètres envoyés à la procédure:", params);
@@ -206,6 +206,7 @@ export class Cours {
             }
           );
         });
+        
         await mysqlConnector.close();
         if (result && result.length > 0 && result[0].length > 0) {
           resolve({
