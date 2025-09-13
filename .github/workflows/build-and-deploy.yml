@@ -3,7 +3,7 @@ name: Deploy ClubManager (no build, only deploy)
 on:
   push:
     branches:
-      - hosting
+      - release/hosting-v2
 
 jobs:
   deploy:
