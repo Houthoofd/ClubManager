@@ -1,23 +1,23 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Compte {
+    mysqlConnector;
+    constructor() {
+        this.mysqlConnector = MysqlConnector.getInstance();
+    }
     obtenirUnUtilisateurParSonNomEtPrenom(prenom, nom) {
         console.log(prenom, nom);
         try {
-            const mysqlConnector = new MysqlConnector();
-            // Construire la requête SQL
             const sql = 'SELECT * FROM utilisateurs WHERE first_name = ? AND last_name = ?';
             const values = [prenom, nom];
-            // Retourner une promesse
             return new Promise((resolve, reject) => {
-                mysqlConnector.query(sql, values, async (error, results) => {
+                this.mysqlConnector.query(sql, values, async (error, results) => {
                     if (error) {
                         console.error("Erreur lors de la récupération de l'utilisateur : " + error.message);
-                        reject(error); // Rejeter la promesse en cas d'erreur
+                        reject(error);
                     }
                     else {
                         if (results.length > 0) {
                             console.log('Utilisateur trouvé avec succès.');
-                            // Mapper les résultats pour correspondre au type UserData
                             const utilisateur = results.map((result) => ({
                                 id: result.id,
                                 prenom: result.first_name,
@@ -31,26 +31,18 @@ export class Compte {
                                 grade_id: result.grade_id,
                                 abonnement_id: result.abonnement_id
                             }));
-                            console.log(utilisateur);
-                            try {
-                                // Récupérer les informations supplémentaires de l'utilisateur
-                                const informations = await this.obtenirInformationsUtilisateur(utilisateur[0].prenom, utilisateur[0].nom);
-                                resolve({
-                                    isFind: true,
-                                    message: "Utilisateur trouvé",
-                                    data: informations // Retourner les informations récupérées
-                                });
-                            }
-                            catch (infoError) {
-                                reject(infoError); // Gérer une erreur lors de la récupération des informations supplémentaires
-                            }
+                            resolve({
+                                isFind: true,
+                                message: "Utilisateur trouvé",
+                                data: utilisateur
+                            });
                         }
                         else {
                             console.log('Aucun utilisateur trouvé.');
                             resolve({
                                 isFind: false,
                                 message: "Aucun utilisateur trouvé",
-                                data: [] // Retourner un tableau vide si aucun utilisateur n'est trouvé
+                                data: []
                             });
                         }
                     }
@@ -58,13 +50,12 @@ export class Compte {
             });
         }
         catch (error) {
-            console.error("Erreur lors de la récupération de l'utilisateur:", error);
-            throw error; // Lever l'erreur pour que l'appelant puisse la gérer
+            console.error('Erreur dans obtenirUnUtilisateurParSonNomEtPrenom:', error);
+            throw error;
         }
     }
     obtenirInformationsUtilisateur = async (prenom, nom) => {
         try {
-            const mysqlConnector = new MysqlConnector();
             // Requête SQL pour récupérer les informations en fonction des IDs liés
             const sql = `
         SELECT 
@@ -94,7 +85,7 @@ export class Compte {
       `;
             const values = [prenom, nom];
             return new Promise((resolve, reject) => {
-                mysqlConnector.query(sql, values, (error, results) => {
+                this.mysqlConnector.query(sql, values, (error, results) => {
                     if (error) {
                         console.error(`Erreur lors de la récupération de l'utilisateur ${prenom} ${nom} : ${error.message}`);
                         reject(error); // Rejeter la promesse en cas d'erreur
@@ -128,7 +119,6 @@ export class Compte {
     };
     // Ajoute ou modifie le mot de passe d'un utilisateur
     async mettreAJourMotDePasse(id, hash, isCreation) {
-        const mysqlConnector = new MysqlConnector();
         if (!id || !hash) {
             return { isConfirm: false, message: "Id et mot de passe requis." };
         }
@@ -144,8 +134,7 @@ export class Compte {
             values = [hash, id];
         }
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, values, (error, result) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, values, (error, result) => {
                 if (error) {
                     console.error('Erreur lors de la mise à jour du mot de passe :', error.message);
                     reject({ isConfirm: false, message: error.message });
@@ -156,6 +145,88 @@ export class Compte {
                 }
                 else {
                     resolve({ isConfirm: false, message: "Aucune modification effectuée." });
+                }
+            });
+        });
+    }
+    obtenirInformationsCompte(userId) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT id, first_name, last_name, email, date_of_birth, phone
+        FROM utilisateurs
+        WHERE id = ? AND status_id = 1
+      `;
+            this.mysqlConnector.query(sql, [userId], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des informations du compte :', error);
+                    reject(error);
+                }
+                else if (results.length === 0) {
+                    resolve(null);
+                }
+                else {
+                    resolve(results[0]);
+                }
+            });
+        });
+    }
+    modifierInformationsCompte(userId, userData) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        UPDATE utilisateurs 
+        SET first_name = ?, last_name = ?, email = ?, date_of_birth = ?, phone = ?
+        WHERE id = ? AND status_id = 1
+      `;
+            this.mysqlConnector.query(sql, [
+                userData.first_name,
+                userData.last_name,
+                userData.email,
+                userData.date_of_birth,
+                userData.phone,
+                userId
+            ], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la modification du compte :', error);
+                    reject(error);
+                }
+                else if (results.affectedRows === 0) {
+                    resolve({
+                        isConfirm: false,
+                        message: 'Compte non trouvé'
+                    });
+                }
+                else {
+                    resolve({
+                        isConfirm: true,
+                        message: 'Informations du compte modifiées avec succès'
+                    });
+                }
+            });
+        });
+    }
+    supprimerCompte(userId) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        UPDATE utilisateurs 
+        SET status_id = 0
+        WHERE id = ? AND status_id = 1
+      `;
+            this.mysqlConnector.query(sql, [userId], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la suppression du compte :', error);
+                    reject(error);
+                }
+                else if (results.affectedRows === 0) {
+                    resolve({
+                        isConfirm: false,
+                        message: 'Compte non trouvé'
+                    });
+                }
+                else {
+                    resolve({
+                        isConfirm: true,
+                        message: 'Compte supprimé avec succès'
+                    });
                 }
             });
         });

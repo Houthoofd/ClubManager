@@ -1,157 +1,149 @@
-import { } from '@clubmanager/types';
+import { ArticleData, ConfirmationResult, NouvelleCommande, ArticleCommande, ArticlesParCategorie, ArticleCreationData } from '@clubmanager/types';
 import MysqlConnector from '../../connector/mysqlconnector.js';
-import { ArticleData, ConfirmationResult, NouvelleCommande, ArticleCommande, ArticlesParCategorie, ArticleCreationData } from '@clubmanager/types'
 
 export class Magasin {
+  private mysqlConnector: MysqlConnector;
+
+  constructor() {
+    this.mysqlConnector = MysqlConnector.getInstance();
+  }
 
   obtenirLesArticles(): Promise<any[]> {
-  return new Promise((resolve, reject) => {
-    const mysqlConnector = new MysqlConnector();
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          a.*, 
+          i.url AS image_url,
+          t.nom AS stock_taille,
+          s.quantite AS stock_quantite,
+          c.id AS categorie_id,
+          c.nom AS categorie_nom
+        FROM articles a
+        LEFT JOIN images i ON i.article_id = a.id
+        LEFT JOIN stocks s ON s.article_id = a.id
+        LEFT JOIN tailles t ON t.id = s.taille_id
+        LEFT JOIN categories c ON c.id = a.categorie_id
+      `;
 
-    const sql = `
-      SELECT 
-        a.*, 
-        i.url AS image_url,
-        t.nom AS stock_taille,
-        s.quantite AS stock_quantite,
-        c.id AS categorie_id,
-        c.nom AS categorie_nom
-      FROM articles a
-      LEFT JOIN images i ON i.article_id = a.id
-      LEFT JOIN stocks s ON s.article_id = a.id
-      LEFT JOIN tailles t ON t.id = s.taille_id
-      LEFT JOIN categories c ON c.id = a.categorie_id
-    `;
+      console.log("Exécution de la requête avec LEFT JOIN");
 
-    console.log("Exécution de la requête avec LEFT JOIN");
-
-    mysqlConnector.query(sql, [], (error, results) => {
-      mysqlConnector.close();
-
-      if (error) {
-        console.error('Erreur lors de la récupération des articles : ' + error.message);
-        return reject(error);
-      }
-
-      const articlesMap = new Map<number, any>();
-
-      for (const row of results) {
-        if (!articlesMap.has(row.id)) {
-          articlesMap.set(row.id, {
-            id: row.id,
-            nom: row.nom,
-            prix: row.prix,
-            description: row.description,
-            images: [],
-            stocks: [],
-            categorie: {
-              id: row.categorie_id,
-              nom: row.categorie_nom
-            }
-          });
+      this.mysqlConnector.query(sql, [], (error, results) => {
+        if (error) {
+          console.error('Erreur lors de la récupération des articles : ' + error.message);
+          return reject(error);
         }
 
-        const article = articlesMap.get(row.id);
+        const articlesMap = new Map<number, any>();
 
-        if (row.image_url && !article.images.includes(row.image_url)) {
-          article.images.push(row.image_url);
+        for (const row of results) {
+          if (!articlesMap.has(row.id)) {
+            articlesMap.set(row.id, {
+              id: row.id,
+              nom: row.nom,
+              prix: row.prix,
+              description: row.description,
+              images: [],
+              stocks: [],
+              categorie: {
+                id: row.categorie_id,
+                nom: row.categorie_nom
+              }
+            });
+          }
+
+          const article = articlesMap.get(row.id);
+          
+          // Ajouter image si elle existe
+          if (row.image_url && !article.images.includes(row.image_url)) {
+            article.images.push(row.image_url);
+          }
+          
+          // Ajouter stock si il existe
+          if (row.stock_taille && row.stock_quantite) {
+            article.stocks.push({
+              taille: row.stock_taille,
+              quantite: row.stock_quantite
+            });
+          }
         }
 
-        if (row.stock_taille && row.stock_quantite !== null) {
-          article.stocks.push({
-            taille: row.stock_taille,
-            quantite: row.stock_quantite
-          });
-        }
-      }
-
-      const articlesAvecDetails = Array.from(articlesMap.values());
-      console.log("Articles enrichis avec catégories :", articlesAvecDetails);
-      resolve(articlesAvecDetails);
+        resolve(Array.from(articlesMap.values()));
+      });
     });
-  });
-}
+  }
 
-obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
-  return new Promise((resolve, reject) => {
-    const mysqlConnector = new MysqlConnector();
+  obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          a.*, 
+          a.categorie_id,
+          i.url AS image_url,
+          t.nom AS stock_taille,
+          s.quantite AS stock_quantite,
+          c.nom AS categorie_nom
+        FROM articles a
+        LEFT JOIN images i ON i.article_id = a.id
+        LEFT JOIN stocks s ON s.article_id = a.id
+        LEFT JOIN tailles t ON t.id = s.taille_id
+        LEFT JOIN categories c ON c.id = a.categorie_id
+        ORDER BY c.nom, a.id
+      `;
 
-    const sql = `
-      SELECT 
-        a.*, 
-        a.categorie_id,
-        i.url AS image_url,
-        t.nom AS stock_taille,
-        s.quantite AS stock_quantite,
-        c.nom AS categorie_nom
-      FROM articles a
-      LEFT JOIN images i ON i.article_id = a.id
-      LEFT JOIN stocks s ON s.article_id = a.id
-      LEFT JOIN tailles t ON t.id = s.taille_id
-      LEFT JOIN categories c ON c.id = a.categorie_id
-      ORDER BY c.nom, a.id
-    `;
-
-    mysqlConnector.query(sql, [], (error, results) => {
-      mysqlConnector.close();
-
-      if (error) {
-        console.error('Erreur lors de la récupération des articles par catégories : ' + error.message);
-        return reject(error);
-      }
-
-      const mapCategories: ArticlesParCategorie = {};
-
-      for (const row of results) {
-        if (!mapCategories[row.categorie_nom]) {
-          mapCategories[row.categorie_nom] = [];
+      this.mysqlConnector.query(sql, [], (error, results) => {
+        if (error) {
+          console.error('Erreur lors de la récupération des articles par catégories : ' + error.message);
+          return reject(error);
         }
 
-        let articles = mapCategories[row.categorie_nom];
-        let article = articles.find(a => a.id === row.id);
+        const mapCategories: ArticlesParCategorie = {};
 
-        if (!article) {
-          article = {
-            id: row.id,
-            nom: row.nom,
-            prix: row.prix,
-            description: row.description,
-            images: [],
-            stocks: [],
-            categorie_id: row.categorie_id, // bien récupéré dans la requête
-          };
-          articles.push(article);
+        for (const row of results) {
+          if (!mapCategories[row.categorie_nom]) {
+            mapCategories[row.categorie_nom] = [];
+          }
+
+          let articles = mapCategories[row.categorie_nom];
+          let article = articles.find(a => a.id === row.id);
+
+          if (!article) {
+            article = {
+              id: row.id,
+              nom: row.nom,
+              prix: row.prix,
+              description: row.description,
+              images: [],
+              stocks: [],
+              categorie_id: row.categorie_id, // bien récupéré dans la requête
+            };
+            articles.push(article);
+          }
+
+
+          if (row.image_url && !article.images.includes(row.image_url)) {
+            article.images.push(row.image_url);
+          }
+
+          if (row.stock_taille && row.stock_quantite !== null) {
+            article.stocks.push({
+              taille: row.stock_taille,
+              quantite: row.stock_quantite
+            });
+          }
         }
 
-
-        if (row.image_url && !article.images.includes(row.image_url)) {
-          article.images.push(row.image_url);
-        }
-
-        if (row.stock_taille && row.stock_quantite !== null) {
-          article.stocks.push({
-            taille: row.stock_taille,
-            quantite: row.stock_quantite
-          });
-        }
-      }
-
-      resolve(mapCategories);
+        resolve(mapCategories);
+      });
     });
-  });
-}
-
-
-
+  }
 
   obtenirLesCategories(): Promise<any[]> {
     return new Promise((resolve, reject) => {
-      const mysqlConnector = new MysqlConnector();
       const sql = `SELECT * FROM categories`;
   
       console.log("Exécution de la requête pour obtenir les categories existantes");
   
-      mysqlConnector.query(sql, [], (error, results) => {
+      this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des categories : ' + error.message);
           reject(error);
@@ -159,19 +151,15 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
           console.log('Articles récupérés avec succès :', results);
           resolve(results);
         }
-  
-        mysqlConnector.close();
       });
     });
   }
 
   async getTailleMap(): Promise<Record<string, number>> {
     return new Promise((resolve, reject) => {
-      const mysqlConnector = new MysqlConnector();
       const sql = `SELECT id, nom FROM tailles`;
 
-      mysqlConnector.query(sql, [], (error, results) => {
-        mysqlConnector.close();
+      this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) return reject(error);
 
         const map: Record<string, number> = {};
@@ -184,8 +172,6 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
   }
 
   async ajouterArticle(data: ArticleCreationData): Promise<ConfirmationResult> {
-    const mysqlConnector = new MysqlConnector();
-
     const articleSql = `
       INSERT INTO articles (nom, description, prix, categorie_id)
       VALUES (?, ?, ?, ?)
@@ -199,9 +185,8 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
     ];
 
     return new Promise((resolve, reject) => {
-      mysqlConnector.query(articleSql, articleValues, async (err, results) => {
+      this.mysqlConnector.query(articleSql, articleValues, async (err, results) => {
         if (err) {
-          mysqlConnector.close();
           return reject({ isConfirm: false, message: 'Erreur article: ' + err.message });
         }
 
@@ -211,9 +196,8 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
         const imageSql = `INSERT INTO images (article_id, url) VALUES ?`;
         const imageValues = (data.images || []).map((url) => [articleId, url]);
 
-        mysqlConnector.query(imageSql, [imageValues], async (errImg) => {
+        this.mysqlConnector.query(imageSql, [imageValues], async (errImg) => {
           if (errImg) {
-            mysqlConnector.close();
             return reject({ isConfirm: false, message: 'Erreur image: ' + errImg.message });
           }
 
@@ -229,8 +213,7 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
               return [articleId, tailleId, quantite];
             });
 
-            mysqlConnector.query(stockSql, [stockValues], (errStock) => {
-              mysqlConnector.close();
+            this.mysqlConnector.query(stockSql, [stockValues], (errStock) => {
 
               if (errStock) {
                 return reject({ isConfirm: false, message: 'Erreur stock: ' + errStock.message });
@@ -243,7 +226,6 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
             });
 
           } catch (errStockMap) {
-            mysqlConnector.close();
             return reject({ isConfirm: false, message: 'Erreur taille/stock : ' + Error });
           }
         });
@@ -251,257 +233,211 @@ obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
     });
   }
 
-
-
-
   obtenirLeStock(): Promise<any[]> {
-  return new Promise((resolve, reject) => {
-    const mysqlConnector = new MysqlConnector();
-    const sql = `
-      SELECT 
-        a.id AS article_id,
-        a.nom AS article,
-        t.nom AS taille,
-        s.quantite
-      FROM stocks s
-      JOIN articles a ON s.article_id = a.id
-      JOIN tailles t ON s.taille_id = t.id
-      ORDER BY a.nom, t.nom
-    `;
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          a.id AS article_id,
+          a.nom AS article,
+          t.nom AS taille,
+          s.quantite
+        FROM stocks s
+        JOIN articles a ON s.article_id = a.id
+        JOIN tailles t ON s.taille_id = t.id
+        ORDER BY a.nom, t.nom
+      `;
 
-    console.log("Exécution de la requête pour obtenir le stock");
+      console.log("Exécution de la requête pour obtenir le stock");
 
-    mysqlConnector.query(sql, [], (error, results) => {
-      if (error) {
-        console.error('Erreur lors de la récupération du stock : ' + error.message);
-        reject(error);
-      } else {
-        resolve(results);
-      }
-
-      mysqlConnector.close();
+      this.mysqlConnector.query(sql, [], (error, results) => {
+        if (error) {
+          console.error('Erreur lors de la récupération du stock : ' + error.message);
+          reject(error);
+        } else {
+          resolve(results);
+        }
+      });
     });
-  });
-}
+  }
 
-ajouterStock(articleId: number, tailleId: number, quantite: number): Promise<ConfirmationResult> {
-  return new Promise((resolve, reject) => {
-    const mysqlConnector = new MysqlConnector();
+  ajouterStock(articleId: number, tailleId: number, quantite: number): Promise<ConfirmationResult> {
+    return new Promise((resolve, reject) => {
+      // Vérifie si une ligne existe déjà pour cet article + taille
+      const checkSql = `SELECT id, quantite FROM stocks WHERE article_id = ? AND taille_id = ?`;
 
-    // Vérifie si une ligne existe déjà pour cet article + taille
-    const checkSql = `SELECT id, quantite FROM stocks WHERE article_id = ? AND taille_id = ?`;
+      this.mysqlConnector.query(checkSql, [articleId, tailleId], (error, results) => {
+        if (error) {
+          console.error("Erreur lors de la vérification du stock : ", error.message);
+          reject({ isConfirm: false, message: "Erreur lors de l'ajout du stock" });
+          return;
+        }
 
-    mysqlConnector.query(checkSql, [articleId, tailleId], (error, results) => {
-      if (error) {
-        console.error("Erreur lors de la vérification du stock : ", error.message);
-        reject({ isConfirm: false, message: "Erreur lors de l'ajout du stock" });
-        mysqlConnector.close();
-        return;
-      }
-
-      if (results.length > 0) {
-        // Mise à jour de la quantité existante
-        const updateSql = `UPDATE stocks SET quantite = quantite + ? WHERE article_id = ? AND taille_id = ?`;
-        mysqlConnector.query(updateSql, [quantite, articleId, tailleId], (err) => {
-          mysqlConnector.close();
-          if (err) {
-            reject({ isConfirm: false, message: "Erreur lors de la mise à jour du stock" });
-          } else {
-            resolve({ isConfirm: true, message: "Stock mis à jour avec succès" });
-          }
-        });
-      } else {
-        // Insertion d'une nouvelle ligne de stock
-        const insertSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES (?, ?, ?)`;
-        mysqlConnector.query(insertSql, [articleId, tailleId, quantite], (err) => {
-          mysqlConnector.close();
-          if (err) {
-            reject({ isConfirm: false, message: "Erreur lors de l'ajout du stock" });
-          } else {
-            resolve({ isConfirm: true, message: "Stock ajouté avec succès" });
-          }
-        });
-      }
+        if (results.length > 0) {
+          // Mise à jour de la quantité existante
+          const updateSql = `UPDATE stocks SET quantite = quantite + ? WHERE article_id = ? AND taille_id = ?`;
+          this.mysqlConnector.query(updateSql, [quantite, articleId, tailleId], (err) => {
+            if (err) {
+              reject({ isConfirm: false, message: "Erreur lors de la mise à jour du stock" });
+            } else {
+              resolve({ isConfirm: true, message: "Stock mis à jour avec succès" });
+            }
+          });
+        } else {
+          // Insertion d'une nouvelle ligne de stock
+          const insertSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES (?, ?, ?)`;
+          this.mysqlConnector.query(insertSql, [articleId, tailleId, quantite], (err) => {
+            if (err) {
+              reject({ isConfirm: false, message: "Erreur lors de l'ajout du stock" });
+            } else {
+              resolve({ isConfirm: true, message: "Stock ajouté avec succès" });
+            }
+          });
+        }
+      });
     });
-  });
-}
+  }
 
-obtenirLesCommandes(): Promise<any[]> {
-  return new Promise((resolve, reject) => {
-    const mysqlConnector = new MysqlConnector();
-    const sql = `
-      SELECT 
-        c.id AS commande_id,
-        c.date_commande,
-        c.statut,
-        u.nom_utilisateur AS client,
-        a.nom AS article,
-        t.nom AS taille,
-        ca.quantite,
-        ca.prix
-      FROM commandes c
-      JOIN utilisateurs u ON c.utilisateur_id = u.id
-      JOIN commande_articles ca ON c.id = ca.commande_id
-      JOIN articles a ON ca.article_id = a.id
-      JOIN tailles t ON ca.taille_id = t.id
-      ORDER BY c.date_commande DESC
-    `;
+  obtenirLesCommandes(): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          c.id AS commande_id,
+          c.date_commande,
+          c.statut,
+          u.nom_utilisateur AS client,
+          a.nom AS article,
+          t.nom AS taille,
+          ca.quantite,
+          ca.prix
+        FROM commandes c
+        JOIN utilisateurs u ON c.utilisateur_id = u.id
+        JOIN commande_articles ca ON c.id = ca.commande_id
+        JOIN articles a ON ca.article_id = a.id
+        JOIN tailles t ON ca.taille_id = t.id
+        ORDER BY c.date_commande DESC
+      `;
 
-    mysqlConnector.query(sql, [], (error, results) => {
-      mysqlConnector.close();
-      if (error) {
-        reject(error);
-      } else {
-        // Regrouper les commandes
-        const commandesMap: Record<number, any> = {};
+      this.mysqlConnector.query(sql, [], (error, results) => {
+        if (error) {
+          reject(error);
+        } else {
+          // Regrouper les commandes
+          const commandesMap: Record<number, any> = {};
 
-        results.forEach((row: any) => {
-          const {
-            commande_id,
-            date_commande,
-            statut,
-            client,
-            article,
-            taille,
-            quantite,
-            prix
-          } = row;
-
-          if (!commandesMap[commande_id]) {
-            commandesMap[commande_id] = {
+          results.forEach((row: any) => {
+            const {
               commande_id,
               date_commande,
               statut,
               client,
-              articles: []
-            };
-          }
+              article,
+              taille,
+              quantite,
+              prix
+            } = row;
 
-          commandesMap[commande_id].articles.push({
-            article,
-            taille,
-            quantite,
-            prix
+            if (!commandesMap[commande_id]) {
+              commandesMap[commande_id] = {
+                commande_id,
+                date_commande,
+                statut,
+                client,
+                articles: []
+              };
+            }
+
+            commandesMap[commande_id].articles.push({
+              article,
+              taille,
+              quantite,
+              prix
+            });
           });
-        });
 
-        // Transformer en tableau
-        const commandes = Object.values(commandesMap);
-        resolve(commandes);
-      }
-    });
-  });
-}
-
-
-
- async ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult> {
-  const mysqlConnector = new MysqlConnector();
-
-  try {
-    // Récupérer la map tailleNom -> tailleId
-    const tailleMap = await this.getTailleMap();
-
-    // Début de transaction
-    await new Promise<void>((resolve, reject) => {
-      mysqlConnector.beginTransaction((err, connection) => {
-        if (err) reject(err);
-        else {
-          // Stocke la connexion pour commit/rollback
-          (global as any).transactionConnection = connection;
-          resolve();
+          const commandes = Object.values(commandesMap);
+          resolve(commandes);
         }
       });
     });
-
-    // Insertion commande
-    const result = await new Promise<any>((resolve, reject) => {
-      const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, statut, date_commande) VALUES (?, ?, ?)`;
-      mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id, data.statut, data.date], (err, res) => {
-        if (err) reject(err);
-        else resolve(res);
-      });
-    });
-
-    const commandeId = result.insertId;
-    console.log("commandeId:", commandeId);
-
-    // Construire valeursArticlesFinales *après* avoir la commandeId
-    const valeursArticlesFinales = data.articles.map(article => [
-      commandeId,
-      article.article_id,
-      article.taille ? tailleMap[article.taille] || null : null,
-      article.quantite || 1,
-      article.prix,
-    ]);
-
-    console.log("valeursArticlesFinales:", valeursArticlesFinales);
-
-    // Insertion articles commande
-    await new Promise<void>((resolve, reject) => {
-      const sqlInsertArticles = `
-        INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
-        VALUES ?
-      `;
-      mysqlConnector.query(sqlInsertArticles, [valeursArticlesFinales], (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
-    // Commit
-    await new Promise<void>((resolve, reject) => {
-      mysqlConnector.commit((global as any).transactionConnection, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
-    mysqlConnector.close();
-
-    return { isConfirm: true, message: "Commande créée avec succès, en attente de paiement" };
-  } catch (error) {
-    console.error("Erreur dans ajouterCommande:", error);
-
-    // Rollback si erreur
-    await new Promise<void>((resolve) => {
-      mysqlConnector.rollback((global as any).transactionConnection, () => {
-        mysqlConnector.close();
-        resolve();
-      });
-    });
-
-    return { isConfirm: false, message: "Erreur lors de la création de la commande" };
   }
-}
 
+  async ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult> {
+    try {
+      // Récupérer la map tailleNom -> tailleId
+      const tailleMap = await this.getTailleMap();
 
+      return new Promise((resolve, reject) => {
+        this.mysqlConnector.beginTransaction((err, connection) => {
+          if (err || !connection) {
+            return reject({ isConfirm: false, message: 'Erreur transaction: ' + (err?.message || 'Connection undefined') });
+          }
 
+          // Insertion commande
+          const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, statut, date_commande) VALUES (?, ?, ?)`;
+          this.mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id, data.statut, data.date], (errCommande, resCommande) => {
+            if (errCommande) {
+              this.mysqlConnector.rollback(connection);
+              return reject({ isConfirm: false, message: 'Erreur commande: ' + errCommande.message });
+            }
 
+            const commandeId = resCommande.insertId;
+            console.log("commandeId:", commandeId);
 
+            // Construire valeursArticlesFinales *après* avoir la commandeId
+            const valeursArticlesFinales = data.articles.map(article => [
+              commandeId,
+              article.article_id,
+              article.taille ? tailleMap[article.taille] || null : null,
+              article.quantite || 1,
+              article.prix,
+            ]);
 
+            console.log("valeursArticlesFinales:", valeursArticlesFinales);
 
-supprimerArticle(articleId: number): Promise<ConfirmationResult> {
-  return new Promise((resolve, reject) => {
-    const mysqlConnector = new MysqlConnector();
-    const sql = `DELETE FROM articles WHERE id = ?`;
+            const sqlInsertArticles = `
+              INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
+              VALUES ?
+            `;
+            this.mysqlConnector.query(sqlInsertArticles, [valeursArticlesFinales], (errArticles) => {
+              if (errArticles) {
+                this.mysqlConnector.rollback(connection);
+                return reject({ isConfirm: false, message: 'Erreur articles: ' + errArticles.message });
+              }
 
-    mysqlConnector.query(sql, [articleId], (error, result) => {
-      mysqlConnector.close();
+              this.mysqlConnector.commit(connection, (errCommit) => {
+                if (errCommit) {
+                  this.mysqlConnector.rollback(connection);
+                  return reject({ isConfirm: false, message: 'Erreur commit: ' + errCommit.message });
+                }
 
-      if (error) {
-        reject({ isConfirm: false, message: "Erreur lors de la suppression de l'article" });
-      } else {
-        resolve({ isConfirm: true, message: "Article supprimé avec succès" });
-      }
+                resolve({ isConfirm: true, message: "Commande créée avec succès, en attente de paiement" });
+              });
+            });
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Erreur dans ajouterCommande:", error);
+      return { isConfirm: false, message: "Erreur lors de la création de la commande" };
+    }
+  }
+
+  supprimerArticle(articleId: number): Promise<ConfirmationResult> {
+    return new Promise((resolve, reject) => {
+      const sql = `DELETE FROM articles WHERE id = ?`;
+
+      this.mysqlConnector.query(sql, [articleId], (error, result) => {
+        if (error) {
+          reject({ isConfirm: false, message: "Erreur lors de la suppression de l'article" });
+        } else {
+          resolve({ isConfirm: true, message: "Article supprimé avec succès" });
+        }
+      });
     });
-  });
-}
+  }
 
   modifierArticle(id: number, data: ArticleData): Promise<ConfirmationResult> {
     return new Promise(async (resolve, reject) => {
-      const mysqlConnector = new MysqlConnector();
-
       const sql = `
         UPDATE articles 
         SET nom = ?, description = ?, prix = ?, categorie_id = ?
@@ -516,80 +452,61 @@ supprimerArticle(articleId: number): Promise<ConfirmationResult> {
         id
       ];
 
-      mysqlConnector.query(sql, values, async (error, result) => {
+      this.mysqlConnector.query(sql, values, async (error, result) => {
         if (error) {
-          mysqlConnector.close();
           return reject({ isConfirm: false, message: "Erreur lors de la mise à jour de l'article" });
         }
 
-        // Supprimer les anciennes images
         const deleteImagesSql = `DELETE FROM images WHERE article_id = ?`;
-        mysqlConnector.query(deleteImagesSql, [id], (deleteError) => {
+        this.mysqlConnector.query(deleteImagesSql, [id], (deleteError) => {
           if (deleteError) {
-            mysqlConnector.close();
-            return reject({ isConfirm: false, message: "Erreur lors de la suppression des images" });
+            return reject({ isConfirm: false, message: "Erreur lors de la suppression des anciennes images" });
           }
 
-          // Réinsérer les nouvelles images seulement si non vide
-          const imageValues = (data.images || []).map((url) => [id, url]);
-          const insertImages = () => {
-            if (imageValues.length === 0) return Promise.resolve();
-            return new Promise((resolveImg, rejectImg) => {
-              const insertSql = `INSERT INTO images (article_id, url) VALUES ?`;
-              mysqlConnector.query(insertSql, [imageValues], (insertError) => {
-                if (insertError) rejectImg(insertError);
-                else resolveImg(true);
-              });
-            });
-          };
-
-          // Supprimer les anciens stocks
           const deleteStocksSql = `DELETE FROM stocks WHERE article_id = ?`;
-          mysqlConnector.query(deleteStocksSql, [id], async (deleteStockError) => {
+          this.mysqlConnector.query(deleteStocksSql, [id], async (deleteStockError) => {
             if (deleteStockError) {
-              mysqlConnector.close();
-              return reject({ isConfirm: false, message: "Erreur lors de la suppression des stocks" });
+              return reject({ isConfirm: false, message: "Erreur lors de la suppression des anciens stocks" });
             }
 
-            // Réinsérer les nouveaux stocks
             try {
-              // Typage explicite pour éviter l'erreur TS
-              const tailleMap: Record<string, number> = await this.getTailleMap();
-              const stockValues = (data.stocks || []).map(({ taille, quantite }) => {
-                const tailleId = tailleMap[taille];
-                if (!tailleId) throw new Error(`Taille inconnue : ${taille}`);
-                return [id, tailleId, quantite];
-              });
+              // Ajouter les nouvelles images
+              if (data.images && data.images.length > 0) {
+                const insertImagesSql = `INSERT INTO images (article_id, url) VALUES ?`;
+                const imageValues = data.images.map((url: string) => [id, url]);
 
-              const insertStocks = () => {
-                if (stockValues.length === 0) return Promise.resolve();
-                return new Promise((resolveStock, rejectStock) => {
-                  const insertStockSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES ?`;
-                  mysqlConnector.query(insertStockSql, [stockValues], (insertStockError) => {
+                await new Promise<void>((resolveImg, rejectImg) => {
+                  this.mysqlConnector.query(insertImagesSql, [imageValues], (insertError) => {
+                    if (insertError) rejectImg(insertError);
+                    else resolveImg();
+                  });
+                });
+              }
+
+              // Ajouter les nouveaux stocks
+              if (data.stocks && data.stocks.length > 0) {
+                const tailleMap = await this.getTailleMap();
+                const stockValues = data.stocks.map((stock: any) => [
+                  id, 
+                  tailleMap[stock.taille] || null, 
+                  stock.quantite
+                ]);
+
+                const insertStocksSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES ?`;
+                await new Promise<void>((resolveStock, rejectStock) => {
+                  this.mysqlConnector.query(insertStocksSql, [stockValues], (insertStockError) => {
                     if (insertStockError) rejectStock(insertStockError);
-                    else resolveStock(true);
+                    else resolveStock();
                   });
                 });
-              };
+              }
 
-              // Exécute l'insertion des images puis des stocks
-              insertImages()
-                .then(() => insertStocks())
-                .then(() => {
-                  mysqlConnector.close();
-                  resolve({
-                    isConfirm: true,
-                    message: "Article, images et stocks mis à jour avec succès"
-                  });
-                })
-                .catch((err) => {
-                  mysqlConnector.close();
-                  reject({ isConfirm: false, message: "Erreur lors de l'insertion des images ou stocks : " + err.message });
-                });
-
-            } catch (errStockMap) {
-              mysqlConnector.close();
-              return reject({ isConfirm: false, message: 'Erreur taille/stock : ' + errStockMap });
+              resolve({
+                isConfirm: true,
+                message: "Article, images et stocks mis à jour avec succès"
+              });
+            } catch (err: any) {
+              reject({ isConfirm: false, message: "Erreur lors de l'insertion des images ou stocks : " + err.message });
             }
           });
         });
@@ -597,60 +514,40 @@ supprimerArticle(articleId: number): Promise<ConfirmationResult> {
     });
   }
 
+  async modifierStock(articleId: number, tailleId: number, quantite: number): Promise<ConfirmationResult> {
+    const sql = `
+      UPDATE stocks 
+      SET quantite = ?
+      WHERE article_id = ? AND taille_id = ?
+    `;
 
-
-async modifierStock(articleId: number, tailleId: number, quantite: number): Promise<ConfirmationResult> {
-  const mysqlConnector = new MysqlConnector();
-
-  const sql = `
-    UPDATE stocks 
-    SET quantite = ?
-    WHERE article_id = ? AND taille_id = ?
-  `;
-
-  return new Promise((resolve, reject) => {
-    mysqlConnector.query(sql, [quantite, articleId, tailleId], (error, result) => {
-      mysqlConnector.close();
-
-      if (error) {
-        reject({
-          isConfirm: false,
-          message: `Erreur lors de la modification du stock : ${error.message}`
-        });
-      } else if (result.affectedRows === 0) {
-        resolve({
-          isConfirm: false,
-          message: "Aucune ligne modifiée : l'article ou la taille est introuvable"
-        });
-      } else {
-        resolve({
-          isConfirm: true,
-          message: "Stock mis à jour avec succès"
-        });
-      }
+    return new Promise((resolve, reject) => {
+      this.mysqlConnector.query(sql, [quantite, articleId, tailleId], (error, result: any) => {
+        if (error) {
+          reject({
+            isConfirm: false,
+            message: `Erreur lors de la modification du stock : ${error.message}`
+          });
+        } else if (result.affectedRows === 0) {
+          resolve({
+            isConfirm: false,
+            message: "Aucune ligne modifiée : l'article ou la taille est introuvable"
+          });
+        } else {
+          resolve({
+            isConfirm: true,
+            message: "Stock mis à jour avec succès"
+          });
+        }
+      });
     });
-  });
-}
-
-
-  creerCommande(
-    utilisateur_id: number,
-    articles: ArticleCommande[],
-    total: number,
-    date: string,
-    statut = 'en_attente'
-  ): Promise<ConfirmationResult> {
-    const commande = { utilisateur_id, articles, total, date, statut };
-    return this.ajouterCommande(commande);
   }
 
   async obtenirLesTailles(): Promise<{ id: number; nom: string }[]> {
     return new Promise((resolve, reject) => {
-      const mysqlConnector = new MysqlConnector();
       const sql = `SELECT id, nom FROM tailles ORDER BY nom`;
 
-      mysqlConnector.query(sql, [], (error, results) => {
-        mysqlConnector.close();
+      this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           reject(error);
         } else {
@@ -660,5 +557,21 @@ async modifierStock(articleId: number, tailleId: number, quantite: number): Prom
     });
   }
 
+  // Ajouter cette méthode manquante
+  creerCommande(
+    utilisateur_id: number,
+    articles: any[],
+    total: number,
+    date: string,
+    statut = 'en_attente'
+  ): Promise<ConfirmationResult> {
+    const commande = { 
+      utilisateur_id, 
+      articles, 
+      total, 
+      date, 
+      statut 
+    };
+    return this.ajouterCommande(commande);
+  }
 }
-

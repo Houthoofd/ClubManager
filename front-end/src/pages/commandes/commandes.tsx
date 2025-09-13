@@ -4,6 +4,7 @@ import { useCommandes, useUpdateCommandeStatut } from '../../hooks/useCommandes'
 import TableauCommandes from '../../components/commandes/TableauCommandes';
 import FiltrageCommandes from '../../components/commandes/FiltrageCommandes';
 import StatistiquesCommandes from '../../components/commandes/StatistiquesCommandes';
+import { PageHeader } from '../../components/common/PageHeader';
 
 const Commandes = () => {
   const [filterInput, setFilterInput] = useState('');
@@ -81,44 +82,52 @@ const Commandes = () => {
 
   if (error) {
     return (
-      <PageSection>
-        <Alert 
-          variant="danger" 
-          title="Erreur lors du chargement des commandes"
-          style={{ borderRadius: '8px' }}
+      <div className="commandes-page">
+        <PageHeader
+          title="Gestion des commandes"
+          subtitle="Suivez et gérez les commandes de votre magasin"
+          variant="commandes"
         />
-      </PageSection>
+        <PageSection className="commandes-content">
+          <Alert 
+            variant="danger" 
+            title="Erreur lors du chargement des commandes"
+            style={{ borderRadius: '8px' }}
+          />
+        </PageSection>
+      </div>
     );
   }
 
   return (
-    <PageSection>
-      <Title headingLevel="h1" size="2xl" style={{ marginBottom: '0.5rem' }}>
-        Gestion des commandes
-      </Title>
-      <p style={{ color: '#6c757d', fontSize: '1.1rem', marginBottom: '2rem' }}>
-        Suivez et gérez toutes les commandes du magasin
-      </p>
-
-      <StatistiquesCommandes commandes={commandes} />
-
-      <FiltrageCommandes
-        filterInput={filterInput}
-        onFilterChange={setFilterInput}
-        totalCommandes={commandes.length}
-        commandesFiltrees={filteredData.length}
+    <div className="commandes-page">
+      <PageHeader
+        title="Gestion des commandes"
+        subtitle="Suivez et gérez les commandes de votre magasin"
+        variant="commandes"
       />
 
-      <TableauCommandes
-        commandes={sortedData}
-        expandedRows={expandedRows}
-        activeSortIndex={activeSortIndex}
-        activeSortDirection={activeSortDirection}
-        onToggleRow={toggleRow}
-        onSort={onSort}
-        onChangeStatut={onChangeStatut}
-      />
-    </PageSection>
+      <PageSection className="commandes-content">
+        <StatistiquesCommandes commandes={commandes} />
+
+        <FiltrageCommandes
+          filterInput={filterInput}
+          onFilterChange={setFilterInput}
+          totalCommandes={commandes.length}
+          commandesFiltrees={filteredData.length}
+        />
+
+        <TableauCommandes
+          commandes={sortedData}
+          expandedRows={expandedRows}
+          activeSortIndex={activeSortIndex}
+          activeSortDirection={activeSortDirection}
+          onToggleRow={toggleRow}
+          onSort={onSort}
+          onChangeStatut={onChangeStatut}
+        />
+      </PageSection>
+    </div>
   );
 };
 

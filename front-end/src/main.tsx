@@ -19,6 +19,9 @@ import './styles/participants.css';
 import './styles/professeurs.css';
 import './styles/cours.css';
 import './styles/inscription.css';
+import './styles/dashboard.css';
+import './styles/users.css';
+import './styles/pages.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

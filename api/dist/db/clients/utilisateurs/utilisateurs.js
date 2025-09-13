@@ -1,13 +1,15 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
 import bcrypt from 'bcrypt';
 export class Utilisateurs {
+    mysqlConnector;
+    constructor() {
+        this.mysqlConnector = MysqlConnector.getInstance();
+    }
     // Vérifie si un utilisateur existe par email
     async checkUtilisateurByEmail(email) {
-        const mysqlConnector = new MysqlConnector();
         const sql = `SELECT id FROM utilisateurs WHERE email = ? LIMIT 1`;
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, [email], (error, results) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, [email], (error, results) => {
                 if (error) {
                     reject(error);
                     return;
@@ -23,38 +25,35 @@ export class Utilisateurs {
     }
     // Inscription d'un utilisateur (version simple, à adapter selon tes besoins)
     async inscriptionUtilisateurSimple(data) {
-        const mysqlConnector = new MysqlConnector();
-        const sql = `
-      INSERT INTO utilisateurs (first_name, last_name, email, password, date_of_birth, abonnement_id, genre_id, grade_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-        const values = [
-            data.prenom,
-            data.nom,
-            data.email,
-            data.password,
-            data.date,
-            data.abonnement,
-            data.genre,
-            1 // grade_id = 1 (ceinture blanche)
-        ];
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, values, (error, results) => {
-                mysqlConnector.close();
+            const sql = `
+        INSERT INTO utilisateurs (first_name, last_name, email, password, date_of_birth, abonnement_id, genre_id, status_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+      `;
+            this.mysqlConnector.query(sql, [
+                data.prenom,
+                data.nom,
+                data.email,
+                data.password,
+                data.date,
+                data.abonnement,
+                data.genre
+            ], (error, results) => {
                 if (error) {
+                    console.error('Erreur lors de l\'inscription :', error);
                     reject(error);
-                    return;
                 }
-                resolve({
-                    insertId: results.insertId,
-                    affectedRows: results.affectedRows,
-                });
+                else {
+                    resolve({
+                        isConfirm: true,
+                        message: 'Utilisateur inscrit avec succès'
+                    });
+                }
             });
         });
     }
     verifierUtilisateur(utilisateurData) {
         return new Promise((resolve, reject) => {
-            const mysqlConnector = new MysqlConnector();
             const sql = `
         SELECT * FROM utilisateurs
         WHERE email = ? OR nom_utilisateur = ?
@@ -64,8 +63,8 @@ export class Utilisateurs {
                 utilisateurData.nom_utilisateur
             ];
             console.log("Exécution de la requête :", sql, values);
-            mysqlConnector.query(sql, values, (error, results) => {
-                mysqlConnector.close(); // fermer connexion ici, une fois la requête finie
+            this.mysqlConnector.query(sql, values, (error, results) => {
+                // fermer connexion ici, une fois la requête finie
                 if (error) {
                     console.error('Erreur lors de l\'exécution de la requête :', error.message);
                     reject(error);
@@ -83,7 +82,6 @@ export class Utilisateurs {
         });
     }
     async inscrireUtilisateur(utilisateurData) {
-        const mysqlConnector = new MysqlConnector();
         // Correction : supporte les deux formats de UserData (prénom/nom ou first_name/last_name)
         // Utilise 'prenom' et 'nom' si présents, sinon fallback sur 'first_name' et 'last_name'
         const firstName = utilisateurData.prenom || utilisateurData.first_name || '';
@@ -112,8 +110,7 @@ export class Utilisateurs {
         ];
         console.log("Insertion utilisateur :", values);
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, values, (error, results) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, values, (error, results) => {
                 if (error) {
                     console.error('Erreur lors de l\'insertion de l\'utilisateur :', error.message);
                     reject(error);
@@ -133,7 +130,6 @@ export class Utilisateurs {
         });
     }
     async validerConnexion(utilisateurData) {
-        const mysqlConnector = new MysqlConnector();
         const sql = `
       SELECT id, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id, password
       FROM utilisateurs
@@ -144,8 +140,7 @@ export class Utilisateurs {
         ];
         console.log("Validation connexion pour :", utilisateurData.email);
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, values, async (error, results) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, values, async (error, results) => {
                 if (error) {
                     console.error("Erreur lors de la vérification de l'utilisateur :", error.message);
                     reject(error);
@@ -215,10 +210,8 @@ export class Utilisateurs {
     }
     obtenirTousLesUtilisateurs() {
         return new Promise((resolve, reject) => {
-            const mysqlConnector = new MysqlConnector();
             const sql = `SELECT * FROM utilisateurs`;
-            mysqlConnector.query(sql, [], (error, results) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
                     console.error("Erreur lors de la récupération des utilisateurs :", error.message);
                     reject(error);
@@ -262,11 +255,9 @@ export class Utilisateurs {
                 reject(new Error("L'identifiant est requis pour récupérer un utilisateur."));
                 return;
             }
-            const mysqlConnector = new MysqlConnector();
             const sql = 'SELECT * FROM utilisateurs WHERE id = ?';
             const values = [id];
-            mysqlConnector.query(sql, values, (error, results) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, values, (error, results) => {
                 if (error) {
                     console.error("Erreur lors de la récupération de l'utilisateur :", error.message);
                     reject(error);
@@ -304,11 +295,9 @@ export class Utilisateurs {
         });
     }
     supprimerUtilisateur(utilisateurId) {
-        const mysqlConnector = new MysqlConnector();
         const deleteSql = `DELETE FROM utilisateurs WHERE id = ?`;
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
                 if (error) {
                     console.error('Erreur lors de la suppression de l\'utilisateur :', error.message);
                     resolve({
@@ -336,29 +325,19 @@ export class Utilisateurs {
     }
     mettreAjourUtilisateur(utilisateurData) {
         return new Promise((resolve, reject) => {
-            const mysqlConnector = new MysqlConnector();
-            if (!utilisateurData.prenom || !utilisateurData.nom) {
-                reject(new Error("Le prénom et le nom de l'utilisateur sont requis pour la mise à jour."));
-                return;
-            }
-            // 1) Récupérer l'id utilisateur à partir du prénom et nom
             const sqlSelect = `SELECT id FROM utilisateurs WHERE first_name = ? AND last_name = ? LIMIT 1`;
             const valuesSelect = [utilisateurData.prenom, utilisateurData.nom];
-            mysqlConnector.query(sqlSelect, valuesSelect, (selectError, selectResults) => {
+            this.mysqlConnector.query(sqlSelect, valuesSelect, (selectError, selectResults) => {
                 if (selectError) {
-                    mysqlConnector.close();
-                    console.error("Erreur lors de la recherche de l'utilisateur :", selectError.message);
+                    console.error('Erreur lors de la recherche de l\'utilisateur :', selectError.message);
                     reject(selectError);
                     return;
                 }
                 if (selectResults.length === 0) {
-                    mysqlConnector.close();
-                    console.log("Utilisateur introuvable avec ce prénom et nom.");
-                    resolve({ isConfirm: false, message: "Utilisateur introuvable avec ce prénom et nom." });
+                    resolve({ isConfirm: false, message: "Utilisateur non trouvé." });
                     return;
                 }
                 const userId = selectResults[0].id;
-                // 2) Mettre à jour l'utilisateur avec l'id trouvé
                 const sqlUpdate = `
           UPDATE utilisateurs SET 
             first_name = ?,
@@ -387,8 +366,7 @@ export class Utilisateurs {
                     userId
                 ];
                 console.log("Exécution de la requête de mise à jour :", sqlUpdate, valuesUpdate);
-                mysqlConnector.query(sqlUpdate, valuesUpdate, (updateError, updateResults) => {
-                    mysqlConnector.close();
+                this.mysqlConnector.query(sqlUpdate, valuesUpdate, (updateError, updateResults) => {
                     if (updateError) {
                         console.error('Erreur lors de la mise à jour de l\'utilisateur :', updateError.message);
                         reject(updateError);
@@ -408,7 +386,6 @@ export class Utilisateurs {
     }
     // Modifie les informations d'un utilisateur selon les champs reçus
     async modifierInfosUtilisateur(data) {
-        const mysqlConnector = new MysqlConnector();
         if (!data.id) {
             throw new Error("L'identifiant de l'utilisateur est requis pour la modification.");
         }
@@ -440,14 +417,12 @@ export class Utilisateurs {
             values.push(data.status);
         }
         if (fields.length === 0) {
-            mysqlConnector.close();
             return { isConfirm: false, message: "Aucune donnée à modifier." };
         }
         const sql = `UPDATE utilisateurs SET ${fields.join(', ')} WHERE id = ?`;
         values.push(data.id);
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, values, (error, results) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, values, (error, results) => {
                 if (error) {
                     console.error('Erreur lors de la modification de l\'utilisateur :', error.message);
                     reject(error);
@@ -463,7 +438,6 @@ export class Utilisateurs {
         });
     }
     verifierEmailExiste(email, id) {
-        const mysqlConnector = new MysqlConnector();
         let sql = 'SELECT id FROM utilisateurs WHERE email = ?';
         let params = [email];
         if (id) {
@@ -471,8 +445,7 @@ export class Utilisateurs {
             params.push(id);
         }
         return new Promise((resolve, reject) => {
-            mysqlConnector.query(sql, params, (error, results) => {
-                mysqlConnector.close();
+            this.mysqlConnector.query(sql, params, (error, results) => {
                 if (error) {
                     reject(error);
                     return;
@@ -483,44 +456,42 @@ export class Utilisateurs {
     }
     obtenirInformationsUtilisateur = async (prenom, nom) => {
         try {
-            const mysqlConnector = new MysqlConnector();
-            // Requête SQL pour récupérer les informations en fonction des IDs liés
             const sql = `
-          SELECT 
-            u.id,
-            u.first_name,
-            u.last_name,
-            u.nom_utilisateur,
-            u.email,
-            u.password,
-            g.genre_name AS genres,  
-            s.nom_role AS status,  
-            gr.grade_id AS grades,  
-            a.nom_plan AS abonnement,  
-            u.date_of_birth
-          FROM 
-            utilisateurs u
-          JOIN 
-            genres g ON u.genre_id = g.id  
-          JOIN 
-            status s ON u.status_id = s.id  
-          JOIN 
-            grades gr ON u.grade_id = gr.id  
-          JOIN 
-            plans_tarifaires a ON u.abonnement_id = a.id  
-          WHERE 
-            u.first_name = ? AND u.last_name = ?
-        `;
+        SELECT 
+          u.id,
+          u.first_name,
+          u.last_name,
+          u.nom_utilisateur,
+          u.email,
+          u.password,
+          g.genre_name AS genres,  
+          s.nom_role AS status,  
+          gr.grade_id AS grades,  
+          a.nom_plan AS abonnement,  
+          u.date_of_birth
+        FROM 
+          utilisateurs u
+        JOIN 
+          genres g ON u.genre_id = g.id  
+        JOIN 
+          status s ON u.status_id = s.id  
+        JOIN 
+          grades gr ON u.grade_id = gr.id  
+        JOIN 
+          plans_tarifaires a ON u.abonnement_id = a.id  
+        WHERE 
+          u.first_name = ? AND u.last_name = ?
+      `;
             const values = [prenom, nom];
             return new Promise((resolve, reject) => {
-                mysqlConnector.query(sql, values, (error, results) => {
+                this.mysqlConnector.query(sql, values, (error, results) => {
                     if (error) {
                         console.error(`Erreur lors de la récupération de l'utilisateur ${prenom} ${nom} : ${error.message}`);
-                        reject(error); // Rejeter la promesse en cas d'erreur
+                        reject(error);
                     }
                     else {
                         if (results.length > 0) {
-                            const utilisateur = results[0]; // On prend le premier résultat si trouvé
+                            const utilisateur = results[0];
                             console.log(utilisateur);
                             resolve({
                                 isFind: true,
@@ -545,4 +516,108 @@ export class Utilisateurs {
             throw error;
         }
     };
+    verifierProfesseurs(utilisateurs) {
+        return new Promise((resolve, reject) => {
+            if (!utilisateurs || utilisateurs.length === 0) {
+                return resolve({ professeurs: [] });
+            }
+            const placeholders = utilisateurs.map(() => '(?, ?)').join(', ');
+            const params = [];
+            utilisateurs.forEach(u => {
+                params.push(u.nom, u.prenom);
+            });
+            const sql = `
+        SELECT nom, prenom, 
+               EXISTS(SELECT 1 FROM professeurs p WHERE p.nom = u.nom AND p.prenom = u.prenom AND p.status_id = 5) as isProf
+        FROM (VALUES ${placeholders}) as u(nom, prenom)
+      `;
+            this.mysqlConnector.query(sql, params, (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la vérification des professeurs :', error);
+                    reject(error);
+                }
+                else {
+                    resolve({ professeurs: results });
+                }
+            });
+        });
+    }
+    creerUtilisateur(userData) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        INSERT INTO utilisateurs (first_name, last_name, email, password_hash, status_id)
+        VALUES (?, ?, ?, ?, 1)
+      `;
+            this.mysqlConnector.query(sql, [
+                userData.first_name,
+                userData.last_name,
+                userData.email,
+                userData.password_hash
+            ], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la création de l\'utilisateur :', error);
+                    reject(error);
+                }
+                else {
+                    resolve({
+                        isConfirm: true,
+                        message: 'Utilisateur créé avec succès'
+                    });
+                }
+            });
+        });
+    }
+    obtenirUtilisateurParEmail(email) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT id, first_name, last_name, email, password_hash, status_id
+        FROM utilisateurs
+        WHERE email = ? AND status_id = 1
+      `;
+            this.mysqlConnector.query(sql, [email], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération de l\'utilisateur :', error);
+                    reject(error);
+                }
+                else if (results.length === 0) {
+                    resolve(null);
+                }
+                else {
+                    resolve(results[0]);
+                }
+            });
+        });
+    }
+    modifierUtilisateur(id, userData) {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        UPDATE utilisateurs 
+        SET first_name = ?, last_name = ?, email = ?
+        WHERE id = ? AND status_id = 1
+      `;
+            this.mysqlConnector.query(sql, [
+                userData.first_name,
+                userData.last_name,
+                userData.email,
+                id
+            ], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la modification de l\'utilisateur :', error);
+                    reject(error);
+                }
+                else if (results.affectedRows === 0) {
+                    resolve({
+                        isConfirm: false,
+                        message: 'Utilisateur non trouvé'
+                    });
+                }
+                else {
+                    resolve({
+                        isConfirm: true,
+                        message: 'Utilisateur modifié avec succès'
+                    });
+                }
+            });
+        });
+    }
 }

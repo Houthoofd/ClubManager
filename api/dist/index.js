@@ -4,6 +4,7 @@ import logger from 'morgan';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import MysqlConnector from './db/connector/mysqlconnector.js';
 import { default as indexRouter } from './routes/index.js';
 import { default as utilisateursRouter } from './routes/utilisateurs.js';
 import { default as informationsRouter } from './routes/informations.js';
@@ -24,6 +25,8 @@ const __dirname = path.dirname(__filename);
 const publicPath = path.join(__dirname, 'public');
 console.log("Chemin du dossier public :", publicPath);
 const app = express();
+// Initialisation du connector MySQL avec singleton - SANS appeler setupGracefulShutdown encore
+const mysqlConnector = MysqlConnector.getInstance();
 // Charger le .env (une seule fois !)
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 app.use(express.json());
@@ -68,8 +71,26 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
-console.log(server);
+// Route de santé pour vérifier le statut du pool
+app.get('/health/database', (req, res) => {
+    try {
+        const status = mysqlConnector.getPoolStatus();
+        res.json({
+            status: 'healthy',
+            database: status
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            status: 'unhealthy',
+            error: error.message
+        });
+    }
+});
 // Démarrer le serveur Express et Socket.io
 server.listen(3000, () => {
-    console.log('Server is running on port 3000');
+    console.log('🚀 Server is running on port 3000');
+    console.log(`📊 Environnement : ${process.env.NODE_ENV || 'development'}`);
+    // SEULEMENT MAINTENANT configurer le shutdown gracieux
+    mysqlConnector.setupGracefulShutdown();
 });

@@ -2,19 +2,22 @@ import {ConfirmationResult, CoursData, UserData, Professeur, VerifyResultWithDat
 import MysqlConnector from '../../connector/mysqlconnector.js';
 
 export class Professeurs {
+  private mysqlConnector: MysqlConnector;
+
+  constructor() {
+    this.mysqlConnector = MysqlConnector.getInstance();
+  }
 
   // Récupérer les professeurs
   // Fonction pour obtenir les professeurs
   async obtenirLesProfesseurs(): Promise<VerifyResultWithData> {
-    const mysqlConnector = new MysqlConnector();
-  
     const sql = `
       SELECT * FROM utilisateurs
       WHERE status_id = 5;
     `;
   
     return new Promise<VerifyResultWithData>((resolve, reject) => {
-      mysqlConnector.query(sql, [], (error, results) => {
+      this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error("Erreur lors de la récupération des professeurs : " + error.message);
           return reject({
@@ -59,15 +62,13 @@ export class Professeurs {
 
   // Récupérer un professeur par son ID
   async obtenirProfesseurParId(id: number): Promise<Professeur | null> {
-    const mysqlConnector = new MysqlConnector();
-  
     const sql = `
       SELECT * FROM utilisateurs
       WHERE id = ? AND status_id = 5;
     `;
   
     return new Promise<Professeur | null>((resolve, reject) => {
-      mysqlConnector.query(sql, [id], (error, results) => {
+      this.mysqlConnector.query(sql, [id], (error, results) => {
         if (error) {
           console.error(`Erreur lors de la récupération du professeur avec ID ${id} : ${error.message}`);
           reject(error);
@@ -99,10 +100,9 @@ export class Professeurs {
   }
 
   async modifierStatutProfesseur(id: number, status_id: number): Promise<ConfirmationResult> {
-    const mysqlConnector = new MysqlConnector();
     return new Promise<ConfirmationResult>((resolve, reject) => {
       const updateSql = `UPDATE utilisateurs SET status_id = ? WHERE id = ?`;
-      mysqlConnector.query(updateSql, [status_id, id], (error) => {
+      this.mysqlConnector.query(updateSql, [status_id, id], (error) => {
         if (error) {
           console.error("Erreur lors de la modification du statut : " + error.message);
           return reject({ isConfirm: false, message: "Erreur lors de la modification du statut." });
@@ -113,24 +113,21 @@ export class Professeurs {
   }  
 
   async retirerPromotionProfesseur(id: number): Promise<ConfirmationResult> {
-    const mysqlConnector = new MysqlConnector();
     return new Promise<ConfirmationResult>((resolve, reject) => {
-      // Met à jour le status à 1 (utilisateur normal)
       const updateSql = `UPDATE utilisateurs SET status_id = 1 WHERE id = ?`;
-      mysqlConnector.query(updateSql, [id], (error) => {
+      
+      this.mysqlConnector.query(updateSql, [id], (error) => {
         if (error) {
-          console.error("Erreur lors du retrait de la promotion : " + error.message);
-          return reject({ isConfirm: false, message: "Erreur lors du retrait de la promotion." });
+          console.error('Erreur lors du retrait de la promotion :', error);
+          reject(error);
+        } else {
+          resolve({ isConfirm: true, message: "Promotion retirée avec succès." });
         }
-        resolve({ isConfirm: true, message: "Promotion retirée avec succès." });
       });
     });
   }
 
   async ajouterUnProfesseur(userData: any): Promise<ConfirmationResult> {
-    const mysqlConnector = new MysqlConnector();
-
-    // Si on reçoit un tableau, traiter chaque utilisateur
     const users = Array.isArray(userData.utilisateurs) ? userData.utilisateurs : [userData];
 
     return new Promise<ConfirmationResult>((resolve, reject) => {
@@ -140,7 +137,7 @@ export class Professeurs {
 
       users.forEach((user: any) => {
         const selectSql = `SELECT * FROM utilisateurs WHERE id = ?`;
-        mysqlConnector.query(selectSql, [user.id], (error, results) => {
+        this.mysqlConnector.query(selectSql, [user.id], (error, results) => {
           if (error) {
             errors.push(`Erreur vérification id ${user.id}: ${error.message}`);
             checkDone();
@@ -154,7 +151,7 @@ export class Professeurs {
               checkDone();
             } else {
               const updateSql = `UPDATE utilisateurs SET status_id = 5 WHERE id = ?`;
-              mysqlConnector.query(updateSql, [utilisateur.id], (updateError) => {
+              this.mysqlConnector.query(updateSql, [utilisateur.id], (updateError) => {
                 if (updateError) {
                   errors.push(`Erreur update id ${user.id}: ${updateError.message}`);
                 } else {
@@ -185,4 +182,3 @@ export class Professeurs {
     });
   }
 }
-

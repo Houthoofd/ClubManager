@@ -4,7 +4,6 @@ import {
   Tab,
   TabTitleText,
   PageSection,
-  Title,
   Spinner,
 } from '@patternfly/react-core';
 import {
@@ -19,8 +18,9 @@ import { useCheckArticleByNomAndCategorie } from '../../hooks/useVerification';
 import FormulaireArticle from '../../components/magasin/FormulaireArticle';
 import ListeArticles from '../../components/magasin/ListeArticles';
 import ModalsArticle from '../../components/common/modal/ModalsArticle';
+import { PageHeader } from '../../components/common/PageHeader';
 
-const AjouterArticle = () => {
+const AjouterArticlePage: React.FC = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [categorieId, setCategorieId] = useState<string | null>(null);
   const [nom, setNom] = useState('');
@@ -158,26 +158,30 @@ const AjouterArticle = () => {
 
   if (loadingArticles || loadingCategories || loadingTailles) {
     return (
-      <PageSection>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <Spinner size="xl" />
-        </div>
-      </PageSection>
+      <div className="store-page">
+        <PageHeader
+          title="Ajouter un article"
+          subtitle="Ajoutez un nouvel article à votre inventaire"
+          variant="store"
+        />
+        <PageSection className="store-content">
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <Spinner size="xl" />
+          </div>
+        </PageSection>
+      </div>
     );
   }
 
   return (
-    <div className="main-content-scrollable">
-      <PageSection>
-        <div className="gradient-header">
-          <Title headingLevel="h1" size="2xl" className="gradient-header-title">
-            Gestion des articles
-          </Title>
-          <p className="gradient-header-subtitle">
-            Ajoutez de nouveaux articles au magasin et gérez le catalogue existant
-          </p>
-        </div>
-        
+    <div className="store-page">
+      <PageHeader
+        title="Ajouter un article"
+        subtitle="Ajoutez un nouvel article à votre inventaire"
+        variant="store"
+      />
+
+      <PageSection className="store-content">
         <Tabs 
           activeKey={activeTabKey} 
           onSelect={handleTabClick}
@@ -257,4 +261,4 @@ const AjouterArticle = () => {
   );
 };
 
-export default AjouterArticle;
+export default AjouterArticlePage;

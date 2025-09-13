@@ -17,11 +17,14 @@ import {
   modifierQuantite, 
   fermerPanier 
 } from '../../redux/slices/panierSlice';
+import React from 'react';
+import { PageSection } from '@patternfly/react-core';
+import { PageHeader } from '../../components/common/PageHeader';
 
 // Import des types
 import type { Article } from '@clubmanager/types';
 
-const Magasin = () => {
+const MagasinPage: React.FC = () => {
   const dispatch = useDispatch();
   const panier = useSelector((state: RootState) => state.panier.articles);
   const isPanelOpen = useSelector((state: RootState) => state.panier.isOpen);
@@ -91,68 +94,91 @@ const Magasin = () => {
 
   if (loadingArticles || loadingCategories) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '50vh' 
-      }}>
-        <Spinner size="xl" />
+      <div className="store-page">
+        <PageHeader
+          title="Magasin"
+          subtitle="Gérez votre inventaire et vos produits"
+          variant="store"
+        />
+        <PageSection className="store-content">
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '50vh' 
+          }}>
+            <Spinner size="xl" />
+          </div>
+        </PageSection>
       </div>
     );
   }
 
   if (errorArticles || errorCategories) {
     return (
-      <div style={{ padding: '2rem' }}>
-        <Alert 
-          variant="danger" 
-          title="Erreur lors du chargement des données"
-          style={{ borderRadius: '8px' }}
+      <div className="store-page">
+        <PageHeader
+          title="Magasin"
+          subtitle="Gérez votre inventaire et vos produits"
+          variant="store"
         />
+        <PageSection className="store-content">
+          <Alert 
+            variant="danger" 
+            title="Erreur lors du chargement des données"
+            style={{ borderRadius: '8px' }}
+          />
+        </PageSection>
       </div>
     );
   }
 
   return (
-    <div className="main-content-scrollable">
-      <RightSidePanel
-        isExpanded={isPanelOpen}
-        onClose={() => dispatch(fermerPanier())}
-        articles={panier}
-        onRemoveArticle={supprimerDuPanier}
-        onUpdateTaille={changerTailleArticle}
-        onUpdateQuantite={changerQuantiteArticle}
-      >
-        <div className="main-content-scrollable">
-          <ToolbarMagasin />
-          <CatalogueMagasin
-            articlesParCategorie={articlesParCategorie}
-            expandedCategories={expandedCategories}
-            onToggleCategorie={toggleCategorie}
-            onAjouterAuPanier={ajouterAuPanier}
-            onOpenInfoModal={openInfoModal}
-          />
-        </div>
-      </RightSidePanel>
-
-      <DetailArticleModal
-        isOpen={isInfoModalOpen}
-        selectedArticle={selectedArticle}
-        selectedTaille={selectedTaille}
-        isTailleOpen={isTailleOpen}
-        onClose={closeInfoModal}
-        onTailleSelect={setSelectedTaille}
-        onTailleToggle={setIsTailleOpen}
-        onAjouterAuPanier={() => {
-          if (selectedArticle && selectedTaille) {
-            ajouterAuPanier(selectedArticle, selectedTaille);
-            closeInfoModal();
-          }
-        }}
+    <div className="store-page">
+      <PageHeader
+        title="Magasin"
+        subtitle="Gérez votre inventaire et vos produits"
+        variant="store"
       />
+
+      <PageSection className="store-content">
+        <RightSidePanel
+          isExpanded={isPanelOpen}
+          onClose={() => dispatch(fermerPanier())}
+          articles={panier}
+          onRemoveArticle={supprimerDuPanier}
+          onUpdateTaille={changerTailleArticle}
+          onUpdateQuantite={changerQuantiteArticle}
+        >
+          <div className="main-content-scrollable">
+            <CatalogueMagasin
+              articlesParCategorie={articlesParCategorie}
+              expandedCategories={expandedCategories}
+              onToggleCategorie={toggleCategorie}
+              onAjouterAuPanier={ajouterAuPanier}
+              onOpenInfoModal={openInfoModal}
+            />
+          </div>
+        </RightSidePanel>
+
+        <DetailArticleModal
+          isOpen={isInfoModalOpen}
+          selectedArticle={selectedArticle}
+          selectedTaille={selectedTaille}
+          isTailleOpen={isTailleOpen}
+          onClose={closeInfoModal}
+          onTailleSelect={setSelectedTaille}
+          onTailleToggle={setIsTailleOpen}
+          onAjouterAuPanier={() => {
+            if (selectedArticle && selectedTaille) {
+              ajouterAuPanier(selectedArticle, selectedTaille);
+              closeInfoModal();
+            }
+          }}
+        />
+      </PageSection>
     </div>
   );
 };
 
-export default Magasin;
+export default MagasinPage;

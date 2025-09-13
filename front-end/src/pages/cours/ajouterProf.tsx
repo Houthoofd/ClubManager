@@ -4,15 +4,14 @@ import {
   Tabs,
   Tab,
   TabTitleText,
-  Title,
   Spinner,
-  Alert,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
   Button,
 } from '@patternfly/react-core';
+import { PageHeader } from '../../components/common/PageHeader';
 import { useProfesseurs, usePromouvoirProfesseurs, useRetirerPromotionProfesseur } from '../../hooks/useProfesseurs';
 import { useTousLesUtilisateurs, useVerifierProfesseurs } from '../../hooks/useUtilisateurs';
 import ProfesseurForm from '../../components/cours/ProfesseurForm';
@@ -108,120 +107,117 @@ const AjouterProfesseur = () => {
   const utilisateurs = utilisateursData?.data || [];
 
   return (
-    <div className="professeurs-container">
-      {/* Header */}
-      <div className="professeurs-header">
-        <Title headingLevel="h1" size="2xl" className="professeurs-header-title">
-          Gestion des professeurs
-        </Title>
-        <p className="professeurs-header-subtitle">
-          Ajoutez de nouveaux professeurs et gérez les promotions
-        </p>
-      </div>
+    <div className="teachers-page">
+      <PageHeader
+        title="Gestion des professeurs"
+        subtitle="Ajoutez de nouveaux professeurs et gérez les promotions"
+        variant="teachers"
+      />
 
-      {/* Tabs */}
-      <Tabs 
-        activeKey={activeTabKey} 
-        onSelect={handleTabClick}
-        className="modern-tabs"
-      >
-        <Tab 
-          eventKey={0} 
-          title={
-            <TabTitleText>
-              <span>Ajouter un professeur</span>
-            </TabTitleText>
-          }
+      <PageSection className="teachers-content">
+        {/* Tabs */}
+        <Tabs 
+          activeKey={activeTabKey} 
+          onSelect={handleTabClick}
+          className="modern-tabs"
         >
-          <ProfesseurForm
-            utilisateurs={utilisateurs}
-            onSubmit={handlePromouvoir}
-            isLoading={promouvoirProfesseurs.isPending}
-            message={promotionMessage}
-            messageType={messageType}
-          />
-        </Tab>
+          <Tab 
+            eventKey={0} 
+            title={
+              <TabTitleText>
+                <span>Ajouter un professeur</span>
+              </TabTitleText>
+            }
+          >
+            <ProfesseurForm
+              utilisateurs={utilisateurs}
+              onSubmit={handlePromouvoir}
+              isLoading={promouvoirProfesseurs.isPending}
+              message={promotionMessage}
+              messageType={messageType}
+            />
+          </Tab>
 
-        <Tab 
-          eventKey={1} 
-          title={
-            <TabTitleText>
-              <span>Voir les professeurs</span>
-            </TabTitleText>
-          }
+          <Tab 
+            eventKey={1} 
+            title={
+              <TabTitleText>
+                <span>Voir les professeurs</span>
+              </TabTitleText>
+            }
+          >
+            <ProfesseursList
+              professeurs={professeurs}
+              onRemoveProfesseur={handleRemoveProfesseur}
+            />
+          </Tab>
+        </Tabs>
+
+        {/* Modal de confirmation */}
+        <Modal
+          variant="small"
+          isOpen={isModalOpen}
+          onClose={() => { 
+            setIsModalOpen(false); 
+            setPromotionMessage(''); 
+          }}
+          className="modern-card"
         >
-          <ProfesseursList
-            professeurs={professeurs}
-            onRemoveProfesseur={handleRemoveProfesseur}
-          />
-        </Tab>
-      </Tabs>
+          <ModalHeader title="Confirmer la promotion" />
+          <ModalBody>
+            {promotionMessage || 'Êtes-vous sûr de vouloir promouvoir ces utilisateurs en professeurs ?'}
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="link" 
+              onClick={() => { 
+                setIsModalOpen(false); 
+                setPromotionMessage(''); 
+              }}
+            >
+              Fermer
+            </Button>
+          </ModalFooter>
+        </Modal>
 
-      {/* Modal de confirmation */}
-      <Modal
-        variant="small"
-        isOpen={isModalOpen}
-        onClose={() => { 
-          setIsModalOpen(false); 
-          setPromotionMessage(''); 
-        }}
-        className="modern-card"
-      >
-        <ModalHeader title="Confirmer la promotion" />
-        <ModalBody>
-          {promotionMessage || 'Êtes-vous sûr de vouloir promouvoir ces utilisateurs en professeurs ?'}
-        </ModalBody>
-        <ModalFooter>
-          <Button 
-            variant="link" 
-            onClick={() => { 
-              setIsModalOpen(false); 
-              setPromotionMessage(''); 
-            }}
-          >
-            Fermer
-          </Button>
-        </ModalFooter>
-      </Modal>
+        {/* Modal de retrait de promotion */}
+        <Modal
+          variant="small"
+          isOpen={removeModalOpen}
+          onClose={() => setRemoveModalOpen(false)}
+          className="modern-card"
+        >
+          <ModalHeader title="Retirer la promotion" />
+          <ModalBody>
+            Êtes-vous sûr de vouloir retirer la promotion de ce professeur ?
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              variant="danger" 
+              onClick={handleRetirerPromotion}
+              isLoading={retirerPromotionProfesseur.isPending}
+            >
+              Confirmer
+            </Button>
+            <Button 
+              variant="link" 
+              onClick={() => setRemoveModalOpen(false)}
+            >
+              Annuler
+            </Button>
+          </ModalFooter>
+        </Modal>
 
-      {/* Modal de retrait de promotion */}
-      <Modal
-        variant="small"
-        isOpen={removeModalOpen}
-        onClose={() => setRemoveModalOpen(false)}
-        className="modern-card"
-      >
-        <ModalHeader title="Retirer la promotion" />
-        <ModalBody>
-          Êtes-vous sûr de vouloir retirer la promotion de ce professeur ?
-        </ModalBody>
-        <ModalFooter>
-          <Button 
-            variant="danger" 
-            onClick={handleRetirerPromotion}
-            isLoading={retirerPromotionProfesseur.isPending}
-          >
-            Confirmer
-          </Button>
-          <Button 
-            variant="link" 
-            onClick={() => setRemoveModalOpen(false)}
-          >
-            Annuler
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Modal de succès */}
-      <ModalWithHelp
-        title="Opération terminée"
-        isOpen={successModalOpen}
-        onClose={() => setSuccessModalOpen(false)}
-      >
-        <div className={successMessage.includes('Erreur') ? 'professeur-error-message' : 'professeur-success-message'}>
-          {successMessage}
-        </div>
-      </ModalWithHelp>
+        {/* Modal de succès */}
+        <ModalWithHelp
+          title="Opération terminée"
+          isOpen={successModalOpen}
+          onClose={() => setSuccessModalOpen(false)}
+          variant={successMessage.includes('Erreur') ? 'error' : 'success'}
+          successMessage={successMessage.includes('Erreur') ? '' : successMessage}
+          error={successMessage.includes('Erreur') ? successMessage : null}
+        />
+      </PageSection>
     </div>
   );
 };

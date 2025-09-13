@@ -2,31 +2,13 @@ import React, { useState } from 'react';
 import {
   PageSection,
   Title,
-  Card,
-  CardTitle,
-  CardBody,
-  Gallery,
-  Grid,
-  GridItem,
   Button,
   Flex,
   FlexItem,
-  ExpandableSection,
+  Grid,
+  GridItem,
 } from '@patternfly/react-core';
 import { PlusIcon, CreditCardIcon, EditIcon } from '@patternfly/react-icons';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import {
   useMembresCount,
@@ -41,24 +23,18 @@ import {
   usePaiementsEchus,
   useNouveauxMembres,
 } from '../hooks/useDashboard';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
-
-// Fonction utilitaire pour capitaliser une chaîne de caractères
-const capitalize = (str: string): string => {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-};
-
-// Fonction utilitaire pour formater une date
-const formatDate = (dateStr: string): string => {
-  if (!dateStr) return 'N/A';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(); // Format par défaut basé sur la locale
-};
+import { MetricCard } from '../components/dashboard/MetricCard';
+import { ChartCard } from '../components/dashboard/ChartCard';
+import { DataTable } from '../components/dashboard/DataTable';
+import { ActionButton } from '../components/common/ActionButton';
+import { ExpandableDataSection } from '../components/dashboard/ExpandableDataSection';
+import { PageHeader } from '../components/common/PageHeader';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const [isPaymentsExpanded, setIsPaymentsExpanded] = useState(false);
+  const [isOverdueExpanded, setIsOverdueExpanded] = useState(false);
+  const [isNewMembersExpanded, setIsNewMembersExpanded] = useState(false);
 
   // Utilisation des hooks React Query
   const { data: membresCount = 0 } = useMembresCount();
@@ -73,254 +49,233 @@ const DashboardPage: React.FC = () => {
   const { data: paiementsEchus = [] } = usePaiementsEchus();
   const { data: nouveauxMembres = [] } = useNouveauxMembres();
 
-  const [isPaiementsExpanded, setIsPaiementsExpanded] = useState(false);
-  const [isEchusExpanded, setIsEchusExpanded] = useState(false);
-  const [isNouveauxExpanded, setIsNouveauxExpanded] = useState(false);
+  const metrics = [
+    {
+      title: 'Membres inscrits',
+      value: membresCount,
+      type: 'number' as const,
+      trend: '+5.2%',
+      trendType: 'positive' as const,
+    },
+    {
+      title: 'Total encaissé ce mois',
+      value: paiementsMois,
+      type: 'currency' as const,
+      trend: '+12.3%',
+      trendType: 'positive' as const,
+    },
+    {
+      title: 'Paiements récents (7j)',
+      value: paiementsRecents,
+      type: 'number' as const,
+      suffix: 'paiements',
+    },
+    {
+      title: 'Paiements en attente',
+      value: paiementsEnAttente,
+      type: 'number' as const,
+      suffix: 'membres',
+      trend: '-3.1%',
+      trendType: 'negative' as const,
+    },
+    {
+      title: 'Plans actifs',
+      value: plansActifs,
+      type: 'number' as const,
+      suffix: 'plans',
+    },
+    {
+      title: 'Taux de renouvellement',
+      value: tauxRenouvellement,
+      type: 'percentage' as const,
+      trend: '+2.4%',
+      trendType: 'positive' as const,
+    },
+  ];
+
+  const paymentsColumns = [
+    { key: 'user', label: 'Utilisateur' },
+    { key: 'amount', label: 'Montant' },
+    { key: 'date', label: 'Date' },
+    { key: 'status', label: 'Statut' },
+  ];
+
+  const overdueColumns = [
+    { key: 'user', label: 'Utilisateur' },
+    { key: 'amount', label: 'Montant' },
+    { key: 'dueDate', label: 'Date d\'échéance' },
+    { key: 'status', label: 'Statut' },
+  ];
+
+  const newMembersColumns = [
+    { key: 'name', label: 'Nom' },
+    { key: 'email', label: 'Email' },
+    { key: 'registrationDate', label: 'Date d\'inscription' },
+    { key: 'plan', label: 'Plan' },
+  ];
+
+  const formatPaymentsData = (payments: any[]) => {
+    return payments.map(p => ({
+      user: p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : 'N/A',
+      amount: p.montant ? `${p.montant} €` : 'N/A',
+      date: p.date_paiement || 'N/A',
+      status: p.statut || 'N/A',
+    }));
+  };
+
+  const formatOverdueData = (overdue: any[]) => {
+    return overdue.map(p => ({
+      user: p.first_name && p.last_name 
+        ? `${p.first_name.charAt(0).toUpperCase()}${p.first_name.slice(1)} ${p.last_name.charAt(0).toUpperCase()}${p.last_name.slice(1)}`
+        : p.nom_utilisateur?.replace(/_/g, ' ') || p.utilisateur_id,
+      amount: `${p.montant} €`,
+      dueDate: p.periode_fin ? new Date(p.periode_fin).toLocaleDateString() : 'N/A',
+      status: p.statut,
+    }));
+  };
+
+  const formatNewMembersData = (members: any[]) => {
+    return members.map(m => ({
+      name: `${m.first_name} ${m.last_name}`,
+      email: m.email || 'N/A',
+      registrationDate: m.date_inscription ? new Date(m.date_inscription).toLocaleDateString() : 'N/A',
+      plan: m.plan_name || 'N/A',
+    }));
+  };
 
   return (
-    <>
-      <PageSection variant="default">
-        <Title headingLevel="h1" size="2xl">Tableau de bord</Title>
-        <p>Bienvenue dans votre espace d’administration.</p>
-      </PageSection>
+    <div className="dashboard-page">
+      <PageHeader
+        title="Tableau de bord"
+        subtitle="Vue d'ensemble de votre centre de fitness"
+        variant="dashboard"
+      />
 
       {/* Actions rapides */}
-      <PageSection>
-        <Flex gap={{ default: 'gapMd' }}>
+      <PageSection className="dashboard-actions">
+        <Flex gap={{ default: 'gapMd' }} wrap={{ default: 'wrap' }}>
           <FlexItem>
-            <Button
+            <ActionButton
               icon={<PlusIcon />}
               variant="primary"
               onClick={() => navigate('/pages/utilisateurs/ajouter-utilisateur')}
             >
               Ajouter un membre
-            </Button>
+            </ActionButton>
           </FlexItem>
           <FlexItem>
-            <Button
+            <ActionButton
               icon={<CreditCardIcon />}
               variant="secondary"
               onClick={() => navigate('/pages/paiements')}
             >
               Enregistrer un paiement
-            </Button>
+            </ActionButton>
           </FlexItem>
           <FlexItem>
-            <Button
+            <ActionButton
               icon={<EditIcon />}
               variant="tertiary"
               onClick={() => navigate('/pages/plans/ajouter')}
             >
-              Créer un nouveau plan
-            </Button>
+              Créer un plan
+            </ActionButton>
           </FlexItem>
         </Flex>
       </PageSection>
 
-      {/* KPIs */}
-      <PageSection>
-        <Gallery hasGutter>
-          <Card isCompact>
-            <CardTitle>Membres inscrits</CardTitle>
-            <CardBody>{typeof membresCount === 'number' ? membresCount : 'N/A'}</CardBody>
-          </Card>
-          <Card isCompact>
-            <CardTitle>Total encaissé ce mois-ci</CardTitle>
-            <CardBody>{typeof paiementsMois === 'number' ? `${paiementsMois} €` : 'N/A'}</CardBody>
-          </Card>
-          <Card isCompact>
-            <CardTitle>Paiements récents (7j)</CardTitle>
-            <CardBody>{typeof paiementsRecents === 'number' ? `${paiementsRecents} paiements` : 'N/A'}</CardBody>
-          </Card>
-          <Card isCompact>
-            <CardTitle>Paiements en attente</CardTitle>
-            <CardBody>{typeof paiementsEnAttente === 'number' ? `${paiementsEnAttente} membres` : 'N/A'}</CardBody>
-          </Card>
-          <Card isCompact>
-            <CardTitle>Plans d’abonnement actifs</CardTitle>
-            <CardBody>{typeof plansActifs === 'number' ? `${plansActifs} plans` : 'N/A'}</CardBody>
-          </Card>
-          <Card isCompact>
-            <CardTitle>Taux de renouvellement</CardTitle>
-            <CardBody>{typeof tauxRenouvellement === 'number' ? `${tauxRenouvellement} %` : 'N/A'}</CardBody>
-          </Card>
-        </Gallery>
+      {/* Métriques */}
+      <PageSection className="dashboard-metrics">
+        <Grid hasGutter span={4}>
+          {metrics.map((metric, index) => (
+            <GridItem key={index}>
+              <MetricCard {...metric} />
+            </GridItem>
+          ))}
+        </Grid>
       </PageSection>
 
       {/* Graphiques */}
-      <PageSection>
+      <PageSection className="dashboard-charts">
         <Grid hasGutter>
           <GridItem span={6}>
-            <Card>
-              <CardTitle>Évolution des paiements (€/mois)</CardTitle>
-              <CardBody>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={Array.isArray(paiementsParMois) ? paiementsParMois : []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="mois" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="total" stroke="#8884d8" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardBody>
-            </Card>
+            <ChartCard
+              title="Évolution des paiements"
+              data={paiementsParMois}
+              type="line"
+              dataKey="total"
+              xAxisKey="mois"
+              color="#2563eb"
+            />
           </GridItem>
-
           <GridItem span={6}>
-            <Card>
-              <CardTitle>Répartition des membres par plan</CardTitle>
-              <CardBody>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie
-                      data={Array.isArray(membresParPlan) ? membresParPlan : []}
-                      dataKey="value"
-                      nameKey="plan"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      label
-                    >
-                      {Array.isArray(membresParPlan) &&
-                        membresParPlan.map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardBody>
-            </Card>
+            <ChartCard
+              title="Répartition par plan"
+              data={membresParPlan}
+              type="pie"
+              dataKey="value"
+              nameKey="plan"
+            />
           </GridItem>
         </Grid>
       </PageSection>
 
-      {/* Tables ou listes récentes */}
-      <PageSection>
-        <Title headingLevel="h2">Derniers paiements</Title>
-        <ExpandableSection
-          toggleText={isPaiementsExpanded ? "Réduire" : "Voir les 10 derniers paiements"}
-          isExpanded={isPaiementsExpanded}
-          onToggle={() => setIsPaiementsExpanded(prev => !prev)}
+      {/* Sections expandables */}
+      <PageSection className="dashboard-expandable-sections">
+        <ExpandableDataSection
+          title="Derniers paiements"
+          count={derniersPaiements.length}
+          isExpanded={isPaymentsExpanded}
+          onToggle={() => setIsPaymentsExpanded(!isPaymentsExpanded)}
+          variant="default"
         >
-          {Array.isArray(derniersPaiements) && derniersPaiements.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                <thead>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Utilisateur</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Montant (€)</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {derniersPaiements.map((p, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        <strong>{p.first_name || p.last_name ? `${p.first_name} ${p.last_name}` : 'N/A'}</strong>
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.montant || 'N/A'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.date_paiement || 'N/A'}</td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.statut || 'N/A'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p>Aucun paiement récent.</p>
-          )}
-        </ExpandableSection>
-      </PageSection>
+          <DataTable
+            title=""
+            data={formatPaymentsData(derniersPaiements)}
+            columns={paymentsColumns}
+            emptyMessage="Aucun paiement récent"
+            hideTitle
+          />
+        </ExpandableDataSection>
 
-      <PageSection>
-        <Title headingLevel="h2">Paiements échus</Title>
-        <ExpandableSection
-          toggleText={isEchusExpanded ? "Réduire" : "Voir les paiements échus"}
-          isExpanded={isEchusExpanded}
-          onToggle={() => setIsEchusExpanded(prev => !prev)}
+        <ExpandableDataSection
+          title="Paiements échus"
+          count={paiementsEchus.length}
+          isExpanded={isOverdueExpanded}
+          onToggle={() => setIsOverdueExpanded(!isOverdueExpanded)}
+          variant="warning"
         >
-          {paiementsEchus.length === 0 ? (
-            <p>Aucun paiement échu.</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                <thead>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Utilisateur</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Montant (€)</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Période fin</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paiementsEchus.map((p, idx) => {
-                    const userDisplay = p.first_name && p.last_name
-                      ? `${capitalize(p.first_name)} ${capitalize(p.last_name)}`
-                      : p.nom_utilisateur?.replace(/_/g, ' ') || p.utilisateur_id;
-                    return (
-                      <tr key={idx}>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                          <strong>{userDisplay}</strong>
-                        </td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.montant}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{formatDate(p.periode_fin)}</td>
-                        <td style={{ padding: '8px', border: '1px solid #ddd' }}>{p.statut}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </ExpandableSection>
-      </PageSection>
+          <DataTable
+            title=""
+            data={formatOverdueData(paiementsEchus)}
+            columns={overdueColumns}
+            emptyMessage="Aucun paiement échu"
+            variant="warning"
+            hideTitle
+          />
+        </ExpandableDataSection>
 
-      <PageSection>
-        <Title headingLevel="h2">Nouveaux membres inscrits</Title>
-        <ExpandableSection
-          toggleText={isNouveauxExpanded ? "Réduire" : "Voir les nouveaux membres"}
-          isExpanded={isNouveauxExpanded}
-          onToggle={() => setIsNouveauxExpanded(prev => !prev)}
+        <ExpandableDataSection
+          title="Nouveaux membres"
+          count={nouveauxMembres.length}
+          isExpanded={isNewMembersExpanded}
+          onToggle={() => setIsNewMembersExpanded(!isNewMembersExpanded)}
+          variant="success"
         >
-          {Array.isArray(nouveauxMembres) && nouveauxMembres.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                <thead>
-                  <tr style={{ background: '#f5f5f5' }}>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Nom</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Prénom</th>
-                    <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date d'inscription</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {nouveauxMembres.map((m, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        <strong>{capitalize(m.last_name)}</strong>
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        <strong>{capitalize(m.first_name)}</strong>
-                      </td>
-                      <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                        {formatDate(m.date_inscription)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p>Aucun nouveau membre.</p>
-          )}
-        </ExpandableSection>
+          <DataTable
+            title=""
+            data={formatNewMembersData(nouveauxMembres)}
+            columns={newMembersColumns}
+            emptyMessage="Aucun nouveau membre"
+            variant="success"
+            hideTitle
+          />
+        </ExpandableDataSection>
       </PageSection>
-    </>
+    </div>
   );
 };
 
 export default DashboardPage;
+
 

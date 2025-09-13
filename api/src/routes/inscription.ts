@@ -39,23 +39,26 @@ router.post('/validation', async (req: any, res: any) => {
     }
     // Chiffre le mot de passe avant insertion
     const hashedPassword = await bcrypt.hash(password, 10);
-    // Inscription
-    const result = await client.inscriptionUtilisateurSimple({
+    // Inscription - Utiliser directement inscriptionUtilisateurSimple au lieu de inscrireUtilisateur
+    const userData = {
       nom,
       prenom,
       email,
       password: hashedPassword,
       date,
       abonnement,
-      genre
-    });
-    if (result.affectedRows > 0) {
-      return res.status(201).json({ message: "Inscription réussie", userId: result.insertId });
+      genre,
+    };
+    const result = await client.inscriptionUtilisateurSimple(userData);
+    
+    if (result.isConfirm) {
+      return res.status(201).json({ message: result.message });
     } else {
-      return res.status(400).json({ message: "Échec de l'inscription" });
+      return res.status(400).json({ message: "Erreur lors de l'inscription" });
     }
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur", error });
+    console.error('Erreur inscription:', error);
+    return res.status(500).json({ message: "Erreur serveur lors de l'inscription" });
   }
 });
 

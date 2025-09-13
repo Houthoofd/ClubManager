@@ -140,14 +140,26 @@ router.post('/commandes/ajouter', async (req:any, res:any) => {
     const { utilisateur_id, articles, statut, date, total } = data;
     const client = new Magasin();
 
-    const result = await client.creerCommande(
-      utilisateur_id,
-      articles,
-      total ?? 0,
-      date ?? new Date().toISOString(),
-      statut
-    );
-    res.status(200).json({ message: result.message });
+    // Corriger l'appel de méthode autour de la ligne 145
+    try {
+      const commandeData = {
+        utilisateur_id,
+        articles,
+        total,
+        date,
+        statut
+      };
+      
+      const result = await client.ajouterCommande(commandeData);
+      
+      res.status(201).json({ 
+        message: "Commande créée avec succès", 
+        commande: result 
+      });
+    } catch (error) {
+      console.error('Erreur création commande:', error);
+      res.status(500).json({ message: "Erreur lors de la création de la commande" });
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({

@@ -5,7 +5,6 @@ import {
   TabTitleText,
   Spinner,
   PageSection,
-  Title,
 } from '@patternfly/react-core';
 import { useAjouterCours, useProfesseurs, useJoursDeCours, useModifierCours } from '../../hooks/useCours';
 import { useSupprimerCoursRecurrent, useRetirerProfesseursDuCours } from '../../hooks/useProfesseurs';
@@ -13,8 +12,9 @@ import { useCheckCoursPlanning } from '../../hooks/useVerification';
 import CoursForm from '../../components/cours/CoursForm';
 import CoursList from '../../components/cours/CoursList';
 import CoursModals from '../../components/cours/CoursModals';
+import { PageHeader } from '../../components/common/PageHeader';
 
-const AjouterCours = () => {
+const AjouterCoursPage: React.FC = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [jour, setJour] = useState<string | null>(null);
@@ -352,76 +352,77 @@ const AjouterCours = () => {
   }
 
   return (
-    <div className="cours-container">
-      {/* Header */}
-      <div className="cours-header">
-        <Title headingLevel="h1" size="2xl" className="cours-header-title">
-          Gestion des cours
-        </Title>
-        <p className="cours-header-subtitle">
-          Planifiez et gérez les cours du club
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <Tabs 
-        activeKey={activeTabKey} 
-        onSelect={(_e, key) => setActiveTabKey(key as number)}
-        className="modern-tabs"
-      >
-        <Tab 
-          eventKey={0} 
-          title={<TabTitleText>Ajouter un cours</TabTitleText>}
-        >
-          <CoursForm
-            nom={nom} setNom={setNom}
-            selectedType={selectedType} setSelectedType={setSelectedType}
-            jour={jour} setJour={setJour}
-            heureDebut={heureDebut} setHeureDebut={setHeureDebut}
-            heureFin={heureFin} setHeureFin={setHeureFin}
-            selectedUsers={selectedUsers} setSelectedUsers={setSelectedUsers}
-            professeurs={professeurs} isModifying={isModifying} originalCours={originalCours}
-            onSubmit={handleSubmit} onAnnulerModification={resetFormulaire}
-          />
-        </Tab>
-        <Tab 
-          eventKey={1} 
-          title={<TabTitleText>Voir les cours</TabTitleText>}
-        >
-          <CoursList
-            cours={planningCours}
-            onModifierCours={ouvrirModalModification}
-            onSupprimerCours={ouvrirModalSuppression}
-            onDissocierProfesseur={ouvrirModalDissociation}
-          />
-        </Tab>
-      </Tabs>
-      
-      <CoursModals
-        isModalOpen={isModalOpen} 
-        successMessage={successMessage} 
-        professeurADissocier={professeurADissocier}
-        onAnnulerDissociation={annulerDissociation} 
-        onConfirmerDissociation={confirmerDissociation}
-        showSupprimerModal={showSupprimerModal} 
-        coursASupprimer={coursASupprimer}
-        onAnnulerSuppression={annulerSuppression} 
-        onConfirmerSuppression={confirmerSuppression}
-        showAjoutModal={showAjoutModal} 
-        ajoutSuccess={ajoutSuccess} 
-        ajoutMessage={ajoutMessage}
-        onFermerAjoutModal={fermerAjoutModal}
-        showConfirmModificationModal={showConfirmModificationModal} 
-        modificationsResume={modificationsResume}
-        originalCours={originalCours} 
-        onAnnulerConfirmationModification={annulerConfirmationModification}
-        onConfirmerModification={confirmerModification}
+    <div className="courses-page">
+      <PageHeader
+        title="Ajouter un cours"
+        subtitle="Créez un nouveau cours de jiu-jitsu brésilien"
+        variant="courses"
       />
+
+      <PageSection className="courses-content">
+        <div className="cours-container">
+          {/* Tabs */}
+          <Tabs 
+            activeKey={activeTabKey} 
+            onSelect={(_e, key) => setActiveTabKey(key as number)}
+            className="modern-tabs"
+          >
+            <Tab 
+              eventKey={0} 
+              title={<TabTitleText>Ajouter un cours</TabTitleText>}
+            >
+              <CoursForm
+                nom={nom} setNom={setNom}
+                selectedType={selectedType} setSelectedType={setSelectedType}
+                jour={jour} setJour={setJour}
+                heureDebut={heureDebut} setHeureDebut={setHeureDebut}
+                heureFin={heureFin} setHeureFin={setHeureFin}
+                selectedUsers={selectedUsers} setSelectedUsers={setSelectedUsers}
+                professeurs={professeurs} isModifying={isModifying} originalCours={originalCours}
+                onSubmit={handleSubmit} onAnnulerModification={resetFormulaire}
+              />
+            </Tab>
+            <Tab 
+              eventKey={1} 
+              title={<TabTitleText>Voir les cours</TabTitleText>}
+            >
+              <CoursList
+                cours={planningCours}
+                onModifierCours={ouvrirModalModification}
+                onSupprimerCours={ouvrirModalSuppression}
+                onDissocierProfesseur={ouvrirModalDissociation}
+              />
+            </Tab>
+          </Tabs>
+          
+          <CoursModals
+            isModalOpen={isModalOpen} 
+            successMessage={successMessage} 
+            professeurADissocier={professeurADissocier}
+            onAnnulerDissociation={annulerDissociation} 
+            onConfirmerDissociation={confirmerDissociation}
+            showSupprimerModal={showSupprimerModal} 
+            coursASupprimer={coursASupprimer}
+            onAnnulerSuppression={annulerSuppression} 
+            onConfirmerSuppression={confirmerSuppression}
+            showAjoutModal={showAjoutModal} 
+            ajoutSuccess={ajoutSuccess} 
+            ajoutMessage={ajoutMessage}
+            onFermerAjoutModal={fermerAjoutModal}
+            showConfirmModificationModal={showConfirmModificationModal} 
+            modificationsResume={modificationsResume}
+            originalCours={originalCours} 
+            onAnnulerConfirmationModification={annulerConfirmationModification}
+            onConfirmerModification={confirmerModification}
+          />
+        </div>
+      </PageSection>
     </div>
   );
 };
 
-export default AjouterCours;
+export default AjouterCoursPage;
+
 
 
 

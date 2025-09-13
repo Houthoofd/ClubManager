@@ -2,6 +2,7 @@ import express from 'express';
 import { Cours } from '../db/clients/cours/cours.js';
 import { datareservationSchema, datannulationSchema, datavalidationSchema } from '@clubmanager/types';
 import { z } from 'zod';
+import MysqlConnector from '../db/connector/mysqlconnector.js';
 const router = express.Router();
 router.post('/participant', async (req, res) => {
     try {
@@ -299,7 +300,7 @@ router.patch('/modifier', async (req, res) => {
     try {
         const { nom, type_cours, jour, heure_debut, heure_fin, professeurs, jour_original, type_cours_original, heure_debut_original, heure_fin_original } = req.body;
         console.log("Données reçues pour modification :", req.body);
-        const mysqlConnector = new (await import('../db/connector/mysqlconnector.js')).default();
+        const connector = MysqlConnector.getInstance();
         // Mapping des jours vers les numéros
         const joursVersNumero = {
             'lundi': 1, 'mardi': 2, 'mercredi': 3, 'jeudi': 4, 'vendredi': 5, 'samedi': 6, 'dimanche': 7
@@ -313,7 +314,7 @@ router.patch('/modifier', async (req, res) => {
         // Trouve l'ID du cours récurrent - utilise les valeurs ACTUELLES dans la base
         const findSql = `SELECT id FROM cours_recurrent WHERE type_cours = ? AND jour_semaine = ? LIMIT 1`;
         const coursRecurrentId = await new Promise((resolve, reject) => {
-            mysqlConnector.query(findSql, [type_cours_original, jourOriginalNum], (error, results) => {
+            connector.query(findSql, [type_cours_original, jourOriginalNum], (error, results) => {
                 if (error) {
                     reject(error);
                 }
@@ -360,7 +361,7 @@ router.patch('/modifier', async (req, res) => {
             const updateSql = `UPDATE cours_recurrent SET ${updateFields.join(', ')} WHERE id = ?`;
             updateValues.push(coursRecurrentId);
             await new Promise((resolve, reject) => {
-                mysqlConnector.query(updateSql, updateValues, (error) => {
+                connector.query(updateSql, updateValues, (error) => {
                     if (error) {
                         reject(error);
                     }
@@ -377,7 +378,7 @@ router.patch('/modifier', async (req, res) => {
             // Supprime d'abord toutes les associations professeurs existantes pour ce cours
             const deleteProfsSql = `DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ?`;
             await new Promise((resolve, reject) => {
-                mysqlConnector.query(deleteProfsSql, [coursRecurrentId], (error) => {
+                connector.query(deleteProfsSql, [coursRecurrentId], (error) => {
                     if (error) {
                         console.error("Erreur lors de la suppression des professeurs:", error);
                         reject(error);
@@ -398,7 +399,7 @@ router.patch('/modifier', async (req, res) => {
             WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = ? AND status_id = 5
           `;
                     const profId = await new Promise((resolve, reject) => {
-                        mysqlConnector.query(getProfIdSql, [profNom.trim()], (error, results) => {
+                        connector.query(getProfIdSql, [profNom.trim()], (error, results) => {
                             if (error) {
                                 reject(error);
                             }
@@ -419,7 +420,7 @@ router.patch('/modifier', async (req, res) => {
                 for (const profId of profIds) {
                     const insertProfSql = `INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id) VALUES (?, ?)`;
                     await new Promise((resolve, reject) => {
-                        mysqlConnector.query(insertProfSql, [coursRecurrentId, profId], (error) => {
+                        connector.query(insertProfSql, [coursRecurrentId, profId], (error) => {
                             if (error) {
                                 reject(error);
                             }
@@ -432,7 +433,7 @@ router.patch('/modifier', async (req, res) => {
                 console.log(`${profIds.length} professeurs associés au cours`);
             }
         }
-        mysqlConnector.close();
+        connector.close();
         res.status(200).json({ isConfirm: true, message: "Cours modifié avec succès." });
     }
     catch (error) {

@@ -66,15 +66,17 @@ router.get('/presence/:userId', async (req, res) => {
     }
     try {
         const results = await statistiques.obtenirPresenceParMois(userId);
-        const formattedData = statistiques.formatPresenceData(results);
-        res.json(formattedData);
+        // Formater les données directement ici au lieu d'utiliser une méthode qui n'existe pas
+        const formattedData = results.map((item) => ({
+            mois: item.nom_mois,
+            presences: item.total_presences,
+            type_cours: item.type_cours
+        }));
+        res.json({ data: formattedData });
     }
-    catch (err) {
-        console.error(`Erreur lors de la récupération des présences pour l'utilisateur ${userId}:`, err);
-        res.status(500).json({
-            error: 'Erreur lors de la récupération des présences',
-            details: err instanceof Error ? err.message : 'Erreur inconnue',
-        });
+    catch (error) {
+        console.error('Erreur statistiques présence:', error);
+        res.status(500).json({ message: "Erreur lors de la récupération des statistiques" });
     }
 });
 /**

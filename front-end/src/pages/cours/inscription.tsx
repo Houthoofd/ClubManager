@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import store from '../../redux/store';
 import {
-  Title,
+  PageSection,
   Button,
   Spinner,
   Alert,
@@ -12,7 +12,8 @@ import { CalendarAltIcon, ClockIcon, UserIcon } from '@patternfly/react-icons';
 import { useCours, useCoursPlanning, useCoursInscritsUtilisateur } from '../../hooks/useCours';
 import { useUtilisateursPourTousLesCours, useInscrireUtilisateurReservation, useAnnulerInscriptionParNomPrenom } from '../../hooks/useInscriptions';
 import { datareservationSchema } from '@clubmanager/types';
-import { ModalWithHelp } from '../../components/common/modal/modalwithhelp';
+import { ModalWithHelp } from '../../components/common/modal/ModalWithHelp';
+import { PageHeader } from '../../components/common/PageHeader';
 import '../../styles/inscription.css';
 
 interface CoursData {
@@ -129,36 +130,46 @@ const Inscription = () => {
 
   if (loadingCours || loadingPlanning) {
     return (
-      <div className="inscription-loading">
-        <Spinner size="xl" />
+      <div className="inscription-page">
+        <PageHeader
+          title="Inscriptions aux cours"
+          subtitle="Inscrivez-vous aux cours disponibles et gérez vos participations"
+          variant="courses"
+        />
+        <PageSection className="inscription-content">
+          <div className="inscription-loading">
+            <Spinner size="xl" />
+          </div>
+        </PageSection>
       </div>
     );
   }
 
   if (errorCours || errorPlanning) {
     return (
-      <div className="inscription-container">
-        <div className="inscription-content">
+      <div className="inscription-page">
+        <PageHeader
+          title="Inscriptions aux cours"
+          subtitle="Inscrivez-vous aux cours disponibles et gérez vos participations"
+          variant="courses"
+        />
+        <PageSection className="inscription-content">
           <Alert variant="danger" title="Erreur lors du chargement des données." />
-        </div>
+        </PageSection>
       </div>
     );
   }
 
   return (
     <Provider store={store}>
-      <div className="inscription-container">
-        <div className="inscription-content">
-          {/* Header */}
-          <div className="inscription-header">
-            <Title headingLevel="h1" size="2xl" className="inscription-header-title">
-              Inscriptions aux cours
-            </Title>
-            <p className="inscription-header-subtitle">
-              Inscrivez-vous aux cours disponibles et gérez vos participations
-            </p>
-          </div>
+      <div className="inscription-page">
+        <PageHeader
+          title="Inscriptions aux cours"
+          subtitle="Inscrivez-vous aux cours disponibles et gérez vos participations"
+          variant="courses"
+        />
 
+        <PageSection className="inscription-content">
           {/* Grid des cours */}
           <div className="inscription-cards-grid">
             {cours?.map((c: any) => {
@@ -276,17 +287,16 @@ const Inscription = () => {
               </p>
             </div>
           )}
-        </div>
+        </PageSection>
         
         <ModalWithHelp
           title={modalSuccess ? "Succès" : "Erreur"}
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-        >
-          <p style={{ color: modalSuccess ? 'green' : 'red', fontSize: '1rem', margin: '1rem 0' }}>
-            {modalMessage}
-          </p>
-        </ModalWithHelp>
+          variant={modalSuccess ? 'success' : 'error'}
+          successMessage={modalSuccess ? modalMessage : ''}
+          error={modalSuccess ? null : modalMessage}
+        />
       </div>
     </Provider>
   );

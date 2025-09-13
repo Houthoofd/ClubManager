@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   PageSection,
-  Title,
   Tabs,
   Tab,
   TabTitleText,
@@ -15,6 +14,7 @@ import VenusMarsIcon from '@patternfly/react-icons/dist/esm/icons/venus-mars-ico
 import BirthdayCakeIcon from '@patternfly/react-icons/dist/esm/icons/birthday-cake-icon';
 import ShoppingCartIcon from '@patternfly/react-icons/dist/esm/icons/shopping-cart-icon';
 import CalendarAltIcon from '@patternfly/react-icons/dist/esm/icons/calendar-alt-icon';
+import { PageHeader } from '../components/common/PageHeader';
 import {
   useTopAssidus,
   useMembresParGrade,
@@ -112,17 +112,14 @@ const StatistiquesPage: React.FC = () => {
   };
 
   return (
-    <>
-      <PageSection variant="default">
-        <Title headingLevel="h1" size="2xl" style={{ marginBottom: '1rem' }}>
-          Statistiques du club
-        </Title>
-        <p style={{ color: '#6c757d', fontSize: '1.1rem' }}>
-          Vue d'ensemble des statistiques et analytics du club
-        </p>
-      </PageSection>
+    <div className="stats-page">
+      <PageHeader
+        title="Statistiques du club"
+        subtitle="Vue d'ensemble des statistiques et analytics du club"
+        variant="stats"
+      />
 
-      <PageSection>
+      <PageSection className="stats-content">
         {/* Cartes de résumé */}
         <Grid hasGutter style={{ marginBottom: '2rem' }}>
           <GridItem xl={3} lg={4} md={6} sm={12}>
@@ -232,8 +229,9 @@ const StatistiquesPage: React.FC = () => {
           </Tab>
         </Tabs>
       </PageSection>
-    </>
+    </div>
   );
 };
 
 export default StatistiquesPage;
+

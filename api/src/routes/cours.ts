@@ -15,6 +15,7 @@ import {
   DataValidation 
 } from '@clubmanager/types';
 import { z } from 'zod';
+import MysqlConnector from '../db/connector/mysqlconnector.js';
 
 const router = express.Router();
 
@@ -373,7 +374,7 @@ router.patch('/modifier', async (req: any, res: any) => {
 
     console.log("Données reçues pour modification :", req.body);
 
-    const mysqlConnector = new (await import('../db/connector/mysqlconnector.js')).default();
+    const connector = MysqlConnector.getInstance();
     
     // Mapping des jours vers les numéros
     const joursVersNumero: { [key: string]: number } = {
@@ -392,7 +393,7 @@ router.patch('/modifier', async (req: any, res: any) => {
     const findSql = `SELECT id FROM cours_recurrent WHERE type_cours = ? AND jour_semaine = ? LIMIT 1`;
     
     const coursRecurrentId = await new Promise<number>((resolve, reject) => {
-      mysqlConnector.query(findSql, [type_cours_original, jourOriginalNum], (error: any, results: any) => {
+      connector.query(findSql, [type_cours_original, jourOriginalNum], (error: any, results: any) => {
         if (error) {
           reject(error);
         } else if (results.length === 0) {
@@ -443,7 +444,7 @@ router.patch('/modifier', async (req: any, res: any) => {
       updateValues.push(coursRecurrentId);
 
       await new Promise<void>((resolve, reject) => {
-        mysqlConnector.query(updateSql, updateValues, (error: any) => {
+        connector.query(updateSql, updateValues, (error: any) => {
           if (error) {
             reject(error);
           } else {
@@ -461,7 +462,7 @@ router.patch('/modifier', async (req: any, res: any) => {
       // Supprime d'abord toutes les associations professeurs existantes pour ce cours
       const deleteProfsSql = `DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ?`;
       await new Promise<void>((resolve, reject) => {
-        mysqlConnector.query(deleteProfsSql, [coursRecurrentId], (error: any) => {
+        connector.query(deleteProfsSql, [coursRecurrentId], (error: any) => {
           if (error) {
             console.error("Erreur lors de la suppression des professeurs:", error);
             reject(error);
@@ -483,7 +484,7 @@ router.patch('/modifier', async (req: any, res: any) => {
           `;
           
           const profId = await new Promise<number | null>((resolve, reject) => {
-            mysqlConnector.query(getProfIdSql, [profNom.trim()], (error: any, results: any) => {
+            connector.query(getProfIdSql, [profNom.trim()], (error: any, results: any) => {
               if (error) {
                 reject(error);
               } else if (results.length > 0) {
@@ -504,7 +505,7 @@ router.patch('/modifier', async (req: any, res: any) => {
         for (const profId of profIds) {
           const insertProfSql = `INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id) VALUES (?, ?)`;
           await new Promise<void>((resolve, reject) => {
-            mysqlConnector.query(insertProfSql, [coursRecurrentId, profId], (error: any) => {
+            connector.query(insertProfSql, [coursRecurrentId, profId], (error: any) => {
               if (error) {
                 reject(error);
               } else {
@@ -517,7 +518,7 @@ router.patch('/modifier', async (req: any, res: any) => {
       }
     }
 
-    mysqlConnector.close();
+    connector.close();
 
     res.status(200).json({ isConfirm: true, message: "Cours modifié avec succès." });
   } catch (error) {

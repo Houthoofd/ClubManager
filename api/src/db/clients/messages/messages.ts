@@ -2,10 +2,14 @@ import { ConfirmationResult, VerifyResultWithData } from '@clubmanager/types';
 import MysqlConnector from '../../connector/mysqlconnector.js';
 
 export class Message {
+  private mysqlConnector: MysqlConnector;
+
+  constructor() {
+    this.mysqlConnector = MysqlConnector.getInstance();
+  }
 
   async envoyerMessage(utilisateur_id: number, contenu: string): Promise<ConfirmationResult> {
     return new Promise((resolve, reject) => {
-      const mysqlConnector = new MysqlConnector();
       const query = `
         INSERT INTO messages_personnalises (utilisateur_id, contenu)
         VALUES (?, ?)
@@ -14,17 +18,13 @@ export class Message {
   
       console.log("Exécution de la requête pour insérer un message");
   
-      mysqlConnector.query(query, params, (error: any, results: any) => {
-        // Fermer la connexion d'abord, avant toute réponse
-        mysqlConnector.close();
-  
+      this.mysqlConnector.query(query, params, (error: any, results: any) => {
         if (error) {
           console.error('Erreur lors de l’insertion du message : ' + error.message);
           reject(error);
         } else {
           console.log('Message inséré avec succès :', results);
   
-          // Ici on peut préparer un "ConfirmationResult" propre
           const confirmation: ConfirmationResult = {
             isConfirm: true,
             message: "Le message à bien été enregistrée"
@@ -38,7 +38,6 @@ export class Message {
   
   async creerTypeMessage(title: string, content: string): Promise<ConfirmationResult> {
     return new Promise((resolve, reject) => {
-      const mysqlConnector = new MysqlConnector();
       const query = `
         INSERT INTO types_messages_personnalises (title, content)
         VALUES (?, ?)
@@ -47,9 +46,7 @@ export class Message {
 
       console.log("Exécution de la requête pour insérer un type de message personnalisé");
 
-      mysqlConnector.query(query, params, (error: any, results: any) => {
-        mysqlConnector.close();
-
+      this.mysqlConnector.query(query, params, (error: any, results: any) => {
         if (error) {
           console.error('Erreur lors de l’insertion du type de message personnalisé : ' + error.message);
           reject(error);
@@ -69,27 +66,23 @@ export class Message {
 
   async obtenirTousLesTypesDeMessages(): Promise<VerifyResultWithData> {
     return new Promise((resolve, reject) => {
-      const mysqlConnector = new MysqlConnector();
       const query = `
         SELECT * FROM types_messages_personnalises
       `;
   
-      console.log("Exécution de la requête pour récupèrer tous les types de message");
+      console.log("Exécution de la requête pour récupérer tous les types de message");
   
-      mysqlConnector.query(query, [], (error: any, results: any) => {
-        mysqlConnector.close();
-  
+      this.mysqlConnector.query(query, [], (error: any, results: any) => {
         if (error) {
-          console.error('Erreur lors de la requête pour récupèrer tous les types de message : ' + error.message);
+          console.error('Erreur lors de la requête pour récupérer tous les types de message : ' + error.message);
           reject(error);
         } else {
           console.log('Types de message personnalisés récupérés avec succès :', results);
   
-          // Ici on renvoie les résultats dans le champ data
           const confirmation: VerifyResultWithData = {
             isFind: true,
             message: "Types de messages récupérés avec succès",
-            data: results  // ✅ On envoie les résultats ici
+            data: results
           };
   
           resolve(confirmation);
@@ -97,6 +90,5 @@ export class Message {
       });
     });
   }
-  
-  
 }
+

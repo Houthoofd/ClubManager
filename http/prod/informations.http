@@ -3,6 +3,12 @@
 # Récupérer les informations générales du club
 GET https://clubmanagment.com/api/informations
 
+### Récupérer les informations générales du club
+GET https://clubmanagment.com/api/informations/genres
+
+### Récupérer les informations générales du club
+GET https://clubmanagment.com/api/informations/grades
+
 ### Récupérer le planning des cours
 GET https://clubmanagment.com/api/informations/planning
 

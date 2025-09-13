@@ -1,41 +1,39 @@
 import React, { useState } from 'react';
 import {
   PageSection,
-  PageSectionVariants,
-  Title,
   Form,
   FormGroup,
   Switch,
-  Divider,
   Button,
   FormSelect,
   FormSelectOption,
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter
+  Card,
+  CardBody,
+  Title,
+  Divider
 } from '@patternfly/react-core';
+import { PageHeader } from '../components/common/PageHeader';
+import { ModalWithHelp } from '../components/common/modal/ModalWithHelp';
 
 const Settings = () => {
   const [notifications, setNotifications] = useState(true);
   const [theme, setTheme] = useState('light');
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [modalVariant, setModalVariant] = useState<'confirmation' | 'success' | 'error'>('success');
 
-  // Ajoute une fonction pour sauvegarder et afficher une modal
   const handleSave = () => {
     console.log('Notifications activées:', notifications);
     console.log('Thème:', theme);
-    setModalMessage('Paramètres sauvegardés !');
+    setModalMessage('Vos paramètres ont été sauvegardés avec succès !');
+    setModalVariant('success');
     setShowModal(true);
   };
 
-  // Ajoute un effet pour appliquer le thème choisi
+  // Applique le thème choisi
   React.useEffect(() => {
-    // Ici, on change la classe sur le body selon le thème
     document.body.classList.remove('theme-light', 'theme-dark', 'theme-system');
     if (theme === 'system') {
-      // Utilise le thème du système (dark ou light)
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
     } else {
@@ -44,63 +42,101 @@ const Settings = () => {
   }, [theme]);
 
   return (
-    <>
-      <PageSection variant="default">
-        <Title headingLevel="h1" size="2xl">
-          Paramètres du compte
-        </Title>
+    <div className="settings-page">
+      <PageHeader
+        title="Paramètres"
+        subtitle="Configurez votre compte et vos préférences"
+        variant="settings"
+      />
+
+      <PageSection className="settings-content">
+        <div className="settings-container">
+          <Card className="settings-card">
+            <CardBody>
+              <div className="settings-section">
+                <div className="settings-section-header">
+                  <Title headingLevel="h3" size="lg" className="settings-section-title">
+                    Préférences générales
+                  </Title>
+                  <p className="settings-section-description">
+                    Personnalisez votre expérience utilisateur
+                  </p>
+                </div>
+
+                <Form className="settings-form">
+                  <div className="settings-form-group">
+                    <FormGroup 
+                      label="Notifications par e‑mail" 
+                      fieldId="notifications"
+                      className="settings-form-field"
+                    >
+                      <div className="settings-switch-container">
+                        <Switch
+                          id="notifications"
+                          label={notifications ? 'Activées' : 'Désactivées'}
+                          isChecked={notifications}
+                          onChange={(_e, checked) => setNotifications(checked)}
+                          className="settings-switch"
+                        />
+                        <p className="settings-field-description">
+                          Recevez des notifications par email pour les événements importants
+                        </p>
+                      </div>
+                    </FormGroup>
+                  </div>
+
+                  <Divider className="settings-divider" />
+
+                  <div className="settings-form-group">
+                    <FormGroup 
+                      label="Thème d'affichage" 
+                      fieldId="theme-select"
+                      className="settings-form-field"
+                    >
+                      <div className="settings-select-container">
+                        <FormSelect
+                          value={theme}
+                          onChange={(_event, value) => setTheme(value)}
+                          aria-label="Sélection du thème"
+                          className="settings-select"
+                        >
+                          <FormSelectOption value="light" label="Clair" />
+                          <FormSelectOption value="dark" label="Sombre" />
+                          <FormSelectOption value="system" label="Automatique (système)" />
+                        </FormSelect>
+                        <p className="settings-field-description">
+                          Choisissez l'apparence de l'interface utilisateur
+                        </p>
+                      </div>
+                    </FormGroup>
+                  </div>
+
+                  <Divider className="settings-divider" />
+
+                  <div className="settings-actions">
+                    <Button 
+                      variant="primary" 
+                      onClick={handleSave}
+                      className="settings-save-button"
+                    >
+                      Sauvegarder les modifications
+                    </Button>
+                  </div>
+                </Form>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
       </PageSection>
 
-      <PageSection variant={PageSectionVariants.default}>
-        <Form isWidthLimited maxWidth="600px">
-          {/* Notifications */}
-          <FormGroup label="Notifications par e‑mail" fieldId="notifications">
-            <Switch
-              id="notifications"
-              label={notifications ? 'Activées' : 'Désactivées'}
-              isChecked={notifications}
-              onChange={(_e, checked) => setNotifications(checked)}
-            />
-          </FormGroup>
-
-          {/* Thème */}
-          <FormGroup label="Thème" fieldId="theme-select">
-            <FormSelect
-              value={theme}
-              onChange={(_event, value) => setTheme(value)}
-              aria-label="Sélection du thème"
-            >
-              <FormSelectOption value="light" label="Clair" />
-              <FormSelectOption value="dark" label="Sombre" />
-              <FormSelectOption value="system" label="Automatique (système)" />
-            </FormSelect>
-          </FormGroup>
-
-          <Divider className="my-4" />
-
-          <Button variant="primary" onClick={handleSave}>
-            Sauvegarder
-          </Button>
-        </Form>
-      </PageSection>
-      {/* Modal de notification */}
-      <Modal
-        variant="small"
+      <ModalWithHelp
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        aria-labelledby="settings-modal-title"
-      >
-        <ModalHeader title="Notification" />
-        <ModalBody>
-          {modalMessage}
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="primary" onClick={() => setShowModal(false)}>
-            OK
-          </Button>
-        </ModalFooter>
-      </Modal>
-    </>
+        title="Paramètres sauvegardés"
+        variant={modalVariant}
+        successMessage={modalMessage}
+      />
+    </div>
   );
 };
 

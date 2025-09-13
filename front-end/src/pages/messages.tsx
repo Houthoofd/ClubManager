@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   PageSection,
-  Title,
   Tabs,
   Tab,
   TabTitleText,
@@ -16,7 +15,9 @@ import {
   Bullseye,
   Badge,
 } from '@patternfly/react-core';
-import { TimesIcon } from '@patternfly/react-icons';
+import { TimesIcon, PaperPlaneIcon, EditIcon, ListIcon } from '@patternfly/react-icons';
+import { PageHeader } from '../components/common/PageHeader';
+import { TabContainer } from '../components/common/TabContainer';
 import GenericForm from '../components/genericForm';
 import {
   useUtilisateurs,
@@ -101,22 +102,43 @@ const Messages: React.FC = () => {
 
   if (loadingUsers || loadingTypes) {
     return (
-      <Bullseye>
-        <Spinner />
-      </Bullseye>
+      <div className="messages-page">
+        <PageHeader
+          title="Messagerie"
+          subtitle="Communication avec vos membres et votre équipe"
+          variant="messages"
+        />
+        <PageSection className="messages-content">
+          <Bullseye>
+            <Spinner size="xl" />
+          </Bullseye>
+        </PageSection>
+      </div>
     );
   }
 
   if (errorUsers || errorTypes) {
-    return <Alert variant="danger" title="Erreur lors du chargement des données" />;
+    return (
+      <div className="messages-page">
+        <PageHeader
+          title="Messagerie"
+          subtitle="Communication avec vos membres et votre équipe"
+          variant="messages"
+        />
+        <PageSection className="messages-content">
+          <Alert variant="danger" title="Erreur lors du chargement des données" />
+        </PageSection>
+      </div>
+    );
   }
 
-  return (
-    <PageSection>
-      <Title headingLevel="h1">📨 Messagerie</Title>
-      <Tabs activeKey={activeTab} onSelect={(_, tabIndex) => setActiveTab(Number(tabIndex))}>
-        {/* Onglet "Envoyer" */}
-        <Tab eventKey={0} title={<TabTitleText>Envoyer</TabTitleText>}>
+  const tabs = [
+    {
+      key: 0,
+      title: 'Envoyer un message',
+      icon: <PaperPlaneIcon />,
+      content: (
+        <div className="messages-send-container">
           <Form isHorizontal style={{ maxWidth: '600px', marginTop: '1rem' }}>
             <FormGroup label="Utilisateurs" fieldId="user-select">
               <FormSelect
@@ -174,31 +196,46 @@ const Messages: React.FC = () => {
               Envoyer le message
             </Button>
           </Form>
-        </Tab>
-
-        {/* Onglet "Créer un type de message" */}
-        <Tab eventKey={2} title={<TabTitleText>Créer un type de message</TabTitleText>}>
+        </div>
+      )
+    },
+    {
+      key: 1,
+      title: 'Créer un type de message',
+      icon: <EditIcon />,
+      content: (
+        <div className="messages-create-container">
           <GenericForm
             formData={formData}
             setFormData={setFormData}
             onSubmit={handleCreateType}
           />
-        </Tab>
-
-        {/* Onglet "Messages existants" */}
-        <Tab eventKey={3} title={<TabTitleText>Messages existants</TabTitleText>}>
-          <div style={{ marginTop: '1rem' }}>
-            {typesMessages.length === 0 ? (
+        </div>
+      )
+    },
+    {
+      key: 2,
+      title: 'Messages existants',
+      icon: <ListIcon />,
+      content: (
+        <div className="messages-list-container">
+          {typesMessages.length === 0 ? (
+            <div className="messages-empty-state">
               <p>Aucun type de message existant.</p>
-            ) : (
-              typesMessages.map((type) => (
+            </div>
+          ) : (
+            <div className="messages-list">
+              {typesMessages.map((type) => (
                 <div
                   key={type.id}
+                  className="message-type-card"
                   style={{
-                    border: '1px solid #ccc',
-                    padding: '1rem',
-                    borderRadius: '0.5rem',
+                    border: '1px solid #e5e7eb',
+                    padding: '1.5rem',
+                    borderRadius: '12px',
                     marginBottom: '1rem',
+                    background: 'white',
+                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
                   }}
                 >
                   {editingId === type.id ? (
@@ -220,48 +257,73 @@ const Messages: React.FC = () => {
                           />
                         </FormGroup>
                       </Form>
-                      <Button
-                        variant="primary"
-                        onClick={() => handleEditType(type.id)}
-                        style={{ marginRight: '0.5rem' }}
-                      >
-                        Sauvegarder
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditFormData({ title: '', content: '' });
-                        }}
-                      >
-                        Annuler
-                      </Button>
+                      <div className="message-type-actions">
+                        <Button
+                          variant="primary"
+                          onClick={() => handleEditType(type.id)}
+                          style={{ marginRight: '0.5rem' }}
+                        >
+                          Sauvegarder
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditFormData({ title: '', content: '' });
+                          }}
+                        >
+                          Annuler
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <>
-                      <strong>{type.title}</strong>
-                      <p>{type.content}</p>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          setEditingId(type.id);
-                          setEditFormData({ title: type.title, content: type.content });
-                        }}
-                        style={{ marginRight: '0.5rem' }}
-                      >
-                        Modifier
-                      </Button>
-                      <Button variant="danger" onClick={() => handleDeleteType(type.id)}>
-                        Supprimer
-                      </Button>
+                      <div className="message-type-content">
+                        <strong className="message-type-title">{type.title}</strong>
+                        <p className="message-type-text">{type.content}</p>
+                      </div>
+                      <div className="message-type-actions">
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setEditingId(type.id);
+                            setEditFormData({ title: type.title, content: type.content });
+                          }}
+                          style={{ marginRight: '0.5rem' }}
+                        >
+                          Modifier
+                        </Button>
+                        <Button variant="danger" onClick={() => handleDeleteType(type.id)}>
+                          Supprimer
+                        </Button>
+                      </div>
                     </>
                   )}
                 </div>
-              ))
-            )}
-          </div>
-        </Tab>
-      </Tabs>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="messages-page">
+      <PageHeader
+        title="Messagerie"
+        subtitle="Communication avec vos membres et votre équipe"
+        variant="messages"
+      />
+
+      <PageSection className="messages-content">
+        <TabContainer
+          tabs={tabs}
+          activeKey={activeTab}
+          onTabSelect={setActiveTab}
+          variant="modern"
+        />
+      </PageSection>
 
       {/* Modal de notification */}
       <Modal
@@ -275,7 +337,7 @@ const Messages: React.FC = () => {
           Fermer
         </Button>
       </Modal>
-    </PageSection>
+    </div>
   );
 };
 

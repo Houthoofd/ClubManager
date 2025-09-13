@@ -4,11 +4,13 @@ import {
   Tab,
   TabTitleText,
   PageSection,
-  Title,
   Spinner,
   Alert,
 } from '@patternfly/react-core';
 import { useParams } from 'react-router-dom';
+import { PageHeader } from '../components/common/PageHeader';
+import { TabContainer } from '../components/common/TabContainer';
+import { UserIcon, ChartLineIcon, CreditCardIcon } from '@patternfly/react-icons';
 import {
   useCompteInfo,
   useUpdateCompte,
@@ -133,55 +135,111 @@ const Compte = () => {
     }
   };
 
-  if (loadingCompte) return <Spinner size="xl" />;
-  if (errorCompte) return <Alert variant="danger" title={errorCompte.message} />;
+  if (loadingCompte) {
+    return (
+      <div className="compte-page">
+        <PageHeader
+          title="Mon compte"
+          subtitle="Gérez vos informations personnelles et préférences"
+          variant="compte"
+        />
+        <PageSection className="compte-content">
+          <div className="loading-container">
+            <Spinner size="xl" />
+            <p>Chargement des informations...</p>
+          </div>
+        </PageSection>
+      </div>
+    );
+  }
+
+  if (errorCompte) {
+    return (
+      <div className="compte-page">
+        <PageHeader
+          title="Mon compte"
+          subtitle="Gérez vos informations personnelles et préférences"
+          variant="compte"
+        />
+        <PageSection className="compte-content">
+          <Alert variant="danger" title="Erreur de chargement" isInline>
+            {errorCompte.message}
+          </Alert>
+        </PageSection>
+      </div>
+    );
+  }
+
+  const tabs = [
+    {
+      key: 0,
+      title: 'Informations personnelles',
+      icon: <UserIcon />,
+      content: (
+        <FormulaireCompte
+          compteInfo={compteInfo}
+          form={form}
+          password={password}
+          showPasswordField={showPasswordField}
+          editingFields={editingFields}
+          abonnements={abonnementsQuery.data || []}
+          grades={gradesQuery.data || []}
+          status={statusQuery.data || []}
+          genres={genresQuery.data || []}
+          onEditClick={handleEditClick}
+          onEmailChange={handleEmailChange}
+          onFormChange={handleFormChange}
+          onPasswordChange={handlePasswordChange}
+          onApplyChanges={handleApplyChanges}
+          isLoading={updateCompte.isPending}
+          formatDateForInput={formatDateForInput}
+        />
+      )
+    },
+    {
+      key: 1,
+      title: 'Statistiques',
+      icon: <ChartLineIcon />,
+      content: (
+        <StatistiquesUtilisateur
+          statFrequentation={statFrequentation}
+          isLoading={loadingStats}
+        />
+      )
+    },
+    {
+      key: 2,
+      title: 'Paiements',
+      icon: <CreditCardIcon />,
+      content: (
+        <EcheancesPaiement paiementsEcheances={paiementsEcheances} />
+      )
+    }
+  ];
 
   return (
-    <PageSection>
-      <Title headingLevel="h1" size="xl" style={{ marginBottom: '1rem' }}>
-        Mon compte
-      </Title>
-      
-      <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
-        <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
-          <FormulaireCompte
-            compteInfo={compteInfo}
-            form={form}
-            password={password}
-            showPasswordField={showPasswordField}
-            editingFields={editingFields}
-            abonnements={abonnementsQuery.data || []}
-            grades={gradesQuery.data || []}
-            status={statusQuery.data || []}
-            genres={genresQuery.data || []}
-            onEditClick={handleEditClick}
-            onEmailChange={handleEmailChange}
-            onFormChange={handleFormChange}
-            onPasswordChange={handlePasswordChange}
-            onApplyChanges={handleApplyChanges}
-            isLoading={updateCompte.isPending}
-            formatDateForInput={formatDateForInput}
-          />
-        </Tab>
-        
-        <Tab eventKey={1} title={<TabTitleText>Statistiques</TabTitleText>}>
-          <StatistiquesUtilisateur
-            statFrequentation={statFrequentation}
-            isLoading={loadingStats}
-          />
-        </Tab>
+    <div className="compte-page">
+      <PageHeader
+        title="Mon compte"
+        subtitle="Gérez vos informations personnelles et préférences"
+        variant="compte"
+      />
 
-        <Tab eventKey={2} title={<TabTitleText>Paiements</TabTitleText>}>
-          <EcheancesPaiement paiementsEcheances={paiementsEcheances} />
-        </Tab>
-      </Tabs>
+      <PageSection className="compte-content">
+        <TabContainer
+          tabs={tabs}
+          activeKey={activeTabKey}
+          onTabSelect={setActiveTabKey}
+          variant="modern"
+        />
+      </PageSection>
 
       <ModalsCompte
         isModalOpen={isModalOpen}
         modalMessage={modalMessage}
         onCloseModal={() => setIsModalOpen(false)}
       />
-    </PageSection>
+    </div>
   );
 };
 

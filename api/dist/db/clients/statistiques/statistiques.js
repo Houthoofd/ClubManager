@@ -1,11 +1,83 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
 export class Statistiques {
+    mysqlConnector;
+    constructor() {
+        this.mysqlConnector = MysqlConnector.getInstance();
+    }
+    obtenirStatistiquesGenerales() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT 
+          (SELECT COUNT(*) FROM utilisateurs WHERE status_id = 1) as total_utilisateurs,
+          (SELECT COUNT(*) FROM cours WHERE date_cours >= CURDATE()) as cours_a_venir,
+          (SELECT COUNT(*) FROM inscriptions i JOIN cours c ON i.cours_id = c.id WHERE c.date_cours >= CURDATE()) as total_inscriptions,
+          (SELECT COUNT(*) FROM professeurs WHERE status_id = 5) as total_professeurs
+      `;
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des statistiques générales :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0]);
+                }
+            });
+        });
+    }
+    obtenirStatistiquesParCours() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT 
+          c.type_cours,
+          COUNT(i.id) as nombre_inscriptions,
+          AVG(i.status_id) as taux_presence
+        FROM cours c
+        LEFT JOIN inscriptions i ON c.id = i.cours_id
+        WHERE c.date_cours >= CURDATE()
+        GROUP BY c.type_cours
+        ORDER BY nombre_inscriptions DESC
+      `;
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des statistiques par cours :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
+    }
+    obtenirStatistiquesPresence() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT 
+          DATE(c.date_cours) as date_cours,
+          c.type_cours,
+          COUNT(i.id) as total_inscrits,
+          SUM(CASE WHEN i.status_id = 1 THEN 1 ELSE 0 END) as presents
+        FROM cours c
+        LEFT JOIN inscriptions i ON c.id = i.cours_id
+        WHERE c.date_cours >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY DATE(c.date_cours), c.type_cours
+        ORDER BY date_cours DESC
+      `;
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des statistiques de présence :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
+    }
     /**
      * Obtient les statistiques de fréquentation pour un utilisateur spécifique
      */
     async obtenirStatistiquesFrequentation(utilisateurId) {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const query = `
         WITH
         cours_recurrents_actifs AS (
@@ -47,39 +119,13 @@ export class Statistiques {
         LEFT JOIN presences_par_mois p ON c.annee = p.annee AND c.mois_num = p.mois_num
         ORDER BY c.annee, c.mois_num;
       `;
-            const results = await this.executerRequete(mysqlConnector, query, [utilisateurId, utilisateurId], (rows) => rows);
-            // On extrait le totalFrequentation du premier résultat (identique pour chaque ligne)
-            const totalFrequentation = results.length > 0 ? Number(results[0].totalFrequentation) : 0;
-            const frequentationParMois = results.map((row) => ({
-                mois: row.mois,
-                frequentation: Number(row.frequentation),
-                nombres_total_de_cours_du_mois: Number(row.nombres_total_de_cours_du_mois),
-                pourcentage_de_cours_valides: Number(row.pourcentage_de_cours_valides)
-            }));
-            return {
-                totalFrequentation,
-                frequentationParMois
-            };
-        }
-        catch (error) {
-            console.error(`Erreur lors de l'obtention des statistiques pour l'utilisateur ${utilisateurId}:`, error);
-            throw error;
-        }
-        finally {
-            mysqlConnector.close();
-        }
-    }
-    /**
-     * Exécute une requête SQL et retourne le résultat transformé
-     */
-    async executerRequete(connector, query, params, transformer) {
-        return new Promise((resolve, reject) => {
-            connector.query(query, params, (error, results) => {
+            this.mysqlConnector.query(query, [utilisateurId, utilisateurId], (error, results) => {
                 if (error) {
+                    console.error('Erreur lors de la récupération des statistiques de fréquentation :', error);
                     reject(error);
                 }
                 else {
-                    resolve(transformer(results));
+                    resolve(results);
                 }
             });
         });
@@ -88,49 +134,46 @@ export class Statistiques {
      * Obtient les statistiques de progression pour un utilisateur spécifique
      */
     async obtenirProgressionUtilisateur(utilisateurId) {
-        const mysqlConnector = new MysqlConnector();
-        try {
-            const [coursSuivis, progression] = await Promise.all([
-                this.executerRequete(mysqlConnector, `SELECT COUNT(*) as total FROM inscriptions WHERE utilisateur_id = ? AND status_id = 1;`, [utilisateurId], (results) => Number(results[0].total)),
-                this.executerRequete(mysqlConnector, `
-            SELECT
-              c.id as cours_id,
-              c.type_cours as titre,
-              COUNT(i.id) as cours_suivis,
-              (COUNT(i.id) * 100 / (
-                SELECT COUNT(*) FROM cours WHERE cours_recurrent_id = c.cours_recurrent_id
-              )) as progression
-            FROM cours c
-            JOIN inscriptions i ON c.id = i.cours_id AND i.utilisateur_id = ? AND i.status_id = 1
-            GROUP BY c.id, c.type_cours, c.cours_recurrent_id;
-          `, [utilisateurId], (results) => results),
-            ]);
-            let niveauActuel = 'Débutant';
-            if (coursSuivis > 30)
-                niveauActuel = 'Avancé';
-            else if (coursSuivis > 10)
-                niveauActuel = 'Intermédiaire';
-            return {
-                utilisateur_id: utilisateurId,
-                coursSuivis,
-                progressionParCours: progression,
-                niveauActuel,
-            };
-        }
-        catch (error) {
-            console.error(`Erreur lors de l'obtention de la progression pour l'utilisateur ${utilisateurId}:`, error);
-            throw error;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT
+          c.id as cours_id,
+          c.type_cours as titre,
+          COUNT(i.id) as cours_suivis,
+          (COUNT(i.id) * 100 / (
+            SELECT COUNT(*) FROM cours WHERE cours_recurrent_id = c.cours_recurrent_id
+          )) as progression
+        FROM cours c
+        JOIN inscriptions i ON c.id = i.cours_id AND i.utilisateur_id = ? AND i.status_id = 1
+        GROUP BY c.id, c.type_cours, c.cours_recurrent_id
+      `;
+            this.mysqlConnector.query(sql, [utilisateurId], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération de la progression :', error);
+                    reject(error);
+                }
+                else {
+                    const coursSuivis = results.reduce((total, cours) => total + cours.cours_suivis, 0);
+                    let niveauActuel = 'Débutant';
+                    if (coursSuivis > 30)
+                        niveauActuel = 'Avancé';
+                    else if (coursSuivis > 10)
+                        niveauActuel = 'Intermédiaire';
+                    resolve({
+                        utilisateur_id: utilisateurId,
+                        coursSuivis,
+                        progressionParCours: results,
+                        niveauActuel
+                    });
+                }
+            });
+        });
     }
     /**
      * Obtient les présences par mois pour un utilisateur
      */
     async obtenirPresenceParMois(userId) {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const query = `
         SELECT
           u.last_name, u.first_name, MONTH(c.date_cours) AS mois,
@@ -157,22 +200,22 @@ export class Statistiques {
         GROUP BY u.last_name, u.first_name, mois, c.type_cours
         ORDER BY u.last_name, u.first_name, mois, c.type_cours;
       `;
-            return this.executerRequete(mysqlConnector, query, [userId], (results) => results);
-        }
-        catch (error) {
-            console.error(`Erreur lors de la récupération des présences pour l'utilisateur ${userId}:`, error);
-            throw error;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(query, [userId], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des présences par mois :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Obtient les présences non validées par mois pour un utilisateur
      */
     async obtenirPresencesNonValideesParMois(userId) {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const query = `
         SELECT
           u.last_name, u.first_name, MONTH(c.date_cours) AS mois,
@@ -194,152 +237,155 @@ export class Statistiques {
         FROM inscriptions i
         JOIN cours c ON i.cours_id = c.id
         JOIN utilisateurs u ON i.utilisateur_id = u.id
-        WHERE i.status_id IS NULL
+        WHERE i.status_id = 0
           AND i.utilisateur_id = ?
         GROUP BY u.last_name, u.first_name, mois, c.type_cours
         ORDER BY u.last_name, u.first_name, mois, c.type_cours;
       `;
-            return this.executerRequete(mysqlConnector, query, [userId], (results) => results);
-        }
-        catch (error) {
-            console.error(`Erreur lors de la récupération des présences non validées pour l'utilisateur ${userId}:`, error);
-            throw error;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(query, [userId], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des présences non validées :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Obtient les statistiques de fréquentation par mois pour tous les utilisateurs
      */
     async obtenirStatistiquesPresenceParMois() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const query = `
-        SELECT
-          MONTHNAME(c.date_cours) as mois,
-          COUNT(DISTINCT i.utilisateur_id) as frequentation
+        SELECT 
+          MONTH(c.date_cours) as mois,
+          MONTHNAME(c.date_cours) as nom_mois,
+          COUNT(i.id) as total_inscriptions,
+          SUM(CASE WHEN i.status_id = 1 THEN 1 ELSE 0 END) as presences_validees
         FROM cours c
-        LEFT JOIN inscriptions i ON c.id = i.cours_id AND i.status_id = 1
-        GROUP BY MONTH(c.date_cours), mois
-        ORDER BY MONTH(c.date_cours);
+        LEFT JOIN inscriptions i ON c.id = i.cours_id
+        WHERE c.date_cours >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+        GROUP BY MONTH(c.date_cours), MONTHNAME(c.date_cours)
+        ORDER BY mois
       `;
-            return this.executerRequete(mysqlConnector, query, [], (results) => results);
-        }
-        catch (error) {
-            console.error("Erreur lors de l'obtention des statistiques de présence par mois:", error);
-            throw error;
-        }
-        finally {
-            mysqlConnector.close();
-        }
-    }
-    /**
-     * Formate les résultats de présence pour affichage graphique
-     */
-    formatPresenceData(data) {
-        const formatted = {};
-        data.forEach((item) => {
-            const { nom_mois, type_cours, total_presences } = item;
-            if (!formatted[nom_mois]) {
-                formatted[nom_mois] = {};
-            }
-            formatted[nom_mois][type_cours] = total_presences;
+            this.mysqlConnector.query(query, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des statistiques de présence par mois :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
         });
-        return formatted;
     }
     /**
      * Obtient le nombre total de membres actifs
      */
     async getNombreMembres() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `SELECT COUNT(*) AS count FROM utilisateurs WHERE status_id IN (1,2,3,4,5)`;
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            return result[0]?.count ?? 0;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération du nombre de membres :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0]?.count ?? 0);
+                }
+            });
+        });
     }
     /**
      * Obtient le montant total des paiements du mois en cours
      */
     async getTotalPaiementsMois() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT COALESCE(SUM(montant), 0) AS total
         FROM paiements
         WHERE MONTH(date_paiement) = MONTH(CURRENT_DATE())
           AND YEAR(date_paiement) = YEAR(CURRENT_DATE())
-          AND statut = 'validé'
+          AND statut = 'confirmé'
       `;
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            return result[0]?.total ?? 0;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération du total des paiements :', error.message);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0].total);
+                }
+            });
+        });
     }
     /**
      * Obtient le nombre de paiements récents (effectués au cours des 7 derniers jours)
      */
     async getPaiementsRecents() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT COUNT(*) AS count
         FROM paiements
         WHERE date_paiement >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
-          AND statut = 'validé'
+          AND statut = 'confirmé'
       `;
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            return result[0]?.count ?? 0;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des paiements récents :', error.message);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0].count);
+                }
+            });
+        });
     }
     /**
      * Obtient le nombre de paiements en attente
      */
     async getPaiementsEnAttente() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
-        SELECT COUNT(DISTINCT utilisateur_id) AS count
+        SELECT COUNT(*) AS count
         FROM paiements
         WHERE statut = 'en attente'
       `;
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            return result[0]?.count ?? 0;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des paiements en attente :', error.message);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0].count);
+                }
+            });
+        });
     }
     /**
      * Obtient le nombre total de plans actifs
      */
     async getPlansActifs() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `SELECT COUNT(*) AS count FROM plans_tarifaires`;
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            return result[0]?.count ?? 0;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération du nombre de plans actifs :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0]?.count ?? 0);
+                }
+            });
+        });
     }
     /**
      * Obtient le taux de renouvellement des abonnements
      */
     async getTauxRenouvellement() {
-        const mysqlConnector = new MysqlConnector();
-        try {
-            // Si tu as une table "statistiques" ou "renouvellements", adapte ici
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT
           ROUND(
@@ -347,19 +393,22 @@ export class Statistiques {
             NULLIF((SELECT COUNT(*) FROM paiements WHERE periode_fin >= CURRENT_DATE()), 0), 2
           ) AS taux
       `;
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            return result[0]?.taux ?? 0;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération du taux de renouvellement :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0]?.taux ?? 0);
+                }
+            });
+        });
     }
     /**
      * Obtient les paiements par mois (12 derniers mois)
      */
     async getPaiementsParMois() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT
           DATE_FORMAT(date_paiement, '%b') AS mois,
@@ -370,18 +419,22 @@ export class Statistiques {
         ORDER BY YEAR(date_paiement) DESC, MONTH(date_paiement) DESC
         LIMIT 12
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des paiements par mois :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Obtient le nombre de membres par plan
      */
     async getMembresParPlan() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT pt.nom_plan AS plan, COUNT(u.id) AS value
         FROM utilisateurs u
@@ -389,49 +442,61 @@ export class Statistiques {
         WHERE u.status_id IN (1,2,3,4,5)
         GROUP BY pt.nom_plan
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération du nombre de membres par plan :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     async getDerniersPaiements() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT p.*, u.nom_utilisateur
         FROM paiements p
         JOIN utilisateurs u ON p.utilisateur_id = u.id
+        WHERE p.statut = 'confirmé'
         ORDER BY p.date_paiement DESC
         LIMIT 10
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des derniers paiements :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     async getPaiementsEchus() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
-        SELECT p.*, u.nom_utilisateur
-        FROM paiements p
-        JOIN utilisateurs u ON p.utilisateur_id = u.id
-        WHERE p.periode_fin < CURRENT_DATE()
-        ORDER BY p.periode_fin DESC
-        LIMIT 10
+        SELECT 
+          COUNT(*) AS count
+        FROM echeances_paiements ep
+        JOIN utilisateurs u ON ep.utilisateur_id = u.id
+        WHERE ep.date_echeance < CURRENT_DATE()
+          AND ep.statut = 'en_attente'
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des paiements échus :', error.message);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     async getNouveauxMembres() {
-        const mysqlConnector = new MysqlConnector();
-        try {
-            // Correction : la colonne d'inscription est 'date_inscription' dans la table utilisateurs
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT u.first_name, u.last_name, u.date_inscription
         FROM utilisateurs u
@@ -439,29 +504,22 @@ export class Statistiques {
         ORDER BY u.date_inscription DESC
         LIMIT 10
       `;
-            console.log('[getNouveauxMembres] SQL:', sql);
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            console.log('[getNouveauxMembres] Result:', result);
-            if (!Array.isArray(result)) {
-                console.error('[getNouveauxMembres] Résultat inattendu:', result);
-                throw new Error('Résultat inattendu pour getNouveauxMembres');
-            }
-            return result;
-        }
-        catch (error) {
-            console.error('[getNouveauxMembres] Erreur:', error);
-            throw error;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des nouveaux membres :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Top 5 membres les plus assidus (présences validées)
      */
     async getTopMembresAssidus() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT u.first_name, u.last_name, COUNT(i.id) AS total_presences_validees
         FROM utilisateurs u
@@ -470,18 +528,22 @@ export class Statistiques {
         ORDER BY total_presences_validees DESC
         LIMIT 5
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des membres les plus assidus :', error.message);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Répartition des membres par grade
      */
     async getMembresParGrade() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT g.grade_id, COUNT(u.id) AS count
         FROM utilisateurs u
@@ -489,18 +551,22 @@ export class Statistiques {
         GROUP BY g.grade_id
         ORDER BY count DESC
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des membres par grade :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Répartition des membres par genre
      */
     async getMembresParGenre() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT ge.genre_name, COUNT(u.id) AS count
         FROM utilisateurs u
@@ -508,18 +574,22 @@ export class Statistiques {
         GROUP BY ge.genre_name
         ORDER BY count DESC
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des membres par genre :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Prochains anniversaires des membres (dans les 30 jours)
      */
     async getProchainsAnniversaires() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT first_name, last_name, date_of_birth
         FROM utilisateurs
@@ -529,18 +599,22 @@ export class Statistiques {
         ORDER BY DATE_FORMAT(date_of_birth, '%m-%d')
         LIMIT 10
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des prochains anniversaires :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Articles les plus vendus
      */
     async getArticlesPlusVendus() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT a.nom, SUM(ca.quantite) AS total_vendu
         FROM commande_articles ca
@@ -549,18 +623,22 @@ export class Statistiques {
         ORDER BY total_vendu DESC
         LIMIT 10
       `;
-            return await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des articles les plus vendus :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
     /**
      * Nombre de cours à venir cette semaine
      */
     async getCoursSemaine() {
-        const mysqlConnector = new MysqlConnector();
-        try {
+        return new Promise((resolve, reject) => {
             const sql = `
         SELECT COUNT(*) AS count
         FROM cours
@@ -568,11 +646,38 @@ export class Statistiques {
           AND YEAR(date_cours) = YEAR(CURRENT_DATE())
           AND date_cours >= CURRENT_DATE()
       `;
-            const result = await this.executerRequete(mysqlConnector, sql, [], rows => rows);
-            return result[0]?.count ?? 0;
-        }
-        finally {
-            mysqlConnector.close();
-        }
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des cours de la semaine :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0]?.count ?? 0);
+                }
+            });
+        });
+    }
+    obtenirEvolutionInscriptions() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT 
+          DATE(i.date_inscription) as date_inscription,
+          COUNT(*) as nouvelles_inscriptions
+        FROM inscriptions i
+        JOIN cours c ON i.cours_id = c.id
+        WHERE i.date_inscription >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
+        GROUP BY DATE(i.date_inscription)
+        ORDER BY date_inscription ASC
+      `;
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération de l\'évolution des inscriptions :', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
     }
 }

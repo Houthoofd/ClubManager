@@ -36,32 +36,116 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Vérifie que toutes les variables critiques sont bien définies
-requiredVars.forEach(v => {
-  if (!process.env[v]) {
-    console.error(`❌ Variable d'environnement manquante : ${v}`);
-  }
-});
+const missingVars = requiredVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`❌ Variables d'environnement manquantes : ${missingVars.join(', ')}`);
+}
 
-// Crée un pool MySQL
-const pool = mysql.createPool({
+// Configuration du pool MySQL améliorée
+const poolConfig = {
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  connectionLimit: Number(process.env.DB_POOL_LIMIT) || 10,
+  connectionLimit: Number(process.env.DB_POOL_LIMIT) || 15,
+  acquireTimeout: Number(process.env.DB_ACQUIRE_TIMEOUT) || 60000,
+  timeout: Number(process.env.DB_TIMEOUT) || 60000,
+  reconnect: true,
+  multipleStatements: false
+};
+
+// Crée un pool MySQL avec configuration robuste
+const pool = mysql.createPool(poolConfig);
+
+// Test de connexion initial et monitoring
+pool.on('connection', (connection) => {
+  console.log(`✅ Nouvelle connexion MySQL établie (ID: ${connection.threadId})`);
 });
 
+pool.on('error', (err) => {
+  console.error('❌ Erreur du pool MySQL :', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    console.log('🔄 Reconnexion automatique en cours...');
+  }
+});
+
+// Monitoring du pool
+let lastPoolStats = { total: 0, free: 0, used: 0 };
+setInterval(() => {
+  const stats = {
+    total: (pool as any)._allConnections?.length || 0,
+    free: (pool as any)._freeConnections?.length || 0,
+    used: ((pool as any)._allConnections?.length || 0) - ((pool as any)._freeConnections?.length || 0)
+  };
+  
+  // Log seulement si changement significatif
+  if (stats.total !== lastPoolStats.total || stats.used > poolConfig.connectionLimit * 0.8) {
+    console.log(`📊 Pool MySQL - Total: ${stats.total}, Utilisées: ${stats.used}, Libres: ${stats.free}`);
+    if (stats.used > poolConfig.connectionLimit * 0.8) {
+      console.warn('⚠️  Pool de connexions à plus de 80% de capacité !');
+    }
+  }
+  lastPoolStats = stats;
+}, 30000);
+
 export default class MysqlConnector {
+  private static instance: MysqlConnector;
+  private isPoolHealthy: boolean = false;
+
+  private constructor() {
+    this.testConnection();
+  }
+
+  public static getInstance(): MysqlConnector {
+    if (!MysqlConnector.instance) {
+      MysqlConnector.instance = new MysqlConnector();
+    }
+    return MysqlConnector.instance;
+  }
+
+  private testConnection(): void {
+    pool.getConnection((err, connection) => {
+      if (err) {
+        console.error('❌ Impossible de se connecter à la base de données :', err.message);
+        this.isPoolHealthy = false;
+      } else {
+        console.log(`✅ Connecté à MySQL sur ${process.env.DB_HOST}/${process.env.DB_NAME}`);
+        connection.release();
+        this.isPoolHealthy = true;
+      }
+    });
+  }
+
   public query(
     sql: string,
     values: any[] = [],
     callback: (error: mysql.MysqlError | null, results?: any, fields?: mysql.FieldInfo[]) => void
   ): void {
+    if (!this.isPoolHealthy) {
+      return callback(new Error('Pool de connexions non disponible') as mysql.MysqlError);
+    }
+
     pool.getConnection((err, connection) => {
-      if (err) return callback(err);
+      if (err) {
+        console.error('❌ Erreur lors de l\'acquisition de connexion :', err.message);
+        return callback(err);
+      }
+
+      const queryTimeout = setTimeout(() => {
+        connection.destroy();
+        callback(new Error('Timeout de requête SQL') as mysql.MysqlError);
+      }, poolConfig.timeout);
+
       connection.query(sql, values, (error, results, fields) => {
+        clearTimeout(queryTimeout);
         connection.release();
+        
+        if (error) {
+          console.error('❌ Erreur SQL :', error.message);
+          console.error('Query :', sql);
+        }
+        
         callback(error, results, fields);
       });
     });
@@ -70,14 +154,19 @@ export default class MysqlConnector {
   public beginTransaction(
     callback: (err: mysql.MysqlError | null, connection?: mysql.PoolConnection) => void
   ): void {
-    // Test rapide de connexion au démarrage
     pool.getConnection((err, connection) => {
       if (err) {
-        console.error('❌ Impossible de se connecter à la base de données :', err.message);
-      } else {
-        console.log(`✅ Connecté à MySQL sur ${process.env.DB_HOST}/${process.env.DB_NAME}`);
-        connection.release();
+        console.error('❌ Erreur lors de l\'acquisition de connexion pour transaction :', err.message);
+        return callback(err);
       }
+
+      connection.beginTransaction((transErr) => {
+        if (transErr) {
+          connection.release();
+          return callback(transErr);
+        }
+        callback(null, connection); // connection est définie ici
+      });
     });
   }
 
@@ -104,16 +193,60 @@ export default class MysqlConnector {
     });
   }
 
-  public close(): void {
-    // Ne fermez le pool que lors de l'arrêt du serveur (ex: dans un handler SIGINT/SIGTERM)
-    // Retirez l'appel automatique ici pour éviter "Pool is closed" lors des requêtes
-    // Exemple d'utilisation correcte :
-    // process.on('SIGINT', () => {
-    //   pool.end(err => { 
-    //     if(err) console.error(err); 
-    //     else console.log('✅ Pool MySQL fermé'); 
-    //     process.exit();
-    //   });
-    // });
+  public getPoolStatus(): { total: number; free: number; used: number; healthy: boolean } {
+    const total = (pool as any)._allConnections?.length || 0;
+    const free = (pool as any)._freeConnections?.length || 0;
+    return {
+      total,
+      free,
+      used: total - free,
+      healthy: this.isPoolHealthy
+    };
+  }
+
+  public close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      pool.end((err) => {
+        if (err) {
+          console.error('❌ Erreur lors de la fermeture du pool :', err);
+          reject(err);
+        } else {
+          console.log('✅ Pool MySQL fermé proprement');
+          resolve();
+        }
+      });
+    });
+  }
+
+  // Méthode pour setup le shutdown gracieux - NE PAS APPELER AUTOMATIQUEMENT
+  public setupGracefulShutdown(): void {
+    // Seulement configurer les handlers, ne pas fermer immédiatement
+    const gracefulShutdown = async (signal: string) => {
+      console.log(`🔄 Signal ${signal} reçu. Arrêt gracieux en cours...`);
+      
+      try {
+        await this.close();
+        console.log('✅ Serveur arrêté proprement');
+        process.exit(0);
+      } catch (error) {
+        console.error('❌ Erreur lors de l\'arrêt :', error);
+        process.exit(1);
+      }
+    };
+
+    // Configurer les handlers pour les signaux d'arrêt
+    process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.once('SIGINT', () => gracefulShutdown('SIGINT'));
+    
+    // Handler pour les erreurs non gérées
+    process.on('uncaughtException', (error) => {
+      console.error('❌ Exception non gérée :', error);
+      gracefulShutdown('uncaughtException');
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('❌ Rejet de promesse non géré :', reason);
+      gracefulShutdown('unhandledRejection');
+    });
   }
 }
