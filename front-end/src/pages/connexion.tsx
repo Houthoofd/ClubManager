@@ -31,15 +31,17 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
     try {
       const data = await connexion.mutateAsync(formData);
 
-      console.log('Réponse de l\'API:', data); // Ajoutez cette ligne pour inspecter la réponse
+      console.log('Réponse de l\'API:', data);
 
       if (!data || !data.user) {
         throw new Error('Données utilisateur manquantes dans la réponse.');
       }
 
-      const { user, token } = data; // Extraire directement `user` et `token` après la correction du hook
+      const { user, token } = data; // Gardez `token` si vous en avez besoin
 
-      // Enregistrer les données utilisateur dans le localStorage dans le format spécifié
+      // Enregistrer le token dans le localStorage
+      localStorage.setItem('authToken', token);
+
       localStorage.setItem('userData', JSON.stringify({
         id: user.id,
         first_name: user.first_name,
@@ -61,7 +63,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
 
       navigate('/pages/dashboard');
     } catch (err: any) {
-      console.error('Erreur lors de la connexion:', err); // Ajoutez cette ligne pour inspecter l'erreur
+      console.error('Erreur lors de la connexion:', err);
       setError(err.message || 'Erreur lors de la tentative de connexion');
     }
   };

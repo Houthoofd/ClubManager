@@ -52,8 +52,9 @@ class AuthService {
   }
 
   getAuthHeaders() {
+    const token = localStorage.getItem('authToken');
     return {
-      'Authorization': `Bearer ${this.token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
   }

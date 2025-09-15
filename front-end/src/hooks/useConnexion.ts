@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
+import AuthService from '../services/AuthService'; // Assurez-vous que le chemin est correct
 
 interface User {
   id: number;
@@ -35,19 +36,48 @@ export const useConnexion = () => {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erreur lors de la tentative de connexion');
+        const errorText = await response.text(); // Lire la réponse en texte brut
+        console.error('Erreur serveur:', errorText); // Log de la réponse brute
+        throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      console.log('Données retournées par l\'API:', data);
-
-      return data.data; // Retourner directement `data.data` pour simplifier l'accès
+      try {
+        const data = await response.json();
+        console.log('Données retournées par l\'API:', data);
+        return data.data; // Retourner directement `data.data` pour simplifier l'accès
+      } catch (err) {
+        console.error('Erreur de parsing JSON:', err);
+        throw new Error('La réponse du serveur n\'est pas un JSON valide.');
+      }
     },
   });
+
+  const checkStatus = async () => {
+    const response = await fetch(apiUrl('auth/status'), {
+      method: 'GET',
+      headers: AuthService.getAuthHeaders(), // Inclure les en-têtes d'autorisation
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Erreur serveur lors de la vérification du statut:', errorText);
+      throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
+    }
+
+    try {
+      const data = await response.json();
+      console.log('Statut de l\'utilisateur:', data);
+      return data;
+    } catch (err) {
+      console.error('Erreur de parsing JSON lors de la vérification du statut:', err);
+      throw new Error('La réponse du serveur n\'est pas un JSON valide.');
+    }
+  };
 
   return {
     ...mutation,
     isLoading: mutation.status === 'pending',
+    checkStatus,
   };
 };
