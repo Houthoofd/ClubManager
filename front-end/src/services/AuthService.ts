@@ -52,9 +52,9 @@ class AuthService {
   }
 
   getAuthHeaders() {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken'); // Récupérer le jeton depuis le localStorage
     return {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token}`, // Inclure le jeton dans les en-têtes
       'Content-Type': 'application/json',
     };
   }
