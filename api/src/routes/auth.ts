@@ -82,10 +82,10 @@ router.post('/login', async (req: any, res: any) => {
 
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      domain: 'localhost',
-      maxAge: 24 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === 'production', // Utiliser HTTPS uniquement en production
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Politique SameSite stricte en production
+      domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost', // Définir le domaine dynamiquement
+      maxAge: 24 * 60 * 60 * 1000 // 1 jour
     });
 
     // Ajoutez les informations utilisateur nécessaires dans la réponse

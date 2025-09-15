@@ -53,12 +53,17 @@ export const useConnexion = () => {
   });
 
   const checkStatus = async () => {
-    const headers = AuthService.getAuthHeaders(); // Récupérer les en-têtes avec le jeton
-    console.log('En-têtes envoyés:', headers); // Ajoutez ce log
+    const token = localStorage.getItem('authToken'); // Récupérer le jeton depuis le localStorage
+    if (!token) {
+      throw new Error('Jeton manquant. Veuillez vous reconnecter.');
+    }
 
     const response = await fetch(apiUrl('auth/status'), {
       method: 'GET',
-      headers,
+      headers: {
+        Authorization: `Bearer ${token}`, // Inclure le jeton dans les en-têtes
+        'Content-Type': 'application/json',
+      },
       credentials: 'include',
     });
 
@@ -68,14 +73,9 @@ export const useConnexion = () => {
       throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
     }
 
-    try {
-      const data = await response.json();
-      console.log('Statut de l\'utilisateur:', data);
-      return data;
-    } catch (err) {
-      console.error('Erreur de parsing JSON lors de la vérification du statut:', err);
-      throw new Error('La réponse du serveur n\'est pas un JSON valide.');
-    }
+    const data = await response.json();
+    console.log('Statut de l\'utilisateur:', data);
+    return data;
   };
 
   return {
