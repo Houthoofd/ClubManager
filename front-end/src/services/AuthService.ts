@@ -8,7 +8,6 @@ class AuthService {
   }
 
   async login(email: string, password: string) {
-    // Vérifie que la route /auth/login existe bien côté back (ce qui est le cas dans ton fichier auth.ts)
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: {
@@ -21,9 +20,13 @@ class AuthService {
     const data = await response.json();
 
     if (data.success) {
-      this.token = data.data.token;
-      localStorage.setItem('authToken', this.token!);
-      localStorage.setItem('userData', JSON.stringify(data.data));
+      this.token = data.data.token; // Récupérer le jeton depuis la réponse JSON
+      if (!this.token) {
+        throw new Error('Jeton non fourni par le serveur.');
+      }
+      localStorage.setItem('authToken', this.token); // Enregistrer le jeton dans le localStorage
+      localStorage.setItem('userData', JSON.stringify(data.data.user)); // Enregistrer les données utilisateur
+      console.log('Jeton enregistré dans le localStorage:', this.token);
     }
 
     return data;
@@ -55,6 +58,7 @@ class AuthService {
     const token = localStorage.getItem('authToken'); // Récupérer le jeton depuis le localStorage
     if (!token) {
       console.error('Aucun jeton trouvé dans le localStorage.');
+      throw new Error('Jeton d\'authentification manquant. Veuillez vous reconnecter.');
     }
     return {
       Authorization: `Bearer ${token}`, // Inclure le jeton dans les en-têtes

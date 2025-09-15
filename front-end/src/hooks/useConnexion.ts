@@ -53,9 +53,12 @@ export const useConnexion = () => {
   });
 
   const checkStatus = async () => {
+    const headers = AuthService.getAuthHeaders(); // Récupérer les en-têtes avec le jeton
+    console.log('En-têtes envoyés:', headers); // Ajoutez ce log
+
     const response = await fetch(apiUrl('auth/status'), {
       method: 'GET',
-      headers: AuthService.getAuthHeaders(), // Inclure les en-têtes d'autorisation
+      headers,
       credentials: 'include',
     });
 
