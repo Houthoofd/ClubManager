@@ -6,7 +6,9 @@ export const usePaiements = () => {
   return useQuery({
     queryKey: ['paiements'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('paiements'));
+      const response = await fetch(apiUrl('paiements'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des paiements');
       return response.json();
     }
@@ -23,6 +25,7 @@ export const useCreerPaiement = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(paiementData),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la création du paiement');
       return response.json();
@@ -43,6 +46,7 @@ export const useModifierPaiement = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(paiementData),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la modification du paiement');
       return response.json();
@@ -61,6 +65,7 @@ export const useSupprimerPaiement = () => {
     mutationFn: async (id: number) => {
       const response = await fetch(apiUrl(`paiements/${id}`), {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la suppression du paiement');
       return response.json();
@@ -76,7 +81,9 @@ export const useEcheancesByUserId = (userId: string) => {
   return useQuery({
     queryKey: ['echeances', userId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`paiements/echeances/${userId}`));
+      const response = await fetch(apiUrl(`paiements/echeances/${userId}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des échéances');
       const data = await response.json();
       return Array.isArray(data) ? data : [];
@@ -94,7 +101,8 @@ export const useUpdatePaiement = () => {
       const response = await fetch(apiUrl('paiements/update'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paiementData)
+        body: JSON.stringify(paiementData),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -103,7 +111,6 @@ export const useUpdatePaiement = () => {
       return response.json();
     },
     onSuccess: (_, variables) => {
-      // Invalider les requêtes concernées pour forcer leur rafraîchissement
       queryClient.invalidateQueries({ 
         queryKey: ['echeances']
       });

@@ -1,9 +1,14 @@
 import express from 'express';
 import { Professeurs } from '../db/clients/professeurs/professeurs.js';
+import { verifyToken, requireRole } from '../middleware/auth.js';
 import { } from '@clubmanager/types';
 import { z } from 'zod';
 
 const router = express.Router();
+
+// Appliquer l'authentification à toutes les routes
+router.use(verifyToken);
+
 
 // route pour ajouter un professeur //
 router.get('/', async (req: any, res: any) => {

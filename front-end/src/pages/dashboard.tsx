@@ -36,6 +36,8 @@ const DashboardPage: React.FC = () => {
   const [isOverdueExpanded, setIsOverdueExpanded] = useState(false);
   const [isNewMembersExpanded, setIsNewMembersExpanded] = useState(false);
 
+  console.log('DashboardPage mounted');
+
   // Utilisation des hooks React Query
   const { data: membresCount = 0 } = useMembresCount();
   const { data: paiementsMois = 0 } = usePaiementsMois();

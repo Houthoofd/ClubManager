@@ -6,7 +6,9 @@ export const useProfesseurs = () => {
   return useQuery({
     queryKey: ['professeurs'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('professeurs'));
+      const response = await fetch(apiUrl('professeurs'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des professeurs');
       const data = await response.json();
       return data.data || [];
@@ -23,7 +25,8 @@ export const usePromouvoirProfesseurs = () => {
       const response = await fetch(apiUrl('professeurs/ajouter'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ utilisateurs })
+        body: JSON.stringify({ utilisateurs }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -46,7 +49,8 @@ export const useRetirerPromotionProfesseur = () => {
       const response = await fetch(apiUrl('professeurs/modifier'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status_id })
+        body: JSON.stringify({ id, status_id }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -68,7 +72,8 @@ export const useAjouterCoursRecurrent = () => {
       const response = await fetch(apiUrl('cours/ajouter'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ajoutCours)
+        body: JSON.stringify(ajoutCours),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -94,6 +99,7 @@ export const useSupprimerCoursRecurrent = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ jourSemaine }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -122,6 +128,7 @@ export const useRetirerProfesseursDuCours = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ professeursNoms, jour }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -146,7 +153,8 @@ export const useModifierCoursRecurrent = () => {
       const response = await fetch(apiUrl('cours/modifier'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modifCours)
+        body: JSON.stringify(modifCours),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();

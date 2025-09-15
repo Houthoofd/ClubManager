@@ -49,7 +49,7 @@ DELETE http://localhost:3000/informations/actualites/1
 GET http://localhost:3000/informations/horaires
 
 ### Récupérer les tarifs
-GET http://localhost:3000/informations/tarifs
+GET http://localhost:3000/informations/grades
 
 
 

@@ -1,8 +1,12 @@
 import express, { Request, Response, Router } from 'express';
 import { Statistiques } from '../db/clients/statistiques/statistiques.js';
+import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router: Router = express.Router();
 const statistiques = new Statistiques();
+
+// Appliquer l'authentification à toutes les routes
+router.use(verifyToken);
 
 /**
  * @route   GET /statistiques/frequentation
@@ -273,7 +277,7 @@ router.get('/membres/assidus', async (_req, res) => {
  * @route   GET /statistiques/membres/par-grade
  * @desc    Répartition des membres par grade
  */
-router.get('/membres/par-grade', async (_req, res) => {
+router.get('/membres/par-grade', requireRole(['admin', 'manager']), async (req: any, res: any) => {
   try {
     const data = await statistiques.getMembresParGrade();
     res.json(data);
@@ -286,7 +290,7 @@ router.get('/membres/par-grade', async (_req, res) => {
  * @route   GET /statistiques/membres/par-genre
  * @desc    Répartition des membres par genre
  */
-router.get('/membres/par-genre', async (_req, res) => {
+router.get('/membres/par-genre', requireRole(['admin', 'manager']), async (req: any, res: any) => {
   try {
     const data = await statistiques.getMembresParGenre();
     res.json(data);
@@ -312,7 +316,7 @@ router.get('/membres/anniversaires', async (_req, res) => {
  * @route   GET /statistiques/articles/plus-vendus
  * @desc    Articles les plus vendus
  */
-router.get('/articles/plus-vendus', async (_req, res) => {
+router.get('/articles/plus-vendus', requireRole(['admin', 'manager']), async (_req, res) => {
   try {
     const data = await statistiques.getArticlesPlusVendus();
     res.json(data);
@@ -331,6 +335,15 @@ router.get('/cours/semaine', async (_req, res) => {
     res.json({ count: data });
   } catch (err) {
     res.status(500).json({ error: 'Erreur lors de la récupération des cours de la semaine' });
+  }
+});
+
+// Statistiques financières - accès admin uniquement
+router.get('/revenus', requireRole(['admin']), async (req: any, res: any) => {
+  try {
+    // ...existing code...
+  } catch (error) {
+    // ...existing error handling...
   }
 });
 

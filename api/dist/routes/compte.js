@@ -1,7 +1,10 @@
 import express from 'express';
+import { verifyToken } from '../middleware/auth.js';
 import { Compte } from '../db/clients/compte/compte.js';
 import bcrypt from 'bcrypt';
 const router = express.Router();
+// Toutes les routes de compte nécessitent une authentification
+router.use(verifyToken);
 router.post('/informations', async (req, res) => {
     const { prenom, nom } = req.body;
     // Vérifier si les paramètres nécessaires sont présents

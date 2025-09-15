@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Paiements } from '../db/clients/paiements/paiements.js';
+import { verifyToken } from '../middleware/auth.js';
 // Recréation de __dirname pour modules ES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +12,8 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 console.log(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
+// Toutes les routes de paiement nécessitent une authentification
+router.use(verifyToken);
 if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error("La clé secrète Stripe est manquante dans le fichier .env");
 }

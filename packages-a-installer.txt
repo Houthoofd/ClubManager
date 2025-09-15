@@ -1,0 +1,84 @@
+===============================================================================
+PACKAGES À INSTALLER POUR JWT AUTHENTICATION
+===============================================================================
+
+📦 POUR L'API (Backend)
+===============================================================================
+
+1. Naviguez vers le dossier API :
+   cd c:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api
+
+2. Installez les packages principaux :
+   npm install jsonwebtoken bcrypt
+
+3. Installez les types TypeScript (devDependencies) :
+   npm install --save-dev @types/jsonwebtoken @types/bcrypt
+
+4. Commande complète en une ligne :
+   npm install jsonwebtoken bcrypt && npm install --save-dev @types/jsonwebtoken @types/bcrypt
+
+📦 POUR LE FRONTEND (Optionnel)
+===============================================================================
+
+1. Naviguez vers le dossier Frontend :
+   cd c:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\front-end
+
+2. Installez js-cookie pour la gestion des cookies :
+   npm install js-cookie
+
+3. Installez les types TypeScript :
+   npm install --save-dev @types/js-cookie
+
+4. Commande complète en une ligne :
+   npm install js-cookie && npm install --save-dev @types/js-cookie
+
+🔐 CONFIGURATION REQUISE
+===============================================================================
+
+Ajoutez ces variables dans votre fichier .env :
+
+JWT_SECRET=your-very-secure-secret-key-change-this-in-production
+JWT_EXPIRES_IN=24h
+
+FRONTEND_URL=http://localhost:8081
+FRONTEND_URL_ALT=http://localhost:3000
+FRONTEND_URL_LOCAL=http://127.0.0.1:8081
+
+⚠️ IMPORTANT : Changez JWT_SECRET en production !
+
+✅ VÉRIFICATION APRÈS INSTALLATION
+===============================================================================
+
+1. Vérifiez que les packages sont dans package.json :
+   - jsonwebtoken: ^9.0.2
+   - bcrypt: ^5.1.1
+   - @types/jsonwebtoken: ^9.0.3
+   - @types/bcrypt: ^5.0.0
+
+2. Testez le build :
+   cd api
+   npm run build
+
+3. Testez le démarrage :
+   npm start
+
+4. Testez l'authentification :
+   curl -X POST http://localhost:3000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"test@example.com","password":"password"}'
+
+📋 RÉSUMÉ DES COMMANDES
+===============================================================================
+
+# Installation complète pour l'API
+cd api && npm install jsonwebtoken bcrypt && npm install --save-dev @types/jsonwebtoken @types/bcrypt
+
+# Installation complète pour le Frontend (optionnel)
+cd front-end && npm install js-cookie && npm install --save-dev @types/js-cookie
+
+# Test après installation
+cd api && npm run build && npm start
+
+===============================================================================
+🔒 VOTRE AUTHENTIFICATION JWT SERA PRÊTE APRÈS CES INSTALLATIONS ! 🔒
+===============================================================================

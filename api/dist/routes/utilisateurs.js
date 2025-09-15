@@ -1,8 +1,11 @@
 import express from 'express';
+import { verifyToken, requireRole } from '../middleware/auth.js';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import { z } from 'zod';
 import { userSchema, userDataLoginSchema } from '../../../packages/types/dist/index.js';
 const router = express.Router();
+// Appliquer l'authentification à toutes les routes
+router.use(verifyToken);
 // Fonction pour convertir une chaîne de caractères en nombre
 function convertToNumber(value) {
     console.log(value);
@@ -69,7 +72,7 @@ router.post('/inscription', async (req, res) => {
         }
     }
 });
-router.get('/', async (req, res) => {
+router.get('/', requireRole(['admin', 'manager']), async (req, res) => {
     try {
         const client = new Utilisateurs();
         // Attendre la résolution de la méthode obtenirTousLesUtilisateurs

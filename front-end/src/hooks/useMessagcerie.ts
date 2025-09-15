@@ -6,7 +6,9 @@ export const useMessagesUtilisateur = (userId: string | number) => {
   return useQuery({
     queryKey: ['messagerie', 'messages', userId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`messagerie/messages/utilisateur/${userId}`));
+      const response = await fetch(apiUrl(`messagerie/messages/utilisateur/${userId}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des messages');
       return response.json();
     },
@@ -19,7 +21,9 @@ export const useConversation = (utilisateur1Id: string | number, utilisateur2Id:
   return useQuery({
     queryKey: ['messagerie', 'conversation', utilisateur1Id, utilisateur2Id],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`messagerie/conversation/${utilisateur1Id}/${utilisateur2Id}`));
+      const response = await fetch(apiUrl(`messagerie/conversation/${utilisateur1Id}/${utilisateur2Id}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement de la conversation');
       return response.json();
     },
@@ -53,7 +57,8 @@ export const useEnvoyerMessage = () => {
       
       const response = await fetch(apiUrl('messagerie/envoyer'), {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -84,7 +89,8 @@ export const useMarquerMessageLu = () => {
   return useMutation({
     mutationFn: async (messageId: number) => {
       const response = await fetch(apiUrl(`messagerie/message/${messageId}/lu`), {
-        method: 'PUT'
+        method: 'PUT',
+        credentials: 'include',
       });
       
       if (!response.ok) {
@@ -116,7 +122,8 @@ export const useEnvoyerMessageGroupe = () => {
       const response = await fetch(apiUrl('messagerie/envoyer-groupe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(message)
+        body: JSON.stringify(message),
+        credentials: 'include',
       });
       
       if (!response.ok) {

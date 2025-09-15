@@ -6,7 +6,9 @@ export const useFrequentationByUserId = (userId: string) => {
   return useQuery({
     queryKey: ['frequentation', userId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`statistiques/frequentation/${userId}`));
+      const response = await fetch(apiUrl(`statistiques/frequentation/${userId}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des statistiques');
       return response.json();
     },
@@ -19,7 +21,9 @@ export const useTopAssidus = () => {
   return useQuery({
     queryKey: ['topAssidus'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/membres/assidus'));
+      const response = await fetch(apiUrl('statistiques/membres/assidus'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des membres assidus');
       return response.json();
     }
@@ -31,7 +35,9 @@ export const useMembresParGrade = () => {
   return useQuery({
     queryKey: ['membresParGrade'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/membres/par-grade'));
+      const response = await fetch(apiUrl('statistiques/membres/par-grade'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des membres par grade');
       return response.json();
     }
@@ -43,7 +49,9 @@ export const useMembresParGenre = () => {
   return useQuery({
     queryKey: ['membresParGenre'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/membres/par-genre'));
+      const response = await fetch(apiUrl('statistiques/membres/par-genre'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des membres par genre');
       return response.json();
     }
@@ -55,7 +63,9 @@ export const useAnniversaires = () => {
   return useQuery({
     queryKey: ['anniversaires'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/membres/anniversaires'));
+      const response = await fetch(apiUrl('statistiques/membres/anniversaires'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des anniversaires');
       return response.json();
     }
@@ -67,7 +77,9 @@ export const useArticlesVendus = () => {
   return useQuery({
     queryKey: ['articlesVendus'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/articles/plus-vendus'));
+      const response = await fetch(apiUrl('statistiques/articles/plus-vendus'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des articles vendus');
       return response.json();
     }
@@ -79,7 +91,9 @@ export const useCoursSemaine = () => {
   return useQuery({
     queryKey: ['coursSemaine'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/cours/semaine'));
+      const response = await fetch(apiUrl('statistiques/cours/semaine'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des cours de la semaine');
       return response.json();
     }

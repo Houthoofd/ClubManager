@@ -6,7 +6,9 @@ export const useCoursDisponibles = () => {
   return useQuery({
     queryKey: ['coursDisponibles'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('cours'));
+      const response = await fetch(apiUrl('cours'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des cours');
       return response.json();
     }
@@ -22,7 +24,8 @@ export const useInscrireUtilisateurCours = () => {
       const response = await fetch(apiUrl('cours/inscription'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coursId })
+        body: JSON.stringify({ userId, coursId }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -43,7 +46,8 @@ export const useAnnulerInscription = () => {
   return useMutation({
     mutationFn: async ({ userId, coursId }: { userId: number; coursId: number }) => {
       const response = await fetch(apiUrl(`cours/inscription/${userId}/${coursId}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -66,7 +70,8 @@ export const useAnnulerInscriptionParNomPrenom = () => {
       const response = await fetch(apiUrl('cours/annulation'), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -85,7 +90,9 @@ export const useAbonnementOptions = () => {
   return useQuery({
     queryKey: ['abonnements'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/abonnements'));
+      const response = await fetch(apiUrl('informations/abonnements'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des abonnements');
       const data = await response.json();
       return data.map((item: any) => ({
@@ -101,7 +108,9 @@ export const useGenreOptions = () => {
   return useQuery({
     queryKey: ['genres'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/genres'));
+      const response = await fetch(apiUrl('informations/genres'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des genres');
       const data = await response.json();
       return data.map((item: any) => ({
@@ -120,6 +129,7 @@ export const useVerifierUtilisateur = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
+        credentials: 'include',
       });
       if (response.status === 409) {
         throw new Error('Cet utilisateur existe déjà.');
@@ -140,6 +150,7 @@ export const useInscrireUtilisateur = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -159,7 +170,8 @@ export const useInscrireUtilisateurReservation = () => {
       const response = await fetch(apiUrl('cours/inscription'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -167,7 +179,6 @@ export const useInscrireUtilisateurReservation = () => {
       }
       return response.json();
     },
-    // Invalider les queries si besoin
     onSuccess: () => {
       queryClient.invalidateQueries();
     }
@@ -179,16 +190,15 @@ export const useUtilisateursParCours = (coursId: number) => {
   return useQuery({
     queryKey: ['utilisateursParCours', coursId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`cours/${coursId}`));
+      const response = await fetch(apiUrl(`cours/${coursId}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs du cours');
       const data = await response.json();
-      // On retourne toujours un tableau d'ID utilisateur pour simplifier l'utilisation dans le composant
       if (Array.isArray(data.data.Cours)) {
-        // Si la structure est [{id, ...}], retourne un tableau d'id
         if (data.data.Cours.length > 0 && typeof data.data.Cours[0] === 'object' && 'id' in data.data.Cours[0]) {
           return data.data.Cours.map((u: any) => u.id);
         }
-        // Sinon retourne le tableau tel quel
         return data.data.Cours;
       }
       return [];
@@ -203,7 +213,9 @@ export const useUtilisateursPourTousLesCours = (coursList: { id: number }[]) => 
     queries: coursList.map((c) => ({
       queryKey: ['utilisateursParCours', c.id],
       queryFn: async () => {
-        const response = await fetch(apiUrl(`cours/${c.id}`));
+        const response = await fetch(apiUrl(`cours/${c.id}`), {
+          credentials: 'include',
+        });
         if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs du cours');
         const data = await response.json();
         if (Array.isArray(data.data.Cours)) {

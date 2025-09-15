@@ -1,8 +1,11 @@
-import { Router } from 'express';
+import express from 'express';
+import { verifyToken } from '../middleware/auth.js';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import { userInscriptionSchema } from '../../../packages/types/dist/index.js';
 import bcrypt from 'bcrypt';
-const router = Router();
+const router = express.Router();
+// Routes protégées pour la gestion
+router.use(verifyToken);
 router.post('/verification', async (req, res) => {
     const { email } = req.body;
     if (!email) {

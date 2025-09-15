@@ -1,10 +1,13 @@
 import express from 'express';
+import { verifyToken } from '../middleware/auth.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import iconv from 'iconv-lite';
 const router = express.Router();
+// Appliquer l'authentification à toutes les routes
+router.use(verifyToken);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Déterminer le chemin du dossier de destination

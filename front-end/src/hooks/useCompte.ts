@@ -10,6 +10,7 @@ export const useCompteInfo = (prenom: string | undefined, nom: string | undefine
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prenom, nom }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des informations utilisateur');
       return response.json();
@@ -23,7 +24,9 @@ export const useStatFrequentation = (userId: string | undefined) => {
   return useQuery({
     queryKey: ['statFrequentation', userId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`statistiques/frequentation/${userId}`));
+      const response = await fetch(apiUrl(`statistiques/frequentation/${userId}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des statistiques de fréquentation');
       return response.json();
     },
@@ -36,7 +39,9 @@ export const useAbonnements = () => {
   return useQuery({
     queryKey: ['abonnements'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/abonnements'));
+      const response = await fetch(apiUrl('informations/abonnements'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des abonnements');
       return response.json();
     },
@@ -48,7 +53,9 @@ export const useGrades = () => {
   return useQuery({
     queryKey: ['grades'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/grades'));
+      const response = await fetch(apiUrl('informations/grades'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des grades');
       return response.json();
     },
@@ -60,7 +67,9 @@ export const useStatus = () => {
   return useQuery({
     queryKey: ['status'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/status'));
+      const response = await fetch(apiUrl('informations/status'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des statuts');
       return response.json();
     },
@@ -75,6 +84,7 @@ export const useUpdateCompte = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -90,7 +100,9 @@ export const useGenres = () => {
   return useQuery({
     queryKey: ['genres'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/genres'));
+      const response = await fetch(apiUrl('informations/genres'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des genres');
       return response.json();
     }

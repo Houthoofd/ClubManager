@@ -67,12 +67,17 @@ export const useAuthentifie = () => {
       const response = await fetch(apiUrl('auth/status'), {
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
+        console.log('auth/status non OK', response.status);
         return { authentifie: false, user: null };
       }
-      
+
       const data = await response.json();
+      console.log('auth/status data', data);
+
+      // Correction : retourne bien le user complet (pas juste le token décodé)
+      // Si le back ne renvoie que les infos du token, il faut enrichir la réponse côté back
       return {
         authentifie: data.authentifie,
         user: data.user || null

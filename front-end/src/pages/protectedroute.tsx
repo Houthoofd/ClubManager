@@ -1,18 +1,23 @@
 // components/ProtectedRoute.tsx
-import type { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuthentifie } from '../hooks/useAuth';
 
-interface Props {
-  children: ReactNode;
-}
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { data, isLoading } = useAuthentifie();
+  const location = useLocation();
 
-const ProtectedRoute = ({ children }: Props) => {
-  const storedData = localStorage.getItem('userData');
-
-  if (!storedData) {
-    return <Navigate to="/pages/connexion" replace />;
+  if (isLoading) {
+    // Affiche un loader ou rien pendant la vérification
+    return <div>Chargement...</div>;
   }
 
+  if (!data?.authentifie) {
+    // Redirige vers la page de connexion si non authentifié
+    return <Navigate to="/pages/connexion" state={{ from: location }} replace />;
+  }
+
+  // Si authentifié, affiche les enfants (la page protégée)
   return <>{children}</>;
 };
 

@@ -1,10 +1,15 @@
 import express from 'express';
+import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
 import { Magasin } from '../db/clients/magasin/magasin.js';
 import { Verifiation } from '../db/clients/verification/verifications.js';
 import { ArticleCreationData, articleCreationSchema, articleDataValidationSchema, nouvelleCommandeSchema, articleCommandeSchema  } from '@clubmanager/types';
 import { z } from 'zod';
 
+
 const router = express.Router();
+
+// Routes protégées pour la gestion
+router.use(verifyToken);
 
 router.get('/articles', async (req: any, res: any) => {
   try {

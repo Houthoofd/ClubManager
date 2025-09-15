@@ -6,7 +6,9 @@ export const useMembresCount = () => {
   return useQuery({
     queryKey: ['membresCount'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/membres/count'));
+      const response = await fetch(apiUrl('statistiques/membres/count'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement du nombre de membres');
       return response.json();
     },
@@ -18,7 +20,9 @@ export const usePaiementsMois = () => {
   return useQuery({
     queryKey: ['paiementsMois'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/paiements/mois'));
+      const response = await fetch(apiUrl('statistiques/paiements/mois'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des paiements du mois');
       return response.json();
     },
@@ -30,7 +34,9 @@ export const usePaiementsRecents = () => {
   return useQuery({
     queryKey: ['paiementsRecents'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/paiements/recents'));
+      const response = await fetch(apiUrl('statistiques/paiements/recents'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des paiements récents');
       return response.json();
     },
@@ -42,7 +48,9 @@ export const usePaiementsEnAttente = () => {
   return useQuery({
     queryKey: ['paiementsEnAttente'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/paiements/en-attente'));
+      const response = await fetch(apiUrl('statistiques/paiements/en-attente'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des paiements en attente');
       return response.json();
     },
@@ -54,7 +62,9 @@ export const usePlansActifs = () => {
   return useQuery({
     queryKey: ['plansActifs'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/plans/actifs'));
+      const response = await fetch(apiUrl('statistiques/plans/actifs'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des plans actifs');
       return response.json();
     },
@@ -66,7 +76,9 @@ export const useTauxRenouvellement = () => {
   return useQuery({
     queryKey: ['tauxRenouvellement'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/plans/taux-renouvellement'));
+      const response = await fetch(apiUrl('statistiques/plans/taux-renouvellement'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement du taux de renouvellement');
       return response.json();
     },
@@ -78,7 +90,9 @@ export const usePaiementsParMois = () => {
   return useQuery({
     queryKey: ['paiementsParMois'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/paiements/par-mois'));
+      const response = await fetch(apiUrl('statistiques/paiements/par-mois'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des paiements par mois');
       return response.json();
     },
@@ -90,7 +104,9 @@ export const useMembresParPlan = () => {
   return useQuery({
     queryKey: ['membresParPlan'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/membres/par-plan'));
+      const response = await fetch(apiUrl('statistiques/membres/par-plan'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des membres par plan');
       return response.json();
     },
@@ -102,7 +118,9 @@ export const useDerniersPaiements = () => {
   return useQuery({
     queryKey: ['derniersPaiements'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/paiements/derniers'));
+      const response = await fetch(apiUrl('statistiques/paiements/derniers'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des derniers paiements');
       return response.json();
     },
@@ -114,7 +132,9 @@ export const usePaiementsEchus = () => {
   return useQuery({
     queryKey: ['paiementsEchus'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/paiements/echus'));
+      const response = await fetch(apiUrl('statistiques/paiements/echus'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des paiements échus');
       return response.json();
     },
@@ -126,7 +146,9 @@ export const useNouveauxMembres = () => {
   return useQuery({
     queryKey: ['nouveauxMembres'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('statistiques/membres/nouveaux'));
+      const response = await fetch(apiUrl('statistiques/membres/nouveaux'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des nouveaux membres');
       return response.json();
     },

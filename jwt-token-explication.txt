@@ -1,0 +1,73 @@
+===============================================================================
+EXPLICATION DU FONCTIONNEMENT DE JWT DANS TON PROJET CLUBMANAGER
+===============================================================================
+
+1. PRINCIPE DE JWT
+------------------
+- JWT (JSON Web Token) est un standard pour l'authentification stateless.
+- Un token est généré côté serveur lors de la connexion, signé avec un secret.
+- Ce token est envoyé au client (dans un cookie ou dans le header Authorization).
+- À chaque requête protégée, le client renvoie ce token pour prouver son identité.
+- Le serveur vérifie la signature et extrait les infos du token (id, email, rôle...).
+
+2. GÉNÉRATION DU TOKEN
+----------------------
+- Lorsqu'un utilisateur se connecte (POST /auth/login), tu vérifies son email/mot de passe.
+- Si OK, tu utilises la fonction `generateToken(payload)` pour créer un JWT :
+    - Le payload contient l'id, l'email, le rôle, etc.
+    - Le token est signé avec la clé secrète (JWT_SECRET) et une durée de validité (JWT_EXPIRES_IN).
+- Le token est envoyé au client (dans un cookie sécurisé).
+
+3. VÉRIFICATION DU TOKEN
+------------------------
+- Pour chaque route protégée, tu utilises le middleware `verifyToken`.
+- Ce middleware :
+    - Récupère le token dans le header Authorization ou dans le cookie.
+    - Vérifie la signature et la validité du token.
+    - Ajoute les infos du user à `req.user` si tout est OK.
+    - Sinon, il renvoie une erreur 401 ou 403.
+
+4. UTILISATION DES RÔLES
+------------------------
+- Tu peux restreindre l'accès à certaines routes avec le middleware `requireRole(['admin', 'manager'])`.
+- Ce middleware vérifie que `req.user.role` fait partie des rôles autorisés.
+
+5. CONFIGURATION NÉCESSAIRE
+---------------------------
+- Dans ton fichier `.env` à la racine du projet, tu dois avoir :
+    JWT_SECRET=une-cle-secrete-tres-forte
+    JWT_EXPIRES_IN=24h
+- Tu peux mettre '24h', '1d', '3600' (secondes), etc.
+
+6. INSTALLATION DES PACKAGES
+----------------------------
+- Tu dois avoir installé :
+    npm install jsonwebtoken bcrypt cookie-parser
+    npm install --save-dev @types/jsonwebtoken @types/bcrypt @types/cookie-parser
+
+7. FLUX D'UTILISATION
+---------------------
+- Le client appelle POST /auth/login avec email/mot de passe.
+- Le serveur vérifie et renvoie un token JWT (dans un cookie).
+- Le client envoie ce cookie (ou le token dans le header) à chaque requête.
+- Les routes protégées utilisent `verifyToken` pour vérifier l'authentification.
+- Les routes sensibles utilisent aussi `requireRole` pour vérifier les permissions.
+
+8. CONSEILS DE SÉCURITÉ
+------------------------
+- Ne partage jamais ta clé JWT_SECRET.
+- Utilise HTTPS en production pour sécuriser les cookies.
+- Change la durée du token selon tes besoins (plus court = plus sécurisé).
+- Pour déconnecter un utilisateur, il suffit de supprimer le cookie côté serveur.
+
+===============================================================================
+RÉSUMÉ POUR FAIRE FONCTIONNER JWT
+===============================================================================
+1. Mets à jour ton .env avec JWT_SECRET et JWT_EXPIRES_IN.
+2. Installe les packages nécessaires.
+3. Utilise le middleware `verifyToken` sur toutes les routes à protéger.
+4. Utilise `requireRole` pour les routes à accès restreint.
+5. Pour la connexion, utilise `generateToken` et envoie le token au client.
+6. Pour la déconnexion, supprime le cookie côté serveur.
+
+===============================================================================

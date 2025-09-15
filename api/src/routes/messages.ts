@@ -1,7 +1,12 @@
 import express from 'express';
+import { verifyToken, requireRole } from '../middleware/auth.js';
 import { Message } from '../db/clients/messages/messages.js';
 
 const router = express.Router();
+
+// Appliquer l'authentification à toutes les routes
+router.use(verifyToken);
+
 
 router.get('/', async (req: any, res: any) => {
   try {

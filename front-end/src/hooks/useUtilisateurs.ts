@@ -6,7 +6,9 @@ export const useUtilisateurs = () => {
   return useQuery({
     queryKey: ['utilisateurs'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('utilisateurs'));
+      const response = await fetch(apiUrl('utilisateurs'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
       const data = await response.json();
       return data.data || [];
@@ -19,7 +21,9 @@ export const useUtilisateurById = (id: string) => {
   return useQuery({
     queryKey: ['utilisateurs', id],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`utilisateurs/${id}`));
+      const response = await fetch(apiUrl(`utilisateurs/${id}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des données de l\'utilisateur');
       return response.json();
     },
@@ -32,7 +36,8 @@ export const checkEmailExists = async (email: string, id?: number) => {
   const response = await fetch(apiUrl('utilisateurs/verifier-email'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, id })
+    body: JSON.stringify({ email, id }),
+    credentials: 'include',
   });
   return response.json();
 };
@@ -46,7 +51,8 @@ export const useUpdateUtilisateur = () => {
       const response = await fetch(apiUrl('utilisateurs/modifier'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
+        body: JSON.stringify(userData),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -75,7 +81,8 @@ export const useAjouterUtilisateur = () => {
       const response = await fetch(apiUrl('utilisateurs/ajouter'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(utilisateur)
+        body: JSON.stringify(utilisateur),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -96,7 +103,8 @@ export const useSupprimerUtilisateur = () => {
   return useMutation({
     mutationFn: async (utilisateurId: number) => {
       const response = await fetch(apiUrl(`utilisateurs/${utilisateurId}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -115,7 +123,9 @@ export const useTousLesUtilisateurs = () => {
   return useQuery({
     queryKey: ['tousLesUtilisateurs'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('utilisateurs'));
+      const response = await fetch(apiUrl('utilisateurs'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
       return response.json(); // Retourne l'objet complet (isFind, data, etc.)
     }
@@ -129,7 +139,8 @@ export const useVerifierProfesseurs = () => {
       const response = await fetch(apiUrl('verification/verifier-professeurs'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ utilisateurs })
+        body: JSON.stringify({ utilisateurs }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();

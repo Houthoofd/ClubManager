@@ -30,9 +30,10 @@ import { RootState } from '../redux/store';
 import { ouvrirPanier } from '../redux/slices/panierSlice';
 
 interface AppPanelHeaderProps {
-  username: string; 
+  username: string;
   onSidebarToggle: () => void;
   onLogout?: () => void;
+  userData: any; // Ajout de la propriété userData
 }
 
 const ROLES = {
@@ -54,7 +55,7 @@ const mapRole = (id: number): string => {
   }
 };
 
-const AppPanelHeader = ({ onSidebarToggle, onLogout }: AppPanelHeaderProps) => {
+const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [fullName, setFullName] = useState('Utilisateur');
   const [roleLabel, setRoleLabel] = useState('');
@@ -64,18 +65,14 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout }: AppPanelHeaderProps) => {
   const panierCount = useSelector((state: RootState) => state.panier.articles.length);
 
   useEffect(() => {
-    const storedData = localStorage.getItem('userData');
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      const user = parsedData?.data;
-
-      const name = user?.nom ?? 'Utilisateur';
-      const statusId = user?.status_id;
+    if (userData) {
+      const name = `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Utilisateur';
+      const role = userData.status || 'Inconnu';
 
       setFullName(name);
-      setRoleLabel(mapRole(statusId));
+      setRoleLabel(role);
     }
-  }, []);
+  }, [userData]);
 
   const handleToggleClick = () => setIsDropdownOpen(prev => !prev);
 

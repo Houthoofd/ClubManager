@@ -1,4 +1,5 @@
 import express from 'express';
+import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
 import { Cours } from '../db/clients/cours/cours.js';
 import { 
   CoursData,
@@ -18,6 +19,7 @@ import { z } from 'zod';
 import MysqlConnector from '../db/connector/mysqlconnector.js';
 
 const router = express.Router();
+
 
 router.post('/participant', async (req: any, res: any) => {
   try {

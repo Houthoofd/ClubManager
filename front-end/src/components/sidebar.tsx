@@ -52,29 +52,12 @@ const hasRole = (role: string | null, allowedRoles: string[]) => {
 const AppSidebar = ({ isOpen }: AppSidebarProps) => {
   const [role, setRole] = useState<string | null>(null);
 
-  const mapRole = (id: number) => {
-    switch (id) {
-      case 1:
-        return ROLES.VISITEUR;
-      case 2:
-        return ROLES.UTILISATEUR;
-      case 3:
-        return ROLES.ADMIN;
-      case 4:
-        return ROLES.SUPER_ADMIN;
-      case 5:
-        return ROLES.PROFESSEUR;
-      default:
-        return null;
-    }
-  };
-
   useEffect(() => {
     const storedData = localStorage.getItem('userData');
     if (storedData) {
       const parsedData = JSON.parse(storedData);
-      const statusId = parsedData?.data?.status_id;
-      setRole(mapRole(statusId));
+      const userRole = parsedData?.status; // Utiliser directement le champ `status`
+      setRole(userRole);
     }
   }, []);
 
@@ -107,11 +90,11 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
           )}
 
           {/* Gestion */}
-          {(hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR])) && (
+          {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
             <>
               <div className="sidebar-section-title">Gestion</div>
 
-              {(hasRole(role, [ROLES.SUPER_ADMIN])) && (
+              {hasRole(role, [ROLES.SUPER_ADMIN]) && (
                 <NavExpandable
                   title={<span className="sidebar-nav-expandable-title"><UsersIcon className="sidebar-icon" /> Utilisateurs</span>}
                   itemID="users"
@@ -188,3 +171,4 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
 };
 
 export default AppSidebar;
+

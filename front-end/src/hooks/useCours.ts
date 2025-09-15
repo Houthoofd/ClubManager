@@ -6,7 +6,9 @@ export const useCoursPlanning = () => {
   return useQuery({
     queryKey: ['coursPlanning'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('cours/informations/planning'));
+      const response = await fetch(apiUrl('cours/informations/planning'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des horaires des cours');
       return response.json();
     }
@@ -18,7 +20,9 @@ export const useJoursDeCours = () => {
   return useQuery({
     queryKey: ['joursDeCours'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('cours/informations/planning'));
+      const response = await fetch(apiUrl('cours/informations/planning'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors de la récupération des jours de cours');
       return response.json();
     }
@@ -30,7 +34,9 @@ export const useCours = () => {
   return useQuery({
     queryKey: ['cours'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('cours'));
+      const response = await fetch(apiUrl('cours'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des cours');
       return response.json();
     }
@@ -49,6 +55,7 @@ export const useModifierCours = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(coursData),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -77,6 +84,7 @@ export const useAjouterCours = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(coursData),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -102,7 +110,8 @@ export const useSupprimerCours = () => {
       const response = await fetch(apiUrl('cours/supprimer'), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jourSemaine })
+        body: JSON.stringify({ jourSemaine }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -121,7 +130,9 @@ export const useProfesseurs = () => {
   return useQuery({
     queryKey: ['professeurs'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('professeurs'));
+      const response = await fetch(apiUrl('professeurs'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des professeurs');
       const data = await response.json();
       return data.data || [];
@@ -134,7 +145,9 @@ export const useCoursInscritsUtilisateur = (userId: number) => {
   return useQuery({
     queryKey: ['coursInscritsUtilisateur', userId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`cours/inscriptions/utilisateur/${userId}`));
+      const response = await fetch(apiUrl(`cours/inscriptions/utilisateur/${userId}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des cours inscrits');
       return response.json();
     },
@@ -150,7 +163,8 @@ export const useAnnulerPresence = () => {
       const response = await fetch(apiUrl('cours/inscription/annulation'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -172,7 +186,8 @@ export const useValiderPresence = () => {
       const response = await fetch(apiUrl('cours/inscription/validation'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();

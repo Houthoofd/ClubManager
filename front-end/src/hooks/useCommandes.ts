@@ -6,7 +6,9 @@ export const useCommandes = () => {
   return useQuery({
     queryKey: ['commandes'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('magasin/commandes'));
+      const response = await fetch(apiUrl('magasin/commandes'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des commandes');
       const data = await response.json();
       return data.commandes;
@@ -23,7 +25,8 @@ export const useUpdateCommandeStatut = () => {
       const response = await fetch(apiUrl(`magasin/commandes/${commandeId}/statut`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statut: newStatut })
+        body: JSON.stringify({ statut: newStatut }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();

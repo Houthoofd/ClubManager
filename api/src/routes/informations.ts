@@ -1,9 +1,14 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
 import { Informations } from '../db/clients/informations/informations.js';
 
 const router = express.Router();
 
-router.get('/grades', async (req: Request, res: Response) => {
+// Routes protégées pour la gestion
+router.use(verifyToken);
+
+
+router.get('/grades', async (req:any, res:any) => {
   try {
     const client = new Informations();
     
@@ -23,7 +28,7 @@ router.get('/grades', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/genres', async (req: Request, res: Response) => {
+router.get('/genres', async (req:any, res:any) => {
   try {
     const client = new Informations();
     
@@ -43,7 +48,7 @@ router.get('/genres', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/status', async (req: Request, res: Response) => {
+router.get('/status', async (req:any, res:any) => {
   try {
     const client = new Informations();
     
@@ -63,7 +68,7 @@ router.get('/status', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/abonnements', async (req: Request, res: Response) => {
+router.get('/abonnements', async (req:any, res:any) => {
   try {
     const client = new Informations();
     

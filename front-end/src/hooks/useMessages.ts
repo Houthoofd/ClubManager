@@ -6,7 +6,9 @@ export const useUtilisateurs = () => {
   return useQuery({
     queryKey: ['utilisateurs'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('utilisateurs'));
+      const response = await fetch(apiUrl('utilisateurs'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
       const data = await response.json();
       return data.data || [];
@@ -19,7 +21,9 @@ export const useTypesMessages = () => {
   return useQuery({
     queryKey: ['typesMessages'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('messages'));
+      const response = await fetch(apiUrl('messages'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des types de messages');
       const data = await response.json();
       return data.data || [];
@@ -37,6 +41,7 @@ export const useCreerTypeMessage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la création du type de message');
       return response.json();
@@ -57,6 +62,7 @@ export const useModifierTypeMessage = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la mise à jour du type de message');
       return response.json();
@@ -75,6 +81,7 @@ export const useSupprimerTypeMessage = () => {
     mutationFn: async (id: number) => {
       const response = await fetch(apiUrl(`messages/types/${id}`), {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la suppression du type de message');
       return response.json();
@@ -93,6 +100,7 @@ export const useEnvoyerMessage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ destinataires, type_message_id }),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de l’envoi du message');
       return response.json();

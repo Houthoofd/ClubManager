@@ -1,6 +1,9 @@
 import express from 'express';
 import { Professeurs } from '../db/clients/professeurs/professeurs.js';
+import { verifyToken } from '../middleware/auth.js';
 const router = express.Router();
+// Appliquer l'authentification à toutes les routes
+router.use(verifyToken);
 // route pour ajouter un professeur //
 router.get('/', async (req, res) => {
     try {

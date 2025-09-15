@@ -6,7 +6,9 @@ export const useParticipants = (coursId: number) => {
   return useQuery({
     queryKey: ['participants', coursId],
     queryFn: async () => {
-      const response = await fetch(apiUrl(`cours/${coursId}`));
+      const response = await fetch(apiUrl(`cours/${coursId}`), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des participants');
       const data = await response.json();
       return data.data?.Cours || null;
@@ -24,7 +26,8 @@ export const useUpdatePresence = () => {
       const response = await fetch(apiUrl(`cours/${coursId}/presence`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ utilisateurId, action })
+        body: JSON.stringify({ utilisateurId, action }),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();

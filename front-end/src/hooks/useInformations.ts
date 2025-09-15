@@ -6,7 +6,9 @@ export const useAbonnements = () => {
   return useQuery({
     queryKey: ['abonnements'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/abonnements'));
+      const response = await fetch(apiUrl('informations/abonnements'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des abonnements');
       return response.json();
     }
@@ -18,7 +20,9 @@ export const useGrades = () => {
   return useQuery({
     queryKey: ['grades'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/grades'));
+      const response = await fetch(apiUrl('informations/grades'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des grades');
       return response.json();
     }
@@ -30,19 +34,23 @@ export const useStatus = () => {
   return useQuery({
     queryKey: ['status'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/status'));
+      const response = await fetch(apiUrl('informations/status'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des statuts');
       return response.json();
     }
   });
 };
 
-// Hook pour récupérer les statuts
+// Hook pour récupérer les genres
 export const useGenres = () => {
   return useQuery({
     queryKey: ['genres'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/genres'));
+      const response = await fetch(apiUrl('informations/genres'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des genres');
       return response.json();
     }

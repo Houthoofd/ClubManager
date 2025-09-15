@@ -1,8 +1,11 @@
 import express from 'express';
+import { verifyToken } from '../middleware/auth.js';
 import { Magasin } from '../db/clients/magasin/magasin.js';
 import { articleCreationSchema, articleDataValidationSchema, nouvelleCommandeSchema } from '@clubmanager/types';
 import { z } from 'zod';
 const router = express.Router();
+// Routes protégées pour la gestion
+router.use(verifyToken);
 router.get('/articles', async (req, res) => {
     try {
         const client = new Magasin();

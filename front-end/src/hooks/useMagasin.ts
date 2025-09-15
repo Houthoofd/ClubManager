@@ -7,7 +7,9 @@ export const useArticlesParCategorie = () => {
   return useQuery({
     queryKey: ['articlesParCategorie'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('magasin/articles'));
+      const response = await fetch(apiUrl('magasin/articles'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des articles');
       return response.json();
     }
@@ -19,7 +21,9 @@ export const useCategoriesMagasin = () => {
   return useQuery({
     queryKey: ['categoriesMagasin'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('magasin/articles/categories'));
+      const response = await fetch(apiUrl('magasin/articles/categories'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des catégories');
       return response.json();
     }
@@ -31,7 +35,9 @@ export const useTaillesMagasin = () => {
   return useQuery({
     queryKey: ['taillesMagasin'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('magasin/tailles'));
+      const response = await fetch(apiUrl('magasin/tailles'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des tailles');
       // Retourne directement le tableau des tailles
       const data = await response.json();
@@ -49,6 +55,7 @@ export const useAjouterArticleMagasin = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(article),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de l\'ajout de l\'article');
       return response.json();
@@ -68,6 +75,7 @@ export const useModifierArticleMagasin = () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(article),
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la modification de l\'article');
       return response.json();
@@ -85,6 +93,7 @@ export const useSupprimerArticleMagasin = () => {
     mutationFn: async (id: number) => {
       const response = await fetch(apiUrl(`magasin/articles/${id}`), {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Erreur lors de la suppression de l\'article');
       return response.json();

@@ -1,7 +1,12 @@
 import express from 'express';
 import { Verifiation } from '../db/clients/verification/verifications.js';
+import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Appliquer l'authentification à toutes les routes de vérification
+router.use(verifyToken);
+
 
 // Toutes les méthodes utilisent maintenant le type VerifyResult et renvoient { exists, message }
 router.post('/verifier-email', async (req:any, res:any) => {

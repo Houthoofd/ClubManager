@@ -6,7 +6,9 @@ export const useArticles = () => {
   return useQuery({
     queryKey: ['articles'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('magasin/articles'));
+      const response = await fetch(apiUrl('magasin/articles'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des articles');
       const data = await response.json();
 
@@ -32,7 +34,9 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('magasin/articles/categories'));
+      const response = await fetch(apiUrl('magasin/articles/categories'), {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Erreur lors du chargement des catégories');
       const data = await response.json();
       return Array.isArray(data) ? data : Object.values(data).flat();
@@ -49,7 +53,8 @@ export const useAjouterArticle = () => {
       const response = await fetch(apiUrl('magasin/articles/ajouter'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(article)
+        body: JSON.stringify(article),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -72,7 +77,8 @@ export const useModifierArticle = () => {
       const response = await fetch(apiUrl(`magasin/modifier/article/${id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(article)
+        body: JSON.stringify(article),
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
@@ -93,7 +99,8 @@ export const useSupprimerArticle = () => {
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await fetch(apiUrl(`magasin/articles/${id}`), {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) {
         const error = await response.json();
