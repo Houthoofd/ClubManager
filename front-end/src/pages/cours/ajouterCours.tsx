@@ -418,6 +418,21 @@ const AjouterCoursPage: React.FC = () => {
     );
   }
 
+  // Vérifiez les tableaux avant de les mapper
+  const coursList = planningCours.length > 0 ? planningCours.map((cours) => (
+    <div key={cours.id}>
+      {/* Rendu des cours */}
+      <p>{cours.nom}</p>
+    </div>
+  )) : <p>Aucun cours à afficher.</p>;
+
+  const professeursList = professeurs.length > 0 ? professeurs.map((prof) => (
+    <div key={prof.id}>
+      {/* Rendu des professeurs */}
+      <p>{prof.name}</p>
+    </div>
+  )) : <p>Aucun professeur à afficher.</p>;
+
   // Rendu principal
   return (
     <div className="courses-page">
