@@ -74,8 +74,8 @@ const AjouterCoursPage: React.FC = () => {
         // Comparaison des heures (avec vérification de null/undefined)
         const originalHeureDebut = originalCours?.heure_debut || '';
         const originalHeureFin = originalCours?.heure_fin || '';
-        const originalHeureDebutFormatted = originalHeureDebut ? originalHeureDebut.substring(0, 5) : '';
-        const originalHeureFinFormatted = originalHeureFin ? originalHeureFin.substring(0, 5) : '';
+        const originalHeureDebutFormatted = originalHeureDebut.substring(0, 5);
+        const originalHeureFinFormatted = originalHeureFin.substring(0, 5);
 
         if (heureDebut !== originalHeureDebutFormatted) {
           modifications.push(`Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`);
