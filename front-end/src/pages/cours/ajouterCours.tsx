@@ -66,12 +66,12 @@ const AjouterCoursPage: React.FC = () => {
           modifications.push(`Jour: "${originalJour}" → "${jour}"`);
         }
         
-        if (heureDebut !== originalCours?.heure_debut.substring(0, 5)) {
-          modifications.push(`Heure de début: "${originalCours?.heure_debut.substring(0, 5)}" → "${heureDebut}"`);
+        if (heureDebut !== (originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '')) {
+          modifications.push(`Heure de début: "${originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : ''}" → "${heureDebut}"`);
         }
         
-        if (heureFin !== originalCours?.heure_fin.substring(0, 5)) {
-          modifications.push(`Heure de fin: "${originalCours?.heure_fin.substring(0, 5)}" → "${heureFin}"`);
+        if (heureFin !== (originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : '')) {
+          modifications.push(`Heure de fin: "${originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : ''}" → "${heureFin}"`);
         }
 
         const professeursOriginaux = (originalCours?.professeurs || []).map((prof: any) => {
@@ -139,8 +139,8 @@ const AjouterCoursPage: React.FC = () => {
   const confirmerModification = async () => {
     try {
       setShowConfirmModificationModal(false);
-      const horaireChange = heureDebut !== originalCours?.heure_debut.substring(0, 5) ||
-                           heureFin !== originalCours?.heure_fin.substring(0, 5) ||
+      const horaireChange = heureDebut !== (originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '') ||
+                           heureFin !== (originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : '') ||
                            jour !== originalCours?.jour;
       
       if (horaireChange) {
@@ -148,8 +148,8 @@ const AjouterCoursPage: React.FC = () => {
           excludeOriginal: true,
           originalJour: originalCours?.jour,
           originalType: originalCours?.type_cours,
-          originalHeureDebut: originalCours?.heure_debut.substring(0, 5),
-          originalHeureFin: originalCours?.heure_fin.substring(0, 5)
+          originalHeureDebut: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
+          originalHeureFin: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : ''
         });
         
         if (coursExiste) {
@@ -190,8 +190,8 @@ const AjouterCoursPage: React.FC = () => {
       professeurs: selectedUsers.map(u => u.name),
       jour_original: originalCours?.jour,
       type_cours_original: originalCours?.type_cours,
-      heure_debut_original: originalCours?.heure_debut.substring(0, 5),
-      heure_fin_original: originalCours?.heure_fin.substring(0, 5)
+      heure_debut_original: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
+      heure_fin_original: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : ''
     };
 
     await modifierCours.mutateAsync(coursData);

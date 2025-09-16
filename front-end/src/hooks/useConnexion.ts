@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
-import AuthService from '../services/AuthService'; // Assurez-vous que le chemin est correct
 
 interface User {
   id: number;
