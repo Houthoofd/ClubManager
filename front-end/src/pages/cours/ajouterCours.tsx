@@ -53,16 +53,19 @@ const AjouterCoursPage: React.FC = () => {
   // Gestion de la soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nom || !selectedType || !jour || !heureDebut || !heureFin) return;
+    if (!nom || !selectedType || !jour || !heureDebut || !heureFin) {
+      console.warn('Certains champs obligatoires sont manquants.');
+      return;
+    }
 
     try {
       if (isModifying && originalCours) {
         const modifications: string[] = [];
         const originalNom = originalCours?.nom || `${originalCours?.type_cours} - ${originalCours?.jour || originalCours?.jour_semaine}`;
 
-        // Comparaison des heures
-        const originalHeureDebutFormatted = safeSubstring(originalCours?.heure_debut, 0, 5);
-        const originalHeureFinFormatted = safeSubstring(originalCours?.heure_fin, 0, 5);
+        // Comparaison des heures avec valeurs par défaut
+        const originalHeureDebutFormatted = safeSubstring(originalCours?.heure_debut || '00:00', 0, 5);
+        const originalHeureFinFormatted = safeSubstring(originalCours?.heure_fin || '00:00', 0, 5);
 
         if (heureDebut !== originalHeureDebutFormatted) {
           modifications.push(`Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`);
@@ -155,8 +158,8 @@ const AjouterCoursPage: React.FC = () => {
   const confirmerModification = async () => {
     try {
       setShowConfirmModificationModal(false);
-      const horaireChange = heureDebut !== safeSubstring(originalCours?.heure_debut, 0, 5) ||
-                           heureFin !== safeSubstring(originalCours?.heure_fin, 0, 5) ||
+      const horaireChange = heureDebut !== safeSubstring(originalCours?.heure_debut || '00:00', 0, 5) ||
+                           heureFin !== safeSubstring(originalCours?.heure_fin || '00:00', 0, 5) ||
                            jour !== originalCours?.jour;
 
       if (horaireChange && originalCours) {
@@ -164,8 +167,8 @@ const AjouterCoursPage: React.FC = () => {
           excludeOriginal: true,
           originalJour: originalCours?.jour,
           originalType: originalCours?.type_cours,
-          originalHeureDebut: safeSubstring(originalCours?.heure_debut, 0, 5),
-          originalHeureFin: safeSubstring(originalCours?.heure_fin, 0, 5),
+          originalHeureDebut: safeSubstring(originalCours?.heure_debut || '00:00', 0, 5),
+          originalHeureFin: safeSubstring(originalCours?.heure_fin || '00:00', 0, 5),
         });
 
         if (coursExiste) {
@@ -253,9 +256,9 @@ const AjouterCoursPage: React.FC = () => {
     }
     setJour(jourToUse);
 
-    // Utilisation de safeSubstring pour éviter les erreurs
-    setHeureDebut(safeSubstring(cours.heure_debut, 0, 5));
-    setHeureFin(safeSubstring(cours.heure_fin, 0, 5));
+    // Utilisation de valeurs par défaut pour éviter les erreurs
+    setHeureDebut(safeSubstring(cours.heure_debut || '00:00', 0, 5));
+    setHeureFin(safeSubstring(cours.heure_fin || '00:00', 0, 5));
 
     let profs: { id: number; name: string }[] = [];
     if (Array.isArray(cours.professeurs)) {
