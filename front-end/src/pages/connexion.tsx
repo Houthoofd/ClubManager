@@ -61,6 +61,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         onSuccess(data);
       }
 
+      // Redirigez l'utilisateur vers la page dashboard
       navigate('/pages/dashboard');
     } catch (err: any) {
       console.error('Erreur lors de la connexion:', err);
