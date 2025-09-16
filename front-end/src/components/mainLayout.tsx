@@ -34,6 +34,8 @@ const MainLayout = () => {
       ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
       : userData?.email || 'Utilisateur';
 
+  console.log('Nom de l\'utilisateur:', username);
+
   const onSidebarToggle = () => {
     setIsSidebarOpen(prev => !prev);
   };
