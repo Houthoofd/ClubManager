@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Tabs,
   Tab,
@@ -377,8 +377,16 @@ const AjouterCoursPage: React.FC = () => {
 
   // Vérifiez si les données sont en cours de chargement ou non disponibles
   const isLoadingData = loadingProfesseurs || loadingPlanning || !planningCours || !professeurs;
+  const [isDataReady, setIsDataReady] = useState(false);
 
-  if (isLoadingData) {
+  useEffect(() => {
+    // Vérifiez si les données sont prêtes
+    if (!loadingProfesseurs && !loadingPlanning && planningCours.length > 0 && professeurs.length > 0) {
+      setIsDataReady(true);
+    }
+  }, [loadingProfesseurs, loadingPlanning, planningCours, professeurs]);
+
+  if (!isDataReady) {
     console.log('Chargement des données en cours...');
     return (
       <PageSection>
