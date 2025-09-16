@@ -40,6 +40,9 @@ const AjouterCoursPage: React.FC = () => {
   // Hooks React Query
   const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
   const { data: planningCours = [], isLoading: loadingPlanning } = useJoursDeCours();
+
+  console.log("planningCours:", planningCours);
+  console.log("professeurs:", professeurs);
   const ajouterCours = useAjouterCours();
   const modifierCours = useModifierCours();
   const supprimerCoursRecurrent = useSupprimerCoursRecurrent();
