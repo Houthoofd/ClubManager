@@ -11,22 +11,17 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: any, errorInfo: any) {
     console.error('Erreur capturée par ErrorBoundary:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <h1>Une erreur inattendue s'est produite.</h1>
-          <p>Veuillez réessayer ou contacter le support si le problème persiste.</p>
-        </div>
-      );
+      return <div>Une erreur est survenue. Veuillez réessayer plus tard.</div>;
     }
 
     return this.props.children;
@@ -34,3 +29,4 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBounda
 }
 
 export default ErrorBoundary;
+

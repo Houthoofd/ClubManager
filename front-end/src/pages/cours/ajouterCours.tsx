@@ -217,7 +217,7 @@ const AjouterCoursPage: React.FC = () => {
       jour_original: originalCours?.jour,
       type_cours_original: originalCours?.type_cours,
       heure_debut_original: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
-      heure_fin_original: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : ''
+      heure_fin_original: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : '',
     };
     await modifierCours.mutateAsync(coursData);
     setAjoutSuccess(true);
