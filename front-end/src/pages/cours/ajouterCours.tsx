@@ -45,19 +45,10 @@ const AjouterCoursPage: React.FC = () => {
   console.log('Valeur de planningCours:', planningCours, 'Chargement en cours:', loadingPlanning);
 
   const ajouterCours = useAjouterCours();
-  console.log('Hook ajouterCours:', ajouterCours);
-
   const modifierCours = useModifierCours();
-  console.log('Hook modifierCours:', modifierCours);
-
   const supprimerCoursRecurrent = useSupprimerCoursRecurrent();
-  console.log('Hook supprimerCoursRecurrent:', supprimerCoursRecurrent);
-
   const retirerProfesseursDuCours = useRetirerProfesseursDuCours();
-  console.log('Hook retirerProfesseursDuCours:', retirerProfesseursDuCours);
-
   const checkCoursPlanning = useCheckCoursPlanning();
-  console.log('Hook checkCoursPlanning:', checkCoursPlanning);
 
   // Gestion de la soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
