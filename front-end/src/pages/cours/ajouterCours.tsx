@@ -15,6 +15,7 @@ import CoursModals from '../../components/cours/CoursModals';
 import { PageHeader } from '../../components/common/PageHeader';
 
 const AjouterCoursPage: React.FC = () => {
+  // États pour la gestion des onglets, formulaires et modales
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [jour, setJour] = useState<string | null>(null);
@@ -44,36 +45,47 @@ const AjouterCoursPage: React.FC = () => {
   const retirerProfesseursDuCours = useRetirerProfesseursDuCours();
   const checkCoursPlanning = useCheckCoursPlanning();
 
+  // Gestion de la soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nom || !selectedType || !jour || !heureDebut || !heureFin) return;
 
     try {
-      if (isModifying) {
+      if (isModifying && originalCours) {
         const modifications: string[] = [];
-        
         const originalNom = originalCours?.nom || `${originalCours?.type_cours} - ${originalCours?.jour || originalCours?.jour_semaine}`;
+
+        // Comparaison du nom
         if (nom !== originalNom) {
           modifications.push(`Nom: "${originalNom}" → "${nom}"`);
         }
-        
+
+        // Comparaison du type de cours
         if (selectedType !== originalCours?.type_cours) {
           modifications.push(`Type: "${originalCours?.type_cours}" → "${selectedType}"`);
         }
-        
+
+        // Comparaison du jour
         const originalJour = originalCours?.jour || originalCours?.jour_semaine;
         if (jour !== originalJour) {
           modifications.push(`Jour: "${originalJour}" → "${jour}"`);
         }
-        
-        if (heureDebut !== (originalCours?.heure_debut || '').substring(0, 5)) {
-          modifications.push(`Heure de début: "${(originalCours?.heure_debut || '').substring(0, 5)}" → "${heureDebut}"`);
-        }
-        
-        if (heureFin !== (originalCours?.heure_fin || '').substring(0, 5)) {
-          modifications.push(`Heure de fin: "${(originalCours?.heure_fin || '').substring(0, 5)}" → "${heureFin}"`);
+
+        // Comparaison des heures (avec vérification de null/undefined)
+        const originalHeureDebut = originalCours?.heure_debut || '';
+        const originalHeureFin = originalCours?.heure_fin || '';
+        const originalHeureDebutFormatted = originalHeureDebut ? originalHeureDebut.substring(0, 5) : '';
+        const originalHeureFinFormatted = originalHeureFin ? originalHeureFin.substring(0, 5) : '';
+
+        if (heureDebut !== originalHeureDebutFormatted) {
+          modifications.push(`Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`);
         }
 
+        if (heureFin !== originalHeureFinFormatted) {
+          modifications.push(`Heure de fin: "${originalHeureFinFormatted}" → "${heureFin}"`);
+        }
+
+        // Comparaison des professeurs
         const professeursOriginaux = (originalCours?.professeurs || []).map((prof: any) => {
           if (typeof prof === 'string') return prof;
           if (prof?.prenom && prof?.nom) return `${prof.prenom} ${prof.nom}`;
@@ -81,13 +93,13 @@ const AjouterCoursPage: React.FC = () => {
           if (prof?.name) return prof.name;
           return '';
         }).filter(Boolean).sort();
-        
+
         const professeursActuels = selectedUsers.map(u => u.name).sort();
-        
+
         if (JSON.stringify(professeursOriginaux) !== JSON.stringify(professeursActuels)) {
           const ajouts = professeursActuels.filter(p => !professeursOriginaux.includes(p));
           const retraits = professeursOriginaux.filter(p => !professeursActuels.includes(p));
-          
+
           if (ajouts.length > 0) {
             modifications.push(`Professeurs ajoutés: ${ajouts.join(', ')}`);
           }
@@ -96,17 +108,17 @@ const AjouterCoursPage: React.FC = () => {
           }
         }
 
+        // Affichage des modifications ou message si aucune modification
         if (modifications.length > 0) {
           setModificationsResume(modifications);
           setShowConfirmModificationModal(true);
-          return;
         } else {
           setAjoutSuccess(false);
           setAjoutMessage("Aucune modification détectée.");
           setShowAjoutModal(true);
-          return;
         }
       } else {
+        // Vérification si un cours existe déjà au même créneau
         const coursExiste = await checkCoursPlanning(jour, heureDebut, heureFin, selectedType);
         if (coursExiste) {
           setAjoutSuccess(false);
@@ -114,7 +126,6 @@ const AjouterCoursPage: React.FC = () => {
           setShowAjoutModal(true);
           return;
         }
-
         await executerAjoutCours();
       }
     } catch (error: any) {
@@ -125,6 +136,7 @@ const AjouterCoursPage: React.FC = () => {
     }
   };
 
+  // Réinitialisation du formulaire
   const resetFormulaire = () => {
     setNom('');
     setSelectedType(null);
@@ -136,14 +148,15 @@ const AjouterCoursPage: React.FC = () => {
     setOriginalCours(null);
   };
 
+  // Confirmation des modifications
   const confirmerModification = async () => {
     try {
       setShowConfirmModificationModal(false);
       const horaireChange = heureDebut !== (originalCours?.heure_debut || '').substring(0, 5) ||
                            heureFin !== (originalCours?.heure_fin || '').substring(0, 5) ||
                            jour !== originalCours?.jour;
-      
-      if (horaireChange) {
+
+      if (horaireChange && originalCours) {
         const coursExiste = await checkCoursPlanning(jour, heureDebut, heureFin, '', {
           excludeOriginal: true,
           originalJour: originalCours?.jour,
@@ -151,7 +164,7 @@ const AjouterCoursPage: React.FC = () => {
           originalHeureDebut: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
           originalHeureFin: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : ''
         });
-        
+
         if (coursExiste) {
           setAjoutSuccess(false);
           setAjoutMessage(`Un cours existe déjà le ${jour} de ${heureDebut} à ${heureFin}. Veuillez choisir un autre créneau.`);
@@ -159,7 +172,6 @@ const AjouterCoursPage: React.FC = () => {
           return;
         }
       }
-
       await executerModificationCours();
     } catch (error: any) {
       console.error('Erreur lors de la modification du cours:', error);
@@ -169,13 +181,16 @@ const AjouterCoursPage: React.FC = () => {
     }
   };
 
+  // Exécution de l'ajout d'un cours
   const executerAjoutCours = async () => {
     const coursData = {
-      nom, type_cours: selectedType, jour_semaine: jour,
-      heure_debut: heureDebut, heure_fin: heureFin,
+      nom,
+      type_cours: selectedType,
+      jour_semaine: jour,
+      heure_debut: heureDebut,
+      heure_fin: heureFin,
       professeurs: selectedUsers.map(u => u.name)
     };
-
     await ajouterCours.mutateAsync(coursData);
     setAjoutSuccess(true);
     setAjoutMessage(`Le cours ${selectedType} du ${jour} a été ajouté avec succès !`);
@@ -183,17 +198,22 @@ const AjouterCoursPage: React.FC = () => {
     resetFormulaire();
   };
 
+  // Exécution de la modification d'un cours
   const executerModificationCours = async () => {
+    if (!originalCours) return;
+
     const coursData = {
-      nom, type_cours: selectedType, jour: jour,
-      heure_debut: heureDebut, heure_fin: heureFin,
+      nom,
+      type_cours: selectedType,
+      jour: jour,
+      heure_debut: heureDebut,
+      heure_fin: heureFin,
       professeurs: selectedUsers.map(u => u.name),
       jour_original: originalCours?.jour,
       type_cours_original: originalCours?.type_cours,
-      heure_debut_original: (originalCours?.heure_debut || '').substring(0, 5),
-      heure_fin_original: (originalCours?.heure_fin || '').substring(0, 5)
+      heure_debut_original: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
+      heure_fin_original: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : ''
     };
-
     await modifierCours.mutateAsync(coursData);
     setAjoutSuccess(true);
     setAjoutMessage(`Le cours ${selectedType} du ${jour} a été modifié avec succès !`);
@@ -201,20 +221,26 @@ const AjouterCoursPage: React.FC = () => {
     resetFormulaire();
   };
 
+  // Conversion du jour en français
   const convertJourToFrench = (jourAnglais: string) => {
     const joursMapping: { [key: string]: string } = {
-      'Monday': 'Lundi', 'Tuesday': 'Mardi', 'Wednesday': 'Mercredi',
-      'Thursday': 'Jeudi', 'Friday': 'Vendredi', 'Saturday': 'Samedi', 'Sunday': 'Dimanche'
+      'Monday': 'Lundi',
+      'Tuesday': 'Mardi',
+      'Wednesday': 'Mercredi',
+      'Thursday': 'Jeudi',
+      'Friday': 'Vendredi',
+      'Saturday': 'Samedi',
+      'Sunday': 'Dimanche'
     };
     return joursMapping[jourAnglais] || jourAnglais;
   };
 
+  // Ouverture de la modale de modification
   const ouvrirModalModification = (cours: any) => {
     console.log("Cours à modifier:", cours);
     setNom(cours.nom || `${cours.type_cours} - ${cours.jour || cours.jour_semaine}`);
     setSelectedType(cours.type_cours);
-    
-    // PRIORITÉ À jour_semaine car c'est le jour du cours récurrent
+
     let jourToUse = cours.jour_semaine;
     if (!jourToUse && cours.jour_cours) {
       jourToUse = convertJourToFrench(cours.jour_cours);
@@ -223,17 +249,17 @@ const AjouterCoursPage: React.FC = () => {
       jourToUse = cours.jour;
     }
     setJour(jourToUse);
-    
-    setHeureDebut((cours.heure_debut || '').substring(0, 5)); // Ajout de valeur par défaut
-    setHeureFin((cours.heure_fin || '').substring(0, 5)); // Ajout de valeur par défaut
-    
+
+    // Vérification des heures (avec valeurs par défaut si null/undefined)
+    setHeureDebut((cours.heure_debut || '00:00').substring(0, 5));
+    setHeureFin((cours.heure_fin || '00:00').substring(0, 5));
+
     let profs: { id: number; name: string }[] = [];
-    
     if (Array.isArray(cours.professeurs)) {
       profs = cours.professeurs.map((prof: any, index: number) => {
         let profName = '';
         let profId = Math.random();
-        
+
         if (typeof prof === 'string') {
           profName = prof;
         } else if (prof && typeof prof === 'object') {
@@ -251,37 +277,39 @@ const AjouterCoursPage: React.FC = () => {
             profName = `Professeur ${index + 1}`;
           }
         }
-        
-        const professeurComplet = professeurs.find(p => 
+
+        const professeurComplet = professeurs.find(p =>
           `${p.first_name} ${p.last_name}` === profName ||
           `${p.prenom} ${p.nom}` === profName ||
           p.name === profName
         );
-        
+
         return {
           id: professeurComplet?.id || profId,
           name: profName
         };
       }).filter(prof => prof.name);
     }
-    
+
     setSelectedUsers(profs);
     setIsModifying(true);
     setOriginalCours({ ...cours, jour: jourToUse });
     setActiveTabKey(0);
   };
 
+  // Ouverture de la modale de dissociation
   const ouvrirModalDissociation = (cours: any, prof: string) => {
-    setProfesseurADissocier({ 
-      cours: { ...cours, jour: cours.jour_semaine || cours.jour }, 
-      prof: { name: prof } 
+    setProfesseurADissocier({
+      cours: { ...cours, jour: cours.jour_semaine || cours.jour },
+      prof: { name: prof }
     });
     setIsModalOpen(true);
   };
 
+  // Confirmation de la dissociation
   const confirmerDissociation = async () => {
     if (!professeurADissocier) return;
-    
+
     try {
       const professeursNoms = [professeurADissocier.prof.name];
       const jourCours = professeurADissocier.cours.jour_semaine || professeurADissocier.cours.jour;
@@ -293,20 +321,23 @@ const AjouterCoursPage: React.FC = () => {
     }
   };
 
+  // Annulation de la dissociation
   const annulerDissociation = () => {
     setIsModalOpen(false);
     setProfesseurADissocier(null);
-    setSuccessMessage(null); // Réinitialiser le message de succès
+    setSuccessMessage(null);
   };
 
+  // Ouverture de la modale de suppression
   const ouvrirModalSuppression = (cours: any) => {
     setCoursASupprimer({ ...cours, jour: cours.jour_semaine || cours.jour });
     setShowSupprimerModal(true);
   };
 
+  // Confirmation de la suppression
   const confirmerSuppression = async () => {
     if (!coursASupprimer) return;
-    
+
     try {
       const jourASupprimer = coursASupprimer.jour_semaine || coursASupprimer.jour;
       await supprimerCoursRecurrent.mutateAsync(jourASupprimer.toLowerCase().trim());
@@ -320,30 +351,34 @@ const AjouterCoursPage: React.FC = () => {
     }
   };
 
+  // Annulation de la suppression
   const annulerSuppression = () => {
     setShowSupprimerModal(false);
     setCoursASupprimer(null);
   };
 
+  // Fermeture de la modale d'ajout
   const fermerAjoutModal = () => {
     setShowAjoutModal(false);
     setAjoutMessage(null);
     setAjoutSuccess(false);
   };
 
+  // Annulation de la confirmation de modification
   const annulerConfirmationModification = () => {
     setShowConfirmModificationModal(false);
     setModificationsResume([]);
   };
 
+  // Affichage du spinner pendant le chargement
   if (loadingProfesseurs || loadingPlanning) {
     return (
       <PageSection>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '50vh' 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh'
         }}>
           <Spinner size="xl" />
         </div>
@@ -351,6 +386,7 @@ const AjouterCoursPage: React.FC = () => {
     );
   }
 
+  // Rendu principal
   return (
     <div className="courses-page">
       <PageHeader
@@ -358,19 +394,14 @@ const AjouterCoursPage: React.FC = () => {
         subtitle="Créez un nouveau cours de jiu-jitsu brésilien"
         variant="courses"
       />
-
       <PageSection className="courses-content">
         <div className="cours-container">
-          {/* Tabs */}
-          <Tabs 
-            activeKey={activeTabKey} 
+          <Tabs
+            activeKey={activeTabKey}
             onSelect={(_e, key) => setActiveTabKey(key as number)}
             className="modern-tabs"
           >
-            <Tab 
-              eventKey={0} 
-              title={<TabTitleText>Ajouter un cours</TabTitleText>}
-            >
+            <Tab eventKey={0} title={<TabTitleText>Ajouter un cours</TabTitleText>}>
               <CoursForm
                 nom={nom} setNom={setNom}
                 selectedType={selectedType} setSelectedType={setSelectedType}
@@ -378,14 +409,14 @@ const AjouterCoursPage: React.FC = () => {
                 heureDebut={heureDebut} setHeureDebut={setHeureDebut}
                 heureFin={heureFin} setHeureFin={setHeureFin}
                 selectedUsers={selectedUsers} setSelectedUsers={setSelectedUsers}
-                professeurs={professeurs} isModifying={isModifying} originalCours={originalCours}
-                onSubmit={handleSubmit} onAnnulerModification={resetFormulaire}
+                professeurs={professeurs}
+                isModifying={isModifying}
+                originalCours={originalCours}
+                onSubmit={handleSubmit}
+                onAnnulerModification={resetFormulaire}
               />
             </Tab>
-            <Tab 
-              eventKey={1} 
-              title={<TabTitleText>Voir les cours</TabTitleText>}
-            >
+            <Tab eventKey={1} title={<TabTitleText>Voir les cours</TabTitleText>}>
               <CoursList
                 cours={planningCours}
                 onModifierCours={ouvrirModalModification}
@@ -394,24 +425,24 @@ const AjouterCoursPage: React.FC = () => {
               />
             </Tab>
           </Tabs>
-          
+
           <CoursModals
-            isModalOpen={isModalOpen} 
-            successMessage={successMessage} 
+            isModalOpen={isModalOpen}
+            successMessage={successMessage}
             professeurADissocier={professeurADissocier}
-            onAnnulerDissociation={annulerDissociation} 
+            onAnnulerDissociation={annulerDissociation}
             onConfirmerDissociation={confirmerDissociation}
-            showSupprimerModal={showSupprimerModal} 
+            showSupprimerModal={showSupprimerModal}
             coursASupprimer={coursASupprimer}
-            onAnnulerSuppression={annulerSuppression} 
+            onAnnulerSuppression={annulerSuppression}
             onConfirmerSuppression={confirmerSuppression}
-            showAjoutModal={showAjoutModal} 
-            ajoutSuccess={ajoutSuccess} 
+            showAjoutModal={showAjoutModal}
+            ajoutSuccess={ajoutSuccess}
             ajoutMessage={ajoutMessage}
             onFermerAjoutModal={fermerAjoutModal}
-            showConfirmModificationModal={showConfirmModificationModal} 
+            showConfirmModificationModal={showConfirmModificationModal}
             modificationsResume={modificationsResume}
-            originalCours={originalCours} 
+            originalCours={originalCours}
             onAnnulerConfirmationModification={annulerConfirmationModification}
             onConfirmerModification={confirmerModification}
           />
@@ -422,7 +453,3 @@ const AjouterCoursPage: React.FC = () => {
 };
 
 export default AjouterCoursPage;
-
-
-
-
