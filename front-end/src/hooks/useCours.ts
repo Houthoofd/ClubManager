@@ -20,12 +20,16 @@ export const useJoursDeCours = () => {
   return useQuery({
     queryKey: ['joursDeCours'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('cours/informations/planning'),{
-        credentials: 'include',
+      const response = await fetch(apiUrl('cours/informations/planning'), {
+        credentials: 'include', // Ajoutez cette ligne si l'authentification est nécessaire
       });
-      if (!response.ok) throw new Error('Erreur lors de la récupération des jours de cours');
-      return response.json();
-    }
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des cours');
+      }
+      const data = await response.json();
+      console.log('Données récupérées par useJoursDeCours:', data);
+      return data;
+    },
   });
 };
 
