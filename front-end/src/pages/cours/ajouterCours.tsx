@@ -13,6 +13,7 @@ import CoursForm from '../../components/cours/CoursForm';
 import CoursList from '../../components/cours/CoursList';
 import CoursModals from '../../components/cours/CoursModals';
 import { PageHeader } from '../../components/common/PageHeader';
+import { safeSubstring } from '../../utils/safeSubstring';
 
 const AjouterCoursPage: React.FC = () => {
   // États pour la gestion des onglets, formulaires et modales
@@ -74,8 +75,8 @@ const AjouterCoursPage: React.FC = () => {
         // Comparaison des heures (avec vérification de null/undefined)
         const originalHeureDebut = originalCours?.heure_debut || '';
         const originalHeureFin = originalCours?.heure_fin || '';
-        const originalHeureDebutFormatted = originalHeureDebut.substring(0, 5);
-        const originalHeureFinFormatted = originalHeureFin.substring(0, 5);
+        const originalHeureDebutFormatted = safeSubstring(originalHeureDebut, 0, 5);
+        const originalHeureFinFormatted = safeSubstring(originalHeureFin, 0, 5);
 
         if (heureDebut !== originalHeureDebutFormatted) {
           modifications.push(`Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`);
@@ -250,9 +251,9 @@ const AjouterCoursPage: React.FC = () => {
     }
     setJour(jourToUse);
 
-    // Vérification des heures (avec valeurs par défaut si null/undefined)
-    setHeureDebut((cours.heure_debut || '00:00').substring(0, 5));
-    setHeureFin((cours.heure_fin || '00:00').substring(0, 5));
+    // Utilisation de safeSubstring pour éviter les erreurs
+    setHeureDebut(safeSubstring(cours.heure_debut, 0, 5));
+    setHeureFin(safeSubstring(cours.heure_fin, 0, 5));
 
     let profs: { id: number; name: string }[] = [];
     if (Array.isArray(cours.professeurs)) {
