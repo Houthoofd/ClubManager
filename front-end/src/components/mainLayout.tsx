@@ -24,6 +24,7 @@ const MainLayout = () => {
     const storedUser = localStorage.getItem('userData');
     if (storedUser) {
       userData = JSON.parse(storedUser);
+      console.log('Récupération des données utilisateur depuis le localStorage:', userData);
       dispatch(setUser(userData)); // Mettez à jour le store Redux
     }
   }
