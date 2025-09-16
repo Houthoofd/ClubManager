@@ -375,8 +375,11 @@ const AjouterCoursPage: React.FC = () => {
     setModificationsResume([]);
   };
 
-  // Affichage du spinner pendant le chargement
-  if (loadingProfesseurs || loadingPlanning) {
+  // Vérifiez si les données sont en cours de chargement ou non disponibles
+  const isLoadingData = loadingProfesseurs || loadingPlanning || !planningCours || !professeurs;
+
+  if (isLoadingData) {
+    console.log('Chargement des données en cours...');
     return (
       <PageSection>
         <div style={{
