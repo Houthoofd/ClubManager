@@ -78,6 +78,7 @@ export const useAjouterCours = () => {
   
   return useMutation({
     mutationFn: async (coursData: any) => {
+      console.log('Données envoyées pour ajouter un cours:', coursData);
       const response = await fetch(apiUrl('cours/ajouter'), {
         method: 'POST',
         headers: {
@@ -86,6 +87,7 @@ export const useAjouterCours = () => {
         body: JSON.stringify(coursData),
         credentials: 'include',
       });
+      console.log('Réponse de l\'API pour ajouter un cours:', response);
 
       if (!response.ok) {
         throw new Error('Erreur lors de l\'ajout du cours');
