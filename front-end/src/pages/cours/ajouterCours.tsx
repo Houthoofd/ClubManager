@@ -418,20 +418,31 @@ const AjouterCoursPage: React.FC = () => {
     );
   }
 
-  // Vérifiez les tableaux avant de les mapper
-  const coursList = planningCours.length > 0 ? planningCours.map((cours) => (
-    <div key={cours.id}>
-      {/* Rendu des cours */}
-      <p>{cours.nom}</p>
+  // Filtrer les cours avec des données invalides
+  const filteredPlanningCours = planningCours.filter(cours => {
+    // Vérifiez que les champs critiques ne sont pas null
+    return cours.heure_debut && cours.heure_fin && cours.jour && cours.type_cours;
+  });
+
+  const normalizedPlanningCours = filteredPlanningCours.map(cours => ({
+    ...cours,
+    heure_debut: cours.heure_debut || '00:00',
+    heure_fin: cours.heure_fin || '00:00',
+    professeurs: cours.professeurs && cours.professeurs.length > 0 ? cours.professeurs : ['Aucun professeur'],
+  }));
+
+  console.log('Données brutes de planningCours:', planningCours);
+  console.log('Données filtrées de planningCours:', filteredPlanningCours);
+  console.log('Données normalisées de planningCours:', normalizedPlanningCours);
+
+  const coursList = normalizedPlanningCours.length > 0 ? normalizedPlanningCours.map((cours, index) => (
+    <div key={index}>
+      <p>Type de cours : {cours.type_cours}</p>
+      <p>Jour : {cours.jour}</p>
+      <p>Heure : {cours.heure_debut} - {cours.heure_fin}</p>
+      <p>Professeurs : {cours.professeurs.join(', ')}</p>
     </div>
   )) : <p>Aucun cours à afficher.</p>;
-
-  const professeursList = professeurs.length > 0 ? professeurs.map((prof) => (
-    <div key={prof.id}>
-      {/* Rendu des professeurs */}
-      <p>{prof.name}</p>
-    </div>
-  )) : <p>Aucun professeur à afficher.</p>;
 
   // Rendu principal
   return (
@@ -465,7 +476,7 @@ const AjouterCoursPage: React.FC = () => {
             </Tab>
             <Tab eventKey={1} title={<TabTitleText>Voir les cours</TabTitleText>}>
               <CoursList
-                cours={planningCours}
+                cours={filteredPlanningCours}
                 onModifierCours={ouvrirModalModification}
                 onSupprimerCours={ouvrirModalSuppression}
                 onDissocierProfesseur={ouvrirModalDissociation}
