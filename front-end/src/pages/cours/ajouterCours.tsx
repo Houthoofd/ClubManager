@@ -56,6 +56,18 @@ const AjouterCoursPage: React.FC = () => {
         const modifications: string[] = [];
         const originalNom = originalCours?.nom || `${originalCours?.type_cours} - ${originalCours?.jour || originalCours?.jour_semaine}`;
 
+        // Comparaison des heures
+        const originalHeureDebutFormatted = safeSubstring(originalCours?.heure_debut, 0, 5);
+        const originalHeureFinFormatted = safeSubstring(originalCours?.heure_fin, 0, 5);
+
+        if (heureDebut !== originalHeureDebutFormatted) {
+          modifications.push(`Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`);
+        }
+
+        if (heureFin !== originalHeureFinFormatted) {
+          modifications.push(`Heure de fin: "${originalHeureFinFormatted}" → "${heureFin}"`);
+        }
+
         // Comparaison du nom
         if (nom !== originalNom) {
           modifications.push(`Nom: "${originalNom}" → "${nom}"`);
@@ -70,20 +82,6 @@ const AjouterCoursPage: React.FC = () => {
         const originalJour = originalCours?.jour || originalCours?.jour_semaine;
         if (jour !== originalJour) {
           modifications.push(`Jour: "${originalJour}" → "${jour}"`);
-        }
-
-        // Comparaison des heures (avec vérification de null/undefined)
-        const originalHeureDebut = originalCours?.heure_debut || '';
-        const originalHeureFin = originalCours?.heure_fin || '';
-        const originalHeureDebutFormatted = safeSubstring(originalHeureDebut, 0, 5);
-        const originalHeureFinFormatted = safeSubstring(originalHeureFin, 0, 5);
-
-        if (heureDebut !== originalHeureDebutFormatted) {
-          modifications.push(`Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`);
-        }
-
-        if (heureFin !== originalHeureFinFormatted) {
-          modifications.push(`Heure de fin: "${originalHeureFinFormatted}" → "${heureFin}"`);
         }
 
         // Comparaison des professeurs
@@ -153,8 +151,8 @@ const AjouterCoursPage: React.FC = () => {
   const confirmerModification = async () => {
     try {
       setShowConfirmModificationModal(false);
-      const horaireChange = heureDebut !== (originalCours?.heure_debut || '').substring(0, 5) ||
-                           heureFin !== (originalCours?.heure_fin || '').substring(0, 5) ||
+      const horaireChange = heureDebut !== safeSubstring(originalCours?.heure_debut, 0, 5) ||
+                           heureFin !== safeSubstring(originalCours?.heure_fin, 0, 5) ||
                            jour !== originalCours?.jour;
 
       if (horaireChange && originalCours) {
@@ -162,8 +160,8 @@ const AjouterCoursPage: React.FC = () => {
           excludeOriginal: true,
           originalJour: originalCours?.jour,
           originalType: originalCours?.type_cours,
-          originalHeureDebut: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
-          originalHeureFin: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : ''
+          originalHeureDebut: safeSubstring(originalCours?.heure_debut, 0, 5),
+          originalHeureFin: safeSubstring(originalCours?.heure_fin, 0, 5),
         });
 
         if (coursExiste) {

@@ -4,6 +4,7 @@ import notificationsReducer from './reducers/notificationsReducers';
 import navigationReducer from './reducers/navigationReducers';
 import messageReducer from './reducers/messageReducers';
 import panierReducer from './slices/panierSlice';
+import authReducer from './reducers/authReducer';
 
 const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
     navigation: navigationReducer,
     message: messageReducer,
     panier: panierReducer,
+    auth: authReducer,
   },
 });
 
