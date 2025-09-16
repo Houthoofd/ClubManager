@@ -392,6 +392,22 @@ const AjouterCoursPage: React.FC = () => {
     );
   }
 
+  if (planningCours.length === 0) {
+    console.warn('Aucun cours disponible dans planningCours.');
+    return (
+      <PageSection>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh'
+        }}>
+          <p>Aucun cours disponible pour le moment.</p>
+        </div>
+      </PageSection>
+    );
+  }
+
   // Rendu principal
   return (
     <div className="courses-page">
