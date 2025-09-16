@@ -39,11 +39,7 @@ const AjouterCoursPage: React.FC = () => {
 
   // Hooks React Query
   const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
-  console.log('Valeur de professeurs:', professeurs, 'Chargement en cours:', loadingProfesseurs);
-
   const { data: planningCours = [], isLoading: loadingPlanning } = useJoursDeCours();
-  console.log('Valeur de planningCours:', planningCours, 'Chargement en cours:', loadingPlanning);
-
   const ajouterCours = useAjouterCours();
   const modifierCours = useModifierCours();
   const supprimerCoursRecurrent = useSupprimerCoursRecurrent();
@@ -402,7 +398,7 @@ const AjouterCoursPage: React.FC = () => {
           alignItems: 'center',
           height: '50vh'
         }}>
-          <p>Aucun cours disponible pour le moment.</p>
+          <p>Aucun cours disponible pour le moment. Veuillez vérifier vos données.</p>
         </div>
       </PageSection>
     );
