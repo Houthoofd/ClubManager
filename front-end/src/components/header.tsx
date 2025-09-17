@@ -15,13 +15,16 @@ import {
   MenuList,
   MenuItem,
   MenuToggle,
-  Popper
+  Popper,
 } from '@patternfly/react-core';
 import {
   BarsIcon,
   BellIcon,
   EnvelopeIcon,
-  ShoppingCartIcon
+  ShoppingCartIcon,
+  UserIcon,
+  CogIcon,
+  SignOutAltIcon, // Ajout de l'icône de déconnexion
 } from '@patternfly/react-icons';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -29,9 +32,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
 import { ouvrirPanier } from '../redux/slices/panierSlice';
 
+const avatarImg = '/assets/avatar.png'; // Chemin relatif à partir de `public`
+
 interface AppPanelHeaderProps {
   username: string;
-  onSidebarToggle: () => void;
+  onSidebarToggle: () => void; // Fonction pour basculer la sidebar
   onLogout?: () => void;
   userData: any; // Ajout de la propriété userData
 }
@@ -115,29 +120,31 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
 
           <FlexItem>
             <Tooltip content="Panier">
-              <Button 
-                variant="plain" 
+              <Button
+                variant="plain"
                 aria-label="Panier"
                 style={{ position: 'relative' }}
                 onClick={handleOuvrirPanier}
               >
                 <ShoppingCartIcon />
                 {panierCount > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    fontSize: '0.75rem',
-                    minWidth: '18px',
-                    height: '18px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold'
-                  }}>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      fontSize: '0.75rem',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                    }}
+                  >
                     {panierCount}
                   </span>
                 )}
@@ -180,25 +187,32 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
               ref={toggleRef}
               onClick={handleToggleClick}
               isExpanded={isDropdownOpen}
-              icon={<Avatar src="" alt="Avatar" />}
-            >
-            </MenuToggle>
-
+              icon={<Avatar src="https://via.placeholder.com/150" alt="Avatar utilisateur" />} // Utilisation d'une image par défaut
+            />
             <Popper
               triggerRef={toggleRef}
               popper={
                 <Menu onSelect={handleSelect}>
                   <MenuContent>
                     <MenuList>
-                      <MenuItem to="/pages/compte" component="a">Profil</MenuItem>
-                      <MenuItem to="/pages/settings" component="a">Paramètres</MenuItem>
-                      <MenuItem onClick={handleLogout}>Déconnexion</MenuItem>
+                      <MenuItem to="/pages/compte" component="a">
+                        <UserIcon style={{ marginRight: '8px' }} />
+                        Profil
+                      </MenuItem>
+                      <MenuItem to="/pages/settings" component="a">
+                        <CogIcon style={{ marginRight: '8px' }} />
+                        Paramètres
+                      </MenuItem>
+                      <MenuItem onClick={handleLogout}>
+                        <SignOutAltIcon style={{ marginRight: '8px' }} />
+                        Déconnexion
+                      </MenuItem>
                     </MenuList>
                   </MenuContent>
                 </Menu>
               }
               isVisible={isDropdownOpen}
-              position="center"
+              position="bottom-end"
             />
           </FlexItem>
         </Flex>

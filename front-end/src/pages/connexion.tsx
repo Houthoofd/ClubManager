@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Button,
   Form,
@@ -7,10 +7,14 @@ import {
   TextInput,
   Alert,
   AlertVariant,
+  PageSection,
+  Bullseye,
+  Title,
 } from '@patternfly/react-core';
 import { useConnexion } from '../hooks/useConnexion';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/slices/authSlice';
+import { PageHeader } from '../components/common/PageHeader';
 
 const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -37,7 +41,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         throw new Error('Données utilisateur manquantes dans la réponse.');
       }
 
-      const { user, token } = data; // Gardez `token` si vous en avez besoin
+      const { user, token } = data;
 
       // Enregistrer le token dans le localStorage
       localStorage.setItem('authToken', token);
@@ -69,37 +73,66 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
     }
   };
 
+  const breadcrumbItems = [
+    { title: 'Accueil', to: '/' },
+    { title: 'Connexion', isActive: true },
+  ];
+
   return (
-    <Form onSubmit={handleSubmit}>
-      <FormGroup label="Email" isRequired fieldId="email">
-        <TextInput
-          id="email"
-          value={formData.email}
-          onChange={(_, value) => handleChange('email', value)}
-          type="email"
-          isRequired
-        />
-      </FormGroup>
-      <FormGroup label="Mot de passe" isRequired fieldId="password">
-        <TextInput
-          id="password"
-          value={formData.password}
-          onChange={(_, value) => handleChange('password', value)}
-          type="password"
-          isRequired
-        />
-      </FormGroup>
+    <PageSection style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+      <PageHeader
+        title="Connexion"
+        subtitle="Accédez à votre compte"
+        breadcrumbItems={breadcrumbItems}
+      />
+      <Bullseye>
+        <div style={{ maxWidth: '800px', width: '100%', padding: '3rem', boxShadow: '0 6px 10px rgba(0, 0, 0, 0.15)', borderRadius: '12px', backgroundColor: '#fff' }}>
+          <Form onSubmit={handleSubmit}>
+            <FormGroup label="Email" isRequired fieldId="email">
+              <TextInput
+                id="email"
+                value={formData.email}
+                onChange={(_, value) => handleChange('email', value)}
+                type="email"
+                isRequired
+              />
+            </FormGroup>
+            <FormGroup label="Mot de passe" isRequired fieldId="password">
+              <TextInput
+                id="password"
+                value={formData.password}
+                onChange={(_, value) => handleChange('password', value)}
+                type="password"
+                isRequired
+              />
+            </FormGroup>
 
-      {error && (
-        <Alert variant={AlertVariant.danger} title="Erreur" isInline>
-          {error}
-        </Alert>
-      )}
+            {error && (
+              <Alert variant={AlertVariant.danger} title="Erreur" isInline>
+                {error}
+              </Alert>
+            )}
 
-      <Button type="submit" variant="primary" isLoading={connexion.isLoading}>
-        Se connecter
-      </Button>
-    </Form>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={connexion.isLoading}
+              style={{ width: '100%', marginTop: '2rem' }}
+            >
+              Se connecter
+            </Button>
+          </Form>
+          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+            <p>
+              Pas encore inscrit ?{' '}
+              <Link to="/pages/inscription" style={{ color: '#007bff', textDecoration: 'none' }}>
+                Créez un compte
+              </Link>
+            </p>
+          </div>
+        </div>
+      </Bullseye>
+    </PageSection>
   );
 };
 

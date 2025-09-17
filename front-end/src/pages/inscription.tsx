@@ -38,6 +38,7 @@ export const InscriptionPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [showRecap, setShowRecap] = useState(false);
   const [modalMessage, setModalMessage] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false); // État pour la modal de succès
 
   // Utilisation des hooks React Query
   const { data: abonnementOptions = [] } = useAbonnementOptions();
@@ -119,6 +120,7 @@ export const InscriptionPage: React.FC = () => {
       setModalMessage("Inscription réussie !");
       setSuccess(true);
       setShowRecap(false);
+      setShowSuccessModal(true); // Affiche la modal de succès
     } catch (err: any) {
       setModalMessage(err.message || "Erreur lors de l'inscription.");
     }
@@ -242,6 +244,22 @@ export const InscriptionPage: React.FC = () => {
           </Button>
           <Button variant="link" onClick={handleCancelRecap}>
             Annuler
+          </Button>
+        </ModalFooter>
+      </Modal>
+      <Modal
+        variant="small"
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        aria-labelledby="success-modal-title"
+      >
+        <ModalHeader title="Inscription réussie !" />
+        <ModalBody>
+          Votre inscription a été effectuée avec succès. Vous pouvez maintenant vous connecter.
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="primary" onClick={() => setShowSuccessModal(false)}>
+            Fermer
           </Button>
         </ModalFooter>
       </Modal>

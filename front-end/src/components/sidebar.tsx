@@ -50,6 +50,8 @@ const hasRole = (role: string | null, allowedRoles: string[]) => {
 };
 
 const AppSidebar = ({ isOpen }: AppSidebarProps) => {
+  console.log('Sidebar isOpen:', isOpen); // Ajoutez ce log pour vérifier la valeur
+
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {

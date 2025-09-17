@@ -1,5 +1,11 @@
 import React from 'react';
-import { PageSection, Title } from '@patternfly/react-core';
+import { Breadcrumb, BreadcrumbItem, PageSection, Title } from '@patternfly/react-core';
+
+interface BreadcrumbItem {
+  title: string;
+  to?: string;
+  isActive?: boolean;
+}
 
 interface PageHeaderProps {
   title: string;
@@ -7,6 +13,7 @@ interface PageHeaderProps {
   variant?: 'dashboard' | 'users' | 'courses' | 'payments' | 'store' | 'teachers' | 'messages' | 'stats' | 'commandes' | 'planning' | 'membres' | 'compte' | 'settings' | 'inscriptions' | 'default';
   actions?: React.ReactNode;
   breadcrumbs?: React.ReactNode;
+  breadcrumbItems?: BreadcrumbItem[]; // Ajout des éléments du breadcrumb
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -15,6 +22,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   variant = 'default',
   actions,
   breadcrumbs,
+  breadcrumbItems
 }) => {
   const getVariantClass = () => {
     return `page-header--${variant}`;
@@ -32,6 +40,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <div className="page-header__breadcrumbs">
             {breadcrumbs}
           </div>
+        )}
+        
+        {breadcrumbItems && (
+          <Breadcrumb style={{ marginBottom: '1rem' }}>
+            {breadcrumbItems.map((item, index) => (
+              <BreadcrumbItem key={index} to={item.to} isActive={item.isActive}>
+                {item.title}
+              </BreadcrumbItem>
+            ))}
+          </Breadcrumb>
         )}
         
         <div className="page-header__main">
