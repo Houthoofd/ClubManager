@@ -1,62 +1,74 @@
 # ClubManager
 
-> Plateforme de gestion de club : gestion des membres, des cours, des paiements, du magasin et plus encore.
+## Description du projet
+ClubManager est une application conçue pour faciliter la gestion des clubs sportifs. Elle permet aux administrateurs de gérer les membres, les événements, les inscriptions, et bien plus encore.
 
-## Présentation
-ClubManager est une application web complète pour la gestion d’un club sportif ou associatif. Elle permet de gérer les utilisateurs (adhérents, administrateurs), les inscriptions aux cours, les paiements, la boutique, la messagerie interne, et bien d’autres fonctionnalités.
+## Objectifs
+- Simplifier la gestion des clubs sportifs.
+- Offrir une interface intuitive pour les administrateurs et les membres.
+- Automatiser les tâches répétitives comme les inscriptions et les paiements.
 
 ## Fonctionnalités principales
-- **Gestion des utilisateurs** : création, modification, suppression, connexion, rôles, etc.
-- **Gestion des cours** : inscription, ajout de cours, gestion des participants et des professeurs.
-- **Paiements** : suivi des paiements, intégration Stripe, gestion des cotisations.
-- **Magasin** : gestion des articles, commandes, catégories, panier.
-- **Statistiques** : tableaux de bord, graphiques sur les membres et les paiements.
-- **Messagerie interne** : chat entre membres.
-- **Administration** : interface d’administration, gestion des statuts, abonnements, grades, etc.
+- Gestion des membres :
+  - Ajout, modification et suppression des membres.
+  - Suivi des informations personnelles et des cotisations.
+- Gestion des événements :
+  - Création et planification des événements.
+  - Gestion des inscriptions aux événements.
+- Rapports :
+  - Génération de statistiques sur les membres et les événements.
+  - Suivi des paiements et des finances.
+- Gestion des rôles et permissions :
+  - Attribution de rôles (administrateur, membre, entraîneur) avec des niveaux d'accès spécifiques.
+- Notifications :
+  - Envoi d'e-mails ou de notifications push pour rappeler les événements ou les paiements.
+- Gestion des équipements :
+  - Suivi des équipements disponibles dans le club.
+- Calendrier partagé :
+  - Affichage d'un calendrier interactif pour les événements et les entraînements.
+- Paiements en ligne :
+  - Intégration d'une passerelle de paiement pour les cotisations et les inscriptions.
+- Forum ou messagerie interne :
+  - Communication entre les membres et les administrateurs.
 
-## Architecture du projet
-- **API (backend)** : Node.js, Express, TypeScript, Socket.io, MySQL, Zod (validation), Stripe (paiement)
-- **Front-end** : React, Vite, TypeScript, Patternfly, Redux Toolkit, React Router, Stripe.js
-- **Mobile** : (structure prévue, non détaillée ici)
-- **Docker** : Conteneurisation du front, back et reverse proxy Nginx
+## Technologies utilisées
+- **Frontend** : [Précisez ici, par exemple React, Angular, etc.]
+- **Backend** : [Précisez ici, par exemple Node.js, Django, etc.]
+- **Base de données** : [Précisez ici, par exemple MySQL, MongoDB, etc.]
 
-## Installation rapide
+## Architecture
+- **Modèle MVC** : Séparation claire entre les modèles, les vues et les contrôleurs.
+- **API REST** : Communication entre le frontend et le backend.
 
-### Prérequis
-- Node.js >= 18
-- npm ou yarn
-- Docker (optionnel mais recommandé)
+## Étapes de développement
+1. Analyse des besoins.
+2. Conception de l'architecture.
+3. Développement des fonctionnalités principales.
+4. Tests et débogage.
+5. Déploiement.
 
-### Lancer avec Docker
-```bash
-docker-compose up --build
-```
-L’application sera accessible sur [http://localhost](http://localhost).
+## Utilisation
+1. Clonez le dépôt :
+   ```bash
+   git clone [URL du dépôt]
+   ```
+2. Installez les dépendances :
+   ```bash
+   npm install
+   ```
+3. Lancez l'application :
+   ```bash
+   npm start
+   ```
 
-### Lancer en local (développement)
-#### API
-```bash
-cd api
-npm install
-npm run build
-npm start
-```
-#### Front-end
-```bash
-cd front-end
-npm install
-npm run dev
-```
+## Auteur
+Guillaume Houthoofd
 
-## Structure des dossiers
-- `api/` : Backend Express/TypeScript
-- `front-end/` : Frontend React/TypeScript
-- `mobile/` : (structure mobile)
-- `nginx/` : Configuration du reverse proxy
-- `docker-compose.yml` : Orchestration des services
+## Licence
+Ce projet est sous licence [Précisez ici, par exemple MIT, GPL, etc.].
 
-## Technologies principales
-- **Backend** : Express, TypeScript, Socket.io, Stripe, MySQL
+## Contact
+Pour toute question ou suggestion, veuillez contacter [votre email ou autre moyen de contact].
 - **Frontend** : React, Vite, Patternfly, Redux Toolkit
 - **Outils** : Docker, Nginx
 

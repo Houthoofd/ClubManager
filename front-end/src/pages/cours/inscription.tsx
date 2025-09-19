@@ -12,7 +12,7 @@ import { CalendarAltIcon, ClockIcon, UserIcon } from '@patternfly/react-icons';
 import { useCours, useCoursPlanning, useCoursInscritsUtilisateur } from '../../hooks/useCours';
 import { useUtilisateursPourTousLesCours, useInscrireUtilisateurReservation, useAnnulerInscriptionParNomPrenom } from '../../hooks/useInscriptions';
 import { datareservationSchema } from '@clubmanager/types';
-import { ModalWithHelp } from '../../components/common/modal/ModalWithHelp';
+import ModalWithHelp from '../../components/common/modal/modalwithhelp';
 import { PageHeader } from '../../components/common/PageHeader';
 import '../../styles/inscription.css';
 
@@ -294,6 +294,7 @@ const Inscription = () => {
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           variant={modalSuccess ? 'success' : 'error'}
+          context="creation" // Ajout du contexte
           successMessage={modalSuccess ? modalMessage : ''}
           error={modalSuccess ? null : modalMessage}
         />

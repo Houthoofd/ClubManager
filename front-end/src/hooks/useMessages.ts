@@ -1,20 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
-// Hook pour récupérer les utilisateurs
-export const useUtilisateurs = () => {
-  return useQuery({
-    queryKey: ['utilisateurs'],
-    queryFn: async () => {
-      const response = await fetch(apiUrl('utilisateurs'), {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
-      const data = await response.json();
-      return data.data || [];
-    }
-  });
+const getAuthToken = () => {
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}'); // Retrieve user data from localStorage
+  return userData.token || ''; // Extract the token from userData
 };
+
 
 // Hook pour récupérer les types de messages
 export const useTypesMessages = () => {
@@ -23,6 +14,7 @@ export const useTypesMessages = () => {
     queryFn: async () => {
       const response = await fetch(apiUrl('messages'), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }, // Use the token in the Authorization header
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des types de messages');
       const data = await response.json();
@@ -39,7 +31,10 @@ export const useCreerTypeMessage = () => {
     mutationFn: async (formData: { title: string; content: string }) => {
       const response = await fetch(apiUrl('messages/types'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}` // Use the token in the Authorization header
+        },
         body: JSON.stringify(formData),
         credentials: 'include',
       });
@@ -60,7 +55,10 @@ export const useModifierTypeMessage = () => {
     mutationFn: async ({ id, formData }: { id: number; formData: { title: string; content: string } }) => {
       const response = await fetch(apiUrl(`messages/types/${id}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}` // Use the token in the Authorization header
+        },
         body: JSON.stringify(formData),
         credentials: 'include',
       });
@@ -82,6 +80,7 @@ export const useSupprimerTypeMessage = () => {
       const response = await fetch(apiUrl(`messages/types/${id}`), {
         method: 'DELETE',
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }, // Use the token in the Authorization header
       });
       if (!response.ok) throw new Error('Erreur lors de la suppression du type de message');
       return response.json();
@@ -98,7 +97,10 @@ export const useEnvoyerMessage = () => {
     mutationFn: async ({ destinataires, type_message_id }: { destinataires: number[]; type_message_id: string }) => {
       const response = await fetch(apiUrl('messages/envoie'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}` // Use the token in the Authorization header
+        },
         body: JSON.stringify({ destinataires, type_message_id }),
         credentials: 'include',
       });

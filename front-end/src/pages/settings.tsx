@@ -13,7 +13,7 @@ import {
   Divider
 } from '@patternfly/react-core';
 import { PageHeader } from '../components/common/PageHeader';
-import { ModalWithHelp } from '../components/common/modal/ModalWithHelp';
+import ModalWithHelp from '../components/common/modal/modalwithhelp'; // Utilisez la casse correcte
 
 const Settings = () => {
   const [notifications, setNotifications] = useState(true);
@@ -130,11 +130,17 @@ const Settings = () => {
       </PageSection>
 
       <ModalWithHelp
+        title="Paramètres sauvegardés"
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title="Paramètres sauvegardés"
         variant={modalVariant}
-        successMessage={modalMessage}
+        context="default" // Ajout du contexte
+        successMessage="Vos paramètres ont été sauvegardés avec succès !"
+        actions={[
+          <Button key="close" variant="primary" onClick={() => setShowModal(false)}>
+            Fermer
+          </Button>,
+        ]}
       />
     </div>
   );

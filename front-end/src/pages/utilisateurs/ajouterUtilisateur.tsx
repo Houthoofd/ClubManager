@@ -1,117 +1,81 @@
 import React, { useEffect, useState } from 'react';
-import {
-  PageSection,
-} from '@patternfly/react-core';
+import { PageSection } from '@patternfly/react-core';
 import { UserIcon, TableIcon } from '@patternfly/react-icons';
 import type { UserData } from '@clubmanager/types';
-import { useUtilisateurs } from '../../hooks/useUtilisateurs';
+import {
+  useUtilisateurs,
+  checkEmailExists,
+  useUpdateUtilisateur,
+  useDeleteUtilisateur,
+} from '../../hooks/useUtilisateurs';
 import { ModalConfirmation, ModalResultat } from '../../components/common/modal/ModalsGestion';
-import { ModalWithHelp } from '../../components/common/modal/ModalWithHelp'; // Import correct avec destructuring
+import ModalWithHelp from '../../components/common/modal/modalwithhelp';
 import OngletTableauUtilisateurs from '../../components/utilisateurs/OngletTableauUtilisateurs';
 import OngletAjoutUtilisateur from '../../components/utilisateurs/OngletAjoutUtilisateur';
-import { UtilisateurService } from '../../services/UtilisateurService';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TabContainer } from '../../components/common/TabContainer';
 
 const Utilisateur = () => {
+  // États pour la gestion des onglets et des données
   const [activeTabKey, setActiveTabKey] = useState<number>(0);
-  const [utilisateur, setUtilisateur] = useState<UserData>();
-  const [userSchema, setUserSchema] = useState<UserData>();
-  const [utilisateurs, setUtilisateurs] = useState<UserData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<any>({});
-  const [existenceMessages, setExistenceMessages] = useState<any>({});
-  const [selectOptions, setSelectOptions] = useState<any>({});
-  const [selectOpenStates, setSelectOpenStates] = useState<{ [key: string]: boolean }>({});
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [utilisateur, setUtilisateur] = useState<UserData | undefined>(undefined);
+  const [formData, setFormData] = useState<Partial<UserData>>({});
+  const [existenceMessages, setExistenceMessages] = useState<Record<string, string>>({});
+  const [selectOpenStates, setSelectOpenStates] = useState<Record<string, boolean>>({});
+  const [selectOptions, setSelectOptions] = useState<Record<string, any[]>>({});
+  const [userSchema, setUserSchema] = useState<Record<string, string> | null>(null);
 
-  // Modals
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [utilisateurToDelete, setUtilisateurToDelete] = useState<UserData | null>(null);
-  const [resultModalOpen, setResultModalOpen] = useState(false);
-  const [resultModalMessage, setResultModalMessage] = useState('');
-  const [resultModalLoading, setResultModalLoading] = useState(false);
+  // États pour les modales
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalVariant, setConfirmModalVariant] = useState<'confirmation' | 'success' | 'error' | 'loading'>('confirmation');
   const [confirmModalTitle, setConfirmModalTitle] = useState('');
   const [confirmModalError, setConfirmModalError] = useState<string | null>(null);
   const [confirmModalSuccess, setConfirmModalSuccess] = useState('');
 
+  // États pour la suppression
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [utilisateurToDelete, setUtilisateurToDelete] = useState<UserData | null>(null);
+  const [resultModalOpen, setResultModalOpen] = useState(false);
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [resultModalLoading, setResultModalLoading] = useState(false);
+
   // Hooks React Query
-  const { data: utilisateursData = [], isLoading: isLoadingUtilisateurs, error } = useUtilisateurs();
+  const { data: utilisateursData = [], isLoading: isLoadingUtilisateurs } = useUtilisateurs();
+  const updateUtilisateur = useUpdateUtilisateur();
+  const deleteUtilisateur = useDeleteUtilisateur();
 
+  console.log(utilisateursData)
+
+  // Initialisation du schéma et des options de sélection
   useEffect(() => {
-    const initialiser = async () => {
-      setResultModalLoading(true);
-      setResultModalMessage('Initialisation...');
-      setResultModalOpen(true);
+    if (utilisateursData.length > 0 && !userSchema) {
+      setUserSchema({
+        first_name: 'string',
+        last_name: 'string',
+        email: 'string',
+        status: 'string',
+      });
 
-      try {
-        const schema = await UtilisateurService.fetchUserSchema();
-        
-        // Vérification plus robuste du schéma
-        if (schema && Array.isArray(schema) && schema.length > 0) {
-          const firstItem = schema[0];
-          if (firstItem && typeof firstItem === 'object') {
-            const keys = Object.keys(firstItem);
-            const initialFormData = UtilisateurService.initaliserFormData(keys);
-            
-            // S'assurer que formData n'est pas vide
-            if (initialFormData && Object.keys(initialFormData).length > 0) {
-              setFormData(initialFormData);
-              setUserSchema(schema);
-
-              // Charger les options pour les champs select
-              const options: any = {};
-              for (const key of keys) {
-                if (key.endsWith('_id')) {
-                  try {
-                    const selectOptionsData = await UtilisateurService.fetchSelectOptions(key);
-                    options[key] = selectOptionsData;
-                  } catch (error) {
-                    console.error(`Erreur pour ${key}:`, error);
-                    options[key] = [];
-                  }
-                }
-              }
-              setSelectOptions(options);
-            } else {
-              throw new Error('Impossible d\'initialiser les données du formulaire');
-            }
-          } else {
-            throw new Error('Structure de schéma invalide');
-          }
-        } else {
-          throw new Error('Schéma utilisateur vide ou invalide');
-        }
-        
-        setResultModalOpen(false);
-      } catch (error) {
-        console.error('Erreur lors de l\'initialisation:', error);
-        setResultModalMessage('Erreur lors de l\'initialisation');
-        setResultModalLoading(false);
-      }
-    };
-
-    initialiser();
-  }, []);
-
-  useEffect(() => {
-    if (utilisateursData.length > 0) {
-      setUtilisateurs(utilisateursData);
+      // Exemple : Initialisation des options pour les selects (à adapter selon vos besoins)
+      const statusOptions = [...new Set(utilisateursData.map((user: UserData) => user.status))];
+      setSelectOptions({
+        status: statusOptions.map(status => ({ value: status, label: status })),
+      });
     }
-  }, [utilisateursData]);
+  }, [utilisateursData, userSchema]);
 
+  // Gestion des changements dans le formulaire
   const handleChange = async (value: string, key: string) => {
-    setFormData((prev: any) => ({ ...prev, [key]: value }));
-    
-    // Vérifier existence pour les champs critiques
+    setFormData((prev) => ({ ...prev, [key]: value }));
+
+    // Vérification d'existence pour les champs critiques
     if (['first_name', 'last_name', 'email', 'nom_utilisateur'].includes(key)) {
       try {
-        const result = await UtilisateurService.checkFieldExistence(key, value);
+        const result = await checkEmailExists(value);
         setExistenceMessages(prev => ({
           ...prev,
-          [key]: result.message || (result.exists ? `Ce champ existe déjà : ${value}` : ''),
+          [key]: result.exists ? `Ce ${key} existe déjà : ${value}` : '',
         }));
       } catch (error) {
         setExistenceMessages(prev => ({
@@ -122,14 +86,14 @@ const Utilisateur = () => {
     }
   };
 
+  // Gestion de l'ouverture/fermeture des selects
   const handleSelectToggle = (key: string, isOpen: boolean) => {
     setSelectOpenStates(prev => ({ ...prev, [key]: isOpen }));
   };
 
+  // Soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Ouvrir la modal de confirmation
     setConfirmModalVariant('confirmation');
     setConfirmModalTitle('Confirmer la création de l\'utilisateur');
     setConfirmModalError(null);
@@ -137,39 +101,32 @@ const Utilisateur = () => {
     setConfirmModalOpen(true);
   };
 
+  // Confirmation de l'ajout d'un utilisateur
   const confirmAddUser = async () => {
-    // Changer la modal en mode loading
     setConfirmModalVariant('loading');
     setConfirmModalTitle('Création en cours...');
 
     try {
-      // Vérifier l'email
-      const isEmailUnique = await UtilisateurService.checkEmailUniqueness(formData.email);
-      if (!isEmailUnique) {
-        setConfirmModalVariant('error');
-        setConfirmModalTitle('Erreur de validation');
-        setConfirmModalError('Cet email est déjà utilisé par un autre utilisateur.');
-        return;
+      // Vérification de l'email
+      if (formData.email) {
+        const isEmailUnique = await checkEmailExists(formData.email);
+        if (isEmailUnique.exists) {
+          setConfirmModalVariant('error');
+          setConfirmModalTitle('Erreur de validation');
+          setConfirmModalError('Cet email est déjà utilisé par un autre utilisateur.');
+          return;
+        }
       }
 
-      // Créer l'utilisateur
-      const result = await UtilisateurService.ajouterUtilisateur(formData);
-      
-      if (result.success) {
-        setUtilisateur(result.data.data);
-        setConfirmModalVariant('success');
-        setConfirmModalTitle('Utilisateur créé avec succès !');
-        setConfirmModalSuccess('L\'utilisateur a été ajouté au système et peut maintenant se connecter.');
-        
-        // Réinitialiser le formulaire
-        const keys = Object.keys(formData);
-        setFormData(UtilisateurService.initaliserFormData(keys));
-        setExistenceMessages({});
-      } else {
-        setConfirmModalVariant('error');
-        setConfirmModalTitle('Erreur lors de la création');
-        setConfirmModalError(result.message || 'Une erreur est survenue lors de la création de l\'utilisateur.');
-      }
+      // Création de l'utilisateur
+      await updateUtilisateur.mutateAsync(formData as UserData);
+      setConfirmModalVariant('success');
+      setConfirmModalTitle('Utilisateur créé avec succès !');
+      setConfirmModalSuccess('L\'utilisateur a été ajouté au système et peut maintenant se connecter.');
+
+      // Réinitialisation du formulaire
+      setFormData({});
+      setExistenceMessages({});
     } catch (error) {
       setConfirmModalVariant('error');
       setConfirmModalTitle('Erreur système');
@@ -178,6 +135,7 @@ const Utilisateur = () => {
     }
   };
 
+  // Fermeture de la modale de confirmation
   const closeConfirmModal = () => {
     setConfirmModalOpen(false);
     setConfirmModalVariant('confirmation');
@@ -186,19 +144,34 @@ const Utilisateur = () => {
     setConfirmModalSuccess('');
   };
 
+  // Ouverture de la modale de suppression
+  const openDeleteModal = (user: UserData) => {
+    setUtilisateurToDelete(user);
+    setConfirmDeleteOpen(true);
+  };
+
+  // Confirmation de la suppression
   const confirmDeleteUtilisateur = async () => {
     if (!utilisateurToDelete) return;
-    
+
     setResultModalLoading(true);
     setResultModalMessage('Suppression en cours...');
     setResultModalOpen(true);
-    
-    // Logique de suppression ici...
-    
-    setConfirmDeleteOpen(false);
-    setUtilisateurToDelete(null);
+
+    try {
+      await deleteUtilisateur.mutateAsync(utilisateurToDelete.id);
+      setResultModalMessage('Utilisateur supprimé avec succès !');
+    } catch (error) {
+      setResultModalMessage('Erreur lors de la suppression. Veuillez réessayer.');
+      console.error('Erreur lors de la suppression:', error);
+    } finally {
+      setResultModalLoading(false);
+      setConfirmDeleteOpen(false);
+      setUtilisateurToDelete(null);
+    }
   };
 
+  // Colonnes du tableau
   const columns = [
     { key: 'first_name', label: 'Prénom' },
     { key: 'last_name', label: 'Nom' },
@@ -206,6 +179,7 @@ const Utilisateur = () => {
     { key: 'status', label: 'Statut' },
   ];
 
+  // Onglets
   const tabs = [
     {
       key: 0,
@@ -213,20 +187,20 @@ const Utilisateur = () => {
       icon: <TableIcon />,
       content: (
         <OngletTableauUtilisateurs
-          utilisateurs={utilisateurs}
+          utilisateurs={utilisateursData}
           columns={columns}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
-          userSchema={userSchema}
-          isLoading={isLoading}
+          isLoading={isLoadingUtilisateurs}
+          onDeleteUser={openDeleteModal}
         />
-      )
+      ),
     },
     {
       key: 1,
       title: 'Ajouter un utilisateur',
       icon: <UserIcon />,
-      content: formData && Object.keys(formData).length > 0 ? (
+      content: Object.keys(formData).length > 0 ? (
         <>
           <OngletAjoutUtilisateur
             formData={formData}
@@ -238,26 +212,25 @@ const Utilisateur = () => {
             onSelectToggle={handleSelectToggle}
             onSubmit={handleSubmit}
           />
-          
           <ModalWithHelp
+            title="Ajout d'utilisateur"
             isOpen={confirmModalOpen}
             onClose={closeConfirmModal}
-            onConfirm={confirmAddUser}
-            title={confirmModalTitle}
             variant={confirmModalVariant}
+            context="ajout"
             data={formData}
-            selectOptions={selectOptions}
-            isLoading={confirmModalVariant === 'loading'}
-            error={confirmModalError}
             successMessage={confirmModalSuccess}
+            errorMessage={confirmModalError}
+            size="medium"
+            onConfirm={confirmAddUser}
           />
         </>
       ) : (
         <div className="loading-container">
           <p>Chargement du formulaire...</p>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -267,7 +240,6 @@ const Utilisateur = () => {
         subtitle="Ajoutez de nouveaux utilisateurs et consultez la liste existante"
         variant="users"
       />
-
       <PageSection className="users-content">
         <TabContainer
           tabs={tabs}
@@ -277,6 +249,7 @@ const Utilisateur = () => {
         />
       </PageSection>
 
+      {/* Modale de confirmation de suppression */}
       <ModalConfirmation
         isOpen={confirmDeleteOpen}
         onClose={() => setConfirmDeleteOpen(false)}
@@ -284,13 +257,14 @@ const Utilisateur = () => {
         title="Confirmer la suppression"
         message={
           utilisateurToDelete
-            ? `Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>${String((utilisateurToDelete as any).first_name)} ${String((utilisateurToDelete as any).last_name)}</strong> ?`
+            ? `Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>${utilisateurToDelete.first_name} ${utilisateurToDelete.last_name}</strong> ?`
             : ''
         }
         confirmText="Supprimer"
         variant="danger"
       />
 
+      {/* Modale de résultat (succès/erreur) */}
       <ModalResultat
         isOpen={resultModalOpen}
         onClose={() => setResultModalOpen(false)}

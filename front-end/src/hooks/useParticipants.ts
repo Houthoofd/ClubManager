@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
+const getAuthToken = () => {
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}'); // Retrieve user data from localStorage
+  return userData.token || ''; // Extract the token from userData
+};
+
 // Hook pour récupérer les participants d'un cours
 export const useParticipants = (coursId: number) => {
   return useQuery({
@@ -8,6 +13,7 @@ export const useParticipants = (coursId: number) => {
     queryFn: async () => {
       const response = await fetch(apiUrl(`cours/${coursId}`), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }, // Add Authorization header
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des participants');
       const data = await response.json();
@@ -25,7 +31,10 @@ export const useUpdatePresence = () => {
     mutationFn: async ({ coursId, utilisateurId, action }: { coursId: number; utilisateurId: number; action: 'valider' | 'annuler' }) => {
       const response = await fetch(apiUrl(`cours/${coursId}/presence`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}` // Add Authorization header
+        },
         body: JSON.stringify({ utilisateurId, action }),
         credentials: 'include',
       });

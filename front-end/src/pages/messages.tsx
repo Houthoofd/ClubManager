@@ -20,13 +20,15 @@ import { PageHeader } from '../components/common/PageHeader';
 import { TabContainer } from '../components/common/TabContainer';
 import GenericForm from '../components/genericForm';
 import {
-  useUtilisateurs,
   useTypesMessages,
   useCreerTypeMessage,
   useModifierTypeMessage,
   useSupprimerTypeMessage,
   useEnvoyerMessage,
 } from '../hooks/useMessages';
+import {
+  useUtilisateurs,
+} from '../hooks/useUtilisateurs';
 
 const Messages: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);

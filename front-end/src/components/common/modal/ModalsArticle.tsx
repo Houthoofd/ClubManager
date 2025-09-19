@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@patternfly/react-core';
-import { ModalWithHelp } from './modalwithhelp';
+import ModalWithHelp from './modalwithhelp';
 import { EditIcon, TrashIcon, CheckIcon } from '@patternfly/react-icons';
 
 interface ModalsArticleProps {

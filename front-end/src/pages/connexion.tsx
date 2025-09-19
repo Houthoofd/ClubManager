@@ -9,16 +9,19 @@ import {
   AlertVariant,
   PageSection,
   Bullseye,
-  Title,
 } from '@patternfly/react-core';
+import ModalWithHelp from '../components/common/modal/modalwithhelp'; // Importer ModalWithHelp
 import { useConnexion } from '../hooks/useConnexion';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/slices/authSlice';
 import { PageHeader } from '../components/common/PageHeader';
+import { CheckCircleIcon } from '@patternfly/react-icons'; // Importer une icône
 
 const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // État pour la modal
+  const [modalData, setModalData] = useState<any>(null); // État pour les données de la modal
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -57,6 +60,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         grades: user.grades,
         abonnement: user.abonnement,
         date_of_birth: user.date_of_birth,
+        token,
       }));
 
       dispatch(loginSuccess(user)); // Mettre à jour le store Redux avec les données utilisateur
@@ -65,12 +69,22 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         onSuccess(data);
       }
 
-      // Redirigez l'utilisateur vers la page dashboard
-      navigate('/pages/dashboard');
+      // Ouvrir la modal de succès avec uniquement les données pertinentes
+      setIsModalOpen(true);
+      setModalData({
+        Prénom: user.first_name,
+        Nom: user.last_name,
+        Email: user.email,
+      });
     } catch (err: any) {
       console.error('Erreur lors de la connexion:', err);
       setError(err.message || 'Erreur lors de la tentative de connexion');
     }
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    navigate('/pages/dashboard'); // Correction : utiliser un chemin absolu
   };
 
   const breadcrumbItems = [
@@ -132,6 +146,17 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
           </div>
         </div>
       </Bullseye>
+      <ModalWithHelp
+        title="Connexion réussie"
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        variant="success"
+        context="connexion"
+        data={modalData}
+        successMessage="Vous êtes maintenant connecté avec succès !"
+        size="large"
+        autoCloseDelay={3000}
+      />
     </PageSection>
   );
 };

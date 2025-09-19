@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
+import { verifyToken, optionalAuth } from '../middleware/auth.js'; // Suppression de requireRole
 import { Cours } from '../db/clients/cours/cours.js';
 import { 
   CoursData,

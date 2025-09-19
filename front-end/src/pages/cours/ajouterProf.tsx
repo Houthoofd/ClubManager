@@ -16,7 +16,7 @@ import { useProfesseurs, usePromouvoirProfesseurs, useRetirerPromotionProfesseur
 import { useTousLesUtilisateurs, useVerifierProfesseurs } from '../../hooks/useUtilisateurs';
 import ProfesseurForm from '../../components/cours/ProfesseurForm';
 import ProfesseursList from '../../components/cours/ProfesseursList';
-import { ModalWithHelp } from '../../components/common/modal/modalwithhelp';
+import ModalWithHelp from '../../components/common/modal/modalwithhelp'; // Utilisez la casse correcte
 
 const AjouterProfesseur = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
@@ -210,12 +210,17 @@ const AjouterProfesseur = () => {
 
         {/* Modal de succès */}
         <ModalWithHelp
-          title="Opération terminée"
-          isOpen={successModalOpen}
+          title="Ajout de professeur"
+          isOpen={isModalOpen}
           onClose={() => setSuccessModalOpen(false)}
-          variant={successMessage.includes('Erreur') ? 'error' : 'success'}
-          successMessage={successMessage.includes('Erreur') ? '' : successMessage}
-          error={successMessage.includes('Erreur') ? successMessage : null}
+          variant="success"
+          context="creation" // Ajout du contexte
+          successMessage="Le professeur a été ajouté avec succès !"
+          actions={[
+            <Button key="close" variant="primary" onClick={() => setSuccessModalOpen(false)}>
+              Fermer
+            </Button>,
+          ]}
         />
       </PageSection>
     </div>

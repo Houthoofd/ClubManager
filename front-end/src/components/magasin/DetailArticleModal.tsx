@@ -6,7 +6,7 @@ import {
   SelectList,
   Label,
 } from '@patternfly/react-core';
-import { ModalWithHelp } from '../common/modal/modalwithhelp';
+import ModalWithHelp from '../common/modal/modalwithhelp'; // Utilisez la casse correcte
 
 interface DetailArticleModalProps {
   isOpen: boolean;
@@ -50,6 +50,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
           </Button>
         </>
       }
+      context="default" // Ajout du contexte
     >
       {selectedArticle ? (
         <div style={{ lineHeight: '1.6' }}>

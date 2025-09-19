@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
+const getAuthToken = () => {
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}'); // Retrieve user data from localStorage
+  return userData.token || ''; // Extract the token from userData
+};
+
 // Hook pour récupérer tous les utilisateurs
 export const useUtilisateurs = () => {
   return useQuery({
@@ -8,6 +13,7 @@ export const useUtilisateurs = () => {
     queryFn: async () => {
       const response = await fetch(apiUrl('utilisateurs'), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }, // Add Authorization header
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
       const data = await response.json();
@@ -23,6 +29,7 @@ export const useUtilisateurById = (id: string) => {
     queryFn: async () => {
       const response = await fetch(apiUrl(`utilisateurs/${id}`), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }, // Add Authorization header
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des données de l\'utilisateur');
       return response.json();
@@ -35,7 +42,10 @@ export const useUtilisateurById = (id: string) => {
 export const checkEmailExists = async (email: string, id?: number) => {
   const response = await fetch(apiUrl('utilisateurs/verifier-email'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getAuthToken()}` // Add Authorization header
+    },
     body: JSON.stringify({ email, id }),
     credentials: 'include',
   });
@@ -45,12 +55,15 @@ export const checkEmailExists = async (email: string, id?: number) => {
 // Hook pour mettre à jour un utilisateur
 export const useUpdateUtilisateur = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (userData: any) => {
       const response = await fetch(apiUrl('utilisateurs/modifier'), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}` // Add Authorization header
+        },
         body: JSON.stringify(userData),
         credentials: 'include',
       });
@@ -80,7 +93,10 @@ export const useAjouterUtilisateur = () => {
     mutationFn: async (utilisateur: any) => {
       const response = await fetch(apiUrl('utilisateurs/ajouter'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}` // Add Authorization header
+        },
         body: JSON.stringify(utilisateur),
         credentials: 'include',
       });
@@ -105,6 +121,7 @@ export const useSupprimerUtilisateur = () => {
       const response = await fetch(apiUrl(`utilisateurs/${utilisateurId}`), {
         method: 'DELETE',
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }, // Add Authorization header
       });
       if (!response.ok) {
         const error = await response.json();
@@ -125,6 +142,7 @@ export const useTousLesUtilisateurs = () => {
     queryFn: async () => {
       const response = await fetch(apiUrl('utilisateurs'), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` }, // Add Authorization header
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
       return response.json(); // Retourne l'objet complet (isFind, data, etc.)
@@ -138,7 +156,10 @@ export const useVerifierProfesseurs = () => {
     mutationFn: async (utilisateurs: { nom: string; prenom: string }[]) => {
       const response = await fetch(apiUrl('verification/verifier-professeurs'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}` // Add Authorization header
+        },
         body: JSON.stringify({ utilisateurs }),
         credentials: 'include',
       });
@@ -148,5 +169,24 @@ export const useVerifierProfesseurs = () => {
       }
       return response.json(); // { professeurs: [...], message }
     }
+  });
+};
+
+// Hook pour supprimer un utilisateur
+export const useDeleteUtilisateur = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(apiUrl(`utilisateurs/${id}`), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) throw new Error('Erreur lors de la suppression de l\'utilisateur');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] }); // Correction : Utilisation d'un objet avec queryKey
+    },
   });
 };

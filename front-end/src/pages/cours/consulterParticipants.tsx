@@ -12,7 +12,7 @@ import { useParticipants } from '../../hooks/useParticipants';
 import { useAnnulerPresence, useValiderPresence } from '../../hooks/useCours';
 import ParticipantCard from '../../components/cours/ParticipantCard';
 import ParticipantsStats from '../../components/cours/ParticipantsStats';
-import { ModalWithHelp } from '../../components/common/modal/modalwithhelp';
+import ModalWithHelp from '../../components/common/modal/modalwithhelp'; // Utilisez la casse correcte
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -161,6 +161,7 @@ const ParticipantsPage = () => {
         title={modalSuccess ? "Succès" : "Erreur"}
         isOpen={showModal}
         onClose={() => setShowModal(false)}
+        context="default" // Ajout du contexte
       >
         <p style={{ 
           color: modalSuccess ? '#28a745' : '#dc3545', 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Modal,
   ModalVariant,
@@ -22,6 +22,9 @@ interface ModalWithHelpProps {
   isLoading?: boolean;
   error?: string | null;
   successMessage?: string;
+  context?: 'connexion' | 'creation' | 'ajout' | 'modification' | 'default'; // Ajout des nouveaux contextes
+  size?: 'small' | 'medium' | 'large'; // Ajout de la propriété size
+  autoCloseDelay?: number; // Ajout de la propriété autoCloseDelay
 }
 
 export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
@@ -35,7 +38,18 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
   isLoading = false,
   error = null,
   successMessage = '',
+  context = 'default',
+  size = 'medium', // Valeur par défaut pour la taille
+  autoCloseDelay, // Délai pour la fermeture automatique
 }) => {
+  useEffect(() => {    if (isOpen && autoCloseDelay) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, autoCloseDelay);
+      return () => clearTimeout(timer); // Nettoyage du timer
+    }
+  }, [isOpen, autoCloseDelay, onClose]);
+
   const formatLabel = (key: string) => {
     let formatted = key.replace(/_/g, ' ');
     if (formatted.endsWith(' id')) formatted = formatted.slice(0, -3);
@@ -73,20 +87,6 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
     return value;
   };
 
-  const renderIcon = () => {
-    switch (variant) {
-      case 'success':
-        return <CheckCircleIcon color="#28a745" size="lg" />;
-      case 'error':
-        return <TimesCircleIcon color="#dc3545" size="lg" />;
-      case 'loading':
-        return <Spinner size="lg" />;
-      case 'confirmation':
-      default:
-        return <ExclamationTriangleIcon color="#ffc107" size="lg" />;
-    }
-  };
-
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -96,7 +96,7 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
               <Spinner size="xl" />
             </FlexItem>
             <FlexItem>
-              <p>Création de l'utilisateur en cours...</p>
+              <p>Chargement en cours...</p>
             </FlexItem>
           </Flex>
         </div>
@@ -104,106 +104,132 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
     }
 
     if (variant === 'success') {
-      return (
-        <div className="modal-help-success">
-          <Alert variant="success" title="Utilisateur créé avec succès !" isInline>
-            {successMessage && <p>{successMessage}</p>}
-          </Alert>
-          {data && Object.keys(data).length > 0 && (
-            <div className="modal-help-data">
-              <Title headingLevel="h4" size="md" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
-                Informations enregistrées :
-              </Title>
-              <div className="modal-help-summary">
-                {Object.entries(data)
-                  .filter(([key]) => key !== 'id' && key !== 'date_creation' && key !== 'date_modification')
-                  .map(([key, value]) => (
-                    <div key={key} className="modal-help-item">
-                      <span className="modal-help-label">{formatLabel(key)} :</span>
-                      <span className="modal-help-value">{getDisplayValue(key, value)}</span>
-                    </div>
-                  ))
-                }
-              </div>
+      switch (context) {
+        case 'connexion':
+          return (
+            <div className="modal-help-success">
+              <Alert variant="success" title="Connexion réussie !" isInline />
+              {data && Object.keys(data).length > 0 && (
+                <div className="modal-help-data">
+                  <Title headingLevel="h4" size="md" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                    Informations utilisateur :
+                  </Title>
+                  <div className="modal-help-summary">
+                    {Object.entries(data).map(([key, value]) => (
+                      <div key={key} className="modal-help-item">
+                        <span className="modal-help-label">{formatLabel(key)} :</span>
+                        <span className="modal-help-value">{getDisplayValue(key, value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      );
+          );
+
+        case 'creation':
+          return (
+            <div className="modal-help-success">
+              <Alert variant="success" title="Création réussie !" isInline>
+                {successMessage && <p>{successMessage}</p>}
+              </Alert>
+              {data && Object.keys(data).length > 0 && (
+                <div className="modal-help-data">
+                  <Title headingLevel="h4" size="md" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                    Informations enregistrées :
+                  </Title>
+                  <div className="modal-help-summary">
+                    {Object.entries(data).map(([key, value]) => (
+                      <div key={key} className="modal-help-item">
+                        <span className="modal-help-label">{key} :</span>
+                        <span className="modal-help-value">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+
+        case 'ajout':
+          return (
+            <div className="modal-help-success">
+              <Alert variant="success" title="Ajout réussi !" isInline>
+                {successMessage && <p>{successMessage}</p>}
+              </Alert>
+              {data && (
+                <div className="modal-help-data">
+                  <p><strong>Élément ajouté :</strong> {data.nom}</p>
+                </div>
+              )}
+            </div>
+          );
+
+        case 'modification':
+          return (
+            <div className="modal-help-success">
+              <Alert variant="success" title="Modification réussie !" isInline>
+                {successMessage && <p>{successMessage}</p>}
+              </Alert>
+              {data && (
+                <div className="modal-help-data">
+                  <p><strong>Élément modifié :</strong> {data.nom}</p>
+                </div>
+              )}
+            </div>
+          );
+
+        default:
+          return (
+            <div className="modal-help-default">
+              <p>Contenu par défaut de la modal.</p>
+            </div>
+          );
+      }
     }
 
     if (variant === 'error') {
       return (
         <div className="modal-help-error">
-          <Alert variant="danger" title="Erreur lors de la création" isInline>
+          <Alert variant="danger" title="Erreur" isInline>
             {error && <p>{error}</p>}
           </Alert>
         </div>
       );
     }
 
-    // Confirmation par défaut
     return (
-      <div className="modal-help-confirmation">
-        <p className="modal-help-description">
-          Veuillez vérifier les informations suivantes avant de confirmer la création de l'utilisateur :
-        </p>
-        
-        <div className="modal-help-summary">
-          {Object.entries(data)
-            .filter(([key]) => key !== 'id' && key !== 'date_creation' && key !== 'date_modification')
-            .map(([key, value]) => (
-              <div key={key} className="modal-help-item">
-                <span className="modal-help-label">{formatLabel(key)} :</span>
-                <span className="modal-help-value">{getDisplayValue(key, value)}</span>
-              </div>
-            ))
-          }
-        </div>
-
-        <Alert variant="info" title="Information" isInline style={{ marginTop: '1rem' }}>
-          Une fois confirmé, l'utilisateur sera créé dans le système et pourra se connecter avec ses identifiants.
-        </Alert>
+      <div className="modal-help-default">
+        <p>Contenu par défaut de la modal.</p>
       </div>
     );
   };
 
-  const renderActions = () => {
-    if (isLoading) {
-      return [];
-    }
-
-    if (variant === 'success' || variant === 'error') {
-      return [
-        <Button key="close" variant="primary" onClick={onClose}>
-          Fermer
-        </Button>
-      ];
-    }
-
-    // Confirmation
-    return [
-      <Button key="cancel" variant="link" onClick={onClose}>
-        Annuler
-      </Button>,
-      <Button key="confirm" variant="primary" onClick={onConfirm}>
-        Confirmer la création
-      </Button>
-    ];
-  };
-
   return (
     <Modal
-      variant={ModalVariant.medium}
+      variant={size === 'large' ? ModalVariant.large : size === 'small' ? ModalVariant.small : ModalVariant.medium}
       title=""
       isOpen={isOpen}
       onClose={onClose}
-      actions={renderActions()}
+      actions={[
+        <Button key="close" variant="primary" onClick={onClose}>
+          Fermer
+        </Button>,
+      ]}
       className="modal-with-help"
+      style={{
+        height: '20vh', // Réduction de la hauteur
+        display: 'flex',
+        justifyContent: 'center', // Centrage horizontal
+        alignItems: 'center', // Centrage vertical
+      }}
     >
       <div className="modal-help-header">
         <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsMd' }}>
           <FlexItem>
-            {renderIcon()}
+            {variant === 'success' && <CheckCircleIcon color="#28a745" size="lg" />}
+            {variant === 'error' && <TimesCircleIcon color="#dc3545" size="lg" />}
+            {variant === 'loading' && <Spinner size="lg" />}
           </FlexItem>
           <FlexItem>
             <Title headingLevel="h2" size="xl">
@@ -213,7 +239,7 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
         </Flex>
       </div>
 
-      <div className="modal-help-content">
+      <div className="modal-help-content" style={{ textAlign: 'center' }}>
         {renderContent()}
       </div>
     </Modal>
@@ -222,3 +248,4 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
 
 // Ajout de l'export par défaut pour la compatibilité
 export default ModalWithHelp;
+

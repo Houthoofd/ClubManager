@@ -34,7 +34,7 @@ import { useUtilisateursPourTousLesCours, useInscrireUtilisateurReservation, use
 import { datareservationSchema } from '@clubmanager/types';
 import { UtilisateurService } from '../../services/UtilisateurService';
 import { ModalConfirmation, ModalResultat } from '../../components/common/modal/ModalsGestion';
-import { ModalWithHelp } from '../../components/common/modal/ModalWithHelp';
+import ModalWithHelp from '../../components/common/modal/modalwithhelp';
 import OngletTableauUtilisateurs from '../../components/utilisateurs/OngletTableauUtilisateurs';
 import OngletAjoutUtilisateur from '../../components/utilisateurs/OngletAjoutUtilisateur';
 import { PageHeader } from '../../components/common/PageHeader';
