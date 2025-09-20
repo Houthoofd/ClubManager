@@ -16,6 +16,7 @@ import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/slices/authSlice';
 import { PageHeader } from '../components/common/PageHeader';
 import { CheckCircleIcon } from '@patternfly/react-icons'; // Importer une icône
+import { apiUrl } from './apiUrl';
 
 const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -84,7 +85,8 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
 
   const handleModalClose = () => {
     setIsModalOpen(false);
-    navigate('/pages/dashboard'); // Correction : utiliser un chemin absolu
+    const dashboardUrl = apiUrl('pages/dashboard'); // Utilisation de apiUrl pour construire l'URL
+    window.location.href = dashboardUrl; // Redirection manuelle
   };
 
 
