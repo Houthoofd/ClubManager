@@ -87,18 +87,9 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
     navigate('/pages/dashboard'); // Correction : utiliser un chemin absolu
   };
 
-  const breadcrumbItems = [
-    { title: 'Accueil', to: '/' },
-    { title: 'Connexion', isActive: true },
-  ];
 
   return (
     <PageSection style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-      <PageHeader
-        title="Connexion"
-        subtitle="Accédez à votre compte"
-        breadcrumbItems={breadcrumbItems}
-      />
       <Bullseye>
         <div style={{ maxWidth: '800px', width: '100%', padding: '3rem', boxShadow: '0 6px 10px rgba(0, 0, 0, 0.15)', borderRadius: '12px', backgroundColor: '#fff' }}>
           <Form onSubmit={handleSubmit}>
