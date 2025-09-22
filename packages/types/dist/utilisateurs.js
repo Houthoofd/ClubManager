@@ -44,3 +44,22 @@ export const userInscriptionSchema = z.object({
     abonnement: z.preprocess(val => typeof val === "string" && /^\d+$/.test(val) ? parseInt(val, 10) : val, z.union([z.string().min(1), z.number().positive()])),
     genre: z.preprocess(val => typeof val === "string" && /^\d+$/.test(val) ? parseInt(val, 10) : val, z.union([z.string().min(1), z.number().positive()])),
 });
+// Schéma Zod pour valider UserDataAjout avec conversion string->number
+export const userDataAjoutSchema = z.object({
+    first_name: z.string().min(1, "Le prénom est requis"),
+    last_name: z.string().min(1, "Le nom est requis"),
+    nom_utilisateur: z.string().min(1, "Le nom d'utilisateur est requis"),
+    email: z.string().email("L'email est invalide"),
+    date_of_birth: z.preprocess(val => {
+        // Si la date est vide ou invalide, retourne undefined pour déclencher une erreur
+        if (typeof val === "string" && !isNaN(Date.parse(val))) {
+            // Retourne la date au format YYYY-MM-DD
+            return new Date(val).toISOString().split('T')[0];
+        }
+        return undefined;
+    }, z.string().refine((val) => !isNaN(Date.parse(val)), "La date de naissance est invalide")),
+    genres: z.preprocess(val => typeof val === "string" ? parseInt(val, 10) : val, z.number().positive("Le genre est requis")),
+    grades: z.preprocess(val => typeof val === "string" ? parseInt(val, 10) : val, z.number().positive("Le grade est requis")),
+    abonnement: z.preprocess(val => typeof val === "string" ? parseInt(val, 10) : val, z.number().positive("L'abonnement est requis")),
+    status: z.preprocess(val => typeof val === "string" ? parseInt(val, 10) : val, z.number().positive("Le statut est requis")),
+});

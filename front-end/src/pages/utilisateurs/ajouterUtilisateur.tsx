@@ -87,19 +87,20 @@ const Utilisateur = () => {
 
   // ========== Initialisation ==========
   useEffect(() => {
-    if (utilisateursData.length > 0 && !userSchema) {
+    if (
+      abonnements.length > 0 &&
+      grades.length > 0 &&
+      statuts.length > 0 &&
+      genres.length > 0 &&
+      !userSchema
+    ) {
       setUserSchema({
         first_name: 'string',
         last_name: 'string',
         email: 'string',
         status: 'string',
       });
-      const statusOptions = [...new Set(utilisateursData.map((user: UserData) => user.status))];
       setSelectOptions({
-        status: statusOptions.map(status => ({
-          id: status?.toString() || '',
-          label: status?.toString() || 'Statut invalide',
-        })),
         abonnements: abonnements.map(a => ({
           id: a.id?.toString() || '',
           label: a.nom_plan && a.prix && a.periode
@@ -118,9 +119,13 @@ const Utilisateur = () => {
           id: g.id?.toString() || '',
           label: g.genre_name || 'Genre invalide',
         })),
+        status: [...new Set(statuts.map(s => s.nom_role))].map(status => ({
+          id: status?.toString() || '',
+          label: status?.toString() || 'Statut invalide',
+        })),
       });
     }
-  }, [utilisateursData, userSchema, abonnements, grades, statuts, genres]);
+  }, [abonnements, grades, statuts, genres, userSchema]);
 
   // ========== Gestion des changements ==========
   const handleChange = (value: string, key: string) => {
@@ -238,17 +243,19 @@ const Utilisateur = () => {
     setConfirmModalError(null);
     setConfirmModalSuccess('');
     try {
-      const userData: UserData = {
+      // Conversion explicite AVANT d'envoyer à l'API (pour garantir la conversion côté front)
+      const userData = {
         first_name: formData.prenom,
         last_name: formData.nom,
         nom_utilisateur: formData.nom_utilisateur,
         email: formData.email,
         date_of_birth: formData.date_naissance,
-        genres: formData.genres,
-        grades: formData.grade,
-        abonnement: formData.abonnement,
-        status: formData.statut,
+        genres: Number(formData.genres),
+        grades: Number(formData.grade),
+        abonnement: Number(formData.abonnement),
+        status: Number(formData.statut),
       };
+      console.log('[confirmAddUtilisateur] Données envoyées au backend :', userData);
       await ajouterUtilisateur.mutateAsync(userData);
       setConfirmModalVariant('success');
       setConfirmModalTitle('Notification');

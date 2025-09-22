@@ -82,16 +82,27 @@ export class Utilisateurs {
         });
     }
     async inscrireUtilisateur(utilisateurData) {
-        // Correction : supporte les deux formats de UserData (prénom/nom ou first_name/last_name)
-        // Utilise 'prenom' et 'nom' si présents, sinon fallback sur 'first_name' et 'last_name'
-        const firstName = utilisateurData.prenom || utilisateurData.first_name || '';
-        const lastName = utilisateurData.nom || utilisateurData.last_name || '';
+        // Supporte UserData (back) ou UserDataAjout (front)
+        const firstName = utilisateurData.prenom ||
+            utilisateurData.first_name ||
+            '';
+        const lastName = utilisateurData.nom ||
+            utilisateurData.last_name ||
+            '';
         if (!firstName || !lastName) {
             throw new Error("Le prénom et le nom sont requis pour l'inscription.");
         }
-        if (!utilisateurData.password || utilisateurData.password.trim() === "") {
-            utilisateurData.password = "password123";
-        }
+        // Mot de passe par défaut si non fourni
+        const password = utilisateurData.password ||
+            "password123";
+        // Récupère les bons champs selon le type
+        const nom_utilisateur = utilisateurData.nom_utilisateur;
+        const email = utilisateurData.email;
+        const genre_id = utilisateurData.genre_id ?? utilisateurData.genres;
+        const date_of_birth = utilisateurData.date_naissance ?? utilisateurData.date_of_birth;
+        const status_id = utilisateurData.status_id ?? utilisateurData.status;
+        const grade_id = utilisateurData.grade_id ?? utilisateurData.grades;
+        const abonnement_id = utilisateurData.abonnement_id ?? utilisateurData.abonnement;
         const sql = `
       INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -99,14 +110,14 @@ export class Utilisateurs {
         const values = [
             firstName,
             lastName,
-            utilisateurData.nom_utilisateur,
-            utilisateurData.email,
-            utilisateurData.genre_id,
-            utilisateurData.date_naissance || utilisateurData.date_of_birth || '',
-            utilisateurData.password,
-            utilisateurData.status_id,
-            utilisateurData.grade_id,
-            utilisateurData.abonnement_id,
+            nom_utilisateur,
+            email,
+            genre_id,
+            date_of_birth,
+            password,
+            status_id,
+            grade_id,
+            abonnement_id,
         ];
         console.log("Insertion utilisateur :", values);
         return new Promise((resolve, reject) => {

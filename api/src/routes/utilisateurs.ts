@@ -2,7 +2,7 @@ import express from 'express';
 import { verifyToken } from '../middleware/auth.js'; // Suppression de requireRole
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import { z } from 'zod';
-import { UserData, userSchema, userDataLoginSchema, VerifyResultWithData } from '../../../packages/types/dist/index.js';
+import { UserData, userSchema, userDataLoginSchema, VerifyResultWithData, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
 
 const router = express.Router();
 
@@ -139,11 +139,46 @@ router.post('/ajouter', async (req: any, res: any) => {
   try {
     const client = new Utilisateurs();
     const data = req.body;
-    console.log(data)
+    console.log('[POST /ajouter] Données reçues du front :', data);
 
+    // Validation et conversion des données avec Zod
+    let validatedData;
+    try {
+      validatedData = userDataAjoutSchema.parse(data);
+      console.log('[POST /ajouter] Données validées et converties :', validatedData);
+    } catch (zodError) {
+      if (zodError instanceof z.ZodError) {
+        console.error('[POST /ajouter] Erreur de validation Zod :', zodError);
+        return res.status(400).json({ message: 'Données invalides.', errors: zodError.errors });
+      } else {
+        console.error('[POST /ajouter] Erreur inconnue :', zodError);
+        return res.status(400).json({ message: 'Erreur inconnue lors de la validation.' });
+      }
+    }
 
-    // Récupérer les utilisateurs associés à ce cours
-    const result = await client.inscrireUtilisateur(data);
+    // Vérifie si l'utilisateur existe déjà (par email ou nom_utilisateur)
+    const verifUtilisateur = await client.verifierUtilisateur({
+      email: validatedData.email,
+      nom_utilisateur: validatedData.nom_utilisateur,
+      prenom: validatedData.first_name,
+      nom: validatedData.last_name,
+      genre_id: validatedData.genres,
+      date_naissance: validatedData.date_of_birth,
+      password: "password123",
+      status_id: validatedData.status,
+      grade_id: validatedData.grades,
+      abonnement_id: validatedData.abonnement,
+      date_inscription: new Date().toISOString().split('T')[0],
+    });
+
+    if (verifUtilisateur.isFind) {
+      return res.status(400).json({ message: 'Utilisateur déjà inscrit.' });
+    }
+
+    console.log("validatedData avant ajout :", validatedData);
+
+    // Appel à la méthode d'insertion qui attend UserDataAjout
+    const result = await client.inscrireUtilisateur(validatedData);
 
     console.log('utilisateur ajouté avec succès:', result);
     res.status(200).json(result);

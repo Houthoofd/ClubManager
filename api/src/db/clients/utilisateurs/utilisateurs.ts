@@ -1,5 +1,5 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
-import { UserData, InsertResult, UserDataLogin, UserDataSession, VerifyResult, VerifyResultWithData, ConfirmationResult } from '@clubmanager/types';
+import { UserData, InsertResult, UserDataLogin, UserDataSession, VerifyResult, VerifyResultWithData, ConfirmationResult, UserDataAjout } from '@clubmanager/types';
 import bcrypt from 'bcrypt';
 
 export class Utilisateurs {
@@ -99,19 +99,34 @@ export class Utilisateurs {
     });
   }
 
-  async inscrireUtilisateur(utilisateurData: UserData): Promise<InsertResult> {
-    // Correction : supporte les deux formats de UserData (prénom/nom ou first_name/last_name)
-    // Utilise 'prenom' et 'nom' si présents, sinon fallback sur 'first_name' et 'last_name'
-    const firstName = (utilisateurData as any).prenom || (utilisateurData as any).first_name || '';
-    const lastName = (utilisateurData as any).nom || (utilisateurData as any).last_name || '';
+  async inscrireUtilisateur(utilisateurData: UserData | UserDataAjout): Promise<InsertResult> {
+    // Supporte UserData (back) ou UserDataAjout (front)
+    const firstName =
+      (utilisateurData as any).prenom ||
+      (utilisateurData as any).first_name ||
+      '';
+    const lastName =
+      (utilisateurData as any).nom ||
+      (utilisateurData as any).last_name ||
+      '';
 
     if (!firstName || !lastName) {
       throw new Error("Le prénom et le nom sont requis pour l'inscription.");
     }
 
-    if (!utilisateurData.password || utilisateurData.password.trim() === "") {
-      utilisateurData.password = "password123";
-    }
+    // Mot de passe par défaut si non fourni
+    const password =
+      (utilisateurData as any).password ||
+      "password123";
+
+    // Récupère les bons champs selon le type
+    const nom_utilisateur = (utilisateurData as any).nom_utilisateur;
+    const email = (utilisateurData as any).email;
+    const genre_id = (utilisateurData as any).genre_id ?? (utilisateurData as any).genres;
+    const date_of_birth = (utilisateurData as any).date_naissance ?? (utilisateurData as any).date_of_birth;
+    const status_id = (utilisateurData as any).status_id ?? (utilisateurData as any).status;
+    const grade_id = (utilisateurData as any).grade_id ?? (utilisateurData as any).grades;
+    const abonnement_id = (utilisateurData as any).abonnement_id ?? (utilisateurData as any).abonnement;
 
     const sql = `
       INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
@@ -121,14 +136,14 @@ export class Utilisateurs {
     const values = [
       firstName,
       lastName,
-      utilisateurData.nom_utilisateur,
-      utilisateurData.email,
-      utilisateurData.genre_id,
-      (utilisateurData as any).date_naissance || (utilisateurData as any).date_of_birth || '',
-      utilisateurData.password,
-      utilisateurData.status_id,
-      utilisateurData.grade_id,
-      utilisateurData.abonnement_id,
+      nom_utilisateur,
+      email,
+      genre_id,
+      date_of_birth,
+      password,
+      status_id,
+      grade_id,
+      abonnement_id,
     ];
 
     console.log("Insertion utilisateur :", values);

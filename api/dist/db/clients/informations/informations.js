@@ -152,7 +152,7 @@ export class Informations {
     // Récupérer les grades
     obtenirLesGrades() {
         return new Promise((resolve, reject) => {
-            const sql = `SELECT * FROM grades`;
+            const sql = `SELECT * FROM grades ORDER BY id ASC`;
             console.log("Exécution de la requête pour obtenir les grades");
             this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {

@@ -10,7 +10,7 @@ import {
   Select, SelectGroup, SelectList, SelectOption,
   MenuToggle, Bullseye, EmptyState, Title as PfTitle
 } from '@patternfly/react-core';
-import { SortAmountDownIcon, EllipsisVIcon, CubesIcon } from '@patternfly/react-icons';
+import { SortAmountDownIcon, EllipsisVIcon, CubesIcon, LockIcon, UnlockIcon } from '@patternfly/react-icons';
 import { Modal as PfModal, ModalBody, ModalHeader, ModalFooter } from '@patternfly/react-core';
 import { useUserContext } from '../../../context/UserContext';
 
@@ -78,6 +78,8 @@ export function EditableTable({
     setRows(data);
   }, [data]);
 
+  console.log(data)
+
   // Tri des données
   const getSortableRowValues = (row: UserData): (string | number)[] => {
     return columns.map(col => {
@@ -128,8 +130,41 @@ export function EditableTable({
     columnIndex
   });
 
+  // Ajoute une fonction pour vérifier la sécurité du mot de passe
+  function getPasswordSecurity(password?: string): 'secure' | 'insecure' | 'empty' {
+    if (!password || password.trim() === '') return 'empty';
+    // Sécurité minimale : au moins 8 caractères, une majuscule, une minuscule, un chiffre
+    const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    return strongRegex.test(password) ? 'secure' : 'insecure';
+  }
+
   // Formatage des valeurs pour l'affichage
-  const formatValue = (value: any, key: keyof UserData): React.ReactNode => {
+  const formatValue = (value: any, key: keyof UserData, row?: UserData): React.ReactNode => {
+    if (key === 'status_id') {
+      // Affichage du cadenas selon la sécurité du mot de passe
+      const password = row?.password;
+      const security = getPasswordSecurity(password);
+      if (security === 'secure') {
+        return (
+          <span style={{ color: 'green', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <LockIcon /> Sécurisé
+          </span>
+        );
+      }
+      if (security === 'insecure') {
+        return (
+          <span style={{ color: 'orange', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <UnlockIcon /> Peu sécurisé
+          </span>
+        );
+      }
+      return (
+        <span style={{ color: 'orange', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <UnlockIcon /> Aucun mot de passe
+        </span>
+      );
+    }
+
     if (value === undefined || value === null) return 'Non renseigné';
 
     // Formatage spécial pour les dates
@@ -248,7 +283,7 @@ export function EditableTable({
                     key={`cell-${row.id}-${String(col.dataKey)}`}
                     onClick={() => navigate(`/pages/utilisateurs/consulter/${row.id}`)}
                   >
-                    {formatValue(row[col.dataKey], col.dataKey)}
+                    {formatValue(row[col.dataKey], col.dataKey, row)}
                   </Td>
                 ))}
                 <Td isActionCell>
@@ -270,7 +305,6 @@ export function EditableTable({
                   >
                     <DropdownList>
                       <DropdownItem onClick={() => {
-                        console.log('editableTable - Utilisateur sélectionné pour suppression :', row);
                         if (row.id) {
                           setSelectedUserId(row.id); // Sauvegarde l'id dans le contexte
                           // Délègue la gestion de la modale au parent
@@ -278,7 +312,7 @@ export function EditableTable({
                             onRequestDelete(row); // Le parent ouvrira ModalConfirmation
                           }
                         } else {
-                          console.error('editableTable - L\'utilisateur sélectionné n\'a pas d\'ID.');
+                     
                         }
                       }}>
                         Supprimer
