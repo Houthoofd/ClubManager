@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
+const getAuthToken = () => {
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}'); // Retrieve user data from localStorage
+  return userData.token || ''; // Extract the token from userData
+};
+
 // Hook pour récupérer les abonnements
 export const useAbonnements = () => {
   return useQuery({
@@ -8,6 +13,7 @@ export const useAbonnements = () => {
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/abonnements'), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des abonnements');
       return response.json();
@@ -22,6 +28,7 @@ export const useGrades = () => {
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/grades'), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des grades');
       return response.json();
@@ -36,6 +43,7 @@ export const useStatus = () => {
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/status'), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des statuts');
       return response.json();
@@ -50,6 +58,7 @@ export const useGenres = () => {
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/genres'), {
         credentials: 'include',
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des genres');
       return response.json();
