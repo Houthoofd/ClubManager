@@ -54,8 +54,18 @@ const Compte = () => {
   const [password, setPassword] = useState('');
   const [showPasswordField, setShowPasswordField] = useState(false);
 
+   // Récupère prénom et nom depuis localStorage
+  React.useEffect(() => {
+    const storedData = localStorage.getItem('userData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      console.log('Données utilisateur récupérées du localStorage:', parsedData);
+      setUserData(parsedData); // Passez directement les données utilisateur
+    }
+  }, []);
+
   // Hooks React Query
-  const { data: compteInfo, isLoading: loadingCompte, error: errorCompte } = useCompteInfo(userData?.prenom, userData?.nom);
+  const { data: compteInfo, isLoading: loadingCompte, error: errorCompte } = useCompteInfo(userData?.first_name, userData?.last_name);
   const { data: statFrequentation, isLoading: loadingStats } = useFrequentationByUserId(userData?.id);
   const { data: paiementsEcheances = [] } = useEcheancesByUserId(userData?.id);
   const updateCompte = useUpdateCompte();
@@ -64,21 +74,26 @@ const Compte = () => {
   const statusQuery = useStatus();
   const genresQuery = useGenres();
 
-  // Récupère prénom et nom depuis localStorage
-  React.useEffect(() => {
-    const storedData = localStorage.getItem('userData');
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      setUserData(parsedData.data);
-    }
-  }, []);
-
   // Utilise le hook useCompteInfo avec prénom et nom
   React.useEffect(() => {
     if (compteInfo && !compteInfo.mot_de_passe) {
       setShowPasswordField(true);
     } else {
       setShowPasswordField(false);
+    }
+  }, [compteInfo]);
+
+  // Synchronise les données de compteInfo avec le formulaire
+  React.useEffect(() => {
+    if (compteInfo) {
+      setForm({
+        email: compteInfo.email || '',
+        date_naissance: formatDateForInput(compteInfo.date_naissance) || '',
+        genres: compteInfo.genres || '',
+        grades: compteInfo.grades || '',
+        abonnement: compteInfo.abonnement || '',
+        status: compteInfo.status || '',
+      });
     }
   }, [compteInfo]);
 

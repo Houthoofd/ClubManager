@@ -13,10 +13,11 @@ interface ModalConfirmationProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  message: string;
+  message?: string; // Rendre `message` optionnel car `children` peut être utilisé à la place
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'primary';
+  children?: React.ReactNode; // Ajoutez cette ligne pour permettre l'utilisation de `children`
 }
 
 interface ModalResultatProps {
@@ -35,8 +36,10 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
   message,
   confirmText = "Confirmer",
   cancelText = "Annuler",
-  variant = "primary"
+  variant = "primary",
+  children,
 }) => {
+
   return (
     <Modal
       variant={ModalVariant.small}
@@ -47,7 +50,7 @@ export const ModalConfirmation: React.FC<ModalConfirmationProps> = ({
     >
       <ModalHeader title={title} labelId="confirm-modal-title" />
       <ModalBody id="confirm-modal-body">
-        <span dangerouslySetInnerHTML={{ __html: message }} />
+        {children || <span dangerouslySetInnerHTML={{ __html: message || '' }} />} {/* Affiche les children si présents */}
       </ModalBody>
       <ModalFooter>
         <Button variant={variant} onClick={onConfirm}>

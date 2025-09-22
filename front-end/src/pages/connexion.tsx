@@ -10,7 +10,7 @@ import {
   PageSection,
   Bullseye,
 } from '@patternfly/react-core';
-import ModalWithHelp from '../components/common/modal/modalwithhelp'; // Importer ModalWithHelp
+import ModalWithHelp from '../components/common/modal/ModalWithHelp'; // Importer ModalWithHelp
 import { useConnexion } from '../hooks/useConnexion';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/slices/authSlice';

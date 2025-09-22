@@ -125,7 +125,7 @@ router.post('/ajouter', async (req, res) => {
         console.log(data);
         // Récupérer les utilisateurs associés à ce cours
         const result = await client.inscrireUtilisateur(data);
-        console.log('Professeur ajouté avec succès:', result);
+        console.log('utilisateur ajouté avec succès:', result);
         res.status(200).json(result);
     }
     catch (error) {
@@ -136,21 +136,28 @@ router.post('/ajouter', async (req, res) => {
 router.delete('/supprimer/:id', async (req, res) => {
     try {
         const utilisateurId = Number(req.params.id);
+        console.log(`[DELETE] Reçu pour suppression, id =`, utilisateurId);
         if (!utilisateurId || isNaN(utilisateurId)) {
+            console.log(`[DELETE] ID utilisateur invalide :`, req.params.id);
             return res.status(400).json({ isConfirm: false, message: "ID utilisateur invalide." });
         }
         const client = new Utilisateurs();
         // Vérifie si l'utilisateur existe avant suppression
         const utilisateurSimple = await client.obtenirUnUtilisateur(utilisateurId);
+        console.log(`[DELETE] Résultat de obtenirUnUtilisateur :`, utilisateurSimple);
         if (!utilisateurSimple.isFind || !utilisateurSimple.data || utilisateurSimple.data.length === 0) {
+            console.log(`[DELETE] Utilisateur introuvable pour id =`, utilisateurId);
             return res.status(404).json({ isConfirm: false, message: "Utilisateur introuvable." });
         }
         // Supprime l'utilisateur
         const result = await client.supprimerUtilisateur(utilisateurId);
+        console.log(`[DELETE] Résultat de supprimerUtilisateur :`, result);
         if (result.isConfirm) {
+            console.log(`[DELETE] Suppression réussie pour id =`, utilisateurId);
             res.status(200).json({ isConfirm: true, message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès.` });
         }
         else {
+            console.log(`[DELETE] La suppression a échoué pour id =`, utilisateurId);
             res.status(400).json({ isConfirm: false, message: "La suppression a échoué." });
         }
     }

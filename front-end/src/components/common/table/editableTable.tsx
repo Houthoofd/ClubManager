@@ -12,6 +12,7 @@ import {
 } from '@patternfly/react-core';
 import { SortAmountDownIcon, EllipsisVIcon, CubesIcon } from '@patternfly/react-icons';
 import { Modal as PfModal, ModalBody, ModalHeader, ModalFooter } from '@patternfly/react-core';
+import { useUserContext } from '../../../context/UserContext';
 
 interface UserData {
   id: number;
@@ -34,12 +35,15 @@ interface EditableTableProps {
   data: UserData[];
   columns?: Column[];
   onDelete?: (row: UserData) => void;
+  // Ajoute une prop pour déléguer la gestion de la modale au parent
+  onRequestDelete?: (row: UserData) => void;
 }
 
 export function EditableTable({
   data,
   columns: propColumns,
-  onDelete: propOnDelete
+  onDelete: propOnDelete,
+  onRequestDelete // nouvelle prop
 }: EditableTableProps) {
   // États
   const [rows, setRows] = useState<UserData[]>(data);
@@ -55,6 +59,7 @@ export function EditableTable({
   const [activeSortIndex, setActiveSortIndex] = useState<number | null>(null);
   const [activeSortDirection, setActiveSortDirection] = useState<'asc' | 'desc' | null>(null);
 
+  const { setSelectedUserId } = useUserContext();
   const navigate = useNavigate();
 
   // Colonnes par défaut qui correspondent exactement à la structure des données
@@ -70,7 +75,6 @@ export function EditableTable({
 
   // Mise à jour des données quand le prop change
   useEffect(() => {
-    console.log('Données reçues dans EditableTable:', data);
     setRows(data);
   }, [data]);
 
@@ -266,8 +270,16 @@ export function EditableTable({
                   >
                     <DropdownList>
                       <DropdownItem onClick={() => {
-                        setRowToDelete(row);
-                        setConfirmDeleteOpen(true);
+                        console.log('editableTable - Utilisateur sélectionné pour suppression :', row);
+                        if (row.id) {
+                          setSelectedUserId(row.id); // Sauvegarde l'id dans le contexte
+                          // Délègue la gestion de la modale au parent
+                          if (onRequestDelete) {
+                            onRequestDelete(row); // Le parent ouvrira ModalConfirmation
+                          }
+                        } else {
+                          console.error('editableTable - L\'utilisateur sélectionné n\'a pas d\'ID.');
+                        }
                       }}>
                         Supprimer
                       </DropdownItem>
@@ -295,59 +307,6 @@ export function EditableTable({
           ]}
         />
       </div>
-
-      {/* Modal de confirmation de suppression */}
-      <PfModal
-        variant="small"
-        isOpen={confirmDeleteOpen}
-        onClose={() => {
-          setConfirmDeleteOpen(false);
-          setRowToDelete(null);
-          setDeleteResult(null);
-        }}
-        aria-labelledby="confirm-delete-modal-title"
-        aria-describedby="confirm-delete-modal-body"
-      >
-        <ModalHeader title="Confirmer la suppression" />
-        <ModalBody id="confirm-delete-modal-body">
-          {rowToDelete && (
-            <span>
-              Êtes-vous sûr de vouloir supprimer l'utilisateur&nbsp;
-              <strong>{rowToDelete.first_name} {rowToDelete.last_name}</strong> ?
-            </span>
-          )}
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            variant="danger"
-            onClick={async () => {
-              if (rowToDelete) {
-                try {
-                  if (propOnDelete) {
-                    await propOnDelete(rowToDelete);
-                    setRows(rows.filter(r => r.id !== rowToDelete.id));
-                  }
-                  setConfirmDeleteOpen(false);
-                  setRowToDelete(null);
-                } catch (error) {
-                  console.error("Erreur lors de la suppression:", error);
-                }
-              }
-            }}
-          >
-            Supprimer
-          </Button>
-          <Button
-            variant="link"
-            onClick={() => {
-              setConfirmDeleteOpen(false);
-              setRowToDelete(null);
-            }}
-          >
-            Annuler
-          </Button>
-        </ModalFooter>
-      </PfModal>
     </>
   );
 }

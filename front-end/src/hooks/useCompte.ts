@@ -1,8 +1,9 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
 // Hook pour récupérer les informations utilisateur par prénom et nom
 export const useCompteInfo = (prenom: string | undefined, nom: string | undefined) => {
+  console.log('Récupération des informations du compte pour:', { prenom, nom });
   return useQuery({
     queryKey: ['compteInfo', prenom, nom],
     queryFn: async () => {
@@ -78,6 +79,8 @@ export const useStatus = () => {
 
 // Hook pour mettre à jour les informations utilisateur
 export const useUpdateCompte = () => {
+  const queryClient = useQueryClient(); // Initialisez le queryClient
+
   return useMutation({
     mutationFn: async (formData: any) => {
       const response = await fetch(apiUrl('utilisateurs/modifier'), {
@@ -91,6 +94,11 @@ export const useUpdateCompte = () => {
         throw new Error(error.message || 'Erreur lors de la mise à jour des informations utilisateur');
       }
       return response.json();
+    },
+    onSuccess: () => {
+      // Invalide les queries associées pour recharger les données
+      queryClient.invalidateQueries({ queryKey: ['compteInfo'] }); // Passez un objet avec queryKey
+      queryClient.invalidateQueries({ queryKey: ['echeancesByUserId'] }); // Passez un objet avec queryKey
     },
   });
 };

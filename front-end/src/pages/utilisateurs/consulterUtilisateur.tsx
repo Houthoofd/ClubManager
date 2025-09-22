@@ -8,6 +8,7 @@ import {
   Title,
   Spinner,
   Alert,
+  Button,
 } from '@patternfly/react-core';
 import { useUtilisateurById, useUpdateUtilisateur, checkEmailExists } from '../../hooks/useUtilisateurs';
 import { useFrequentationByUserId } from '../../hooks/useStatistiques';
@@ -17,6 +18,7 @@ import FormulaireUtilisateur from '../../components/utilisateurs/FormulaireUtili
 import EcheancesPaiement from '../../components/utilisateurs/EcheancesPaiement';
 import StatistiquesUtilisateur from '../../components/utilisateurs/StatistiquesUtilisateur';
 import ModalsUtilisateur from '../../components/common/modal/ModalsUtilisateur';
+import ModalsCompte from '../../components/compte/ModalsCompte'; // Import de la modal
 
 function formatDateForInput(isoDateString: string): string {
   const date = new Date(isoDateString);
@@ -37,6 +39,11 @@ const ConsulterUtilisateurPage = () => {
   const [modificationsResume, setModificationsResume] = useState<string[]>([]);
   const [emailCheckMessage, setEmailCheckMessage] = useState<string>('');
   const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [frequentationData, setFrequentationData] = useState<any[]>([]);
+  const [isFrequentationModalOpen, setIsFrequentationModalOpen] = useState(false);
+  const [frequentationModalMessage, setFrequentationModalMessage] = useState('');
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmModalMessage, setConfirmModalMessage] = useState('');
 
   // Hooks React Query
   const { data: userData, isLoading: loadingUser, error: userError } = useUtilisateurById(id);
@@ -123,57 +130,32 @@ const ConsulterUtilisateurPage = () => {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleValidateChanges = async () => {
+  // Fonction pour valider les changements
+  const handleValidateChanges = () => {
     if (!form.id) return;
 
     const modifications: string[] = [];
     const originalData = userData?.utilisateur;
 
     if (editingFields['email'] && form.email !== originalData?.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!form.email || !emailRegex.test(form.email)) {
-        setModalMessage("Veuillez entrer une adresse email valide.");
-        setModalSuccess(false);
-        setShowResultModal(true);
-        return;
-      }
-      
-      try {
-        const checkResult = await checkEmailExists(form.email, form.id);
-        if (checkResult.exists) {
-          setModalMessage("Cette adresse email est déjà utilisée par un autre utilisateur.");
-          setModalSuccess(false);
-          setShowResultModal(true);
-          return;
-        }
-      } catch (error) {
-        setModalMessage("Erreur lors de la vérification de l'email.");
-        setModalSuccess(false);
-        setShowResultModal(true);
-        return;
-      }
       modifications.push(`Email: "${originalData?.email}" → "${form.email}"`);
     }
-
     if (editingFields['date_naissance'] && form.date_naissance !== originalData?.date_of_birth) {
       modifications.push(`Date de naissance: "${originalData?.date_of_birth}" → "${form.date_naissance}"`);
     }
-
     if (editingFields['genres'] && form.genres !== String(originalData?.genres || '')) {
       modifications.push(`Genre: "${originalData?.genres || 'Non défini'}" → "${form.genres}"`);
     }
-
     if (editingFields['grades'] && form.grades !== String(originalData?.grades || '')) {
       modifications.push(`Grade: "${originalData?.grades || 'Non défini'}" → "${form.grades}"`);
     }
-
     if (editingFields['abonnement'] && form.abonnement !== String(originalData?.abonnement || '')) {
       modifications.push(`Abonnement: "${originalData?.abonnement || 'Non défini'}" → "${form.abonnement}"`);
     }
 
     if (modifications.length > 0) {
-      setModificationsResume(modifications);
-      setShowConfirmModal(true);
+      setConfirmModalMessage(modifications.join('\n'));
+      setIsConfirmModalOpen(true); // Ouvre la modal de confirmation
     } else {
       setModalMessage("Aucune modification détectée.");
       setModalSuccess(false);
@@ -181,10 +163,11 @@ const ConsulterUtilisateurPage = () => {
     }
   };
 
+  // Fonction pour confirmer les modifications
   const confirmerModifications = async () => {
     if (!form.id) return;
 
-    setShowConfirmModal(false);
+    setIsConfirmModalOpen(false); // Ferme la modal de confirmation
 
     const body = {
       id: form.id,
@@ -193,9 +176,9 @@ const ConsulterUtilisateurPage = () => {
       genres: form.genres,
       grades: form.grades,
       abonnement: form.abonnement,
-      status: form.status
+      status: form.status,
     };
-    
+
     try {
       const result = await updateUtilisateur.mutateAsync(body);
       setModalMessage(result.message || 'Modifications enregistrées avec succès !');
@@ -214,6 +197,32 @@ const ConsulterUtilisateurPage = () => {
     setModificationsResume([]);
   };
 
+  // Fonction pour récupérer les données de fréquentation
+  const fetchFrequentationData = async () => {
+    try {
+      const response = await fetch(`/api/frequentation/${id}`); // Remplacez par l'URL correcte de votre API
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des données de fréquentation');
+      }
+      const data = await response.json();
+      setFrequentationData(data);
+
+      // Construire le message pour la modal
+      const message = data
+        .map(
+          (item: any) =>
+            `Mois: ${item.mois}, Fréquentation: ${item.frequentation}, Total cours: ${item.nombres_total_de_cours_du_mois}, Pourcentage: ${item.pourcentage_de_cours_valides}%`
+        )
+        .join('\n');
+      setFrequentationModalMessage(message);
+      setIsFrequentationModalOpen(true); // Ouvre la modal après avoir récupéré les données
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données de fréquentation:', error);
+      setFrequentationModalMessage('Une erreur est survenue lors de la récupération des données.');
+      setIsFrequentationModalOpen(true);
+    }
+  };
+
   if (loadingUser) return <Spinner size="xl" />;
   if (userError) return <Alert variant="danger" title={(userError as Error).message || "Une erreur est survenue"} />;
 
@@ -226,7 +235,15 @@ const ConsulterUtilisateurPage = () => {
       <Title headingLevel="h1" style={{ marginBottom: '1rem' }}>
         {userName}
       </Title>
-      
+
+      <Button
+        variant="primary"
+        onClick={fetchFrequentationData}
+        style={{ marginBottom: '1rem' }}
+      >
+        Voir les statistiques de fréquentation
+      </Button>
+
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
         <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
           <FormulaireUtilisateur
@@ -268,10 +285,38 @@ const ConsulterUtilisateurPage = () => {
         modalMessage={modalMessage}
         onCloseResultModal={() => setShowResultModal(false)}
       />
+
+      {/* Modal pour afficher les données de fréquentation */}
+      <ModalsCompte
+        isModalOpen={isFrequentationModalOpen}
+        modalMessage={frequentationModalMessage}
+        onCloseModal={() => setIsFrequentationModalOpen(false)}
+      />
+
+      {/* Modal de confirmation des modifications */}
+      <ModalsCompte
+        isModalOpen={isConfirmModalOpen}
+        modalMessage={`Les modifications suivantes seront appliquées :\n\n${confirmModalMessage}`}
+        onCloseModal={() => setIsConfirmModalOpen(false)}
+      >
+        <Button
+          key="confirm"
+          variant="primary"
+          onClick={confirmerModifications}
+        >
+          Confirmer
+        </Button>
+        <Button
+          key="cancel"
+          variant="link"
+          onClick={() => setIsConfirmModalOpen(false)}
+        >
+          Annuler
+        </Button>
+      </ModalsCompte>
     </PageSection>
   );
 };
 
 
 export default ConsulterUtilisateurPage;
-                         

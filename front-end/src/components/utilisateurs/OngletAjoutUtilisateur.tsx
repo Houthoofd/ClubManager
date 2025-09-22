@@ -11,6 +11,7 @@ interface OngletAjoutUtilisateurProps {
   onChange: (value: string, key: string) => void;
   onSelectToggle: (key: string, isOpen: boolean) => void;
   onSubmit: (e: React.FormEvent) => Promise<any>;
+  DynamicFormComponent: React.ReactNode; // Ajoutez cette propriété
 }
 
 const OngletAjoutUtilisateur: React.FC<OngletAjoutUtilisateurProps> = ({
@@ -21,7 +22,8 @@ const OngletAjoutUtilisateur: React.FC<OngletAjoutUtilisateurProps> = ({
   dernierUtilisateur,
   onChange,
   onSelectToggle,
-  onSubmit
+  onSubmit,
+  DynamicFormComponent
 }) => {
   // Ajouter une vérification avant de rendre le formulaire
   if (!formData || Object.keys(formData).length === 0) {
@@ -56,6 +58,7 @@ const OngletAjoutUtilisateur: React.FC<OngletAjoutUtilisateurProps> = ({
             onSubmit={onSubmit}
             existenceMessages={existenceMessages}
           />
+          {DynamicFormComponent}
         </div>
       </div>
     </div>

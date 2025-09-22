@@ -107,6 +107,7 @@ export const useAjouterUtilisateur = () => {
       return response.json();
     },
     onSuccess: () => {
+      // Invalider les requêtes liées aux utilisateurs pour forcer leur rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
     }
   });
@@ -178,15 +179,23 @@ export const useDeleteUtilisateur = () => {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await fetch(apiUrl(`utilisateurs/${id}`), {
+      // Le log doit être ici pour voir l'id reçu à chaque appel
+      console.log('[useDeleteUtilisateur] Appel mutation avec id =', id);
+      const response = await fetch(apiUrl(`utilisateurs/supprimer/${id}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${getAuthToken()}` },
+        credentials: 'include',
       });
-      if (!response.ok) throw new Error('Erreur lors de la suppression de l\'utilisateur');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la suppression de l\'utilisateur');
+      }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] }); // Correction : Utilisation d'un objet avec queryKey
+    onSuccess: (_data, variables) => {
+      // Ajoute un log ici pour voir l'id passé à la mutation
+      console.log('[useDeleteUtilisateur] onSuccess - id passé à la mutation :', variables);
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
     },
   });
 };

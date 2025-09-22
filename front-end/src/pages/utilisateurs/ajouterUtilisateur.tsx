@@ -7,22 +7,44 @@ import {
   checkEmailExists,
   useUpdateUtilisateur,
   useDeleteUtilisateur,
+  useAjouterUtilisateur
 } from '../../hooks/useUtilisateurs';
 import { ModalConfirmation, ModalResultat } from '../../components/common/modal/ModalsGestion';
-import ModalWithHelp from '../../components/common/modal/modalwithhelp';
+import ModalWithHelp from '../../components/common/modal/ModalWithHelp';
 import OngletTableauUtilisateurs from '../../components/utilisateurs/OngletTableauUtilisateurs';
-import OngletAjoutUtilisateur from '../../components/utilisateurs/OngletAjoutUtilisateur';
+import FormulaireUtilisateurAjout from '../../components/utilisateurs/FormulaireUtilisateurAjout';
 import { PageHeader } from '../../components/common/PageHeader';
 import { TabContainer } from '../../components/common/TabContainer';
+import { useAbonnements, useGrades, useStatus, useGenres } from '../../hooks/useInformations';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUserContext } from '../../context/UserContext';
 
 const Utilisateur = () => {
-  // États pour la gestion des onglets et des données
+  const { selectedUser, setSelectedUser, selectedUserId, setSelectedUserId } = useUserContext();
+
+  // Ajoutez cet effet pour surveiller les changements de selectedUserId
+  useEffect(() => {
+
+  }, [selectedUserId]);
+
+  // ========== États ==========
   const [activeTabKey, setActiveTabKey] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [utilisateur, setUtilisateur] = useState<UserData | undefined>(undefined);
-  const [formData, setFormData] = useState<Partial<UserData>>({});
-  const [existenceMessages, setExistenceMessages] = useState<Record<string, string>>({});
-  const [selectOpenStates, setSelectOpenStates] = useState<Record<string, boolean>>({});
+  const [formData, setFormData] = useState({
+    prenom: '',
+    nom: '',
+    nom_utilisateur: '',
+    email: '',
+    date_naissance: '',
+    genres: '',
+    grades: '',
+    abonnement: '',
+    grade: '',
+    statut: '',
+  });
+  const [errors, setErrors] = useState({
+    email: '',
+  });
   const [selectOptions, setSelectOptions] = useState<Record<string, any[]>>({});
   const [userSchema, setUserSchema] = useState<Record<string, string> | null>(null);
 
@@ -39,15 +61,31 @@ const Utilisateur = () => {
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [resultModalMessage, setResultModalMessage] = useState('');
   const [resultModalLoading, setResultModalLoading] = useState(false);
+  const [showConfirmAddModal, setShowConfirmAddModal] = useState(false);
 
-  // Hooks React Query
+  // État pour la modal d'utilisateur existant
+  const [existingUserModalOpen, setExistingUserModalOpen] = useState(false);
+  const [existingUserMessage, setExistingUserMessage] = useState('');
+
+  // ========== Hooks ==========
   const { data: utilisateursData = [], isLoading: isLoadingUtilisateurs } = useUtilisateurs();
   const updateUtilisateur = useUpdateUtilisateur();
   const deleteUtilisateur = useDeleteUtilisateur();
+  const ajouterUtilisateur = useAjouterUtilisateur();
+  const { data: abonnements = [] } = useAbonnements();
+  const { data: grades = [] } = useGrades();
+  const { data: statuts = [] } = useStatus();
+  const { data: genres = [] } = useGenres();
+  const queryClient = useQueryClient();
 
-  console.log(utilisateursData)
+  // ========== Fonctions de validation ==========
+  const validateEmail = (email: string): boolean => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isValid = re.test(email);
+    return isValid;
+  };
 
-  // Initialisation du schéma et des options de sélection
+  // ========== Initialisation ==========
   useEffect(() => {
     if (utilisateursData.length > 0 && !userSchema) {
       setUserSchema({
@@ -56,86 +94,189 @@ const Utilisateur = () => {
         email: 'string',
         status: 'string',
       });
-
-      // Exemple : Initialisation des options pour les selects (à adapter selon vos besoins)
       const statusOptions = [...new Set(utilisateursData.map((user: UserData) => user.status))];
       setSelectOptions({
-        status: statusOptions.map(status => ({ value: status, label: status })),
+        status: statusOptions.map(status => ({
+          id: status?.toString() || '',
+          label: status?.toString() || 'Statut invalide',
+        })),
+        abonnements: abonnements.map(a => ({
+          id: a.id?.toString() || '',
+          label: a.nom_plan && a.prix && a.periode
+            ? `${a.nom_plan} (${a.prix}€/${a.periode})`
+            : 'Abonnement invalide',
+        })),
+        grades: grades.map(g => ({
+          id: g.id?.toString() || '',
+          label: g.grade_id?.toString() || 'Grade invalide',
+        })),
+        statuts: statuts.map(s => ({
+          id: s.id?.toString() || '',
+          label: s.nom_role || 'Statut invalide',
+        })),
+        genres: genres.map(g => ({
+          id: g.id?.toString() || '',
+          label: g.genre_name || 'Genre invalide',
+        })),
       });
     }
-  }, [utilisateursData, userSchema]);
+  }, [utilisateursData, userSchema, abonnements, grades, statuts, genres]);
 
-  // Gestion des changements dans le formulaire
-  const handleChange = async (value: string, key: string) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+  // ========== Gestion des changements ==========
+  const handleChange = (value: string, key: string) => {
+    setFormData(prev => {
+      const updatedFormData = {
+        ...prev,
+        [key]: value,
+      };
+      if (key === 'prenom' || key === 'nom') {
+        updatedFormData.nom_utilisateur = `${updatedFormData.prenom.toLowerCase()}.${updatedFormData.nom.toLowerCase()}`;
+      }
+      return updatedFormData;
+    });
 
-    // Vérification d'existence pour les champs critiques
-    if (['first_name', 'last_name', 'email', 'nom_utilisateur'].includes(key)) {
-      try {
-        const result = await checkEmailExists(value);
-        setExistenceMessages(prev => ({
+    if (key === 'email') {
+      setErrors(prev => ({
+        ...prev,
+        email: value && !validateEmail(value) ? "Format d'email invalide" : ""
+      }));
+    }
+    if (key === 'date_naissance') {
+      const today = new Date().toISOString().split('T')[0];
+      if (value > today) {
+        setErrors(prev => ({
           ...prev,
-          [key]: result.exists ? `Ce ${key} existe déjà : ${value}` : '',
+          date_naissance: "La date de naissance ne peut pas être dans le futur"
         }));
-      } catch (error) {
-        setExistenceMessages(prev => ({
+      } else {
+        setErrors(prev => ({
           ...prev,
-          [key]: 'Erreur de vérification.',
+          date_naissance: ""
         }));
       }
     }
   };
 
-  // Gestion de l'ouverture/fermeture des selects
-  const handleSelectToggle = (key: string, isOpen: boolean) => {
-    setSelectOpenStates(prev => ({ ...prev, [key]: isOpen }));
+  const handleDateNaissanceChange = (value: string) => {
+    handleChange(value, 'date_naissance');
   };
 
-  // Soumission du formulaire
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setConfirmModalVariant('confirmation');
-    setConfirmModalTitle('Confirmer la création de l\'utilisateur');
-    setConfirmModalError(null);
-    setConfirmModalSuccess('');
-    setConfirmModalOpen(true);
+  // ========== Vérification de l'email avant confirmation ==========
+  const checkEmailBeforeConfirm = async () => {
+    if (!validateEmail(formData.email)) {
+      setErrors({ email: "Format d'email invalide", date_naissance: '' });
+      return false;
+    }
+    if (formData.email) {
+      try {
+        const emailExists = await checkEmailExists(formData.email);
+        if (emailExists.exists) {
+          setExistingUserMessage(`Un utilisateur avec l'adresse email "${formData.email}" existe déjà.`);
+          setExistingUserModalOpen(true);
+          return false;
+        }
+      } catch (error) {
+        console.error("Erreur lors de la vérification de l'email:", error);
+        setConfirmModalVariant('error');
+        setConfirmModalTitle('Erreur de validation');
+        setConfirmModalError('Une erreur est survenue lors de la vérification de l\'email.');
+        setConfirmModalOpen(true);
+        return false;
+      }
+    }
+    return true;
   };
 
-  // Confirmation de l'ajout d'un utilisateur
-  const confirmAddUser = async () => {
+  // ========== Gestion des modales ==========
+  const openConfirmAddModal = async () => {
+    const canProceed = await checkEmailBeforeConfirm();
+    if (canProceed) {
+      setShowConfirmAddModal(true);
+    }
+  };
+
+  const closeConfirmAddModal = () => {
+    setShowConfirmAddModal(false);
+  };
+
+  const openDeleteModal = (user: UserData) => {
+    setSelectedUser(user);
+    if (user.id) {
+      setSelectedUserId(user.id);
+    } else {
+    }
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmDeleteUtilisateur = async () => {
+    if (!selectedUserId) {
+      console.error('Aucun ID utilisateur sélectionné pour suppression.');
+      return;
+    }
+    setResultModalLoading(true);
+    setResultModalMessage('Suppression en cours...');
+    setResultModalOpen(true);
+    try {
+      const result = await deleteUtilisateur.mutateAsync(selectedUserId);
+      setResultModalMessage(result.message || 'Suppression réussie');
+      // Invalide la liste des utilisateurs pour la mettre à jour
+      await queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+    } catch (error) {
+      setResultModalMessage('Erreur lors de la suppression. Veuillez réessayer.');
+    } finally {
+      setResultModalLoading(false);
+      setConfirmDeleteOpen(false);
+      setSelectedUser(null);
+      setSelectedUserId(null);
+    }
+  };
+
+  const confirmAddUtilisateur = async () => {
+    setShowConfirmAddModal(false);
     setConfirmModalVariant('loading');
     setConfirmModalTitle('Création en cours...');
-
+    setConfirmModalError(null);
+    setConfirmModalSuccess('');
     try {
-      // Vérification de l'email
-      if (formData.email) {
-        const isEmailUnique = await checkEmailExists(formData.email);
-        if (isEmailUnique.exists) {
-          setConfirmModalVariant('error');
-          setConfirmModalTitle('Erreur de validation');
-          setConfirmModalError('Cet email est déjà utilisé par un autre utilisateur.');
-          return;
-        }
-      }
-
-      // Création de l'utilisateur
-      await updateUtilisateur.mutateAsync(formData as UserData);
+      const userData: UserData = {
+        first_name: formData.prenom,
+        last_name: formData.nom,
+        nom_utilisateur: formData.nom_utilisateur,
+        email: formData.email,
+        date_of_birth: formData.date_naissance,
+        genres: formData.genres,
+        grades: formData.grade,
+        abonnement: formData.abonnement,
+        status: formData.statut,
+      };
+      await ajouterUtilisateur.mutateAsync(userData);
       setConfirmModalVariant('success');
-      setConfirmModalTitle('Utilisateur créé avec succès !');
-      setConfirmModalSuccess('L\'utilisateur a été ajouté au système et peut maintenant se connecter.');
-
-      // Réinitialisation du formulaire
-      setFormData({});
-      setExistenceMessages({});
-    } catch (error) {
+      setConfirmModalTitle('Notification');
+      setConfirmModalSuccess('<p>Utilisateur créé avec succès</p>');
+      setFormData({
+        prenom: '',
+        nom: '',
+        nom_utilisateur: '',
+        email: '',
+        date_naissance: '',
+        genres: '',
+        grades: '',
+        abonnement: '',
+        grade: '',
+        statut: '',
+      });
+      setErrors({ email: '' });
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+    } catch (error: any) {
       setConfirmModalVariant('error');
       setConfirmModalTitle('Erreur système');
-      setConfirmModalError('Une erreur technique est survenue. Veuillez réessayer.');
+      setConfirmModalError(error.message || 'Une erreur technique est survenue. Veuillez réessayer.');
       console.error('Erreur lors de l\'ajout:', error);
+    } finally {
+      setConfirmModalOpen(true);
     }
   };
 
-  // Fermeture de la modale de confirmation
   const closeConfirmModal = () => {
     setConfirmModalOpen(false);
     setConfirmModalVariant('confirmation');
@@ -144,42 +285,27 @@ const Utilisateur = () => {
     setConfirmModalSuccess('');
   };
 
-  // Ouverture de la modale de suppression
-  const openDeleteModal = (user: UserData) => {
-    setUtilisateurToDelete(user);
-    setConfirmDeleteOpen(true);
+  const closeExistingUserModal = () => {
+    setExistingUserModalOpen(false);
+    setExistingUserMessage('');
   };
 
-  // Confirmation de la suppression
-  const confirmDeleteUtilisateur = async () => {
-    if (!utilisateurToDelete) return;
-
-    setResultModalLoading(true);
-    setResultModalMessage('Suppression en cours...');
-    setResultModalOpen(true);
-
-    try {
-      await deleteUtilisateur.mutateAsync(utilisateurToDelete.id);
-      setResultModalMessage('Utilisateur supprimé avec succès !');
-    } catch (error) {
-      setResultModalMessage('Erreur lors de la suppression. Veuillez réessayer.');
-      console.error('Erreur lors de la suppression:', error);
-    } finally {
-      setResultModalLoading(false);
-      setConfirmDeleteOpen(false);
-      setUtilisateurToDelete(null);
-    }
-  };
-
-  // Colonnes du tableau
+  // ========== Colonnes et onglets ==========
   const columns = [
-    { key: 'first_name', label: 'Prénom' },
-    { key: 'last_name', label: 'Nom' },
-    { key: 'email', label: 'Email' },
-    { key: 'status', label: 'Statut' },
+    { key: 'first_name', label: 'Prénom', ariaLabel: 'Prénom' },
+    { key: 'last_name', label: 'Nom', ariaLabel: 'Nom' },
+    { key: 'email', label: 'Email', ariaLabel: 'Adresse email' },
+    { key: 'status', label: 'Statut', ariaLabel: 'Statut de l\'utilisateur' },
   ];
 
-  // Onglets
+  // Remplace le callback onDeleteUser pour qu'il ne fasse que sauvegarder l'utilisateur et son id dans le contexte,
+  // puis ouvre la modale de confirmation. La suppression réelle doit être déclenchée par la modale.
+  const onDeleteUser = (user: UserData) => {
+    setSelectedUser(user);
+    setSelectedUserId(user.id);
+    setConfirmDeleteOpen(true); // Ouvre ModalConfirmation pour demander la confirmation
+  };
+
   const tabs = [
     {
       key: 0,
@@ -192,47 +318,47 @@ const Utilisateur = () => {
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           isLoading={isLoadingUtilisateurs}
-          onDeleteUser={openDeleteModal}
+          onRequestDelete={onDeleteUser} // Passe la prop au tableau
         />
-      ),
+      )
     },
     {
       key: 1,
       title: 'Ajouter un utilisateur',
       icon: <UserIcon />,
-      content: Object.keys(formData).length > 0 ? (
-        <>
-          <OngletAjoutUtilisateur
-            formData={formData}
-            selectOptions={selectOptions}
-            selectOpenStates={selectOpenStates}
-            existenceMessages={existenceMessages}
-            dernierUtilisateur={utilisateur}
-            onChange={handleChange}
-            onSelectToggle={handleSelectToggle}
-            onSubmit={handleSubmit}
-          />
-          <ModalWithHelp
-            title="Ajout d'utilisateur"
-            isOpen={confirmModalOpen}
-            onClose={closeConfirmModal}
-            variant={confirmModalVariant}
-            context="ajout"
-            data={formData}
-            successMessage={confirmModalSuccess}
-            errorMessage={confirmModalError}
-            size="medium"
-            onConfirm={confirmAddUser}
-          />
-        </>
-      ) : (
-        <div className="loading-container">
-          <p>Chargement du formulaire...</p>
-        </div>
-      ),
-    },
+      content: (
+        <FormulaireUtilisateurAjout
+          prenom={formData.prenom}
+          nom={formData.nom}
+          email={formData.email}
+          dateNaissance={formData.date_naissance}
+          genre={formData.genres}
+          abonnement={formData.abonnement}
+          grade={formData.grade}
+          statut={formData.statut}
+          abonnements={selectOptions.abonnements || []}
+          grades={selectOptions.grades || []}
+          statuts={selectOptions.statuts || []}
+          genres={selectOptions.genres || []}
+          onPrenomChange={(value) => handleChange(value, 'prenom')}
+          onNomChange={(value) => handleChange(value, 'nom')}
+          onEmailChange={(value) => handleChange(value, 'email')}
+          onDateNaissanceChange={handleDateNaissanceChange}
+          onGenreChange={(value) => handleChange(value, 'genres')}
+          onAbonnementChange={(value) => handleChange(value, 'abonnement')}
+          onGradeChange={(value) => handleChange(value, 'grade')}
+          onStatutChange={(value) => handleChange(value, 'statut')}
+          onSubmit={(e) => {
+            e.preventDefault();
+            openConfirmAddModal();
+          }}
+          emailError={errors.email}
+        />
+      )
+    }
   ];
 
+  // ========== Render ==========
   return (
     <div className="users-page">
       <PageHeader
@@ -240,9 +366,61 @@ const Utilisateur = () => {
         subtitle="Ajoutez de nouveaux utilisateurs et consultez la liste existante"
         variant="users"
       />
+
+
       <PageSection className="users-content">
         <TabContainer
-          tabs={tabs}
+          tabs={[
+            {
+              key: 0,
+              title: 'Consulter les utilisateurs',
+              icon: <TableIcon />,
+              content: (
+                <OngletTableauUtilisateurs
+                  utilisateurs={utilisateursData}
+                  columns={columns}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  isLoading={isLoadingUtilisateurs}
+                  onDeleteUser={onDeleteUser}
+                />
+              )
+            },
+            {
+              key: 1,
+              title: 'Ajouter un utilisateur',
+              icon: <UserIcon />,
+              content: (
+                <FormulaireUtilisateurAjout
+                  prenom={formData.prenom}
+                  nom={formData.nom}
+                  email={formData.email}
+                  dateNaissance={formData.date_naissance}
+                  genre={formData.genres}
+                  abonnement={formData.abonnement}
+                  grade={formData.grade}
+                  statut={formData.statut}
+                  abonnements={selectOptions.abonnements || []}
+                  grades={selectOptions.grades || []}
+                  statuts={selectOptions.statuts || []}
+                  genres={selectOptions.genres || []}
+                  onPrenomChange={(value) => handleChange(value, 'prenom')}
+                  onNomChange={(value) => handleChange(value, 'nom')}
+                  onEmailChange={(value) => handleChange(value, 'email')}
+                  onDateNaissanceChange={handleDateNaissanceChange}
+                  onGenreChange={(value) => handleChange(value, 'genres')}
+                  onAbonnementChange={(value) => handleChange(value, 'abonnement')}
+                  onGradeChange={(value) => handleChange(value, 'grade')}
+                  onStatutChange={(value) => handleChange(value, 'statut')}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    openConfirmAddModal();
+                  }}
+                  emailError={errors.email}
+                />
+              )
+            }
+          ]}
           activeKey={activeTabKey}
           onTabSelect={setActiveTabKey}
           variant="modern"
@@ -252,26 +430,89 @@ const Utilisateur = () => {
       {/* Modale de confirmation de suppression */}
       <ModalConfirmation
         isOpen={confirmDeleteOpen}
-        onClose={() => setConfirmDeleteOpen(false)}
-        onConfirm={confirmDeleteUtilisateur}
+        onClose={() => {
+          setConfirmDeleteOpen(false);
+        }}
+        onConfirm={() => {
+          confirmDeleteUtilisateur(); // Effectue la suppression si confirmé
+        }}
         title="Confirmer la suppression"
         message={
-          utilisateurToDelete
-            ? `Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>${utilisateurToDelete.first_name} ${utilisateurToDelete.last_name}</strong> ?`
+          selectedUser
+            ? `Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>${selectedUser.first_name} ${selectedUser.last_name}</strong> ?`
             : ''
         }
         confirmText="Supprimer"
         variant="danger"
       />
 
-      {/* Modale de résultat (succès/erreur) */}
+      {/* Modale de résultat */}
       <ModalResultat
         isOpen={resultModalOpen}
         onClose={() => setResultModalOpen(false)}
         title="Information"
-        message={resultModalMessage}
+        message={resultModalMessage} // Affiche le message de succès ou d'erreur
         isLoading={resultModalLoading}
       />
+
+      {/* Modal de confirmation d'ajout */}
+      <ModalConfirmation
+        title="Confirmer l'ajout de l'utilisateur"
+        isOpen={showConfirmAddModal}
+        onClose={closeConfirmAddModal}
+        onConfirm={confirmAddUtilisateur}
+        confirmText="Oui, ajouter"
+        variant="primary"
+        isDisabled={!!errors.email}
+      >
+        <div>
+          <p>Êtes-vous sûr de vouloir ajouter cet utilisateur avec les informations suivantes ?</p>
+          <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
+            <li><strong>Prénom :</strong> {formData.prenom}</li>
+            <li><strong>Nom :</strong> {formData.nom}</li>
+            <li><strong>Email :</strong> {formData.email}</li>
+            <li><strong>Date de naissance :</strong> {formData.date_naissance}</li>
+            <li><strong>Genre :</strong> {selectOptions.genres?.find(g => g.id === formData.genres)?.label || ''}</li>
+            <li><strong>Abonnement :</strong> {selectOptions.abonnements?.find(a => a.id === formData.abonnement)?.label || ''}</li>
+            <li><strong>Grade :</strong> {selectOptions.grades?.find(g => g.id === formData.grade)?.label || ''}</li>
+            <li><strong>Statut :</strong> {selectOptions.statuts?.find(s => s.id === formData.statut)?.label || ''}</li>
+          </ul>
+          {errors.email && <p style={{ color: 'red' }}>{errors.email}</p>}
+        </div>
+      </ModalConfirmation>
+
+      {/* Modal pour utilisateur existant */}
+      <ModalConfirmation
+        isOpen={existingUserModalOpen}
+        onClose={closeExistingUserModal}
+        title="Notification"
+        confirmText="OK"
+        variant="danger"
+        showCancelButton={false}
+      >
+        <div style={{ textAlign: 'center', padding: '1rem' }}>
+          <p style={{ fontSize: '1rem', fontWeight: 'normal', color: 'red' }}>
+            {existingUserMessage}
+          </p>
+        </div>
+      </ModalConfirmation>
+
+      {/* Modal de confirmation générale */}
+      <ModalConfirmation
+        title={confirmModalTitle}
+        isOpen={confirmModalOpen}
+        onClose={closeConfirmModal}
+        confirmText="OK"
+        variant={confirmModalVariant}
+        showCancelButton={false}
+      >
+        {confirmModalVariant === 'success' && (
+          <div dangerouslySetInnerHTML={{ __html: confirmModalSuccess }} />
+        )}
+        {confirmModalVariant === 'error' && (
+          <p style={{ color: 'red' }}>{confirmModalError}</p>
+        )}
+      </ModalConfirmation>
     </div>
   );
 };

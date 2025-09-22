@@ -283,24 +283,29 @@ export class Utilisateurs {
   }
 
   obtenirUnUtilisateur(id?: number): Promise<VerifyResultWithData> {
+    console.log(`[obtenirUnUtilisateur] Appel avec id =`, id);
     return new Promise<VerifyResultWithData>((resolve, reject) => {
       if (!id) {
+        console.error(`[obtenirUnUtilisateur] L'identifiant est requis pour récupérer un utilisateur.`);
         reject(new Error("L'identifiant est requis pour récupérer un utilisateur."));
         return;
       }
 
       const sql = 'SELECT * FROM utilisateurs WHERE id = ?';
       const values = [id];
+      console.log(`[obtenirUnUtilisateur] Requête SQL :`, sql, 'Paramètres :', values);
 
       this.mysqlConnector.query(sql, values, (error, results) => {
         if (error) {
-          console.error("Erreur lors de la récupération de l'utilisateur :", error.message);
+          console.error("[obtenirUnUtilisateur] Erreur lors de la récupération de l'utilisateur :", error.message);
           reject(error);
           return;
         }
 
+        console.log(`[obtenirUnUtilisateur] Résultat brut :`, results);
+
         if (results.length > 0) {
-          console.log('Utilisateur trouvé avec succès.');
+          console.log('[obtenirUnUtilisateur] Utilisateur trouvé avec succès.');
 
           const utilisateur: UserData[] = results.map((result: any) => ({
             id: result.id,
@@ -315,13 +320,15 @@ export class Utilisateurs {
             abonnement_id: result.abonnement_id
           }));
 
+          console.log('[obtenirUnUtilisateur] Utilisateur formaté :', utilisateur);
+
           resolve({
             isFind: true,
             message: "Utilisateur trouvé",
             data: utilisateur
           });
         } else {
-          console.log('Aucun utilisateur trouvé.');
+          console.log('[obtenirUnUtilisateur] Aucun utilisateur trouvé.');
           resolve({
             isFind: false,
             message: "Aucun utilisateur trouvé",
@@ -334,11 +341,13 @@ export class Utilisateurs {
 
   supprimerUtilisateur(utilisateurId: number): Promise<ConfirmationResult> {
     const deleteSql = `DELETE FROM utilisateurs WHERE id = ?`;
+    console.log(`[supprimerUtilisateur] Requête SQL :`, deleteSql, 'Paramètres :', utilisateurId);
 
     return new Promise<ConfirmationResult>((resolve, reject) => {
       this.mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
+        console.log(`[supprimerUtilisateur] Résultat brut :`, result);
         if (error) {
-          console.error('Erreur lors de la suppression de l\'utilisateur :', error.message);
+          console.error('[supprimerUtilisateur] Erreur lors de la suppression de l\'utilisateur :', error.message);
           resolve({
             isConfirm: false,
             message: `Erreur lors de la suppression de l'utilisateur : ${error.message}`
@@ -347,13 +356,13 @@ export class Utilisateurs {
         }
 
         if (result.affectedRows > 0) {
-          console.log(`Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
+          console.log(`[supprimerUtilisateur] Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
           resolve({
             isConfirm: true,
             message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès`
           });
         } else {
-          console.log(`Aucun utilisateur supprimé pour l'ID ${utilisateurId}`);
+          console.log(`[supprimerUtilisateur] Aucun utilisateur supprimé pour l'ID ${utilisateurId}`);
           resolve({
             isConfirm: false,
             message: `Aucun utilisateur supprimé pour l'ID ${utilisateurId}`
@@ -678,12 +687,12 @@ export class Utilisateurs {
         } else if (results.affectedRows === 0) {
           resolve({
             isConfirm: false,
-            message: 'Utilisateur non trouvé'
+            message: "Aucune modification apportée, vérifiez les données."
           });
         } else {
           resolve({
             isConfirm: true,
-            message: 'Utilisateur modifié avec succès'
+            message: "Utilisateur modifié avec succès."
           });
         }
       });
