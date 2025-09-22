@@ -1,24 +1,56 @@
 import express from 'express';
-import { verifyToken } from '../middleware/auth.js'; // Suppression de requireRole
+import { verifyToken } from '../middleware/auth.js';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import { z } from 'zod';
-import { UserData, userSchema, userDataLoginSchema, VerifyResultWithData, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
+import { UserData, utilisateurInscriptionSchema, userDataLoginSchema, VerifyResultWithData, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
+import bcrypt from 'bcrypt';
 
 const router = express.Router();
 
-router.use(verifyToken);
+// Route d'inscription d'un utilisateur (publique)
+router.post('/inscription', async (req, res) => {
+  try {
+    // Validation des données reçues avec Zod
+    const validatedData = utilisateurInscriptionSchema.parse(req.body);
 
-// Fonction pour convertir une chaîne de caractères en nombre
-function convertToNumber(value: string | null | undefined): number {
-  console.log(value);
-  if (value === null || value === undefined) {
-    return 0;
+    console.log("Données validées :", validatedData);
+
+    const client = new Utilisateurs();
+    
+    // Vérification si l'utilisateur existe déjà
+    const verifUtilisateur = await client.verifierUtilisateur(validatedData);
+    
+    if (verifUtilisateur.isFind === false) {
+      // Hash du mot de passe avant l'insertion
+      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+      const userToInsert = { ...validatedData, password: hashedPassword };
+
+      // L'utilisateur n'existe pas, on peut l'inscrire
+      const result = await client.inscrireUtilisateur(userToInsert);
+      
+      if (result.affectedRows > 0) {
+        res.status(201).json({ message: 'Utilisateur inscrit avec succès.', userId: result.insertId });
+      } else {
+        res.status(400).json({ message: 'Échec de l\'inscription de l\'utilisateur.' });
+      }
+    } else {
+      // L'utilisateur existe déjà
+      res.status(400).json({ message: 'Utilisateur déjà inscrit.' });
+    }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      // Gestion des erreurs de validation
+      res.status(400).json({ message: 'Données invalides.', errors: error.errors });
+    } else {
+      // Gestion des autres erreurs serveur
+      console.error("Erreur lors de l'inscription de l'utilisateur :", error);
+      res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
+    }
   }
+});
 
-  const convertedValue = Number(value);
-  return isNaN(convertedValue) ? 0 : convertedValue;
-}
-
+// Middleware d'authentification pour toutes les autres routes
+router.use(verifyToken);
 
 // Route de vérification de l'existence d'un utilisateur
 router.post('/connexion', async (req, res) => {
@@ -44,44 +76,6 @@ router.post('/connexion', async (req, res) => {
 });
 
 
-
-// Route d'inscription d'un utilisateur
-router.post('/inscription', async (req, res) => {
-  try {
-    // Validation des données reçues avec Zod
-    const validatedData = userSchema.parse(req.body);
-
-    console.log("Données validées :", validatedData);
-
-    const client = new Utilisateurs();
-    
-    // Vérification si l'utilisateur existe déjà
-    const verifUtilisateur = await client.verifierUtilisateur(validatedData);
-    
-    if (verifUtilisateur.isFind === false) {
-      // L'utilisateur n'existe pas, on peut l'inscrire
-      const result = await client.inscrireUtilisateur(validatedData);
-      
-      if (result.affectedRows > 0) {
-        res.status(201).json({ message: 'Utilisateur inscrit avec succès.', userId: result.insertId });
-      } else {
-        res.status(400).json({ message: 'Échec de l\'inscription de l\'utilisateur.' });
-      }
-    } else {
-      // L'utilisateur existe déjà
-      res.status(400).json({ message: 'Utilisateur déjà inscrit.' });
-    }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      // Gestion des erreurs de validation
-      res.status(400).json({ message: 'Données invalides.', errors: error.errors });
-    } else {
-      // Gestion des autres erreurs serveur
-      console.error("Erreur lors de l'inscription de l'utilisateur :", error);
-      res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
-    }
-  }
-});
 
 router.get('/', async (req: any, res: any) => { // Removed requireRole
   try {

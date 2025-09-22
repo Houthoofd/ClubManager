@@ -1,52 +1,25 @@
 import express from 'express';
-import { verifyToken } from '../middleware/auth.js'; // Suppression de requireRole
+import { verifyToken } from '../middleware/auth.js';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import { z } from 'zod';
-import { userSchema, userDataLoginSchema, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
+import { utilisateurInscriptionSchema, userDataLoginSchema, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
+import bcrypt from 'bcrypt';
 const router = express.Router();
-router.use(verifyToken);
-// Fonction pour convertir une chaîne de caractères en nombre
-function convertToNumber(value) {
-    console.log(value);
-    if (value === null || value === undefined) {
-        return 0;
-    }
-    const convertedValue = Number(value);
-    return isNaN(convertedValue) ? 0 : convertedValue;
-}
-// Route de vérification de l'existence d'un utilisateur
-router.post('/connexion', async (req, res) => {
-    try {
-        // Validate incoming data with Zod
-        const validatedData = userDataLoginSchema.parse(req.body);
-        console.log("Données validées :", validatedData);
-        const client = new Utilisateurs();
-        // Check if the user exists
-        const result = await client.validerConnexion(validatedData);
-        if (result.isFind) {
-            res.status(200).json({ message: result.message, data: result.dataToStore });
-        }
-        else {
-            res.status(404).json({ message: result.message });
-        }
-    }
-    catch (error) {
-        console.error('Erreur lors de la vérification de l\'utilisateur :', error);
-        res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'utilisateur.' });
-    }
-});
-// Route d'inscription d'un utilisateur
+// Route d'inscription d'un utilisateur (publique)
 router.post('/inscription', async (req, res) => {
     try {
         // Validation des données reçues avec Zod
-        const validatedData = userSchema.parse(req.body);
+        const validatedData = utilisateurInscriptionSchema.parse(req.body);
         console.log("Données validées :", validatedData);
         const client = new Utilisateurs();
         // Vérification si l'utilisateur existe déjà
         const verifUtilisateur = await client.verifierUtilisateur(validatedData);
         if (verifUtilisateur.isFind === false) {
+            // Hash du mot de passe avant l'insertion
+            const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+            const userToInsert = { ...validatedData, password: hashedPassword };
             // L'utilisateur n'existe pas, on peut l'inscrire
-            const result = await client.inscrireUtilisateur(validatedData);
+            const result = await client.inscrireUtilisateur(userToInsert);
             if (result.affectedRows > 0) {
                 res.status(201).json({ message: 'Utilisateur inscrit avec succès.', userId: result.insertId });
             }
@@ -69,6 +42,29 @@ router.post('/inscription', async (req, res) => {
             console.error("Erreur lors de l'inscription de l'utilisateur :", error);
             res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
         }
+    }
+});
+// Middleware d'authentification pour toutes les autres routes
+router.use(verifyToken);
+// Route de vérification de l'existence d'un utilisateur
+router.post('/connexion', async (req, res) => {
+    try {
+        // Validate incoming data with Zod
+        const validatedData = userDataLoginSchema.parse(req.body);
+        console.log("Données validées :", validatedData);
+        const client = new Utilisateurs();
+        // Check if the user exists
+        const result = await client.validerConnexion(validatedData);
+        if (result.isFind) {
+            res.status(200).json({ message: result.message, data: result.dataToStore });
+        }
+        else {
+            res.status(404).json({ message: result.message });
+        }
+    }
+    catch (error) {
+        console.error('Erreur lors de la vérification de l\'utilisateur :', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'utilisateur.' });
     }
 });
 router.get('/', async (req, res) => {

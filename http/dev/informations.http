@@ -3,6 +3,18 @@
 # Récupérer les informations générales du club
 GET http://localhost:3000/informations
 
+# Récupérer les informations générales du club
+GET http://localhost:3000/informations/grades
+
+# Récupérer les informations générales du club
+GET http://localhost:3000/informations/status
+
+# Récupérer les informations générales du club
+GET http://localhost:3000/informations/genres
+
+# Récupérer les informations générales du club
+GET http://localhost:3000/informations
+
 ### Récupérer le planning des cours
 GET http://localhost:3000/informations/planning
 

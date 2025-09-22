@@ -65,6 +65,59 @@ router.post('/login', async (req: any, res: any) => {
       });
     }
 
+    // Si le mot de passe en base est "password123" (mot de passe par défaut non hashé)
+    if (user[0].password === 'password123') {
+      if (password === 'password123') {
+        // Connexion acceptée pour le mot de passe par défaut
+        const token = generateToken({
+          id: user[0].id,
+          email: user[0].email,
+          status_id: user[0].status_id
+        });
+
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+          domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost',
+          maxAge: 24 * 60 * 60 * 1000
+        });
+
+        return res.json({
+          success: true,
+          message: 'Connexion réussie (mot de passe par défaut)',
+          data: {
+            user: {
+              id: user[0].id,
+              first_name: user[0].first_name,
+              last_name: user[0].last_name,
+              nom_utilisateur: user[0].nom_utilisateur || '',
+              email: user[0].email,
+              status: user[0].status,
+              genres: user[0].genres,
+              grades: user[0].grades,
+              abonnement: user[0].abonnement,
+              date_of_birth: user[0].date_of_birth
+            },
+            token
+          }
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Email ou mot de passe incorrect'
+        });
+      }
+    }
+
+    // Sinon, vérifie le hash bcrypt
+    if (!user[0].password || typeof user[0].password !== 'string' || user[0].password.trim() === '') {
+      return res.status(401).json({
+        success: false,
+        message: 'Email ou mot de passe incorrect'
+      });
+    }
+
     const isValidPassword = await bcrypt.compare(password, user[0].password);
 
     if (!isValidPassword) {
@@ -82,13 +135,12 @@ router.post('/login', async (req: any, res: any) => {
 
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Utiliser HTTPS uniquement en production
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Politique SameSite stricte en production
-      domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost', // Définir le domaine dynamiquement
-      maxAge: 24 * 60 * 60 * 1000 // 1 jour
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost',
+      maxAge: 24 * 60 * 60 * 1000
     });
 
-    // Ajoutez les informations utilisateur nécessaires dans la réponse
     res.json({
       success: true,
       message: 'Connexion réussie',

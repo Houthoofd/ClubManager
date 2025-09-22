@@ -142,14 +142,29 @@ export const useVerifierUtilisateur = () => {
   });
 };
 
-// Hook pour inscrire un utilisateur (deuxième - pour l'inscription générale)
+// Nouveau type pour le payload d'inscription utilisateur (front-end)
+export type UtilisateurInscriptionPayload = {
+  prenom: string;
+  nom: string;
+  nom_utilisateur: string;
+  email: string;
+  password: string;
+  genre_id: number;
+  abonnement_id: number;
+  date_naissance: string;
+  date_inscription: string;
+  status_id: number;
+  grade_id: number;
+};
+
+// Hook pour inscrire un utilisateur (inscription générale, typé proprement)
 export const useInscrireUtilisateur = () => {
   return useMutation({
-    mutationFn: async (formData: any) => {
-      const response = await fetch(apiUrl('inscription/validation'), {
+    mutationFn: async (payload: UtilisateurInscriptionPayload) => {
+      const response = await fetch(apiUrl('utilisateurs/inscription'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
         credentials: 'include',
       });
       if (!response.ok) {

@@ -7,8 +7,6 @@ import bcrypt from 'bcrypt';
 
 const router = express.Router();
 
-// Routes protégées pour la gestion
-router.use(verifyToken);
 
 router.post('/verification', async (req: any, res: any) => {
   const { email } = req.body;

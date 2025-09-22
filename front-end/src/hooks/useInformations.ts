@@ -1,10 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
-const getAuthToken = () => {
-  const userData = JSON.parse(localStorage.getItem('userData') || '{}'); // Retrieve user data from localStorage
-  return userData.token || ''; // Extract the token from userData
-};
 
 // Hook pour récupérer les abonnements
 export const useAbonnements = () => {
@@ -12,8 +8,8 @@ export const useAbonnements = () => {
     queryKey: ['abonnements'],
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/abonnements'), {
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${getAuthToken()}` },
+        // credentials: 'omit' pour accès public
+        credentials: 'omit',
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des abonnements');
       return response.json();
@@ -27,8 +23,7 @@ export const useGrades = () => {
     queryKey: ['grades'],
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/grades'), {
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${getAuthToken()}` },
+        credentials: 'omit',
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des grades');
       return response.json();
@@ -42,8 +37,7 @@ export const useStatus = () => {
     queryKey: ['status'],
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/status'), {
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${getAuthToken()}` },
+        credentials: 'omit',
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des statuts');
       return response.json();
@@ -57,8 +51,7 @@ export const useGenres = () => {
     queryKey: ['genres'],
     queryFn: async () => {
       const response = await fetch(apiUrl('informations/genres'), {
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${getAuthToken()}` },
+        credentials: 'omit',
       });
       if (!response.ok) throw new Error('Erreur lors du chargement des genres');
       return response.json();

@@ -63,3 +63,31 @@ export const userDataAjoutSchema = z.object({
     abonnement: z.preprocess(val => typeof val === "string" ? parseInt(val, 10) : val, z.number().positive("L'abonnement est requis")),
     status: z.preprocess(val => typeof val === "string" ? parseInt(val, 10) : val, z.number().positive("Le statut est requis")),
 });
+// Schéma Zod pour valider UtilisateurInscriptionPayload
+export const utilisateurInscriptionSchema = z.object({
+    prenom: z.string().min(1, "Le prénom est requis"),
+    nom: z.string().min(1, "Le nom est requis"),
+    nom_utilisateur: z.string().min(1, "Le nom d'utilisateur est requis"),
+    email: z.string().email("L'email est invalide"),
+    password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+    genre_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("Le genre ID doit être un nombre positif")),
+    abonnement_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("L'abonnement ID doit être un nombre positif")),
+    date_naissance: z.preprocess(val => {
+        if (val === undefined)
+            return new Date().toISOString().split('T')[0];
+        if (typeof val === "string" && !isNaN(Date.parse(val))) {
+            return new Date(val).toISOString().split('T')[0];
+        }
+        return val;
+    }, z.string().refine((val) => !isNaN(Date.parse(val)), "La date de naissance est invalide")),
+    date_inscription: z.preprocess(val => {
+        if (val === undefined)
+            return new Date().toISOString().split('T')[0];
+        if (typeof val === "string" && !isNaN(Date.parse(val))) {
+            return new Date(val).toISOString().split('T')[0];
+        }
+        return val;
+    }, z.string().refine((val) => !isNaN(Date.parse(val)), "La date d'inscription est invalide")),
+    status_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("Le status ID doit être un nombre positif")),
+    grade_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("Le grade ID doit être un nombre positif")),
+});

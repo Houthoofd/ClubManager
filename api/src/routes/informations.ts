@@ -4,9 +4,6 @@ import { Informations } from '../db/clients/informations/informations.js';
 
 const router = express.Router();
 
-// Routes protégées pour la gestion
-router.use(verifyToken);
-
 
 router.get('/grades', async (req:any, res:any) => {
   try {

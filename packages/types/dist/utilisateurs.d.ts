@@ -77,6 +77,19 @@ export type UserDataAjout = {
     abonnement: number;
     status: number;
 };
+export type UtilisateurInscriptionPayload = {
+    prenom: string;
+    nom: string;
+    nom_utilisateur: string;
+    email: string;
+    password: string;
+    genre_id: number;
+    abonnement_id: number;
+    date_naissance: string;
+    date_inscription: string;
+    status_id: number;
+    grade_id: number;
+};
 export declare const abonnementSchema: z.ZodObject<{
     id: z.ZodNumber;
     nom_plan: z.ZodString;
@@ -209,5 +222,42 @@ export declare const userDataAjoutSchema: z.ZodObject<{
     date_of_birth?: unknown;
     genres?: unknown;
     grades?: unknown;
+}>;
+export declare const utilisateurInscriptionSchema: z.ZodObject<{
+    prenom: z.ZodString;
+    nom: z.ZodString;
+    nom_utilisateur: z.ZodString;
+    email: z.ZodString;
+    password: z.ZodString;
+    genre_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    abonnement_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    date_naissance: z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, unknown>;
+    date_inscription: z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, unknown>;
+    status_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    grade_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+}, "strip", z.ZodTypeAny, {
+    grade_id: number;
+    email: string;
+    password: string;
+    prenom: string;
+    nom: string;
+    nom_utilisateur: string;
+    genre_id: number;
+    date_naissance: string;
+    status_id: number;
+    abonnement_id: number;
+    date_inscription: string;
+}, {
+    email: string;
+    password: string;
+    prenom: string;
+    nom: string;
+    nom_utilisateur: string;
+    grade_id?: unknown;
+    genre_id?: unknown;
+    date_naissance?: unknown;
+    status_id?: unknown;
+    abonnement_id?: unknown;
+    date_inscription?: unknown;
 }>;
 //# sourceMappingURL=utilisateurs.d.ts.map

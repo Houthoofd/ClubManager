@@ -30,7 +30,7 @@ export const InscriptionPage: React.FC = () => {
     nom: '',
     email: '',
     password: '',
-    date: '',
+    date_naissance: '', // Remplace 'date' par 'date_naissance'
     abonnement: '',
     genre: ''
   });
@@ -46,6 +46,8 @@ export const InscriptionPage: React.FC = () => {
   const verifierUtilisateur = useVerifierUtilisateur();
   const inscrireUtilisateur = useInscrireUtilisateur();
 
+  console.log(abonnementOptions, genreOptions);
+
   const handleChange = (value: string, name: string) => {
     setForm({ ...form, [name]: value });
   };
@@ -55,8 +57,15 @@ export const InscriptionPage: React.FC = () => {
     setError('');
     setSuccess(false);
 
+    // Ajout du nom_utilisateur avant validation
+    const nom_utilisateur = `${form.prenom.toLowerCase()}.${form.nom.toLowerCase()}`;
+    const formWithUsername = { ...form, nom_utilisateur };
+
     // Validation avec Zod
-    const result = userInscriptionSchema.safeParse(form);
+    const result = userInscriptionSchema.safeParse({
+      ...formWithUsername,
+      date: form.date_naissance // Pour compatibilité avec le schéma existant
+    });
     if (!result.success) {
       setError(result.error.errors[0]?.message || "Données invalides.");
       return;
@@ -87,7 +96,7 @@ export const InscriptionPage: React.FC = () => {
       setError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
-    if (!form.date) {
+    if (!form.date_naissance) {
       setError("La date d'inscription est obligatoire.");
       return;
     }
@@ -99,8 +108,8 @@ export const InscriptionPage: React.FC = () => {
     try {
       // Vérifie si l'utilisateur existe déjà
       await verifierUtilisateur.mutateAsync(form.email);
-      // Affiche la fenêtre de récapitulatif
       setShowRecap(true);
+      setForm(formWithUsername); // Met à jour le form avec nom_utilisateur pour la suite
     } catch (err: any) {
       setError(err.message);
     }
@@ -115,12 +124,26 @@ export const InscriptionPage: React.FC = () => {
     setModalMessage(null);
 
     try {
-      // Inscription
-      await inscrireUtilisateur.mutateAsync(form);
+      // Prépare le payload complet pour le backend
+      const dataToSend = {
+        prenom: form.prenom,
+        nom: form.nom,
+        nom_utilisateur: form.nom_utilisateur,
+        email: form.email,
+        password: form.password,
+        genre_id: typeof form.genre === 'string' ? Number(form.genre) : form.genre,
+        abonnement_id: typeof form.abonnement === 'string' ? Number(form.abonnement) : form.abonnement,
+        date_naissance: form.date_naissance,
+        date_inscription: new Date().toISOString().split('T')[0],
+        status_id: 1,
+        grade_id: 1,
+      };
+      console.log('[Inscription] Données envoyées au backend :', dataToSend);
+      await inscrireUtilisateur.mutateAsync(dataToSend);
       setModalMessage("Inscription réussie !");
       setSuccess(true);
       setShowRecap(false);
-      setShowSuccessModal(true); // Affiche la modal de succès
+      setShowSuccessModal(true);
     } catch (err: any) {
       setModalMessage(err.message || "Erreur lors de l'inscription.");
     }
@@ -170,14 +193,14 @@ export const InscriptionPage: React.FC = () => {
             onChange={e => handleChange(e.currentTarget.value, 'password')}
           />
         </FormGroup>
-        <FormGroup label="Date d'inscription" isRequired fieldId="date">
+        <FormGroup label="Date de naissance" isRequired fieldId="date_naissance">
           <TextInput
             isRequired
             type="date"
-            id="date"
-            name="date"
-            value={form.date}
-            onChange={e => handleChange(e.currentTarget.value, 'date')}
+            id="date_naissance"
+            name="date_naissance"
+            value={form.date_naissance}
+            onChange={e => handleChange(e.currentTarget.value, 'date_naissance')}
           />
         </FormGroup>
         <FormGroup label="Type d'abonnement" isRequired fieldId="abonnement">
@@ -189,9 +212,9 @@ export const InscriptionPage: React.FC = () => {
             <FormSelectOption value="" label="Sélectionner un abonnement" isDisabled />
             {abonnementOptions.map(option => (
               <FormSelectOption
-                key={option.value}
-                value={option.value}
-                label={option.label}
+                key={option.id}
+                value={option.id}
+                label={`${option.nom_plan} - ${option.description}`}
               />
             ))}
           </FormSelect>
@@ -205,9 +228,9 @@ export const InscriptionPage: React.FC = () => {
             <FormSelectOption value="" label="Sélectionner un genre" isDisabled />
             {genreOptions.map(option => (
               <FormSelectOption
-                key={option.value}
-                value={option.value}
-                label={option.label}
+                key={option.id}
+                value={option.id}
+                label={option.genre_name}
               />
             ))}
           </FormSelect>
@@ -228,7 +251,7 @@ export const InscriptionPage: React.FC = () => {
           <p><strong>Nom :</strong> {form.nom}</p>
           <p><strong>Email :</strong> {form.email}</p>
           <p><strong>Genre :</strong> {form.genre}</p>
-          <p><strong>Date d'inscription :</strong> {form.date}</p>
+          <p><strong>Date de naissance :</strong> {form.date_naissance}</p>
           <p><strong>Type d'abonnement :</strong> {form.abonnement}</p>
           {modalMessage && (
             <Alert
