@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Tabs,
   Tab,
@@ -6,6 +6,8 @@ import {
   PageSection,
   Spinner,
   Alert,
+  FormSelect,
+  FormSelectOption
 } from '@patternfly/react-core';
 import { useParams } from 'react-router-dom';
 import { PageHeader } from '../components/common/PageHeader';
@@ -36,12 +38,13 @@ function formatDateForInput(isoDateString: string): string {
 }
 
 const Compte = () => {
+  // 1. États initiaux
   const { id } = useParams<{ id: string }>();
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [editingFields, setEditingFields] = useState<{ [key: string]: boolean }>({});
   const [pendingChanges, setPendingChanges] = useState<{ [key: string]: string }>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMessage, setModalMessage] = useState<string>('');
+  const [modalMessage, setModalMessage] = useState('');
   const [form, setForm] = useState({
     email: '',
     date_naissance: '',
@@ -53,38 +56,51 @@ const Compte = () => {
   const [userData, setUserData] = useState<any | null>(null);
   const [password, setPassword] = useState('');
   const [showPasswordField, setShowPasswordField] = useState(false);
+  const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
+  const [isLocalStorageChecked, setIsLocalStorageChecked] = useState(false);
 
-   // Récupère prénom et nom depuis localStorage
-  React.useEffect(() => {
+  // 2. Récupération des données utilisateur depuis localStorage
+  useEffect(() => {
     const storedData = localStorage.getItem('userData');
     if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      console.log('Données utilisateur récupérées du localStorage:', parsedData);
-      setUserData(parsedData); // Passez directement les données utilisateur
+      try {
+        const parsedData = JSON.parse(storedData);
+        setUserData(parsedData);
+        setIsUserDataLoaded(true);
+      } catch (error) {
+        console.error('Erreur lors du parsing des données utilisateur:', error);
+      }
     }
+    setIsLocalStorageChecked(true);
   }, []);
 
-  // Hooks React Query
-  const { data: compteInfo, isLoading: loadingCompte, error: errorCompte } = useCompteInfo(userData?.first_name, userData?.last_name);
-  const { data: statFrequentation, isLoading: loadingStats } = useFrequentationByUserId(userData?.id);
-  const { data: paiementsEcheances = [] } = useEcheancesByUserId(userData?.id);
+  // Les hooks doivent être appelés à chaque render, même si userData n'est pas prêt
+  const { data: compteInfo, isLoading: loadingCompte, error: errorCompte } = useCompteInfo(
+    isUserDataLoaded ? userData?.first_name : null,
+    isUserDataLoaded ? userData?.last_name : null
+  );
+  const { data: statFrequentation, isLoading: loadingStats } = useFrequentationByUserId(
+    isUserDataLoaded ? userData?.id : null
+  );
+  const { data: paiementsEcheances = [] } = useEcheancesByUserId(
+    isUserDataLoaded ? userData?.id : null
+  );
   const updateCompte = useUpdateCompte();
-  const abonnementsQuery = useAbonnements();
-  const gradesQuery = useGrades();
-  const statusQuery = useStatus();
-  const genresQuery = useGenres();
+  const { data: abonnements = [] } = useAbonnements();
+  const { data: grades = [] } = useGrades();
+  const { data: status = [] } = useStatus();
+  const { data: genres = [] } = useGenres();
 
-  // Utilise le hook useCompteInfo avec prénom et nom
-  React.useEffect(() => {
+  // 4. Effets secondaires - appelés uniquement quand les données nécessaires sont disponibles
+  useEffect(() => {
     if (compteInfo && !compteInfo.mot_de_passe) {
       setShowPasswordField(true);
-    } else {
+    } else if (compteInfo) {
       setShowPasswordField(false);
     }
   }, [compteInfo]);
 
-  // Synchronise les données de compteInfo avec le formulaire
-  React.useEffect(() => {
+  useEffect(() => {
     if (compteInfo) {
       setForm({
         email: compteInfo.email || '',
@@ -97,6 +113,9 @@ const Compte = () => {
     }
   }, [compteInfo]);
 
+  console.log('Statistiques:', statFrequentation, 'Utilisateur:', userData?.first_name, userData?.last_name, 'Compte:', compteInfo);
+
+  // 6. Gestionnaires d'événements
   const handleTabClick = (_event: React.MouseEvent<HTMLElement, MouseEvent>, eventKey: string | number) => {
     setActiveTabKey(Number(eventKey));
   };
@@ -132,17 +151,17 @@ const Compte = () => {
     if (showPasswordField && password) {
       changes['mot_de_passe'] = password;
     }
-    setPendingChanges(changes);
-    
+
     const changesList = Object.entries(changes)
       .map(([key, value]) => `• ${key}: ${value}`)
       .join('\n');
-    
+
     setModalMessage(
       Object.keys(changes).length > 0
         ? `Les modifications suivantes seront appliquées :\n\n${changesList}`
         : 'Aucun changement détecté.'
     );
+
     setIsModalOpen(true);
 
     if (Object.keys(changes).length > 0) {
@@ -150,41 +169,7 @@ const Compte = () => {
     }
   };
 
-  if (loadingCompte) {
-    return (
-      <div className="compte-page">
-        <PageHeader
-          title="Mon compte"
-          subtitle="Gérez vos informations personnelles et préférences"
-          variant="compte"
-        />
-        <PageSection className="compte-content">
-          <div className="loading-container">
-            <Spinner size="xl" />
-            <p>Chargement des informations...</p>
-          </div>
-        </PageSection>
-      </div>
-    );
-  }
-
-  if (errorCompte) {
-    return (
-      <div className="compte-page">
-        <PageHeader
-          title="Mon compte"
-          subtitle="Gérez vos informations personnelles et préférences"
-          variant="compte"
-        />
-        <PageSection className="compte-content">
-          <Alert variant="danger" title="Erreur de chargement" isInline>
-            {errorCompte.message}
-          </Alert>
-        </PageSection>
-      </div>
-    );
-  }
-
+  // 5. Déclaration des tabs - après toutes les déclarations de données et gestionnaires
   const tabs = [
     {
       key: 0,
@@ -197,10 +182,10 @@ const Compte = () => {
           password={password}
           showPasswordField={showPasswordField}
           editingFields={editingFields}
-          abonnements={abonnementsQuery.data || []}
-          grades={gradesQuery.data || []}
-          status={statusQuery.data || []}
-          genres={genresQuery.data || []}
+          abonnements={abonnements}
+          grades={grades}
+          status={status}
+          genres={genres}
           onEditClick={handleEditClick}
           onEmailChange={handleEmailChange}
           onFormChange={handleFormChange}
@@ -216,10 +201,12 @@ const Compte = () => {
       title: 'Statistiques',
       icon: <ChartLineIcon />,
       content: (
-        <StatistiquesUtilisateur
-          statFrequentation={statFrequentation}
-          isLoading={loadingStats}
-        />
+        !statFrequentation
+          ? <Spinner size="lg" />
+          : <StatistiquesUtilisateur
+              statFrequentation={statFrequentation}
+              isLoading={loadingStats}
+            />
       )
     },
     {
@@ -232,23 +219,41 @@ const Compte = () => {
     }
   ];
 
-  return (
+  // 7. Fonctions de rendu
+  const renderLoading = () => (
     <div className="compte-page">
       <PageHeader
         title="Mon compte"
         subtitle="Gérez vos informations personnelles et préférences"
         variant="compte"
       />
-
       <PageSection className="compte-content">
+        <div className="loading-container">
+          <Spinner size="xl" />
+          <p>Chargement des informations...</p>
+        </div>
+      </PageSection>
+    </div>
+  );
+
+  const renderError = () => (
+    <div className="compte-page">
+      <PageHeader
+        title="Mon compte"
+        subtitle="Gérez vos informations personnelles et préférences"
+        variant="compte"
+      />
+      <PageSection className="compte-content">
+        <Alert variant="danger" title="Erreur de chargement" isInline>
+          {errorCompte?.message}
+        </Alert>
         <TabContainer
           tabs={tabs}
           activeKey={activeTabKey}
-          onTabSelect={setActiveTabKey}
+          onTabSelect={handleTabClick}
           variant="modern"
         />
       </PageSection>
-
       <ModalsCompte
         isModalOpen={isModalOpen}
         modalMessage={modalMessage}
@@ -256,6 +261,58 @@ const Compte = () => {
       />
     </div>
   );
+
+  const renderMainContent = () => (
+    <div className="compte-page">
+      <PageHeader
+        title="Mon compte"
+        subtitle="Gérez vos informations personnelles et préférences"
+        variant="compte"
+      />
+      <PageSection className="compte-content">
+        <TabContainer
+          tabs={tabs}
+          activeKey={activeTabKey}
+          onTabSelect={handleTabClick}
+          variant="modern"
+        />
+      </PageSection>
+      <ModalsCompte
+        isModalOpen={isModalOpen}
+        modalMessage={modalMessage}
+        onCloseModal={() => setIsModalOpen(false)}
+      />
+    </div>
+  );
+
+  // 8. Logique de rendu conditionnel
+  if (loadingCompte && !compteInfo) {
+    return renderLoading();
+  }
+
+  if (errorCompte && !(compteInfo && userData)) {
+    return renderError();
+  }
+
+  // Ajout : attendre que les données principales soient chargées avant de rendre la page
+  if (!compteInfo || !userData) {
+    return (
+      <div className="compte-page">
+        <PageHeader
+          title="Mon compte"
+          subtitle="Gérez vos informations personnelles et préférences"
+          variant="compte"
+        />
+        <PageSection className="compte-content">
+          <Spinner size="xl" />
+          <p>Chargement des informations du compte...</p>
+        </PageSection>
+      </div>
+    );
+  }
+
+  return renderMainContent();
 };
+
 
 export default Compte;

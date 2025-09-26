@@ -18,7 +18,6 @@ export class Statistiques {
           (SELECT COUNT(*) FROM inscriptions i JOIN cours c ON i.cours_id = c.id WHERE c.date_cours >= CURDATE()) as total_inscriptions,
           (SELECT COUNT(*) FROM professeurs WHERE status_id = 5) as total_professeurs
       `;
-
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des statistiques générales :', error);
@@ -43,7 +42,6 @@ export class Statistiques {
         GROUP BY c.type_cours
         ORDER BY nombre_inscriptions DESC
       `;
-
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des statistiques par cours :', error);
@@ -69,7 +67,6 @@ export class Statistiques {
         GROUP BY DATE(c.date_cours), c.type_cours
         ORDER BY date_cours DESC
       `;
-
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des statistiques de présence :', error);
@@ -85,6 +82,7 @@ export class Statistiques {
    * Obtient les statistiques de fréquentation pour un utilisateur spécifique
    */
   async obtenirStatistiquesFrequentation(utilisateurId: number): Promise<any> {
+    console.log('[Statistiques] obtenirStatistiquesFrequentation - utilisateurId:', utilisateurId);
     return new Promise((resolve, reject) => {
       const query = `
         WITH
@@ -127,12 +125,13 @@ export class Statistiques {
         LEFT JOIN presences_par_mois p ON c.annee = p.annee AND c.mois_num = p.mois_num
         ORDER BY c.annee, c.mois_num;
       `;
-
+      console.log('[Statistiques] Query:', query);
       this.mysqlConnector.query(query, [utilisateurId, utilisateurId], (error, results) => {
         if (error) {
-          console.error('Erreur lors de la récupération des statistiques de fréquentation :', error);
+          console.error('[Statistiques] Erreur SQL:', error);
           reject(error);
         } else {
+          console.log('[Statistiques] Résultats SQL:', results);
           resolve(results);
         }
       });
@@ -156,7 +155,6 @@ export class Statistiques {
         JOIN inscriptions i ON c.id = i.cours_id AND i.utilisateur_id = ? AND i.status_id = 1
         GROUP BY c.id, c.type_cours, c.cours_recurrent_id
       `;
-
       this.mysqlConnector.query(sql, [utilisateurId], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération de la progression :', error);
@@ -209,7 +207,6 @@ export class Statistiques {
         GROUP BY u.last_name, u.first_name, mois, c.type_cours
         ORDER BY u.last_name, u.first_name, mois, c.type_cours;
       `;
-
       this.mysqlConnector.query(query, [userId], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des présences par mois :', error);
@@ -252,7 +249,6 @@ export class Statistiques {
         GROUP BY u.last_name, u.first_name, mois, c.type_cours
         ORDER BY u.last_name, u.first_name, mois, c.type_cours;
       `;
-
       this.mysqlConnector.query(query, [userId], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des présences non validées :', error);
@@ -281,7 +277,6 @@ export class Statistiques {
         GROUP BY MONTH(c.date_cours), MONTHNAME(c.date_cours)
         ORDER BY mois
       `;
-
       this.mysqlConnector.query(query, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des statistiques de présence par mois :', error);
@@ -299,7 +294,6 @@ export class Statistiques {
   async getNombreMembres(): Promise<number> {
     return new Promise((resolve, reject) => {
       const sql = `SELECT COUNT(*) AS count FROM utilisateurs WHERE status_id IN (1,2,3,4,5)`;
-      
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération du nombre de membres :', error);
@@ -323,7 +317,6 @@ export class Statistiques {
           AND YEAR(date_paiement) = YEAR(CURRENT_DATE())
           AND statut = 'confirmé'
       `;
-
       this.mysqlConnector.query(sql, [], (error: mysql.MysqlError | null, results: any[]) => {
         if (error) {
           console.error('Erreur lors de la récupération du total des paiements :', error.message);
@@ -346,7 +339,6 @@ export class Statistiques {
         WHERE date_paiement >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
           AND statut = 'confirmé'
       `;
-
       this.mysqlConnector.query(sql, [], (error: mysql.MysqlError | null, results: any[]) => {
         if (error) {
           console.error('Erreur lors de la récupération des paiements récents :', error.message);
@@ -368,7 +360,6 @@ export class Statistiques {
         FROM paiements
         WHERE statut = 'en attente'
       `;
-
       this.mysqlConnector.query(sql, [], (error: mysql.MysqlError | null, results: any[]) => {
         if (error) {
           console.error('Erreur lors de la récupération des paiements en attente :', error.message);
@@ -500,7 +491,6 @@ export class Statistiques {
         WHERE ep.date_echeance < CURRENT_DATE()
           AND ep.statut = 'en_attente'
       `;
-
       this.mysqlConnector.query(sql, [], (error: mysql.MysqlError | null, results: any[]) => {
         if (error) {
           console.error('Erreur lors de la récupération des paiements échus :', error.message);
@@ -545,7 +535,6 @@ export class Statistiques {
         ORDER BY total_presences_validees DESC
         LIMIT 5
       `;
-
       this.mysqlConnector.query(sql, [], (error: mysql.MysqlError | null, results: any[]) => {
         if (error) {
           console.error('Erreur lors de la récupération des membres les plus assidus :', error.message);
@@ -664,7 +653,6 @@ export class Statistiques {
           AND YEAR(date_cours) = YEAR(CURRENT_DATE())
           AND date_cours >= CURRENT_DATE()
       `;
-
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des cours de la semaine :', error);
@@ -688,7 +676,6 @@ export class Statistiques {
         GROUP BY DATE(i.date_inscription)
         ORDER BY date_inscription ASC
       `;
-
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération de l\'évolution des inscriptions :', error);

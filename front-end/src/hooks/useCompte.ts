@@ -3,7 +3,6 @@ import { apiUrl } from '../pages/apiUrl';
 
 // Hook pour récupérer les informations utilisateur par prénom et nom
 export const useCompteInfo = (prenom: string | undefined, nom: string | undefined) => {
-  console.log('Récupération des informations du compte pour:', { prenom, nom });
   return useQuery({
     queryKey: ['compteInfo', prenom, nom],
     queryFn: async () => {

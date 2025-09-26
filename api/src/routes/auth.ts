@@ -215,9 +215,19 @@ router.get('/test', (req, res) => {
 
 // Status
 router.get('/status', verifyToken, async (req: any, res: any) => {
+  console.log('[AUTH] /status route called, user:', req.user);
+  if (!req.user || !req.user.id) {
+    console.log('[AUTH] /status - utilisateur non authentifié ou token absent');
+    return res.status(401).json({ authentifie: false, user: null });
+  }
   try {
     const userId = req.user.id;
-    const [user]: User[] = await queryAsync(
+    console.log('[AUTH] /status - userId:', userId, 'token:', req.cookies?.token);
+
+    // Ajoute un log pour vérifier la requête SQL et le paramètre
+    console.log('[AUTH] /status - requête SQL utilisateur id:', userId);
+
+    const users: User[] = await queryAsync(
       `SELECT 
           u.id,
           u.first_name,
@@ -231,19 +241,23 @@ router.get('/status', verifyToken, async (req: any, res: any) => {
           u.date_of_birth
         FROM 
           utilisateurs u
-        JOIN 
+        LEFT JOIN 
           genres g ON u.genre_id = g.id  
-        JOIN 
+        LEFT JOIN 
           status s ON u.status_id = s.id  
-        JOIN 
+        LEFT JOIN 
           grades gr ON u.grade_id = gr.id  
-        JOIN 
+        LEFT JOIN 
           plans_tarifaires a ON u.abonnement_id = a.id  
         WHERE 
           u.id = ?`,
       [userId]
     );
+    console.log('[AUTH] /status - résultat SQL:', users);
+
+    const user = users && users.length > 0 ? users[0] : null;
     if (!user) {
+      console.log('[AUTH] /status - utilisateur non trouvé, retour 401');
       return res.status(401).json({ authentifie: false, user: null });
     }
     res.json({
@@ -251,6 +265,7 @@ router.get('/status', verifyToken, async (req: any, res: any) => {
       user
     });
   } catch (error) {
+    console.log('[AUTH] /status - erreur serveur', error);
     res.status(500).json({ authentifie: false, user: null });
   }
 });

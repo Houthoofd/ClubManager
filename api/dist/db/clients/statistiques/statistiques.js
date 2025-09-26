@@ -77,6 +77,7 @@ export class Statistiques {
      * Obtient les statistiques de fréquentation pour un utilisateur spécifique
      */
     async obtenirStatistiquesFrequentation(utilisateurId) {
+        console.log('[Statistiques] obtenirStatistiquesFrequentation - utilisateurId:', utilisateurId);
         return new Promise((resolve, reject) => {
             const query = `
         WITH
@@ -119,12 +120,14 @@ export class Statistiques {
         LEFT JOIN presences_par_mois p ON c.annee = p.annee AND c.mois_num = p.mois_num
         ORDER BY c.annee, c.mois_num;
       `;
+            console.log('[Statistiques] Query:', query);
             this.mysqlConnector.query(query, [utilisateurId, utilisateurId], (error, results) => {
                 if (error) {
-                    console.error('Erreur lors de la récupération des statistiques de fréquentation :', error);
+                    console.error('[Statistiques] Erreur SQL:', error);
                     reject(error);
                 }
                 else {
+                    console.log('[Statistiques] Résultats SQL:', results);
                     resolve(results);
                 }
             });

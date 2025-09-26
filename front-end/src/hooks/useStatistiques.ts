@@ -6,6 +6,9 @@ export const useFrequentationByUserId = (userId: string) => {
   return useQuery({
     queryKey: ['frequentation', userId],
     queryFn: async () => {
+      if (!userId || isNaN(Number(userId))) {
+        throw new Error('ID utilisateur invalide');
+      }
       const response = await fetch(apiUrl(`statistiques/frequentation/${userId}`), {
         credentials: 'include',
       });

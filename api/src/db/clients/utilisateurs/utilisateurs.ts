@@ -467,7 +467,9 @@ export class Utilisateurs {
     abonnement?: string,
     status?: string
   }): Promise<ConfirmationResult> {
+    console.log('[UTILISATEURS] Appel de modifierInfosUtilisateur avec:', data); // Ajout du log
     if (!data.id) {
+      console.log('[UTILISATEURS] Erreur: id manquant dans la requête de modification');
       throw new Error("L'identifiant de l'utilisateur est requis pour la modification.");
     }
 

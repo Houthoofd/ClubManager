@@ -404,7 +404,9 @@ export class Utilisateurs {
     }
     // Modifie les informations d'un utilisateur selon les champs reçus
     async modifierInfosUtilisateur(data) {
+        console.log('[UTILISATEURS] Appel de modifierInfosUtilisateur avec:', data); // Ajout du log
         if (!data.id) {
+            console.log('[UTILISATEURS] Erreur: id manquant dans la requête de modification');
             throw new Error("L'identifiant de l'utilisateur est requis pour la modification.");
         }
         // Prépare la requête et les valeurs à mettre à jour

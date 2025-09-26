@@ -156,13 +156,9 @@ const CoursModals: React.FC<CoursModalsProps> = ({
         <Modal
           variant="small"
           isOpen={!!successMessage}
-          onClose={() => {
-            // Appeler la fonction de fermeture passée en props
-            if (typeof onAnnulerDissociation === 'function') {
-              onAnnulerDissociation();
-            }
-          }}
+          onClose={onAnnulerDissociation}
           className="modern-card"
+          showClose={true}
         >
           <ModalHeader title="Information" />
           <ModalBody>
@@ -173,12 +169,7 @@ const CoursModals: React.FC<CoursModalsProps> = ({
           <ModalFooter>
             <Button 
               variant="link" 
-              onClick={() => {
-                // Appeler la fonction de fermeture passée en props
-                if (typeof onAnnulerDissociation === 'function') {
-                  onAnnulerDissociation();
-                }
-              }}
+              onClick={onAnnulerDissociation}
             >
               Fermer
             </Button>

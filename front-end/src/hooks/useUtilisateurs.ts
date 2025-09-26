@@ -62,7 +62,7 @@ export const useUpdateUtilisateur = () => {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${getAuthToken()}` // Add Authorization header
+          Authorization: `Bearer ${getAuthToken()}`
         },
         body: JSON.stringify(userData),
         credentials: 'include',
@@ -74,11 +74,8 @@ export const useUpdateUtilisateur = () => {
       return response.json();
     },
     onSuccess: (data, variables) => {
-      // Invalider les requêtes concernées pour forcer leur rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
       queryClient.invalidateQueries({ queryKey: ['utilisateurs', String(variables.id)] });
-      
-      // Invalider aussi les échéances de paiement car elles dépendent de l'abonnement
       queryClient.invalidateQueries({ queryKey: ['echeances', String(variables.id)] });
       queryClient.invalidateQueries({ queryKey: ['paiements'] });
     }

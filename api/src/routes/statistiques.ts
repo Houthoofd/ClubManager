@@ -13,10 +13,8 @@ router.use(verifyToken);
  * @desc    Récupère les statistiques de fréquentation globales
  */
 router.get('/frequentation/:utilisateurId', async (req: any, res: any) => {
-  // Récupérer utilisateurId depuis les paramètres et le convertir en nombre
   const utilisateurId = Number(req.params.utilisateurId);
 
-  // Vérifier si la conversion a échoué (si utilisateurId n'est pas un nombre valide)
   if (isNaN(utilisateurId)) {
     return res.status(400).json({ error: 'ID utilisateur invalide' });
   }
@@ -24,12 +22,27 @@ router.get('/frequentation/:utilisateurId', async (req: any, res: any) => {
   try {
     const result = await statistiques.obtenirStatistiquesFrequentation(utilisateurId);
 
-    // Vérifie que le résultat est bien défini et a le format attendu
-    if (!result || typeof result.totalFrequentation !== 'number') {
-      return res.status(400).json({ error: 'Aucune statistique de fréquentation trouvée.' });
+    // Amélioration du format de la réponse
+    if (!Array.isArray(result) || result.length === 0) {
+      return res.status(404).json({ error: 'Aucune statistique de fréquentation trouvée.' });
     }
 
-    res.json(result);
+    // Récupère le total fréquentation (même valeur pour chaque ligne)
+    const totalFrequentation = result[0]?.totalFrequentation ?? 0;
+
+    // Formate les données par mois
+    const moisData = result.map((row: any) => ({
+      mois: row.mois,
+      frequentation: row.frequentation,
+      totalCoursMois: row.nombres_total_de_cours_du_mois,
+      pourcentageCoursValides: row.pourcentage_de_cours_valides
+    }));
+
+    res.json({
+      utilisateurId,
+      totalFrequentation,
+      mois: moisData
+    });
   } catch (err) {
     console.error(`Erreur lors de la récupération des statistiques de fréquentation pour l'utilisateur ${utilisateurId}:`, err);
     res.status(500).json({

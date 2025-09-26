@@ -22,9 +22,12 @@ interface ModalWithHelpProps {
   isLoading?: boolean;
   error?: string | null;
   successMessage?: string;
-  context?: 'connexion' | 'creation' | 'ajout' | 'modification' | 'default'; // Ajout des nouveaux contextes
-  size?: 'small' | 'medium' | 'large'; // Ajout de la propriété size
-  autoCloseDelay?: number; // Ajout de la propriété autoCloseDelay
+  context?: 'connexion' | 'creation' | 'ajout' | 'modification' | 'default';
+  size?: 'small' | 'medium' | 'large';
+  autoCloseDelay?: number;
+  confirmText?: string;
+  cancelText?: string;
+  children?: React.ReactNode;
 }
 
 export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
@@ -39,14 +42,18 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
   error = null,
   successMessage = '',
   context = 'default',
-  size = 'medium', // Valeur par défaut pour la taille
-  autoCloseDelay, // Délai pour la fermeture automatique
+  size = 'medium',
+  autoCloseDelay,
+  confirmText,
+  cancelText,
+  children,
 }) => {
-  useEffect(() => {    if (isOpen && autoCloseDelay) {
+  useEffect(() => {
+    if (isOpen && autoCloseDelay) {
       const timer = setTimeout(() => {
         onClose();
       }, autoCloseDelay);
-      return () => clearTimeout(timer); // Nettoyage du timer
+      return () => clearTimeout(timer);
     }
   }, [isOpen, autoCloseDelay, onClose]);
 
@@ -88,6 +95,10 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
   };
 
   const renderContent = () => {
+    if (children) {
+      return children;
+    }
+
     if (isLoading) {
       return (
         <div className="modal-help-loading">
@@ -205,42 +216,56 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
     );
   };
 
+  // Actions pour les boutons de confirmation/annulation
+  const actions = [];
+  if (onConfirm) {
+    actions.push(
+      <Button key="confirm" variant={variant === 'danger' ? 'danger' : 'primary'} onClick={onConfirm}>
+        {confirmText || 'Confirmer'}
+      </Button>
+    );
+  }
+  actions.push(
+    <Button key="close" variant="secondary" onClick={onClose}>
+      {cancelText || 'Fermer'}
+    </Button>
+  );
+
   return (
     <Modal
       variant={size === 'large' ? ModalVariant.large : size === 'small' ? ModalVariant.small : ModalVariant.medium}
       title=""
       isOpen={isOpen}
       onClose={onClose}
-      actions={[
-        <Button key="close" variant="primary" onClick={onClose}>
-          Fermer
-        </Button>,
-      ]}
+      actions={[]}
       className="modal-with-help"
       style={{
-        height: '20vh', // Réduction de la hauteur
+        height: 'auto',
         display: 'flex',
-        justifyContent: 'center', // Centrage horizontal
-        alignItems: 'center', // Centrage vertical
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 0
       }}
     >
-      <div className="modal-help-header">
-        <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsMd' }}>
+      <div className="modal-help-header" style={{ padding: '1.5rem 1.5rem 0 1.5rem', borderBottom: 'none', textAlign: 'left' }}>
+        <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsMd' }} style={{ justifyContent: 'flex-start' }}>
           <FlexItem>
             {variant === 'success' && <CheckCircleIcon color="#28a745" size="lg" />}
             {variant === 'error' && <TimesCircleIcon color="#dc3545" size="lg" />}
             {variant === 'loading' && <Spinner size="lg" />}
           </FlexItem>
-          <FlexItem>
-            <Title headingLevel="h2" size="xl">
+          <FlexItem style={{ flex: 1 }}>
+            <Title headingLevel="h2" size="xl" style={{ textAlign: 'left', marginBottom: 0 }}>
               {title}
             </Title>
           </FlexItem>
         </Flex>
       </div>
-
-      <div className="modal-help-content" style={{ textAlign: 'center' }}>
+      <div className="modal-help-content" style={{ textAlign: 'left', padding: '0 1.5rem' }}>
         {renderContent()}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 8, marginTop: 24, padding: '0 1.5rem 1.5rem 1.5rem' }}>
+        {actions}
       </div>
     </Modal>
   );

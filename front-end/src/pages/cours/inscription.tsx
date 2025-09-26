@@ -7,6 +7,7 @@ import {
   Button,
   Spinner,
   Alert,
+  Title
 } from '@patternfly/react-core';
 import { CalendarAltIcon, ClockIcon, UserIcon } from '@patternfly/react-icons';
 import { useCours, useCoursPlanning, useCoursInscritsUtilisateur } from '../../hooks/useCours';
@@ -14,6 +15,7 @@ import { useUtilisateursPourTousLesCours, useInscrireUtilisateurReservation, use
 import { datareservationSchema } from '@clubmanager/types';
 import ModalWithHelp from '../../components/common/modal/modalwithhelp';
 import { PageHeader } from '../../components/common/PageHeader';
+import CoursModals from '../../components/cours/CoursModals';
 import '../../styles/inscription.css';
 
 interface CoursData {
@@ -31,13 +33,23 @@ interface CoursData {
 }
 
 const Inscription = () => {
+  // Récupère userData du localStorage AVANT le montage
   const [userData] = useState(() => {
     const storedData = localStorage.getItem('userData');
-    return storedData ? JSON.parse(storedData).data : null;
+    if (storedData) {
+      const parsed = JSON.parse(storedData);
+      // Supporte les deux formats possibles
+      return parsed.first_name && parsed.last_name ? parsed : parsed.data;
+    }
+    return null;
   });
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [modalSuccess, setModalSuccess] = useState<boolean>(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successType, setSuccessType] = useState<'inscription' | 'desinscription' | null>(null);
+  const [coursInscrit, setCoursInscrit] = useState<any | null>(null);
   const navigate = useNavigate();
 
   // Utilisation des hooks React Query
@@ -52,12 +64,13 @@ const Inscription = () => {
   const utilisateursCoursQueries = useUtilisateursPourTousLesCours(cours);
   // Affiche le contenu de chaque query pour debug
   utilisateursCoursQueries.forEach((q, idx) => {
-    console.log(`Cours idx ${idx} :`, q.data);
+    
   });
 
 
   const handleInscription = async (coursId: number) => {
-    if (!userData?.nom || !userData?.prenom || !coursId || isNaN(coursId)) {
+    // Utilise first_name et last_name pour l'inscription
+    if (!userData?.first_name || !userData?.last_name || !coursId || isNaN(coursId)) {
       setModalMessage('Utilisateur ou cours invalide.');
       setModalSuccess(false);
       setShowModal(true);
@@ -67,15 +80,17 @@ const Inscription = () => {
       // Validation côté front avec le schéma Zod
       const validated = datareservationSchema.parse({
         cours_id: coursId,
-        utilisateur_nom: userData.nom,
-        utilisateur_prenom: userData.prenom
+        utilisateur_nom: userData.last_name,
+        utilisateur_prenom: userData.first_name
       });
 
       await inscrireUtilisateur.mutateAsync(validated);
-      setModalMessage('Inscription réussie ! Vous êtes maintenant inscrit à ce cours.');
-      setModalSuccess(true);
-      setShowModal(true);
-      // Invalide les queries pour rafraîchir la liste des inscrits
+      setCoursInscrit(cours.find((c: any) => c.id === coursId));
+      setSuccessMessage(
+        `Inscription au cours ${cours.find((c: any) => c.id === coursId)?.date_cours || ''} réussie`
+      );
+      setSuccessType('inscription');
+      setShowSuccessModal(true);
       utilisateursCoursQueries.forEach((q) => q.refetch && q.refetch());
     } catch (error: any) {
       console.error('Erreur lors de l\'inscription au cours:', error);
@@ -90,22 +105,30 @@ const Inscription = () => {
   };
 
   const handleAnnulation = async (coursId: number) => {
-    if (!userData?.nom || !userData?.prenom || !coursId || isNaN(coursId)) {
+    if (!userData?.first_name || !userData?.last_name || !coursId || isNaN(coursId)) {
       setModalMessage('Utilisateur ou cours invalide.');
       setModalSuccess(false);
       setShowModal(true);
       return;
     }
     try {
-      await annulerInscription.mutateAsync({ cours_id: coursId, utilisateur_nom: userData.nom, utilisateur_prenom: userData.prenom });
-      setModalMessage('Désinscription réussie ! Vous n\'êtes plus inscrit à ce cours.');
-      setModalSuccess(true);
-      setShowModal(true);
-      // Invalide les queries pour rafraîchir la liste des inscrits et des coursInscrits
+      await annulerInscription.mutateAsync({
+        cours_id: coursId,
+        utilisateur_nom: userData.last_name,
+        utilisateur_prenom: userData.first_name
+      });
+      setCoursInscrit(cours.find((c: any) => c.id === coursId));
+      setSuccessMessage(
+        `Désinscription du cours ${cours.find((c: any) => c.id === coursId)?.date_cours || ''} réussie`
+      );
+      setSuccessType('desinscription');
+      setShowSuccessModal(true);
       utilisateursCoursQueries.forEach((q) => q.refetch && q.refetch());
     } catch (error) {
       console.error('Erreur lors de l\'annulation de l\'inscription:', error);
-      setModalMessage('Erreur lors de la désinscription. Veuillez réessayer.');
+      setSuccessMessage('Erreur lors de la désinscription. Veuillez réessayer.');
+      setSuccessType('desinscription');
+      setShowSuccessModal(true);
       setModalSuccess(false);
       setShowModal(true);
     }
@@ -289,14 +312,31 @@ const Inscription = () => {
           )}
         </PageSection>
         
-        <ModalWithHelp
-          title={modalSuccess ? "Succès" : "Erreur"}
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          variant={modalSuccess ? 'success' : 'error'}
-          context="creation" // Ajout du contexte
-          successMessage={modalSuccess ? modalMessage : ''}
-          error={modalSuccess ? null : modalMessage}
+    
+        {/* Ajout de la modal CoursModals pour le succès d'inscription */}
+        <CoursModals
+          isModalOpen={showSuccessModal}
+          successMessage={successMessage}
+          professeurADissocier={null}
+          onAnnulerDissociation={() => {
+            setShowSuccessModal(false);
+            setSuccessMessage(null);
+            setSuccessType(null);
+          }}
+          onConfirmerDissociation={() => {}}
+          showSupprimerModal={false}
+          coursASupprimer={null}
+          onAnnulerSuppression={() => {}}
+          onConfirmerSuppression={() => {}}
+          showAjoutModal={false}
+          ajoutSuccess={false}
+          ajoutMessage={null}
+          onFermerAjoutModal={() => {}}
+          showConfirmModificationModal={false}
+          modificationsResume={[]}
+          originalCours={null}
+          onAnnulerConfirmationModification={() => {}}
+          onConfirmerModification={() => {}}
         />
       </div>
     </Provider>

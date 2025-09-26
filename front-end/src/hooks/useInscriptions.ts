@@ -98,6 +98,7 @@ export const useAbonnementOptions = () => {
       return data.map((item: any) => ({
         value: String(item.id),
         label: item.nom_plan,
+        prix: item.prix
       }));
     },
   });

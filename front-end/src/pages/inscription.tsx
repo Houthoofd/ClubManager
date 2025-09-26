@@ -205,7 +205,7 @@ export const InscriptionPage: React.FC = () => {
         </FormGroup>
         <FormGroup label="Type d'abonnement" isRequired fieldId="abonnement">
           <FormSelect
-            value={form.abonnement}
+            value={form.abonnement !== undefined && form.abonnement !== null ? String(form.abonnement) : ''}
             onChange={(_event, value) => handleChange(value, 'abonnement')}
             aria-label="Type d'abonnement"
           >
@@ -213,15 +213,15 @@ export const InscriptionPage: React.FC = () => {
             {abonnementOptions.map(option => (
               <FormSelectOption
                 key={option.id}
-                value={option.id}
-                label={`${option.nom_plan} - ${option.description}`}
+                value={String(option.id)}
+                label={`${option.label} - ${option.prix} euros`}
               />
             ))}
           </FormSelect>
         </FormGroup>
         <FormGroup label="Genre" isRequired fieldId="genre">
           <FormSelect
-            value={form.genre}
+            value={form.genre !== undefined && form.genre !== null ? String(form.genre) : ''}
             onChange={(_event, value) => handleChange(value, 'genre')}
             aria-label="Genre"
           >
@@ -229,8 +229,8 @@ export const InscriptionPage: React.FC = () => {
             {genreOptions.map(option => (
               <FormSelectOption
                 key={option.id}
-                value={option.id}
-                label={option.genre_name}
+                value={String(option.id)}
+                label={option.label}
               />
             ))}
           </FormSelect>

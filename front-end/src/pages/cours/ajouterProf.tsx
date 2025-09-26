@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PageSection,
   Tabs,
@@ -16,7 +16,9 @@ import { useProfesseurs, usePromouvoirProfesseurs, useRetirerPromotionProfesseur
 import { useTousLesUtilisateurs, useVerifierProfesseurs } from '../../hooks/useUtilisateurs';
 import ProfesseurForm from '../../components/cours/ProfesseurForm';
 import ProfesseursList from '../../components/cours/ProfesseursList';
-import ModalWithHelp from '../../components/common/modal/modalwithhelp'; // Utilisez la casse correcte
+import ModalWithHelp from '../../components/common/modal/ModalWithHelp'; // Utilisez la casse correcte
+import SelectAllUsers from '../../components/cours/SelectAllUsers';
+import ModalConfirmation from '../../components/common/modal/ModalConfirmation';
 
 const AjouterProfesseur = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
@@ -28,6 +30,23 @@ const AjouterProfesseur = () => {
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promoteResult, setPromoteResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [verifMessage, setVerifMessage] = useState<string | null>(null);
+  const [verifChecked, setVerifChecked] = useState(false);
+
+  // Ajout de l'effet pour fermeture auto après succès
+  useEffect(() => {
+    if (showPromoteModal && promoteResult?.success) {
+      const timer = setTimeout(() => {
+        setShowPromoteModal(false);
+        setPromoteResult(null);
+        setSelectedUsers([]); // Optionnel : vide la sélection après succès
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [showPromoteModal, promoteResult]);
 
   // Hooks React Query
   const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
@@ -44,23 +63,33 @@ const AjouterProfesseur = () => {
 
   const handlePromouvoir = async (selectedUsers: any[], typeId: string) => {
     try {
-      // Vérifier si les utilisateurs sont déjà professeurs
       const toCheck = selectedUsers.map(u => ({ nom: u.nom, prenom: u.prenom }));
       const verifResult = await verifierProfesseurs.mutateAsync(toCheck);
       const dejaProfs = verifResult.professeurs.filter((p: any) => p.isProf);
-      
+
       if (dejaProfs.length > 0) {
         setPromotionMessage(`Déjà professeurs : ${dejaProfs.map((p: any) => p.prenom + ' ' + p.nom).join(', ')}`);
         setMessageType('error');
+        setPromoteResult({ success: false, message: `Déjà professeurs : ${dejaProfs.map((p: any) => p.prenom + ' ' + p.nom).join(', ')}` });
         return;
       }
-      
-      await promouvoirProfesseurs.mutateAsync(selectedUsers);
+
+      // Appel mutation et gestion du retour serveur
+      const result = await promouvoirProfesseurs.mutateAsync(selectedUsers);
+      if (result && result.isConfirm === false) {
+        setPromotionMessage(result.message || 'Erreur lors de la promotion des professeurs.');
+        setMessageType('error');
+        setPromoteResult({ success: false, message: result.message || 'Erreur lors de la promotion des professeurs.' });
+        return;
+      }
+
       setPromotionMessage('Promotion effectuée avec succès !');
       setMessageType('success');
-    } catch (error) {
-      setPromotionMessage('Erreur lors de la promotion des professeurs.');
+      setPromoteResult({ success: true, message: 'Promotion effectuée avec succès !' });
+    } catch (error: any) {
+      setPromotionMessage(error?.message || 'Erreur lors de la promotion des professeurs.');
       setMessageType('error');
+      setPromoteResult({ success: false, message: error?.message || 'Erreur lors de la promotion des professeurs.' });
       console.error('Erreur lors de la promotion des professeurs:', error);
     }
   };
@@ -89,6 +118,50 @@ const AjouterProfesseur = () => {
     setRemoveModalOpen(true);
   };
 
+  const handleSelectAll = () => {
+    setSelectedUsers(utilisateurs);
+  };
+
+  const handleUserSelect = (user: any) => {
+    setSelectedUsers(prev =>
+      prev.some(u => u.id === user.id)
+        ? prev.filter(u => u.id !== user.id)
+        : [...prev, user]
+    );
+  };
+
+  // Nouvelle fonction pour vérifier avant d'ouvrir la modal
+  const handlePromouvoirSelected = async () => {
+    if (selectedUsers.length === 0) return;
+    setPromoteResult(null);
+    setVerifMessage(null);
+    setVerifChecked(false);
+
+    // Utilisation du hook useVerifierProfesseurs
+    try {
+      const toCheck = selectedUsers.map(u => ({ nom: u.nom, prenom: u.prenom }));
+      const verifResult = await verifierProfesseurs.mutateAsync(toCheck);
+      const dejaProfs = verifResult.professeurs.filter((p: any) => p.isProf);
+
+      if (dejaProfs.length > 0) {
+        setVerifMessage(
+          `Attention : déjà professeurs - ${dejaProfs.map((p: any) => p.prenom + ' ' + p.nom).join(', ')}`
+        );
+      }
+      setVerifChecked(true);
+      setShowPromoteModal(true);
+    } catch (error: any) {
+      setVerifMessage('Erreur lors de la vérification des professeurs.');
+      setVerifChecked(true);
+      setShowPromoteModal(true);
+    }
+  };
+
+  const confirmPromoteUsers = async () => {
+    await handlePromouvoir(selectedUsers, 'professeur');
+    // La fermeture est gérée par l'effet ci-dessus
+  };
+
   if (loadingProfesseurs || loadingUtilisateurs) {
     return (
       <PageSection>
@@ -115,7 +188,6 @@ const AjouterProfesseur = () => {
       />
 
       <PageSection className="teachers-content">
-        {/* Tabs */}
         <Tabs 
           activeKey={activeTabKey} 
           onSelect={handleTabClick}
@@ -123,19 +195,46 @@ const AjouterProfesseur = () => {
         >
           <Tab 
             eventKey={0} 
-            title={
-              <TabTitleText>
-                <span>Ajouter un professeur</span>
-              </TabTitleText>
-            }
+            title={<TabTitleText><span>Ajouter un professeur</span></TabTitleText>}
           >
-            <ProfesseurForm
+            {/* Sélecteur multiple */}
+            <SelectAllUsers
               utilisateurs={utilisateurs}
-              onSubmit={handlePromouvoir}
-              isLoading={promouvoirProfesseurs.isPending}
-              message={promotionMessage}
-              messageType={messageType}
+              selectedUsers={selectedUsers}
+              onSelectAll={handleSelectAll}
+              onUserSelect={setSelectedUsers}
             />
+
+            {/* Visualisation des utilisateurs sélectionnés et bouton de promotion */}
+            {selectedUsers.length > 0 && (
+              <div style={{ margin: '1rem 0' }}>
+                <strong>Utilisateurs sélectionnés :</strong>
+                <ul>
+                  {utilisateurs
+                    .filter(u => selectedUsers.includes(String(u.id)))
+                    .map(u => (
+                      <li key={u.id}>{u.first_name} {u.last_name} ({u.email})</li>
+                    ))}
+                </ul>
+                <Button
+                  variant="primary"
+                  onClick={handlePromouvoirSelected}
+                  isLoading={promouvoirProfesseurs.isPending || verifierProfesseurs.isPending}
+                  style={{ marginTop: 8 }}
+                >
+                  Promouvoir en professeur
+                </Button>
+                {/* Message de promotion */}
+                {promotionMessage && (
+                  <div style={{ marginTop: 8, color: messageType === 'success' ? 'green' : 'red' }}>
+                    {promotionMessage}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Supprime l'affichage du formulaire individuel */}
+            {/* <ProfesseurForm ... /> */}
           </Tab>
 
           <Tab 
@@ -222,6 +321,68 @@ const AjouterProfesseur = () => {
             </Button>,
           ]}
         />
+
+        {/* Modal de confirmation de promotion */}
+        <ModalConfirmation
+          title="Confirmer la promotion"
+          isOpen={showPromoteModal}
+          onClose={() => {
+            setShowPromoteModal(false);
+            setPromoteResult(null);
+            setVerifMessage(null);
+            setVerifChecked(false);
+          }}
+          onConfirm={confirmPromoteUsers}
+          confirmText="Oui, promouvoir"
+          variant={promoteResult?.success === false ? 'danger' : 'primary'}
+        >
+          <div style={{ padding: '1rem 0' }}>
+            {/* Message de vérification avant promotion */}
+            {verifChecked && verifMessage && (
+              <div
+                style={{
+                  marginBottom: 12,
+                  color: '#d9534f',
+                  background: '#fbeaea',
+                  borderRadius: 4,
+                  padding: '8px 12px',
+                  fontWeight: 500
+                }}
+              >
+                {verifMessage}
+              </div>
+            )}
+            {promoteResult ? (
+              <div
+                style={{
+                  marginTop: 0,
+                  color: promoteResult.success ? 'green' : 'red',
+                  fontWeight: 500,
+                  borderRadius: 4,
+                  background: promoteResult.success ? '#e6f4ea' : '#fbeaea',
+                  padding: '8px 12px'
+                }}
+              >
+                {promoteResult.message}
+              </div>
+            ) : (
+              <>
+                <p style={{ marginBottom: '1rem', fontWeight: 500 }}>
+                  Êtes-vous sûr de vouloir promouvoir ce ou ces utilisateurs au rôle de professeurs ?
+                </p>
+                <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
+                  {utilisateurs
+                    .filter(u => selectedUsers.includes(String(u.id)))
+                    .map(u => (
+                      <li key={u.id} style={{ marginBottom: '0.5rem', color: '#0066cc' }}>
+                        {u.first_name} {u.last_name} ({u.email})
+                      </li>
+                    ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </ModalConfirmation>
       </PageSection>
     </div>
   );

@@ -61,53 +61,54 @@ export class Compte {
   
 
   obtenirInformationsUtilisateur = async (prenom: string, nom: string): Promise<VerifyResultWithData> => {
+    console.log(`[obtenirInformationsUtilisateur] Entrée - prenom: ${prenom}, nom: ${nom}`);
     try {
       // Requête SQL pour récupérer les informations en fonction des IDs liés
       const sql = `
-        SELECT 
+        SELECT
           u.id,
           u.first_name,
           u.last_name,
           u.nom_utilisateur,
           u.email,
           u.password,
-          g.genre_name AS genres,  
-          s.nom_role AS status,  
-          gr.grade_id AS grades,  
-          a.nom_plan AS abonnement,  
+          g.genre_name AS genres,
+          s.nom_role AS status,
+          gr.grade_id AS grades,
+          a.nom_plan AS abonnement,
           u.date_of_birth
-        FROM 
-          utilisateurs u
-        JOIN 
-          genres g ON u.genre_id = g.id  
-        JOIN 
-          status s ON u.status_id = s.id  
-        JOIN 
-          grades gr ON u.grade_id = gr.id  
-        JOIN 
-          plans_tarifaires a ON u.abonnement_id = a.id  
-        WHERE 
-          u.first_name = ? AND u.last_name = ?
-      `;
+        FROM
+            utilisateurs u
+        LEFT JOIN genres g ON u.genre_id = g.id
+        LEFT JOIN status s ON u.status_id = s.id
+        LEFT JOIN grades gr ON u.grade_id = gr.id
+        LEFT JOIN plans_tarifaires a ON u.abonnement_id = a.id
+        WHERE
+            u.first_name = ?
+            AND u.last_name = ?;
 
+      `;
+      console.log(`[obtenirInformationsUtilisateur] SQL: ${sql}`);
       const values = [prenom, nom];
-      
+      console.log(`[obtenirInformationsUtilisateur] Values:`, values);
+
       return new Promise<VerifyResultWithData>((resolve, reject) => {
         this.mysqlConnector.query(sql, values, (error, results) => {
           if (error) {
-            console.error(`Erreur lors de la récupération de l'utilisateur ${prenom} ${nom} : ${error.message}`);
+            console.error(`[obtenirInformationsUtilisateur] Erreur SQL:`, error);
             reject(error); // Rejeter la promesse en cas d'erreur
           } else {
+            console.log(`[obtenirInformationsUtilisateur] Résultats SQL:`, results);
             if (results.length > 0) {
               const utilisateur = results[0]; // On prend le premier résultat si trouvé
-              console.log(utilisateur);
+              console.log(`[obtenirInformationsUtilisateur] Utilisateur trouvé:`, utilisateur);
               resolve({
                 isFind: true,
                 message: "Utilisateur trouvé",
                 data: utilisateur
               });
             } else {
-              console.log(`Aucun utilisateur trouvé pour ${prenom} ${nom}`);
+              console.log(`[obtenirInformationsUtilisateur] Aucun utilisateur trouvé pour ${prenom} ${nom}`);
               resolve({
                 isFind: false,
                 message: "Aucun utilisateur trouvé",
@@ -118,7 +119,7 @@ export class Compte {
         });
       });
     } catch (error) {
-      console.error(`Erreur lors de la récupération des informations de l'utilisateur ${prenom} ${nom} :`, error);
+      console.error(`[obtenirInformationsUtilisateur] Exception:`, error);
       throw error;
     }
   };

@@ -128,39 +128,63 @@ export class Professeurs {
   }
 
   async ajouterUnProfesseur(userData: any): Promise<ConfirmationResult> {
-    const users = Array.isArray(userData.utilisateurs) ? userData.utilisateurs : [userData];
+    console.log('[ajouterUnProfesseur] userData reçu:', userData);
+    let users: any[] = [];
+    if (Array.isArray(userData.utilisateurs)) {
+      // Si ce sont des objets, on garde tel quel
+      if (typeof userData.utilisateurs[0] === 'object') {
+        users = userData.utilisateurs;
+      } else {
+        // Si ce sont des ids, on les convertit en objets { id: ... }
+        users = userData.utilisateurs.map((id: any) => ({ id: Number(id) }));
+      }
+    } else {
+      users = [userData];
+    }
+    console.log('[ajouterUnProfesseur] users à traiter:', users);
 
     return new Promise<ConfirmationResult>((resolve, reject) => {
       let processed = 0;
       let errors: string[] = [];
       let successCount = 0;
 
-      users.forEach((user: any) => {
+      users.forEach((user: any, idx: number) => {
+        console.log(`[ajouterUnProfesseur] Traitement user ${idx}:`, user);
+
         const selectSql = `SELECT * FROM utilisateurs WHERE id = ?`;
         this.mysqlConnector.query(selectSql, [user.id], (error, results) => {
           if (error) {
+            console.log(`[ajouterUnProfesseur] Erreur SELECT id ${user.id}:`, error);
             errors.push(`Erreur vérification id ${user.id}: ${error.message}`);
             checkDone();
             return;
           }
 
+          console.log(`[ajouterUnProfesseur] Résultat SELECT id ${user.id}:`, results);
+
           if (results.length > 0) {
             const utilisateur = results[0];
+            console.log(`[ajouterUnProfesseur] Utilisateur trouvé id ${user.id}:`, utilisateur);
+
             if (utilisateur.status_id === 5) {
+              console.log(`[ajouterUnProfesseur] Utilisateur déjà professeur id ${user.id}`);
               successCount++;
               checkDone();
             } else {
               const updateSql = `UPDATE utilisateurs SET status_id = 5 WHERE id = ?`;
               this.mysqlConnector.query(updateSql, [utilisateur.id], (updateError) => {
                 if (updateError) {
+                  console.log(`[ajouterUnProfesseur] Erreur UPDATE id ${user.id}:`, updateError);
                   errors.push(`Erreur update id ${user.id}: ${updateError.message}`);
                 } else {
+                  console.log(`[ajouterUnProfesseur] Promotion réussie id ${user.id}`);
                   successCount++;
                 }
                 checkDone();
               });
             }
           } else {
+            console.log(`[ajouterUnProfesseur] Utilisateur NON trouvé id ${user.id}`);
             errors.push(`Utilisateur id ${user.id} non trouvé, ajout impossible.`);
             checkDone();
           }
@@ -169,12 +193,16 @@ export class Professeurs {
 
       function checkDone() {
         processed++;
+        console.log(`[ajouterUnProfesseur] processed: ${processed}/${users.length}`);
         if (processed === users.length) {
           if (errors.length === 0) {
+            console.log('[ajouterUnProfesseur] Tous promus');
             resolve({ isConfirm: true, message: "Tous les utilisateurs ont été promus professeurs." });
           } else if (successCount > 0) {
+            console.log('[ajouterUnProfesseur] Promotion partielle, erreurs:', errors);
             resolve({ isConfirm: true, message: `Promotion partielle. Erreurs: ${errors.join('; ')}` });
           } else {
+            console.log('[ajouterUnProfesseur] Aucune promotion, erreurs:', errors);
             resolve({ isConfirm: false, message: `Aucune promotion. Erreurs: ${errors.join('; ')}` });
           }
         }
