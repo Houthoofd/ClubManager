@@ -216,61 +216,39 @@ export const ModalWithHelp: React.FC<ModalWithHelpProps> = ({
     );
   };
 
-  // Actions pour les boutons de confirmation/annulation
-  const actions = [];
-  if (onConfirm) {
-    actions.push(
-      <Button key="confirm" variant={variant === 'danger' ? 'danger' : 'primary'} onClick={onConfirm}>
-        {confirmText || 'Confirmer'}
-      </Button>
-    );
-  }
-  actions.push(
+  // Supprimons la création complexe d'actions et utilisons directement
+  const modalActions = [
     <Button key="close" variant="secondary" onClick={onClose}>
       {cancelText || 'Fermer'}
     </Button>
-  );
+  ];
 
   return (
     <Modal
       variant={size === 'large' ? ModalVariant.large : size === 'small' ? ModalVariant.small : ModalVariant.medium}
-      title=""
+      title={title}
       isOpen={isOpen}
       onClose={onClose}
-      actions={[]}
+      actions={modalActions}
       className="modal-with-help"
-      style={{
-        height: 'auto',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 0
-      }}
     >
-      <div className="modal-help-header" style={{ padding: '1.5rem 1.5rem 0 1.5rem', borderBottom: 'none', textAlign: 'left' }}>
-        <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsMd' }} style={{ justifyContent: 'flex-start' }}>
-          <FlexItem>
-            {variant === 'success' && <CheckCircleIcon color="#28a745" size="lg" />}
-            {variant === 'error' && <TimesCircleIcon color="#dc3545" size="lg" />}
-            {variant === 'loading' && <Spinner size="lg" />}
-          </FlexItem>
-          <FlexItem style={{ flex: 1 }}>
-            <Title headingLevel="h2" size="xl" style={{ textAlign: 'left', marginBottom: 0 }}>
-              {title}
-            </Title>
-          </FlexItem>
-        </Flex>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        <div>
+          {variant === 'success' && <CheckCircleIcon color="#28a745" size="lg" />}
+          {variant === 'error' && <TimesCircleIcon color="#dc3545" size="lg" />}
+          {variant === 'loading' && <Spinner size="lg" />}
+        </div>
+        <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>
+          {variant === 'success' ? 'Opération réussie' : variant === 'error' ? 'Une erreur est survenue' : ''}
+        </div>
       </div>
-      <div className="modal-help-content" style={{ textAlign: 'left', padding: '0 1.5rem' }}>
+      <div>
         {renderContent()}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 8, marginTop: 24, padding: '0 1.5rem 1.5rem 1.5rem' }}>
-        {actions}
       </div>
     </Modal>
   );
 };
 
-// Ajout de l'export par défaut pour la compatibilité
 export default ModalWithHelp;
+
 

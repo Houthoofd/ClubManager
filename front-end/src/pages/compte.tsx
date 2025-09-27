@@ -1,34 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import {
-  PageSection,
-  Spinner,
-  Alert,
-  Tabs,
-  Tab,
-  Flex,
-  FlexItem,
-  Card,
-  CardBody,
-  Title,
-  Badge
-} from '@patternfly/react-core';
-import { useParams } from 'react-router-dom';
+import { PageSection, Spinner, Alert, Tabs, Tab } from '@patternfly/react-core';
 import { PageHeader } from '../components/common/PageHeader';
 import { UserIcon, ChartLineIcon, CreditCardIcon } from '@patternfly/react-icons';
-import {
-  useCompteInfo,
-  useUpdateCompte,
-  useAbonnements,
-  useGrades,
-  useStatus,
-  useGenres
-} from '../hooks/useCompte';
-import { useFrequentationByUserId } from '../hooks/useStatistiques';
-import FormulaireCompte from '../components/compte/FormulaireCompte';
-import ModalsCompte from '../components/compte/ModalsCompte';
-import EcheancesPaiement from '../components/utilisateurs/EcheancesPaiement';
-import { useEcheancesByUserId } from '../hooks/usePaiements';
-import GraphiqueLineaire from '../components/common/graph/GraphiqueLineaire';
+import { useCompteData } from '../hooks/useCompteData';
+import CompteInfoTab from '../components/compte/CompteInfoTab';
+import StatistiquesTab from '../components/compte/StatistiquesTab';
+import PaiementsTab from '../components/compte/PaiementsTab';
+import ResultModal from '../components/common/modal/ResultModal';
+import ConfirmModal from '../components/common/modal/ConfirmModal';
 
 function formatDateForInput(isoDateString: string): string {
   if (!isoDateString) return '';
@@ -39,12 +18,20 @@ function formatDateForInput(isoDateString: string): string {
   return `${year}-${month}-${day}`;
 }
 
+interface ModificationItem {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
+
 const Compte = () => {
-  const { id } = useParams<{ id: string }>();
   const [activeTabKey, setActiveTabKey] = useState<string>('0');
   const [editingFields, setEditingFields] = useState<{ [key: string]: boolean }>({});
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [resultModalSuccess, setResultModalSuccess] = useState(false);
+  const [modificationsResume, setModificationsResume] = useState<ModificationItem[]>([]);
   const [form, setForm] = useState({
     email: '',
     date_naissance: '',
@@ -53,56 +40,27 @@ const Compte = () => {
     abonnement: '',
     status: ''
   });
-  const [userData, setUserData] = useState<any | null>(null);
   const [password, setPassword] = useState('');
   const [showPasswordField, setShowPasswordField] = useState(false);
-  const [isDataReady, setIsDataReady] = useState(false);
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('line');
-  // Correction : ajoute l'état disabledFields
   const [disabledFields, setDisabledFields] = useState<{ [key: string]: boolean }>({});
-  // Ajoute l'état pour gérer l'étape de la modal et les changements en attente
-  const [modalStep, setModalStep] = useState<'summary' | 'result'>('summary');
-  const [pendingChanges, setPendingChanges] = useState<any | null>(null);
 
-  // récupération userData depuis localStorage
-  useEffect(() => {
-    const storedData = localStorage.getItem('userData');
-    if (storedData) {
-      try {
-        const parsedData = JSON.parse(storedData);
-        setUserData(parsedData);
-      } catch (error) {
-        console.error('Erreur parsing localStorage:', error);
-      }
-    }
-  }, []);
-
-  // hooks React Query
-  // Correction : utilise l'id de l'utilisateur pour les hooks
-  const utilisateurId = userData?.id || id || null;
-
-  const { data: compteInfo, isLoading: loadingCompte, error: errorCompte } = useCompteInfo(
-    userData?.first_name || null,
-    userData?.last_name || null
-  );
-
-  const { data: statFrequentation, isLoading: loadingStats } = useFrequentationByUserId(
-    utilisateurId
-  );
-
-  const { data: paiementsEcheances = [] } = useEcheancesByUserId(utilisateurId);
-  const updateCompte = useUpdateCompte();
-  const { data: abonnements = [] } = useAbonnements();
-  const { data: grades = [] } = useGrades();
-  const { data: status = [] } = useStatus();
-  const { data: genres = [] } = useGenres();
-
-  // data ready ?
-  useEffect(() => {
-    if (compteInfo && userData && !loadingCompte) {
-      setIsDataReady(true);
-    }
-  }, [compteInfo, userData, loadingCompte]);
+  const {
+    userData,
+    utilisateurId,
+    compteInfo,
+    paiementsEcheances,
+    updateCompte,
+    abonnements,
+    grades,
+    status,
+    genres,
+    isDataReady,
+    statsDataReady,
+    statFrequentationForGraph,
+    loadingCompte,
+    errorCompte,
+  } = useCompteData();
 
   // initialisation du formulaire
   useEffect(() => {
@@ -143,116 +101,215 @@ const Compte = () => {
     return changes;
   };
 
-  // Correction : affiche le résultat de la mutation dans la même modal
+  // Gestion des résultats de mutation
   useEffect(() => {
-    if (modalStep === 'result') {
-      if (updateCompte.isSuccess) {
-        setModalMessage('Modification réussie !');
-        // Désactive les champs modifiés
-        if (pendingChanges) {
-          const newDisabled: { [key: string]: boolean } = {};
-          Object.keys(pendingChanges).forEach(field => {
-            if (field !== 'id' && field !== 'mot_de_passe') newDisabled[field] = true;
-          });
-          setDisabledFields(prev => ({ ...prev, ...newDisabled }));
-        }
-      }
-      if (updateCompte.isError) {
-        setModalMessage(updateCompte.error?.message || 'Échec de la modification.');
-      }
+    if (updateCompte.isSuccess) {
+      setResultModalMessage('Les modifications apportées ont été sauvegardées avec succès.');
+      setResultModalSuccess(true);
+      setIsResultModalOpen(true);
+      setEditingFields({});
+      setDisabledFields({});
     }
-  }, [updateCompte.isSuccess, updateCompte.isError, updateCompte.error, modalStep, pendingChanges]);
+    if (updateCompte.isError) {
+      setResultModalMessage('Une erreur est survenue lors de la sauvegarde des modifications. Veuillez réessayer.');
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
+    }
+  }, [updateCompte.isSuccess, updateCompte.isError, updateCompte.error]);
+
+  // Fonction pour obtenir le nom d'affichage d'une valeur
+  const getDisplayValue = (key: string, value: any) => {
+    if (!value || value === '') return 'Non défini';
+    
+    switch (key) {
+      case 'genres':
+        const genre = genres?.find(g => g.id == value);
+        return genre?.genre_name || value;
+      case 'grades':
+        const grade = grades?.find(g => g.id == value);
+        return grade?.grade_id || value;
+      case 'abonnement':
+        const abonnement = abonnements?.find(a => a.id == value);
+        return abonnement?.nom_plan || value;
+      case 'status':
+        const statusItem = status?.find(s => s.id == value);
+        return statusItem?.nom_status || value;
+      case 'mot_de_passe':
+        return '••••••••';
+      default:
+        return value;
+    }
+  };
 
   // Affiche le résumé des changements dans la modal avant modification
   const handleApplyChanges = () => {
     const changes = getChangesSummary();
     if (showPasswordField && password) changes['mot_de_passe'] = password;
 
-    const changesList = Object.entries(changes)
-      .map(([key, value]) => `• ${key}: ${value}`)
-      .join('\n');
+    console.log('=== DEBUG handleApplyChanges ===');
+    console.log('Changes:', changes);
+    console.log('CompteInfo:', compteInfo);
+    console.log('CompteInfo.utilisateur:', compteInfo?.utilisateur);
+    console.log('Genres array:', genres);
 
-    setModalMessage(
-      Object.keys(changes).length > 0
-        ? `Les modifications suivantes seront appliquées :\n\n${changesList}\n\nConfirmer la modification ?`
-        : 'Aucun changement détecté.'
-    );
-    setIsModalOpen(true);
-    setModalStep('summary');
-    setPendingChanges(Object.keys(changes).length > 0 ? { id: utilisateurId, ...changes } : null);
-  };
-
-  // Handler pour confirmer la modification depuis la modal
-  const handleConfirmModal = () => {
-    if (pendingChanges && !updateCompte.isPending) {
-      // Correction : retire les champs vides ou non modifiés avant mutation
-      const changesToSend = { ...pendingChanges };
-      Object.keys(changesToSend).forEach(key => {
-        if (
-          key !== 'id' &&
-          (changesToSend[key] === undefined ||
-            changesToSend[key] === null ||
-            changesToSend[key] === '')
-        ) {
-          delete changesToSend[key];
-        }
-      });
-      updateCompte.mutate(changesToSend);
-      setModalStep('result');
+    if (Object.keys(changes).length > 0) {
+      const modifications: ModificationItem[] = Object.entries(changes)
+        .map(([key, newValue]) => {
+          console.log(`\n--- Processing field: ${key} ---`);
+          
+          // Récupérer la valeur originale depuis compteInfo.utilisateur
+          let originalValue = compteInfo?.utilisateur?.[key];
+          console.log(`Original value from compteInfo.utilisateur[${key}]:`, originalValue);
+          console.log(`New value:`, newValue);
+          
+          // Obtenir les noms d'affichage avec fallback
+          let originalDisplay = 'Non défini';
+          let newDisplay = String(newValue || 'Vide');
+          
+          // Conversion des valeurs originales - seulement si on a une vraie valeur
+          if (originalValue && originalValue !== '' && originalValue !== null) {
+            console.log(`Processing original value: ${originalValue}`);
+            
+            if (key === 'genres' && genres) {
+              console.log('Looking for genre with name:', originalValue);
+              // Chercher par nom d'abord, puis par ID
+              let genre = genres.find(g => g.genre_name === originalValue);
+              if (!genre) {
+                genre = genres.find(g => String(g.id) === String(originalValue));
+              }
+              console.log('Found genre:', genre);
+              originalDisplay = genre?.genre_name || `Genre: ${originalValue}`;
+            } else if (key === 'grades' && grades) {
+              console.log('Looking for grade with name:', originalValue);
+              let grade = grades.find(g => g.grade_id === originalValue);
+              if (!grade) {
+                grade = grades.find(g => String(g.id) === String(originalValue));
+              }
+              console.log('Found grade:', grade);
+              originalDisplay = grade?.grade_id || `Grade: ${originalValue}`;
+            } else if (key === 'abonnement' && abonnements) {
+              console.log('Looking for abonnement with name:', originalValue);
+              let abonnement = abonnements.find(a => a.nom_plan === originalValue);
+              if (!abonnement) {
+                abonnement = abonnements.find(a => String(a.id) === String(originalValue));
+              }
+              console.log('Found abonnement:', abonnement);
+              originalDisplay = abonnement?.nom_plan || `Abonnement: ${originalValue}`;
+            } else if (key === 'status' && status) {
+              console.log('Looking for status with name:', originalValue);
+              let statusItem = status.find(s => s.nom_status === originalValue);
+              if (!statusItem) {
+                statusItem = status.find(s => String(s.id) === String(originalValue));
+              }
+              console.log('Found status:', statusItem);
+              originalDisplay = statusItem?.nom_status || `Status: ${originalValue}`;
+            } else if (key === 'mot_de_passe') {
+              originalDisplay = 'Mot de passe existant';
+            } else {
+              originalDisplay = String(originalValue);
+            }
+          }
+          
+          // Conversion des nouvelles valeurs
+          if (newValue && newValue !== '') {
+            console.log(`Processing new value: ${newValue}`);
+            
+            if (key === 'genres' && genres) {
+              console.log('Looking for new genre with name:', newValue);
+              // La nouvelle valeur peut être le nom du genre directement
+              let genre = genres.find(g => g.genre_name === newValue);
+              if (!genre) {
+                genre = genres.find(g => String(g.id) === String(newValue));
+              }
+              console.log('Found new genre:', genre);
+              newDisplay = genre?.genre_name || newValue;
+            } else if (key === 'grades' && grades) {
+              console.log('Looking for new grade with name:', newValue);
+              let grade = grades.find(g => g.grade_id === newValue);
+              if (!grade) {
+                grade = grades.find(g => String(g.id) === String(newValue));
+              }
+              console.log('Found new grade:', grade);
+              newDisplay = grade?.grade_id || newValue;
+            } else if (key === 'abonnement' && abonnements) {
+              console.log('Looking for new abonnement with name:', newValue);
+              let abonnement = abonnements.find(a => a.nom_plan === newValue);
+              if (!abonnement) {
+                abonnement = abonnements.find(a => String(a.id) === String(newValue));
+              }
+              console.log('Found new abonnement:', abonnement);
+              newDisplay = abonnement?.nom_plan || newValue;
+            } else if (key === 'status' && status) {
+              console.log('Looking for new status with name:', newValue);
+              let statusItem = status.find(s => s.nom_status === newValue);
+              if (!statusItem) {
+                statusItem = status.find(s => String(s.id) === String(newValue));
+              }
+              console.log('Found new status:', statusItem);
+              newDisplay = statusItem?.nom_status || newValue;
+            } else if (key === 'mot_de_passe') {
+              newDisplay = 'Nouveau mot de passe';
+            } else {
+              newDisplay = String(newValue);
+            }
+          }
+          
+          console.log(`Final display values - Original: "${originalDisplay}", New: "${newDisplay}"`);
+          
+          return {
+            field: key,
+            oldValue: originalDisplay,
+            newValue: newDisplay
+          };
+        });
+      
+      console.log('Final modifications array:', modifications);
+      setModificationsResume(modifications);
+      setShowConfirmModal(true);
+    } else {
+      setResultModalMessage("Aucune modification détectée.");
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
     }
   };
 
-  // Handler pour fermer la modal (réinitialise pendingChanges et l'étape)
-  const handleCloseModal = () => {
-    // Si on est à l'étape de résumé, lancer la mutation avant de fermer
-    if (pendingChanges && modalStep === 'summary') {
-      const changesToSend = { ...pendingChanges };
-      Object.keys(changesToSend).forEach(key => {
-        if (
-          key !== 'id' &&
-          (changesToSend[key] === undefined ||
-            changesToSend[key] === null ||
-            changesToSend[key] === '')
-        ) {
-          delete changesToSend[key];
-        }
-      });
-      updateCompte.mutate(changesToSend);
-      setModalStep('result');
-      // Ne ferme pas la modal tout de suite, laisse le résultat s'afficher
-      return;
-    }
-    // Sinon, ferme la modal normalement
-    setIsModalOpen(false);
-    setPendingChanges(null);
-    setModalStep('summary');
-  };
+  // Fonction pour confirmer les modifications
+  const confirmerModifications = async () => {
+    setShowConfirmModal(false);
 
-  // Transformation des données pour GraphiqueLineaire
-  const statsDataReady =
-    statFrequentation &&
-    Array.isArray(statFrequentation.mois) &&
-    statFrequentation.mois.length > 0;
+    const changes = getChangesSummary();
+    if (showPasswordField && password) changes['mot_de_passe'] = password;
 
-  const statFrequentationForGraph = statsDataReady
-    ? {
-        ...statFrequentation,
-        mois: statFrequentation.mois.map((item: any) => ({
-          mois: item.mois,
-          frequentation: item.frequentation,
-          pourcentage_de_cours_valides: item.pourcentageCoursValides,
-          nombres_total_de_cours_du_mois: item.totalCoursMois,
-        }))
+    const changesToSend = { id: utilisateurId, ...changes };
+    
+    // Nettoie les champs vides
+    Object.keys(changesToSend).forEach(key => {
+      if (
+        key !== 'id' &&
+        (changesToSend[key] === undefined ||
+          changesToSend[key] === null ||
+          changesToSend[key] === '')
+      ) {
+        delete changesToSend[key];
       }
-    : undefined;
+    });
+
+    updateCompte.mutate(changesToSend);
+  };
+
+  const annulerModifications = () => {
+    setShowConfirmModal(false);
+    setModificationsResume([]);
+  };
 
   const tabs = [
     {
       key: '0',
       title: 'Informations personnelles',
       icon: <UserIcon />,
-      content: isDataReady ? (
-        <FormulaireCompte
+      content: (
+        <CompteInfoTab
+          isDataReady={isDataReady}
           compteInfo={compteInfo}
           form={form}
           password={password}
@@ -269,152 +326,32 @@ const Compte = () => {
           onApplyChanges={handleApplyChanges}
           isLoading={updateCompte.isPending}
           formatDateForInput={formatDateForInput}
-          disabledFields={disabledFields} // <-- Ajout ici
+          disabledFields={disabledFields}
         />
-      ) : (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <Spinner size="md" />
-        </div>
       )
     },
     {
       key: '1',
       title: 'Statistiques',
       icon: <ChartLineIcon />,
-      content: statsDataReady ? (
-        <div>
-          {/* Résumé global */}
-          <div style={{ marginBottom: '2rem' }}>
-            <Title headingLevel="h3" style={{ marginBottom: '1rem' }}>Résumé des statistiques</Title>
-            <Flex spaceItems={{ default: 'spaceItemsLg' }}>
-              <FlexItem flex={{ default: 'flex_1' }}>
-                <Card style={{ textAlign: 'center', padding: '1rem' }}>
-                  <CardBody>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f77b4' }}>
-                      {statFrequentationForGraph!.mois.reduce((acc, item) => acc + (item.frequentation ?? 0), 0)}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#666' }}>Présences totales</div>
-                  </CardBody>
-                </Card>
-              </FlexItem>
-
-              <FlexItem flex={{ default: 'flex_1' }}>
-                <Card style={{ textAlign: 'center', padding: '1rem' }}>
-                  <CardBody>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ff7f0e' }}>
-                      {(statFrequentationForGraph!.mois.reduce((acc, item) => acc + (item.pourcentage_de_cours_valides ?? 0), 0) / statFrequentationForGraph!.mois.length).toFixed(1)}%
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#666' }}>Taux de présence moyen</div>
-                  </CardBody>
-                </Card>
-              </FlexItem>
-
-              <FlexItem flex={{ default: 'flex_1' }}>
-                <Card style={{ textAlign: 'center', padding: '1rem' }}>
-                  <CardBody>
-                    {(() => {
-                      const best = statFrequentationForGraph!.mois.reduce(
-                        (best, current) => (current.pourcentage_de_cours_valides ?? 0) > (best?.pourcentage_de_cours_valides ?? 0) ? current : best,
-                        null
-                      );
-                      return (
-                        <>
-                          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2ca02c' }}>
-                            {best?.mois || 'N/A'}
-                          </div>
-                          <div style={{ fontSize: '0.9rem', color: '#666' }}>Meilleur mois</div>
-                          {best && (
-                            <Badge style={{ marginTop: '0.5rem', backgroundColor: '#2ca02c', color: 'white' }}>
-                              {best.pourcentage_de_cours_valides}%
-                            </Badge>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </CardBody>
-                </Card>
-              </FlexItem>
-            </Flex>
-          </div>
-
-          {/* Contrôles du graphique */}
-          <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-            <button onClick={() => setChartType('line')} style={{ padding: '0.5rem 1rem', borderRadius: 4, border: 'none', backgroundColor: chartType==='line'?'#1f77b4':'#ccc', color:'white' }}>Ligne</button>
-            <button onClick={() => setChartType('area')} style={{ padding: '0.5rem 1rem', borderRadius: 4, border: 'none', backgroundColor: chartType==='area'?'#1f77b4':'#ccc', color:'white' }}>Aire</button>
-            <button onClick={() => setChartType('bar')} style={{ padding: '0.5rem 1rem', borderRadius: 4, border: 'none', backgroundColor: chartType==='bar'?'#1f77b4':'#ccc', color:'white' }}>Barres</button>
-          </div>
-
-          {/* Graphique */}
-          <GraphiqueLineaire
-            data={statFrequentationForGraph!.mois}
-            series={[
-              { dataKey: 'pourcentage_de_cours_valides', name: 'Taux de présence (%)', color: '#1f77b4' },
-              { dataKey: 'frequentation', name: 'Nombre de présences', color: '#ff7f0e' }
-            ]}
-            xAxisKey="mois"
-            xAxisLabel="Mois"
-            yAxisLabel="Valeurs"
-            type={chartType}
-            height={450}
-            showGrid
-            showLegend
-            showTooltip
-            gradientColors={chartType === 'area'}
-            cardStyle={{ border: '1px solid #dee2e6', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-            formatTooltip={(value, name) => name.includes('%') ? [`${value}%`, name] : [`${value} présence${value > 1 ? 's' : ''}`, name]}
-          />
-
-          {/* Détail par mois */}
-          <div style={{ marginTop: '2rem' }}>
-            <Title headingLevel="h4" style={{ marginBottom: '1rem' }}>Détail par mois</Title>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-              {statFrequentationForGraph!.mois.map((item, index) => (
-                <Card key={index} style={{ padding: '0.75rem' }}>
-                  <CardBody>
-                    <Title headingLevel="h5" size="md" style={{ marginBottom: '0.5rem' }}>{item.mois}</Title>
-                    <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsXs' }}>
-                      <FlexItem>
-                        <span style={{ fontWeight: '500' }}>Présences : </span>
-                        <Badge style={{ backgroundColor: '#ff7f0e', color: 'white' }}>{item.frequentation}</Badge>
-                      </FlexItem>
-                      <FlexItem>
-                        <span style={{ fontWeight: '500' }}>Taux : </span>
-                        <Badge style={{
-                          backgroundColor: item.pourcentage_de_cours_valides >= 80 ? '#28a745' :
-                            item.pourcentage_de_cours_valides >= 60 ? '#ffc107' : '#dc3545',
-                          color: 'white'
-                        }}>
-                          {item.pourcentage_de_cours_valides}%
-                        </Badge>
-                      </FlexItem>
-                      <FlexItem>
-                        <span style={{ fontWeight: '500', fontSize: '0.9rem', color: '#666' }}>
-                          Cours total : {item.nombres_total_de_cours_du_mois}
-                        </span>
-                      </FlexItem>
-                    </Flex>
-                  </CardBody>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <Spinner size="md" />
-        </div>
+      content: (
+        <StatistiquesTab
+          statsDataReady={statsDataReady}
+          statFrequentationForGraph={statFrequentationForGraph}
+          chartType={chartType}
+          onChartTypeChange={setChartType}
+        />
       )
     },
     {
       key: '2',
       title: 'Paiements',
       icon: <CreditCardIcon />,
-      content: isDataReady ? (
-        <EcheancesPaiement paiementsEcheances={paiementsEcheances} />
-      ) : (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <Spinner size="md" />
-        </div>
+      content: (
+        <PaiementsTab
+          isDataReady={isDataReady}
+          paiementsEcheances={paiementsEcheances}
+        />
       )
     }
   ];
@@ -451,7 +388,6 @@ const Compte = () => {
               eventKey={tab.key}
               title={
                 <>
-                  {/* Correction : utilise tab.icon comme composant, pas comme balise JSX */}
                   {tab.icon}
                   <span style={{ marginLeft: 8 }}>{tab.title}</span>
                 </>
@@ -462,15 +398,27 @@ const Compte = () => {
           ))}
         </Tabs>
       </PageSection>
-      <ModalsCompte
-        isModalOpen={isModalOpen}
-        modalMessage={modalMessage}
-        onCloseModal={handleCloseModal}
-        onConfirm={pendingChanges && modalStep === 'summary' ? handleConfirmModal : undefined}
+      
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={annulerModifications}
+        onConfirm={confirmerModifications}
+        title="Confirmer les modifications"
+        message="Vous êtes sur le point de modifier vos informations."
+        modificationsResume={modificationsResume}
+      />
+      
+      <ResultModal
+        isOpen={isResultModalOpen}
+        onClose={() => setIsResultModalOpen(false)}
+        title={resultModalSuccess ? 'Succès' : 'Erreur'}
+        message={resultModalMessage}
+        isSuccess={resultModalSuccess}
       />
     </div>
   );
 };
 
 export default Compte;
+
 

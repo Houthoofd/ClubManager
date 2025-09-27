@@ -12,6 +12,11 @@ const StatistiquesGraphique: React.FC<StatistiquesGraphiqueProps> = ({
   chartType,
   onChartTypeChange,
 }) => {
+  // Vérifications de sécurité
+  if (!statFrequentationForGraph || !statFrequentationForGraph.mois || !Array.isArray(statFrequentationForGraph.mois)) {
+    return <div>Aucune donnée disponible pour le graphique</div>;
+  }
+
   return (
     <>
       {/* Contrôles du graphique */}
