@@ -64,21 +64,21 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({ paiementsEcheance
   };
 
   return (
-    <div>
+    <>
       <Title headingLevel="h3" style={{ marginBottom: '1.5rem' }}>
         Échéances de paiement
       </Title>
-      <Gallery hasGutter maxWidths={{ default: '300px' }}>
-        {paiementsEcheances.map(paiement => {
+      <Gallery hasGutter>
+        {paiementsEcheances.map((paiement, idx) => {
           const dateEcheance = new Date(paiement.date_echeance);
           const isOverdue = dateEcheance < new Date() && paiement.statut !== 'payé';
           const statusColor = getStatusColor(paiement.statut, isOverdue);
           const diffDays = calculateDaysDifference(dateEcheance);
 
           return (
-            <GalleryItem key={paiement.id}>
+            <GalleryItem key={idx}>
               <Card 
-                isHoverable 
+                isHoverable={true} // Correction : passer isHoverable uniquement au Card
                 style={{ 
                   border: `2px solid ${statusColor.border}`,
                   borderRadius: '12px',
@@ -220,7 +220,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({ paiementsEcheance
           </FlexItem>
         </Flex>
       </div>
-    </div>
+    </>
   );
 };
 

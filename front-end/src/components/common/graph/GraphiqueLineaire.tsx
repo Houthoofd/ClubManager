@@ -59,6 +59,10 @@ const GraphiqueLineaire: React.FC<GraphiqueLineaireProps> = ({
   cardStyle,
   gradientColors = false,
 }) => {
+  // Ajoute un log pour vérifier les données reçues
+  console.log('GraphiqueLineaire data:', data);
+  console.log('GraphiqueLineaire series:', series);
+
   // Fonction de formatage par défaut pour le tooltip
   const defaultFormatTooltip = (value: any, name: string, props: any) => {
     if (name.includes('%')) {

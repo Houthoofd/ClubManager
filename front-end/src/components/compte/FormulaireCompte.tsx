@@ -36,6 +36,7 @@ interface FormulaireCompteProps {
   onApplyChanges: () => void;
   isLoading: boolean;
   formatDateForInput: (date: string) => string;
+  disabledFields?: { [key: string]: boolean }; // Ajout de la prop
 }
 
 const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
@@ -55,6 +56,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
   onApplyChanges,
   isLoading,
   formatDateForInput,
+  disabledFields = {},
 }) => {
   return (
     <>
@@ -128,7 +130,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                       type="email"
                       id="email"
                       value={form.email || compteInfo?.utilisateur?.email || ''}
-                      isDisabled={!editingFields['email']}
+                      isDisabled={!editingFields['email'] || disabledFields['email']}
                       onChange={onEmailChange}
                       style={{ 
                         flexGrow: 1, 
@@ -164,7 +166,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                       id="date_naissance"
                       value={formatDateForInput(form.date_naissance || compteInfo?.utilisateur?.date_naissance)}
                       onChange={(value) => onFormChange('date_naissance', value)}
-                      isDisabled={!editingFields['date_naissance']}
+                      isDisabled={!editingFields['date_naissance'] || disabledFields['date_naissance']}
                       style={{ 
                         flexGrow: 1, 
                         border: 'none',
@@ -250,7 +252,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                           id="genres"
                           value={form.genres || compteInfo?.utilisateur?.genres || ''}
                           onChange={e => onFormChange('genres', e.target.value)}
-                          disabled={!editingFields['genres']}
+                          disabled={disabledFields['genres'] ? true : !editingFields['genres']}
                           style={{
                             flex: 1,
                             border: 'none',
@@ -294,7 +296,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                           id="grades"
                           value={form.grades || compteInfo?.utilisateur?.grades || ''}
                           onChange={e => onFormChange('grades', e.target.value)}
-                          disabled={!editingFields['grades']}
+                          disabled={disabledFields['grades'] ? true : !editingFields['grades']}
                           style={{
                             flex: 1,
                             border: 'none',
@@ -338,7 +340,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                           id="status"
                           value={form.status || compteInfo?.utilisateur?.status || ''}
                           onChange={e => onFormChange('status', e.target.value)}
-                          disabled={!editingFields['status']}
+                          disabled={disabledFields['status'] ? true : !editingFields['status']}
                           style={{
                             flex: 1,
                             border: 'none',
@@ -382,7 +384,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                           id="abonnement"
                           value={form.abonnement || compteInfo?.utilisateur?.abonnement || ''}
                           onChange={e => onFormChange('abonnement', e.target.value)}
-                          disabled={!editingFields['abonnement']}
+                          disabled={disabledFields['abonnement'] ? true : !editingFields['abonnement']}
                           style={{
                             flex: 1,
                             border: 'none',

@@ -78,7 +78,7 @@ export const useStatus = () => {
 
 // Hook pour mettre à jour les informations utilisateur
 export const useUpdateCompte = () => {
-  const queryClient = useQueryClient(); // Initialisez le queryClient
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (formData: any) => {
@@ -94,10 +94,10 @@ export const useUpdateCompte = () => {
       }
       return response.json();
     },
-    onSuccess: () => {
-      // Invalide les queries associées pour recharger les données
-      queryClient.invalidateQueries({ queryKey: ['compteInfo'] }); // Passez un objet avec queryKey
-      queryClient.invalidateQueries({ queryKey: ['echeancesByUserId'] }); // Passez un objet avec queryKey
+    onSuccess: (_, variables) => {
+      // Invalide les queries avec les bonnes clés utilisées dans les hooks
+      queryClient.invalidateQueries({ queryKey: ['compteInfo', variables?.prenom, variables?.nom] });
+      queryClient.invalidateQueries({ queryKey: ['echeances', variables?.id] });
     },
   });
 };
