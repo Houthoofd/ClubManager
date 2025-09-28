@@ -91,50 +91,57 @@ export class Cours {
   }
 
   // Obtenir les jours de cours
-  obtenirLesJoursDeCours(): Promise<JourCours[]> {
+  async obtenirLesJoursDeCours(): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirLesJoursDeCours");
+      throw new Error("Service temporairement indisponible - Pool fermé");
+    }
+
+    console.log('Appel pour obtenir les jours de cours');
+    
+    const sql = `
+      SELECT 
+        cr.type_cours,
+        cr.jour_semaine,
+        cr.heure_debut,
+        cr.heure_fin,
+        CASE cr.jour_semaine
+          WHEN 1 THEN 'Lundi'
+          WHEN 2 THEN 'Mardi'
+          WHEN 3 THEN 'Mercredi'
+          WHEN 4 THEN 'Jeudi'
+          WHEN 5 THEN 'Vendredi'
+          WHEN 6 THEN 'Samedi'
+          WHEN 7 THEN 'Dimanche'
+          ELSE 'Jour inconnu'
+        END as jour,
+        GROUP_CONCAT(CONCAT(p.prenom, ' ', p.nom) SEPARATOR ', ') AS professeurs
+      FROM cours_recurrent cr
+      LEFT JOIN cours_recurrent_professeur crp ON cr.id = crp.cours_recurrent_id
+      LEFT JOIN professeurs p ON crp.professeur_id = p.id
+      WHERE cr.active = 1
+      GROUP BY cr.id, cr.type_cours, cr.jour_semaine, cr.heure_debut, cr.heure_fin
+      ORDER BY cr.jour_semaine, cr.heure_debut;
+    `;
+    
     return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT
-          cr.id AS cours_recurrent_id,
-          CASE cr.jour_semaine
-            WHEN 1 THEN 'Lundi'
-            WHEN 2 THEN 'Mardi'
-            WHEN 3 THEN 'Mercredi'
-            WHEN 4 THEN 'Jeudi'
-            WHEN 5 THEN 'Vendredi'
-            WHEN 6 THEN 'Samedi'
-            WHEN 7 THEN 'Dimanche'
-          END AS jour,
-          cr.type_cours,
-          TIME_FORMAT(cr.heure_debut, '%H:%i') AS heure_debut,
-          TIME_FORMAT(cr.heure_fin, '%H:%i') AS heure_fin,
-          GROUP_CONCAT(DISTINCT CONCAT(p.prenom, ' ', p.nom) ORDER BY p.nom ASC SEPARATOR ', ') AS professeurs
-        FROM cours_recurrent cr
-        LEFT JOIN cours_recurrent_professeur crp ON cr.id = crp.cours_recurrent_id
-        LEFT JOIN professeurs p ON crp.professeur_id = p.id
-        WHERE cr.active = 1
-        GROUP BY cr.id, cr.type_cours, cr.heure_debut, cr.heure_fin, cr.jour_semaine
-        ORDER BY cr.jour_semaine, cr.heure_debut;
-      `;
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error('Erreur lors de la récupération des jours de cours:', error);
-          reject(error);
-        } else {
-          const joursDeCours: JourCours[] = results.map((result: any) => {
-            const professeursArray: string[] = result.professeurs
-              ? result.professeurs.split(',').map((p: string) => p.trim())
-              : [];
-            return {
-              jour: result.jour,
-              type_cours: result.type_cours,
-              heure_debut: result.heure_debut,
-              heure_fin: result.heure_fin,
-              professeurs: Array.from(new Set(professeursArray))
-            };
-          });
-          resolve(joursDeCours);
+          return reject(error);
         }
+        
+        console.log('Résultat des jours de cours:', results);
+        
+        // Traitement des résultats pour s'assurer que les professeurs sont correctement formatés
+        const coursFormattes = results.map((cours: any) => ({
+          ...cours,
+          jour: cours.jour || 'Jour non défini', // Fallback si le jour est null
+          professeurs: cours.professeurs ? cours.professeurs.split(', ').filter(Boolean) : []
+        }));
+        
+        console.log('Cours formatés:', coursFormattes);
+        resolve(coursFormattes);
       });
     });
   }
@@ -675,7 +682,7 @@ export class Cours {
 
   // Ajouter un cours récurrent
   ajouterCoursRecurrent(data: AjoutCours): Promise<ConfirmationResult> {
-    return new Promise<ConfirmationResult>((resolve, reject) => {
+    return new Promise<ConfirmationResult>(async (resolve, reject) => {
       const joursDeSemaine: { [key: string]: number } = {
         lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6, dimanche: 7
       };

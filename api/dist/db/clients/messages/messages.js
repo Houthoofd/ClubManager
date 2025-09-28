@@ -1,16 +1,54 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
-export class Message {
+export class Messages {
     mysqlConnector;
     constructor() {
         this.mysqlConnector = MysqlConnector.getInstance();
     }
-    async envoyerMessage(utilisateur_id, contenu) {
+    async obtenirMessages() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirMessages");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
         return new Promise((resolve, reject) => {
             const query = `
-        INSERT INTO messages_personnalises (utilisateur_id, contenu)
-        VALUES (?, ?)
+        SELECT m.*, u.nom, u.prenom
+        FROM messages m
+        JOIN utilisateurs u ON m.utilisateur_id = u.id
+        ORDER BY m.date_envoi DESC
       `;
-            const params = [utilisateur_id, contenu];
+            console.log("Exécution de la requête pour récupérer tous les messages");
+            this.mysqlConnector.query(query, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la requête pour récupérer tous les messages : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    console.log('Messages récupérés avec succès :', results);
+                    const confirmation = {
+                        isFind: true,
+                        message: "Messages récupérés avec succès",
+                        data: results
+                    };
+                    resolve(confirmation);
+                }
+            });
+        });
+    }
+    async envoyerMessage(messageData) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour envoyerMessage");
+            throw new Error("Service temporairement indisponible - Pool fermé");
+        }
+        return new Promise((resolve, reject) => {
+            const query = `
+        INSERT INTO messages (utilisateur_id, contenu, date_envoi)
+        VALUES (?, ?, NOW())
+      `;
+            const params = [messageData.utilisateur_id, messageData.contenu];
             console.log("Exécution de la requête pour insérer un message");
             this.mysqlConnector.query(query, params, (error, results) => {
                 if (error) {
@@ -28,46 +66,62 @@ export class Message {
             });
         });
     }
-    async creerTypeMessage(title, content) {
+    async marquerCommeLu(messageId, utilisateurId) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour marquerCommeLu");
+            throw new Error("Service temporairement indisponible - Pool fermé");
+        }
         return new Promise((resolve, reject) => {
             const query = `
-        INSERT INTO types_messages_personnalises (title, content)
-        VALUES (?, ?)
+        UPDATE messages
+        SET lu = 1
+        WHERE id = ? AND utilisateur_id = ?
       `;
-            const params = [title, content];
-            console.log("Exécution de la requête pour insérer un type de message personnalisé");
+            const params = [messageId, utilisateurId];
+            console.log("Exécution de la requête pour marquer le message comme lu");
             this.mysqlConnector.query(query, params, (error, results) => {
                 if (error) {
-                    console.error('Erreur lors de l’insertion du type de message personnalisé : ' + error.message);
+                    console.error('Erreur lors de la mise à jour du message : ' + error.message);
                     reject(error);
                 }
                 else {
-                    console.log('Type de message personnalisé inséré avec succès :', results);
+                    console.log('Message marqué comme lu avec succès :', results);
                     const confirmation = {
                         isConfirm: true,
-                        message: "Le type de message personnalisé a bien été enregistré"
+                        message: "Le message a bien été marqué comme lu"
                     };
                     resolve(confirmation);
                 }
             });
         });
     }
-    async obtenirTousLesTypesDeMessages() {
+    async obtenirMessagesPersonnalises() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirMessagesPersonnalises");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
         return new Promise((resolve, reject) => {
             const query = `
-        SELECT * FROM types_messages_personnalises
+        SELECT mp.*, u.nom, u.prenom
+        FROM messages_personnalises mp
+        JOIN utilisateurs u ON mp.utilisateur_id = u.id
+        ORDER BY mp.date_envoi DESC
       `;
-            console.log("Exécution de la requête pour récupérer tous les types de message");
+            console.log("Exécution de la requête pour récupérer tous les messages personnalisés");
             this.mysqlConnector.query(query, [], (error, results) => {
                 if (error) {
-                    console.error('Erreur lors de la requête pour récupérer tous les types de message : ' + error.message);
+                    console.error('Erreur lors de la requête pour récupérer tous les messages personnalisés : ' + error.message);
                     reject(error);
                 }
                 else {
-                    console.log('Types de message personnalisés récupérés avec succès :', results);
+                    console.log('Messages personnalisés récupérés avec succès :', results);
                     const confirmation = {
                         isFind: true,
-                        message: "Types de messages récupérés avec succès",
+                        message: "Messages personnalisés récupérés avec succès",
                         data: results
                     };
                     resolve(confirmation);

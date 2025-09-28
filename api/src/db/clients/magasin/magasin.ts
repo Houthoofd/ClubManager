@@ -9,6 +9,11 @@ export class Magasin {
   }
 
   obtenirLesArticles(): Promise<any[]> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirLesArticles");
+      return Promise.resolve([]);
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT 
@@ -73,6 +78,11 @@ export class Magasin {
   }
 
   obtenirArticlesParCategories(): Promise<ArticlesParCategorie> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirArticlesParCategories");
+      return Promise.resolve({});
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT 
@@ -138,6 +148,11 @@ export class Magasin {
   }
 
   obtenirLesCategories(): Promise<any[]> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirLesCategories");
+      return Promise.resolve([]);
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `SELECT * FROM categories`;
   
@@ -156,6 +171,11 @@ export class Magasin {
   }
 
   async getTailleMap(): Promise<Record<string, number>> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour getTailleMap");
+      return {};
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `SELECT id, nom FROM tailles`;
 
@@ -172,6 +192,11 @@ export class Magasin {
   }
 
   async ajouterArticle(data: ArticleCreationData): Promise<ConfirmationResult> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour ajouterArticle");
+      return { isConfirm: false, message: "Service temporairement indisponible - Pool fermé" };
+    }
+
     const articleSql = `
       INSERT INTO articles (nom, description, prix, categorie_id)
       VALUES (?, ?, ?, ?)
@@ -242,6 +267,11 @@ export class Magasin {
   }
 
   obtenirLeStock(): Promise<any[]> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirLeStock");
+      return Promise.resolve([]);
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT 
@@ -269,6 +299,14 @@ export class Magasin {
   }
 
   ajouterStock(articleId: number, tailleId: number, quantite: number): Promise<ConfirmationResult> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour ajouterStock");
+      return Promise.resolve({
+        isConfirm: false,
+        message: "Service temporairement indisponible - Pool fermé"
+      });
+    }
+
     return new Promise((resolve, reject) => {
       // Vérifie si une ligne existe déjà pour cet article + taille
       const checkSql = `SELECT id, quantite FROM stocks WHERE article_id = ? AND taille_id = ?`;
@@ -306,6 +344,11 @@ export class Magasin {
   }
 
   obtenirLesCommandes(): Promise<any[]> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirLesCommandes");
+      return Promise.resolve([]);
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT 
@@ -370,6 +413,14 @@ export class Magasin {
   }
 
   async ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour ajouterCommande");
+      return {
+        isConfirm: false,
+        message: "Service temporairement indisponible - Pool fermé"
+      };
+    }
+
     try {
       // Récupérer la map tailleNom -> tailleId
       const tailleMap = await this.getTailleMap();
@@ -431,6 +482,14 @@ export class Magasin {
   }
 
   supprimerArticle(articleId: number): Promise<ConfirmationResult> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour supprimerArticle");
+      return Promise.resolve({
+        isConfirm: false,
+        message: "Service temporairement indisponible - Pool fermé"
+      });
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `DELETE FROM articles WHERE id = ?`;
 
@@ -445,6 +504,14 @@ export class Magasin {
   }
 
   modifierArticle(id: number, data: ArticleData): Promise<ConfirmationResult> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour modifierArticle");
+      return Promise.resolve({
+        isConfirm: false,
+        message: "Service temporairement indisponible - Pool fermé"
+      });
+    }
+
     return new Promise(async (resolve, reject) => {
       const sql = `
         UPDATE articles 
@@ -523,6 +590,14 @@ export class Magasin {
   }
 
   async modifierStock(articleId: number, tailleId: number, quantite: number): Promise<ConfirmationResult> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour modifierStock");
+      return {
+        isConfirm: false,
+        message: "Service temporairement indisponible - Pool fermé"
+      };
+    }
+
     const sql = `
       UPDATE stocks 
       SET quantite = ?
@@ -552,6 +627,11 @@ export class Magasin {
   }
 
   async obtenirLesTailles(): Promise<{ id: number; nom: string }[]> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirLesTailles");
+      return [];
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `SELECT id, nom FROM tailles ORDER BY nom`;
 
@@ -573,6 +653,14 @@ export class Magasin {
     date: string,
     statut = 'en_attente'
   ): Promise<ConfirmationResult> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour creerCommande");
+      return Promise.resolve({
+        isConfirm: false,
+        message: "Service temporairement indisponible - Pool fermé"
+      });
+    }
+
     const commande = { 
       utilisateur_id, 
       articles, 

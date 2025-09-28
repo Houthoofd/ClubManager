@@ -376,12 +376,12 @@ const AjouterCoursPage: React.FC = () => {
   };
 
   // Vérifiez si les données sont en cours de chargement ou non disponibles
-  const isLoadingData = loadingProfesseurs || loadingPlanning || !planningCours || !professeurs;
+  const isLoadingData = loadingProfesseurs || loadingPlanning;
   const [isDataReady, setIsDataReady] = useState(false);
 
   useEffect(() => {
-    // Vérifiez si les données sont prêtes
-    if (!loadingProfesseurs && !loadingPlanning && planningCours.length > 0 && professeurs.length > 0) {
+    // Vérifiez si les données sont prêtes - on accepte même des tableaux vides
+    if (!loadingProfesseurs && !loadingPlanning && planningCours !== undefined && professeurs !== undefined) {
       setIsDataReady(true);
     }
   }, [loadingProfesseurs, loadingPlanning, planningCours, professeurs]);
@@ -402,17 +402,25 @@ const AjouterCoursPage: React.FC = () => {
     );
   }
 
-  if (planningCours.length === 0) {
+  // Affichage des données brutes pour debug
+  console.log('Données brutes de planningCours:', planningCours);
+
+  // Si pas de cours, afficher un message informatif plutôt qu'une erreur
+  if (!planningCours || planningCours.length === 0) {
     console.warn('Aucun cours disponible dans planningCours.');
     return (
       <PageSection>
         <div style={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '50vh'
+          height: '50vh',
+          textAlign: 'center'
         }}>
-          <p>Aucun cours disponible pour le moment. Veuillez vérifier vos données.</p>
+          <h3>Aucun cours configuré</h3>
+          <p>Il n'y a actuellement aucun cours configuré dans le système.</p>
+          <p>Vous pouvez créer votre premier cours en utilisant l'onglet "Ajouter un cours".</p>
         </div>
       </PageSection>
     );
@@ -431,7 +439,6 @@ const AjouterCoursPage: React.FC = () => {
     professeurs: cours.professeurs && cours.professeurs.length > 0 ? cours.professeurs : ['Aucun professeur'],
   }));
 
-  console.log('Données brutes de planningCours:', planningCours);
   console.log('Données filtrées de planningCours:', filteredPlanningCours);
   console.log('Données normalisées de planningCours:', normalizedPlanningCours);
 

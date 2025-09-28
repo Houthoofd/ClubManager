@@ -107,7 +107,7 @@ router.get('/:id', async (req: any, res: any) => {
     const client = new Utilisateurs();
 
     // Récupère le prénom et le nom de l'utilisateur à partir de l'id
-    const utilisateurSimple = await client.obtenirUnUtilisateur(Number(utilisateurId));
+    const utilisateurSimple = await client.obtenirUtilisateurParId(Number(utilisateurId));
     if (!utilisateurSimple.isFind || !utilisateurSimple.data || utilisateurSimple.data.length === 0) {
       return res.status(404).json({ message: "Aucun utilisateur trouvé.", data: [] });
     }
@@ -196,7 +196,7 @@ router.delete('/supprimer/:id', async (req: any, res: any) => {
     const client = new Utilisateurs();
 
     // Vérifie si l'utilisateur existe avant suppression
-    const utilisateurSimple = await client.obtenirUnUtilisateur(utilisateurId);
+    const utilisateurSimple = await client.obtenirUtilisateurParId(utilisateurId);
     console.log(`[DELETE] Résultat de obtenirUnUtilisateur :`, utilisateurSimple);
 
     if (!utilisateurSimple.isFind || !utilisateurSimple.data || utilisateurSimple.data.length === 0) {

@@ -91,9 +91,12 @@ setInterval(() => {
 
 export default class MysqlConnector {
   private static instance: MysqlConnector;
+  private pool: mysql.Pool;
   private isPoolHealthy: boolean = false;
+  private isClosing: boolean = false;
 
   private constructor() {
+    this.pool = mysql.createPool(poolConfig);
     this.testConnection();
   }
 
@@ -122,13 +125,22 @@ export default class MysqlConnector {
     values: any[] = [],
     callback: (error: mysql.MysqlError | null, results?: any, fields?: mysql.FieldInfo[]) => void
   ): void {
-    if (!this.isPoolHealthy) {
-      return callback(new Error('Pool de connexions non disponible') as mysql.MysqlError);
+    // Vérifier si le pool est fermé ou en cours de fermeture
+    if (this.isClosing || !this.isPoolHealthy) {
+      console.log('❌ Pool MySQL fermé ou non disponible');
+      return callback(new Error('Pool de connexions fermé ou non disponible') as mysql.MysqlError);
     }
 
-    pool.getConnection((err, connection) => {
+    this.pool.getConnection((err, connection) => {
       if (err) {
         console.error('❌ Erreur lors de l\'acquisition de connexion :', err.message);
+        
+        // Si le pool est fermé, marquer comme non sain
+        if (err.code === 'POOL_CLOSED' || err.code === 'POOL_DESTROYED') {
+          this.isPoolHealthy = false;
+          this.isClosing = true;
+        }
+        
         return callback(err);
       }
 
@@ -206,7 +218,16 @@ export default class MysqlConnector {
 
   public close(): Promise<void> {
     return new Promise((resolve, reject) => {
-      pool.end((err) => {
+      // Marquer comme en cours de fermeture
+      this.isClosing = true;
+      this.isPoolHealthy = false;
+      
+      if (!this.pool) {
+        resolve();
+        return;
+      }
+
+      this.pool.end((err) => {
         if (err) {
           console.error('❌ Erreur lors de la fermeture du pool :', err);
           reject(err);
@@ -216,6 +237,11 @@ export default class MysqlConnector {
         }
       });
     });
+  }
+
+  // Vérifier l'état du pool
+  public isPoolReady(): boolean {
+    return this.isPoolHealthy && !this.isClosing && !!this.pool;
   }
 
   // Méthode pour setup le shutdown gracieux - NE PAS APPELER AUTOMATIQUEMENT

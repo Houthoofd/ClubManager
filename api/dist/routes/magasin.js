@@ -9,14 +9,25 @@ router.use(verifyToken);
 router.get('/articles', async (req, res) => {
     try {
         const client = new Magasin();
-        // Récupérer les utilisateurs associés à ce cours
-        const result = await client.obtenirArticlesParCategories();
-        console.log('articles récupèrés avec succès', result);
-        res.status(200).json(result);
+        const result = await client.obtenirLesCategories();
+        if (result && result.length > 0) {
+            res.json({
+                isFind: true,
+                message: "Articles trouvés",
+                data: result
+            });
+        }
+        else {
+            res.json({
+                isFind: false,
+                message: "Aucun article trouvé",
+                data: []
+            });
+        }
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des articles :', error);
-        res.status(500).json({ message: 'Erreur lors de la récupération des articles.' });
+        console.error('Erreur lors de la récupération des articles:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
 });
 router.get('/articles/categories', async (req, res) => {

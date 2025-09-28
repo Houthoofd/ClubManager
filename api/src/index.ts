@@ -128,6 +128,59 @@ app.get('/health/database', (req, res) => {
   }
 });
 
+// Gestion de l'arrêt gracieux
+let serverInstance: any;
+let isShuttingDown = false;
+
+const gracefulShutdown = async (signal: string) => {
+  if (isShuttingDown) {
+    console.log('🔄 Arrêt déjà en cours...');
+    return;
+  }
+  
+  isShuttingDown = true;
+  console.log(`🔄 Signal ${signal} reçu. Arrêt gracieux en cours...`);
+  
+  // Arrêter d'accepter de nouvelles requêtes
+  if (serverInstance) {
+    serverInstance.close(async () => {
+      console.log('✅ Serveur HTTP fermé');
+      
+      try {
+        // Attendre un peu pour que les requêtes en cours se terminent
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Fermer le pool MySQL
+        const mysqlConnector = MysqlConnector.getInstance();
+        await mysqlConnector.close();
+        
+        console.log('✅ Toutes les connexions fermées proprement');
+        process.exit(0);
+      } catch (error) {
+        console.error('❌ Erreur lors de la fermeture:', error);
+        process.exit(1);
+      }
+    });
+    
+    // Forcer l'arrêt après 10 secondes si pas terminé
+    setTimeout(() => {
+      console.log('⚠️  Arrêt forcé après timeout');
+      process.exit(1);
+    }, 10000);
+  } else {
+    process.exit(0);
+  }
+};
+
+// Middleware pour rejeter les requêtes pendant l'arrêt
+app.use((req, res, next) => {
+  if (isShuttingDown) {
+    res.status(503).json({ message: 'Service en cours d\'arrêt' });
+    return;
+  }
+  next();
+});
+
 // Démarrer le serveur Express et Socket.io
 server.listen(3000, () => {
   console.log('🚀 Server is running on port 3000');

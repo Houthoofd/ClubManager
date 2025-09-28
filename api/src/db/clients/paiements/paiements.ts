@@ -8,7 +8,16 @@ export class Paiements {
     this.mysqlConnector = MysqlConnector.getInstance();
   }
 
-  obtenirLesTousLesPaiements() {
+  async obtenirPaiements(): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirPaiements");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT paiements.*, 
@@ -39,28 +48,30 @@ export class Paiements {
    * @param utilisateurId - L'ID de l'utilisateur
    * @returns Une promesse qui résout avec la liste des paiements de l'utilisateur
    */
-  obtenirPaiementsParUtilisateur(utilisateurId: number) {
+  async obtenirPaiementsParUtilisateur(utilisateur_id: number): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirPaiementsParUtilisateur");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
     return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT paiements.*, 
-          utilisateurs.first_name, 
-          utilisateurs.last_name, 
-          plans_tarifaires.nom_plan
-        FROM paiements
-        INNER JOIN utilisateurs ON paiements.utilisateur_id = utilisateurs.id
-        INNER JOIN plans_tarifaires ON paiements.abonnement_id = plans_tarifaires.id
-        WHERE paiements.utilisateur_id = ?;
-      `;
-
-      console.log(`Exécution de la requête pour obtenir les paiements de l'utilisateur ID ${utilisateurId}`);
-
-      this.mysqlConnector.query(sql, [utilisateurId], (error, results) => {
+      const sql = `SELECT * FROM paiements WHERE utilisateur_id = ?`;
+      console.log('Param utilisateur_id:', utilisateur_id);
+      
+      this.mysqlConnector.query(sql, [utilisateur_id], (error, results) => {
         if (error) {
-          console.error(`Erreur lors de la récupération des paiements pour l'utilisateur ${utilisateurId}: ${error.message}`);
+          console.error('Erreur lors de la récupération des paiements par utilisateur:', error);
           reject(error);
         } else {
-          console.log(`Paiements récupérés avec succès pour l'utilisateur ${utilisateurId}:`, results);
-          resolve(results);
+          resolve({
+            isFind: true,
+            message: "Paiements récupérés",
+            data: results
+          });
         }
       });
     });
@@ -71,12 +82,12 @@ export class Paiements {
    * @param paiementData - Les données du paiement à créer
    * @returns Une promesse qui résout avec les données du paiement créé
    */
-  creerPaiement(paiementData: {
-    utilisateur_id: number;
-    montant: number;
-    description: string;
-    abonnement_id?: number;
-  }) {
+  async creerPaiement(paiementData: any): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour creerPaiement");
+      throw new Error("Service temporairement indisponible - Pool fermé");
+    }
+
     return new Promise((resolve, reject) => {
       // Générer la date actuelle pour le paiement
       const dateActuelle = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -121,11 +132,51 @@ export class Paiements {
   }
 
   /**
+   * Modifie le statut d'un paiement
+   * @param id - L'ID du paiement
+   * @param statut - Le nouveau statut à appliquer
+   * @returns Une promesse qui résout avec le résultat de l'opération
+   */
+  async modifierStatutPaiement(id: number, statut: string): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour modifierStatutPaiement");
+      throw new Error("Service temporairement indisponible - Pool fermé");
+    }
+
+    return new Promise((resolve, reject) => {
+      const sql = `
+        UPDATE paiements 
+        SET statut = ?
+        WHERE id = ?;
+      `;
+
+      this.mysqlConnector.query(sql, [statut, id], (error, results) => {
+        if (error) {
+          console.error('Erreur lors de la modification du statut du paiement : ' + error.message);
+          reject(error);
+        } else {
+          console.log('Statut du paiement modifié avec succès, ID:', id);
+          resolve({ id, statut });
+        }
+      });
+    });
+  }
+
+  /**
    * Récupère les échéances de paiement pour un utilisateur spécifique
    * @param utilisateurId - L'ID de l'utilisateur
    * @returns Une promesse qui résout avec la liste des échéances
    */
-  obtenirEcheancesPourUtilisateur(utilisateurId: number) {
+  async obtenirEcheancesPaiements(utilisateurId: number): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirEcheancesPaiements");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT 
@@ -200,6 +251,39 @@ export class Paiements {
           resolve({
             isConfirm: true,
             message: 'Paiement annulé avec succès'
+          });
+        }
+      });
+    });
+  }
+
+  // Ajouter les méthodes manquantes
+  async obtenirLesTousLesPaiements(): Promise<any> {
+    return this.obtenirPaiements();
+  }
+
+  async obtenirEcheancesPourUtilisateur(utilisateurId: number): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirEcheancesPourUtilisateur");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
+    return new Promise((resolve, reject) => {
+      const sql = `SELECT * FROM echeances_paiements WHERE utilisateur_id = ?`;
+      
+      this.mysqlConnector.query(sql, [utilisateurId], (error, results) => {
+        if (error) {
+          console.error('Erreur lors de la récupération des échéances:', error);
+          reject(error);
+        } else {
+          resolve({
+            isFind: true,
+            message: "Échéances récupérées",
+            data: results
           });
         }
       });

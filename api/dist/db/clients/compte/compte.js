@@ -5,6 +5,14 @@ export class Compte {
         this.mysqlConnector = MysqlConnector.getInstance();
     }
     obtenirUnUtilisateurParSonNomEtPrenom(prenom, nom) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirUnUtilisateurParSonNomEtPrenom");
+            return Promise.resolve({
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            });
+        }
         console.log(prenom, nom);
         try {
             const sql = 'SELECT * FROM utilisateurs WHERE first_name = ? AND last_name = ?';
@@ -55,6 +63,14 @@ export class Compte {
         }
     }
     obtenirInformationsUtilisateur = async (prenom, nom) => {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirInformationsUtilisateur");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
         console.log(`[obtenirInformationsUtilisateur] Entrée - prenom: ${prenom}, nom: ${nom}`);
         try {
             // Requête SQL pour récupérer les informations en fonction des IDs liés
@@ -121,6 +137,10 @@ export class Compte {
     };
     // Ajoute ou modifie le mot de passe d'un utilisateur
     async mettreAJourMotDePasse(id, hash, isCreation) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour mettreAJourMotDePasse");
+            return { isConfirm: false, message: "Service temporairement indisponible - Pool fermé" };
+        }
         if (!id || !hash) {
             return { isConfirm: false, message: "Id et mot de passe requis." };
         }
@@ -152,6 +172,10 @@ export class Compte {
         });
     }
     obtenirInformationsCompte(userId) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirInformationsCompte");
+            return Promise.reject(new Error("Service temporairement indisponible - Pool fermé"));
+        }
         return new Promise((resolve, reject) => {
             const sql = `
         SELECT id, first_name, last_name, email, date_of_birth, phone
@@ -173,6 +197,13 @@ export class Compte {
         });
     }
     modifierInformationsCompte(userId, userData) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour modifierInformationsCompte");
+            return Promise.resolve({
+                isConfirm: false,
+                message: "Service temporairement indisponible - Pool fermé"
+            });
+        }
         return new Promise((resolve, reject) => {
             const sql = `
         UPDATE utilisateurs 
@@ -207,6 +238,13 @@ export class Compte {
         });
     }
     supprimerCompte(userId) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour supprimerCompte");
+            return Promise.resolve({
+                isConfirm: false,
+                message: "Service temporairement indisponible - Pool fermé"
+            });
+        }
         return new Promise((resolve, reject) => {
             const sql = `
         UPDATE utilisateurs 

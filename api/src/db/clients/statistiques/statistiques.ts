@@ -9,7 +9,16 @@ export class Statistiques {
     this.mysqlConnector = MysqlConnector.getInstance();
   }
 
-  obtenirStatistiquesGenerales(): Promise<any> {
+  async obtenirStatistiquesGenerales(): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirStatistiquesGenerales");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT 
@@ -82,6 +91,15 @@ export class Statistiques {
    * Obtient les statistiques de fréquentation pour un utilisateur spécifique
    */
   async obtenirStatistiquesFrequentation(utilisateurId: number): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirStatistiquesFrequentation");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
     console.log('[Statistiques] obtenirStatistiquesFrequentation - utilisateurId:', utilisateurId);
     return new Promise((resolve, reject) => {
       const query = `

@@ -11,6 +11,16 @@ export class Professeurs {
   // Récupérer les professeurs
   // Fonction pour obtenir les professeurs
   async obtenirLesProfesseurs(): Promise<VerifyResultWithData> {
+    // Vérifier si le pool est disponible
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirLesProfesseurs");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
     const sql = `
       SELECT * FROM utilisateurs
       WHERE status_id = 5;
@@ -20,7 +30,7 @@ export class Professeurs {
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
           console.error("Erreur lors de la récupération des professeurs : " + error.message);
-          return reject({
+          return resolve({
             isFind: false,
             message: error.message,
             data: [] // Retourner un tableau vide en cas d'erreur

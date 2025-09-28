@@ -252,7 +252,16 @@ export class Utilisateurs {
     });
   }
 
-  obtenirTousLesUtilisateurs(): Promise<VerifyResultWithData> {
+  async obtenirTousLesUtilisateurs(): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirTousLesUtilisateurs");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        data: []
+      };
+    }
+
     return new Promise<VerifyResultWithData>((resolve, reject) => {
       const sql = `SELECT * FROM utilisateurs`;
 
@@ -297,7 +306,12 @@ export class Utilisateurs {
     });
   }
 
-  obtenirUnUtilisateur(id?: number): Promise<VerifyResultWithData> {
+  async obtenirUtilisateurParId(id: number): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour obtenirUtilisateurParId");
+      throw new Error("Service temporairement indisponible - Pool fermé");
+    }
+
     console.log(`[obtenirUnUtilisateur] Appel avec id =`, id);
     return new Promise<VerifyResultWithData>((resolve, reject) => {
       if (!id) {
@@ -354,12 +368,17 @@ export class Utilisateurs {
     });
   }
 
-  supprimerUtilisateur(utilisateurId: number): Promise<ConfirmationResult> {
+  async supprimerUtilisateur(id: number): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour supprimerUtilisateur");
+      throw new Error("Service temporairement indisponible - Pool fermé");
+    }
+
     const deleteSql = `DELETE FROM utilisateurs WHERE id = ?`;
-    console.log(`[supprimerUtilisateur] Requête SQL :`, deleteSql, 'Paramètres :', utilisateurId);
+    console.log(`[supprimerUtilisateur] Requête SQL :`, deleteSql, 'Paramètres :', id);
 
     return new Promise<ConfirmationResult>((resolve, reject) => {
-      this.mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
+      this.mysqlConnector.query(deleteSql, [id], (error, result) => {
         console.log(`[supprimerUtilisateur] Résultat brut :`, result);
         if (error) {
           console.error('[supprimerUtilisateur] Erreur lors de la suppression de l\'utilisateur :', error.message);
@@ -371,91 +390,21 @@ export class Utilisateurs {
         }
 
         if (result.affectedRows > 0) {
-          console.log(`[supprimerUtilisateur] Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
+          console.log(`[supprimerUtilisateur] Utilisateur avec ID ${id} supprimé avec succès`);
           resolve({
             isConfirm: true,
-            message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès`
+            message: `Utilisateur avec ID ${id} supprimé avec succès`
           });
         } else {
-          console.log(`[supprimerUtilisateur] Aucun utilisateur supprimé pour l'ID ${utilisateurId}`);
+          console.log(`[supprimerUtilisateur] Aucun utilisateur supprimé pour l'ID ${id}`);
           resolve({
             isConfirm: false,
-            message: `Aucun utilisateur supprimé pour l'ID ${utilisateurId}`
+            message: `Aucun utilisateur supprimé pour l'ID ${id}`
           });
         }
       });
     });
   }
-
-  mettreAjourUtilisateur(utilisateurData: UserData): Promise<ConfirmationResult> {
-    return new Promise<ConfirmationResult>((resolve, reject) => {
-      const sqlSelect = `SELECT id FROM utilisateurs WHERE first_name = ? AND last_name = ? LIMIT 1`;
-      const valuesSelect = [utilisateurData.prenom, utilisateurData.nom];
-
-      this.mysqlConnector.query(sqlSelect, valuesSelect, (selectError, selectResults) => {
-        if (selectError) {
-          console.error('Erreur lors de la recherche de l\'utilisateur :', selectError.message);
-          reject(selectError);
-          return;
-        }
-
-        if (selectResults.length === 0) {
-          resolve({ isConfirm: false, message: "Utilisateur non trouvé." });
-          return;
-        }
-
-        const userId = selectResults[0].id;
-
-        const sqlUpdate = `
-          UPDATE utilisateurs SET 
-            first_name = ?,
-            last_name = ?,
-            nom_utilisateur = ?,
-            email = ?,
-            genre_id = ?,
-            date_of_birth = ?,
-            password = ?,
-            status_id = ?,
-            grade_id = ?,
-            abonnement_id = ?
-          WHERE id = ?
-        `;
-
-        const valuesUpdate = [
-          utilisateurData.prenom,
-          utilisateurData.nom,
-          utilisateurData.nom_utilisateur,
-          utilisateurData.email,
-          utilisateurData.genre_id,
-          utilisateurData.date_naissance,
-          utilisateurData.password,
-          utilisateurData.status_id,
-          utilisateurData.grade_id,
-          utilisateurData.abonnement_id,
-          userId
-        ];
-
-        console.log("Exécution de la requête de mise à jour :", sqlUpdate, valuesUpdate);
-
-        this.mysqlConnector.query(sqlUpdate, valuesUpdate, (updateError, updateResults: any) => {
-          if (updateError) {
-            console.error('Erreur lors de la mise à jour de l\'utilisateur :', updateError.message);
-            reject(updateError);
-            return;
-          }
-
-          if (updateResults.affectedRows === 0) {
-            console.log("Aucun utilisateur mis à jour, vérifiez les données.");
-            resolve({ isConfirm: false, message: "Aucun utilisateur mis à jour." });
-          } else {
-            console.log('Utilisateur mis à jour avec succès, ID:', userId);
-            resolve({ isConfirm: true, message: `Utilisateur avec ID ${userId} mis à jour avec succès.` });
-          }
-        });
-      });
-    });
-  }
-
 
   // Modifie les informations d'un utilisateur selon les champs reçus
   async modifierInfosUtilisateur(data: {
@@ -607,16 +556,25 @@ export class Utilisateurs {
   };
 
 
-  verifierProfesseurs(utilisateurs: { nom: string; prenom: string }[]): Promise<{ professeurs: any[] }> {
+  async verifierProfesseurs(professeurs: any[]): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour verifierProfesseurs");
+      return {
+        isFind: false,
+        message: "Service temporairement indisponible - Pool fermé",
+        professeurs: []
+      };
+    }
+
     return new Promise((resolve, reject) => {
-      if (!utilisateurs || utilisateurs.length === 0) {
+      if (!professeurs || professeurs.length === 0) {
         return resolve({ professeurs: [] });
       }
 
-      const placeholders = utilisateurs.map(() => '(?, ?)').join(', ');
+      const placeholders = professeurs.map(() => '(?, ?)').join(', ');
       const params: any[] = [];
       
-      utilisateurs.forEach(u => {
+      professeurs.forEach(u => {
         params.push(u.nom, u.prenom);
       });
 
@@ -637,7 +595,12 @@ export class Utilisateurs {
     });
   }
 
-  creerUtilisateur(userData: any): Promise<ConfirmationResult> {
+  async creerUtilisateur(userData: any): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour creerUtilisateur");
+      throw new Error("Service temporairement indisponible - Pool fermé");
+    }
+
     return new Promise((resolve, reject) => {
       const sql = `
         INSERT INTO utilisateurs (first_name, last_name, email, password_hash, status_id)
@@ -684,35 +647,70 @@ export class Utilisateurs {
     });
   }
 
-  modifierUtilisateur(id: number, userData: any): Promise<ConfirmationResult> {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        UPDATE utilisateurs 
-        SET first_name = ?, last_name = ?, email = ?
-        WHERE id = ? AND status_id = 1
-      `;
+  // Suppression de la méthode dupliquée - garder seulement cette version complète
+  async modifierUtilisateur(id: number, userData: any): Promise<any> {
+    if (!this.mysqlConnector.isPoolReady()) {
+      console.error("❌ Pool MySQL non disponible pour modifierUtilisateur");
+      throw new Error("Service temporairement indisponible - Pool fermé");
+    }
 
-      this.mysqlConnector.query(sql, [
-        userData.first_name,
-        userData.last_name,
-        userData.email,
-        id
-      ], (error, results: any) => {
-        if (error) {
-          console.error('Erreur lors de la modification de l\'utilisateur :', error);
-          reject(error);
-        } else if (results.affectedRows === 0) {
-          resolve({
+    return new Promise<ConfirmationResult>((resolve, reject) => {
+      const userId = id;
+      
+      const sqlSelect = `SELECT * FROM utilisateurs WHERE id = ?`;
+      const valuesSelect = [userId];
+
+      this.mysqlConnector.query(sqlSelect, valuesSelect, (selectError, selectResults) => {
+        if (selectError) {
+          console.error('Erreur lors de la sélection de l\'utilisateur :', selectError.message);
+          return reject(selectError);
+        }
+
+        if (selectResults.length === 0) {
+          return resolve({
             isConfirm: false,
-            message: "Aucune modification apportée, vérifiez les données."
-          });
-        } else {
-          resolve({
-            isConfirm: true,
-            message: "Utilisateur modifié avec succès."
+            message: 'Utilisateur non trouvé'
           });
         }
+
+        const sqlUpdate = `
+          UPDATE utilisateurs 
+          SET first_name = ?, last_name = ?, nom_utilisateur = ?, email = ?, genre_id = ?, 
+              date_of_birth = ?, password = ?, status_id = ?, grade_id = ?, abonnement_id = ?
+          WHERE id = ?
+        `;
+
+        const valuesUpdate = [
+          userData.prenom,
+          userData.nom,
+          userData.nom_utilisateur,
+          userData.email,
+          userData.genre_id,
+          userData.date_naissance,
+          userData.password,
+          userData.status_id,
+          userData.grade_id,
+          userData.abonnement_id,
+          userId
+        ];
+
+        this.mysqlConnector.query(sqlUpdate, valuesUpdate, (updateError, updateResults: any) => {
+          if (updateError) {
+            console.error('Erreur lors de la mise à jour de l\'utilisateur :', updateError.message);
+            reject(updateError);
+          } else {
+            resolve({
+              isConfirm: true,
+              message: 'Utilisateur modifié avec succès'
+            });
+          }
+        });
       });
     });
+  }
+
+  // Ajouter cette méthode manquante
+  async obtenirUnUtilisateur(id: number): Promise<any> {
+    return this.obtenirUtilisateurParId(id);
   }
 }

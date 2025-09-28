@@ -4,55 +4,180 @@ export class Informations {
     constructor() {
         this.mysqlConnector = MysqlConnector.getInstance();
     }
-    obtenirToutesLesInformations() {
+    async obtenirLesInformations() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirLesInformations");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
+        const sql = `
+      SELECT id, titre, contenu, date_creation, status_id
+      FROM informations
+      WHERE status_id = 1
+      ORDER BY date_creation DESC
+    `;
         return new Promise((resolve, reject) => {
-            const sql = `
-        SELECT id, titre, contenu, date_creation, status_id
-        FROM informations
-        WHERE status_id = 1
-        ORDER BY date_creation DESC
-      `;
             this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
                     console.error('Erreur lors de la récupération des informations :', error);
                     reject(error);
                 }
                 else {
-                    resolve(results);
+                    resolve({
+                        isFind: true,
+                        message: 'Informations récupérées avec succès',
+                        data: results
+                    });
                 }
             });
         });
     }
-    obtenirInformationParId(id) {
+    async obtenirLesGenres() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirLesGenres");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
+        const sql = `SELECT * FROM genres`;
         return new Promise((resolve, reject) => {
-            const sql = `
-        SELECT id, titre, contenu, date_creation, status_id
-        FROM informations
-        WHERE id = ? AND status_id = 1
-      `;
-            this.mysqlConnector.query(sql, [id], (error, results) => {
+            this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
-                    console.error('Erreur lors de la récupération de l\'information :', error);
+                    console.error('Erreur lors de la récupération des genres : ' + error.message);
                     reject(error);
                 }
-                else if (results.length === 0) {
-                    resolve(null);
-                }
                 else {
-                    resolve(results[0]);
+                    resolve({
+                        isFind: true,
+                        message: 'Genres récupérés avec succès',
+                        data: results
+                    });
                 }
             });
         });
     }
-    ajouterInformation(infoData) {
+    async obtenirLesStatus() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirLesStatus");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
+        const sql = `SELECT * FROM status`;
         return new Promise((resolve, reject) => {
-            const sql = `
-        INSERT INTO informations (titre, contenu, date_creation, status_id)
-        VALUES (?, ?, NOW(), 1)
-      `;
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des statuts : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    resolve({
+                        isFind: true,
+                        message: 'Statuts récupérés avec succès',
+                        data: results
+                    });
+                }
+            });
+        });
+    }
+    async obtenirLesGrades() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirLesGrades");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
+        const sql = `SELECT * FROM grades ORDER BY id ASC`;
+        return new Promise((resolve, reject) => {
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des grades : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    resolve({
+                        isFind: true,
+                        message: 'Grades récupérés avec succès',
+                        data: results
+                    });
+                }
+            });
+        });
+    }
+    async obtenirLesPlans() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirLesPlans");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
+        const sql = `SELECT * FROM plans_tarifaires`;
+        return new Promise((resolve, reject) => {
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des plans tarifaires : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    resolve({
+                        isFind: true,
+                        message: 'Plans tarifaires récupérés avec succès',
+                        data: results
+                    });
+                }
+            });
+        });
+    }
+    async obtenirLesAbonnements() {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour obtenirLesAbonnements");
+            return {
+                isFind: false,
+                message: "Service temporairement indisponible - Pool fermé",
+                data: []
+            };
+        }
+        const sql = `SELECT * FROM abonnements`;
+        return new Promise((resolve, reject) => {
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error('Erreur lors de la récupération des abonnements : ' + error.message);
+                    reject(error);
+                }
+                else {
+                    resolve({
+                        isFind: true,
+                        message: 'Abonnements récupérés avec succès',
+                        data: results
+                    });
+                }
+            });
+        });
+    }
+    async creerInformation(informationData) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour creerInformation");
+            throw new Error("Service temporairement indisponible - Pool fermé");
+        }
+        const sql = `
+      INSERT INTO informations (titre, contenu, date_creation, status_id)
+      VALUES (?, ?, NOW(), 1)
+    `;
+        return new Promise((resolve, reject) => {
             this.mysqlConnector.query(sql, [
-                infoData.titre,
-                infoData.contenu
+                informationData.titre,
+                informationData.contenu
             ], (error, results) => {
                 if (error) {
                     console.error('Erreur lors de l\'ajout de l\'information :', error);
@@ -67,16 +192,20 @@ export class Informations {
             });
         });
     }
-    modifierInformation(id, infoData) {
+    async modifierInformation(id, informationData) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour modifierInformation");
+            throw new Error("Service temporairement indisponible - Pool fermé");
+        }
+        const sql = `
+      UPDATE informations 
+      SET titre = ?, contenu = ?
+      WHERE id = ? AND status_id = 1
+    `;
         return new Promise((resolve, reject) => {
-            const sql = `
-        UPDATE informations 
-        SET titre = ?, contenu = ?
-        WHERE id = ? AND status_id = 1
-      `;
             this.mysqlConnector.query(sql, [
-                infoData.titre,
-                infoData.contenu,
+                informationData.titre,
+                informationData.contenu,
                 id
             ], (error, results) => {
                 if (error) {
@@ -98,72 +227,35 @@ export class Informations {
             });
         });
     }
-    // Récupérer les statuts
-    obtenirLeStatus() {
+    async supprimerInformation(id) {
+        if (!this.mysqlConnector.isPoolReady()) {
+            console.error("❌ Pool MySQL non disponible pour supprimerInformation");
+            throw new Error("Service temporairement indisponible - Pool fermé");
+        }
+        const sql = `
+      DELETE FROM informations
+      WHERE id = ?
+    `;
         return new Promise((resolve, reject) => {
-            const sql = `SELECT * FROM status`;
-            console.log("Exécution de la requête pour obtenir les statuts");
-            this.mysqlConnector.query(sql, [], (error, results) => {
+            this.mysqlConnector.query(sql, [id], (error, results) => {
                 if (error) {
-                    console.error('Erreur lors de la récupération des statuts : ' + error.message);
+                    console.error('Erreur lors de la suppression de l\'information :', error);
                     reject(error);
                 }
                 else {
-                    console.log('Statuts récupérés avec succès :', results);
-                    resolve(results);
+                    resolve({
+                        isConfirm: true,
+                        message: 'Information supprimée avec succès'
+                    });
                 }
             });
         });
     }
-    // Récupérer les plans tarifaires
-    obtenirLesPlansTarifaires() {
-        return new Promise((resolve, reject) => {
-            const sql = `SELECT * FROM plans_tarifaires`;
-            console.log("Exécution de la requête pour obtenir les plans tarifaires");
-            this.mysqlConnector.query(sql, [], (error, results) => {
-                if (error) {
-                    console.error('Erreur lors de la récupération des plans tarifaires : ' + error.message);
-                    reject(error);
-                }
-                else {
-                    console.log('Plans tarifaires récupérés avec succès :', results);
-                    resolve(results);
-                }
-            });
-        });
+    // Ajouter ces méthodes manquantes
+    async obtenirLeStatus() {
+        return this.obtenirLesStatus();
     }
-    // Récupérer les genres
-    obtenirLesGenres() {
-        return new Promise((resolve, reject) => {
-            const sql = `SELECT * FROM genres`;
-            console.log("Exécution de la requête pour obtenir les genres");
-            this.mysqlConnector.query(sql, [], (error, results) => {
-                if (error) {
-                    console.error('Erreur lors de la récupération des genres : ' + error.message);
-                    reject(error);
-                }
-                else {
-                    console.log('Genres récupérés avec succès :', results);
-                    resolve(results);
-                }
-            });
-        });
-    }
-    // Récupérer les grades
-    obtenirLesGrades() {
-        return new Promise((resolve, reject) => {
-            const sql = `SELECT * FROM grades ORDER BY id ASC`;
-            console.log("Exécution de la requête pour obtenir les grades");
-            this.mysqlConnector.query(sql, [], (error, results) => {
-                if (error) {
-                    console.error('Erreur lors de la récupération des grades : ' + error.message);
-                    reject(error);
-                }
-                else {
-                    console.log('Grades récupérés avec succès :', results);
-                    resolve(results);
-                }
-            });
-        });
+    async obtenirLesPlansTarifaires() {
+        return this.obtenirLesPlans();
     }
 }

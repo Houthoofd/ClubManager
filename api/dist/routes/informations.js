@@ -4,77 +4,89 @@ const router = express.Router();
 router.get('/grades', async (req, res) => {
     try {
         const client = new Informations();
-        // Appel de la méthode pour obtenir les grades
         const grades = await client.obtenirLesGrades();
-        if (grades && grades.length > 0) {
-            console.log('Grades récupérés:', grades);
-            res.status(200).json(grades);
+        if (grades && grades.data && grades.data.length > 0) {
+            res.json({
+                isFind: true,
+                message: "Grades trouvés",
+                data: grades.data
+            });
         }
         else {
-            console.log('Aucun grade trouvé.');
-            res.status(404).json({ message: 'Aucun grade trouvé.' });
+            res.json({
+                isFind: false,
+                message: "Aucun grade trouvé",
+                data: []
+            });
         }
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des grades :', error);
-        res.status(500).json({ message: 'Erreur serveur lors de la récupération des grades.' });
+        console.error('Erreur lors de la récupération des grades:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
 });
 router.get('/genres', async (req, res) => {
     try {
         const client = new Informations();
-        // Appel de la méthode pour obtenir les genres
         const genres = await client.obtenirLesGenres();
-        if (genres && genres.length > 0) {
-            console.log('Genres récupérés:', genres);
-            res.status(200).json(genres);
+        if (genres && genres.data && genres.data.length > 0) {
+            res.json({
+                isFind: true,
+                message: "Genres trouvés",
+                data: genres.data
+            });
         }
         else {
-            console.log('Aucun genres trouvé.');
-            res.status(404).json({ message: 'Aucun genres trouvé.' });
+            res.json({
+                isFind: false,
+                message: "Aucun genre trouvé",
+                data: []
+            });
         }
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des genres :', error);
-        res.status(500).json({ message: 'Erreur serveur lors de la récupération des genres.' });
+        console.error('Erreur lors de la récupération des genres:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
 });
 router.get('/status', async (req, res) => {
     try {
         const client = new Informations();
-        // Appel de la méthode pour obtenir les status
-        const status = await client.obtenirLeStatus();
-        if (status && status.length > 0) {
-            console.log('Status récupérés:', status);
-            res.status(200).json(status);
+        const status = await client.obtenirLesStatus();
+        if (status && status.data) {
+            res.json(status);
         }
         else {
-            console.log('Aucun status trouvé.');
-            res.status(404).json({ message: 'Aucun status trouvé.' });
+            res.json({
+                isFind: false,
+                message: "Aucun statut trouvé",
+                data: []
+            });
         }
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des status :', error);
-        res.status(500).json({ message: 'Erreur serveur lors de la récupération des status.' });
+        console.error('Erreur lors de la récupération des statuts:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
 });
-router.get('/abonnements', async (req, res) => {
+router.get('/plans', async (req, res) => {
     try {
         const client = new Informations();
-        // Appel de la méthode pour obtenir les plans tarifaires
-        const plansTarifaires = await client.obtenirLesPlansTarifaires();
-        if (plansTarifaires && plansTarifaires.length > 0) {
-            console.log('plans tarifaires récupérés:', plansTarifaires);
-            res.status(200).json(plansTarifaires);
+        const plansTarifaires = await client.obtenirLesPlans();
+        if (plansTarifaires && plansTarifaires.data) {
+            res.json(plansTarifaires);
         }
         else {
-            console.log('Aucun plans tarifaires trouvé.');
-            res.status(404).json({ message: 'Aucun plans tarifaires trouvé.' });
+            res.json({
+                isFind: false,
+                message: "Aucun plan trouvé",
+                data: []
+            });
         }
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des plans tarifaires :', error);
-        res.status(500).json({ message: 'Erreur serveur lors de la récupération des plans tarifaires.' });
+        console.error('Erreur lors de la récupération des plans tarifaires:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
 });
 export default router;
