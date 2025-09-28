@@ -42,6 +42,19 @@ const ListeArticles: React.FC<ListeArticlesProps> = ({
   onEditArticle,
   onDeleteArticle,
 }) => {
+  // Fonction pour dédupliquer les stocks par taille
+  const deduplicateStocks = (stocks: Array<{ taille: string; quantite: number }>) => {
+    return stocks?.reduce((acc: any[], stock: any) => {
+      const existingStock = acc.find(s => s.taille === stock.taille);
+      if (existingStock) {
+        existingStock.quantite += stock.quantite;
+      } else {
+        acc.push({ taille: stock.taille, quantite: stock.quantite });
+      }
+      return acc;
+    }, []) || [];
+  };
+
   return (
     <div style={{ 
       background: '#fff', 
@@ -108,7 +121,7 @@ const ListeArticles: React.FC<ListeArticlesProps> = ({
                           description={article.description}
                           imageUrl={article.images?.[0] || ''}
                           prix={article.prix}
-                          stocks={article.stocks || []}
+                          stocks={deduplicateStocks(article.stocks || [])}
                           onAddToCart={() => {}}
                           onOpenDetails={() => onSelectArticle(article)}
                         />

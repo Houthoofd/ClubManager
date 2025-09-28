@@ -8,6 +8,7 @@ import StatistiquesTab from '../components/compte/StatistiquesTab';
 import PaiementsTab from '../components/compte/PaiementsTab';
 import ResultModal from '../components/common/modal/ResultModal';
 import ConfirmModal from '../components/common/modal/ConfirmModal';
+import ResumeConfirmModal from '../components/common/modal/ResumeConfirmModal';
 
 function formatDateForInput(isoDateString: string): string {
   if (!isoDateString) return '';
@@ -399,7 +400,7 @@ const Compte = () => {
         </Tabs>
       </PageSection>
       
-      <ConfirmModal
+      <ResumeConfirmModal
         isOpen={showConfirmModal}
         onClose={annulerModifications}
         onConfirm={confirmerModifications}

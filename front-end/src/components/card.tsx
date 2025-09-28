@@ -28,7 +28,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
   prix,
   stocks,
   onAddToCart,
-  onOpenDetails
+  onOpenDetails,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -39,6 +39,21 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
       onAddToCart(firstAvailableSize);
     }
   };
+
+  // Fonction pour dédupliquer les stocks par taille
+  const deduplicateStocks = (stocks: Array<{ taille: string; quantite: number }>) => {
+    return stocks?.reduce((acc: any[], stock: any) => {
+      const existingStock = acc.find(s => s.taille === stock.taille);
+      if (existingStock) {
+        existingStock.quantite += stock.quantite;
+      } else {
+        acc.push({ taille: stock.taille, quantite: stock.quantite });
+      }
+      return acc;
+    }, []) || [];
+  };
+
+  const uniqueStocks = deduplicateStocks(stocks);
 
   return (
     <>
@@ -70,7 +85,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
               Tailles disponibles :
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-              {stocks
+              {uniqueStocks
                 .filter(stock => stock.quantite > 0)
                 .map((stock, index) => (
                   <span
@@ -128,5 +143,5 @@ const ArticleCard: React.FC<ArticleCardProps> = ({
 };
 
 export default ArticleCard;
-              
-             
+
+

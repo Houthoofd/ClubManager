@@ -10,7 +10,7 @@ export const articleCreationSchema = z.object({
     nom: z.string(),
     description: z.string(),
     prix: z.preprocess((val) => Number(val), z.number()),
-    images: z.array(z.string()),
+    images: z.array(z.string()).optional().default([]), // Rendre optionnel avec valeur par défaut
     categorie_id: z.preprocess((val) => Number(val), z.number()),
     stocks: z.array(z.object({
         taille: z.string(),

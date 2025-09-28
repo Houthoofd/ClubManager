@@ -19,6 +19,7 @@ import EcheancesPaiement from '../../components/utilisateurs/EcheancesPaiement';
 import StatistiquesTab from '../../components/compte/StatistiquesTab';
 import ConfirmModal from '../../components/common/modal/ConfirmModal';
 import ResultModal from '../../components/common/modal/ResultModal';
+import ResumeConfirmModal from '../../components/common/modal/ResumeConfirmModal';
 
 function formatDateForInput(isoDateString: string): string {
   const date = new Date(isoDateString);
@@ -351,7 +352,7 @@ const ConsulterUtilisateurPage = () => {
         </Tab>
       </Tabs>
 
-      <ConfirmModal
+      <ResumeConfirmModal
         isOpen={showConfirmModal}
         onClose={annulerModifications}
         onConfirm={confirmerModifications}

@@ -19,6 +19,17 @@ import FormulaireArticle from '../../components/magasin/FormulaireArticle';
 import ListeArticles from '../../components/magasin/ListeArticles';
 import ModalsArticle from '../../components/common/modal/ModalsArticle';
 import { PageHeader } from '../../components/common/PageHeader';
+import ResultModal from '../../components/common/modal/ResultModal';
+import ConfirmModal from '../../components/common/modal/ConfirmModal';
+import ResumeConfirmModal from '../../components/common/modal/ResumeConfirmModal';
+import DetailArticleModal from '../../components/magasin/DetailArticleModal';
+import RightSidePanel from '../../components/common/panel/rightSidePanel';
+
+interface ModificationItem {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
 
 const AjouterArticlePage: React.FC = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
@@ -30,11 +41,30 @@ const AjouterArticlePage: React.FC = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [articleEnEdition, setArticleEnEdition] = useState<any | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [resultModalSuccess, setResultModalSuccess] = useState(false);
+  const [modificationsResume, setModificationsResume] = useState<ModificationItem[]>([]);
   const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<{ [catId: string]: boolean }>({});
+
+  // Ajouter les états pour la modal de confirmation de suppression
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<any | null>(null);
+
+  // Ajouter les états pour la modal de détails
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedDetailArticle, setSelectedDetailArticle] = useState<any | null>(null);
+  const [selectedTaille, setSelectedTaille] = useState<string | null>(null);
+  const [isTailleOpen, setIsTailleOpen] = useState(false);
+
+  // Ajouter l'état pour gérer le panier
+  const [panierArticles, setPanierArticles] = useState<any[]>([]);
+  // Ajouter un état pour contrôler l'affichage du panier
+  const [showPanier, setShowPanier] = useState(false);
 
   // Hooks React Query
   const { data: articles, isLoading: loadingArticles } = useArticlesParCategorie();
@@ -49,66 +79,261 @@ const AjouterArticlePage: React.FC = () => {
     setActiveTabKey(Number(tabIndex));
   };
 
+  // Fonction pour formater les modifications d'article
+  const formatModifications = (): ModificationItem[] => {
+    const modifications: ModificationItem[] = [];
+    
+    if (articleEnEdition) {
+      if (nom !== articleEnEdition.nom) {
+        modifications.push({
+          field: 'Nom',
+          oldValue: articleEnEdition.nom || 'Non défini',
+          newValue: nom
+        });
+      }
+      
+      if (description !== articleEnEdition.description) {
+        modifications.push({
+          field: 'Description',
+          oldValue: articleEnEdition.description || 'Non défini',
+          newValue: description
+        });
+      }
+      
+      if (prix !== String(articleEnEdition.prix || 0)) {
+        modifications.push({
+          field: 'Prix',
+          oldValue: `${articleEnEdition.prix || 0}€`,
+          newValue: `${prix}€`
+        });
+      }
+      
+      if (categorieId !== String(articleEnEdition.categorie_id || '')) {
+        const oldCategorie = categories?.find(c => String(c.id) === String(articleEnEdition.categorie_id));
+        const newCategorie = categories?.find(c => String(c.id) === categorieId);
+        
+        modifications.push({
+          field: 'Catégorie',
+          oldValue: oldCategorie?.nom || 'Non défini',
+          newValue: newCategorie?.nom || 'Non défini'
+        });
+      }
+
+      // Vérifier les changements d'images
+      const originalImages = articleEnEdition.images || [];
+      const filteredImages = imageUrls.filter(url => url && url.trim() !== '');
+      
+      if (JSON.stringify(originalImages.sort()) !== JSON.stringify(filteredImages.sort())) {
+        modifications.push({
+          field: 'Images',
+          oldValue: originalImages.length > 0 ? `${originalImages.length} image(s)` : 'Aucune image',
+          newValue: filteredImages.length > 0 ? `${filteredImages.length} image(s)` : 'Aucune image'
+        });
+      }
+
+      // Vérifier les changements de stocks
+      const originalStocks = articleEnEdition.stocks || [];
+      const filteredStocks = stocks.filter(stock => stock.quantite > 0);
+      
+      if (JSON.stringify(originalStocks) !== JSON.stringify(filteredStocks)) {
+        const originalStockText = originalStocks.length > 0 
+          ? originalStocks.map(s => `${s.taille}: ${s.quantite}`).join(', ')
+          : 'Aucun stock';
+        const newStockText = filteredStocks.length > 0 
+          ? filteredStocks.map(s => `${s.taille}: ${s.quantite}`).join(', ')
+          : 'Aucun stock';
+        
+        modifications.push({
+          field: 'Stocks',
+          oldValue: originalStockText,
+          newValue: newStockText
+        });
+      }
+    } else {
+      // Pour un nouvel article, afficher les informations principales
+      modifications.push({
+        field: 'Nom',
+        oldValue: 'Nouvel article',
+        newValue: nom
+      });
+      
+      if (categorieId) {
+        const categorie = categories?.find(c => String(c.id) === categorieId);
+        modifications.push({
+          field: 'Catégorie',
+          oldValue: 'Nouvel article',
+          newValue: categorie?.nom || 'Non défini'
+        });
+      }
+      
+      modifications.push({
+        field: 'Prix',
+        oldValue: 'Nouvel article',
+        newValue: `${prix}€`
+      });
+
+      // Afficher les images pour un nouvel article
+      const filteredImages = imageUrls.filter(url => url && url.trim() !== '');
+      if (filteredImages.length > 0) {
+        modifications.push({
+          field: 'Images',
+          oldValue: 'Nouvel article',
+          newValue: `${filteredImages.length} image(s) ajoutée(s)`
+        });
+      }
+
+      // Afficher les stocks pour un nouvel article
+      const filteredStocks = stocks.filter(stock => stock.quantite > 0);
+      if (filteredStocks.length > 0) {
+        const stockText = filteredStocks.map(s => `${s.taille}: ${s.quantite}`).join(', ');
+        modifications.push({
+          field: 'Stocks',
+          oldValue: 'Nouvel article',
+          newValue: stockText
+        });
+      }
+    }
+    
+    return modifications;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setPendingSubmitEvent(e);
+    
+    const modifications = formatModifications();
+    setModificationsResume(modifications);
     setShowConfirmModal(true);
   };
 
-  const handleConfirmAdd = async () => {
+  const confirmerAjout = async () => {
     setShowConfirmModal(false);
-    if (!pendingSubmitEvent) return;
 
-    setErrorMessage(null);
-
-    if (!articleEnEdition) {
-      try {
+    try {
+      if (!articleEnEdition) {
         const exists = await checkArticleByNomAndCategorie(nom, categorieId);
         if (exists) {
-          setErrorMessage("Un article avec ce nom existe déjà dans cette catégorie.");
-          setPendingSubmitEvent(null);
+          setResultModalMessage("Un article avec ce nom existe déjà dans cette catégorie.");
+          setResultModalSuccess(false);
+          setShowResultModal(true);
           return;
         }
-      } catch (err) {
-        setErrorMessage("Erreur lors de la vérification de l'article.");
-        setPendingSubmitEvent(null);
-        return;
       }
-    }
 
-    const articlePayload = {
-      nom,
-      description,
-      prix,
-      categorie_id: categorieId,
-      images: imageUrls,
-      stocks
-    };
+      // Toujours envoyer le champ images, même vide
+      const articlePayload = {
+        nom,
+        description,
+        prix,
+        categorie_id: categorieId,
+        images: imageUrls.filter(url => url && url.trim() !== ''), // Array vide si pas d'images
+        stocks: stocks.filter(stock => stock.quantite > 0)
+      };
 
-    try {
       if (articleEnEdition) {
         await modifierArticle.mutateAsync({ id: articleEnEdition.id, article: articlePayload });
-        setSuccessMessage("L'article a bien été modifié.");
+        setResultModalMessage("Les modifications apportées ont été sauvegardées avec succès.");
       } else {
         await ajouterArticle.mutateAsync(articlePayload);
-        setSuccessMessage("L'article a bien été ajouté.");
+        setResultModalMessage("L'article a été ajouté avec succès à votre inventaire.");
       }
+      
+      setResultModalSuccess(true);
       resetForm();
     } catch (error) {
-      setErrorMessage('Erreur lors de la soumission de l\'article.');
+      console.error('Erreur lors de l\'ajout/modification:', error);
+      setResultModalMessage("Une erreur est survenue lors de l'opération. Veuillez réessayer.");
+      setResultModalSuccess(false);
     }
-    setPendingSubmitEvent(null);
+    
+    setShowResultModal(true);
   };
 
-  const handleSupprimerArticle = async (id: number) => {
-    setErrorMessage(null);
-    setSuccessMessage(null);
+  const annulerModifications = () => {
+    setShowConfirmModal(false);
+    setModificationsResume([]);
+  };
+
+  // Modifier handleSupprimerArticle pour demander confirmation
+  const handleSupprimerArticle = (id: number) => {
+    // Trouver l'article complet à partir de son ID
+    const article = articlesParCategorie
+      .flatMap(cat => cat.articles)
+      .find(art => art.id === id);
+    
+    setArticleToDelete(article || { id, nom: 'Article inconnu' });
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Nouvelle fonction pour confirmer la suppression
+  const confirmerSuppression = async () => {
+    setShowDeleteConfirmModal(false);
+    
+    if (!articleToDelete) return;
+
     try {
-      await supprimerArticle.mutateAsync(id);
-      setSuccessMessage("L'article a bien été supprimé.");
+      await supprimerArticle.mutateAsync(articleToDelete.id);
+      setResultModalMessage(`L'article "${articleToDelete.nom}" a été supprimé avec succès de votre inventaire.`);
+      setResultModalSuccess(true);
     } catch (error) {
-      setErrorMessage('Erreur lors de la suppression de l\'article.');
+      setResultModalMessage("Une erreur est survenue lors de la suppression de l'article. Veuillez réessayer.");
+      setResultModalSuccess(false);
     }
+    
+    setArticleToDelete(null);
+    setShowResultModal(true);
+  };
+
+  const annulerSuppression = () => {
+    setShowDeleteConfirmModal(false);
+    setArticleToDelete(null);
+  };
+
+  // Nouvelle fonction pour ouvrir la modal de détails
+  const handleShowDetails = (article: any) => {
+    setSelectedDetailArticle(article);
+    setShowDetailModal(true);
+    setSelectedTaille(null); // Reset taille selection
+  };
+
+  // Fonctions pour la modal de détails
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedDetailArticle(null);
+    setSelectedTaille(null);
+    setIsTailleOpen(false);
+  };
+
+  const handleTailleSelect = (taille: string) => {
+    setSelectedTaille(taille);
+  };
+
+  const handleTailleToggle = (isOpen: boolean) => {
+    setIsTailleOpen(isOpen);
+  };
+
+  // Modifier la fonction handleAjouterAuPanier
+  const handleAjouterAuPanier = (article: any, taille: string, quantite: number) => {
+    const nouvelArticle = {
+      ...article,
+      taille,
+      quantite
+    };
+    
+    setPanierArticles(prev => [...prev, nouvelArticle]);
+    setShowPanier(true); // Ouvrir automatiquement le panier
+    
+    console.log(`Article "${article.nom}" ajouté au panier (${taille}, quantité: ${quantite})`);
+  };
+
+  // Fonctions pour gérer le panier
+  const handleRemoveArticle = (index: number) => {
+    setPanierArticles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateQuantite = (index: number, quantite: number, taille: string) => {
+    setPanierArticles(prev => prev.map((article, i) => 
+      i === index ? { ...article, quantite, taille } : article
+    ));
   };
 
   const resetForm = () => {
@@ -174,89 +399,130 @@ const AjouterArticlePage: React.FC = () => {
   }
 
   return (
-    <div className="store-page">
-      <PageHeader
-        title="Ajouter un article"
-        subtitle="Ajoutez un nouvel article à votre inventaire"
-        variant="store"
-      />
-
-      <PageSection className="store-content">
-        <Tabs 
-          activeKey={activeTabKey} 
-          onSelect={handleTabClick}
-          className="modern-tabs"
-        >
-          <Tab 
-            eventKey={0} 
-            title={
-              <TabTitleText>
-                <span>Ajouter un article</span>
-              </TabTitleText>
-            }
-          >
-            <FormulaireArticle
-              nom={nom}
-              description={description}
-              prix={prix}
-              categorieId={categorieId}
-              stocks={stocks}
-              imageUrls={imageUrls}
-              categories={categories || []}
-              taillesDisponibles={taillesDisponibles}
-              articleEnEdition={articleEnEdition}
-              onNomChange={setNom}
-              onDescriptionChange={setDescription}
-              onPrixChange={setPrix}
-              onCategorieChange={setCategorieId}
-              onStocksChange={setStocks}
-              onImageUrlsChange={setImageUrls}
-              onSubmit={handleSubmit}
-            />
-          </Tab>
-          
-          <Tab 
-            eventKey={1} 
-            title={
-              <TabTitleText>
-                <span>Voir les articles</span>
-              </TabTitleText>
-            }
-          >
-            <ListeArticles
-              articlesParCategorie={articlesParCategorie}
-              expandedCategories={expandedCategories}
-              onToggleCategory={toggleCategory}
-              onSelectArticle={setSelectedArticle}
-              onEditArticle={setArticleEnEdition}
-              onDeleteArticle={handleSupprimerArticle}
-            />
-          </Tab>
-        </Tabs>
-
-        <ModalsArticle
-          selectedArticle={selectedArticle}
-          categories={categories || []}
-          onCloseDetailsModal={() => setSelectedArticle(null)}
-          onEditFromModal={setArticleEnEdition}
-          onDeleteFromModal={handleSupprimerArticle}
-          showConfirmModal={showConfirmModal}
-          articleEnEdition={articleEnEdition}
-          nom={nom}
-          description={description}
-          prix={prix}
-          categorieId={categorieId}
-          stocks={stocks}
-          onCloseConfirmModal={() => setShowConfirmModal(false)}
-          onConfirmAction={handleConfirmAdd}
-          successMessage={successMessage}
-          errorMessage={errorMessage}
-          onCloseMessageModal={() => {
-            setSuccessMessage(null);
-            setErrorMessage(null);
-          }}
+    <div className="store-page" style={{ display: 'flex', minHeight: '100vh' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <PageHeader
+          title="Ajouter un article"
+          subtitle="Ajoutez un nouvel article à votre inventaire"
+          variant="store"
         />
-      </PageSection>
+
+        <PageSection className="store-content" style={{ flex: 1 }}>
+          <Tabs 
+            activeKey={activeTabKey} 
+            onSelect={handleTabClick}
+            className="modern-tabs"
+          >
+            <Tab 
+              eventKey={0} 
+              title={
+                <TabTitleText>
+                  <span>Ajouter un article</span>
+                </TabTitleText>
+              }
+            >
+              <FormulaireArticle
+                nom={nom}
+                description={description}
+                prix={prix}
+                categorieId={categorieId}
+                stocks={stocks}
+                imageUrls={imageUrls}
+                categories={categories || []}
+                taillesDisponibles={taillesDisponibles}
+                articleEnEdition={articleEnEdition}
+                onNomChange={setNom}
+                onDescriptionChange={setDescription}
+                onPrixChange={setPrix}
+                onCategorieChange={setCategorieId}
+                onStocksChange={setStocks}
+                onImageUrlsChange={setImageUrls}
+                onSubmit={handleSubmit}
+              />
+            </Tab>
+            
+            <Tab 
+              eventKey={1} 
+              title={
+                <TabTitleText>
+                  <span>Voir les articles</span>
+                </TabTitleText>
+              }
+            >
+              <ListeArticles
+                articlesParCategorie={articlesParCategorie}
+                expandedCategories={expandedCategories}
+                onToggleCategory={toggleCategory}
+                onSelectArticle={handleShowDetails}
+                onEditArticle={setArticleEnEdition}
+                onDeleteArticle={handleSupprimerArticle}
+              />
+            </Tab>
+          </Tabs>
+
+          <DetailArticleModal
+            isOpen={showDetailModal}
+            selectedArticle={selectedDetailArticle}
+            selectedTaille={selectedTaille}
+            isTailleOpen={isTailleOpen}
+            onClose={handleCloseDetailModal}
+            onTailleSelect={handleTailleSelect}
+            onTailleToggle={handleTailleToggle}
+            onAjouterAuPanier={handleAjouterAuPanier} // Passer la nouvelle fonction
+          />
+
+          {/* Supprimer ou commenter ModalsArticle */}
+          {/* 
+          <ModalsArticle
+            // ... props
+          />
+          */}
+          
+          <ResumeConfirmModal
+            isOpen={showConfirmModal}
+            onClose={annulerModifications}
+            onConfirm={confirmerAjout}
+            title={articleEnEdition ? "Confirmer les modifications" : "Confirmer l'ajout d'article"}
+            message={articleEnEdition 
+              ? `Vous êtes sur le point de modifier l'article "${articleEnEdition.nom}".`
+              : `Vous êtes sur le point d'ajouter un nouvel article "${nom}".`
+            }
+            modificationsResume={modificationsResume}
+            confirmText={articleEnEdition ? "Modifier" : "Ajouter"}
+          />
+
+          <ConfirmModal
+            isOpen={showDeleteConfirmModal}
+            onClose={annulerSuppression}
+            onConfirm={confirmerSuppression}
+            title="Confirmer la suppression"
+            message={`Êtes-vous sûr de vouloir supprimer l'article "${articleToDelete?.nom}" ? Cette action est irréversible.`}
+            confirmText="Supprimer"
+            cancelText="Annuler"
+            variant="danger"
+          />
+          
+          <ResultModal
+            isOpen={showResultModal}
+            onClose={() => setShowResultModal(false)}
+            title={resultModalSuccess ? 'Succès' : 'Erreur'}
+            message={resultModalMessage}
+            isSuccess={resultModalSuccess}
+          />
+        </PageSection>
+      </div>
+
+      {/* Panier latéral */}
+      <RightSidePanel
+        isExpanded={showPanier}
+        onClose={() => setShowPanier(false)}
+        articles={panierArticles}
+        onRemoveArticle={handleRemoveArticle}
+        onUpdateQuantite={handleUpdateQuantite}
+        onUpdateTaille={(index: number, nouvelleTaille: string) => {
+          // Implémenter si nécessaire
+        }}
+      />
     </div>
   );
 };

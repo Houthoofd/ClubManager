@@ -67,7 +67,7 @@ export declare const articleCreationSchema: z.ZodObject<{
     nom: z.ZodString;
     description: z.ZodString;
     prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-    images: z.ZodArray<z.ZodString, "many">;
+    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
     categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
     stocks: z.ZodArray<z.ZodObject<{
         taille: z.ZodString;
@@ -92,19 +92,19 @@ export declare const articleCreationSchema: z.ZodObject<{
 }, {
     nom: string;
     description: string;
-    images: string[];
     stocks: {
         taille: string;
         quantite?: unknown;
     }[];
     categorie_id?: unknown;
     prix?: unknown;
+    images?: string[] | undefined;
 }>;
 export declare const articleDataValidationSchema: z.ZodObject<{
     nom: z.ZodString;
     description: z.ZodString;
     prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-    images: z.ZodArray<z.ZodString, "many">;
+    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
     categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
     stocks: z.ZodArray<z.ZodObject<{
         taille: z.ZodString;
@@ -133,13 +133,13 @@ export declare const articleDataValidationSchema: z.ZodObject<{
     id: number;
     nom: string;
     description: string;
-    images: string[];
     stocks: {
         taille: string;
         quantite?: unknown;
     }[];
     categorie_id?: unknown;
     prix?: unknown;
+    images?: string[] | undefined;
 }>;
 export declare const nouvelleCommandeSchema: z.ZodObject<{
     utilisateur_id: z.ZodEffects<z.ZodNumber, number, unknown>;

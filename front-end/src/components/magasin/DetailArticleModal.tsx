@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Button,
   Select,
   SelectOption,
   SelectList,
   Label,
+  NumberInput,
 } from '@patternfly/react-core';
-import ModalWithHelp from '../common/modal/modalwithhelp'; // Utilisez la casse correcte
+import { ShoppingCartIcon, ChevronLeftIcon, ChevronRightIcon } from '@patternfly/react-icons';
+import BaseModal from '../common/modal/BaseModal';
 
 interface DetailArticleModalProps {
   isOpen: boolean;
@@ -16,7 +18,7 @@ interface DetailArticleModalProps {
   onClose: () => void;
   onTailleSelect: (taille: string) => void;
   onTailleToggle: (isOpen: boolean) => void;
-  onAjouterAuPanier: () => void;
+  onAjouterAuPanier: (article: any, taille: string, quantite: number) => void; // Modifier pour passer les paramètres
 }
 
 const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
@@ -29,44 +31,206 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
   onTailleToggle,
   onAjouterAuPanier,
 }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedQuantite, setSelectedQuantite] = useState(1);
+
+  const nextImage = () => {
+    if (selectedArticle?.images?.length > 1) {
+      setCurrentImageIndex((prev) => 
+        prev === selectedArticle.images.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
+  const prevImage = () => {
+    if (selectedArticle?.images?.length > 1) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? selectedArticle.images.length - 1 : prev - 1
+      );
+    }
+  };
+
+  // Fonction pour obtenir le stock maximum pour la taille sélectionnée
+  const getMaxStock = () => {
+    if (!selectedTaille || !selectedArticle?.stocks) return 0;
+    const stock = selectedArticle.stocks.find((s: any) => s.taille === selectedTaille);
+    return stock?.quantite || 0;
+  };
+
+  // Reset quantité quand la taille change
+  React.useEffect(() => {
+    setSelectedQuantite(1);
+  }, [selectedTaille]);
+
+  // Reset image index when modal opens with new article
+  React.useEffect(() => {
+    setCurrentImageIndex(0);
+    setSelectedQuantite(1);
+  }, [selectedArticle?.id]);
+
+  const handleQuantiteChange = (event: React.FormEvent<HTMLInputElement>, value: number) => {
+    const maxStock = getMaxStock();
+    if (value >= 1 && value <= maxStock) {
+      setSelectedQuantite(value);
+    }
+  };
+
+  const incrementQuantite = () => {
+    const maxStock = getMaxStock();
+    if (selectedQuantite < maxStock) {
+      setSelectedQuantite(prev => prev + 1);
+    }
+  };
+
+  const decrementQuantite = () => {
+    if (selectedQuantite > 1) {
+      setSelectedQuantite(prev => prev - 1);
+    }
+  };
+
+  const handleAjouterAuPanier = () => {
+    if (selectedArticle && selectedTaille && selectedQuantite > 0) {
+      onAjouterAuPanier(selectedArticle, selectedTaille, selectedQuantite);
+      onClose();
+    }
+  };
+
   return (
-    <ModalWithHelp
+    <BaseModal
       isOpen={isOpen}
       onClose={onClose}
       title={selectedArticle?.nom || "Informations sur l'article"}
-      footer={
-        <>
-          <Button 
-            variant="primary" 
-            onClick={onAjouterAuPanier}
-            isDisabled={!selectedTaille}
-            size="lg"
-            style={{ padding: '0.75rem 2rem' }}
-          >
-            Ajouter au panier
-          </Button>
-          <Button variant="link" onClick={onClose}>
-            Annuler
-          </Button>
-        </>
-      }
-      context="default" // Ajout du contexte
+      size="large"
+      actions={[
+        <Button 
+          key="add-to-cart"
+          variant="primary" 
+          onClick={handleAjouterAuPanier} // Utiliser la fonction locale
+          isDisabled={!selectedTaille || selectedQuantite < 1}
+          size="lg"
+          style={{ padding: '0.75rem 2rem' }}
+          icon={<ShoppingCartIcon />}
+        >
+          Ajouter au panier ({selectedQuantite})
+        </Button>,
+        <Button key="cancel" variant="link" onClick={onClose}>
+          Annuler
+        </Button>
+      ]}
     >
       {selectedArticle ? (
         <div style={{ lineHeight: '1.6' }}>
           {selectedArticle.images?.length > 0 && (
-            <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-              <img
-                src={selectedArticle.images[0]}
-                alt={selectedArticle.nom}
-                style={{ 
-                  width: '100%', 
-                  maxHeight: '300px',
-                  objectFit: 'cover',
-                  borderRadius: '8px',
-                  border: '1px solid #dee2e6'
-                }}
-              />
+            <div style={{ 
+              marginBottom: '1.5rem', 
+              position: 'relative',
+              width: '100%'
+            }}>
+              <div style={{ 
+                position: 'relative',
+                width: '100%'
+              }}>
+                <img
+                  src={selectedArticle.images[currentImageIndex]}
+                  alt={`${selectedArticle.nom} - Image ${currentImageIndex + 1}`}
+                  style={{ 
+                    width: '100%', 
+                    maxHeight: '400px',
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                    border: '1px solid #dee2e6'
+                  }}
+                />
+                
+                {/* Navigation buttons pour plusieurs images */}
+                {selectedArticle.images.length > 1 && (
+                  <>
+                    <Button
+                      variant="control"
+                      onClick={prevImage}
+                      style={{
+                        position: 'absolute',
+                        left: '15px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '45px',
+                        height: '45px',
+                        minWidth: '45px',
+                        padding: 0,
+                        zIndex: 2
+                      }}
+                      icon={<ChevronLeftIcon />}
+                    />
+                    <Button
+                      variant="control"
+                      onClick={nextImage}
+                      style={{
+                        position: 'absolute',
+                        right: '15px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '45px',
+                        height: '45px',
+                        minWidth: '45px',
+                        padding: 0,
+                        zIndex: 2
+                      }}
+                      icon={<ChevronRightIcon />}
+                    />
+                  </>
+                )}
+                
+                {/* Compteur d'images */}
+                {selectedArticle.images.length > 1 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '15px',
+                    right: '15px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '15px',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    zIndex: 2
+                  }}>
+                    {currentImageIndex + 1} / {selectedArticle.images.length}
+                  </div>
+                )}
+              </div>
+              
+              {/* Indicateurs de pagination */}
+              {selectedArticle.images.length > 1 && (
+                <div style={{ 
+                  marginTop: '1rem',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '0.6rem'
+                }}>
+                  {selectedArticle.images.map((_: any, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        border: 'none',
+                        backgroundColor: index === currentImageIndex ? '#007bff' : '#dee2e6',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                        boxShadow: index === currentImageIndex ? '0 0 0 2px rgba(0, 123, 255, 0.3)' : 'none'
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
           
@@ -104,22 +268,35 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
               flexWrap: 'wrap',
               gap: '0.5rem'
             }}>
-              {selectedArticle.stocks?.map((stock: any, i: any) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    background: stock.quantite > 0 ? '#e8f5e8' : '#ffebee',
-                    color: stock.quantite > 0 ? '#2e7d32' : '#c62828',
-                    borderRadius: '6px',
-                    border: `1px solid ${stock.quantite > 0 ? '#4caf50' : '#f44336'}`,
-                    fontWeight: 'bold',
-                    fontSize: '0.9rem'
-                  }}
-                >
-                  Taille {stock.taille} : {stock.quantite} en stock
-                </div>
-              ))}
+              {selectedArticle.stocks
+                ?.reduce((acc: any[], stock: any) => {
+                  // Vérifier si la taille existe déjà dans l'accumulateur
+                  const existingStock = acc.find(s => s.taille === stock.taille);
+                  if (existingStock) {
+                    // Additionner les quantités si la taille existe déjà
+                    existingStock.quantite += stock.quantite;
+                  } else {
+                    // Ajouter une nouvelle entrée si la taille n'existe pas
+                    acc.push({ taille: stock.taille, quantite: stock.quantite });
+                  }
+                  return acc;
+                }, [])
+                ?.map((stock: any, i: any) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      background: stock.quantite > 0 ? '#e8f5e8' : '#ffebee',
+                      color: stock.quantite > 0 ? '#2e7d32' : '#c62828',
+                      borderRadius: '6px',
+                      border: `1px solid ${stock.quantite > 0 ? '#4caf50' : '#f44336'}`,
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    Taille {stock.taille} : {stock.quantite} en stock
+                  </div>
+                ))}
             </div>
           </div>
           
@@ -157,7 +334,16 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
             >
               <SelectList>
                 {selectedArticle.stocks
-                  ?.filter((stock: any) => stock.quantite > 0)
+                  ?.reduce((acc: any[], stock: any) => {
+                    // Même logique de déduplication pour le select
+                    const existingStock = acc.find(s => s.taille === stock.taille);
+                    if (existingStock) {
+                      existingStock.quantite += stock.quantite;
+                    } else if (stock.quantite > 0) { // Seulement les stocks > 0
+                      acc.push({ taille: stock.taille, quantite: stock.quantite });
+                    }
+                    return acc;
+                  }, [])
                   ?.map((stock: any, i: any) => (
                     <SelectOption key={i} value={stock.taille}>
                       Taille {stock.taille} ({stock.quantite} en stock)
@@ -165,6 +351,64 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                   ))}
               </SelectList>
             </Select>
+
+            {/* Section quantité */}
+            {selectedTaille && (
+              <div style={{ marginTop: '1rem' }}>
+                <strong style={{ color: '#495057' }}>Quantité :</strong>
+                <div style={{ 
+                  marginTop: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <Button
+                    variant="secondary"
+                    onClick={decrementQuantite}
+                    isDisabled={selectedQuantite <= 1}
+                    style={{
+                      minWidth: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    -
+                  </Button>
+                  
+                  <NumberInput
+                    value={selectedQuantite}
+                    onChange={handleQuantiteChange}
+                    min={1}
+                    max={getMaxStock()}
+                    style={{ 
+                      width: '80px',
+                      textAlign: 'center'
+                    }}
+                  />
+                  
+                  <Button
+                    variant="secondary"
+                    onClick={incrementQuantite}
+                    isDisabled={selectedQuantite >= getMaxStock()}
+                    style={{
+                      minWidth: '40px',
+                      height: '40px',
+                      padding: 0
+                    }}
+                  >
+                    +
+                  </Button>
+                  
+                  <span style={{ 
+                    marginLeft: '0.5rem',
+                    color: '#6c757d',
+                    fontSize: '0.9rem'
+                  }}>
+                    (max: {getMaxStock()})
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -177,7 +421,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
           Aucun article sélectionné.
         </div>
       )}
-    </ModalWithHelp>
+    </BaseModal>
   );
 };
 

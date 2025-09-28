@@ -192,15 +192,8 @@ export class Magasin {
 
         const articleId = results.insertId;
 
-        // Insertion des images
-        const imageSql = `INSERT INTO images (article_id, url) VALUES ?`;
-        const imageValues = (data.images || []).map((url) => [articleId, url]);
-
-        this.mysqlConnector.query(imageSql, [imageValues], async (errImg) => {
-          if (errImg) {
-            return reject({ isConfirm: false, message: 'Erreur image: ' + errImg.message });
-          }
-
+        // Fonction pour continuer avec les stocks
+        const continueWithStocks = async () => {
           try {
             // Récupération de la map des tailles
             const tailleMap = await this.getTailleMap();
@@ -214,7 +207,6 @@ export class Magasin {
             });
 
             this.mysqlConnector.query(stockSql, [stockValues], (errStock) => {
-
               if (errStock) {
                 return reject({ isConfirm: false, message: 'Erreur stock: ' + errStock.message });
               }
@@ -228,7 +220,23 @@ export class Magasin {
           } catch (errStockMap) {
             return reject({ isConfirm: false, message: 'Erreur taille/stock : ' + Error });
           }
-        });
+        };
+
+        // Insertion des images seulement s'il y en a
+        if (data.images && data.images.length > 0) {
+          const imageSql = `INSERT INTO images (article_id, url) VALUES ?`;
+          const imageValues = data.images.map((url) => [articleId, url]);
+
+          this.mysqlConnector.query(imageSql, [imageValues], async (errImg) => {
+            if (errImg) {
+              return reject({ isConfirm: false, message: 'Erreur image: ' + errImg.message });
+            }
+            await continueWithStocks();
+          });
+        } else {
+          // Pas d'images, continuer directement avec les stocks
+          await continueWithStocks();
+        }
       });
     });
   }
