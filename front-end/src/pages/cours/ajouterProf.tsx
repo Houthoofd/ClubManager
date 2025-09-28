@@ -19,6 +19,7 @@ import ProfesseursList from '../../components/cours/ProfesseursList';
 import ModalWithHelp from '../../components/common/modal/ModalWithHelp'; // Utilisez la casse correcte
 import SelectAllUsers from '../../components/cours/SelectAllUsers';
 import ModalConfirmation from '../../components/common/modal/ModalConfirmation';
+import PromotionConfirmModal from '../../components/common/modal/PromotionConfirmModal';
 
 const AjouterProfesseur = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
@@ -35,6 +36,8 @@ const AjouterProfesseur = () => {
   const [promoteResult, setPromoteResult] = useState<{ success: boolean; message: string } | null>(null);
   const [verifMessage, setVerifMessage] = useState<string | null>(null);
   const [verifChecked, setVerifChecked] = useState(false);
+  const [removeSuccessModalOpen, setRemoveSuccessModalOpen] = useState(false);
+  const [removeSuccessMessage, setRemoveSuccessMessage] = useState<string>('');
 
   // Ajout de l'effet pour fermeture auto après succès
   useEffect(() => {
@@ -97,19 +100,24 @@ const AjouterProfesseur = () => {
   const handleRetirerPromotion = async () => {
     if (!profToRemove) return;
     try {
-      await retirerPromotionProfesseur.mutateAsync({ 
+      const result = await retirerPromotionProfesseur.mutateAsync({ 
         id: profToRemove.id, 
         status_id: selectedStatus 
       });
+      
       setRemoveModalOpen(false);
       const profName = `${profToRemove.first_name} ${profToRemove.last_name}`;
-      setSuccessMessage(`La promotion de ${profName} a été retirée avec succès.`);
-      setSuccessModalOpen(true);
+      
+      // Message personnalisé basé sur la réponse du serveur
+      const successMsg = result?.message || `La promotion de ${profName} a été retirée avec succès. Le professeur a été automatiquement retiré de tous ses cours.`;
+      
+      setRemoveSuccessMessage(successMsg);
+      setRemoveSuccessModalOpen(true);
       setProfToRemove(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors du retrait de la promotion:', error);
-      setSuccessMessage('Erreur lors du retrait de la promotion.');
-      setSuccessModalOpen(true);
+      setRemoveSuccessMessage(error?.message || 'Erreur lors du retrait de la promotion.');
+      setRemoveSuccessModalOpen(true);
     }
   };
 
@@ -322,9 +330,23 @@ const AjouterProfesseur = () => {
           ]}
         />
 
-        {/* Modal de confirmation de promotion */}
-        <ModalConfirmation
-          title="Confirmer la promotion"
+        {/* Modal de succès pour le retrait de promotion */}
+        <ModalWithHelp
+          title="Retrait de promotion"
+          isOpen={removeSuccessModalOpen}
+          onClose={() => setRemoveSuccessModalOpen(false)}
+          variant="success"
+          context="deletion"
+          successMessage={removeSuccessMessage}
+          actions={[
+            <Button key="close" variant="primary" onClick={() => setRemoveSuccessModalOpen(false)}>
+              Fermer
+            </Button>,
+          ]}
+        />
+
+        {/* Remplacer ModalConfirmation par PromotionConfirmModal */}
+        <PromotionConfirmModal
           isOpen={showPromoteModal}
           onClose={() => {
             setShowPromoteModal(false);
@@ -333,62 +355,20 @@ const AjouterProfesseur = () => {
             setVerifChecked(false);
           }}
           onConfirm={confirmPromoteUsers}
-          confirmText="Oui, promouvoir"
-          variant={promoteResult?.success === false ? 'danger' : 'primary'}
-        >
-          <div style={{ padding: '1rem 0' }}>
-            {/* Message de vérification avant promotion */}
-            {verifChecked && verifMessage && (
-              <div
-                style={{
-                  marginBottom: 12,
-                  color: '#d9534f',
-                  background: '#fbeaea',
-                  borderRadius: 4,
-                  padding: '8px 12px',
-                  fontWeight: 500
-                }}
-              >
-                {verifMessage}
-              </div>
-            )}
-            {promoteResult ? (
-              <div
-                style={{
-                  marginTop: 0,
-                  color: promoteResult.success ? 'green' : 'red',
-                  fontWeight: 500,
-                  borderRadius: 4,
-                  background: promoteResult.success ? '#e6f4ea' : '#fbeaea',
-                  padding: '8px 12px'
-                }}
-              >
-                {promoteResult.message}
-              </div>
-            ) : (
-              <>
-                <p style={{ marginBottom: '1rem', fontWeight: 500 }}>
-                  Êtes-vous sûr de vouloir promouvoir ce ou ces utilisateurs au rôle de professeurs ?
-                </p>
-                <ul style={{ paddingLeft: '1.5rem', marginBottom: '1rem' }}>
-                  {utilisateurs
-                    .filter(u => selectedUsers.includes(String(u.id)))
-                    .map(u => (
-                      <li key={u.id} style={{ marginBottom: '0.5rem', color: '#0066cc' }}>
-                        {u.first_name} {u.last_name} ({u.email})
-                      </li>
-                    ))}
-                </ul>
-              </>
-            )}
-          </div>
-        </ModalConfirmation>
+          utilisateurs={utilisateurs}
+          selectedUsers={selectedUsers}
+          verifMessage={verifMessage}
+          verifChecked={verifChecked}
+          promoteResult={promoteResult}
+          isLoading={promouvoirProfesseurs.isPending || verifierProfesseurs.isPending}
+        />
       </PageSection>
     </div>
   );
 };
 
 export default AjouterProfesseur;
+                
 
 
 

@@ -59,7 +59,23 @@ export const useRetirerPromotionProfesseur = () => {
       return response.json();
     },
     onSuccess: () => {
+      // Invalider toutes les queries liées aux professeurs
       queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      
+      // Invalider les queries des utilisateurs (pour mettre à jour la liste des utilisateurs disponibles)
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+      
+      // Invalider les queries des cours (car les professeurs assignés aux cours peuvent changer)
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
+      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+      queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
+      
+      // Invalider aussi les queries pour la gestion/modification des cours
+      queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
     }
   });
 };
@@ -138,9 +154,18 @@ export const useRetirerProfesseursDuCours = () => {
       return response.json();
     },
     onSuccess: () => {
-      // Invalide les queries pour forcer le rechargement des données
+      // Invalider toutes les queries des cours
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
       queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
       queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+      queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
+      queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
+      
+      // Invalider les queries des professeurs
+      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
     },
   });
 };

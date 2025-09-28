@@ -121,7 +121,13 @@ export class Professeurs {
           console.error('Erreur lors du retrait de la promotion :', error);
           reject(error);
         } else {
-          resolve({ isConfirm: true, message: "Promotion retirée avec succès." });
+          // Le trigger se charge automatiquement de :
+          // 1. Supprimer les associations cours_recurrent_professeur
+          // 2. Supprimer l'entrée dans la table professeurs
+          resolve({ 
+            isConfirm: true, 
+            message: "Promotion retirée avec succès. Le professeur a été retiré de tous ses cours." 
+          });
         }
       });
     });

@@ -47,32 +47,37 @@ export const useCours = () => {
   });
 };
 
-// Hook pour modifier un cours
+// Hook pour modifier un cours récurrent
 export const useModifierCours = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: async (coursData: any) => {
+    mutationFn: async (modifCours: any) => {
       const response = await fetch(apiUrl('cours/modifier'), {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(coursData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modifCours),
         credentials: 'include',
       });
-
       if (!response.ok) {
-        throw new Error('Erreur lors de la modification du cours');
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la modification du cours récurrent');
       }
-
       return response.json();
     },
     onSuccess: () => {
-      // Invalide les queries pour forcer le rechargement des données
+      // Invalider toutes les queries liées aux cours
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
       queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
       queryClient.invalidateQueries({ queryKey: ['planningCours'] });
-    },
+      queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
+      queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
+      
+      // Invalider aussi les queries des professeurs car les associations peuvent changer
+      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
+    }
   });
 };
 
@@ -100,9 +105,18 @@ export const useAjouterCours = () => {
       return response.json();
     },
     onSuccess: () => {
-      // Invalide les queries pour forcer le rechargement des données
+      // Invalider toutes les queries liées aux cours
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
       queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
       queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+      queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
+      queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
+      
+      // Invalider aussi les queries des professeurs car les associations peuvent changer
+      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
     },
   });
 };
