@@ -14,12 +14,10 @@ import {
 import { PageHeader } from '../../components/common/PageHeader';
 import { useProfesseurs, usePromouvoirProfesseurs, useRetirerPromotionProfesseur } from '../../hooks/useProfesseurs';
 import { useTousLesUtilisateurs, useVerifierProfesseurs } from '../../hooks/useUtilisateurs';
-import ProfesseurForm from '../../components/cours/ProfesseurForm';
 import ProfesseursList from '../../components/cours/ProfesseursList';
-import ModalWithHelp from '../../components/common/modal/ModalWithHelp'; // Utilisez la casse correcte
 import SelectAllUsers from '../../components/cours/SelectAllUsers';
-import ModalConfirmation from '../../components/common/modal/ModalConfirmation';
 import PromotionConfirmModal from '../../components/common/modal/PromotionConfirmModal';
+import ResultModal from '../../components/common/modal/ResultModal';
 
 const AjouterProfesseur = () => {
   const [activeTabKey, setActiveTabKey] = useState(0);
@@ -38,6 +36,11 @@ const AjouterProfesseur = () => {
   const [verifChecked, setVerifChecked] = useState(false);
   const [removeSuccessModalOpen, setRemoveSuccessModalOpen] = useState(false);
   const [removeSuccessMessage, setRemoveSuccessMessage] = useState<string>('');
+
+  // Nouveaux états pour ResultModal (remplace les anciens états de succès)
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [resultModalSuccess, setResultModalSuccess] = useState(false);
 
   // Ajout de l'effet pour fermeture auto après succès
   useEffect(() => {
@@ -108,16 +111,18 @@ const AjouterProfesseur = () => {
       setRemoveModalOpen(false);
       const profName = `${profToRemove.first_name} ${profToRemove.last_name}`;
       
-      // Message personnalisé basé sur la réponse du serveur
-      const successMsg = result?.message || `La promotion de ${profName} a été retirée avec succès. Le professeur a été automatiquement retiré de tous ses cours.`;
-      
-      setRemoveSuccessMessage(successMsg);
-      setRemoveSuccessModalOpen(true);
+      // Message personnalisé avec le nom du professeur
+      setResultModalMessage(`${profName} n'est désormais plus professeur, opération réalisée avec succès`);
+      setResultModalSuccess(true);
+      setShowResultModal(true);
       setProfToRemove(null);
     } catch (error: any) {
       console.error('Erreur lors du retrait de la promotion:', error);
-      setRemoveSuccessMessage(error?.message || 'Erreur lors du retrait de la promotion.');
-      setRemoveSuccessModalOpen(true);
+      setResultModalMessage(error?.message || 'Erreur lors du retrait de la promotion.');
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      setRemoveModalOpen(false);
+      setProfToRemove(null);
     }
   };
 
@@ -315,36 +320,6 @@ const AjouterProfesseur = () => {
           </ModalFooter>
         </Modal>
 
-        {/* Modal de succès */}
-        <ModalWithHelp
-          title="Ajout de professeur"
-          isOpen={isModalOpen}
-          onClose={() => setSuccessModalOpen(false)}
-          variant="success"
-          context="creation" // Ajout du contexte
-          successMessage="Le professeur a été ajouté avec succès !"
-          actions={[
-            <Button key="close" variant="primary" onClick={() => setSuccessModalOpen(false)}>
-              Fermer
-            </Button>,
-          ]}
-        />
-
-        {/* Modal de succès pour le retrait de promotion */}
-        <ModalWithHelp
-          title="Retrait de promotion"
-          isOpen={removeSuccessModalOpen}
-          onClose={() => setRemoveSuccessModalOpen(false)}
-          variant="success"
-          context="deletion"
-          successMessage={removeSuccessMessage}
-          actions={[
-            <Button key="close" variant="primary" onClick={() => setRemoveSuccessModalOpen(false)}>
-              Fermer
-            </Button>,
-          ]}
-        />
-
         {/* Remplacer ModalConfirmation par PromotionConfirmModal */}
         <PromotionConfirmModal
           isOpen={showPromoteModal}
@@ -362,13 +337,22 @@ const AjouterProfesseur = () => {
           promoteResult={promoteResult}
           isLoading={promouvoirProfesseurs.isPending || verifierProfesseurs.isPending}
         />
+
+        {/* Nouvelle ResultModal unique pour toutes les opérations professeur */}
+        <ResultModal
+          isOpen={showResultModal}
+          onClose={() => setShowResultModal(false)}
+          title={resultModalSuccess ? 'Succès' : 'Erreur'}
+          message={resultModalMessage}
+          isSuccess={resultModalSuccess}
+        />
       </PageSection>
     </div>
   );
 };
 
 export default AjouterProfesseur;
-                
+
 
 
 

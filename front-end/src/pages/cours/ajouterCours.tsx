@@ -14,6 +14,7 @@ import CoursList from '../../components/cours/CoursList';
 import CoursModals from '../../components/cours/CoursModals';
 import { PageHeader } from '../../components/common/PageHeader';
 import { safeSubstring } from '../../utils/safeSubstring';
+import ResultModal from '../../components/common/modal/ResultModal';
 
 const AjouterCoursPage: React.FC = () => {
   // États pour la gestion des onglets, formulaires et modales
@@ -36,6 +37,11 @@ const AjouterCoursPage: React.FC = () => {
   const [originalCours, setOriginalCours] = useState<any | null>(null);
   const [showConfirmModificationModal, setShowConfirmModificationModal] = useState(false);
   const [modificationsResume, setModificationsResume] = useState<string[]>([]);
+
+  // Nouveaux états pour ResultModal
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [resultModalSuccess, setResultModalSuccess] = useState(false);
 
   // Hooks React Query
   const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
@@ -319,18 +325,25 @@ const AjouterCoursPage: React.FC = () => {
       const professeursNoms = [professeurADissocier.prof.name];
       const jourCours = professeurADissocier.cours.jour_semaine || professeurADissocier.cours.jour;
       await retirerProfesseursDuCours.mutateAsync({ professeursNoms, jour: jourCours });
-      setSuccessMessage(`Le professeur ${professeurADissocier.prof.name} a bien été dissocié du cours ${professeurADissocier.cours.type_cours} du ${jourCours}.`);
+      
+      // Remplacer setSuccessMessage par ResultModal
+      setResultModalMessage(`Le professeur ${professeurADissocier.prof.name} a bien été dissocié du cours ${professeurADissocier.cours.type_cours} du ${jourCours}.`);
+      setResultModalSuccess(true);
+      setShowResultModal(true);
+      
+      // Fermer la modal de confirmation
+      setIsModalOpen(false);
+      setProfesseurADissocier(null);
     } catch (error) {
       console.error('Erreur lors de la dissociation du professeur:', error);
-      setSuccessMessage("Erreur lors de la dissociation du professeur.");
+      setResultModalMessage("Erreur lors de la dissociation du professeur.");
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      
+      // Fermer la modal de confirmation
+      setIsModalOpen(false);
+      setProfesseurADissocier(null);
     }
-  };
-
-  // Annulation de la dissociation
-  const annulerDissociation = () => {
-    setIsModalOpen(false);
-    setProfesseurADissocier(null);
-    setSuccessMessage(null);
   };
 
   // Ouverture de la modale de suppression
@@ -346,14 +359,29 @@ const AjouterCoursPage: React.FC = () => {
     try {
       const jourASupprimer = coursASupprimer.jour_semaine || coursASupprimer.jour;
       await supprimerCoursRecurrent.mutateAsync(jourASupprimer.toLowerCase().trim());
-      setSuccessMessage(`Le cours ${coursASupprimer.type_cours} du ${jourASupprimer} a bien été supprimé.`);
+      
+      // Remplacer setSuccessMessage par ResultModal
+      setResultModalMessage(`Le cours ${coursASupprimer.type_cours} du ${jourASupprimer} a bien été supprimé.`);
+      setResultModalSuccess(true);
+      setShowResultModal(true);
+      
       setShowSupprimerModal(false);
       setCoursASupprimer(null);
     } catch (error) {
       console.error('Erreur lors de la suppression du cours:', error);
-      setSuccessMessage("Erreur lors de la suppression du cours.");
+      setResultModalMessage("Erreur lors de la suppression du cours.");
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      
       setShowSupprimerModal(false);
     }
+  };
+
+  // Annulation de la dissociation
+  const annulerDissociation = () => {
+    setIsModalOpen(false);
+    setProfesseurADissocier(null);
+    setSuccessMessage(null);
   };
 
   // Annulation de la suppression
@@ -503,6 +531,15 @@ const AjouterCoursPage: React.FC = () => {
             originalCours={originalCours}
             onAnnulerConfirmationModification={annulerConfirmationModification}
             onConfirmerModification={confirmerModification}
+          />
+
+          {/* Nouvelle ResultModal pour les opérations de cours */}
+          <ResultModal
+            isOpen={showResultModal}
+            onClose={() => setShowResultModal(false)}
+            title={resultModalSuccess ? 'Succès' : 'Erreur'}
+            message={resultModalMessage}
+            isSuccess={resultModalSuccess}
           />
         </div>
       </PageSection>
