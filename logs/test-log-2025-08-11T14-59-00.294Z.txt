@@ -1,0 +1,126 @@
+[2025-08-11T14:59:00.374Z] Starting tests at 11/08/2025 16:59:00
+[2025-08-11T14:59:00.379Z] 
+Running tests in C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api
+
+[2025-08-11T14:59:00.387Z] Found 27 test files
+[2025-08-11T14:59:00.388Z] 
+--- Running test file: src\__tests__\db\clients\compte\compte.test.ts ---
+[2025-08-11T14:59:00.389Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\compte\compte.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:00.955Z] ✅ Test completed successfully: src\__tests__\db\clients\compte\compte.test.ts
+[2025-08-11T14:59:00.957Z] 
+--- Running test file: src\__tests__\db\clients\cours\cours.test.ts ---
+[2025-08-11T14:59:00.958Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\cours\cours.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:01.531Z] ✅ Test completed successfully: src\__tests__\db\clients\cours\cours.test.ts
+[2025-08-11T14:59:01.534Z] 
+--- Running test file: src\__tests__\db\clients\informations\informations.test.ts ---
+[2025-08-11T14:59:01.535Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\informations\informations.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:02.112Z] ✅ Test completed successfully: src\__tests__\db\clients\informations\informations.test.ts
+[2025-08-11T14:59:02.114Z] 
+--- Running test file: src\__tests__\db\clients\magasin\magasin.test.ts ---
+[2025-08-11T14:59:02.115Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\magasin\magasin.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:02.691Z] ✅ Test completed successfully: src\__tests__\db\clients\magasin\magasin.test.ts
+[2025-08-11T14:59:02.692Z] 
+--- Running test file: src\__tests__\db\clients\paiements\paiements.test.ts ---
+[2025-08-11T14:59:02.693Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\paiements\paiements.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:03.289Z] ✅ Test completed successfully: src\__tests__\db\clients\paiements\paiements.test.ts
+[2025-08-11T14:59:03.290Z] 
+--- Running test file: src\__tests__\db\clients\professeurs\professeurs.test.ts ---
+[2025-08-11T14:59:03.291Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\professeurs\professeurs.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:03.834Z] ✅ Test completed successfully: src\__tests__\db\clients\professeurs\professeurs.test.ts
+[2025-08-11T14:59:03.835Z] 
+--- Running test file: src\__tests__\db\clients\statistiques\statistiques.test.ts ---
+[2025-08-11T14:59:03.836Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\statistiques\statistiques.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:04.442Z] ✅ Test completed successfully: src\__tests__\db\clients\statistiques\statistiques.test.ts
+[2025-08-11T14:59:04.443Z] 
+--- Running test file: src\__tests__\db\clients\utilisateurs\utilisateurs.test.ts ---
+[2025-08-11T14:59:04.444Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\clients\utilisateurs\utilisateurs.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:05.007Z] ✅ Test completed successfully: src\__tests__\db\clients\utilisateurs\utilisateurs.test.ts
+[2025-08-11T14:59:05.009Z] 
+--- Running test file: src\__tests__\db\db-connection.test.ts ---
+[2025-08-11T14:59:05.010Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\db\db-connection.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:05.565Z] ✅ Test completed successfully: src\__tests__\db\db-connection.test.ts
+[2025-08-11T14:59:05.567Z] 
+--- Running test file: src\__tests__\integration\magasin.integration.test.ts ---
+[2025-08-11T14:59:05.568Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\magasin.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:06.106Z] ✅ Test completed successfully: src\__tests__\integration\magasin.integration.test.ts
+[2025-08-11T14:59:06.108Z] 
+--- Running test file: src\__tests__\integration\routes\compte.integration.test.ts ---
+[2025-08-11T14:59:06.109Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\routes\compte.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:06.653Z] ✅ Test completed successfully: src\__tests__\integration\routes\compte.integration.test.ts
+[2025-08-11T14:59:06.654Z] 
+--- Running test file: src\__tests__\integration\routes\cours.integration.test.ts ---
+[2025-08-11T14:59:06.655Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\routes\cours.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:07.203Z] ✅ Test completed successfully: src\__tests__\integration\routes\cours.integration.test.ts
+[2025-08-11T14:59:07.204Z] 
+--- Running test file: src\__tests__\integration\routes\informations.integration.test.ts ---
+[2025-08-11T14:59:07.205Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\routes\informations.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:07.745Z] ✅ Test completed successfully: src\__tests__\integration\routes\informations.integration.test.ts
+[2025-08-11T14:59:07.747Z] 
+--- Running test file: src\__tests__\integration\routes\paiements.integration.test.ts ---
+[2025-08-11T14:59:07.748Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\routes\paiements.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:08.287Z] ✅ Test completed successfully: src\__tests__\integration\routes\paiements.integration.test.ts
+[2025-08-11T14:59:08.288Z] 
+--- Running test file: src\__tests__\integration\routes\professeurs.integration.test.ts ---
+[2025-08-11T14:59:08.290Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\routes\professeurs.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:08.824Z] ✅ Test completed successfully: src\__tests__\integration\routes\professeurs.integration.test.ts
+[2025-08-11T14:59:08.826Z] 
+--- Running test file: src\__tests__\integration\routes\statistiques.integration.test.ts ---
+[2025-08-11T14:59:08.827Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\routes\statistiques.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:09.386Z] ✅ Test completed successfully: src\__tests__\integration\routes\statistiques.integration.test.ts
+[2025-08-11T14:59:09.388Z] 
+--- Running test file: src\__tests__\integration\routes\utilisateurs.integration.test.ts ---
+[2025-08-11T14:59:09.389Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\integration\routes\utilisateurs.integration.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:09.964Z] ✅ Test completed successfully: src\__tests__\integration\routes\utilisateurs.integration.test.ts
+[2025-08-11T14:59:09.966Z] 
+--- Running test file: src\__tests__\routes\compte.test.ts ---
+[2025-08-11T14:59:09.967Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\compte.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:10.630Z] ✅ Test completed successfully: src\__tests__\routes\compte.test.ts
+[2025-08-11T14:59:10.631Z] 
+--- Running test file: src\__tests__\routes\cours.test.ts ---
+[2025-08-11T14:59:10.632Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\cours.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:11.209Z] ✅ Test completed successfully: src\__tests__\routes\cours.test.ts
+[2025-08-11T14:59:11.210Z] 
+--- Running test file: src\__tests__\routes\index.test.ts ---
+[2025-08-11T14:59:11.211Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\index.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:11.754Z] ✅ Test completed successfully: src\__tests__\routes\index.test.ts
+[2025-08-11T14:59:11.755Z] 
+--- Running test file: src\__tests__\routes\informations.test.ts ---
+[2025-08-11T14:59:11.756Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\informations.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:12.302Z] ✅ Test completed successfully: src\__tests__\routes\informations.test.ts
+[2025-08-11T14:59:12.303Z] 
+--- Running test file: src\__tests__\routes\magasin.test.ts ---
+[2025-08-11T14:59:12.305Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\magasin.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:12.852Z] ✅ Test completed successfully: src\__tests__\routes\magasin.test.ts
+[2025-08-11T14:59:12.853Z] 
+--- Running test file: src\__tests__\routes\paiements.test.ts ---
+[2025-08-11T14:59:12.855Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\paiements.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:13.396Z] ✅ Test completed successfully: src\__tests__\routes\paiements.test.ts
+[2025-08-11T14:59:13.397Z] 
+--- Running test file: src\__tests__\routes\professeurs.test.ts ---
+[2025-08-11T14:59:13.398Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\professeurs.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:13.955Z] ✅ Test completed successfully: src\__tests__\routes\professeurs.test.ts
+[2025-08-11T14:59:13.956Z] 
+--- Running test file: src\__tests__\routes\statistiques.test.ts ---
+[2025-08-11T14:59:13.957Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\statistiques.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:14.502Z] ✅ Test completed successfully: src\__tests__\routes\statistiques.test.ts
+[2025-08-11T14:59:14.504Z] 
+--- Running test file: src\__tests__\routes\utilisateurs.test.ts ---
+[2025-08-11T14:59:14.505Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\routes\utilisateurs.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:15.061Z] ✅ Test completed successfully: src\__tests__\routes\utilisateurs.test.ts
+[2025-08-11T14:59:15.062Z] 
+--- Running test file: src\__tests__\sample.test.ts ---
+[2025-08-11T14:59:15.063Z] Executing: node --experimental-vm-modules C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\node_modules\jest\bin\jest.js --config C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api\jest.config.js --runInBand src\__tests__\sample.test.ts --passWithNoTests --verbose
+[2025-08-11T14:59:15.604Z] ✅ Test completed successfully: src\__tests__\sample.test.ts
+[2025-08-11T14:59:15.605Z] 
+Test Summary for C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\api:
+[2025-08-11T14:59:15.606Z] Total: 27, Passed: 27, Failed: 0, Skipped: 0
+[2025-08-11T14:59:15.608Z] 
+Running tests in C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\front-end
+
+[2025-08-11T14:59:15.612Z] No test files found in C:\Users\guillaumehouthoofd\Documents\Benoit\Epreuve_intégrée\ClubManager\front-end\src\__tests__
+[2025-08-11T14:59:15.613Z] 
+====== OVERALL TEST SUMMARY ======
+[2025-08-11T14:59:15.614Z] API Tests: 27/27 passed, 0 failed
+[2025-08-11T14:59:15.614Z] Frontend Tests: 0/0 passed, 0 failed
+[2025-08-11T14:59:15.615Z] 
+✅ All tests completed successfully!
