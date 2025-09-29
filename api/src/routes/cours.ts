@@ -566,4 +566,42 @@ router.get('/inscriptions/utilisateur/:userId', async (req: any, res: any) => {
   }
 });
 
+// Nouvel endpoint pour supprimer un cours spécifique
+router.delete('/supprimer-specifique', async (req: any, res: any) => {
+  const { jour, type_cours, heure_debut, heure_fin } = req.body;
+  
+  console.log("Données reçues pour suppression spécifique :", req.body);
+
+  if (!jour || !type_cours || !heure_debut || !heure_fin) {
+    return res.status(400).json({ 
+      message: 'Tous les champs sont requis : jour, type_cours, heure_debut, heure_fin' 
+    });
+  }
+
+  const joursDeSemaine: { [key: string]: number } = {
+    lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, 
+    vendredi: 5, samedi: 6, dimanche: 7
+  };
+
+  const jourNum = joursDeSemaine[jour.toLowerCase().trim()];
+
+  if (!jourNum) {
+    return res.status(400).json({ 
+      message: 'Jour invalide. Veuillez fournir un jour valide (ex: lundi, mardi...)' 
+    });
+  }
+
+  try {
+    const client = new Cours();
+    await client.supprimerCoursSpecifique(jourNum, type_cours, heure_debut, heure_fin);
+
+    res.status(200).json({ 
+      message: `Cours ${type_cours} du ${jour} de ${heure_debut} à ${heure_fin} supprimé avec succès` 
+    });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du cours spécifique:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la suppression' });
+  }
+});
+
 export default router;

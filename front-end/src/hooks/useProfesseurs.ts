@@ -127,23 +127,36 @@ export const useRetirerProfesseursDuCours = () => {
 // Hook pour supprimer un cours récurrent par jour
 export const useSupprimerCoursRecurrent = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (jour: string) => {
-      const response = await fetch(apiUrl('cours/supprimer'), {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jourSemaine: jour }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la suppression du cours');
+    mutationFn: async (coursData: any) => {
+      // Si coursData est une string (ancien format), on garde la compatibilité
+      if (typeof coursData === 'string') {
+        const response = await fetch(apiUrl('cours/supprimer'), {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jourSemaine: coursData }),
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Erreur lors de la suppression du cours");
+        }
+        return response.json();
+      } else {
+        // Nouveau format avec informations détaillées
+        const response = await fetch(apiUrl('cours/supprimer-specifique'), {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(coursData),
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Erreur lors de la suppression du cours");
+        }
+        return response.json();
       }
-
-      return response.json();
     },
     onSuccess: () => {
       // Invalider toutes les queries liées aux cours et professeurs
@@ -151,7 +164,10 @@ export const useSupprimerCoursRecurrent = () => {
       queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
       queryClient.invalidateQueries({ queryKey: ['planningCours'] });
       queryClient.invalidateQueries({ queryKey: ['cours'] });
-    },
+      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+    }
   });
 };
 

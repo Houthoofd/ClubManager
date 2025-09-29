@@ -760,4 +760,60 @@ export class Cours {
             }
         });
     }
+    // Supprimer un cours spécifique (par jour, type, et horaires)
+    supprimerCoursSpecifique(jourSemaine, typeCours, heureDebut, heureFin) {
+        return new Promise((resolve, reject) => {
+            // D'abord, trouver l'ID du cours récurrent spécifique
+            const findCoursRecurrentSql = `
+        SELECT id FROM cours_recurrent 
+        WHERE jour_semaine = ? 
+        AND type_cours = ? 
+        AND TIME_FORMAT(heure_debut, '%H:%i') = ? 
+        AND TIME_FORMAT(heure_fin, '%H:%i') = ?
+      `;
+            this.mysqlConnector.query(findCoursRecurrentSql, [jourSemaine, typeCours, heureDebut, heureFin], (findError, findResults) => {
+                if (findError) {
+                    console.error('Erreur lors de la recherche du cours récurrent:', findError.message);
+                    reject(findError);
+                    return;
+                }
+                if (findResults.length === 0) {
+                    reject(new Error('Aucun cours trouvé avec ces critères spécifiques'));
+                    return;
+                }
+                const coursRecurrentId = findResults[0].id;
+                // Supprimer les cours liés
+                const deleteCoursSql = `DELETE FROM cours WHERE cours_recurrent_id = ?`;
+                this.mysqlConnector.query(deleteCoursSql, [coursRecurrentId], (deleteCoursError) => {
+                    if (deleteCoursError) {
+                        console.error('Erreur lors de la suppression des cours:', deleteCoursError.message);
+                        reject(deleteCoursError);
+                    }
+                    else {
+                        // Supprimer les associations professeurs
+                        const deleteProfSql = `DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ?`;
+                        this.mysqlConnector.query(deleteProfSql, [coursRecurrentId], (deleteProfError) => {
+                            if (deleteProfError) {
+                                console.error('Erreur lors de la suppression des associations professeurs:', deleteProfError.message);
+                            }
+                            // Supprimer le cours récurrent
+                            const deleteRecurrentSql = `DELETE FROM cours_recurrent WHERE id = ?`;
+                            this.mysqlConnector.query(deleteRecurrentSql, [coursRecurrentId], (recurrentError) => {
+                                if (recurrentError) {
+                                    console.error('Erreur lors de la suppression du cours récurrent:', recurrentError.message);
+                                    reject(recurrentError);
+                                }
+                                else {
+                                    resolve({
+                                        isConfirm: true,
+                                        message: `Cours ${typeCours} du jour ${jourSemaine} de ${heureDebut} à ${heureFin} supprimé avec succès.`
+                                    });
+                                }
+                            });
+                        });
+                    }
+                });
+            });
+        });
+    }
 }

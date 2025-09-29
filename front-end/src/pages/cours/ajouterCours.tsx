@@ -460,11 +460,18 @@ const AjouterCoursPage: React.FC = () => {
     if (!coursASupprimer) return;
 
     try {
-      const jourASupprimer = coursASupprimer.jour_semaine || coursASupprimer.jour;
-      await supprimerCoursRecurrent.mutateAsync(jourASupprimer.toLowerCase().trim());
+      // Au lieu de supprimer par jour, on supprime par cours spécifique
+      // Il faut passer plus d'informations pour identifier le cours exact
+      const coursIdentifier = {
+        jour: coursASupprimer.jour_semaine || coursASupprimer.jour,
+        type_cours: coursASupprimer.type_cours,
+        heure_debut: coursASupprimer.heure_debut,
+        heure_fin: coursASupprimer.heure_fin
+      };
       
-      // Remplacer setSuccessMessage par ResultModal
-      setResultModalMessage(`Le cours ${coursASupprimer.type_cours} du ${jourASupprimer} a bien été supprimé.`);
+      await supprimerCoursRecurrent.mutateAsync(coursIdentifier);
+      
+      setResultModalMessage(`Le cours ${coursASupprimer.type_cours} du ${coursASupprimer.jour || coursASupprimer.jour_semaine} de ${coursASupprimer.heure_debut} à ${coursASupprimer.heure_fin} a bien été supprimé.`);
       setResultModalSuccess(true);
       setShowResultModal(true);
       
