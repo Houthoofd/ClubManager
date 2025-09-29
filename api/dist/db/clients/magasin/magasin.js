@@ -336,7 +336,7 @@ export class Magasin {
                         const commandeId = resCommande.insertId;
                         console.log("commandeId:", commandeId);
                         // Construire valeursArticlesFinales *après* avoir la commandeId
-                        const valeursArticlesFinales = data.articles.map(article => [
+                        const valeursArticlesFinales = data.articles.map((article) => [
                             commandeId,
                             article.article_id,
                             article.taille ? tailleMap[article.taille] || null : null,

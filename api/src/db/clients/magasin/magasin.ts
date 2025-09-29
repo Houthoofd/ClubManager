@@ -200,7 +200,7 @@ export class Magasin {
 
             const stockSql = `INSERT INTO stocks (article_id, taille_id, quantite) VALUES ?`;
 
-            const stockValues = (data.stocks || []).map(({ taille, quantite }) => {
+            const stockValues = (data.stocks || []).map(({ taille, quantite } : any) => {
               const tailleId = tailleMap[taille];
               if (!tailleId) throw new Error(`Taille inconnue : ${taille}`);
               return [articleId, tailleId, quantite];
@@ -225,7 +225,7 @@ export class Magasin {
         // Insertion des images seulement s'il y en a
         if (data.images && data.images.length > 0) {
           const imageSql = `INSERT INTO images (article_id, url) VALUES ?`;
-          const imageValues = data.images.map((url) => [articleId, url]);
+          const imageValues = data.images.map((url:any) => [articleId, url]);
 
           this.mysqlConnector.query(imageSql, [imageValues], async (errImg) => {
             if (errImg) {
@@ -392,7 +392,7 @@ export class Magasin {
             console.log("commandeId:", commandeId);
 
             // Construire valeursArticlesFinales *après* avoir la commandeId
-            const valeursArticlesFinales = data.articles.map(article => [
+            const valeursArticlesFinales = data.articles.map((article:any) => [
               commandeId,
               article.article_id,
               article.taille ? tailleMap[article.taille] || null : null,
