@@ -121,10 +121,12 @@ export class Cours {
           console.error('Erreur lors de la récupération des jours de cours:', error);
           reject(error);
         } else {
+          console.log('Résultats bruts de la DB:', results); // Log ajouté pour debug
           const joursDeCours: JourCours[] = results.map((result: any) => {
             const professeursArray: string[] = result.professeurs
               ? result.professeurs.split(',').map((p: string) => p.trim())
               : [];
+            console.log(`Cours ${result.type_cours} ${result.jour} - Professeurs trouvés:`, professeursArray); // Log ajouté
             return {
               jour: result.jour,
               type_cours: result.type_cours,

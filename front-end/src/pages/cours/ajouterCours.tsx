@@ -211,11 +211,22 @@ const AjouterCoursPage: React.FC = () => {
       heure_fin: heureFin,
       professeurs: selectedUsers.map(u => u.name)
     };
-    await ajouterCours.mutateAsync(coursData);
-    setAjoutSuccess(true);
-    setAjoutMessage(`Le cours ${selectedType} du ${jour} a été ajouté avec succès !`);
-    setShowAjoutModal(true);
-    resetFormulaire();
+    
+    try {
+      const result = await ajouterCours.mutateAsync(coursData);
+      console.log('Résultat ajout cours:', result);
+      
+      // Attendre un peu pour que les invalidations se propagent
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setAjoutSuccess(true);
+      setAjoutMessage(`Le cours ${selectedType} du ${jour} a été ajouté avec succès !`);
+      setShowAjoutModal(true);
+      resetFormulaire();
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du cours:', error);
+      throw error;
+    }
   };
 
   // Exécution de la modification d'un cours
@@ -234,11 +245,22 @@ const AjouterCoursPage: React.FC = () => {
       heure_debut_original: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
       heure_fin_original: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : '',
     };
-    await modifierCours.mutateAsync(coursData);
-    setAjoutSuccess(true);
-    setAjoutMessage(`Le cours ${selectedType} du ${jour} a été modifié avec succès !`);
-    setShowAjoutModal(true);
-    resetFormulaire();
+    
+    try {
+      const result = await modifierCours.mutateAsync(coursData);
+      console.log('Résultat modification cours:', result);
+      
+      // Attendre un peu pour que les invalidations se propagent
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setAjoutSuccess(true);
+      setAjoutMessage(`Le cours ${selectedType} du ${jour} a été modifié avec succès !`);
+      setShowAjoutModal(true);
+      resetFormulaire();
+    } catch (error) {
+      console.error('Erreur lors de la modification du cours:', error);
+      throw error;
+    }
   };
 
   // Conversion du jour en français
@@ -490,7 +512,8 @@ const AjouterCoursPage: React.FC = () => {
 
   useEffect(() => {
     // Vérifiez si les données sont prêtes
-    if (!loadingProfesseurs && !loadingPlanning && planningCours.length > 0 && professeurs.length > 0) {
+    if (!loadingProfesseurs && !loadingPlanning) {
+      // Permettre l'affichage même si planningCours est vide (pour pouvoir créer le premier cours)
       setIsDataReady(true);
     }
   }, [loadingProfesseurs, loadingPlanning, planningCours, professeurs]);
@@ -511,27 +534,10 @@ const AjouterCoursPage: React.FC = () => {
     );
   }
 
-  if (planningCours.length === 0) {
-    console.warn('Aucun cours disponible dans planningCours.');
-    return (
-      <PageSection>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '50vh'
-        }}>
-          <p>Aucun cours disponible pour le moment. Veuillez vérifier vos données.</p>
-        </div>
-      </PageSection>
-    );
-  }
-
-  // Filtrer les cours avec des données invalides
-  const filteredPlanningCours = planningCours.filter(cours => {
-    // Vérifiez que les champs critiques ne sont pas null
+  // Permettre l'affichage même si planningCours est vide
+  const filteredPlanningCours = planningCours ? planningCours.filter(cours => {
     return cours.heure_debut && cours.heure_fin && cours.jour && cours.type_cours;
-  });
+  }) : [];
 
   const normalizedPlanningCours = filteredPlanningCours.map(cours => ({
     ...cours,

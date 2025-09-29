@@ -47,40 +47,6 @@ export const useCours = () => {
   });
 };
 
-// Hook pour modifier un cours récurrent
-export const useModifierCours = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (modifCours: any) => {
-      const response = await fetch(apiUrl('cours/modifier'), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(modifCours),
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erreur lors de la modification du cours récurrent');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      // Invalider toutes les queries liées aux cours
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
-      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
-      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
-      queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
-      queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
-      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
-      queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
-      
-      // Invalider aussi les queries des professeurs car les associations peuvent changer
-      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
-      queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
-    }
-  });
-};
-
 // Hook pour ajouter un cours
 export const useAjouterCours = () => {
   const queryClient = useQueryClient();
@@ -99,25 +65,66 @@ export const useAjouterCours = () => {
       console.log('Réponse de l\'API pour ajouter un cours:', response);
 
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'ajout du cours');
+        const errorData = await response.json();
+        console.error('Erreur API:', errorData);
+        throw new Error(errorData.message || 'Erreur lors de l\'ajout du cours');
       }
 
+      const result = await response.json();
+      console.log('Données retournées après ajout:', result);
+      return result;
+    },
+    onSuccess: (data) => {
+      console.log('Succès ajout cours - invalidation des queries', data);
+      // Invalider toutes les queries liées aux cours et professeurs
+      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
+      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      // Invalider également les queries des utilisateurs pour la liste des professeurs
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+      
+      // Forcer le refetch immédiat des données principales
+      queryClient.refetchQueries({ queryKey: ['joursDeCours'] });
+      queryClient.refetchQueries({ queryKey: ['professeurs'] });
+    },
+    onError: (error) => {
+      console.error('Erreur lors de l\'ajout du cours:', error);
+    }
+  });
+};
+
+// Hook pour modifier un cours récurrent
+export const useModifierCours = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (modifCours: any) => {
+      const response = await fetch(apiUrl('cours/modifier'), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(modifCours),
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la modification du cours récurrent');
+      }
       return response.json();
     },
     onSuccess: () => {
-      // Invalider toutes les queries liées aux cours
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
+      // Invalider toutes les queries liées aux cours et professeurs
+      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
       queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
       queryClient.invalidateQueries({ queryKey: ['planningCours'] });
-      queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
-      queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      queryClient.invalidateQueries({ queryKey: ['cours'] });
       queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
-      queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
-      
-      // Invalider aussi les queries des professeurs car les associations peuvent changer
-      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
-      queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
-    },
+      // Invalider également les queries des utilisateurs pour la liste des professeurs
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+    }
   });
 };
 
@@ -140,7 +147,15 @@ export const useSupprimerCours = () => {
       return response.json();
     },
     onSuccess: () => {
+      // Invalider toutes les queries liées aux cours et professeurs
+      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
       queryClient.invalidateQueries({ queryKey: ['cours'] });
+      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      // Invalider également les queries des utilisateurs
+      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
     }
   });
 };
