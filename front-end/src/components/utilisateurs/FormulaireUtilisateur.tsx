@@ -21,11 +21,14 @@ interface FormulaireUtilisateurProps {
     genres: string;
     grades: string;
     abonnement: string;
+    status: string; // Ajout du statut
   };
   editingFields: { [key: string]: boolean };
   emailCheckMessage: string;
   abonnements: any[];
   gradesList: any[];
+  statusList: any[]; // Ajout de statusList
+  genresList: any[]; // Ajout de genresList
   onEditClick: (field: string) => void;
   onEmailChange: (value: string) => void;
   onInputChange: (value: string, event: React.FormEvent<HTMLInputElement>) => void;
@@ -33,6 +36,8 @@ interface FormulaireUtilisateurProps {
   onValidateChanges: () => void;
   isLoading: boolean;
   formatDateForInput: (date: string) => string;
+  canEditStatus: boolean; // Ajout de canEditStatus
+  disabledFields?: { [key: string]: boolean }; // Ajout de disabledFields
 }
 
 const FormulaireUtilisateur: React.FC<FormulaireUtilisateurProps> = ({
@@ -41,6 +46,8 @@ const FormulaireUtilisateur: React.FC<FormulaireUtilisateurProps> = ({
   emailCheckMessage,
   abonnements,
   gradesList,
+  statusList,
+  genresList,
   onEditClick,
   onEmailChange,
   onInputChange,
@@ -48,6 +55,8 @@ const FormulaireUtilisateur: React.FC<FormulaireUtilisateurProps> = ({
   onValidateChanges,
   isLoading,
   formatDateForInput,
+  canEditStatus,
+  disabledFields = {}
 }) => {
   return (
     <>
@@ -355,6 +364,51 @@ const FormulaireUtilisateur: React.FC<FormulaireUtilisateurProps> = ({
                           aria-label={editingFields['abonnement'] ? "Valider" : "Éditer"}
                         >
                           {editingFields['abonnement'] ? <CheckIcon /> : <PencilAltIcon />}
+                        </Button>
+                      </div>
+                    </FormGroup>
+                    <FormGroup label="status" fieldId="status">
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        background: editingFields['status'] ? '#fff' : '#f8f9fa',
+                        border: `1px solid ${editingFields['status'] ? '#007bff' : '#ced4da'}`,
+                        borderRadius: '4px',
+                        padding: '0.5rem',
+                        transition: 'all 0.2s'
+                      }}>
+                        <select
+                          id="status"
+                          name="status"
+                          value={form.status}
+                          onChange={e => onFormChange('status', e.target.value)}
+                          disabled={!editingFields['status']}
+                          style={{
+                            flex: 1,
+                            border: 'none',
+                            background: 'transparent',
+                            padding: '0.25rem',
+                            fontSize: '1rem',
+                            outline: 'none'
+                          }}
+                        >
+                          <option value="">Sélectionner un statut</option>
+                          {statusList.map(status => (
+                            <option key={status.id} value={status.nom_role}>
+                              {status.nom_role}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          variant="plain"
+                          onClick={() => onEditClick('status')}
+                          style={{ 
+                            marginLeft: '10px',
+                            color: editingFields['status'] ? '#28a745' : '#007bff'
+                          }}
+                          aria-label={editingFields['status'] ? "Valider" : "Éditer"}
+                        >
+                          {editingFields['status'] ? <CheckIcon /> : <PencilAltIcon />}
                         </Button>
                       </div>
                     </FormGroup>

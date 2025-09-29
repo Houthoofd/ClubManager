@@ -174,10 +174,10 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                 </Title>
                 <Flex spaceItems={{ default: 'spaceItemsLg' }}>
                   <FlexItem flex={{ default: 'flex_1' }}>
-                    <FormGroup label="Nom" fieldId="nom">
+                    <FormGroup label="Prénom" fieldId="prenom">
                       <TextInput
                         type="text"
-                        id="nom"
+                        id="prenom"
                         value={compteInfo?.utilisateur?.first_name || ''}
                         isDisabled={true}
                         style={{ backgroundColor: '#f8f9fa' }}
@@ -185,11 +185,11 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                     </FormGroup>
                   </FlexItem>
                   <FlexItem flex={{ default: 'flex_1' }}>
-                    <FormGroup label="Prénom" fieldId="prenom">
+                    <FormGroup label="Nom" fieldId="nom">
                       <TextInput
                         type="text"
-                        id="prenom"
-                        value={compteInfo?.utilisateur?.prenom || ''}
+                        id="nom"
+                        value={compteInfo?.utilisateur?.last_name || ''}
                         isDisabled={true}
                         style={{ backgroundColor: '#f8f9fa' }}
                       />

@@ -49,7 +49,8 @@ export const InscriptionPage: React.FC = () => {
   const verifierUtilisateur = useVerifierUtilisateur();
   const inscrireUtilisateur = useInscrireUtilisateur();
 
-  console.log(abonnementOptions, genreOptions);
+  console.log('Abonnement Options:', abonnementOptions);
+  console.log('Genre Options:', genreOptions);
 
   const handleChange = (value: string, name: string) => {
     setForm({ ...form, [name]: value });
@@ -134,8 +135,8 @@ export const InscriptionPage: React.FC = () => {
         nom_utilisateur: form.nom_utilisateur,
         email: form.email,
         password: form.password,
-        genre_id: typeof form.genre === 'string' ? Number(form.genre) : form.genre,
-        abonnement_id: typeof form.abonnement === 'string' ? Number(form.abonnement) : form.abonnement,
+        genre_id: Number(form.genre),
+        abonnement_id: Number(form.abonnement),
         date_naissance: form.date_naissance,
         date_inscription: new Date().toISOString().split('T')[0],
         status_id: 1,
@@ -253,37 +254,43 @@ export const InscriptionPage: React.FC = () => {
 
               <FormGroup label="Type d'abonnement" isRequired fieldId="abonnement" className="login-form-group">
                 <FormSelect
-                  value={form.abonnement !== undefined && form.abonnement !== null ? String(form.abonnement) : ''}
+                  value={form.abonnement}
                   onChange={(_event, value) => handleChange(value, 'abonnement')}
                   aria-label="Type d'abonnement"
                   className="login-input"
                 >
                   <FormSelectOption value="" label="Sélectionner un abonnement" isDisabled />
-                  {abonnementOptions.map(option => (
-                    <FormSelectOption
-                      key={option.id}
-                      value={String(option.id)}
-                      label={`${option.label} - ${option.prix} euros`}
-                    />
-                  ))}
+                  {abonnementOptions.map(option => {
+                    console.log('Abonnement option:', option);
+                    return (
+                      <FormSelectOption
+                        key={option.id}
+                        value={String(option.id)}
+                        label={`${option.label || option.nom_plan || option.nom} - ${option.prix}€`}
+                      />
+                    );
+                  })}
                 </FormSelect>
               </FormGroup>
 
               <FormGroup label="Genre" isRequired fieldId="genre" className="login-form-group">
                 <FormSelect
-                  value={form.genre !== undefined && form.genre !== null ? String(form.genre) : ''}
+                  value={form.genre}
                   onChange={(_event, value) => handleChange(value, 'genre')}
                   aria-label="Genre"
                   className="login-input"
                 >
                   <FormSelectOption value="" label="Sélectionner un genre" isDisabled />
-                  {genreOptions.map(option => (
-                    <FormSelectOption
-                      key={option.id}
-                      value={String(option.id)}
-                      label={option.label}
-                    />
-                  ))}
+                  {genreOptions.map(option => {
+                    console.log('Genre option:', option);
+                    return (
+                      <FormSelectOption
+                        key={option.id}
+                        value={String(option.id)}
+                        label={option.label || option.genre_name || option.nom}
+                      />
+                    );
+                  })}
                 </FormSelect>
               </FormGroup>
 
@@ -302,7 +309,7 @@ export const InscriptionPage: React.FC = () => {
               <div className="login-footer">
                 <p>
                   Déjà un compte ?{' '}
-                  <Link to="/connexion" className="login-link">
+                  <Link to="/pages/connexion" className="login-link">
                     Connectez-vous ici
                   </Link>
                 </p>
@@ -330,10 +337,10 @@ export const InscriptionPage: React.FC = () => {
             <p><strong>Prénom :</strong> {form.prenom}</p>
             <p><strong>Nom :</strong> {form.nom}</p>
             <p><strong>Email :</strong> {form.email}</p>
-            <p><strong>Genre :</strong> {genreOptions.find(g => String(g.id) === form.genre)?.label}</p>
+            <p><strong>Genre :</strong> {genreOptions.find(g => String(g.id) === String(form.genre))?.label || genreOptions.find(g => String(g.id) === String(form.genre))?.genre_name || 'Non sélectionné'}</p>
             <p><strong>Date de naissance :</strong> {form.date_naissance}</p>
             <p style={{ margin: 0 }}>
-              <strong>Type d'abonnement :</strong> {abonnementOptions.find(a => String(a.id) === form.abonnement)?.label}
+              <strong>Type d'abonnement :</strong> {abonnementOptions.find(a => String(a.id) === String(form.abonnement))?.label || abonnementOptions.find(a => String(a.id) === String(form.abonnement))?.nom_plan || 'Non sélectionné'}
             </p>
           </div>
           {modalMessage && (

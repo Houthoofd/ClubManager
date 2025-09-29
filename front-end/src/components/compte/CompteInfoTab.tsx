@@ -1,5 +1,8 @@
 import React from 'react';
-import { Button, Spinner } from '@patternfly/react-core';
+import {
+  Button,
+  Spinner,
+} from '@patternfly/react-core';
 import FormulaireCompte from './FormulaireCompte';
 
 interface CompteInfoTabProps {
@@ -106,3 +109,4 @@ const CompteInfoTab: React.FC<CompteInfoTabProps> = ({
 };
 
 export default CompteInfoTab;
+          

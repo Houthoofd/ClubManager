@@ -7,7 +7,8 @@ import {
   Tab,
   Button,
   TextInput,
-  FormSelect
+  FormSelect,
+  Title
 } from '@patternfly/react-core';
 import { 
   PageHeader 
@@ -62,6 +63,7 @@ const Compte = () => {
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('line');
   const [disabledFields, setDisabledFields] = useState<{ [key: string]: boolean }>({});
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const {
     userData,
@@ -80,6 +82,21 @@ const Compte = () => {
     errorCompte,
   } = useCompteData();
 
+  // Récupération du rôle de l'utilisateur connecté
+  useEffect(() => {
+    const storedData = localStorage.getItem('userData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      const role = parsedData?.status;
+      setUserRole(role);
+    }
+  }, []);
+
+  // Fonction pour vérifier si l'utilisateur peut modifier le statut
+  const canEditStatus = () => {
+    return userRole === 'super-administrateur';
+  };
+
   // initialisation du formulaire
   useEffect(() => {
     if (compteInfo) {
@@ -93,8 +110,14 @@ const Compte = () => {
         status: compteInfo.status || '',
         password: ''
       });
+
+      // Définir les champs désactivés selon le rôle
+      setDisabledFields({
+        status: !canEditStatus(), // Seuls les super-admin peuvent modifier le statut
+        grades: !canEditStatus()  // Optionnel: restreindre aussi les grades aux super-admin
+      });
     }
-  }, [compteInfo]);
+  }, [compteInfo, userRole]);
 
   // handlers
   const handleTabClick = (_event: React.SyntheticEvent, eventKey: string | number) => {
@@ -102,6 +125,14 @@ const Compte = () => {
   };
 
   const handleEditClick = (field: string) => {
+    // Empêcher l'édition du statut si l'utilisateur n'a pas les droits
+    if (field === 'status' && !canEditStatus()) {
+      setResultModalMessage('Vous n\'avez pas les permissions pour modifier le statut/rôle.');
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
+      return;
+    }
+
     setEditingFields(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
@@ -180,6 +211,17 @@ const Compte = () => {
           let originalDisplay = 'Non défini';
           let newDisplay = String(newValue || 'Vide');
           
+          // Mapping des noms de champs pour l'affichage
+          const fieldDisplayNames: { [key: string]: string } = {
+            'email': 'Email',
+            'date_naissance': 'Date de naissance',
+            'genres': 'Genre',
+            'grades': 'Grade',
+            'abonnement': 'Abonnement',
+            'status': 'Statut/Rôle',
+            'password': 'Mot de passe'
+          };
+          
           // Conversion des valeurs originales
           if (originalValue && originalValue !== '' && originalValue !== null) {
             if (key === 'genres' && genres) {
@@ -247,7 +289,7 @@ const Compte = () => {
           }
           
           return {
-            field: key,
+            field: fieldDisplayNames[key] || key,
             oldValue: originalDisplay,
             newValue: newDisplay
           };
@@ -320,6 +362,7 @@ const Compte = () => {
           isLoading={updateCompte.isPending}
           formatDateForInput={formatDateForInput}
           disabledFields={disabledFields}
+          canEditStatus={canEditStatus()} // Passer l'information au composant
         />
       )
     },

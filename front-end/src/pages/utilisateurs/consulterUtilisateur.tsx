@@ -12,7 +12,7 @@ import {
 } from '@patternfly/react-core';
 import { useUtilisateurById, useUpdateUtilisateur, checkEmailExists } from '../../hooks/useUtilisateurs';
 import { useFrequentationByUserId } from '../../hooks/useStatistiques';
-import { useAbonnements, useGrades, useStatus } from '../../hooks/useInformations';
+import { useAbonnements, useGrades, useStatus, useGenres } from '../../hooks/useInformations';
 import { useEcheancesByUserId } from '../../hooks/usePaiements';
 import FormulaireUtilisateur from '../../components/utilisateurs/FormulaireUtilisateur';
 import EcheancesPaiement from '../../components/utilisateurs/EcheancesPaiement';
@@ -51,6 +51,7 @@ const ConsulterUtilisateurPage = () => {
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('line');
   const [modalStep, setModalStep] = useState<'summary' | 'result'>('summary');
   const [pendingChanges, setPendingChanges] = useState<any | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Hooks React Query
   const { data: userData, isLoading: loadingUser, error: userError } = useUtilisateurById(id);
@@ -59,6 +60,7 @@ const ConsulterUtilisateurPage = () => {
   const { data: gradesList = [] } = useGrades();
   const { data: statusList = [] } = useStatus();
   const { data: paiementsEcheances = [] } = useEcheancesByUserId(id);
+  const { data: genresList = [] } = useGenres(); // Ajout du hook pour les genres
   const updateUtilisateur = useUpdateUtilisateur();
 
 
@@ -112,6 +114,16 @@ const ConsulterUtilisateurPage = () => {
     }
   }, [userData]);
 
+  // Récupération du rôle de l'utilisateur connecté
+  React.useEffect(() => {
+    const storedData = localStorage.getItem('userData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      const role = parsedData?.status;
+      setUserRole(role);
+    }
+  }, []);
+
   // Transformation des données pour GraphiqueLineaire
   const statsDataReady =
     statFrequentation &&
@@ -138,6 +150,14 @@ const ConsulterUtilisateurPage = () => {
   };
 
   const handleEditClick = (field: string) => {
+    // Empêcher l'édition du statut si l'utilisateur n'a pas les droits
+    if (field === 'status' && !canEditStatus()) {
+      setModalMessage('Vous n\'avez pas les permissions pour modifier le statut/rôle.');
+      setModalSuccess(false);
+      setShowResultModal(true);
+      return;
+    }
+
     setEditingFields(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
@@ -169,6 +189,11 @@ const ConsulterUtilisateurPage = () => {
     }
   }, [updateUtilisateur.isSuccess, updateUtilisateur.isError, updateUtilisateur.error, modalStep]);
 
+  // Fonction pour vérifier si l'utilisateur peut modifier le statut
+  const canEditStatus = () => {
+    return userRole === 'super-administrateur';
+  };
+
   // Fonction pour formater les modifications
   const formatModifications = (): ModificationItem[] => {
     const modifications: ModificationItem[] = [];
@@ -191,17 +216,44 @@ const ConsulterUtilisateurPage = () => {
       });
     }
     
+    if (editingFields['status'] && form.status !== String(originalData?.status || '')) {
+      // Trouver le nom du statut original
+      const originalStatusId = originalData?.status;
+      let originalStatusName = 'Non défini';
+      if (originalStatusId && statusList) {
+        const status = statusList.find(s => String(s.id) === String(originalStatusId));
+        originalStatusName = status?.nom_status || String(originalStatusId);
+      }
+      
+      // Trouver le nom du nouveau statut
+      let newStatusName = form.status;
+      if (statusList) {
+        const status = statusList.find(s => String(s.id) === form.status);
+        newStatusName = status?.nom_status || form.status;
+      }
+      
+      modifications.push({
+        field: 'Statut/Rôle',
+        oldValue: originalStatusName,
+        newValue: newStatusName
+      });
+    }
+
     if (editingFields['genres'] && form.genres !== String(originalData?.genres || '')) {
       // Trouver le nom du genre original
       const originalGenreId = originalData?.genres;
       let originalGenreName = 'Non défini';
-      if (originalGenreId) {
-        // Ici on devrait avoir accès aux genres, mais ils ne sont pas dans les hooks
-        originalGenreName = String(originalGenreId);
+      if (originalGenreId && genresList) {
+        const genre = genresList.find(g => String(g.id) === String(originalGenreId));
+        originalGenreName = genre?.genre_name || String(originalGenreId);
       }
       
       // Trouver le nom du nouveau genre
       let newGenreName = form.genres;
+      if (genresList) {
+        const genre = genresList.find(g => String(g.id) === form.genres);
+        newGenreName = genre?.genre_name || form.genres;
+      }
       
       modifications.push({
         field: 'Genre',
@@ -275,6 +327,7 @@ const ConsulterUtilisateurPage = () => {
     if (editingFields['genres']) changes.genres = form.genres;
     if (editingFields['grades']) changes.grades = form.grades;
     if (editingFields['abonnement']) changes.abonnement = form.abonnement;
+    if (editingFields['status'] && canEditStatus()) changes.status = form.status; // Ajout du statut
 
     try {
       await updateUtilisateur.mutateAsync(changes);
@@ -328,6 +381,8 @@ const ConsulterUtilisateurPage = () => {
             emailCheckMessage={emailCheckMessage}
             abonnements={abonnements}
             gradesList={gradesList}
+            statusList={statusList} // Passer la liste des statuts
+            genresList={genresList} // Passer la liste des genres
             onEditClick={handleEditClick}
             onEmailChange={handleEmailChange}
             onInputChange={handleInputChange}
@@ -335,6 +390,10 @@ const ConsulterUtilisateurPage = () => {
             onValidateChanges={handleValidateChanges}
             isLoading={updateUtilisateur.isPending}
             formatDateForInput={formatDateForInput}
+            canEditStatus={canEditStatus()} // Passer l'autorisation
+            disabledFields={{
+              status: !canEditStatus() // Désactiver le champ statut si pas autorisé
+            }}
           />
         </Tab>
         

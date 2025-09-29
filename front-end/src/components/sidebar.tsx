@@ -73,13 +73,71 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
             <TachometerAltIcon className="sidebar-icon" />
             Accueil
           </NavItem>
-          <NavItem itemId="statistiques" to="/pages/statistiques">
-            <ClipboardCheckIcon className="sidebar-icon" />
-            Statistiques avancées
-          </NavItem>
+          
+          {/* Statistiques - uniquement pour admin et professeurs */}
+          {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
+            <NavItem itemId="statistiques" to="/pages/statistiques">
+              <ClipboardCheckIcon className="sidebar-icon" />
+              Statistiques avancées
+            </NavItem>
+          )}
           <Divider className="sidebar-divider" />
 
-          {/* Paiements */}
+          {/* Cours - accessible à tous les utilisateurs connectés */}
+          <div className="sidebar-section-title">Cours</div>
+          <NavItem to="/pages/cours/inscription" data-item-id="inscription">
+            <ClipboardCheckIcon className="sidebar-icon" />
+            S'inscrire aux cours
+          </NavItem>
+          
+          {/* Gestion des cours - uniquement pour admin et professeurs */}
+          {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
+            <NavExpandable
+              title={<span className="sidebar-nav-expandable-title"><BookIcon className="sidebar-icon" /> Gestion des cours</span>}
+              itemID="courses-management"
+            >
+              {hasRole(role, [ROLES.SUPER_ADMIN]) && (
+                <>
+                  <NavItem to="/pages/cours/ajouter-professeur" itemId="ajouter-professeur">
+                    <GraduationCapIcon className="sidebar-icon" />
+                    Ajouter un professeur
+                  </NavItem>
+                  <NavItem to="/pages/cours/ajouter-cours" itemId="ajouter-cours">
+                    <EditIcon className="sidebar-icon" />
+                    Ajouter un cours
+                  </NavItem>
+                </>
+              )}
+            </NavExpandable>
+          )}
+          <Divider className="sidebar-divider" />
+
+          {/* Magasin - accessible à tous les utilisateurs connectés */}
+          <div className="sidebar-section-title">Magasin</div>
+          <NavItem to="/pages/magasin/magasin" itemId="magasin">
+            <StoreIcon className="sidebar-icon" />
+            Boutique
+          </NavItem>
+          
+          {/* Gestion du magasin - uniquement pour admin */}
+          {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN]) && (
+            <NavExpandable
+              title={<span className="sidebar-nav-expandable-title"><StoreIcon className="sidebar-icon" /> Gestion magasin</span>}
+              itemID="store-management"
+            >
+              <NavItem to="/pages/magasin/commandes" itemId="commandes">
+                <PackageIcon className="sidebar-icon" />
+                Commandes
+              </NavItem>
+              <NavItem to="/pages/magasin/ajouter-article" itemId="ajouter-article">
+                <ShoppingCartIcon className="sidebar-icon" />
+                Ajouter un article
+              </NavItem>
+            </NavExpandable>
+          )}
+          <Divider className="sidebar-divider" />
+
+          {/* Paiements - uniquement pour admin et professeurs */}
           {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
             <>
               <div className="sidebar-section-title">Paiements</div>
@@ -91,72 +149,24 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
             </>
           )}
 
-          {/* Gestion */}
-          {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
+          {/* Gestion des utilisateurs - uniquement pour super admin */}
+          {hasRole(role, [ROLES.SUPER_ADMIN]) && (
             <>
-              <div className="sidebar-section-title">Gestion</div>
-
-              {hasRole(role, [ROLES.SUPER_ADMIN]) && (
-                <NavExpandable
-                  title={<span className="sidebar-nav-expandable-title"><UsersIcon className="sidebar-icon" /> Utilisateurs</span>}
-                  itemID="users"
-                >
-                  <NavItem to="/pages/utilisateurs/ajouter-utilisateur" itemId="ajouter-utilisateur">
-                    <PlusCircleIcon className="sidebar-icon" />
-                    Ajouter
-                  </NavItem>
-                </NavExpandable>
-              )}
-
+              <div className="sidebar-section-title">Administration</div>
               <NavExpandable
-                title={<span className="sidebar-nav-expandable-title"><BookIcon className="sidebar-icon" /> Cours</span>}
-                itemID="courses"
+                title={<span className="sidebar-nav-expandable-title"><UsersIcon className="sidebar-icon" /> Utilisateurs</span>}
+                itemID="users"
               >
-                <NavItem to="/pages/cours/inscription" data-item-id="inscription">
-                  <ClipboardCheckIcon className="sidebar-icon" />
-                  S'inscrire
+                <NavItem to="/pages/utilisateurs/ajouter-utilisateur" itemId="ajouter-utilisateur">
+                  <PlusCircleIcon className="sidebar-icon" />
+                  Ajouter
                 </NavItem>
-                {hasRole(role, [ROLES.SUPER_ADMIN]) && (
-                  <>
-                    <NavItem to="/pages/cours/ajouter-professeur" itemId="ajouter-professeur">
-                      <GraduationCapIcon className="sidebar-icon" />
-                      Ajouter un professeur
-                    </NavItem>
-                    <NavItem to="/pages/cours/ajouter-cours" itemId="ajouter-cours">
-                      <EditIcon className="sidebar-icon" />
-                      Ajouter un cours
-                    </NavItem>
-                  </>
-                )}
               </NavExpandable>
-
-              <NavExpandable
-                title={<span className="sidebar-nav-expandable-title"><StoreIcon className="sidebar-icon" /> Magasins</span>}
-                itemID="stores"
-              >
-                <NavItem to="/pages/magasin/magasin" itemId="magasin">
-                  <StoreIcon className="sidebar-icon" />
-                  Magasin
-                </NavItem>
-                {hasRole(role, [ROLES.SUPER_ADMIN]) && (
-                  <>
-                    <NavItem to="/pages/magasin/commandes" itemId="commandes">
-                      <PackageIcon className="sidebar-icon" />
-                      Commandes
-                    </NavItem>
-                    <NavItem to="/pages/magasin/ajouter-article" itemId="ajouter-article">
-                      <ShoppingCartIcon className="sidebar-icon" />
-                      Ajouter un article
-                    </NavItem>
-                  </>
-                )}
-              </NavExpandable>
-
               <Divider className="sidebar-divider" />
             </>
           )}
 
-          {/* Paramètres */}
+          {/* Paramètres - accessible à tous */}
           <div className="sidebar-section-title">Paramètres</div>
           <NavItem itemId="profile" to="/pages/compte">
             <UserIcon className="sidebar-icon" />
