@@ -83,7 +83,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   // Fonction pour gérer la fermeture de la modal et redirection
   const handleResultModalClose = () => {
     setIsResultModalOpen(false);
-    navigate('/');
+    window.location.href = `${window.location.origin}/pages/dashboard`;
   };
 
   // Effet pour redirection automatique avec timer
@@ -93,7 +93,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         setCountdown(prev => {
           if (prev <= 1) {
             clearInterval(interval);
-            handleResultModalClose();
+            window.location.href = `${window.location.origin}/pages/dashboard`;
             return 0;
           }
           return prev - 1;
@@ -213,5 +213,5 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
 };
 
 export default LoginPage;
-              
+
 
