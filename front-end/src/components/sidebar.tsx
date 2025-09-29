@@ -67,21 +67,23 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
     <PageSidebar isSidebarOpen={isOpen}>
       <Nav aria-label="Primary navigation">
         <NavList>
-          {/* Tableau de bord */}
-          <div className="sidebar-section-title">Tableau de bord</div>
-          <NavItem itemId="dashboard" to="/pages/dashboard">
-            <TachometerAltIcon className="sidebar-icon" />
-            Accueil
-          </NavItem>
-          
-          {/* Statistiques - uniquement pour admin et professeurs */}
+          {/* Tableau de bord - uniquement pour admin, professeurs et super-admin */}
           {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
-            <NavItem itemId="statistiques" to="/pages/statistiques">
-              <ClipboardCheckIcon className="sidebar-icon" />
-              Statistiques avancées
-            </NavItem>
+            <>
+              <div className="sidebar-section-title">Tableau de bord</div>
+              <NavItem itemId="dashboard" to="/pages/dashboard">
+                <TachometerAltIcon className="sidebar-icon" />
+                Accueil
+              </NavItem>
+              
+              {/* Statistiques - uniquement pour admin et professeurs */}
+              <NavItem itemId="statistiques" to="/pages/statistiques">
+                <ClipboardCheckIcon className="sidebar-icon" />
+                Statistiques avancées
+              </NavItem>
+              <Divider className="sidebar-divider" />
+            </>
           )}
-          <Divider className="sidebar-divider" />
 
           {/* Cours - accessible à tous les utilisateurs connectés */}
           <div className="sidebar-section-title">Cours</div>

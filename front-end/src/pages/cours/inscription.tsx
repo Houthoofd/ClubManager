@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import store from '../../redux/store';
@@ -43,6 +43,9 @@ const Inscription = () => {
     }
     return null;
   });
+
+  // État pour le rôle de l'utilisateur
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [modalSuccess, setModalSuccess] = useState<boolean>(false);
@@ -67,6 +70,20 @@ const Inscription = () => {
     
   });
 
+  // Récupération du rôle de l'utilisateur connecté
+  useEffect(() => {
+    const storedData = localStorage.getItem('userData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      const role = parsedData?.status;
+      setUserRole(role);
+    }
+  }, []);
+
+  // Fonction pour vérifier si l'utilisateur peut voir les participants
+  const canViewParticipants = () => {
+    return userRole !== 'utilisateur';
+  };
 
   const handleInscription = async (coursId: number) => {
     // Utilise first_name et last_name pour l'inscription
@@ -279,16 +296,19 @@ const Inscription = () => {
                         </Button>
                       )}
                       
-                      <Button 
-                        variant="secondary" 
-                        size="sm"
-                        onClick={() => navigate(`/pages/cours/${c.id}/participants`)}
-                      >
-                        Voir les participants
-                      </Button>
+                      {/* Bouton "Voir les participants" - masqué pour les utilisateurs normaux */}
+                      {canViewParticipants() && (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => navigate(`/pages/cours/${c.id}/participants`)}
+                        >
+                          Voir les participants
+                        </Button>
+                      )}
                     </div>
                     
-                    {/* Affichage du nombre d'inscrits */}
+                    {/* Affichage du nombre d'inscrits - visible pour tous */}
                     {utilisateursCoursQueries[cours.indexOf(c)]?.data && (
                       <span className="inscription-participants-count">
                         {utilisateursCoursQueries[cours.indexOf(c)].data.length} inscrit{utilisateursCoursQueries[cours.indexOf(c)].data.length > 1 ? 's' : ''}
