@@ -90,9 +90,7 @@ export const useAbonnementOptions = () => {
   return useQuery({
     queryKey: ['abonnements'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/abonnements'), {
-        credentials: 'include',
-      });
+      const response = await fetch(apiUrl('informations/abonnements'));
       if (!response.ok) throw new Error('Erreur lors du chargement des abonnements');
       const data = await response.json();
       return data.map((item: any) => ({
@@ -109,9 +107,7 @@ export const useGenreOptions = () => {
   return useQuery({
     queryKey: ['genres'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/genres'), {
-        credentials: 'include',
-      });
+      const response = await fetch(apiUrl('informations/genres'));
       if (!response.ok) throw new Error('Erreur lors du chargement des genres');
       const data = await response.json();
       return data.map((item: any) => ({

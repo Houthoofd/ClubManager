@@ -264,9 +264,9 @@ export const InscriptionPage: React.FC = () => {
                     console.log('Abonnement option:', option);
                     return (
                       <FormSelectOption
-                        key={option.id}
-                        value={String(option.id)}
-                        label={`${option.label || option.nom_plan || option.nom} - ${option.prix}€`}
+                        key={option.value}
+                        value={option.value}
+                        label={`${option.label} - ${option.prix}€`}
                       />
                     );
                   })}
@@ -285,9 +285,9 @@ export const InscriptionPage: React.FC = () => {
                     console.log('Genre option:', option);
                     return (
                       <FormSelectOption
-                        key={option.id}
-                        value={String(option.id)}
-                        label={option.label || option.genre_name || option.nom}
+                        key={option.value}
+                        value={option.value}
+                        label={option.label}
                       />
                     );
                   })}
@@ -337,10 +337,10 @@ export const InscriptionPage: React.FC = () => {
             <p><strong>Prénom :</strong> {form.prenom}</p>
             <p><strong>Nom :</strong> {form.nom}</p>
             <p><strong>Email :</strong> {form.email}</p>
-            <p><strong>Genre :</strong> {genreOptions.find(g => String(g.id) === String(form.genre))?.label || genreOptions.find(g => String(g.id) === String(form.genre))?.genre_name || 'Non sélectionné'}</p>
+            <p><strong>Genre :</strong> {genreOptions.find(g => g.value === form.genre)?.label || 'Non sélectionné'}</p>
             <p><strong>Date de naissance :</strong> {form.date_naissance}</p>
             <p style={{ margin: 0 }}>
-              <strong>Type d'abonnement :</strong> {abonnementOptions.find(a => String(a.id) === String(form.abonnement))?.label || abonnementOptions.find(a => String(a.id) === String(form.abonnement))?.nom_plan || 'Non sélectionné'}
+              <strong>Type d'abonnement :</strong> {abonnementOptions.find(a => a.value === form.abonnement)?.label || 'Non sélectionné'}
             </p>
           </div>
           {modalMessage && (
