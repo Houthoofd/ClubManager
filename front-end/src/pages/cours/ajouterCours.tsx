@@ -15,6 +15,7 @@ import CoursModals from '../../components/cours/CoursModals';
 import { PageHeader } from '../../components/common/PageHeader';
 import { safeSubstring } from '../../utils/safeSubstring';
 import ResultModal from '../../components/common/modal/ResultModal';
+import { LastProfessorWarningModal } from '../../components/modals/LastProfessorWarningModal';
 
 const AjouterCoursPage: React.FC = () => {
   // États pour la gestion des onglets, formulaires et modales
@@ -42,6 +43,14 @@ const AjouterCoursPage: React.FC = () => {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultModalMessage, setResultModalMessage] = useState('');
   const [resultModalSuccess, setResultModalSuccess] = useState(false);
+
+  // Nouveaux états pour la modal d'avertissement du dernier professeur
+  const [showLastProfessorWarning, setShowLastProfessorWarning] = useState(false);
+  const [pendingLastProfessorDissociation, setPendingLastProfessorDissociation] = useState<{
+    cours: any;
+    prof: any;
+    isLastProfessor: boolean;
+  } | null>(null);
 
   // Hooks React Query
   const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
@@ -310,14 +319,86 @@ const AjouterCoursPage: React.FC = () => {
 
   // Ouverture de la modale de dissociation
   const ouvrirModalDissociation = (cours: any, prof: string) => {
-    setProfesseurADissocier({
-      cours: { ...cours, jour: cours.jour_semaine || cours.jour },
-      prof: { name: prof }
-    });
-    setIsModalOpen(true);
+    console.log("Cours reçu pour dissociation:", cours);
+    console.log("Professeur reçu pour dissociation:", prof);
+    
+    // Vérifier si c'est le dernier professeur
+    const isLast = isLastProfessorForCourse(cours, prof);
+    
+    if (isLast) {
+      // C'est le dernier professeur - afficher l'avertissement spécial
+      setPendingLastProfessorDissociation({ 
+        cours: { ...cours, jour: cours.jour_semaine || cours.jour }, 
+        prof: { name: prof }, 
+        isLastProfessor: true 
+      });
+      setShowLastProfessorWarning(true);
+    } else {
+      // Dissociation normale
+      setProfesseurADissocier({
+        cours: { ...cours, jour: cours.jour_semaine || cours.jour },
+        prof: { name: prof }
+      });
+      setIsModalOpen(true);
+    }
   };
 
-  // Confirmation de la dissociation
+  // Fonction pour vérifier si c'est le dernier professeur d'un cours
+  const isLastProfessorForCourse = (cours: any, professorName: string) => {
+    if (!cours.professeurs || cours.professeurs.length === 0) return false;
+    
+    console.log("Vérification dernier professeur - Professeurs du cours:", cours.professeurs);
+    console.log("Nom du professeur à retirer:", professorName);
+    
+    // Si il n'y a qu'un seul professeur et c'est celui qu'on veut dissocier
+    return cours.professeurs.length === 1 && cours.professeurs[0] === professorName;
+  };
+
+  // Handler pour confirmer la dissociation du dernier professeur
+  const confirmerDissociationDernierProfesseur = async () => {
+    if (!pendingLastProfessorDissociation) return;
+    
+    setShowLastProfessorWarning(false);
+    
+    try {
+      const { cours, prof } = pendingLastProfessorDissociation;
+      const jourCours = cours.jour;
+      
+      console.log("Dissociation dernier professeur - Cours:", cours, "Prof:", prof);
+      
+      // Dissocier le professeur
+      await retirerProfesseursDuCours.mutateAsync({ 
+        professeursNoms: [prof.name], 
+        jour: jourCours 
+      });
+      
+      // Supprimer également le cours récurrent car il n'a plus de professeur
+      await supprimerCoursRecurrent.mutateAsync(jourCours.toLowerCase().trim());
+      
+      // Afficher le succès avec message spécifique
+      setResultModalSuccess(true);
+      setResultModalMessage(
+        `Le professeur ${prof.name} a été dissocié et le cours "${cours.type_cours} - ${cours.jour}" a été supprimé car il n'avait plus de professeur assigné.`
+      );
+      setShowResultModal(true);
+      
+    } catch (error: any) {
+      console.error("Erreur lors de la dissociation du dernier professeur:", error);
+      setResultModalSuccess(false);
+      setResultModalMessage(error.message || 'Erreur lors de la dissociation du dernier professeur');
+      setShowResultModal(true);
+    } finally {
+      setPendingLastProfessorDissociation(null);
+    }
+  };
+
+  // Handler pour annuler la dissociation du dernier professeur
+  const annulerDissociationDernierProfesseur = () => {
+    setShowLastProfessorWarning(false);
+    setPendingLastProfessorDissociation(null);
+  };
+
+  // Confirmation de la dissociation (normale)
   const confirmerDissociation = async () => {
     if (!professeurADissocier) return;
 
@@ -531,6 +612,23 @@ const AjouterCoursPage: React.FC = () => {
             originalCours={originalCours}
             onAnnulerConfirmationModification={annulerConfirmationModification}
             onConfirmerModification={confirmerModification}
+          />
+
+          {/* Modal d'avertissement pour le dernier professeur */}
+          <LastProfessorWarningModal
+            isOpen={showLastProfessorWarning}
+            onClose={annulerDissociationDernierProfesseur}
+            onConfirm={confirmerDissociationDernierProfesseur}
+            professorName={
+              pendingLastProfessorDissociation 
+                ? pendingLastProfessorDissociation.prof.name
+                : ''
+            }
+            courseName={
+              pendingLastProfessorDissociation
+                ? `${pendingLastProfessorDissociation.cours.type_cours} - ${pendingLastProfessorDissociation.cours.jour}`
+                : ''
+            }
           />
 
           {/* Nouvelle ResultModal pour les opérations de cours */}
