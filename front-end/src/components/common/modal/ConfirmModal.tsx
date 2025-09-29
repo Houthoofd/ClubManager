@@ -1,5 +1,10 @@
 import React from 'react';
-import { Modal, ModalBody, ModalFooter, ModalHeader, Button } from '@patternfly/react-core';
+import {
+  Modal,
+  ModalVariant,
+  Button,
+  ButtonVariant
+} from '@patternfly/react-core';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -9,10 +14,10 @@ interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'primary' | 'danger' | 'warning';
+  variant?: 'primary' | 'danger' | 'warning' | 'secondary';
 }
 
-export const ConfirmModal: React.FC<ConfirmModalProps> = ({
+const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
@@ -22,41 +27,43 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   cancelText = 'Annuler',
   variant = 'primary'
 }) => {
+  const getButtonVariant = (): ButtonVariant => {
+    switch (variant) {
+      case 'danger':
+        return ButtonVariant.danger;
+      case 'warning':
+        return ButtonVariant.warning;
+      case 'secondary':
+        return ButtonVariant.secondary;
+      default:
+        return ButtonVariant.primary;
+    }
+  };
+
   return (
     <Modal
-      variant="small"
+      variant={ModalVariant.small}
+      title={title}
       isOpen={isOpen}
       onClose={onClose}
-      aria-labelledby="confirm-modal-title"
-      aria-describedby="confirm-modal-body"
-    >
-      <ModalHeader
-        title={title}
-        labelId="confirm-modal-title"
-      />
-      <ModalBody id="confirm-modal-body">
-        <div style={{ padding: '1rem', textAlign: 'center' }}>
-          <p style={{ 
-            fontSize: '1rem',
-            margin: 0,
-            color: '#333'
-          }}>
-            {message}
-          </p>
-        </div>
-      </ModalBody>
-      <ModalFooter>
-        <Button 
-          key="confirm" 
-          variant={variant} 
+      actions={[
+        <Button
+          key="confirm"
+          variant={getButtonVariant()}
           onClick={onConfirm}
         >
           {confirmText}
-        </Button>
-        <Button key="cancel" variant="link" onClick={onClose}>
+        </Button>,
+        <Button
+          key="cancel"
+          variant={ButtonVariant.link}
+          onClick={onClose}
+        >
           {cancelText}
         </Button>
-      </ModalFooter>
+      ]}
+    >
+      <p>{message}</p>
     </Modal>
   );
 };

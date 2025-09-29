@@ -294,6 +294,48 @@ CREATE TABLE IF NOT EXISTS statistiques (
     INDEX idx_type_periode (type_statistique, periode_debut, periode_fin)
 ) ENGINE=InnoDB;
 
+-- ========== SYSTÈME D'ALERTES ==========
+
+-- Table pour les types d'alertes
+CREATE TABLE IF NOT EXISTS alertes_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    nom VARCHAR(100) NOT NULL,
+    description TEXT,
+    priorite ENUM('basse', 'normale', 'haute', 'critique') DEFAULT 'normale',
+    actif BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Table pour les alertes des utilisateurs
+CREATE TABLE IF NOT EXISTS alertes_utilisateurs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    alerte_type_id INT NOT NULL,
+    statut ENUM('active', 'resolue', 'ignoree') DEFAULT 'active',
+    donnees_contexte JSON,
+    date_detection TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_resolution TIMESTAMP NULL,
+    notes TEXT,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    FOREIGN KEY (alerte_type_id) REFERENCES alertes_types(id) ON DELETE CASCADE,
+    INDEX idx_utilisateur_statut (utilisateur_id, statut),
+    INDEX idx_type_statut (alerte_type_id, statut)
+) ENGINE=InnoDB;
+
+-- Table pour les actions de suivi
+CREATE TABLE IF NOT EXISTS alertes_actions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    alerte_id INT NOT NULL,
+    action_type ENUM('message_envoye', 'information_mise_a_jour', 'paiement_recu', 'autre') NOT NULL,
+    description TEXT,
+    effectue_par INT,
+    date_action TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (alerte_id) REFERENCES alertes_utilisateurs(id) ON DELETE CASCADE,
+    FOREIGN KEY (effectue_par) REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    INDEX idx_alerte_date (alerte_id, date_action)
+) ENGINE=InnoDB;
+
 -- INDEXES
 CREATE INDEX idx_utilisateurs_email ON utilisateurs(email);
 CREATE INDEX idx_utilisateurs_status ON utilisateurs(status_id);

@@ -7,7 +7,8 @@ interface ResultModalProps {
   title: string;
   message: string;
   isSuccess: boolean;
-  closeButtonText?: string;
+  showTimer?: boolean; // Nouvelle prop pour activer le timer
+  countdown?: number;  // Nouvelle prop pour le timer
 }
 
 export const ResultModal: React.FC<ResultModalProps> = ({
@@ -16,7 +17,8 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   title,
   message,
   isSuccess,
-  closeButtonText = 'Fermer',
+  showTimer = false,
+  countdown = 0,
 }) => {
   return (
     <Modal
@@ -56,13 +58,38 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         </div>
       </ModalBody>
       <ModalFooter>
-        <Button variant="primary" onClick={onClose}>
-          {closeButtonText}
-        </Button>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          width: '100%' 
+        }}>
+          <div>
+            {showTimer && countdown > 0 && (
+              <span style={{ 
+                color: '#6c757d', 
+                fontSize: '0.875rem' 
+              }}>
+                Redirection automatique dans {countdown} seconde{countdown > 1 ? 's' : ''}...
+              </span>
+            )}
+          </div>
+          <Button
+            key="close"
+            variant="primary"
+            onClick={onClose}
+            style={{
+              backgroundColor: isSuccess ? '#28a745' : '#dc3545',
+              borderColor: isSuccess ? '#28a745' : '#dc3545',
+            }}
+          >
+            Fermer
+          </Button>
+        </div>
       </ModalFooter>
     </Modal>
   );
 };
 
 export default ResultModal;
-              
+

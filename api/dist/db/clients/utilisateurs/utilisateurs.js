@@ -404,7 +404,7 @@ export class Utilisateurs {
     }
     // Modifie les informations d'un utilisateur selon les champs reçus
     async modifierInfosUtilisateur(data) {
-        console.log('[UTILISATEURS] Appel de modifierInfosUtilisateur avec:', data); // Ajout du log
+        console.log('[UTILISATEURS] Appel de modifierInfosUtilisateur avec:', data);
         if (!data.id) {
             console.log('[UTILISATEURS] Erreur: id manquant dans la requête de modification');
             throw new Error("L'identifiant de l'utilisateur est requis pour la modification.");
@@ -435,6 +435,12 @@ export class Utilisateurs {
         if (typeof data.status !== 'undefined') {
             fields.push('status_id = (SELECT id FROM status WHERE nom_role = ? LIMIT 1)');
             values.push(data.status);
+        }
+        // Le mot de passe est déjà hashé côté route, pas besoin de le re-hasher
+        if (typeof data.password !== 'undefined' && data.password.trim() !== '') {
+            fields.push('password = ?');
+            values.push(data.password);
+            console.log('[UTILISATEURS] Mot de passe mis à jour (déjà hashé)');
         }
         if (fields.length === 0) {
             return { isConfirm: false, message: "Aucune donnée à modifier." };

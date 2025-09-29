@@ -1,5 +1,5 @@
 import React from 'react';
-import { Spinner } from '@patternfly/react-core';
+import { Button, Spinner } from '@patternfly/react-core';
 import FormulaireCompte from './FormulaireCompte';
 
 interface CompteInfoTabProps {
@@ -52,25 +52,56 @@ const CompteInfoTab: React.FC<CompteInfoTabProps> = ({
   }
 
   return (
-    <FormulaireCompte
-      compteInfo={compteInfo}
-      form={form}
-      password={password}
-      showPasswordField={showPasswordField}
-      editingFields={editingFields}
-      abonnements={abonnements}
-      grades={grades}
-      status={status}
-      genres={genres}
-      onEditClick={onEditClick}
-      onEmailChange={onEmailChange}
-      onFormChange={onFormChange}
-      onPasswordChange={onPasswordChange}
-      onApplyChanges={onApplyChanges}
-      isLoading={isLoading}
-      formatDateForInput={formatDateForInput}
-      disabledFields={disabledFields}
-    />
+    <div className="compte-info-tab">
+      <div className="compte-info-content">
+        <FormulaireCompte
+          compteInfo={compteInfo}
+          form={form}
+          password={password}
+          editingFields={editingFields}
+          onEditClick={onEditClick}
+          onEmailChange={onEmailChange}
+          onFormChange={onFormChange}
+          onPasswordChange={onPasswordChange}
+          abonnements={abonnements}
+          grades={grades}
+          status={status}
+          genres={genres}
+          formatDateForInput={formatDateForInput}
+          disabledFields={disabledFields}
+          includePassword={true}
+        />
+
+        {/* Bouton "Voir les changements effectués" aligné complètement à droite avec border-radius */}
+        {Object.values(editingFields).some(Boolean) && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginTop: '1.5rem',
+              width: '100%',
+            }}
+          >
+            <Button
+              variant="primary"
+              onClick={onApplyChanges}
+              isLoading={isLoading}
+              isDisabled={isLoading}
+              style={{
+                backgroundColor: '#007bff',
+                borderColor: '#007bff',
+                color: '#fff',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                borderRadius: '8px', // Ajout du border-radius pour respecter le style de l'app
+              }}
+            >
+              {isLoading ? 'Sauvegarde...' : 'Voir les changements effectués'}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

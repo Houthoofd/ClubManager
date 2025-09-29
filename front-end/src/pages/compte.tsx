@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { PageSection, Spinner, Alert, Tabs, Tab } from '@patternfly/react-core';
-import { PageHeader } from '../components/common/PageHeader';
-import { UserIcon, ChartLineIcon, CreditCardIcon } from '@patternfly/react-icons';
+import { 
+  PageSection, 
+  Spinner, 
+  Alert, 
+  Tabs, 
+  Tab,
+  Button,
+  TextInput,
+  FormSelect
+} from '@patternfly/react-core';
+import { 
+  PageHeader 
+} from '../components/common/PageHeader';
+import { 
+  UserIcon, 
+  ChartLineIcon, 
+  CreditCardIcon,
+  EditIcon,
+  TimesIcon
+} from '@patternfly/react-icons';
 import { useCompteData } from '../hooks/useCompteData';
-import CompteInfoTab from '../components/compte/CompteInfoTab';
 import StatistiquesTab from '../components/compte/StatistiquesTab';
 import PaiementsTab from '../components/compte/PaiementsTab';
+import CompteInfoTab from '../components/compte/CompteInfoTab';
 import ResultModal from '../components/common/modal/ResultModal';
 import ConfirmModal from '../components/common/modal/ConfirmModal';
 import ResumeConfirmModal from '../components/common/modal/ResumeConfirmModal';
@@ -39,9 +56,9 @@ const Compte = () => {
     genres: '',
     grades: '',
     abonnement: '',
-    status: ''
+    status: '',
+    password: ''
   });
-  const [password, setPassword] = useState('');
   const [showPasswordField, setShowPasswordField] = useState(false);
   const [chartType, setChartType] = useState<'line' | 'area' | 'bar'>('line');
   const [disabledFields, setDisabledFields] = useState<{ [key: string]: boolean }>({});
@@ -74,6 +91,7 @@ const Compte = () => {
         grades: compteInfo.grades || '',
         abonnement: compteInfo.abonnement || '',
         status: compteInfo.status || '',
+        password: ''
       });
     }
   }, [compteInfo]);
@@ -92,7 +110,9 @@ const Compte = () => {
   };
 
   const handleEmailChange = (value: string) => setForm(prev => ({ ...prev, email: value }));
-  const handlePasswordChange = (value: string) => setPassword(value);
+  const handlePasswordChange = (value: string) => {
+    setForm(prev => ({ ...prev, password: value }));
+  };
 
   const getChangesSummary = () => {
     const changes: { [key: string]: string } = {};
@@ -145,67 +165,49 @@ const Compte = () => {
   // Affiche le résumé des changements dans la modal avant modification
   const handleApplyChanges = () => {
     const changes = getChangesSummary();
-    if (showPasswordField && password) changes['mot_de_passe'] = password;
-
-    console.log('=== DEBUG handleApplyChanges ===');
-    console.log('Changes:', changes);
-    console.log('CompteInfo:', compteInfo);
-    console.log('CompteInfo.utilisateur:', compteInfo?.utilisateur);
-    console.log('Genres array:', genres);
+    // Ajout du mot de passe s'il a été modifié
+    if (editingFields.password && form.password.trim() !== '') {
+      changes['password'] = form.password;
+    }
 
     if (Object.keys(changes).length > 0) {
       const modifications: ModificationItem[] = Object.entries(changes)
         .map(([key, newValue]) => {
-          console.log(`\n--- Processing field: ${key} ---`);
-          
           // Récupérer la valeur originale depuis compteInfo.utilisateur
           let originalValue = compteInfo?.utilisateur?.[key];
-          console.log(`Original value from compteInfo.utilisateur[${key}]:`, originalValue);
-          console.log(`New value:`, newValue);
           
           // Obtenir les noms d'affichage avec fallback
           let originalDisplay = 'Non défini';
           let newDisplay = String(newValue || 'Vide');
           
-          // Conversion des valeurs originales - seulement si on a une vraie valeur
+          // Conversion des valeurs originales
           if (originalValue && originalValue !== '' && originalValue !== null) {
-            console.log(`Processing original value: ${originalValue}`);
-            
             if (key === 'genres' && genres) {
-              console.log('Looking for genre with name:', originalValue);
-              // Chercher par nom d'abord, puis par ID
               let genre = genres.find(g => g.genre_name === originalValue);
               if (!genre) {
                 genre = genres.find(g => String(g.id) === String(originalValue));
               }
-              console.log('Found genre:', genre);
               originalDisplay = genre?.genre_name || `Genre: ${originalValue}`;
             } else if (key === 'grades' && grades) {
-              console.log('Looking for grade with name:', originalValue);
               let grade = grades.find(g => g.grade_id === originalValue);
               if (!grade) {
                 grade = grades.find(g => String(g.id) === String(originalValue));
               }
-              console.log('Found grade:', grade);
               originalDisplay = grade?.grade_id || `Grade: ${originalValue}`;
             } else if (key === 'abonnement' && abonnements) {
-              console.log('Looking for abonnement with name:', originalValue);
               let abonnement = abonnements.find(a => a.nom_plan === originalValue);
               if (!abonnement) {
                 abonnement = abonnements.find(a => String(a.id) === String(originalValue));
               }
-              console.log('Found abonnement:', abonnement);
               originalDisplay = abonnement?.nom_plan || `Abonnement: ${originalValue}`;
             } else if (key === 'status' && status) {
-              console.log('Looking for status with name:', originalValue);
               let statusItem = status.find(s => s.nom_status === originalValue);
               if (!statusItem) {
                 statusItem = status.find(s => String(s.id) === String(originalValue));
               }
-              console.log('Found status:', statusItem);
               originalDisplay = statusItem?.nom_status || `Status: ${originalValue}`;
-            } else if (key === 'mot_de_passe') {
-              originalDisplay = 'Mot de passe existant';
+            } else if (key === 'password') {
+              originalDisplay = '••••••••';
             } else {
               originalDisplay = String(originalValue);
             }
@@ -213,49 +215,36 @@ const Compte = () => {
           
           // Conversion des nouvelles valeurs
           if (newValue && newValue !== '') {
-            console.log(`Processing new value: ${newValue}`);
-            
             if (key === 'genres' && genres) {
-              console.log('Looking for new genre with name:', newValue);
-              // La nouvelle valeur peut être le nom du genre directement
               let genre = genres.find(g => g.genre_name === newValue);
               if (!genre) {
                 genre = genres.find(g => String(g.id) === String(newValue));
               }
-              console.log('Found new genre:', genre);
               newDisplay = genre?.genre_name || newValue;
             } else if (key === 'grades' && grades) {
-              console.log('Looking for new grade with name:', newValue);
               let grade = grades.find(g => g.grade_id === newValue);
               if (!grade) {
                 grade = grades.find(g => String(g.id) === String(newValue));
               }
-              console.log('Found new grade:', grade);
               newDisplay = grade?.grade_id || newValue;
             } else if (key === 'abonnement' && abonnements) {
-              console.log('Looking for new abonnement with name:', newValue);
               let abonnement = abonnements.find(a => a.nom_plan === newValue);
               if (!abonnement) {
                 abonnement = abonnements.find(a => String(a.id) === String(newValue));
               }
-              console.log('Found new abonnement:', abonnement);
               newDisplay = abonnement?.nom_plan || newValue;
             } else if (key === 'status' && status) {
-              console.log('Looking for new status with name:', newValue);
               let statusItem = status.find(s => s.nom_status === newValue);
               if (!statusItem) {
                 statusItem = status.find(s => String(s.id) === String(newValue));
               }
-              console.log('Found new status:', statusItem);
               newDisplay = statusItem?.nom_status || newValue;
-            } else if (key === 'mot_de_passe') {
+            } else if (key === 'password') {
               newDisplay = 'Nouveau mot de passe';
             } else {
               newDisplay = String(newValue);
             }
           }
-          
-          console.log(`Final display values - Original: "${originalDisplay}", New: "${newDisplay}"`);
           
           return {
             field: key,
@@ -264,7 +253,6 @@ const Compte = () => {
           };
         });
       
-      console.log('Final modifications array:', modifications);
       setModificationsResume(modifications);
       setShowConfirmModal(true);
     } else {
@@ -279,14 +267,18 @@ const Compte = () => {
     setShowConfirmModal(false);
 
     const changes = getChangesSummary();
-    if (showPasswordField && password) changes['mot_de_passe'] = password;
+    // Ajout du mot de passe s'il a été modifié
+    if (editingFields.password && form.password.trim() !== '') {
+      changes['password'] = form.password;
+    }
 
     const changesToSend = { id: utilisateurId, ...changes };
     
-    // Nettoie les champs vides
+    // Nettoie les champs vides (mais garde le password s'il a été fourni)
     Object.keys(changesToSend).forEach(key => {
       if (
         key !== 'id' &&
+        key !== 'password' && // Ne pas supprimer le password même s'il est vide
         (changesToSend[key] === undefined ||
           changesToSend[key] === null ||
           changesToSend[key] === '')
@@ -313,8 +305,8 @@ const Compte = () => {
           isDataReady={isDataReady}
           compteInfo={compteInfo}
           form={form}
-          password={password}
-          showPasswordField={showPasswordField}
+          password={form.password}
+          showPasswordField={true}
           editingFields={editingFields}
           abonnements={abonnements}
           grades={grades}
@@ -421,5 +413,6 @@ const Compte = () => {
 };
 
 export default Compte;
+
 
 

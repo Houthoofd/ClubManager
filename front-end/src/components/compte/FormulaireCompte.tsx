@@ -37,6 +37,7 @@ interface FormulaireCompteProps {
   isLoading: boolean;
   formatDateForInput: (date: string) => string;
   disabledFields?: { [key: string]: boolean }; // Ajout de la prop
+  includePassword?: boolean;
 }
 
 const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
@@ -57,7 +58,100 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
   isLoading,
   formatDateForInput,
   disabledFields = {},
+  includePassword = false,
 }) => {
+  const fields = [
+    { key: 'email', label: 'Email', type: 'email' },
+    { key: 'date_naissance', label: 'Date de naissance', type: 'date' },
+    { key: 'genres', label: 'Genre', type: 'select', options: genres, optionValue: 'genre_name', optionLabel: 'genre_name' },
+    { key: 'grades', label: 'Grade', type: 'select', options: grades, optionValue: 'grade_id', optionLabel: 'grade_id' },
+    { key: 'abonnement', label: 'Abonnement', type: 'select', options: abonnements, optionValue: 'nom_plan', optionLabel: 'nom_plan' },
+    { key: 'status', label: 'Statut', type: 'select', options: status, optionValue: 'nom_role', optionLabel: 'nom_role' },
+    ...(includePassword ? [{ key: 'password', label: 'Mot de passe', type: 'password' }] : [])
+  ];
+
+  const renderField = (field: any) => {
+    const { key, label, type, options, optionValue, optionLabel } = field;
+    const isEditing = editingFields[key];
+    const isDisabled = disabledFields[key];
+    const value = key === 'password' ? password : (form[key] || compteInfo?.[key] || '');
+    const displayValue = key === 'password' ? '••••••••' : (compteInfo?.[key] || 'Non défini');
+
+    return (
+      <div className="field-row" key={key}>
+        <div className="field-label">{label}</div>
+        <div className="field-content">
+          {!isEditing ? (
+            <div className="field-display">
+              <span className="field-value">{displayValue}</span>
+              {!isDisabled && (
+                <Button 
+                  variant="link" 
+                  className="edit-button" 
+                  onClick={() => onEditClick(key)}
+                  icon={<PencilAltIcon />}
+                >
+                  Modifier
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="field-edit">
+              {type === 'select' ? (
+                <select
+                  id={key}
+                  value={form[key]}
+                  onChange={(e) => onFormChange(key, e.target.value)}
+                  disabled={isDisabled}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    background: 'transparent',
+                    padding: '0.25rem',
+                    fontSize: '1rem',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">Sélectionnez {label.toLowerCase()}</option>
+                  {options?.map((option: any) => (
+                    <option key={option.id} value={option[optionValue]}>
+                      {option[optionLabel]}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <TextInput
+                  type={type}
+                  value={key === 'password' ? password : value}
+                  onChange={(_event, value) => {
+                    if (key === 'email') {
+                      onEmailChange(value);
+                    } else if (key === 'password') {
+                      onPasswordChange(value);
+                    } else {
+                      onFormChange(key, value);
+                    }
+                  }}
+                  placeholder={key === 'password' ? 'Nouveau mot de passe' : `Entrez votre ${label.toLowerCase()}`}
+                  aria-label={label}
+                  className="form-control"
+                />
+              )}
+              <Button 
+                variant="link" 
+                className="cancel-button" 
+                onClick={() => onEditClick(key)}
+                icon={<PencilAltIcon />}
+              >
+                Annuler
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Section informations de base */}
@@ -190,36 +284,52 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center',
-                    background: '#f8f9fa',
-                    border: '1px solid #ced4da',
+                    justifyContent: 'space-between', // Force l'espacement entre le contenu et le bouton
+                    background: editingFields['password'] ? '#fff' : '#f8f9fa',
+                    border: `1px solid ${editingFields['password'] ? '#007bff' : '#ced4da'}`,
                     borderRadius: '4px',
-                    padding: '0.5rem'
+                    padding: '0.5rem',
+                    transition: 'all 0.2s',
+                    width: '100%' // S'assure que le conteneur prend toute la largeur
                   }}>
-                    {showPasswordField ? (
+                    {editingFields['password'] ? (
                       <TextInput
-                        type="password"
                         id="password"
+                        type="password"
                         value={password}
-                        onChange={onPasswordChange}
-                        placeholder="Créer un mot de passe"
-                        style={{ 
-                          flexGrow: 1, 
+                        onChange={(_event, value) => onPasswordChange(value)}
+                        placeholder="Entrez votre nouveau mot de passe"
+                        style={{
+                          flex: 1,
                           border: 'none',
-                          background: 'transparent'
+                          background: 'transparent',
+                          padding: '0.25rem',
+                          fontSize: '1rem',
+                          outline: 'none',
+                          marginRight: '10px' // Espace entre le champ et le bouton
                         }}
                       />
                     ) : (
-                      <TextInput
-                        type="password"
-                        value="********"
-                        isDisabled
-                        style={{ 
-                          flexGrow: 1, 
-                          border: 'none',
-                          background: 'transparent'
-                        }}
-                      />
+                      <span style={{
+                        flex: 1,
+                        padding: '0.25rem',
+                        fontSize: '1rem',
+                        color: '#6c757d'
+                      }}>
+                        ••••••••
+                      </span>
                     )}
+                    <Button
+                      variant="plain"
+                      onClick={() => onEditClick('password')}
+                      style={{ 
+                        marginLeft: 'auto', // Force le bouton complètement à droite
+                        color: editingFields['password'] ? '#28a745' : '#007bff',
+                        flexShrink: 0 // Empêche le bouton de se réduire
+                      }}
+                    >
+                      {editingFields['password'] ? <CheckIcon /> : <PencilAltIcon />}
+                    </Button>
                   </div>
                 </FormGroup>
               </div>
@@ -419,49 +529,10 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
         </Form>
       </Card>
       
-      {/* Bouton d'enregistrement */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'flex-end', 
-        alignItems: 'center',
-        gap: '1rem',
-        padding: '1rem',
-        background: '#f8f9fa',
-        borderRadius: '8px',
-        border: '1px solid #dee2e6'
-      }}>
-        {Object.values(editingFields).some(Boolean) && (
-          <div style={{ 
-            fontSize: '0.9rem', 
-            color: '#6c757d',
-            fontStyle: 'italic'
-          }}>
-            {Object.values(editingFields).filter(Boolean).length} modification{Object.values(editingFields).filter(Boolean).length > 1 ? 's' : ''} en cours
-          </div>
-        )}
-        <Button 
-          variant="primary" 
-          size="lg"
-          onClick={onApplyChanges} 
-          isDisabled={!Object.values(editingFields).some(Boolean) && !showPasswordField}
-          style={{
-            background: (!Object.values(editingFields).some(Boolean) && !showPasswordField) ? '#6c757d' : '#007bff',
-            borderColor: (!Object.values(editingFields).some(Boolean) && !showPasswordField) ? '#6c757d' : '#007bff',
-            padding: '0.75rem 2rem'
-          }}
-        >
-          {isLoading ? (
-            <>
-              <Spinner size="sm" style={{ marginRight: '0.5rem' }} />
-              Enregistrement...
-            </>
-          ) : (
-            'Voir les changements effectués'
-          )}
-        </Button>
-      </div>
+      {/* Supprimer le bouton d'enregistrement - gardé seulement dans CompteInfoTab */}
     </>
   );
 };
 
 export default FormulaireCompte;
+

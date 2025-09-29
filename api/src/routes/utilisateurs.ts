@@ -223,9 +223,9 @@ router.delete('/supprimer/:id', async (req: any, res: any) => {
 
 // Nouvelle route pour modifier uniquement le status, le grade et l'abonnement d'un utilisateur
 router.put('/modifier', async (req:any, res:any) => {
-  console.log('[ROUTE] PUT /utilisateurs/modifier appelée'); // Ajout du log pour traçabilité
+  console.log('[ROUTE] PUT /utilisateurs/modifier appelée');
   try {
-    const { id, email, date_naissance, genres, grades, abonnement, status } = req.body;
+    const { id, email, date_naissance, genres, grades, abonnement, status, password } = req.body;
     console.log('[ROUTE] Body reçu:', req.body);
 
     if (!id) {
@@ -242,6 +242,16 @@ router.put('/modifier', async (req:any, res:any) => {
     if (typeof grades !== 'undefined') dataToUpdate.grades = grades;
     if (typeof abonnement !== 'undefined') dataToUpdate.abonnement = abonnement;
     if (typeof status !== 'undefined') dataToUpdate.status = status;
+    
+    // Hashage du mot de passe s'il est fourni
+    if (typeof password !== 'undefined' && password.trim() !== '') {
+      console.log('[ROUTE] Hashage du mot de passe en cours...');
+      const hashedPassword = await bcrypt.hash(password, 10);
+      dataToUpdate.password = hashedPassword;
+      console.log('[ROUTE] Mot de passe hashé avec succès');
+    }
+
+    console.log('[ROUTE] Données à envoyer au client:', { ...dataToUpdate, password: dataToUpdate.password ? '[HASHED]' : undefined });
 
     // Appel à la méthode du client qui gère la modification
     const result = await client.modifierInfosUtilisateur(dataToUpdate);

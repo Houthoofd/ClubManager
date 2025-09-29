@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Button,
@@ -10,19 +10,20 @@ import {
   PageSection,
   Bullseye,
 } from '@patternfly/react-core';
-import ModalWithHelp from '../components/common/modal/ModalWithHelp'; // Importer ModalWithHelp
+import ResultModal from '../components/common/modal/ResultModal';
 import { useConnexion } from '../hooks/useConnexion';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/slices/authSlice';
 import { PageHeader } from '../components/common/PageHeader';
-import { CheckCircleIcon } from '@patternfly/react-icons'; // Importer une icône
 import { apiUrl } from './apiUrl';
+import '../styles/connexion.css'; // Import du fichier CSS
 
 const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // État pour la modal
-  const [modalData, setModalData] = useState<any>(null); // État pour les données de la modal
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [countdown, setCountdown] = useState(5); // Changement de 3 à 5 secondes
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -64,95 +65,153 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         token,
       }));
 
-      dispatch(loginSuccess(user)); // Mettre à jour le store Redux avec les données utilisateur
+      dispatch(loginSuccess(user));
 
       if (onSuccess) {
         onSuccess(data);
       }
 
-      // Ouvrir la modal de succès avec uniquement les données pertinentes
-      setIsModalOpen(true);
-      setModalData({
-        Prénom: user.first_name,
-        Nom: user.last_name,
-        Email: user.email,
-      });
+      // Afficher la ResultModal de succès
+      setResultModalMessage(`Bienvenue ${user.first_name} ${user.last_name} ! Connexion réussie.`);
+      setIsResultModalOpen(true);
     } catch (err: any) {
       console.error('Erreur lors de la connexion:', err);
       setError(err.message || 'Erreur lors de la tentative de connexion');
     }
   };
 
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    const currentUrl = window.location.href; // URL actuelle
-    const dashboardUrl = currentUrl.replace('/connexion', '/dashboard'); // Remplace '/connexion' par '/dashboard'
-    window.location.href = dashboardUrl; // Redirection manuelle
+  // Fonction pour gérer la fermeture de la modal et redirection
+  const handleResultModalClose = () => {
+    setIsResultModalOpen(false);
+    navigate('/');
   };
 
+  // Effet pour redirection automatique avec timer
+  useEffect(() => {
+    if (isResultModalOpen && resultModalMessage.includes('Bienvenue')) {
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleResultModalClose();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Nettoyer l'interval si l'utilisateur ferme la modal manuellement
+      return () => clearInterval(interval);
+    }
+  }, [isResultModalOpen, resultModalMessage]);
+
+  // Réinitialiser le countdown quand la modal s'ouvre
+  useEffect(() => {
+    if (isResultModalOpen) {
+      setCountdown(5); // Changement de 3 à 5 secondes
+    }
+  }, [isResultModalOpen]);
 
   return (
-    <PageSection style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-      <Bullseye>
-        <div style={{ maxWidth: '800px', width: '100%', padding: '3rem', boxShadow: '0 6px 10px rgba(0, 0, 0, 0.15)', borderRadius: '12px', backgroundColor: '#fff' }}>
-          <Form onSubmit={handleSubmit}>
-            <FormGroup label="Email" isRequired fieldId="email">
-              <TextInput
-                id="email"
-                value={formData.email}
-                onChange={(_, value) => handleChange('email', value)}
-                type="email"
-                isRequired
-              />
-            </FormGroup>
-            <FormGroup label="Mot de passe" isRequired fieldId="password">
-              <TextInput
-                id="password"
-                value={formData.password}
-                onChange={(_, value) => handleChange('password', value)}
-                type="password"
-                isRequired
-              />
-            </FormGroup>
+    <div className="login-page">
+      {/* Background decorative elements */}
+      <div className="login-background-decoration" />
 
-            {error && (
-              <Alert variant={AlertVariant.danger} title="Erreur" isInline>
-                {error}
-              </Alert>
-            )}
-
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={connexion.isLoading}
-              style={{ width: '100%', marginTop: '2rem' }}
-            >
-              Se connecter
-            </Button>
-          </Form>
-          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-            <p>
-              Pas encore inscrit ?{' '}
-              <Link to="/pages/inscription" style={{ color: '#007bff', textDecoration: 'none' }}>
-                Créez un compte
-              </Link>
-            </p>
-          </div>
-        </div>
-      </Bullseye>
-      <ModalWithHelp
-        title="Connexion réussie"
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        variant="success"
-        context="connexion"
-        data={modalData}
-        successMessage="Vous êtes maintenant connecté avec succès !"
-        size="large"
-        autoCloseDelay={3000}
+      <PageHeader
+        title="Club Manager"
+        subtitle="Connectez-vous à votre espace membre"
+        variant="login"
       />
-    </PageSection>
+
+      <PageSection style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '2rem' }}>
+        <Bullseye style={{ width: '100%' }}>
+          <div className="login-container">
+            {/* Logo/Icon section */}
+            <div className="login-header">
+              <div className="login-logo">🥋</div>
+              <h1 className="login-title">Bienvenue</h1>
+              <p className="login-subtitle">
+                Connectez-vous pour accéder à votre espace
+              </p>
+            </div>
+
+            <Form onSubmit={handleSubmit} className="login-form">
+              {error && (
+                <Alert
+                  variant={AlertVariant.danger}
+                  title="Erreur de connexion"
+                  isInline
+                  className="login-error"
+                >
+                  {error}
+                </Alert>
+              )}
+
+              <FormGroup label="Email" isRequired fieldId="email" className="login-form-group">
+                <TextInput
+                  isRequired
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={(_event, value) => handleChange('email', value)}
+                  placeholder="Entrez votre email"
+                  className="login-input"
+                />
+              </FormGroup>
+
+              <FormGroup label="Mot de passe" isRequired fieldId="password" className="login-form-group">
+                <TextInput
+                  isRequired
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={(_event, value) => handleChange('password', value)}
+                  placeholder="Entrez votre mot de passe"
+                  className="login-input"
+                />
+              </FormGroup>
+
+              <div className="login-actions">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  isLoading={connexion.isPending}
+                  isDisabled={connexion.isPending}
+                  className="login-button"
+                >
+                  {connexion.isPending ? 'Connexion en cours...' : 'Se connecter'}
+                </Button>
+              </div>
+
+              <div className="login-footer">
+                <p>
+                  Pas encore de compte ?{' '}
+                  <Link to="/pages/inscription" className="register-link">
+                    Inscrivez-vous ici
+                  </Link>
+                </p>
+              </div>
+            </Form>
+          </div>
+        </Bullseye>
+      </PageSection>
+
+      {/* ResultModal avec timer dans le footer */}
+      <ResultModal
+        isOpen={isResultModalOpen}
+        onClose={handleResultModalClose}
+        title="Connexion réussie"
+        message={resultModalMessage}
+        isSuccess={true}
+        showTimer={true}
+        countdown={countdown}
+      />
+    </div>
   );
 };
 
 export default LoginPage;
+              
+

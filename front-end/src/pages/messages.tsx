@@ -1,34 +1,39 @@
 import React, { useState } from 'react';
 import {
   PageSection,
-  Tabs,
-  Tab,
-  TabTitleText,
-  Button,
-  Alert,
-  Modal,
-  Form,
-  FormGroup,
-  FormSelect,
-  FormSelectOption,
   Spinner,
   Bullseye,
-  Badge,
+  Alert
 } from '@patternfly/react-core';
-import { TimesIcon, PaperPlaneIcon, EditIcon, ListIcon } from '@patternfly/react-icons';
+import { 
+  PaperPlaneIcon, 
+  EditIcon, 
+  ListIcon, 
+  InboxIcon
+} from '@patternfly/react-icons';
 import { PageHeader } from '../components/common/PageHeader';
 import { TabContainer } from '../components/common/TabContainer';
-import GenericForm from '../components/genericForm';
+import { ResultModal } from '../components/common/modal/ResultModal';
+import { ResumeConfirmModal } from '../components/common/modal/ResumeConfirmModal';
+import MessageDetailModal from '../components/messages/MessageDetailModal';
+import MessagesReceivedTab from '../components/messages/MessagesReceivedTab';
+import SendMessageForm from '../components/messages/SendMessageForm';
+import CreateMessageTypeForm from '../components/messages/CreateMessageTypeForm';
+import MessageTypesListTab from '../components/messages/MessageTypesListTab';
 import {
   useTypesMessages,
   useCreerTypeMessage,
   useModifierTypeMessage,
   useSupprimerTypeMessage,
   useEnvoyerMessage,
+  useMessagesRecus,
+  useMarquerMessageLu,
+  useSupprimerMessageRecu,
 } from '../hooks/useMessages';
 import {
   useUtilisateurs,
 } from '../hooks/useUtilisateurs';
+import '../styles/messages.css';
 
 const Messages: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
@@ -37,72 +42,219 @@ const Messages: React.FC = () => {
   const [formData, setFormData] = useState({ title: '', content: '' });
   const [editFormData, setEditFormData] = useState({ title: '', content: '' });
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [modalMessage, setModalMessage] = useState<string>('');
-  const [showModal, setShowModal] = useState<boolean>(false);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [resultModalMessage, setResultModalMessage] = useState('');
+  const [resultModalSuccess, setResultModalSuccess] = useState(false);
+  const [showSendConfirmModal, setShowSendConfirmModal] = useState(false);
+  const [sendConfirmData, setSendConfirmData] = useState<{
+    users: any[];
+    messageType: any;
+  } | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [isMessageDetailOpen, setIsMessageDetailOpen] = useState(false);
 
-  // Utilisation des hooks React Query
+  // Hooks React Query
   const { data: utilisateurs = [], isLoading: loadingUsers, error: errorUsers } = useUtilisateurs();
   const { data: typesMessages = [], isLoading: loadingTypes, error: errorTypes } = useTypesMessages();
+  const { data: messagesRecus = [], isLoading: loadingMessages, error: errorMessages } = useMessagesRecus();
   const creerTypeMessage = useCreerTypeMessage();
   const modifierTypeMessage = useModifierTypeMessage();
   const supprimerTypeMessage = useSupprimerTypeMessage();
   const envoyerMessage = useEnvoyerMessage();
+  const marquerMessageLu = useMarquerMessageLu();
+  const supprimerMessageRecu = useSupprimerMessageRecu();
+
+  // Vérification des permissions
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+  const isSuperAdmin = userData.status === 'super-administrateur' || userData.status_id === 4;
+
+  // Handlers pour les messages reçus
+  const handleMessageClick = (message: any) => {
+    setSelectedMessage(message);
+    setIsMessageDetailOpen(true);
+    if (!message.lu) {
+      handleMarkAsRead(message.id);
+    }
+  };
+
+  const handleCloseMessageDetail = () => {
+    setIsMessageDetailOpen(false);
+    setSelectedMessage(null);
+  };
+
+  const handleMarkAsRead = (messageId: number) => {
+    marquerMessageLu.mutate(messageId, {
+      onSuccess: () => {
+        setResultModalMessage('Message marqué comme lu.');
+        setResultModalSuccess(true);
+        setIsResultModalOpen(true);
+      },
+      onError: () => {
+        setResultModalMessage('Erreur lors de la mise à jour du message.');
+        setResultModalSuccess(false);
+        setIsResultModalOpen(true);
+      }
+    });
+  };
+
+  const handleDeleteMessage = (messageId: number) => {
+    supprimerMessageRecu.mutate(messageId, {
+      onSuccess: () => {
+        setResultModalMessage('Message supprimé avec succès.');
+        setResultModalSuccess(true);
+        setIsResultModalOpen(true);
+      },
+      onError: () => {
+        setResultModalMessage('Erreur lors de la suppression du message.');
+        setResultModalSuccess(false);
+        setIsResultModalOpen(true);
+      }
+    });
+  };
+
+  // Handlers pour l'envoi de messages
+  const handleUserSelect = (userId: number) => {
+    setSelectedUsers([...selectedUsers, userId]);
+  };
+
+  const handleUserRemove = (userId: number) => {
+    setSelectedUsers(selectedUsers.filter(id => id !== userId));
+  };
+
+  const handleTypeSelect = (typeId: string) => {
+    setSelectedType(typeId);
+  };
 
   const handleSendMessage = async () => {
     if (selectedUsers.length === 0 || selectedType === '') {
-      setModalMessage('Veuillez sélectionner au moins un utilisateur et un type de message.');
-      setShowModal(true);
+      setResultModalMessage('Veuillez sélectionner au moins un utilisateur et un type de message.');
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
       return;
     }
+
+    const selectedUsersList = selectedUsers.map(userId => 
+      utilisateurs.find(u => u.id === userId)
+    ).filter(Boolean);
+    
+    const messageType = typesMessages.find(t => t.id.toString() === selectedType);
+    
+    setSendConfirmData({
+      users: selectedUsersList,
+      messageType
+    });
+    setShowSendConfirmModal(true);
+  };
+
+  const confirmSendMessage = async () => {
+    setShowSendConfirmModal(false);
+    
     try {
       await envoyerMessage.mutateAsync({ destinataires: selectedUsers, type_message_id: selectedType });
-      setModalMessage('Message envoyé avec succès.');
-      setShowModal(true);
+      setResultModalMessage(`Message envoyé avec succès à ${selectedUsers.length} destinataire${selectedUsers.length > 1 ? 's' : ''}.`);
+      setResultModalSuccess(true);
+      setIsResultModalOpen(true);
       setSelectedUsers([]);
       setSelectedType('');
     } catch (error) {
-      setModalMessage('Erreur lors de l’envoi du message.');
-      setShowModal(true);
+      setResultModalMessage('Erreur lors de l\'envoi du message. Veuillez réessayer.');
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
     }
+  };
+
+  const cancelSendMessage = () => {
+    setShowSendConfirmModal(false);
+    setSendConfirmData(null);
+  };
+
+  // Handlers pour la création de types de messages
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleCreateType = async () => {
     try {
       await creerTypeMessage.mutateAsync(formData);
       setFormData({ title: '', content: '' });
-      setModalMessage('Type de message créé avec succès.');
-      setShowModal(true);
+      setResultModalMessage('Type de message créé avec succès.');
+      setResultModalSuccess(true);
+      setIsResultModalOpen(true);
     } catch (error) {
-      setModalMessage('Erreur lors de la création du type de message.');
-      setShowModal(true);
+      setResultModalMessage('Erreur lors de la création du type de message.');
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
     }
   };
 
-  const handleEditType = async (id: number) => {
+  // Handlers pour l'édition des types de messages
+  const handleEditStart = (id: number, title: string, content: string) => {
+    setEditingId(id);
+    setEditFormData({ title, content });
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditFormData({ title: '', content: '' });
+  };
+
+  const handleEditSave = async (id: number) => {
     try {
       await modifierTypeMessage.mutateAsync({ id, formData: editFormData });
       setEditingId(null);
       setEditFormData({ title: '', content: '' });
-      setModalMessage('Type de message mis à jour avec succès.');
-      setShowModal(true);
+      setResultModalMessage('Type de message mis à jour avec succès.');
+      setResultModalSuccess(true);
+      setIsResultModalOpen(true);
     } catch (error) {
-      setModalMessage('Erreur lors de la mise à jour du type de message.');
-      setShowModal(true);
+      setResultModalMessage('Erreur lors de la mise à jour du type de message.');
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
     }
   };
 
   const handleDeleteType = async (id: number) => {
     try {
       await supprimerTypeMessage.mutateAsync(id);
-      setModalMessage('Type de message supprimé avec succès.');
-      setShowModal(true);
+      setResultModalMessage('Type de message supprimé avec succès.');
+      setResultModalSuccess(true);
+      setIsResultModalOpen(true);
     } catch (error) {
-      setModalMessage('Erreur lors de la suppression du type de message.');
-      setShowModal(true);
+      setResultModalMessage('Erreur lors de la suppression du type de message.');
+      setResultModalSuccess(false);
+      setIsResultModalOpen(true);
     }
   };
 
-  if (loadingUsers || loadingTypes) {
+  const handleEditFormDataChange = (field: string, value: string) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Préparation des modifications pour ResumeConfirmModal
+  const getSendMessageModifications = () => {
+    if (!sendConfirmData) return [];
+
+    return [
+      {
+        field: 'Type de message',
+        oldValue: 'Aucun',
+        newValue: sendConfirmData.messageType?.title || 'Type inconnu'
+      },
+      {
+        field: 'Contenu du message',
+        oldValue: '',
+        newValue: sendConfirmData.messageType?.content || 'Contenu non disponible'
+      },
+      {
+        field: `Destinataire${sendConfirmData.users.length > 1 ? 's' : ''}`,
+        oldValue: 'Aucun',
+        newValue: sendConfirmData.users.map(u => `${u.first_name} ${u.last_name}`).join(', ')
+      }
+    ];
+  };
+
+  // États de chargement et d'erreur
+  if (loadingUsers || loadingTypes || loadingMessages) {
     return (
       <div className="messages-page">
         <PageHeader
@@ -119,7 +271,7 @@ const Messages: React.FC = () => {
     );
   }
 
-  if (errorUsers || errorTypes) {
+  if (errorUsers || errorTypes || errorMessages) {
     return (
       <div className="messages-page">
         <PageHeader
@@ -134,181 +286,73 @@ const Messages: React.FC = () => {
     );
   }
 
-  const tabs = [
+  // Configuration des onglets
+  const messagesRecusTab = {
+    key: 0,
+    title: 'Messages reçus',
+    icon: <InboxIcon />,
+    content: (
+      <MessagesReceivedTab
+        messagesRecus={messagesRecus}
+        onMessageClick={handleMessageClick}
+        onMarkAsRead={handleMarkAsRead}
+        onDeleteMessage={handleDeleteMessage}
+      />
+    )
+  };
+
+  const adminTabs = isSuperAdmin ? [
     {
-      key: 0,
+      key: 1,
       title: 'Envoyer un message',
       icon: <PaperPlaneIcon />,
       content: (
-        <div className="messages-send-container">
-          <Form isHorizontal style={{ maxWidth: '600px', marginTop: '1rem' }}>
-            <FormGroup label="Utilisateurs" fieldId="user-select">
-              <FormSelect
-                value={selectedUsers.map((u) => u.toString())}
-                onChange={(e) => {
-                  const selected = Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value);
-                  setSelectedUsers(selected.map((id) => Number(id)));
-                }}
-                multiple
-                aria-label="Sélection multiple"
-              >
-                {utilisateurs.map((user) => (
-                  <FormSelectOption
-                    key={user.id}
-                    value={user.id.toString()}
-                    label={`${user.first_name} ${user.last_name}`}
-                  />
-                ))}
-              </FormSelect>
-            </FormGroup>
-            {selectedUsers.length > 0 && (
-              <div style={{ marginTop: '1rem' }}>
-                <strong>Utilisateurs sélectionnés :</strong>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  {selectedUsers.map((userId) => {
-                    const user = utilisateurs.find((u) => u.id === userId);
-                    return (
-                      user && (
-                        <Badge key={user.id} isRead>
-                          {user.first_name} {user.last_name}
-                          <Button
-                            variant="plain"
-                            aria-label="Retirer utilisateur"
-                            onClick={() => setSelectedUsers(selectedUsers.filter((id) => id !== user.id))}
-                            style={{ paddingLeft: 4 }}
-                          >
-                            <TimesIcon />
-                          </Button>
-                        </Badge>
-                      )
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            <FormGroup label="Type de message" fieldId="type-select">
-              <FormSelect value={selectedType} onChange={(e) => setSelectedType(e.currentTarget.value)}>
-                <FormSelectOption value="" label="-- Choisissez un type --" />
-                {typesMessages.map((type) => (
-                  <FormSelectOption key={type.id} value={type.id} label={type.title} />
-                ))}
-              </FormSelect>
-            </FormGroup>
-            <Button variant="primary" onClick={handleSendMessage}>
-              Envoyer le message
-            </Button>
-          </Form>
-        </div>
-      )
-    },
-    {
-      key: 1,
-      title: 'Créer un type de message',
-      icon: <EditIcon />,
-      content: (
-        <div className="messages-create-container">
-          <GenericForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={handleCreateType}
-          />
-        </div>
+        <SendMessageForm
+          utilisateurs={utilisateurs}
+          typesMessages={typesMessages}
+          selectedUsers={selectedUsers}
+          selectedType={selectedType}
+          isLoading={envoyerMessage.isPending}
+          onUserSelect={handleUserSelect}
+          onUserRemove={handleUserRemove}
+          onTypeSelect={handleTypeSelect}
+          onSendMessage={handleSendMessage}
+        />
       )
     },
     {
       key: 2,
+      title: 'Créer un type de message',
+      icon: <EditIcon />,
+      content: (
+        <CreateMessageTypeForm
+          formData={formData}
+          isLoading={creerTypeMessage.isPending}
+          onFormChange={handleFormChange}
+          onCreateType={handleCreateType}
+        />
+      )
+    },
+    {
+      key: 3,
       title: 'Messages existants',
       icon: <ListIcon />,
       content: (
-        <div className="messages-list-container">
-          {typesMessages.length === 0 ? (
-            <div className="messages-empty-state">
-              <p>Aucun type de message existant.</p>
-            </div>
-          ) : (
-            <div className="messages-list">
-              {typesMessages.map((type) => (
-                <div
-                  key={type.id}
-                  className="message-type-card"
-                  style={{
-                    border: '1px solid #e5e7eb',
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    marginBottom: '1rem',
-                    background: 'white',
-                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                  }}
-                >
-                  {editingId === type.id ? (
-                    <>
-                      <Form>
-                        <FormGroup label="Titre" fieldId={`edit-title-${type.id}`}>
-                          <input
-                            className="pf-v5-c-form-control"
-                            type="text"
-                            value={editFormData.title}
-                            onChange={(e) => setEditFormData((prev) => ({ ...prev, title: e.target.value }))}
-                          />
-                        </FormGroup>
-                        <FormGroup label="Contenu" fieldId={`edit-content-${type.id}`}>
-                          <textarea
-                            className="pf-v5-c-form-control"
-                            value={editFormData.content}
-                            onChange={(e) => setEditFormData((prev) => ({ ...prev, content: e.target.value }))}
-                          />
-                        </FormGroup>
-                      </Form>
-                      <div className="message-type-actions">
-                        <Button
-                          variant="primary"
-                          onClick={() => handleEditType(type.id)}
-                          style={{ marginRight: '0.5rem' }}
-                        >
-                          Sauvegarder
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setEditingId(null);
-                            setEditFormData({ title: '', content: '' });
-                          }}
-                        >
-                          Annuler
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="message-type-content">
-                        <strong className="message-type-title">{type.title}</strong>
-                        <p className="message-type-text">{type.content}</p>
-                      </div>
-                      <div className="message-type-actions">
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setEditingId(type.id);
-                            setEditFormData({ title: type.title, content: type.content });
-                          }}
-                          style={{ marginRight: '0.5rem' }}
-                        >
-                          Modifier
-                        </Button>
-                        <Button variant="danger" onClick={() => handleDeleteType(type.id)}>
-                          Supprimer
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <MessageTypesListTab
+          typesMessages={typesMessages}
+          editingId={editingId}
+          editFormData={editFormData}
+          onEditStart={handleEditStart}
+          onEditCancel={handleEditCancel}
+          onEditSave={handleEditSave}
+          onDelete={handleDeleteType}
+          onFormDataChange={handleEditFormDataChange}
+        />
       )
     }
-  ];
+  ] : [];
+
+  const tabs = [messagesRecusTab, ...adminTabs];
 
   return (
     <div className="messages-page">
@@ -319,6 +363,17 @@ const Messages: React.FC = () => {
       />
 
       <PageSection className="messages-content">
+        {!isSuperAdmin && (
+          <Alert
+            variant="info"
+            title="Accès limité"
+            isInline
+            style={{ marginBottom: '2rem' }}
+          >
+            Vous avez accès en lecture seule aux messages. Seuls les super-administrateurs peuvent envoyer et gérer les messages.
+          </Alert>
+        )}
+
         <TabContainer
           tabs={tabs}
           activeKey={activeTab}
@@ -327,20 +382,36 @@ const Messages: React.FC = () => {
         />
       </PageSection>
 
-      {/* Modal de notification */}
-      <Modal
-        title="Notification"
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        variant="default"
-      >
-        <p>{modalMessage}</p>
-        <Button variant="primary" onClick={() => setShowModal(false)}>
-          Fermer
-        </Button>
-      </Modal>
+      {/* Modals */}
+      <MessageDetailModal
+        isOpen={isMessageDetailOpen}
+        onClose={handleCloseMessageDetail}
+        message={selectedMessage}
+        onMarkAsRead={handleMarkAsRead}
+        onDelete={handleDeleteMessage}
+      />
+
+      <ResumeConfirmModal
+        isOpen={showSendConfirmModal}
+        onClose={cancelSendMessage}
+        onConfirm={confirmSendMessage}
+        title="Confirmer l'envoi du message"
+        message={`Êtes-vous sûr de vouloir envoyer ce message "${sendConfirmData?.messageType?.title}" à ${sendConfirmData?.users.length === 1 ? 'cet utilisateur' : 'ces utilisateurs'} ?`}
+        modificationsResume={getSendMessageModifications()}
+        confirmText="Envoyer le message"
+        cancelText="Annuler"
+      />
+
+      <ResultModal
+        isOpen={isResultModalOpen}
+        onClose={() => setIsResultModalOpen(false)}
+        title={resultModalSuccess ? 'Succès' : 'Erreur'}
+        message={resultModalMessage}
+        isSuccess={resultModalSuccess}
+      />
     </div>
   );
 };
 
 export default Messages;
+                      

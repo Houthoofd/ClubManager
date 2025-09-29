@@ -1,39 +1,39 @@
 import React from 'react';
-import { Bullseye, Title } from '@patternfly/react-core';
+import { Bullseye, Title, Badge } from '@patternfly/react-core';
+import { useNavigate } from 'react-router-dom';
 import EditableTable from '../common/table/editableTable';
 import SearchInput from '../common/input/SearchInput';
+import AlertesBadge from '../gestion/AlertesBadge';
+import KebabMenu from '../common/menu/KebabMenu';
+import { EnvelopeIcon } from '@patternfly/react-icons';
 import type { UserData } from '@clubmanager/types';
 
-// Ajoute la prop onRequestDelete dans les props du composant
 export interface OngletTableauUtilisateursProps {
   utilisateurs: UserData[];
   columns: { key: string; label: string; ariaLabel: string }[];
   searchTerm: string;
   onSearchChange: (value: string) => void;
   isLoading: boolean;
-  onDeleteUser?: (user: UserData) => void; // <-- Ajout ici
-  // ...autres props éventuelles...
+  onDeleteUser?: (user: UserData) => void;
+  onEdit: (user: UserData) => void;
+  onSendMessage: (user: UserData) => void;
+  getUserAlertes: (userId: number) => any[];
+  getSuggestedMessages: (userId: number) => any[];
 }
 
 const OngletTableauUtilisateurs: React.FC<OngletTableauUtilisateursProps> = ({
   utilisateurs,
-  columns: propColumns, // Renomme la prop ici pour éviter le conflit
+  columns: propColumns,
   searchTerm,
   onSearchChange,
   isLoading,
-  onDeleteUser, // <-- Ajout ici
-  // ...autres props éventuelles...
-}: OngletTableauUtilisateursProps) => {
-  // Colonnes par défaut
-  const defaultColumns = [
-    { key: 'first_name', label: 'Prénom' },
-    { key: 'last_name', label: 'Nom' },
-    { key: 'email', label: 'Email' },
-    { key: 'status', label: 'Statut' }
-  ];
-
-  // Utiliser les colonnes fournies ou les colonnes par défaut
-  const columns = propColumns && propColumns.length > 0 ? propColumns : defaultColumns;
+  onDeleteUser,
+  onEdit,
+  onSendMessage,
+  getUserAlertes,
+  getSuggestedMessages,
+}) => {
+  const navigate = useNavigate();
 
   // Filtre les utilisateurs selon le terme de recherche
   const filteredUtilisateurs = utilisateurs.filter(u => {
@@ -62,58 +62,145 @@ const OngletTableauUtilisateurs: React.FC<OngletTableauUtilisateursProps> = ({
     );
   }
 
+  // Fonction pour formater les valeurs d'affichage
+  const formatDisplayValue = (user: UserData, key: string) => {
+    const value = user[key as keyof UserData];
+    
+    if (value === null || value === undefined || value === '') {
+      return 'Non renseigné';
+    }
+
+    // Formatage spécial pour certains champs
+    switch (key) {
+      case 'status_id':
+        const statusNames = {
+          1: 'Visiteur',
+          2: 'Utilisateur', 
+          3: 'Administrateur',
+          4: 'Super-administrateur',
+          5: 'Professeur'
+        };
+        return statusNames[value as keyof typeof statusNames] || `Statut ${value}`;
+      default:
+        return String(value);
+    }
+  };
+
+  const getKebabMenuItems = (user: UserData) => {
+    const alertes = getUserAlertes(user.id);
+    const suggestedMessages = getSuggestedMessages(user.id);
+
+    const menuItems = [
+      {
+        title: (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <EnvelopeIcon />
+            Envoyer un message
+            {suggestedMessages.length > 0 && (
+              <Badge variant="warning" style={{ fontSize: '0.75rem' }}>
+                {suggestedMessages.length}
+              </Badge>
+            )}
+          </div>
+        ),
+        onClick: () => onSendMessage(user)
+      },
+      { title: 'Modifier', onClick: () => onEdit(user) },
+      { 
+        title: (
+          <span style={{ color: 'var(--pf-global--danger-color--100)' }}>
+            Supprimer
+          </span>
+        ), 
+        onClick: () => onDeleteUser && onDeleteUser(user),
+        isDanger: true
+      }
+    ];
+
+    return menuItems;
+  };
+
+  // Fonction pour gérer le clic sur une ligne
+  const handleRowClick = (user: UserData) => {
+    // Rediriger vers le profil de l'utilisateur avec la bonne URL
+    navigate(`/pages/utilisateurs/consulter/${user.id}`);
+  };
+
+  // Configuration des colonnes simplifiée - avec le kebab menu fonctionnel
+  const tableColumns = [
+    {
+      key: 'first_name',
+      label: 'Prénom',
+      ariaLabel: 'Prénom',
+      cell: (user: UserData) => user.first_name || 'Non renseigné'
+    },
+    {
+      key: 'last_name',
+      label: 'Nom',
+      ariaLabel: 'Nom',
+      cell: (user: UserData) => user.last_name || 'Non renseigné'
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      ariaLabel: 'Email',
+      cell: (user: UserData) => user.email || 'Non renseigné'
+    },
+    {
+      key: 'status_id',
+      label: 'Statut',
+      ariaLabel: 'Statut',
+      cell: (user: UserData) => formatDisplayValue(user, 'status_id')
+    },
+    {
+      key: 'alertes',
+      label: 'Alertes',
+      ariaLabel: 'Alertes',
+      cell: (user: UserData) => {
+        const alertes = getUserAlertes(user.id);
+        return alertes.length > 0 ? <AlertesBadge alertes={alertes} /> : (
+          <span style={{ color: '#6a6e73', fontSize: '0.875rem' }}>Aucune</span>
+        );
+      }
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      ariaLabel: 'Actions',
+      cell: (user: UserData) => (
+        <KebabMenu items={getKebabMenuItems(user)} />
+      )
+    }
+  ];
+
+  console.log('Utilisateurs data:', utilisateurs.slice(0, 2)); // Debug pour voir les données
+
   return (
-    <>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Title headingLevel="h3" style={{ marginBottom: '1rem', color: '#333' }}>
-          Liste des utilisateurs
-        </Title>
+    <div>
+      <div style={{ marginBottom: '1rem' }}>
         <SearchInput
           value={searchTerm}
           onChange={onSearchChange}
-          placeholder="Rechercher un utilisateur"
-          style={{ marginBottom: '1rem' }}
+          placeholder="Rechercher par nom, prénom, email ou statut..."
         />
-        <div style={{
-          fontSize: '0.9rem',
-          color: '#6c757d',
-          marginBottom: '0.5rem'
+        <div style={{ 
+          marginTop: '0.5rem', 
+          fontSize: '0.875rem', 
+          color: '#6a6e73',
+          fontStyle: 'italic' 
         }}>
-          {filteredUtilisateurs.length} utilisateur{filteredUtilisateurs.length > 1 ? 's' : ''} trouvé{filteredUtilisateurs.length > 1 ? 's' : ''}
+          💡 Cliquez sur une ligne pour voir le profil utilisateur
         </div>
       </div>
-      <div style={{
-        border: '1px solid #dee2e6',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <EditableTable
-          data={filteredUtilisateurs}
-          columns={columns.map(col => ({
-            title: col.label,
-            dataKey: col.key as keyof UserData
-          }))}
-          onRequestDelete={onDeleteUser} // <-- Passe la prop ici
-          renderRowActions={(user) => (
-            <button
-              onClick={() => onDeleteUser && onDeleteUser(user)}
-              style={{
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                padding: '0.25rem 0.5rem',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.8rem'
-              }}
-            >
-              Supprimer
-            </button>
-          )}
-        />
-      </div>
-    </>
+      
+      <EditableTable
+        data={filteredUtilisateurs}
+        columns={tableColumns}
+        isLoading={isLoading}
+        emptyStateMessage="Aucun utilisateur trouvé"
+        onRowClick={handleRowClick}
+      />
+    </div>
   );
 };
 
