@@ -66,6 +66,50 @@ export class Paiements {
     });
   }
 
+  // Méthode pour obtenir les échéances d'un utilisateur
+  obtenirEcheancesUtilisateur(userId: number): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          e.id,
+          e.utilisateur_id,
+          e.montant,
+          e.date_echeance,
+          e.statut,
+          u.first_name,
+          u.last_name,
+          pt.nom_plan as abonnement_nom
+        FROM echeances_paiements e
+        LEFT JOIN utilisateurs u ON e.utilisateur_id = u.id
+        LEFT JOIN plans_tarifaires pt ON u.abonnement_id = pt.id
+        WHERE e.utilisateur_id = ?
+        ORDER BY e.date_echeance DESC
+      `;
+      
+      this.mysqlConnector.query(sql, [userId], (error, results) => {
+        if (error) {
+          console.error('Erreur lors de la récupération des échéances:', error);
+          reject(error);
+        } else {
+          const echeances = results.map((row: any) => ({
+            id: row.id,
+            utilisateur_id: row.utilisateur_id,
+            montant: row.montant,
+            date_echeance: row.date_echeance,
+            statut: row.statut,
+            description: null, // Valeur par défaut puisque la colonne n'existe pas
+            utilisateur: {
+              first_name: row.first_name,
+              last_name: row.last_name
+            },
+            abonnement_nom: row.abonnement_nom
+          }));
+          resolve(echeances);
+        }
+      });
+    });
+  }
+
   /**
    * Récupère les échéances de paiement pour un utilisateur spécifique
    * @param utilisateurId - L'ID de l'utilisateur
@@ -80,7 +124,7 @@ export class Paiements {
           date_echeance,
           montant,
           statut
-        FROM echeances_paiements
+        FROM echeance_paiement
         WHERE utilisateur_id = ?
         ORDER BY date_echeance DESC;
       `;

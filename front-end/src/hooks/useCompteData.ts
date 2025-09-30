@@ -9,7 +9,7 @@ import {
   useGenres
 } from './useCompte';
 import { useFrequentationByUserId } from './useStatistiques';
-import { useEcheancesByUserId } from './usePaiements';
+import { useEcheancesUtilisateur } from './usePaiements';
 
 export const useCompteData = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,7 +40,26 @@ export const useCompteData = () => {
     utilisateurId
   );
 
-  const { data: paiementsEcheances = [] } = useEcheancesByUserId(utilisateurId);
+  // Utiliser le hook des échéances avec une gestion d'erreur améliorée
+  const { 
+    data: paiementsEcheances = [], 
+    isLoading: loadingEcheances,
+    error: errorEcheances 
+  } = useEcheancesUtilisateur(utilisateurId || 0);
+
+  // Log pour debug
+  useEffect(() => {
+    if (utilisateurId) {
+      console.log('🔍 Chargement des échéances pour l\'utilisateur:', utilisateurId);
+    }
+    if (errorEcheances) {
+      console.error('❌ Erreur lors du chargement des échéances:', errorEcheances);
+    }
+    if (paiementsEcheances) {
+      console.log('✅ Échéances chargées:', paiementsEcheances);
+    }
+  }, [utilisateurId, errorEcheances, paiementsEcheances]);
+
   const updateCompte = useUpdateCompte();
   const { data: abonnements = [] } = useAbonnements();
   const { data: grades = [] } = useGrades();
@@ -88,5 +107,7 @@ export const useCompteData = () => {
     statFrequentationForGraph,
     loadingCompte,
     errorCompte,
+    loadingEcheances,
+    errorEcheances,
   };
 };

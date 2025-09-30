@@ -312,5 +312,28 @@ router.post('/test/confirm-payment', async (req, res) => {
   }
 });
 
+// Endpoint pour récupérer les échéances de paiement d'un utilisateur
+router.get('/echeances/:userId', async (req: any, res: any) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId || isNaN(parseInt(userId))) {
+      return res.status(400).json({ message: 'ID utilisateur invalide' });
+    }
+
+    const client = new Paiements();
+    const echeances = await client.obtenirEcheancesUtilisateur(parseInt(userId));
+
+    if (!echeances || echeances.length === 0) {
+      return res.status(200).json([]); // Retourner un tableau vide plutôt qu'une 404
+    }
+
+    res.status(200).json(echeances);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des échéances:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des échéances' });
+  }
+});
+
 // Utilisation de export default pour le routeur
 export default router;

@@ -145,19 +145,31 @@ export const useSupprimerPaiement = () => {
   });
 };
 
-// Hook pour récupérer les échéances de paiement d'un utilisateur
-export const useEcheancesByUserId = (userId: string) => {
+// Hook pour récupérer les échéances d'un utilisateur
+export const useEcheancesUtilisateur = (userId: number) => {
   return useQuery({
     queryKey: ['echeances', userId],
     queryFn: async () => {
+      console.log('Récupération des échéances pour l\'utilisateur:', userId);
       const response = await fetch(apiUrl(`paiements/echeances/${userId}`), {
         credentials: 'include',
       });
-      if (!response.ok) throw new Error('Erreur lors du chargement des échéances');
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log('Aucune échéance trouvée pour cet utilisateur');
+          return []; // Retourner un tableau vide pour une 404
+        }
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
-      return Array.isArray(data) ? data : [];
+      console.log('Échéances récupérées:', data);
+      return data;
     },
-    enabled: !!userId
+    enabled: !!userId && userId > 0, // Ne lance la requête que si userId est valide
+    retry: 1, // Réessayer une seule fois en cas d'erreur
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -185,4 +197,9 @@ export const useUpdatePaiement = () => {
       });
     }
   });
+};
+
+// Hook pour récupérer les échéances d'un utilisateur (alias pour compatibilité)
+export const useEcheancesByUserId = (userId: number) => {
+  return useEcheancesUtilisateur(userId);
 };
