@@ -49,8 +49,14 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
   console.log('Total amount:', totalAmount);
 
   const onPayement = async () => {
-    if (!paymentMethod || !totalAmount) {
-      alert('Veuillez sélectionner une méthode de paiement et entrer un montant.');
+    // Modifier la condition pour être plus spécifique
+    if (!paymentMethod) {
+      alert('Veuillez sélectionner une méthode de paiement.');
+      return;
+    }
+
+    if (!totalAmount || totalAmount <= 0) {
+      alert('Le montant du panier est invalide.');
       return;
     }
 
@@ -59,6 +65,11 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
       alert('Erreur: utilisateur non identifié. Veuillez vous reconnecter.');
       return;
     }
+
+    // Debug - Afficher les valeurs pour diagnostiquer
+    console.log('PaymentMethod:', paymentMethod);
+    console.log('TotalAmount:', totalAmount);
+    console.log('Commande:', commande);
 
     const amountInCents = totalAmount * 100;
 

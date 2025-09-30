@@ -80,9 +80,9 @@ router.post('/bancontact', async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
-      automatic_payment_methods: { 
-        enabled: true 
-      },
+      payment_method_types: ['bancontact'],
+      confirmation_method: 'automatic',
+      return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/magasin/success`,
       metadata: {
         utilisateur_id: finalUserId.toString(),
         commande_data: JSON.stringify(commande)

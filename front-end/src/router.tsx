@@ -30,6 +30,8 @@ import InscriptionPage from './pages/inscription';
 
 import StatistiquesPage from './pages/statistiques';
 
+import PaymentSuccessPage from './pages/magasin/success';
+
 const router = createBrowserRouter([
   // Route publique pour la page de connexion
   {
@@ -177,6 +179,10 @@ const router = createBrowserRouter([
             <StatistiquesPage />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: '/pages/magasin/success',
+        element: <PaymentSuccessPage />,
       },
     ],
   },

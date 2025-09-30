@@ -26,6 +26,9 @@ const StripeForm = ({ clientSecret, onClose, totalAmount }: StripeFormProps) => 
     try {
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/pages/magasin/success`,
+        },
         redirect: 'if_required',
       });
 
@@ -35,11 +38,9 @@ const StripeForm = ({ clientSecret, onClose, totalAmount }: StripeFormProps) => 
       } else if (paymentIntent) {
         console.log('PaymentIntent confirmé:', paymentIntent);
         
-        // Pour les paiements de test, on peut simuler le traitement
         if (paymentIntent.status === 'succeeded') {
           setPaymentStatus('Paiement réussi ! Traitement de la commande en cours...');
           
-          // Simuler le traitement de la commande (optionnel pour les tests)
           try {
             await fetch('/api/paiements/test/confirm-payment', {
               method: 'POST',
