@@ -22,6 +22,9 @@ import {
 
 const router = express.Router();
 
+// Ajouter l'instance de la classe Cours
+const cours = new Cours();
+
 
 router.post('/participant', async (req: any, res: any) => {
   try {
@@ -241,12 +244,8 @@ router.get('/informations/planning', async (req: any, res: any) => {
 router.post('/ajouter', async (req:any, res:any) => {
   const data = req.body;
   console.log("Données reçues complètes:", data);
-  console.log("Type de data.professeurs:", typeof data.professeurs);
-  console.log("Valeur de data.professeurs:", data.professeurs);
 
   try {
-    const client = new Cours();
-
     // Mapping des jours pour convertir le nom en jour_semaine
     const joursDeSemaine: { [key: string]: string } = {
       'Lundi': 'lundi',
@@ -264,31 +263,23 @@ router.post('/ajouter', async (req:any, res:any) => {
       return res.status(400).json({ message: `Jour invalide: ${data.jour_semaine}` });
     }
 
-    console.log("Jour normalisé:", jourNormalise);
-
-    // Gestion des professeurs - correction pour gérer les chaînes JSON
+    // Gestion des professeurs
     let professeurs = [];
     if (Array.isArray(data.professeurs)) {
       professeurs = data.professeurs;
     } else if (typeof data.professeurs === 'string') {
       try {
-        // Tenter de parser si c'est une chaîne JSON
         professeurs = JSON.parse(data.professeurs);
       } catch (parseError) {
-        console.error("Erreur lors du parsing des professeurs:", parseError);
-        // Si ce n'est pas du JSON valide, traiter comme un seul nom
         professeurs = [data.professeurs];
       }
     } else if (data.professeurs) {
-      // Autres cas, convertir en tableau
       professeurs = [data.professeurs];
     }
 
-    console.log("Professeurs traités:", professeurs);
-
-    // On prépare l'objet AjoutCours pour le backend
+    // Utilisation de la nouvelle procédure stockée optimisée
     const ajoutCours: AjoutCours = {
-      nom: data.nom,
+      nom: data.nom || `${data.type_cours} - ${jourNormalise}`,
       type_cours: data.type_cours,
       jour_semaine: jourNormalise,
       heure_debut: data.heure_debut,
@@ -296,14 +287,103 @@ router.post('/ajouter', async (req:any, res:any) => {
       professeurs: professeurs
     };
 
-    console.log("Objet ajoutCours envoyé:", ajoutCours);
+    console.log("Utilisation de la procédure optimisée avec:", ajoutCours);
+    
+    // NOUVELLE MÉTHODE OPTIMISÉE avec procédure stockée
+    const result = await cours.ajouterCoursRecurrentAvecProfesseurs(ajoutCours);
 
-    await client.ajouterCoursRecurrentAvecProfesseurs(ajoutCours);
-
-    res.status(200).json({ message: 'Cours récurrent ajouté avec succès' });
+    res.status(200).json({ 
+      success: true,
+      message: result.message || 'Cours récurrent ajouté avec succès',
+      data: result
+    });
   } catch (error) {
     console.error('Erreur lors de l\'ajout du cours récurrent:', error);
     res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
+  }
+});
+
+// PATCH - Modifier un cours récurrent (utilise la nouvelle procédure optimisée)
+router.patch('/modifier', async (req: any, res: any) => {
+  try {
+    console.log('Données reçues pour modification :', req.body);
+    
+    const { 
+      nom, type_cours, jour, heure_debut, heure_fin, professeurs,
+      jour_original, type_cours_original, heure_debut_original, heure_fin_original 
+    } = req.body;
+
+    if (!type_cours || !jour || !heure_debut || !heure_fin || !professeurs) {
+      return res.status(400).json({
+        error: 'Paramètres manquants pour la modification'
+      });
+    }
+
+    try {
+      // Obtenir l'ID du cours récurrent basé sur les données originales
+      const coursRecurrentId = await cours.obtenirIdCoursRecurrent(
+        jour_original || jour, 
+        type_cours_original || type_cours, 
+        heure_debut_original || heure_debut, 
+        heure_fin_original || heure_fin
+      );
+      
+      console.log('ID du cours récurrent trouvé:', coursRecurrentId);
+
+      // Mapping des jours
+      const joursDeSemaine: { [key: string]: string } = {
+        'Lundi': 'lundi', 'Mardi': 'mardi', 'Mercredi': 'mercredi',
+        'Jeudi': 'jeudi', 'Vendredi': 'vendredi', 'Samedi': 'samedi', 'Dimanche': 'dimanche'
+      };
+
+      const jourNormalise = joursDeSemaine[jour] || jour.toLowerCase();
+
+      // NOUVELLE MÉTHODE OPTIMISÉE avec procédure stockée
+      const result = await cours.modifierCoursRecurrentAvecProfesseurs({
+        cours_recurrent_id: coursRecurrentId,
+        type_cours,
+        jour_semaine: jourNormalise,
+        heure_debut,
+        heure_fin,
+        professeurs
+      });
+
+      console.log('Résultat modification cours:', result);
+
+      res.status(200).json({
+        success: true,
+        message: result.message || 'Cours modifié avec succès',
+        data: result
+      });
+    } catch (error: any) {
+      console.error('Erreur lors de la modification du cours :', error);
+      res.status(500).json({
+        error: 'Erreur lors de la modification du cours',
+        details: error.message
+      });
+    }
+  } catch (error: any) {
+    console.error('Erreur générale lors de la modification :', error);
+    res.status(500).json({
+      error: 'Erreur générale lors de la modification',
+      details: error.message
+    });
+  }
+});
+
+// Nouveau endpoint pour récupérer les cours à venir où l'utilisateur est inscrit
+router.get('/inscriptions/utilisateur/:userId', async (req: any, res: any) => {
+  try {
+    const { userId } = req.params;
+    const client = new Cours();
+    const cours = await client.obtenirCoursInscritsParUtilisateur(Number(userId));
+    if (!cours || cours.length === 0) {
+      return res.status(404).json({ message: 'Aucun cours trouvé pour cet utilisateur.' });
+    }
+    res.status(200).json(cours);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des cours inscrits de l\'utilisateur :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours inscrits.' });
   }
 });
 
@@ -329,10 +409,11 @@ router.delete('/supprimer', async (req:any, res:any) => {
   }
 
   try {
-    const client = new Cours();
-    await client.supprimerJourDeCours(jourNum);
-
-    res.status(200).json({ message: `Cours du ${jourTexte} supprimé avec succès` });
+    const result = await cours.supprimerJourDeCours(jourNum);
+    res.status(200).json({ 
+      success: true,
+      message: result.message || `Cours du ${jourTexte} supprimé avec succès` 
+    });
   } catch (error) {
     console.error('Erreur lors de la suppression du cours:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la suppression' });
@@ -349,220 +430,15 @@ router.post('/retirer-professeur', async (req: any, res: any) => {
   }
 
   try {
-    const client = new Cours();
-    // Nouvelle méthode à créer dans la classe Cours
-    const result = await client.supprimerProfesseursParNomEtJour(professeursNoms, jour);
-    res.status(200).json(result);
+    const result = await cours.supprimerProfesseursParNomEtJour(professeursNoms, jour);
+    res.status(200).json({
+      success: true,
+      message: result.message || `${professeursNoms.length} professeur(s) retiré(s) avec succès`,
+      data: result
+    });
   } catch (error) {
     console.error("Erreur lors du retrait des professeurs :", error);
     res.status(500).json({ message: "Erreur serveur lors du retrait des professeurs." });
-  }
-});
-
-
-router.patch('/modifier', async (req: any, res: any) => {
-  let connector: MysqlConnector;
-  try {
-    const {
-      nom,
-      type_cours,
-      jour,
-      heure_debut,
-      heure_fin,
-      professeurs,
-      jour_original,
-      type_cours_original,
-      heure_debut_original,
-      heure_fin_original
-    } = req.body;
-
-    console.log("Données reçues pour modification :", req.body);
-    connector = MysqlConnector.getInstance();
-
-    // 1. Mapping des jours
-    const joursVersNumero: Record<string, number> = {
-      'lundi': 1, 'mardi': 2, 'mercredi': 3, 'jeudi': 4,
-      'vendredi': 5, 'samedi': 6, 'dimanche': 7
-    };
-
-    const joursDeSemaine: Record<string, string> = {
-      'Lundi': 'lundi', 'Mardi': 'mardi', 'Mercredi': 'mercredi',
-      'Jeudi': 'jeudi', 'Vendredi': 'vendredi', 'Samedi': 'samedi', 'Dimanche': 'dimanche'
-    };
-
-    // 2. Normalisation des jours
-    const jourOriginalNormalise = joursDeSemaine[jour_original] || jour_original.toLowerCase();
-    const jourOriginalNum = joursVersNumero[jourOriginalNormalise];
-
-    if (!jourOriginalNum) {
-      throw new Error('Jour original invalide');
-    }
-
-    // 3. Récupération du cours récurrent (avec gestion d'erreur)
-    const coursRecurrent: any[] = await new Promise<any[]>((resolve, reject) => {
-      connector.query(
-        `SELECT id FROM cours_recurrent WHERE type_cours = ? AND jour_semaine = ? LIMIT 1`,
-        [type_cours_original, jourOriginalNum],
-        (error: mysql.MysqlError | null, results: any[]) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(results);
-          }
-        }
-      );
-    });
-
-    if (!coursRecurrent || coursRecurrent.length === 0) {
-      throw new Error('Cours récurrent non trouvé');
-    }
-
-    const coursRecurrentId = coursRecurrent[0].id;
-    console.log("ID du cours récurrent trouvé:", coursRecurrentId);
-
-    // 4. Préparation des champs à modifier
-    const updates: { field: string; value: any }[] = [];
-
-    if (type_cours !== type_cours_original) {
-      updates.push({ field: 'type_cours', value: type_cours });
-    }
-
-    if (jour && jour !== jour_original) {
-      const nouveauJourNormalise = joursDeSemaine[jour] || jour.toLowerCase();
-      const nouveauJourNum = joursVersNumero[nouveauJourNormalise];
-      if (nouveauJourNum) {
-        updates.push({ field: 'jour_semaine', value: nouveauJourNum });
-      }
-    }
-
-    ['heure_debut', 'heure_fin'].forEach(heureType => {
-      const originalValue = req.body[`${heureType}_original`];
-      const newValue = req.body[heureType];
-
-      if (newValue && newValue !== originalValue) {
-        const formattedValue = newValue.length === 5 ? `${newValue}:00` : newValue;
-        updates.push({ field: heureType, value: formattedValue });
-      }
-    });
-
-    // 5. Mise à jour du cours récurrent (si modifications)
-    if (updates.length > 0) {
-      const updateSql = `
-        UPDATE cours_recurrent
-        SET ${updates.map(u => `${u.field} = ?`).join(', ')}
-        WHERE id = ?
-      `;
-
-      const updateValues = updates.map(u => u.value);
-      updateValues.push(coursRecurrentId);
-
-      await new Promise<void>((resolve, reject) => {
-        connector.query(updateSql, updateValues, (error: mysql.MysqlError | null, results: any) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      });
-      console.log("Cours récurrent modifié avec succès");
-    }
-
-    // 6. Gestion des professeurs (si modifiés)
-    if (professeurs && Array.isArray(professeurs)) {
-      console.log("Gestion des professeurs:", professeurs);
-
-      // Suppression des associations existantes
-      await new Promise<void>((resolve, reject) => {
-        connector.query(
-          `DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ?`,
-          [coursRecurrentId],
-          (error: mysql.MysqlError | null, results: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve();
-            }
-          }
-        );
-      });
-      console.log("Anciens professeurs supprimés");
-
-      // Ajout des nouveaux professeurs (en une seule requête)
-      if (professeurs.length > 0) {
-        // Récupération des IDs des professeurs
-        const profIds = await Promise.all(
-          professeurs.map(async (profNom: string) => {
-            return new Promise<number | null>((resolve, reject) => {
-              connector.query(
-                `SELECT id FROM professeurs
-                 WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = ?
-                 AND status_id = 5 LIMIT 1`,
-                [profNom.trim()],
-                (error: mysql.MysqlError | null, results: any[]) => {
-                  if (error) {
-                    reject(error);
-                  } else {
-                    resolve(results.length > 0 ? results[0].id : null);
-                  }
-                }
-              );
-            });
-          })
-        );
-
-        // Insertion des nouvelles associations (en batch)
-        const validProfIds = profIds.filter(id => id !== null);
-        if (validProfIds.length > 0) {
-          const insertValues = validProfIds.map(profId => [coursRecurrentId, profId]);
-          await new Promise<void>((resolve, reject) => {
-            connector.query(
-              `INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id)
-               VALUES ?`,
-              [insertValues],
-              (error: mysql.MysqlError | null, results: any) => {
-                if (error) {
-                  reject(error);
-                } else {
-                  resolve();
-                }
-              }
-            );
-          });
-          console.log(`${validProfIds.length} professeurs associés au cours`);
-        }
-      }
-    }
-
-    res.status(200).json({
-      isConfirm: true,
-      message: "Cours modifié avec succès.",
-      coursRecurrentId
-    });
-
-  } catch (error) {
-    console.error("Erreur lors de la modification du cours :", error);
-    res.status(500).json({
-      isConfirm: false,
-      message: error instanceof Error ? error.message : "Erreur serveur"
-    });
-  }
-});
-
-
-// Nouveau endpoint pour récupérer les cours à venir où l'utilisateur est inscrit
-router.get('/inscriptions/utilisateur/:userId', async (req: any, res: any) => {
-  try {
-    const { userId } = req.params;
-    const client = new Cours();
-    const cours = await client.obtenirCoursInscritsParUtilisateur(Number(userId));
-    if (!cours || cours.length === 0) {
-      return res.status(404).json({ message: 'Aucun cours trouvé pour cet utilisateur.' });
-    }
-    res.status(200).json(cours);
-  } catch (error) {
-    console.error('Erreur lors de la récupération des cours inscrits de l\'utilisateur :', error);
-    res.status(500).json({ message: 'Erreur serveur lors de la récupération des cours inscrits.' });
   }
 });
 
