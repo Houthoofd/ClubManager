@@ -23,10 +23,21 @@ jobs:
           script: |
             cd /home/***/ClubManager
 
-            echo "🔄 Pull depuis la branche hosting..."
+            echo "🔍 Vérification de la branche actuelle..."
+            git branch
+            
+            echo "🔄 Basculement vers la branche back-up/hosting..."
+            git checkout back-up/hosting || git checkout -b back-up/hosting origin/back-up/hosting
+
+            echo "🔄 Pull depuis la branche back-up/hosting..."
             git reset --hard HEAD
             git clean -fd
             git pull origin back-up/hosting
+
+            echo "📊 Vérification de la version..."
+            echo "Branche actuelle: $(git branch --show-current)"
+            echo "Dernier commit: $(git rev-parse --short HEAD)"
+            echo "Dernière modification: $(git log -1 --format='%ci')"
 
             echo "🧹 Nettoyage de l'ancien contenu du dossier clubmanager..."
             sudo rm -rf /usr/share/nginx/html/clubmanager
@@ -42,6 +53,5 @@ jobs:
             sudo systemctl restart clubmanager.service
 
             echo "✅ Déploiement terminé avec succès"
-            echo "📊 Vérification des logs de déploiement..."
-            echo "Version déployée: $(git rev-parse --short HEAD)"
-            echo "Dernière modification: $(git log -1 --format='%ci')"
+            echo "🎯 Vérification finale..."
+            ls -la | grep test-deploy || echo "Fichier test-deploy.txt non trouvé"
