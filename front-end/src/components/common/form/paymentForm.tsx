@@ -1,5 +1,5 @@
 import React from 'react';
-import { Radio, Stack, Button, Title, Alert } from '@patternfly/react-core';
+import { Radio, Stack, Button, Title, Alert, Modal, ModalVariant } from '@patternfly/react-core';
 import { CreditCardIcon, PaypalIcon, BitcoinIcon } from '@patternfly/react-icons';
 import StripeForm from './stripeForm';
 import { Elements } from '@stripe/react-stripe-js';
@@ -41,37 +41,61 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('bancontact');
   const [clientSecret, setClientSecret] = React.useState<string | null>(null);
   const [stripeOptions, setStripeOptions] = React.useState<any | null>(null);
+  
+  // États pour les modals
+  const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState('');
+  const [errorTitle, setErrorTitle] = React.useState('');
 
   // Utilisation du hook usePaiements
   const creerPaiement = useCreerPaiement();
 
-  console.log('Commande reçue dans PaymentForm:', commande);
-  console.log('Total amount:', totalAmount);
+  // Debug au chargement du composant
+  console.log('=== PAYMENT FORM PROPS ===');
+  console.log('TotalAmount reçu:', totalAmount);
+  console.log('Type de totalAmount:', typeof totalAmount);
+  console.log('Commande reçue:', commande);
+  console.log('PaymentMethod initial:', paymentMethod);
+
+  // Fonction pour afficher les erreurs via modal
+  const showError = (title: string, message: string) => {
+    setErrorTitle(title);
+    setErrorMessage(message);
+    setIsErrorModalOpen(true);
+  };
 
   const onPayement = async () => {
-    // Modifier la condition pour être plus spécifique
+    // Debug - Afficher les valeurs AVANT les vérifications
+    console.log('=== DEBUG PAIEMENT ===');
+    console.log('PaymentMethod:', paymentMethod);
+    console.log('TotalAmount:', totalAmount);
+    console.log('Type of totalAmount:', typeof totalAmount);
+    console.log('Commande:', commande);
+    console.log('Commande.utilisateur_id:', (commande as any)?.utilisateur_id);
+
+    // Vérifications séparées avec logs spécifiques
     if (!paymentMethod) {
-      alert('Veuillez sélectionner une méthode de paiement.');
+      console.log('❌ Erreur: Pas de méthode de paiement');
+      showError('Méthode de paiement manquante', 'Veuillez sélectionner une méthode de paiement.');
       return;
     }
 
     if (!totalAmount || totalAmount <= 0) {
-      alert('Le montant du panier est invalide.');
+      console.log('❌ Erreur: Montant invalide -', totalAmount);
+      showError('Montant invalide', 'Le montant du panier est invalide.');
       return;
     }
 
-    // Vérifier que nous avons un utilisateur_id
-    if (!commande.utilisateur_id) {
-      alert('Erreur: utilisateur non identifié. Veuillez vous reconnecter.');
+    if (!commande || !(commande as any).utilisateur_id) {
+      console.log('❌ Erreur: Pas d\'utilisateur_id');
+      showError('Utilisateur non identifié', 'Erreur: utilisateur non identifié. Veuillez vous reconnecter.');
       return;
     }
 
-    // Debug - Afficher les valeurs pour diagnostiquer
-    console.log('PaymentMethod:', paymentMethod);
-    console.log('TotalAmount:', totalAmount);
-    console.log('Commande:', commande);
+    console.log('✅ Toutes les vérifications passées, envoi du paiement...');
 
     const amountInCents = totalAmount * 100;
+    const utilisateurId = (commande as any).utilisateur_id;
 
     try {
       // ✅ 1. Créer le paiement avec le hook
@@ -84,16 +108,16 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
             currency: 'eur',
             payment_method: 'bancontact',
             commande: commande,
-            utilisateur_id: commande.utilisateur_id // S'assurer que l'utilisateur_id est inclus
+            utilisateur_id: utilisateurId
           };
           break;
         case 'paypal':
           paiementData = {
             totalAmount: amountInCents,
             payment_method: 'paypal',
-            userId: commande.utilisateur_id,
+            userId: utilisateurId,
             commande: commande,
-            utilisateur_id: commande.utilisateur_id
+            utilisateur_id: utilisateurId
           };
           break;
         case 'bitcoin':
@@ -101,7 +125,7 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
             sats: amountInCents / 100000000,
             payment_method: 'bitcoin',
             commande: commande,
-            utilisateur_id: commande.utilisateur_id
+            utilisateur_id: utilisateurId
           };
           break;
         default:
@@ -125,11 +149,11 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
         window.location.href = response.url;
       } else {
         console.error("Réponse inattendue du serveur :", response);
-        alert("Aucune information de paiement reçue.");
+        showError('Erreur de paiement', 'Aucune information de paiement reçue.');
       }
     } catch (error: any) {
       console.error('Erreur lors du paiement :', error);
-      alert(`Erreur lors du paiement : ${error.message}`);
+      showError('Erreur de paiement', `Erreur lors du paiement : ${error.message}`);
     }
   };
 
@@ -140,129 +164,146 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
   };
 
   return (
-    <div style={{
-      backgroundColor: '#f8f9fa',
-      padding: '30px',
-      borderRadius: '12px',
-      boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-      maxWidth: '600px',
-      margin: 'auto',
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      <Title headingLevel="h2" style={{ marginBottom: '30px', textAlign: 'center', color: '#333' }}>
-        Choisissez votre moyen de paiement
-      </Title>
+    <>
+      <div style={{
+        backgroundColor: '#f8f9fa',
+        padding: '30px',
+        borderRadius: '12px',
+        boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
+        maxWidth: '600px',
+        margin: 'auto',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <Title headingLevel="h2" style={{ marginBottom: '30px', textAlign: 'center', color: '#333' }}>
+          Choisissez votre moyen de paiement
+        </Title>
 
-      {/* Affichage des erreurs du hook */}
-      {creerPaiement.isError && (
-        <Alert 
-          variant="danger" 
-          title="Erreur de paiement" 
-          isInline 
-          style={{ marginBottom: '20px' }}
-        >
-          {creerPaiement.error?.message || 'Erreur lors du traitement du paiement'}
-        </Alert>
-      )}
-
-      <Stack hasGutter>
-        <div style={{
-          backgroundColor: '#fff',
-          padding: '20px',
-          borderRadius: '10px',
-          border: '1px solid #d1d1d1',
-          boxShadow: '0 3px 6px rgba(0, 0, 0, 0.05)',
-          transition: 'transform 0.2s ease-in-out',
-        }}>
-          <Radio
-            isChecked={paymentMethod === 'bancontact'}
-            name="paymentMethod"
-            onChange={() => handlePaymentMethodChange('bancontact')}
-            label={
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '18px' }}>
-                <CreditCardIcon style={{ marginRight: '15px', color: '#0066cc' }} />
-                Bancontact
-              </div>
-            }
-            id="bancontact"
-          />
-        </div>
-
-        <div style={{
-          backgroundColor: '#fff',
-          padding: '20px',
-          borderRadius: '10px',
-          border: '1px solid #d1d1d1',
-          boxShadow: '0 3px 6px rgba(0, 0, 0, 0.05)',
-          transition: 'transform 0.2s ease-in-out',
-        }}>
-          <Radio
-            isChecked={paymentMethod === 'paypal'}
-            name="paymentMethod"
-            onChange={() => handlePaymentMethodChange('paypal')}
-            label={
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '18px' }}>
-                <PaypalIcon style={{ marginRight: '15px', color: '#009cde' }} />
-                PayPal
-              </div>
-            }
-            id="paypal"
-          />
-        </div>
-
-        <div style={{
-          backgroundColor: '#fff',
-          padding: '20px',
-          borderRadius: '10px',
-          border: '1px solid #d1d1d1',
-          boxShadow: '0 3px 6px rgba(0, 0, 0, 0.05)',
-          transition: 'transform 0.2s ease-in-out',
-        }}>
-          <Radio
-            isChecked={paymentMethod === 'bitcoin'}
-            name="paymentMethod"
-            onChange={() => handlePaymentMethodChange('bitcoin')}
-            label={
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '18px' }}>
-                <BitcoinIcon style={{ marginRight: '15px', color: '#f7931a' }} />
-                Bitcoin
-              </div>
-            }
-            id="bitcoin"
-          />
-        </div>
-      </Stack>
-
-      <div style={{ marginTop: '30px', textAlign: 'center' }}>
-        {paymentMethod === 'bancontact' && clientSecret && stripeOptions && (
-          <Elements stripe={stripePromise} options={stripeOptions}>
-            <StripeForm clientSecret={clientSecret} onClose={onClose} totalAmount={totalAmount} />
-          </Elements>
+        {/* Affichage des erreurs du hook */}
+        {creerPaiement.isError && (
+          <Alert 
+            variant="danger" 
+            title="Erreur de paiement" 
+            isInline 
+            style={{ marginBottom: '20px' }}
+          >
+            {creerPaiement.error?.message || 'Erreur lors du traitement du paiement'}
+          </Alert>
         )}
-        {paymentMethod === 'paypal' && <PayPalForm />}
-        {paymentMethod === 'bitcoin' && <BitcoinForm />}
 
-        <Button
-          variant="primary"
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#0066cc',
-            border: 'none',
-            borderRadius: '6px',
-            color: '#fff',
-            fontSize: '18px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-            marginTop: '20px'
-          }}
-          onClick={onPayement}
-          isLoading={creerPaiement.isPending}
-          isDisabled={creerPaiement.isPending}
-        >
-          {creerPaiement.isPending ? 'Traitement...' : 'Payer'}
-        </Button>
+        <Stack hasGutter>
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '20px',
+            borderRadius: '10px',
+            border: '1px solid #d1d1d1',
+            boxShadow: '0 3px 6px rgba(0, 0, 0, 0.05)',
+            transition: 'transform 0.2s ease-in-out',
+          }}>
+            <Radio
+              isChecked={paymentMethod === 'bancontact'}
+              name="paymentMethod"
+              onChange={() => handlePaymentMethodChange('bancontact')}
+              label={
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: '18px' }}>
+                  <CreditCardIcon style={{ marginRight: '15px', color: '#0066cc' }} />
+                  Bancontact
+                </div>
+              }
+              id="bancontact"
+            />
+          </div>
+
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '20px',
+            borderRadius: '10px',
+            border: '1px solid #d1d1d1',
+            boxShadow: '0 3px 6px rgba(0, 0, 0, 0.05)',
+            transition: 'transform 0.2s ease-in-out',
+          }}>
+            <Radio
+              isChecked={paymentMethod === 'paypal'}
+              name="paymentMethod"
+              onChange={() => handlePaymentMethodChange('paypal')}
+              label={
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: '18px' }}>
+                  <PaypalIcon style={{ marginRight: '15px', color: '#009cde' }} />
+                  PayPal
+                </div>
+              }
+              id="paypal"
+            />
+          </div>
+
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '20px',
+            borderRadius: '10px',
+            border: '1px solid #d1d1d1',
+            boxShadow: '0 3px 6px rgba(0, 0, 0, 0.05)',
+            transition: 'transform 0.2s ease-in-out',
+          }}>
+            <Radio
+              isChecked={paymentMethod === 'bitcoin'}
+              name="paymentMethod"
+              onChange={() => handlePaymentMethodChange('bitcoin')}
+              label={
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: '18px' }}>
+                  <BitcoinIcon style={{ marginRight: '15px', color: '#f7931a' }} />
+                  Bitcoin
+                </div>
+              }
+              id="bitcoin"
+            />
+          </div>
+        </Stack>
+
+        <div style={{ marginTop: '30px', textAlign: 'center' }}>
+          {paymentMethod === 'bancontact' && clientSecret && stripeOptions && (
+            <Elements stripe={stripePromise} options={stripeOptions}>
+              <StripeForm clientSecret={clientSecret} onClose={onClose} totalAmount={totalAmount} />
+            </Elements>
+          )}
+          {paymentMethod === 'paypal' && <PayPalForm />}
+          {paymentMethod === 'bitcoin' && <BitcoinForm />}
+
+          <Button
+            variant="primary"
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#0066cc',
+              border: 'none',
+              borderRadius: '6px',
+              color: '#fff',
+              fontSize: '18px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+              marginTop: '20px'
+            }}
+            onClick={onPayement}
+            isLoading={creerPaiement.isPending}
+            isDisabled={creerPaiement.isPending}
+          >
+            {creerPaiement.isPending ? 'Traitement...' : 'Payer'}
+          </Button>
+        </div>
       </div>
-    </div>
+
+      {/* Modal d'erreur */}
+      <Modal
+        variant={ModalVariant.small}
+        title={errorTitle}
+        isOpen={isErrorModalOpen}
+        onClose={() => setIsErrorModalOpen(false)}
+        actions={[
+          <Button key="confirm" variant="primary" onClick={() => setIsErrorModalOpen(false)}>
+            OK
+          </Button>
+        ]}
+      >
+        {errorMessage}
+      </Modal>
+    </>
   );
 };
 
