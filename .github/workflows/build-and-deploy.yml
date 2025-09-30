@@ -37,6 +37,11 @@ jobs:
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
             sudo chmod -R 755 /usr/share/nginx/html/clubmanager
 
+            echo "🔧 Installation des dépendances backend..."
+            cd /home/***/ClubManager/api
+            npm install
+            npm run build
+
             echo "🔁 Rechargement de nginx et redémarrage du service clubmanager..."
             sudo systemctl reload nginx
             sudo systemctl restart clubmanager.service
