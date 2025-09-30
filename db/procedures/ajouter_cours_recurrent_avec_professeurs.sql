@@ -100,7 +100,7 @@ BEGIN
         END IF;
     END LOOP batch_loop;
 
-    -- 6. Association professeurs (recherche dans utilisateurs d'abord)
+    -- 6. Association professeurs (avec mapping utilisateurs -> professeurs)
     SET v_professeur_count = JSON_LENGTH(p_professeurs);
     SET @professeurs_associes = 0;
 
@@ -108,54 +108,30 @@ BEGIN
         SET v_professeur_nom = JSON_UNQUOTE(JSON_EXTRACT(p_professeurs, CONCAT('$[', i, ']')));
         SET v_professeur_id = NULL;
 
-        -- Recherche dans utilisateurs (professeurs actifs) - ordre prenom nom
+        -- 1. Recherche directe dans professeurs - ordre prenom nom
         SELECT id INTO v_professeur_id
-        FROM utilisateurs
-        WHERE CONCAT(TRIM(first_name), ' ', TRIM(last_name)) = TRIM(v_professeur_nom)
+        FROM professeurs
+        WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = TRIM(v_professeur_nom)
         AND status_id = 5
         LIMIT 1;
 
-        -- Fallback dans professeurs - ordre prenom nom
+        -- 2. Si pas trouvé, recherche dans utilisateurs et mapping vers professeurs
         IF v_professeur_id IS NULL THEN
-            SELECT id INTO v_professeur_id
-            FROM professeurs
-            WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = TRIM(v_professeur_nom)
-            AND status_id = 5
+            SELECT p.id INTO v_professeur_id
+            FROM utilisateurs u
+            JOIN professeurs p ON (
+                TRIM(u.first_name) = TRIM(p.prenom) AND TRIM(u.last_name) = TRIM(p.nom)
+            )
+            WHERE CONCAT(TRIM(u.first_name), ' ', TRIM(u.last_name)) = TRIM(v_professeur_nom)
+            AND u.status_id = 5 AND p.status_id = 5
             LIMIT 1;
         END IF;
 
-        -- Si toujours pas trouvé, essayer l'ordre inverse - nom prenom
+        -- 3. Recherche par ordre inverse - nom prenom
         IF v_professeur_id IS NULL THEN
             SELECT id INTO v_professeur_id
             FROM professeurs
             WHERE CONCAT(TRIM(nom), ' ', TRIM(prenom)) = TRIM(v_professeur_nom)
-            AND status_id = 5
-            LIMIT 1;
-        END IF;
-
-        -- Essayer aussi avec les utilisateurs ordre inverse
-        IF v_professeur_id IS NULL THEN
-            SELECT id INTO v_professeur_id
-            FROM utilisateurs
-            WHERE CONCAT(TRIM(last_name), ' ', TRIM(first_name)) = TRIM(v_professeur_nom)
-            AND status_id = 5
-            LIMIT 1;
-        END IF;
-
-        -- Recherche partielle par prénom seulement (nouveau)
-        IF v_professeur_id IS NULL THEN
-            SELECT id INTO v_professeur_id
-            FROM professeurs
-            WHERE TRIM(prenom) = SUBSTRING_INDEX(TRIM(v_professeur_nom), ' ', 1)
-            AND status_id = 5
-            LIMIT 1;
-        END IF;
-
-        -- Recherche partielle par nom seulement (nouveau)
-        IF v_professeur_id IS NULL THEN
-            SELECT id INTO v_professeur_id
-            FROM professeurs
-            WHERE TRIM(nom) = SUBSTRING_INDEX(TRIM(v_professeur_nom), ' ', -1)
             AND status_id = 5
             LIMIT 1;
         END IF;

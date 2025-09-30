@@ -360,18 +360,57 @@ const AjouterCoursPage: React.FC = () => {
   };
 
   // Ouverture de la modale de dissociation
-  const ouvrirModalDissociation = (cours: any, prof: string) => {
-    console.log("Cours reçu pour dissociation:", cours);
-    console.log("Professeur reçu pour dissociation:", prof);
+  const ouvrirModalDissociation = (professeurOuCours: any, prof?: string) => {
+    console.log("🔍 Données reçues pour dissociation:", { professeurOuCours, prof });
+    
+    let cours: any;
+    let professeurName: string;
+    
+    // Gestion des deux formats possibles d'appel
+    if (prof) {
+      // Format: ouvrirModalDissociation(cours, professeurName)
+      cours = professeurOuCours;
+      professeurName = prof;
+    } else if (professeurOuCours?.prof?.name && professeurOuCours?.cours) {
+      // Format: ouvrirModalDissociation({prof: {name: "..."}, cours: {...}})
+      cours = professeurOuCours.cours;
+      professeurName = professeurOuCours.prof.name;
+    } else {
+      console.error("❌ Format de données invalide pour la dissociation:", professeurOuCours);
+      setResultModalMessage("Erreur: Données de dissociation invalides.");
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      return;
+    }
+    
+    console.log("✅ Cours identifié:", cours);
+    console.log("✅ Professeur identifié:", professeurName);
+    
+    // Validation des données
+    if (!professeurName || professeurName.trim() === '') {
+      console.error("❌ Nom du professeur manquant ou vide");
+      setResultModalMessage("Erreur: Nom du professeur manquant.");
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      return;
+    }
+    
+    if (!cours) {
+      console.error("❌ Informations du cours manquantes");
+      setResultModalMessage("Erreur: Informations du cours manquantes.");
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      return;
+    }
     
     // Vérifier si c'est le dernier professeur
-    const isLast = isLastProfessorForCourse(cours, prof);
+    const isLast = isLastProfessorForCourse(cours, professeurName);
     
     if (isLast) {
       // C'est le dernier professeur - afficher l'avertissement spécial
       setPendingLastProfessorDissociation({ 
         cours: { ...cours, jour: cours.jour_semaine || cours.jour }, 
-        prof: { name: prof }, 
+        prof: { name: professeurName }, 
         isLastProfessor: true 
       });
       setShowLastProfessorWarning(true);
@@ -379,7 +418,7 @@ const AjouterCoursPage: React.FC = () => {
       // Dissociation normale
       setProfesseurADissocier({
         cours: { ...cours, jour: cours.jour_semaine || cours.jour },
-        prof: { name: prof }
+        prof: { name: professeurName }
       });
       setIsModalOpen(true);
     }
@@ -403,61 +442,50 @@ const AjouterCoursPage: React.FC = () => {
     return professeursValides.length === 1 && professeursValides[0] === professorName;
   };
 
-  // Handler pour confirmer la dissociation du dernier professeur
-  const confirmerDissociationDernierProfesseur = async () => {
-    if (!pendingLastProfessorDissociation) return;
-    
-    setShowLastProfessorWarning(false);
-    
-    try {
-      const { cours, prof } = pendingLastProfessorDissociation;
-      const jourCours = cours.jour;
-      
-      console.log("Dissociation dernier professeur - Cours:", cours, "Prof:", prof);
-      
-      // Dissocier le professeur
-      await retirerProfesseursDuCours.mutateAsync({ 
-        professeursNoms: [prof.name], 
-        jour: jourCours 
-      });
-      
-      // Supprimer également le cours récurrent car il n'a plus de professeur
-      await supprimerCoursRecurrent.mutateAsync(jourCours.toLowerCase().trim());
-      
-      // Afficher le succès avec message spécifique
-      setResultModalSuccess(true);
-      setResultModalMessage(
-        `Le professeur ${prof.name} a été dissocié et le cours "${cours.type_cours} - ${cours.jour}" a été supprimé car il n'avait plus de professeur assigné.`
-      );
-      setShowResultModal(true);
-      
-    } catch (error: any) {
-      console.error("Erreur lors de la dissociation du dernier professeur:", error);
-      setResultModalSuccess(false);
-      setResultModalMessage(error.message || 'Erreur lors de la dissociation du dernier professeur');
-      setShowResultModal(true);
-    } finally {
-      setPendingLastProfessorDissociation(null);
-    }
-  };
-
-  // Handler pour annuler la dissociation du dernier professeur
-  const annulerDissociationDernierProfesseur = () => {
-    setShowLastProfessorWarning(false);
-    setPendingLastProfessorDissociation(null);
-  };
-
   // Confirmation de la dissociation (normale)
   const confirmerDissociation = async () => {
     if (!professeurADissocier) return;
 
+    const professeurName = professeurADissocier.prof.name;
+    const coursInfo = professeurADissocier.cours;
+    
+    console.log("🔍 Confirmation dissociation - Professeur:", professeurName);
+    console.log("🔍 Confirmation dissociation - Cours:", coursInfo);
+    
+    // Validation finale
+    if (!professeurName || professeurName.trim() === '') {
+      console.error("❌ Nom du professeur invalide lors de la confirmation");
+      setResultModalMessage("Erreur: Nom du professeur invalide.");
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      setIsModalOpen(false);
+      setProfesseurADissocier(null);
+      return;
+    }
+
     try {
-      const professeursNoms = [professeurADissocier.prof.name];
-      const jourCours = professeurADissocier.cours.jour_semaine || professeurADissocier.cours.jour;
-      await retirerProfesseursDuCours.mutateAsync({ professeursNoms, jour: jourCours });
+      const professeursNoms = [professeurName];
+      const jourCours = coursInfo.jour_semaine || coursInfo.jour;
+      
+      console.log("🎯 Envoi des données:", {
+        professeursNoms,
+        jour: jourCours,
+        type_cours: coursInfo.type_cours,
+        heure_debut: coursInfo.heure_debut,
+        heure_fin: coursInfo.heure_fin
+      });
+      
+      // 🎯 IMPORTANT: Passer TOUTES les informations du cours pour éviter les ambiguïtés
+      await retirerProfesseursDuCours.mutateAsync({ 
+        professeursNoms, 
+        jour: jourCours,
+        type_cours: coursInfo.type_cours,
+        heure_debut: coursInfo.heure_debut,
+        heure_fin: coursInfo.heure_fin
+      });
       
       // Remplacer setSuccessMessage par ResultModal
-      setResultModalMessage(`Le professeur ${professeurADissocier.prof.name} a bien été dissocié du cours ${professeurADissocier.cours.type_cours} du ${jourCours}.`);
+      setResultModalMessage(`Le professeur ${professeurName} a bien été dissocié du cours ${coursInfo.type_cours} du ${jourCours} (${coursInfo.heure_debut}-${coursInfo.heure_fin}).`);
       setResultModalSuccess(true);
       setShowResultModal(true);
       
@@ -466,7 +494,7 @@ const AjouterCoursPage: React.FC = () => {
       setProfesseurADissocier(null);
     } catch (error) {
       console.error('Erreur lors de la dissociation du professeur:', error);
-      setResultModalMessage("Erreur lors de la dissociation du professeur.");
+      setResultModalMessage(error?.message || "Erreur lors de la dissociation du professeur.");
       setResultModalSuccess(false);
       setShowResultModal(true);
       
@@ -476,61 +504,67 @@ const AjouterCoursPage: React.FC = () => {
     }
   };
 
-  // Ouverture de la modale de suppression
-  const ouvrirModalSuppression = (cours: any) => {
-    setCoursASupprimer({ ...cours, jour: cours.jour_semaine || cours.jour });
-    setShowSupprimerModal(true);
-  };
-
-  // Confirmation de la suppression
-  const confirmerSuppression = async () => {
-    if (!coursASupprimer) return;
-
-    try {
-      const jourASupprimer = coursASupprimer.jour_semaine || coursASupprimer.jour;
-      await supprimerCoursRecurrent.mutateAsync(jourASupprimer.toLowerCase().trim());
-      
-      // Remplacer setSuccessMessage par ResultModal
-      setResultModalMessage(`Le cours ${coursASupprimer.type_cours} du ${jourASupprimer} a bien été supprimé.`);
-      setResultModalSuccess(true);
-      setShowResultModal(true);
-      
-      setShowSupprimerModal(false);
-      setCoursASupprimer(null);
-    } catch (error) {
-      console.error('Erreur lors de la suppression du cours:', error);
-      setResultModalMessage("Erreur lors de la suppression du cours.");
+  // Handler pour confirmer la dissociation du dernier professeur
+  const confirmerDissociationDernierProfesseur = async () => {
+    if (!pendingLastProfessorDissociation) return;
+    
+    const professeurName = pendingLastProfessorDissociation.prof.name;
+    const coursInfo = pendingLastProfessorDissociation.cours;
+    
+    console.log("🔍 Confirmation dernier professeur - Professeur:", professeurName);
+    console.log("🔍 Confirmation dernier professeur - Cours:", coursInfo);
+    
+    // Validation finale
+    if (!professeurName || professeurName.trim() === '') {
+      console.error("❌ Nom du professeur invalide lors de la confirmation du dernier professeur");
+      setResultModalMessage("Erreur: Nom du professeur invalide.");
       setResultModalSuccess(false);
       setShowResultModal(true);
-      
-      setShowSupprimerModal(false);
+      setShowLastProfessorWarning(false);
+      setPendingLastProfessorDissociation(null);
+      return;
     }
-  };
-
-  // Annulation de la dissociation
-  const annulerDissociation = () => {
-    setIsModalOpen(false);
-    setProfesseurADissocier(null);
-    setSuccessMessage(null);
-  };
-
-  // Annulation de la suppression
-  const annulerSuppression = () => {
-    setShowSupprimerModal(false);
-    setCoursASupprimer(null);
-  };
-
-  // Fermeture de la modale d'ajout
-  const fermerAjoutModal = () => {
-    setShowAjoutModal(false);
-    setAjoutMessage(null);
-    setAjoutSuccess(false);
-  };
-
-  // Annulation de la confirmation de modification
-  const annulerConfirmationModification = () => {
-    setShowConfirmModificationModal(false);
-    setModificationsResume([]);
+    
+    setShowLastProfessorWarning(false);
+    
+    try {
+      const jourCours = coursInfo.jour;
+      
+      console.log("🎯 Envoi des données pour dernier professeur:", {
+        professeursNoms: [professeurName],
+        jour: jourCours,
+        type_cours: coursInfo.type_cours,
+        heure_debut: coursInfo.heure_debut,
+        heure_fin: coursInfo.heure_fin
+      });
+      
+      // Dissocier le professeur
+      await retirerProfesseursDuCours.mutateAsync({ 
+        professeursNoms: [professeurName], 
+        jour: jourCours,
+        type_cours: coursInfo.type_cours,
+        heure_debut: coursInfo.heure_debut,
+        heure_fin: coursInfo.heure_fin
+      });
+      
+      // Supprimer également le cours récurrent car il n'a plus de professeur
+      await supprimerCoursRecurrent.mutateAsync(jourCours.toLowerCase().trim());
+      
+      // Afficher le succès avec message spécifique
+      setResultModalSuccess(true);
+      setResultModalMessage(
+        `Le professeur ${professeurName} a été dissocié et le cours "${coursInfo.type_cours} - ${coursInfo.jour}" a été supprimé car il n'avait plus de professeur assigné.`
+      );
+      setShowResultModal(true);
+      
+    } catch (error: any) {
+      console.error("Erreur lors de la dissociation du dernier professeur:", error);
+      setResultModalSuccess(false);
+      setResultModalMessage(error?.message || 'Erreur lors de la dissociation du dernier professeur');
+      setShowResultModal(true);
+    } finally {
+      setPendingLastProfessorDissociation(null);
+    }
   };
 
   // Vérifiez si les données sont en cours de chargement ou non disponibles
@@ -587,6 +621,78 @@ const AjouterCoursPage: React.FC = () => {
       <p>Professeurs : {cours.professeurs.join(', ')}</p>
     </div>
   )) : <p>Aucun cours à afficher.</p>;
+
+  // Ouverture de la modale de suppression
+  const ouvrirModalSuppression = (cours: any) => {
+    console.log("🗑️ Ouverture modal suppression pour:", cours);
+    setCoursASupprimer({ ...cours, jour: cours.jour_semaine || cours.jour });
+    setShowSupprimerModal(true);
+  };
+
+  // Confirmation de la suppression
+  const confirmerSuppression = async () => {
+    if (!coursASupprimer) return;
+
+    try {
+      const jourASupprimer = coursASupprimer.jour_semaine || coursASupprimer.jour;
+      console.log("🗑️ Suppression du cours:", jourASupprimer);
+      
+      await supprimerCoursRecurrent.mutateAsync(jourASupprimer.toLowerCase().trim());
+      
+      // Remplacer setSuccessMessage par ResultModal
+      setResultModalMessage(`Le cours ${coursASupprimer.type_cours} du ${jourASupprimer} a bien été supprimé.`);
+      setResultModalSuccess(true);
+      setShowResultModal(true);
+      
+      setShowSupprimerModal(false);
+      setCoursASupprimer(null);
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression du cours:', error);
+      setResultModalMessage(error?.message || "Erreur lors de la suppression du cours.");
+      setResultModalSuccess(false);
+      setShowResultModal(true);
+      
+      setShowSupprimerModal(false);
+      setCoursASupprimer(null);
+    }
+  };
+
+  // Annulation de la suppression
+  const annulerSuppression = () => {
+    console.log("❌ Annulation suppression cours");
+    setShowSupprimerModal(false);
+    setCoursASupprimer(null);
+  };
+
+  // Handler pour annuler la dissociation du dernier professeur
+  const annulerDissociationDernierProfesseur = () => {
+    console.log("❌ Annulation dissociation dernier professeur");
+    setShowLastProfessorWarning(false);
+    setPendingLastProfessorDissociation(null);
+  };
+
+  // Annulation de la dissociation (normale)
+  const annulerDissociation = () => {
+    console.log("❌ Annulation dissociation normale");
+    setIsModalOpen(false);
+    setProfesseurADissocier(null);
+    setSuccessMessage(null);
+  };
+
+  // Fermeture de la modale d'ajout
+  const fermerAjoutModal = () => {
+    console.log("❌ Fermeture modal ajout");
+    setShowAjoutModal(false);
+    setAjoutMessage(null);
+    setAjoutSuccess(false);
+  };
+
+  // Annulation de la confirmation de modification
+  const annulerConfirmationModification = () => {
+    console.log("❌ Annulation confirmation modification");
+    setShowConfirmModificationModal(false);
+    setModificationsResume([]);
+  };
 
   // Rendu principal
   return (

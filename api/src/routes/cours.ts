@@ -263,6 +263,32 @@ router.post('/ajouter', async (req:any, res:any) => {
       return res.status(400).json({ message: `Jour invalide: ${data.jour_semaine}` });
     }
 
+    // Vérification des conflits d'horaires AVANT d'ajouter
+    try {
+      const coursExistants = await cours.obtenirLesJoursDeCours();
+      const coursConflituels = coursExistants.filter(c => {
+        // Vérifier que les heures ne sont pas null avant de faire les comparaisons
+        if (!c.heure_debut || !c.heure_fin || !data.heure_debut || !data.heure_fin) {
+          return false; // Ignorer les cours avec des heures null
+        }
+        
+        return c.jour.toLowerCase() === jourNormalise &&
+        ((data.heure_debut >= c.heure_debut && data.heure_debut < c.heure_fin) ||
+         (data.heure_fin > c.heure_debut && data.heure_fin <= c.heure_fin) ||
+         (data.heure_debut <= c.heure_debut && data.heure_fin >= c.heure_fin));
+      });
+
+      if (coursConflituels.length > 0) {
+        const conflits = coursConflituels.map(c => `${c.type_cours} ${c.heure_debut}-${c.heure_fin}`).join(', ');
+        return res.status(409).json({ 
+          message: `Conflit d'horaire détecté avec: ${conflits}. Impossible d'ajouter le cours.` 
+        });
+      }
+    } catch (verificationError) {
+      console.log('Erreur lors de la vérification des conflits:', verificationError);
+      // Continuer quand même si la vérification échoue
+    }
+
     // Gestion des professeurs
     let professeurs = [];
     if (Array.isArray(data.professeurs)) {
@@ -299,7 +325,16 @@ router.post('/ajouter', async (req:any, res:any) => {
     });
   } catch (error) {
     console.error('Erreur lors de l\'ajout du cours récurrent:', error);
-    res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
+    
+    // Gestion spécifique de l'erreur de clé étrangère
+    if (error instanceof Error && error.message.includes('ER_NO_REFERENCED_ROW_2')) {
+      res.status(400).json({ 
+        message: 'Un ou plusieurs professeurs spécifiés n\'existent pas en base de données. Veuillez vérifier les noms des professeurs.',
+        details: 'Erreur de référence de clé étrangère - professeurs introuvables'
+      });
+    } else {
+      res.status(500).json({ message: 'Erreur serveur lors de l\'ajout du cours récurrent' });
+    }
   }
 });
 
@@ -425,24 +460,74 @@ router.post('/retirer-professeur', async (req: any, res: any) => {
   const { professeursNoms, jour, type_cours, heure_debut, heure_fin } = req.body;
   console.log('Données reçues pour retirer un professeur :', req.body);
 
+  // Validation plus stricte des données d'entrée
   if (!Array.isArray(professeursNoms) || professeursNoms.length === 0 || !jour) {
     return res.status(400).json({ message: "professeursNoms (array) et jour requis." });
   }
 
+  // Vérifier que les noms de professeurs ne sont pas null/undefined/vides
+  const professeursValides = professeursNoms.filter(nom => nom && typeof nom === 'string' && nom.trim() !== '');
+  
+  if (professeursValides.length === 0) {
+    console.error('❌ Aucun nom de professeur valide dans:', professeursNoms);
+    return res.status(400).json({ 
+      message: "Aucun nom de professeur valide fourni. Noms reçus: " + JSON.stringify(professeursNoms) 
+    });
+  }
+
+  if (professeursValides.length !== professeursNoms.length) {
+    console.warn('⚠️ Certains noms de professeurs étaient invalides:', {
+      original: professeursNoms,
+      valides: professeursValides
+    });
+  }
+
   try {
-    // Passer le contexte du cours pour plus de précision
+    // Construire le contexte avec toutes les informations disponibles
     const coursContext = {
       type_cours,
       heure_debut,
       heure_fin
     };
 
-    const result = await cours.supprimerProfesseursParNomEtJour(professeursNoms, jour, coursContext);
-    res.status(200).json({
-      success: true,
-      message: result.message || `${professeursNoms.length} professeur(s) retiré(s) avec succès`,
-      data: result
-    });
+    console.log('🎯 Contexte utilisé pour la dissociation:', coursContext);
+    console.log('🎯 Professeurs valides à dissocier:', professeursValides);
+
+    // Si on a des informations précises (type, heures), utiliser la méthode directe
+    if (type_cours && heure_debut && heure_fin) {
+      console.log('✅ Utilisation de la méthode directe avec contexte complet');
+      const result = await cours.supprimerProfesseursParNomEtJour(professeursValides, jour, coursContext);
+      
+      if (result.isConfirm) {
+        res.status(200).json({
+          success: true,
+          message: result.message || `${professeursValides.length} professeur(s) retiré(s) avec succès`,
+          data: result
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } else {
+      console.log('⚠️ Utilisation de la méthode avec résolution automatique');
+      // Utiliser la résolution automatique si le contexte est incomplet
+      const result = await cours.supprimerProfesseursParNomEtJourAvecResolution(professeursValides, jour, coursContext);
+      
+      if (result.isConfirm) {
+        res.status(200).json({
+          success: true,
+          message: result.message || `${professeursValides.length} professeur(s) retiré(s) avec succès`,
+          data: result
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: result.message
+        });
+      }
+    }
   } catch (error) {
     console.error("Erreur lors du retrait des professeurs :", error);
     res.status(500).json({ message: "Erreur serveur lors du retrait des professeurs." });

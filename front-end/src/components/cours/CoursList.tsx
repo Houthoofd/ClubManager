@@ -28,6 +28,29 @@ const CoursList: React.FC<CoursListProps> = ({
     );
   }
 
+  const handleDissocierProfesseur = (professeur: string, cours: any) => {
+    console.log('🎯 Dissociation avec contexte complet:', {
+      professeur,
+      cours: {
+        jour: cours.jour,
+        type_cours: cours.type_cours,
+        heure_debut: cours.heure_debut,
+        heure_fin: cours.heure_fin
+      }
+    });
+
+    onDissocierProfesseur({
+      prof: { name: professeur },
+      cours: {
+        jour_semaine: cours.jour,
+        jour: cours.jour,
+        type_cours: cours.type_cours,
+        heure_debut: cours.heure_debut,
+        heure_fin: cours.heure_fin
+      }
+    });
+  };
+
   return (
     <div className="cours-cards-grid">
       {cours.map((c, index) => (
@@ -36,7 +59,7 @@ const CoursList: React.FC<CoursListProps> = ({
           cours={c}
           onModifier={() => onModifierCours(c)}
           onSupprimer={() => onSupprimerCours(c)}
-          onDissocierProfesseur={(prof) => onDissocierProfesseur(c, prof)}
+          onDissocierProfesseur={(prof) => handleDissocierProfesseur(prof, c)}
         />
       ))}
     </div>

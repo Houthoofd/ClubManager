@@ -184,7 +184,8 @@ export const useRetirerProfesseursDuCours = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors du retrait des professeurs');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors du retrait des professeurs');
       }
 
       return response.json();

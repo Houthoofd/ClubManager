@@ -1167,4 +1167,79 @@ export class Cours {
       });
     });
   }
+
+  // Supprimer des professeurs par nom et jour avec résolution automatique
+  async supprimerProfesseursParNomEtJourAvecResolution(professeursNoms: string[], jour: string, coursContext?: {type_cours?: string, heure_debut?: string, heure_fin?: string}): Promise<ConfirmationResult> {
+    // Si le contexte n'est pas fourni, essayer de le résoudre automatiquement
+    if (!coursContext?.type_cours && !coursContext?.heure_debut && !coursContext?.heure_fin) {
+      console.log('⚠️ Contexte manquant - tentative de résolution automatique...');
+      
+      try {
+        const coursAuto = await this.trouverCoursAvecProfesseur(professeursNoms, jour);
+        if (coursAuto) {
+          console.log('✅ Contexte résolu automatiquement:', coursAuto);
+          return this.supprimerProfesseursParNomEtJour(professeursNoms, jour, coursAuto);
+        } else {
+          return {
+            isConfirm: false,
+            message: `Le professeur ${professeursNoms[0]} n'est associé à aucun cours du ${jour}`
+          };
+        }
+      } catch (error) {
+        console.error('Erreur lors de la résolution automatique:', error);
+        // Continuer avec la logique normale sans contexte
+      }
+    }
+    
+    // Utiliser la méthode normale si le contexte est fourni ou si la résolution automatique a échoué
+    return this.supprimerProfesseursParNomEtJour(professeursNoms, jour, coursContext);
+  }
+
+  // Nouvelle méthode pour trouver automatiquement le cours contenant un professeur
+  private async trouverCoursAvecProfesseur(professeursNoms: string[], jour: string): Promise<{type_cours: string, heure_debut: string, heure_fin: string} | null> {
+    const joursDeSemaine: Record<string, number> = {
+      lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, 
+      vendredi: 5, samedi: 6, dimanche: 7
+    };
+    const jourNum = joursDeSemaine[jour.toLowerCase()];
+    
+    if (!jourNum) return null;
+    
+    const coursQuery = `
+      SELECT cr.id, cr.type_cours, cr.heure_debut, cr.heure_fin,
+             GROUP_CONCAT(CONCAT(p.prenom, ' ', p.nom) SEPARATOR ', ') as professeurs
+      FROM cours_recurrent cr
+      LEFT JOIN cours_recurrent_professeur crp ON cr.id = crp.cours_recurrent_id
+      LEFT JOIN professeurs p ON crp.professeur_id = p.id
+      WHERE cr.jour_semaine = ?
+      GROUP BY cr.id, cr.type_cours, cr.heure_debut, cr.heure_fin
+    `;
+    
+    return new Promise((resolve, reject) => {
+      this.mysqlConnector.query(coursQuery, [jourNum], (error, results) => {
+        if (error) {
+          reject(error);
+        } else {
+          console.log('📋 Cours trouvés pour ce jour:', results);
+          
+          // Trouver le cours qui contient le professeur à retirer
+          const coursAvecProfesseur = results.find((c: any) => 
+            c.professeurs && c.professeurs.includes(professeursNoms[0])
+          );
+          
+          if (coursAvecProfesseur) {
+            console.log('✅ Cours trouvé automatiquement:', coursAvecProfesseur);
+            resolve({
+              type_cours: coursAvecProfesseur.type_cours,
+              heure_debut: coursAvecProfesseur.heure_debut.substring(0, 5), // Format HH:MM
+              heure_fin: coursAvecProfesseur.heure_fin.substring(0, 5)
+            });
+          } else {
+            console.log('❌ Aucun cours trouvé contenant ce professeur');
+            resolve(null);
+          }
+        }
+      });
+    });
+  }
 }
