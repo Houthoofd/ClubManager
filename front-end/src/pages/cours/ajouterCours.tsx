@@ -203,6 +203,14 @@ const AjouterCoursPage: React.FC = () => {
 
   // Exécution de l'ajout d'un cours
   const executerAjoutCours = async () => {
+    // Validation : Vérifier qu'au moins un professeur est sélectionné
+    if (selectedUsers.length === 0) {
+      setAjoutSuccess(false);
+      setAjoutMessage('Veuillez sélectionner au moins un professeur pour ce cours.');
+      setShowAjoutModal(true);
+      return;
+    }
+
     const coursData = {
       nom,
       type_cours: selectedType,
@@ -211,6 +219,8 @@ const AjouterCoursPage: React.FC = () => {
       heure_fin: heureFin,
       professeurs: selectedUsers.map(u => u.name)
     };
+    
+    console.log("Données du cours à ajouter:", coursData);
     
     try {
       const result = await ajouterCours.mutateAsync(coursData);
@@ -233,6 +243,14 @@ const AjouterCoursPage: React.FC = () => {
   const executerModificationCours = async () => {
     if (!originalCours) return;
 
+    // Validation : Vérifier qu'au moins un professeur est sélectionné
+    if (selectedUsers.length === 0) {
+      setAjoutSuccess(false);
+      setAjoutMessage('Un cours doit avoir au moins un professeur assigné.');
+      setShowAjoutModal(true);
+      return;
+    }
+
     const coursData = {
       nom,
       type_cours: selectedType,
@@ -245,6 +263,8 @@ const AjouterCoursPage: React.FC = () => {
       heure_debut_original: originalCours?.heure_debut ? originalCours.heure_debut.substring(0, 5) : '',
       heure_fin_original: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : '',
     };
+    
+    console.log("Données du cours à modifier:", coursData);
     
     try {
       const result = await modifierCours.mutateAsync(coursData);
@@ -283,12 +303,9 @@ const AjouterCoursPage: React.FC = () => {
     setNom(cours.nom || `${cours.type_cours} - ${cours.jour || cours.jour_semaine}`);
     setSelectedType(cours.type_cours);
 
-    let jourToUse = cours.jour_semaine;
+    let jourToUse = cours.jour_semaine || cours.jour;
     if (!jourToUse && cours.jour_cours) {
       jourToUse = convertJourToFrench(cours.jour_cours);
-    }
-    if (!jourToUse && cours.jour) {
-      jourToUse = cours.jour;
     }
     setJour(jourToUse);
 
@@ -296,6 +313,7 @@ const AjouterCoursPage: React.FC = () => {
     setHeureDebut(safeSubstring(cours.heure_debut || '00:00', 0, 5));
     setHeureFin(safeSubstring(cours.heure_fin || '00:00', 0, 5));
 
+    // Correction : Améliorer la gestion des professeurs
     let profs: { id: number; name: string }[] = [];
     if (Array.isArray(cours.professeurs)) {
       profs = cours.professeurs.map((prof: any, index: number) => {
@@ -304,6 +322,13 @@ const AjouterCoursPage: React.FC = () => {
 
         if (typeof prof === 'string') {
           profName = prof;
+          // Chercher l'ID du professeur dans la liste complète
+          const professeurComplet = professeurs.find(p =>
+            `${p.first_name} ${p.last_name}` === profName ||
+            `${p.prenom} ${p.nom}` === profName ||
+            p.name === profName
+          );
+          profId = professeurComplet?.id || Math.random();
         } else if (prof && typeof prof === 'object') {
           if (prof.prenom && prof.nom) {
             profName = `${prof.prenom} ${prof.nom}`;
@@ -320,19 +345,14 @@ const AjouterCoursPage: React.FC = () => {
           }
         }
 
-        const professeurComplet = professeurs.find(p =>
-          `${p.first_name} ${p.last_name}` === profName ||
-          `${p.prenom} ${p.nom}` === profName ||
-          p.name === profName
-        );
-
         return {
-          id: professeurComplet?.id || profId,
+          id: profId,
           name: profName
         };
-      }).filter(prof => prof.name);
+      }).filter(prof => prof.name && prof.name !== 'Aucun professeur');
     }
 
+    console.log("Professeurs extraits pour modification:", profs);
     setSelectedUsers(profs);
     setIsModifying(true);
     setOriginalCours({ ...cours, jour: jourToUse });
@@ -372,8 +392,15 @@ const AjouterCoursPage: React.FC = () => {
     console.log("Vérification dernier professeur - Professeurs du cours:", cours.professeurs);
     console.log("Nom du professeur à retirer:", professorName);
     
-    // Si il n'y a qu'un seul professeur et c'est celui qu'on veut dissocier
-    return cours.professeurs.length === 1 && cours.professeurs[0] === professorName;
+    // Filtrer les professeurs valides (exclure "Aucun professeur")
+    const professeursValides = cours.professeurs.filter((prof: string) => 
+      prof && prof !== 'Aucun professeur' && prof.trim() !== ''
+    );
+    
+    console.log("Professeurs valides:", professeursValides);
+    
+    // Si il n'y a qu'un seul professeur valide et c'est celui qu'on veut dissocier
+    return professeursValides.length === 1 && professeursValides[0] === professorName;
   };
 
   // Handler pour confirmer la dissociation du dernier professeur
@@ -543,7 +570,9 @@ const AjouterCoursPage: React.FC = () => {
     ...cours,
     heure_debut: cours.heure_debut || '00:00',
     heure_fin: cours.heure_fin || '00:00',
-    professeurs: cours.professeurs && cours.professeurs.length > 0 ? cours.professeurs : ['Aucun professeur'],
+    professeurs: cours.professeurs && cours.professeurs.length > 0 && cours.professeurs[0] !== null 
+      ? cours.professeurs 
+      : ['Aucun professeur'],
   }));
 
   console.log('Données brutes de planningCours:', planningCours);

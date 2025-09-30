@@ -72,43 +72,72 @@ BEGIN
 
     DROP TEMPORARY TABLE temp_weeks;
 
-    -- 6. Association professeurs (version corrigée avec logs debug)
+    -- 6. Association professeurs (CORRECTION MAJEURE)
     SET v_professeur_count = JSON_LENGTH(p_professeurs);
     SET i = 0;
 
     WHILE i < v_professeur_count DO
         SET v_professeur_nom = JSON_UNQUOTE(JSON_EXTRACT(p_professeurs, CONCAT('$[', i, ']')));
-        SET v_professeur_id = NULL; -- Réinitialiser l'ID
+        SET v_professeur_id = NULL;
 
-        -- Recherche par nom complet (prénom + nom)
-        SELECT id INTO v_professeur_id
-        FROM professeurs
-        WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = TRIM(v_professeur_nom)
-        AND status_id = 5  -- S'assurer que c'est bien un professeur actif
+        -- CORRECTION: Rechercher d'abord dans la table `utilisateurs` 
+        -- qui sont promus professeurs (les vrais professeurs)
+        SELECT u.id INTO v_professeur_id
+        FROM utilisateurs u
+        WHERE CONCAT(TRIM(u.first_name), ' ', TRIM(u.last_name)) = TRIM(v_professeur_nom)
+        AND u.status_id = 5  -- Status professeur
         LIMIT 1;
 
-        -- Si pas trouvé par nom complet, essayer par nom seul (fallback)
+        -- Si pas trouvé dans utilisateurs, chercher dans la table professeurs
         IF v_professeur_id IS NULL THEN
-            SELECT id INTO v_professeur_id
-            FROM professeurs
-            WHERE TRIM(nom) = TRIM(v_professeur_nom)
-            AND status_id = 5  -- S'assurer que c'est bien un professeur actif
+            SELECT p.id INTO v_professeur_id
+            FROM professeurs p
+            WHERE CONCAT(TRIM(p.prenom), ' ', TRIM(p.nom)) = TRIM(v_professeur_nom)
+            AND p.status_id = 5
             LIMIT 1;
         END IF;
 
-        IF v_professeur_id IS NOT NULL THEN
-            INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id)
-            VALUES (v_cours_recurrent_id, v_professeur_id);
+        -- Fallback: recherche par nom seul dans utilisateurs
+        IF v_professeur_id IS NULL THEN
+            SELECT u.id INTO v_professeur_id
+            FROM utilisateurs u
+            WHERE TRIM(u.last_name) = TRIM(v_professeur_nom)
+            AND u.status_id = 5
+            LIMIT 1;
         END IF;
 
-        SET i = i + 1; -- Toujours incrémenter pour éviter une boucle infinie
+        -- Fallback: recherche par nom seul dans professeurs
+        IF v_professeur_id IS NULL THEN
+            SELECT p.id INTO v_professeur_id
+            FROM professeurs p
+            WHERE TRIM(p.nom) = TRIM(v_professeur_nom)
+            AND p.status_id = 5
+            LIMIT 1;
+        END IF;
+
+        -- Si on trouve un professeur, l'associer au cours
+        IF v_professeur_id IS NOT NULL THEN
+            -- Vérifier que l'association n'existe pas déjà
+            IF NOT EXISTS (
+                SELECT 1 FROM cours_recurrent_professeur 
+                WHERE cours_recurrent_id = v_cours_recurrent_id 
+                AND professeur_id = v_professeur_id
+            ) THEN
+                INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id)
+                VALUES (v_cours_recurrent_id, v_professeur_id);
+            END IF;
+        END IF;
+
+        SET i = i + 1;
     END WHILE;
 
     -- 7. Commit
     COMMIT;
 
+    -- 8. Vérification finale et message de retour
     SELECT
         v_cours_recurrent_id AS cours_recurrent_id,
-        CONCAT('Succès: ', (SELECT COUNT(*) FROM cours_recurrent_professeur WHERE cours_recurrent_id = v_cours_recurrent_id), ' professeur(s) associé(s)') AS message;
+        (SELECT COUNT(*) FROM cours_recurrent_professeur WHERE cours_recurrent_id = v_cours_recurrent_id) AS professeurs_associes,
+        CONCAT('Cours créé avec succès. ', (SELECT COUNT(*) FROM cours_recurrent_professeur WHERE cours_recurrent_id = v_cours_recurrent_id), ' professeur(s) associé(s)') AS message;
 END //
 DELIMITER ;

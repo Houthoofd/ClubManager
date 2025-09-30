@@ -65,41 +65,40 @@ export const useAjouterCours = () => {
       console.log('Réponse de l\'API pour ajouter un cours:', response);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erreur API:', errorData);
-        throw new Error(errorData.message || 'Erreur lors de l\'ajout du cours');
+        throw new Error('Erreur lors de l\'ajout du cours');
       }
 
-      const result = await response.json();
-      console.log('Données retournées après ajout:', result);
-      return result;
+      return response.json();
     },
-    onSuccess: (data) => {
-      console.log('Succès ajout cours - invalidation des queries', data);
+    onSuccess: async () => {
+      console.log('Succès ajout cours - invalidation complète des queries');
+      
       // Invalider toutes les queries liées aux cours et professeurs
-      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
-      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
-      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
-      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
-      // Invalider également les queries des utilisateurs pour la liste des professeurs
-      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
-      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      await queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+      await queryClient.invalidateQueries({ queryKey: ['cours'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
+      await queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
       
       // Forcer le refetch immédiat des données principales
-      queryClient.refetchQueries({ queryKey: ['joursDeCours'] });
-      queryClient.refetchQueries({ queryKey: ['professeurs'] });
+      await queryClient.refetchQueries({ queryKey: ['joursDeCours'] });
+      await queryClient.refetchQueries({ queryKey: ['professeurs'] });
+      
+      // Attendre que les refetch se terminent
+      await new Promise(resolve => setTimeout(resolve, 1000));
     },
-    onError: (error) => {
-      console.error('Erreur lors de l\'ajout du cours:', error);
-    }
   });
 };
 
 // Hook pour modifier un cours récurrent
 export const useModifierCours = () => {
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: async (modifCours: any) => {
       const response = await fetch(apiUrl('cours/modifier'), {
@@ -114,16 +113,28 @@ export const useModifierCours = () => {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      console.log('Succès modification cours - invalidation complète des queries');
+      
       // Invalider toutes les queries liées aux cours et professeurs
-      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
-      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
-      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
-      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
-      // Invalider également les queries des utilisateurs pour la liste des professeurs
-      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
-      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      await queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+      await queryClient.invalidateQueries({ queryKey: ['cours'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
+      await queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+      
+      // Forcer le refetch immédiat
+      await queryClient.refetchQueries({ queryKey: ['joursDeCours'] });
+      await queryClient.refetchQueries({ queryKey: ['professeurs'] });
+      
+      // Attendre que les refetch se terminent
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   });
 };
@@ -146,16 +157,28 @@ export const useSupprimerCours = () => {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      console.log('Succès suppression cours - invalidation complète des queries');
+      
       // Invalider toutes les queries liées aux cours et professeurs
-      queryClient.invalidateQueries({ queryKey: ['professeurs'] });
-      queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
-      queryClient.invalidateQueries({ queryKey: ['planningCours'] });
-      queryClient.invalidateQueries({ queryKey: ['cours'] });
-      queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
-      // Invalider également les queries des utilisateurs
-      queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
-      queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['professeurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['joursDeCours'] });
+      await queryClient.invalidateQueries({ queryKey: ['planningCours'] });
+      await queryClient.invalidateQueries({ queryKey: ['cours'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursPlanning'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursRecurrents'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursInformations'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursGestion'] });
+      await queryClient.invalidateQueries({ queryKey: ['coursRecurrentProfesseur'] });
+      await queryClient.invalidateQueries({ queryKey: ['utilisateurs'] });
+      await queryClient.invalidateQueries({ queryKey: ['tousLesUtilisateurs'] });
+      
+      // Forcer le refetch immédiat
+      await queryClient.refetchQueries({ queryKey: ['joursDeCours'] });
+      await queryClient.refetchQueries({ queryKey: ['professeurs'] });
+      
+      // Attendre plus longtemps car la suppression est plus complexe
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
   });
 };
