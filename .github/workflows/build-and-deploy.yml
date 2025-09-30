@@ -23,33 +23,10 @@ jobs:
           script: |
             cd /home/***/ClubManager
 
-            echo "🔍 Vérification de la branche actuelle..."
-            git branch -a
-
-            echo "🔄 Configuration Git pour éviter les conflits..."
-            git config pull.rebase false
-
-            echo "🔄 Fetch toutes les branches..."
-            git fetch origin
-
-            echo "🔄 Nettoyage et basculement vers back-up/hosting..."
+            echo "🔄 Pull depuis la branche back-up/hosting..."
             git reset --hard HEAD
             git clean -fd
-            
-            # Créer la branche locale si elle n'existe pas
-            if ! git show-ref --verify --quiet refs/heads/back-up/hosting; then
-                echo "Création de la branche back-up/hosting..."
-                git checkout -b back-up/hosting origin/back-up/hosting
-            else
-                echo "Basculement vers back-up/hosting existante..."
-                git checkout back-up/hosting
-                git reset --hard origin/back-up/hosting
-            fi
-
-            echo "📊 Vérification de la version..."
-            echo "Branche actuelle: $(git branch --show-current)"
-            echo "Dernier commit: $(git rev-parse --short HEAD)"
-            echo "Dernière modification: $(git log -1 --format='%ci')"
+            git pull origin back-up/hosting
 
             echo "🧹 Nettoyage de l'ancien contenu du dossier clubmanager..."
             sudo rm -rf /usr/share/nginx/html/clubmanager
@@ -65,5 +42,6 @@ jobs:
             sudo systemctl restart clubmanager.service
 
             echo "✅ Déploiement terminé avec succès"
-            echo "🎯 Vérification finale..."
-            ls -la | grep test-deploy && echo "✅ Fichier test-deploy.txt trouvé !" || echo "❌ Fichier test-deploy.txt non trouvé"
+            echo "📊 Vérification des logs de déploiement..."
+            echo "Version déployée: $(git rev-parse --short HEAD)"
+            echo "Dernière modification: $(git log -1 --format='%ci')"
