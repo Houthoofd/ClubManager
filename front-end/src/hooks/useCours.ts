@@ -27,7 +27,6 @@ export const useJoursDeCours = () => {
         throw new Error('Erreur lors de la récupération des cours');
       }
       const data = await response.json();
-      console.log('Données récupérées par useJoursDeCours:', data);
       return data;
     },
   });

@@ -56,8 +56,6 @@ const AjouterCoursPage: React.FC = () => {
   const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
   const { data: planningCours = [], isLoading: loadingPlanning } = useJoursDeCours();
 
-  console.log("planningCours:", planningCours);
-  console.log("professeurs:", professeurs);
   const ajouterCours = useAjouterCours();
   const modifierCours = useModifierCours();
   const supprimerCoursRecurrent = useSupprimerCoursRecurrent();
@@ -194,7 +192,6 @@ const AjouterCoursPage: React.FC = () => {
       }
       await executerModificationCours();
     } catch (error: any) {
-      console.error('Erreur lors de la modification du cours:', error);
       setAjoutSuccess(false);
       setAjoutMessage(error?.message || 'Erreur lors de la modification du cours.');
       setShowAjoutModal(true);
@@ -220,11 +217,9 @@ const AjouterCoursPage: React.FC = () => {
       professeurs: selectedUsers.map(u => u.name)
     };
     
-    console.log("Données du cours à ajouter:", coursData);
     
     try {
       const result = await ajouterCours.mutateAsync(coursData);
-      console.log('Résultat ajout cours:', result);
       
       // Attendre un peu pour que les invalidations se propagent
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -359,8 +354,69 @@ const AjouterCoursPage: React.FC = () => {
     setActiveTabKey(0);
   };
 
-  // Ouverture de la modale de dissociation
+  // Fonction pour vérifier si c'est le dernier professeur d'un cours (CORRIGÉE)
+  const isLastProfessorForCourse = (cours: any, professorName: string) => {
+    console.log("🔍 DEBUG - Vérification dernier professeur");
+    console.log("🔍 Cours reçu:", cours);
+    console.log("🔍 Professeur à vérifier:", professorName);
+    
+    if (!cours.professeurs) {
+      console.log("❌ Pas de professeurs dans le cours");
+      return false;
+    }
+    
+    // Gérer le cas où professeurs est une string (un seul professeur)
+    let professeursArray: string[] = [];
+    if (typeof cours.professeurs === 'string') {
+      professeursArray = [cours.professeurs];
+    } else if (Array.isArray(cours.professeurs)) {
+      professeursArray = cours.professeurs;
+    } else {
+      console.log("❌ Format de professeurs non reconnu:", cours.professeurs);
+      return false;
+    }
+    
+    console.log("🔍 Array des professeurs:", professeursArray);
+    
+    // Filtrer les professeurs valides (exclure "Aucun professeur", null, undefined, chaînes vides)
+    const professeursValides = professeursArray.filter((prof: any) => {
+      if (!prof) return false;
+      if (typeof prof !== 'string') return false;
+      const profTrimmed = prof.trim();
+      return profTrimmed !== '' && 
+             profTrimmed !== 'Aucun professeur' && 
+             profTrimmed !== 'null' && 
+             profTrimmed !== 'undefined';
+    });
+    
+    console.log("🔍 Professeurs valides filtrés:", professeursValides);
+    console.log("🔍 Nombre de professeurs valides:", professeursValides.length);
+    
+    // Vérifier si le professeur à dissocier est dans la liste
+    const professeurTrouve = professeursValides.some((prof: string) => {
+      const profNormalized = prof.trim().toLowerCase();
+      const professorNameNormalized = professorName.trim().toLowerCase();
+      console.log(`🔍 Comparaison: "${profNormalized}" === "${professorNameNormalized}" ?`, profNormalized === professorNameNormalized);
+      return profNormalized === professorNameNormalized;
+    });
+    
+    console.log("🔍 Professeur trouvé dans la liste:", professeurTrouve);
+    
+    // C'est le dernier professeur SI:
+    // 1. Il n'y a qu'un seul professeur valide ET
+    // 2. Ce professeur est celui qu'on veut dissocier
+    const isLast = professeursValides.length === 1 && professeurTrouve;
+    
+    console.log("🔍 RÉSULTAT - Est le dernier professeur:", isLast);
+    console.log("🔍 Logique: professeursValides.length === 1 &&", professeursValides.length === 1);
+    console.log("🔍 Logique: professeurTrouve &&", professeurTrouve);
+    
+    return isLast;
+  };
+
+  // Ouverture de la modale de dissociation (AMÉLIORÉE avec enrichissement des données)
   const ouvrirModalDissociation = (professeurOuCours: any, prof?: string) => {
+    console.log("🔍 === DÉBUT DISSOCIATION ===");
     console.log("🔍 Données reçues pour dissociation:", { professeurOuCours, prof });
     
     let cours: any;
@@ -371,10 +427,12 @@ const AjouterCoursPage: React.FC = () => {
       // Format: ouvrirModalDissociation(cours, professeurName)
       cours = professeurOuCours;
       professeurName = prof;
+      console.log("✅ Format détecté: (cours, professeurName)");
     } else if (professeurOuCours?.prof?.name && professeurOuCours?.cours) {
       // Format: ouvrirModalDissociation({prof: {name: "..."}, cours: {...}})
       cours = professeurOuCours.cours;
       professeurName = professeurOuCours.prof.name;
+      console.log("✅ Format détecté: {prof: {name}, cours: {}}");
     } else {
       console.error("❌ Format de données invalide pour la dissociation:", professeurOuCours);
       setResultModalMessage("Erreur: Données de dissociation invalides.");
@@ -384,7 +442,33 @@ const AjouterCoursPage: React.FC = () => {
     }
     
     console.log("✅ Cours identifié:", cours);
-    console.log("✅ Professeur identifié:", professeurName);
+    console.log("✅ Professeur identifié:", `"${professeurName}"`);
+    
+    // 🎯 ENRICHISSEMENT: Récupérer les professeurs du cours depuis planningCours
+    if (!cours.professeurs && planningCours) {
+      const coursComplet = planningCours.find(c => 
+        c.type_cours === cours.type_cours && 
+        c.jour === cours.jour && 
+        c.heure_debut === cours.heure_debut && 
+        c.heure_fin === cours.heure_fin
+      );
+      
+      if (coursComplet && coursComplet.professeurs) {
+        cours.professeurs = coursComplet.professeurs;
+        console.log("✅ Professeurs enrichis depuis planningCours:", cours.professeurs);
+      } else {
+        console.log("⚠️ Cours complet non trouvé dans planningCours, recherche par jour uniquement");
+        const coursParJour = planningCours.find(c => 
+          c.jour === cours.jour && c.type_cours === cours.type_cours
+        );
+        if (coursParJour && coursParJour.professeurs) {
+          cours.professeurs = coursParJour.professeurs;
+          console.log("✅ Professeurs enrichis par jour:", cours.professeurs);
+        } else {
+          console.log("❌ Impossible d'enrichir les professeurs");
+        }
+      }
+    }
     
     // Validation des données
     if (!professeurName || professeurName.trim() === '') {
@@ -403,11 +487,16 @@ const AjouterCoursPage: React.FC = () => {
       return;
     }
     
-    // Vérifier si c'est le dernier professeur
+    // Vérifier si c'est le dernier professeur (avec debug amélioré)
+    console.log("🔍 === VÉRIFICATION DERNIER PROFESSEUR ===");
+    console.log("🔍 Cours avec professeurs enrichis:", cours);
     const isLast = isLastProfessorForCourse(cours, professeurName);
+    console.log("🔍 === RÉSULTAT FINAL ===");
+    console.log(`🔍 Est le dernier professeur: ${isLast ? '✅ OUI' : '❌ NON'}`);
     
     if (isLast) {
       // C'est le dernier professeur - afficher l'avertissement spécial
+      console.log("🚨 ACTIVATION LastProfessorWarningModal");
       setPendingLastProfessorDissociation({ 
         cours: { ...cours, jour: cours.jour_semaine || cours.jour }, 
         prof: { name: professeurName }, 
@@ -416,30 +505,15 @@ const AjouterCoursPage: React.FC = () => {
       setShowLastProfessorWarning(true);
     } else {
       // Dissociation normale
+      console.log("👍 ACTIVATION Modal normale");
       setProfesseurADissocier({
         cours: { ...cours, jour: cours.jour_semaine || cours.jour },
         prof: { name: professeurName }
       });
       setIsModalOpen(true);
     }
-  };
-
-  // Fonction pour vérifier si c'est le dernier professeur d'un cours
-  const isLastProfessorForCourse = (cours: any, professorName: string) => {
-    if (!cours.professeurs || cours.professeurs.length === 0) return false;
     
-    console.log("Vérification dernier professeur - Professeurs du cours:", cours.professeurs);
-    console.log("Nom du professeur à retirer:", professorName);
-    
-    // Filtrer les professeurs valides (exclure "Aucun professeur")
-    const professeursValides = cours.professeurs.filter((prof: string) => 
-      prof && prof !== 'Aucun professeur' && prof.trim() !== ''
-    );
-    
-    console.log("Professeurs valides:", professeursValides);
-    
-    // Si il n'y a qu'un seul professeur valide et c'est celui qu'on veut dissocier
-    return professeursValides.length === 1 && professeursValides[0] === professorName;
+    console.log("🔍 === FIN DISSOCIATION ===");
   };
 
   // Confirmation de la dissociation (normale)
@@ -492,7 +566,7 @@ const AjouterCoursPage: React.FC = () => {
       // Fermer la modal de confirmation
       setIsModalOpen(false);
       setProfesseurADissocier(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la dissociation du professeur:', error);
       setResultModalMessage(error?.message || "Erreur lors de la dissociation du professeur.");
       setResultModalSuccess(false);
@@ -567,7 +641,7 @@ const AjouterCoursPage: React.FC = () => {
     }
   };
 
-  // Vérifiez si les données sont en cours de chargement ou non disponibles
+  // Vérification si les données sont en cours de chargement ou non disponibles
   const isLoadingData = loadingProfesseurs || loadingPlanning || !planningCours || !professeurs;
   const [isDataReady, setIsDataReady] = useState(false);
 
@@ -580,7 +654,6 @@ const AjouterCoursPage: React.FC = () => {
   }, [loadingProfesseurs, loadingPlanning, planningCours, professeurs]);
 
   if (!isDataReady) {
-    console.log('Chargement des données en cours...');
     return (
       <PageSection>
         <div style={{
@@ -609,9 +682,6 @@ const AjouterCoursPage: React.FC = () => {
       : ['Aucun professeur'],
   }));
 
-  console.log('Données brutes de planningCours:', planningCours);
-  console.log('Données filtrées de planningCours:', filteredPlanningCours);
-  console.log('Données normalisées de planningCours:', normalizedPlanningCours);
 
   const coursList = normalizedPlanningCours.length > 0 ? normalizedPlanningCours.map((cours, index) => (
     <div key={index}>
