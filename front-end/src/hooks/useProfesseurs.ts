@@ -155,13 +155,31 @@ export const useRetirerProfesseursDuCours = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ professeursNoms, jour }: { professeursNoms: string[], jour: string }) => {
+    mutationFn: async ({ 
+      professeursNoms, 
+      jour, 
+      type_cours, 
+      heure_debut, 
+      heure_fin 
+    }: { 
+      professeursNoms: string[], 
+      jour: string,
+      type_cours?: string,
+      heure_debut?: string,
+      heure_fin?: string
+    }) => {
       const response = await fetch(apiUrl('cours/retirer-professeur'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ professeursNoms, jour }),
+        body: JSON.stringify({ 
+          professeursNoms, 
+          jour, 
+          type_cours, 
+          heure_debut, 
+          heure_fin 
+        }),
         credentials: 'include',
       });
 
