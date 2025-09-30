@@ -92,13 +92,17 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
       return;
     }
 
+    // Ajouter une validation pour le montant minimum Stripe
+    if (totalAmount < 0.50) {
+      showError('Montant insuffisant', 'Le montant minimum pour un paiement Stripe est de 0.50€.');
+      return;
+    }
+
     console.log('✅ Toutes les vérifications passées, envoi du paiement...');
 
-    const amountInCents = totalAmount * 100;
-    const utilisateurId = (commande as any).utilisateur_id;
+    const amountInCents = Math.round(totalAmount * 100); // Arrondir pour éviter les décimales
 
     try {
-      // ✅ 1. Créer le paiement avec le hook
       let paiementData: any;
 
       switch (paymentMethod) {
@@ -134,6 +138,7 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
       }
 
       console.log('Données de paiement à envoyer:', paiementData);
+      console.log('Montant en centimes:', amountInCents);
 
       // Utiliser le hook pour créer le paiement
       const response = await creerPaiement.mutateAsync(paiementData);
