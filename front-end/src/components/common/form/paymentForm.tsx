@@ -101,6 +101,7 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
     console.log('✅ Toutes les vérifications passées, envoi du paiement...');
 
     const amountInCents = Math.round(totalAmount * 100); // Arrondir pour éviter les décimales
+    const utilisateurId = (commande as any).utilisateur_id; // Déclarer la variable ici
 
     try {
       let paiementData: any;
@@ -133,7 +134,7 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
           };
           break;
         default:
-          alert('Méthode de paiement non reconnue.');
+          showError('Méthode non reconnue', 'Méthode de paiement non reconnue.');
           return;
       }
 
