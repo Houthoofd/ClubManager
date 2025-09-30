@@ -55,6 +55,8 @@ const StripeForm = ({ clientSecret, onClose, totalAmount }: StripeFormProps) => 
             console.error('Erreur lors du traitement de la commande:', error);
             setPaymentStatus('Paiement réussi, mais erreur lors du traitement de la commande');
           }
+        } else if (paymentIntent.status === 'requires_action') {
+          setPaymentStatus('Redirection vers votre banque...');
         } else {
           setPaymentStatus(`Statut du paiement: ${paymentIntent.status}`);
         }

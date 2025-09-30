@@ -81,8 +81,7 @@ router.post('/bancontact', async (req, res) => {
       amount,
       currency,
       payment_method_types: ['bancontact'],
-      confirmation_method: 'automatic',
-      return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/magasin/success`,
+      // Supprimer return_url et confirmation_method pour créer d'abord le PaymentIntent
       metadata: {
         utilisateur_id: finalUserId.toString(),
         commande_data: JSON.stringify(commande)
