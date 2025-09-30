@@ -26,7 +26,7 @@ jobs:
             echo "🔄 Pull depuis la branche hosting..."
             git reset --hard HEAD
             git clean -fd
-            git pull origin release/hosting-v2
+            git pull origin back-up/hosting
 
             echo "🧹 Nettoyage de l'ancien contenu du dossier clubmanager..."
             sudo rm -rf /usr/share/nginx/html/clubmanager

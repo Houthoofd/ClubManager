@@ -15,23 +15,92 @@ export const usePaiements = () => {
   });
 };
 
-// Hook pour créer un paiement
+// Hook pour créer un paiement avec différentes méthodes
 export const useCreerPaiement = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (paiementData: any) => {
-      const response = await fetch(apiUrl('paiements'), {
+      let endpoint = 'paiements';
+      
+      // Déterminer l'endpoint en fonction de la méthode de paiement
+      if (paiementData.payment_method) {
+        switch (paiementData.payment_method) {
+          case 'bancontact':
+            endpoint = 'paiements/bancontact';
+            break;
+          case 'paypal':
+            endpoint = 'paiements/paypal';
+            break;
+          case 'bitcoin':
+            endpoint = 'paiements/bitcoin';
+            break;
+          default:
+            endpoint = 'paiements';
+        }
+      }
+
+      const response = await fetch(apiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(paiementData),
         credentials: 'include',
       });
-      if (!response.ok) throw new Error('Erreur lors de la création du paiement');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors de la création du paiement');
+      }
+      
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paiements'] });
+      queryClient.invalidateQueries({ queryKey: ['commandes'] });
+    }
+  });
+};
+
+// Hook pour créer une commande avec paiement
+export const useCreerCommandeAvecPaiement = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ commande, paiementData }: { commande: any; paiementData: any }) => {
+      // 1. Créer la commande
+      const commandeResponse = await fetch(apiUrl('magasin/commandes/ajouter'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commande),
+        credentials: 'include',
+      });
+
+      if (!commandeResponse.ok) {
+        throw new Error("Échec lors de l'enregistrement de la commande");
+      }
+
+      const commandeResult = await commandeResponse.json();
+
+      // 2. Créer le paiement
+      const paiementResponse = await fetch(apiUrl(`paiements/${paiementData.payment_method}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...paiementData,
+          commande_id: commandeResult.id
+        }),
+        credentials: 'include',
+      });
+
+      if (!paiementResponse.ok) {
+        throw new Error("Échec lors du traitement du paiement");
+      }
+
+      return paiementResponse.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paiements'] });
+      queryClient.invalidateQueries({ queryKey: ['commandes'] });
     }
   });
 };

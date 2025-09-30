@@ -8,45 +8,63 @@ type StripeFormProps = {
   clientSecret: string; // obligatoire ici
 };
 
-const StripeForm = ({ totalAmount, clientSecret }: StripeFormProps) => {
+const StripeForm = ({ clientSecret, onClose, totalAmount }: StripeFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string>('');
 
-  console.log("stripeForm rendered")
-  console.log(clientSecret)
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-
-    setIsProcessing(true);
-
-    // Étape 1 : submit les éléments pour valider le formulaire
-    const submitResult = await elements.submit();
-    if (submitResult.error) {
-      setMessage(submitResult.error.message || 'Erreur lors de la validation du formulaire.');
-      setIsProcessing(false);
+    if (!stripe || !elements) {
       return;
     }
 
-    // Étape 2 : confirmer le paiement
-    const { error } = await stripe.confirmPayment({
-      elements,
-      clientSecret, // clé secrète venant du serveur
-      confirmParams: {
-        return_url: window.location.origin + '/success',
-      },
-    });
+    setIsProcessing(true);
 
-    if (error) {
-      setMessage(error.message || 'Erreur lors du paiement.');
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        console.error('Erreur de paiement:', error);
+        setPaymentStatus(`Erreur: ${error.message}`);
+      } else if (paymentIntent) {
+        console.log('PaymentIntent confirmé:', paymentIntent);
+        
+        // Pour les paiements de test, on peut simuler le traitement
+        if (paymentIntent.status === 'succeeded') {
+          setPaymentStatus('Paiement réussi ! Traitement de la commande en cours...');
+          
+          // Simuler le traitement de la commande (optionnel pour les tests)
+          try {
+            await fetch('/api/paiements/test/confirm-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+              credentials: 'include',
+            });
+            
+            setPaymentStatus('Paiement et commande traités avec succès !');
+            setTimeout(() => onClose(), 2000);
+          } catch (error) {
+            console.error('Erreur lors du traitement de la commande:', error);
+            setPaymentStatus('Paiement réussi, mais erreur lors du traitement de la commande');
+          }
+        } else {
+          setPaymentStatus(`Statut du paiement: ${paymentIntent.status}`);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur inattendue:', error);
+      setPaymentStatus('Erreur inattendue lors du paiement');
     }
 
     setIsProcessing(false);
   };
-
 
   return (
   <>
@@ -68,7 +86,7 @@ const StripeForm = ({ totalAmount, clientSecret }: StripeFormProps) => {
         >
           {isProcessing ? 'Traitement...' : 'Payer'}
         </Button>
-        {message && <div style={{ color: 'red', marginTop: '10px' }}>{message}</div>}
+        {paymentStatus && <div style={{ color: 'red', marginTop: '10px' }}>{paymentStatus}</div>}
       </form>
     )}
   </>

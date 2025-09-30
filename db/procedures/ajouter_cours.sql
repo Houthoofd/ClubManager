@@ -72,8 +72,9 @@ BEGIN
 
     DROP TEMPORARY TABLE temp_weeks;
 
-    -- 6. Association professeurs (version corrigée)
+    -- 6. Association professeurs (version corrigée avec logs debug)
     SET v_professeur_count = JSON_LENGTH(p_professeurs);
+    SET i = 0;
 
     WHILE i < v_professeur_count DO
         SET v_professeur_nom = JSON_UNQUOTE(JSON_EXTRACT(p_professeurs, CONCAT('$[', i, ']')));
@@ -83,6 +84,7 @@ BEGIN
         SELECT id INTO v_professeur_id
         FROM professeurs
         WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) = TRIM(v_professeur_nom)
+        AND status_id = 5  -- S'assurer que c'est bien un professeur actif
         LIMIT 1;
 
         -- Si pas trouvé par nom complet, essayer par nom seul (fallback)
@@ -90,17 +92,16 @@ BEGIN
             SELECT id INTO v_professeur_id
             FROM professeurs
             WHERE TRIM(nom) = TRIM(v_professeur_nom)
+            AND status_id = 5  -- S'assurer que c'est bien un professeur actif
             LIMIT 1;
         END IF;
 
         IF v_professeur_id IS NOT NULL THEN
             INSERT INTO cours_recurrent_professeur (cours_recurrent_id, professeur_id)
             VALUES (v_cours_recurrent_id, v_professeur_id);
-            SET i = i + 1; -- Incrémenter seulement si un professeur a été trouvé et ajouté
-        ELSE
-            -- Log d'erreur pour debug (optionnel)
-            SET i = i + 1; -- Continuer même si le professeur n'est pas trouvé
         END IF;
+
+        SET i = i + 1; -- Toujours incrémenter pour éviter une boucle infinie
     END WHILE;
 
     -- 7. Commit

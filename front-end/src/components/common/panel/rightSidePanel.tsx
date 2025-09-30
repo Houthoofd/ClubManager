@@ -19,7 +19,9 @@ import {
   MenuToggle,
   Modal
 } from '@patternfly/react-core';
-import PaymentForm from '../form/paymentForm';
+import PaymentForm from '../../common/form/paymentForm';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../../redux/store';
 // Import des types (à ajuster selon ton arborescence)
 import type { Article, Taille } from '@clubmanager/types';
 
@@ -48,6 +50,8 @@ const RightSidePanel = ({
   const [localArticles, setLocalArticles] = useState<Article[]>(articles);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [commande, setCommande] = useState<any>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const user = useSelector((state: RootState) => state.auth.user);
 
 
   useEffect(() => {
@@ -131,19 +135,22 @@ const RightSidePanel = ({
     article_id: Number(article.id),
     quantite: Number(article.quantite),
     prix: Number(article.prix),
-    taille: article.taille ?? undefined,  // taille reste string ou undefined
+    taille: article.taille ?? undefined,
   }));
 
   const total = articles.reduce((acc, article) => acc + article.prix * article.quantite, 0);
 
   const nouvelleCommande = {
-    utilisateur_id,
+    utilisateur_id, // S'assurer que c'est bien défini
     articles,
     total: Number(total.toFixed(2)),
     statut: 'en_attente',
     date: new Date().toISOString(),
   };
-  console.log('Commande à envoyer:', nouvelleCommande);
+  
+  console.log('Commande créée avec utilisateur_id:', nouvelleCommande.utilisateur_id);
+  console.log('Commande complète:', nouvelleCommande);
+  
   setCommande(nouvelleCommande);
   setIsPaymentModalOpen(true);
 };
@@ -185,6 +192,49 @@ const RightSidePanel = ({
     setSelectedTaille(null);
     setQuantiteTemp(1);
     setIsSelectOpen(false);
+  };
+
+  // Calculer le total du panier
+  const calculerTotal = () => {
+    return articles.reduce((total, article) => {
+      return total + (article.prix * (article.quantite || 1));
+    }, 0);
+  };
+
+  // Créer l'objet commande pour le paiement
+  const creerCommande = () => {
+    return {
+      utilisateur_id: user?.id,
+      articles: articles.map(article => ({
+        article_id: article.id,
+        nom: article.nom,
+        prix: article.prix,
+        quantite: article.quantite || 1,
+        taille: article.taille
+      })),
+      total: calculerTotal(),
+      date_commande: new Date().toISOString()
+    };
+  };
+
+  // Gérer le passage au paiement
+  const handleProceedToPayment = () => {
+    if (articles.length === 0) {
+      alert('Votre panier est vide');
+      return;
+    }
+    
+    if (!user) {
+      alert('Vous devez être connecté pour effectuer un achat');
+      return;
+    }
+
+    setShowPaymentForm(true);
+  };
+
+  // Fermer le formulaire de paiement
+  const handleClosePayment = () => {
+    setShowPaymentForm(false);
   };
 
   return (
@@ -534,7 +584,7 @@ const RightSidePanel = ({
         </DrawerContentBody>
       </DrawerContent>
 
-      {/* Modal de paiement */}
+      {/* Modal de paiement - Correction des props */}
       <Modal
         variant="large"
         title="Finaliser votre commande"
@@ -543,12 +593,9 @@ const RightSidePanel = ({
       >
         {commande && (
           <PaymentForm
+            totalAmount={commande.total}
             commande={commande}
-            onSuccess={() => {
-              setIsPaymentModalOpen(false);
-              onClose();
-            }}
-            onCancel={() => setIsPaymentModalOpen(false)}
+            onClose={() => setIsPaymentModalOpen(false)}
           />
         )}
       </Modal>
@@ -557,3 +604,4 @@ const RightSidePanel = ({
 };
 
 export default RightSidePanel;
+

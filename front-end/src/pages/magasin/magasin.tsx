@@ -20,12 +20,14 @@ import {
 import React from 'react';
 import { PageSection } from '@patternfly/react-core';
 import { PageHeader } from '../../components/common/PageHeader';
+import { useNavigate } from 'react-router-dom';
 
 // Import des types
 import type { Article } from '@clubmanager/types';
 
 const MagasinPage: React.FC = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const panier = useSelector((state: RootState) => state.panier.articles);
   const isPanelOpen = useSelector((state: RootState) => state.panier.isOpen);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -92,6 +94,11 @@ const MagasinPage: React.FC = () => {
     }
   }, [isInfoModalOpen, selectedArticle]);
 
+  // Fonction pour aller au checkout
+  const allerAuCheckout = () => {
+    navigate('/pages/magasin/checkout');
+  };
+
   if (loadingArticles || loadingCategories) {
     return (
       <div className="store-page">
@@ -149,6 +156,7 @@ const MagasinPage: React.FC = () => {
           onRemoveArticle={supprimerDuPanier}
           onUpdateTaille={changerTailleArticle}
           onUpdateQuantite={changerQuantiteArticle}
+          onCheckout={allerAuCheckout} // Garde l'ancien système si besoin
         >
           <div className="main-content-scrollable">
             <CatalogueMagasin

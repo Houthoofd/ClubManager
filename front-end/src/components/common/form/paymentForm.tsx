@@ -1,15 +1,14 @@
 import React from 'react';
-import { Radio, Stack, Button, Title } from '@patternfly/react-core';
+import { Radio, Stack, Button, Title, Alert } from '@patternfly/react-core';
 import { CreditCardIcon, PaypalIcon, BitcoinIcon } from '@patternfly/react-icons';
 import StripeForm from './stripeForm';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { useCreerPaiement } from '../../../hooks/usePaiements';
+import { apiUrl } from '../../../pages/apiUrl';
 import type { Commande } from '@clubmanager/types';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-
-
-
 
 // Composant pour le formulaire PayPal
 const PayPalForm = () => (
@@ -43,15 +42,11 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
   const [clientSecret, setClientSecret] = React.useState<string | null>(null);
   const [stripeOptions, setStripeOptions] = React.useState<any | null>(null);
 
+  // Utilisation du hook usePaiements
+  const creerPaiement = useCreerPaiement();
 
-  console.log(totalAmount)
-
-  const paymentEndpoints = {
-    bancontact: 'http://localhost:3000/paiements/bancontact',
-    paypal: 'http://localhost:3000/paiements/paypal',
-    bitcoin: 'http://localhost:3000/paiements/bitcoin',
-  };
-
+  console.log('Commande reçue dans PaymentForm:', commande);
+  console.log('Total amount:', totalAmount);
 
   const onPayement = async () => {
     if (!paymentMethod || !totalAmount) {
@@ -59,73 +54,77 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
       return;
     }
 
-    const amountInCents = totalAmount * 100;
-
-    let body: any;
-
-    switch (paymentMethod) {
-      case 'bancontact':
-        body = { amount: amountInCents, currency: 'eur' };
-        break;
-      case 'paypal':
-        body = { totalAmount: amountInCents, userId: commande };
-        break;
-      case 'bitcoin':
-        body = { sats: amountInCents / 100000000 };
-        break;
-      default:
-        alert('Méthode de paiement non reconnue.');
-        return;
+    // Vérifier que nous avons un utilisateur_id
+    if (!commande.utilisateur_id) {
+      alert('Erreur: utilisateur non identifié. Veuillez vous reconnecter.');
+      return;
     }
 
-    const endpoint = paymentEndpoints[paymentMethod];
+    const amountInCents = totalAmount * 100;
 
     try {
-      // ✅ 1. Envoyer la commande (contenant déjà userId)
-      const commandeResponse = await fetch('http://localhost:3000/magasin/commandes/ajouter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(commande),
-      });
+      // ✅ 1. Créer le paiement avec le hook
+      let paiementData: any;
 
-      if (!commandeResponse.ok) {
-        throw new Error("Échec lors de l'enregistrement de la commande");
+      switch (paymentMethod) {
+        case 'bancontact':
+          paiementData = {
+            amount: amountInCents,
+            currency: 'eur',
+            payment_method: 'bancontact',
+            commande: commande,
+            utilisateur_id: commande.utilisateur_id // S'assurer que l'utilisateur_id est inclus
+          };
+          break;
+        case 'paypal':
+          paiementData = {
+            totalAmount: amountInCents,
+            payment_method: 'paypal',
+            userId: commande.utilisateur_id,
+            commande: commande,
+            utilisateur_id: commande.utilisateur_id
+          };
+          break;
+        case 'bitcoin':
+          paiementData = {
+            sats: amountInCents / 100000000,
+            payment_method: 'bitcoin',
+            commande: commande,
+            utilisateur_id: commande.utilisateur_id
+          };
+          break;
+        default:
+          alert('Méthode de paiement non reconnue.');
+          return;
       }
 
-      // ✅ 2. Effectuer le paiement
-      const paiementResponse = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      console.log('Données de paiement à envoyer:', paiementData);
 
-      const data = await paiementResponse.json();
-      console.log('Réponse du serveur :', data);
+      // Utiliser le hook pour créer le paiement
+      const response = await creerPaiement.mutateAsync(paiementData);
+      console.log('Réponse du serveur :', response);
 
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret);
+      if (response.clientSecret) {
+        setClientSecret(response.clientSecret);
         setStripeOptions({
-          clientSecret: data.clientSecret,
+          clientSecret: response.clientSecret,
           appearance: { theme: 'stripe' },
         });
-      } else if (data.url) {
-        window.location.href = data.url;
+      } else if (response.url) {
+        window.location.href = response.url;
       } else {
-        console.error("Réponse inattendue du serveur :", data);
+        console.error("Réponse inattendue du serveur :", response);
         alert("Aucune information de paiement reçue.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors du paiement :', error);
-      alert('Erreur lors du paiement.');
+      alert(`Erreur lors du paiement : ${error.message}`);
     }
   };
 
-
   console.log(clientSecret)
 
-
-
-  const handlePaymentMethodChange = (method:PaymentMethod) => {
+  const handlePaymentMethodChange = (method: PaymentMethod) => {
     setPaymentMethod(method);
   };
 
@@ -142,6 +141,18 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
       <Title headingLevel="h2" style={{ marginBottom: '30px', textAlign: 'center', color: '#333' }}>
         Choisissez votre moyen de paiement
       </Title>
+
+      {/* Affichage des erreurs du hook */}
+      {creerPaiement.isError && (
+        <Alert 
+          variant="danger" 
+          title="Erreur de paiement" 
+          isInline 
+          style={{ marginBottom: '20px' }}
+        >
+          {creerPaiement.error?.message || 'Erreur lors du traitement du paiement'}
+        </Alert>
+      )}
 
       <Stack hasGutter>
         <div style={{
@@ -213,10 +224,10 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
 
       <div style={{ marginTop: '30px', textAlign: 'center' }}>
         {paymentMethod === 'bancontact' && clientSecret && stripeOptions && (
-  <Elements stripe={stripePromise} options={stripeOptions}>
-    <StripeForm clientSecret={clientSecret} onClose={onClose} totalAmount={totalAmount} />
-  </Elements>
-)}
+          <Elements stripe={stripePromise} options={stripeOptions}>
+            <StripeForm clientSecret={clientSecret} onClose={onClose} totalAmount={totalAmount} />
+          </Elements>
+        )}
         {paymentMethod === 'paypal' && <PayPalForm />}
         {paymentMethod === 'bitcoin' && <BitcoinForm />}
 
@@ -233,9 +244,11 @@ const PaymentForm = ({ totalAmount, onClose, commande }: PaymentFormProps) => {
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
             marginTop: '20px'
           }}
-          onClick={() => onPayement()}
+          onClick={onPayement}
+          isLoading={creerPaiement.isPending}
+          isDisabled={creerPaiement.isPending}
         >
-          Payer
+          {creerPaiement.isPending ? 'Traitement...' : 'Payer'}
         </Button>
       </div>
     </div>
