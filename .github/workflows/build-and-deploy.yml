@@ -42,3 +42,6 @@ jobs:
             sudo systemctl restart clubmanager.service
 
             echo "✅ Déploiement terminé avec succès"
+            echo "📊 Vérification des logs de déploiement..."
+            echo "Version déployée: $(git rev-parse --short HEAD)"
+            echo "Dernière modification: $(git log -1 --format='%ci')"
