@@ -952,8 +952,8 @@ export class Cours {
             });
         });
     }
-    // Supprimer des professeurs par nom et jour
-    supprimerProfesseursParNomEtJour(professeursNoms, jour) {
+    // Supprimer des professeurs par nom et jour avec plus de spécificité
+    supprimerProfesseursParNomEtJour(professeursNoms, jour, coursContext) {
         return new Promise((resolve, reject) => {
             const joursDeSemaine = {
                 lundi: 1, mardi: 2, mercredi: 3, jeudi: 4,
@@ -965,41 +965,62 @@ export class Cours {
                 return;
             }
             console.log(`🔍 Debug suppression - Jour: ${jour} (${jourNum}), Professeurs à retirer:`, professeursNoms);
-            // Vérification préalable : quels professeurs existent ?
-            const debugSql = `
-        SELECT id, nom, prenom, CONCAT(TRIM(prenom), ' ', TRIM(nom)) as nom_complet, status_id 
-        FROM professeurs 
-        WHERE status_id = 5
-      `;
-            this.mysqlConnector.query(debugSql, [], (debugError, debugResults) => {
-                if (!debugError) {
-                    console.log("🔍 Professeurs disponibles en base:");
-                    debugResults.forEach((prof) => {
-                        console.log(`  - ID: ${prof.id}, Nom complet: "${prof.nom_complet}" (${prof.prenom} ${prof.nom})`);
-                    });
-                    console.log("🔍 Comparaison avec les noms à retirer:");
-                    professeursNoms.forEach(nomARetirer => {
-                        const found = debugResults.find((prof) => prof.nom_complet === nomARetirer);
-                        console.log(`  - "${nomARetirer}" -> ${found ? `✅ Trouvé (ID: ${found.id})` : '❌ NON TROUVÉ'}`);
-                    });
+            console.log(`🔍 Contexte cours:`, coursContext);
+            // Construire la requête pour trouver le bon cours récurrent
+            let coursQuery = 'SELECT id, type_cours, heure_debut, heure_fin FROM cours_recurrent WHERE jour_semaine = ?';
+            let coursParams = [jourNum];
+            if (coursContext?.type_cours) {
+                coursQuery += ' AND type_cours = ?';
+                coursParams.push(coursContext.type_cours);
+            }
+            if (coursContext?.heure_debut) {
+                coursQuery += ' AND TIME_FORMAT(heure_debut, "%H:%i") = ?';
+                coursParams.push(coursContext.heure_debut);
+            }
+            if (coursContext?.heure_fin) {
+                coursQuery += ' AND TIME_FORMAT(heure_fin, "%H:%i") = ?';
+                coursParams.push(coursContext.heure_fin);
+            }
+            console.log(`🔍 Requête cours récurrent:`, coursQuery, coursParams);
+            this.mysqlConnector.query(coursQuery, coursParams, (error, results) => {
+                if (error) {
+                    reject(error);
                 }
-                // Continuer avec la logique normale après le debug
-                this.mysqlConnector.query('SELECT id FROM cours_recurrent WHERE jour_semaine = ? LIMIT 1', [jourNum], (error, results) => {
-                    if (error) {
-                        reject(error);
-                    }
-                    else if (results.length === 0) {
-                        reject(new Error('Cours récurrent non trouvé'));
-                    }
-                    else {
-                        const coursRecurrentId = results[0].id;
-                        console.log(`🔍 Cours récurrent trouvé - ID: ${coursRecurrentId}`);
-                        // Récupérer les IDs des professeurs à retirer avec plusieurs stratégies
+                else if (results.length === 0) {
+                    reject(new Error('Cours récurrent non trouvé avec les critères fournis'));
+                }
+                else if (results.length > 1) {
+                    console.log('🔍 Plusieurs cours trouvés:', results);
+                    // Si plusieurs cours, prendre le premier ou demander plus de précision
+                    resolve({
+                        isConfirm: false,
+                        message: `Plusieurs cours trouvés pour ${jour}. Veuillez être plus spécifique.`
+                    });
+                    return;
+                }
+                else {
+                    const coursRecurrent = results[0];
+                    console.log(`🔍 Cours récurrent trouvé:`, coursRecurrent);
+                    // DEBUG: Vérifier les associations existantes pour ce cours spécifique
+                    this.mysqlConnector.query(`SELECT crp.professeur_id, p.prenom, p.nom, CONCAT(TRIM(p.prenom), ' ', TRIM(p.nom)) as nom_complet
+             FROM cours_recurrent_professeur crp 
+             JOIN professeurs p ON crp.professeur_id = p.id 
+             WHERE crp.cours_recurrent_id = ?`, [coursRecurrent.id], (assocError, assocResults) => {
+                        if (!assocError) {
+                            console.log(`🔍 Professeurs actuellement associés au cours ${coursRecurrent.type_cours} ${coursRecurrent.heure_debut}-${coursRecurrent.heure_fin}:`);
+                            if (assocResults.length === 0) {
+                                console.log("  ❌ Aucun professeur associé à ce cours !");
+                            }
+                            else {
+                                assocResults.forEach((assoc) => {
+                                    console.log(`  - ID: ${assoc.professeur_id}, Nom: "${assoc.nom_complet}"`);
+                                });
+                            }
+                        }
+                        // Continuer avec la suppression
                         const searchQueries = [
-                            // Stratégie 1: Prenom Nom
-                            `SELECT id, CONCAT(TRIM(prenom), ' ', TRIM(nom)) as nom_format FROM professeurs WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) IN (${professeursNoms.map(() => '?').join(',')}) AND status_id = 5`,
-                            // Stratégie 2: Nom Prenom  
-                            `SELECT id, CONCAT(TRIM(nom), ' ', TRIM(prenom)) as nom_format FROM professeurs WHERE CONCAT(TRIM(nom), ' ', TRIM(prenom)) IN (${professeursNoms.map(() => '?').join(',')}) AND status_id = 5`
+                            `SELECT id FROM professeurs WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) IN (${professeursNoms.map(() => '?').join(',')}) AND status_id = 5`,
+                            `SELECT id FROM professeurs WHERE CONCAT(TRIM(nom), ' ', TRIM(prenom)) IN (${professeursNoms.map(() => '?').join(',')}) AND status_id = 5`
                         ];
                         let professeurIds = [];
                         let strategyUsed = 0;
@@ -1023,9 +1044,9 @@ export class Cours {
                                     professeurIds = profResults.map((row) => row.id);
                                     strategyUsed = strategyIndex + 1;
                                     console.log(`✅ Stratégie ${strategyUsed} réussie - Professeurs trouvés:`, professeurIds);
-                                    // Supprimer les associations
+                                    // Supprimer les associations du cours spécifique
                                     const deletePlaceholders = professeurIds.map(() => '?').join(',');
-                                    this.mysqlConnector.query(`DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ? AND professeur_id IN (${deletePlaceholders})`, [coursRecurrentId, ...professeurIds], (deleteError, deleteResults) => {
+                                    this.mysqlConnector.query(`DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ? AND professeur_id IN (${deletePlaceholders})`, [coursRecurrent.id, ...professeurIds], (deleteError, deleteResults) => {
                                         if (deleteError) {
                                             reject(deleteError);
                                         }
@@ -1033,7 +1054,7 @@ export class Cours {
                                             console.log(`✅ Suppression réussie - ${deleteResults.affectedRows} association(s) supprimée(s)`);
                                             resolve({
                                                 isConfirm: true,
-                                                message: `${deleteResults.affectedRows} professeur(s) retiré(s) avec succès (stratégie ${strategyUsed})`
+                                                message: `${deleteResults.affectedRows} professeur(s) retiré(s) avec succès du cours ${coursRecurrent.type_cours} ${coursRecurrent.heure_debut}-${coursRecurrent.heure_fin}`
                                             });
                                         }
                                     });
@@ -1045,8 +1066,8 @@ export class Cours {
                             });
                         };
                         tryNextStrategy(0);
-                    }
-                });
+                    });
+                }
             });
         });
     }

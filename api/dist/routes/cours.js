@@ -346,13 +346,19 @@ router.delete('/supprimer', async (req, res) => {
 });
 // Endpoint pour retirer un ou plusieurs professeurs d'un cours récurrent (par nom et jour)
 router.post('/retirer-professeur', async (req, res) => {
-    const { professeursNoms, jour } = req.body;
+    const { professeursNoms, jour, type_cours, heure_debut, heure_fin } = req.body;
     console.log('Données reçues pour retirer un professeur :', req.body);
     if (!Array.isArray(professeursNoms) || professeursNoms.length === 0 || !jour) {
         return res.status(400).json({ message: "professeursNoms (array) et jour requis." });
     }
     try {
-        const result = await cours.supprimerProfesseursParNomEtJour(professeursNoms, jour);
+        // Passer le contexte du cours pour plus de précision
+        const coursContext = {
+            type_cours,
+            heure_debut,
+            heure_fin
+        };
+        const result = await cours.supprimerProfesseursParNomEtJour(professeursNoms, jour, coursContext);
         res.status(200).json({
             success: true,
             message: result.message || `${professeursNoms.length} professeur(s) retiré(s) avec succès`,
