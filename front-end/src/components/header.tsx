@@ -32,6 +32,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
 import { ouvrirPanier } from '../redux/slices/panierSlice';
 import { useMessagesNonLus } from '../hooks/useMessages';
+import { clearAllAuthData } from '../utils/authCleaner';
 
 const avatarImg = '/assets/avatar.png'; // Chemin relatif à partir de `public`
 
@@ -87,24 +88,16 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
 
   const handleSelect = () => setIsDropdownOpen(false);
 
-  const handleLogout = () => {
-    // Supprimer les données du localStorage
-    localStorage.removeItem('userData');
-    localStorage.removeItem('authToken');
+  const handleLogout = async () => {
+    console.log('🚪 Début de la déconnexion...');
     
-    // Supprimer tous les cookies
-    document.cookie.split(";").forEach(function(c) { 
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-    });
-    
-    // Supprimer les cookies spécifiques de l'application (si ils existent)
-    document.cookie = "authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "userData=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "sessionId=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"; // Ajout du cookie token
+    // CORRECTION: Utiliser la version async de clearAllAuthData
+    await clearAllAuthData();
     
     // Appeler le callback de déconnexion
     onLogout?.();
+    
+    console.log('✅ Déconnexion terminée, redirection...');
     
     // Rediriger vers la page de connexion
     navigate('/pages/connexion');

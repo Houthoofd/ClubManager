@@ -29,12 +29,26 @@ import { DataTable } from '../components/dashboard/DataTable';
 import { ActionButton } from '../components/common/ActionButton';
 import { ExpandableDataSection } from '../components/dashboard/ExpandableDataSection';
 import { PageHeader } from '../components/common/PageHeader';
+import { useAuthRedirect } from '../hooks/useAuthRedirect';
+import AuthRequiredModal from '../components/common/modal/AuthRequiredModal';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [isPaymentsExpanded, setIsPaymentsExpanded] = useState(false);
   const [isOverdueExpanded, setIsOverdueExpanded] = useState(false);
   const [isNewMembersExpanded, setIsNewMembersExpanded] = useState(false);
+
+  // NOUVEAU: Hook pour gérer l'authentification et la redirection
+  const { 
+    showAuthModal, 
+    redirectToLogin, 
+    customMessage, 
+    autoRedirectDelay 
+  } = useAuthRedirect({
+    autoRedirectDelay: 5,
+    checkInterval: 60000, // Vérifier chaque minute sur le dashboard
+    customMessage: "Votre session a expiré. Vous devez vous reconnecter pour accéder au tableau de bord."
+  });
 
   console.log('DashboardPage mounted');
 
@@ -147,6 +161,14 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="dashboard-page">
+      {/* NOUVEAU: Modal d'authentification requise */}
+      <AuthRequiredModal
+        isOpen={showAuthModal}
+        onRedirect={redirectToLogin}
+        autoRedirectDelay={autoRedirectDelay}
+        message={customMessage}
+      />
+
       <PageHeader
         title="Tableau de bord"
         subtitle="Vue d'ensemble de votre centre de fitness"

@@ -154,12 +154,163 @@ router.post('/login', async (req, res) => {
     }
 });
 // Logout
-router.post('/logout', (req, res) => {
-    res.clearCookie('token');
-    res.json({
-        success: true,
-        message: 'Déconnexion réussie'
-    });
+router.post('/logout', verifyToken, async (req, res) => {
+    try {
+        console.log('🚪 Déconnexion demandée pour utilisateur:', req.user?.id);
+        // CORRECTION: Typage correct des attributs de cookies
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax'),
+            domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost',
+            path: '/'
+        };
+        // Supprimer le cookie 'token' avec les attributs exacts
+        res.clearCookie('token', cookieOptions);
+        // NOUVEAU: Suppression exhaustive avec typage correct
+        const cookieVariants = [
+            // Variante 1: Attributs exacts comme à la création
+            { httpOnly: true, secure: false, sameSite: 'lax', domain: 'localhost', path: '/' },
+            // Variante 2: Sans domaine
+            { httpOnly: true, secure: false, sameSite: 'lax', path: '/' },
+            // Variante 3: Domaine undefined
+            { httpOnly: true, secure: false, sameSite: 'lax', domain: undefined, path: '/' },
+            // Variante 4: Sans sameSite
+            { httpOnly: true, secure: false, path: '/' },
+            // Variante 5: Minimum d'attributs
+            { path: '/' },
+            // Variante 6: Avec différents sameSite
+            { httpOnly: true, secure: false, sameSite: 'strict', domain: 'localhost', path: '/' },
+            { httpOnly: true, secure: false, sameSite: 'none', domain: 'localhost', path: '/' },
+            // Variante 7: Pour développement et production
+            { httpOnly: true, secure: true, sameSite: 'strict', domain: 'clubmanagment.com', path: '/' }
+        ];
+        // Appliquer toutes les variantes de suppression
+        cookieVariants.forEach((variant, index) => {
+            try {
+                res.clearCookie('token', variant);
+                console.log(`🗑️ Tentative suppression cookie variant ${index + 1}:`, variant);
+            }
+            catch (error) {
+                console.log(`⚠️ Échec variant ${index + 1}:`, error.message);
+            }
+        });
+        // NOUVEAU: Forcer la suppression avec headers Set-Cookie directs
+        const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
+        const cookieHeaders = [
+            `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
+            `token=; expires=${expiredDate}; path=/; HttpOnly; SameSite=Lax`,
+            `token=; expires=${expiredDate}; path=/; domain=localhost`,
+            `token=; expires=${expiredDate}; path=/`,
+            `token=; max-age=0; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
+            `token=; max-age=0; path=/; HttpOnly`,
+            `token=; max-age=0; path=/`,
+            `token=deleted; expires=${expiredDate}; path=/; domain=localhost; HttpOnly`,
+            `token=deleted; expires=${expiredDate}; path=/`
+        ];
+        // Appliquer tous les headers de suppression
+        cookieHeaders.forEach((header, index) => {
+            try {
+                res.setHeader('Set-Cookie', header);
+                console.log(`🔨 Header suppression ${index + 1}: ${header}`);
+            }
+            catch (error) {
+                console.log(`⚠️ Échec header ${index + 1}:`, error);
+            }
+        });
+        // Supprimer les autres cookies potentiels
+        const authCookieNames = [
+            'authToken', 'userData', 'user', 'auth_token',
+            'access_token', 'refresh_token', 'sessionId', 'session', 'jwt', 'JWT'
+        ];
+        authCookieNames.forEach(cookieName => {
+            res.clearCookie(cookieName);
+            res.clearCookie(cookieName, { path: '/', domain: 'localhost' });
+            res.clearCookie(cookieName, { path: '/', httpOnly: true });
+            console.log(`🗑️ Cookie "${cookieName}" supprimé`);
+        });
+        // Headers additionnels pour forcer la suppression
+        res.setHeader('Clear-Site-Data', '"cookies", "storage"');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        console.log('✅ Déconnexion côté serveur terminée avec suppression exhaustive');
+        res.status(200).json({
+            success: true,
+            message: 'Déconnexion réussie - Tous les cookies ont été supprimés'
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur lors de la déconnexion:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la déconnexion'
+        });
+    }
+});
+// CORRECTION: Route de nettoyage d'urgence avec typage correct
+router.post('/cleanup-cookies', async (req, res) => {
+    try {
+        console.log('🧹 Nettoyage d\'urgence des cookies demandé');
+        // NOUVEAU: Suppression spécifique et exhaustive du cookie 'token'
+        const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
+        // Toutes les combinaisons possibles pour supprimer le cookie 'token'
+        const tokenDeletionHeaders = [
+            `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
+            `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly; SameSite=Strict`,
+            `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly`,
+            `token=; expires=${expiredDate}; path=/; HttpOnly; SameSite=Lax`,
+            `token=; expires=${expiredDate}; path=/; HttpOnly`,
+            `token=; expires=${expiredDate}; path=/; domain=localhost`,
+            `token=; expires=${expiredDate}; path=/`,
+            `token=; max-age=0; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
+            `token=; max-age=0; path=/; HttpOnly; SameSite=Lax`,
+            `token=; max-age=0; path=/; domain=localhost`,
+            `token=; max-age=0; path=/`,
+            `token=deleted; expires=${expiredDate}; path=/; domain=localhost; HttpOnly`,
+            `token=deleted; expires=${expiredDate}; path=/`
+        ];
+        // Appliquer chaque header individuellement
+        tokenDeletionHeaders.forEach((header, index) => {
+            res.setHeader(`Set-Cookie-${index}`, header);
+            console.log(`🔥 Suppression forcée ${index + 1}: ${header}`);
+        });
+        // Méthodes clearCookie avec typage correct
+        const cookieVariants = [
+            { httpOnly: true, secure: false, sameSite: 'lax', domain: 'localhost', path: '/' },
+            { httpOnly: true, secure: false, sameSite: 'lax', path: '/' },
+            { httpOnly: true, path: '/' },
+            { path: '/', domain: 'localhost' },
+            { path: '/' }
+        ];
+        cookieVariants.forEach((variant, index) => {
+            res.clearCookie('token', variant);
+            console.log(`🧹 clearCookie variant ${index + 1}:`, variant);
+        });
+        // Autres cookies d'authentification
+        const authCookieNames = [
+            'authToken', 'userData', 'user', 'auth_token',
+            'access_token', 'refresh_token', 'sessionId', 'session', 'jwt', 'JWT'
+        ];
+        authCookieNames.forEach(cookieName => {
+            res.clearCookie(cookieName);
+            res.clearCookie(cookieName, { path: '/', domain: 'localhost' });
+            res.clearCookie(cookieName, { path: '/', httpOnly: true });
+        });
+        // Headers de nettoyage global
+        res.setHeader('Clear-Site-Data', '"cookies", "storage"');
+        res.status(200).json({
+            success: true,
+            message: 'Nettoyage d\'urgence effectué avec suppression exhaustive du cookie token'
+        });
+    }
+    catch (error) {
+        console.error('❌ Erreur lors du nettoyage d\'urgence:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors du nettoyage des cookies'
+        });
+    }
 });
 // Vérifier le token
 router.get('/verify', verifyToken, (req, res) => {

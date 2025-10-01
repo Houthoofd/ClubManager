@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Form,
   FormGroup,
@@ -24,6 +24,9 @@ import {
   useVerifierUtilisateur,
   useInscrireUtilisateur
 } from '../hooks/useInscriptions';
+import { useDispatch } from 'react-redux';
+import { logout } from '../redux/slices/authSlice';
+import { clearAllAuthData } from '../utils/authCleaner';
 import '../styles/connexion.css'; // Import du même fichier CSS
 
 // Page d'inscription
@@ -42,6 +45,13 @@ export const InscriptionPage: React.FC = () => {
   const [showRecap, setShowRecap] = useState(false);
   const [modalMessage, setModalMessage] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false); // État pour la modal de succès
+  const dispatch = useDispatch();
+
+  // NOUVEAU: Nettoyer l'authentification au chargement de la page d'inscription
+  useEffect(() => {
+    clearAllAuthData();
+    dispatch(logout());
+  }, [dispatch]);
 
   // Utilisation des hooks React Query
   const { data: abonnementOptions = [] } = useAbonnementOptions();
@@ -144,6 +154,11 @@ export const InscriptionPage: React.FC = () => {
       };
       console.log('[Inscription] Données envoyées au backend :', dataToSend);
       await inscrireUtilisateur.mutateAsync(dataToSend);
+      
+      // NOUVEAU: Nettoyer à nouveau après inscription réussie
+      clearAllAuthData();
+      dispatch(logout());
+      
       setModalMessage("Inscription réussie !");
       setSuccess(true);
       setShowRecap(false);
@@ -370,7 +385,11 @@ export const InscriptionPage: React.FC = () => {
       <Modal
         variant="small"
         isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
+        onClose={() => {
+          setShowSuccessModal(false);
+          // CORRECTION: Redirection vers la page de connexion après fermeture
+          window.location.href = `${window.location.origin}/pages/connexion`;
+        }}
         aria-labelledby="success-modal-title"
       >
         <ModalHeader title="Inscription réussie !" />
@@ -391,13 +410,17 @@ export const InscriptionPage: React.FC = () => {
         <ModalFooter>
           <Button 
             variant="primary" 
-            onClick={() => setShowSuccessModal(false)}
+            onClick={() => {
+              setShowSuccessModal(false);
+              // CORRECTION: Redirection vers la page de connexion
+              window.location.href = `${window.location.origin}/pages/connexion`;
+            }}
             style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               border: 'none'
             }}
           >
-            Fermer
+            Aller à la connexion
           </Button>
         </ModalFooter>
       </Modal>

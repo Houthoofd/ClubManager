@@ -17,6 +17,7 @@ import { loginSuccess } from '../redux/slices/authSlice';
 import { PageHeader } from '../components/common/PageHeader';
 import { apiUrl } from './apiUrl';
 import '../styles/connexion.css'; // Import du fichier CSS
+import { clearAllAuthData } from '../utils/authCleaner';
 
 const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -111,6 +112,12 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
       setCountdown(5); // Changement de 3 à 5 secondes
     }
   }, [isResultModalOpen]);
+
+  // OPTIONNEL: Nettoyer les anciens tokens au chargement de la page de connexion
+  useEffect(() => {
+    clearAllAuthData();
+    // Ne pas dispatch logout ici car on veut se connecter
+  }, []);
 
   return (
     <div className="login-page">
