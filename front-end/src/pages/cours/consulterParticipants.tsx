@@ -12,7 +12,7 @@ import { useParticipants } from '../../hooks/useParticipants';
 import { useAnnulerPresence, useValiderPresence } from '../../hooks/useCours';
 import ParticipantCard from '../../components/cours/ParticipantCard';
 import ParticipantsStats from '../../components/cours/ParticipantsStats';
-import ModalWithHelp from '../../components/common/modal/modalwithhelp'; // Utilisez la casse correcte
+import PresenceConfirmationModal from '../../components/common/modal/PresenceConfirmationModal';
 
 function formatDateFromISO(isoDateString: string) {
   const date = new Date(isoDateString);
@@ -30,6 +30,8 @@ const ParticipantsPage = () => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [modalSuccess, setModalSuccess] = useState<boolean>(false);
+  const [currentParticipant, setCurrentParticipant] = useState<string>('');
+  const [currentAction, setCurrentAction] = useState<'valider' | 'annuler' | undefined>();
 
   // Hooks React Query
   const { data: cours, isLoading, error } = useParticipants(coursId);
@@ -56,22 +58,33 @@ const ParticipantsPage = () => {
         utilisateur_prenom: utilisateur.prenom
       };
 
+      setCurrentParticipant(`${utilisateur.prenom} ${utilisateur.nom}`);
+      setCurrentAction(action);
+
       if (action === 'valider') {
         await validerPresence.mutateAsync(data);
-        setModalMessage('Présence validée avec succès !');
+        setModalMessage('La présence a été validée avec succès !');
         setModalSuccess(true);
       } else {
         await annulerPresence.mutateAsync(data);
-        setModalMessage('Présence annulée avec succès !');
+        setModalMessage('La présence a été annulée avec succès !');
         setModalSuccess(true);
       }
       setShowModal(true);
     } catch (err) {
       setModalMessage("Erreur lors de la mise à jour de la présence.");
       setModalSuccess(false);
+      setCurrentParticipant(`${utilisateur.prenom} ${utilisateur.nom}`);
+      setCurrentAction(action);
       setShowModal(true);
       console.error('Erreur lors de la mise à jour de la présence:', err);
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setCurrentParticipant('');
+    setCurrentAction(undefined);
   };
 
   if (isLoading) {
@@ -156,21 +169,15 @@ const ParticipantsPage = () => {
         </div>
       )}
 
-      {/* Modal de notification */}
-      <ModalWithHelp
-        title={modalSuccess ? "Succès" : "Erreur"}
+      {/* Modal de confirmation de présence */}
+      <PresenceConfirmationModal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        context="default" // Ajout du contexte
-      >
-        <p style={{ 
-          color: modalSuccess ? '#28a745' : '#dc3545', 
-          fontSize: '1rem', 
-          margin: '1rem 0' 
-        }}>
-          {modalMessage}
-        </p>
-      </ModalWithHelp>
+        onClose={handleCloseModal}
+        isSuccess={modalSuccess}
+        message={modalMessage}
+        participantName={currentParticipant}
+        action={currentAction}
+      />
     </div>
   );
 };
