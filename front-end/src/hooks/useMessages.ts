@@ -193,32 +193,46 @@ export const useEnvoyerMessage = () => {
   });
 };
 
-// Hook pour compter les messages non lus
-export const useMessagesNonLus = () => {
-  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-  
+// Hook pour récupérer les messages non lus
+export const useMessagesNonLus = (utilisateurId: number) => {
   return useQuery({
-    queryKey: ['messages-non-lus', userData.id],
+    queryKey: ['messages', 'non-lus', utilisateurId],
     queryFn: async () => {
-      if (!userData.id) return 0;
-      
-      const response = await fetch(apiUrl(`messages/non-lus/${userData.id}`), {
+      // Vérifier l'authentification avant la requête
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
+
+      const response = await fetch(apiUrl(`messages/non-lus/${utilisateurId}`), {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        credentials: 'include',
+        credentials: 'include'
       });
       
       if (!response.ok) {
-        throw new Error('Erreur lors de la récupération du nombre de messages non lus');
+        if (response.status === 401) {
+          // Token invalide, nettoyer et rediriger
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('userData');
+          window.location.href = '/pages/connexion';
+          throw new Error('Session expirée');
+        }
+        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
-      return data.count || 0;
+      return response.json();
     },
-    enabled: !!userData.id,
-    refetchInterval: 30000, // Refetch toutes les 30 secondes
-    refetchOnWindowFocus: true,
+    enabled: !!utilisateurId && utilisateurId > 0, // Ne pas exécuter si utilisateurId invalide
+    retry: (failureCount, error: any) => {
+      // Ne pas retry si erreur d'authentification
+      if (error.message.includes('401') || error.message.includes('Session expirée')) {
+        return false;
+      }
+      return failureCount < 3;
+    }
   });
 };

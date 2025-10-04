@@ -27,9 +27,11 @@ router.post('/verification', async (req: any, res: any) => {
 
 router.post('/validation', async (req: any, res: any) => {
   // Vérification des données reçues via Zod
+  // Validation avec Zod
   const parseResult = userInscriptionSchema.safeParse(req.body);
   if (!parseResult.success) {
-    return res.status(400).json({ message: parseResult.error.errors[0]?.message || "Données invalides" });
+    console.log("Erreur de validation :", parseResult.error.issues);
+    return res.status(400).json({ message: parseResult.error.issues[0]?.message || "Données invalides" });
   }
   const { nom, prenom, email, password, date, abonnement, genre } = parseResult.data;
   try {

@@ -2,67 +2,131 @@ import express from 'express';
 import { verifyToken } from '../middleware/auth.js';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
 import { z } from 'zod';
-import { UserData, utilisateurInscriptionSchema, userDataLoginSchema, VerifyResultWithData, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
+import { UserData, utilisateurInscriptionSchema, userDataLoginSchema, userDataLoginByUserIdSchema, userSearchByEmailSchema, VerifyResultWithData, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
 import bcrypt from 'bcrypt';
 
 const router = express.Router();
 
-// Route d'inscription d'un utilisateur (publique)
-router.post('/inscription', async (req, res) => {
+// Routes PUBLIQUES (AVANT le middleware verifyToken)
+router.post('/verifier', async (req, res) => {
   try {
-    // Validation des données reçues avec Zod
-    const validatedData = utilisateurInscriptionSchema.parse(req.body);
-
-    console.log("Données validées :", validatedData);
-
-    const client = new Utilisateurs();
+    console.log('[Route] Vérification utilisateur - Body reçu:', req.body);
     
-    // Vérification si l'utilisateur existe déjà
-    const verifUtilisateur = await client.verifierUtilisateur(validatedData);
+    const { nom, prenom, date_naissance } = req.body;
     
-    if (verifUtilisateur.isFind === false) {
-      // Hash du mot de passe avant l'insertion
-      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-      const userToInsert = { ...validatedData, password: hashedPassword };
-
-      // L'utilisateur n'existe pas, on peut l'inscrire
-      const result = await client.inscrireUtilisateur(userToInsert);
-      
-      if (result.affectedRows > 0) {
-        res.status(201).json({ message: 'Utilisateur inscrit avec succès.', userId: result.insertId });
-      } else {
-        res.status(400).json({ message: 'Échec de l\'inscription de l\'utilisateur.' });
-      }
-    } else {
-      // L'utilisateur existe déjà
-      res.status(400).json({ message: 'Utilisateur déjà inscrit.' });
+    // Validation des paramètres
+    if (!nom || !prenom || !date_naissance) {
+      return res.status(400).json({
+        message: 'Les paramètres nom, prenom et date_naissance sont requis'
+      });
     }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      // Gestion des erreurs de validation
-      res.status(400).json({ message: 'Données invalides.', errors: error.errors });
+
+    // Validation du format de date
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date_naissance)) {
+      return res.status(400).json({
+        message: 'Format de date invalide. Utilisez YYYY-MM-DD'
+      });
+    }
+
+    const utilisateursClient = new Utilisateurs();
+    const result = await utilisateursClient.verifierUtilisateurExiste({
+      nom: nom.trim(),
+      prenom: prenom.trim(),
+      date_naissance: date_naissance
+    });
+    
+    console.log('[Route] Vérification réussie:', result);
+    res.status(200).json(result);
+    
+  } catch (error: any) {
+    console.error('[Route] Erreur vérification:', error);
+    
+    if (error.status === 409) {
+      // Conflit - utilisateur existe
+      res.status(409).json({
+        message: error.message,
+        data: error.data
+      });
     } else {
-      // Gestion des autres erreurs serveur
-      console.error("Erreur lors de l'inscription de l'utilisateur :", error);
-      res.status(500).json({ message: 'Erreur serveur lors de l\'inscription de l\'utilisateur.' });
+      res.status(500).json({
+        message: 'Erreur serveur lors de la vérification',
+        error: error.message
+      });
     }
   }
 });
 
-// Middleware d'authentification pour toutes les autres routes
-router.use(verifyToken);
-
-// Route de vérification de l'existence d'un utilisateur
-router.post('/connexion', async (req, res) => {
+// Route d'inscription d'un utilisateur (PUBLIQUE - pas de verifyToken)
+router.post('/inscription', async (req: any, res: any) => {
   try {
-    // Validate incoming data with Zod
-    const validatedData = userDataLoginSchema.parse(req.body);
-    console.log("Données validées :", validatedData);
+    console.log('[Route] Inscription utilisateur - Body reçu:', req.body);
+
+    // Générer automatiquement le nom_utilisateur s'il n'est pas fourni
+    if (!req.body.nom_utilisateur || req.body.nom_utilisateur.trim() === '') {
+      const prenom = req.body.prenom ? req.body.prenom.toLowerCase().replace(/\s+/g, '') : '';
+      const nom = req.body.nom ? req.body.nom.toLowerCase().replace(/\s+/g, '') : '';
+      const timestamp = Date.now().toString().slice(-4); // 4 derniers chiffres du timestamp
+      
+      req.body.nom_utilisateur = `${prenom}_${nom}_${timestamp}`;
+      console.log('[Route] Nom d\'utilisateur généré automatiquement:', req.body.nom_utilisateur);
+    }
+
+    // Validation avec le schéma utilisateurInscriptionSchema
+    const validationResult = utilisateurInscriptionSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      console.log('[Route] Erreur de validation Zod:', validationResult.error.issues);
+      return res.status(400).json({
+        message: validationResult.error.issues[0]?.message || "Données invalides",
+        errors: validationResult.error.issues
+      });
+    }
+
+    const validatedData = validationResult.data;
+    console.log('[Route] Données validées:', validatedData);
+
+    // Mapper vers le format attendu par la base de données
+    const mappedData = {
+      prenom: validatedData.prenom,
+      nom: validatedData.nom,
+      nom_utilisateur: validatedData.nom_utilisateur,
+      email: validatedData.email,
+      password: validatedData.password,
+      genre_id: validatedData.genre_id,
+      abonnement_id: validatedData.abonnement_id,
+      date_naissance: validatedData.date_naissance,
+      date_inscription: validatedData.date_inscription,
+      status_id: validatedData.status_id,
+      grade_id: validatedData.grade_id
+    };
+
+    console.log('[Route] Données mappées pour DB:', mappedData);
+
+    // Appel de la méthode d'inscription
+    const client = new Utilisateurs();
+    const result = await client.inscrireUtilisateur(mappedData);
+
+    console.log('[Route] Résultat inscription:', result);
+    res.status(201).json(result);
+
+  } catch (error: any) {
+    console.error('Erreur lors de l\'inscription de l\'utilisateur :', error);
+    res.status(500).json({ 
+      message: error.message || 'Erreur interne du serveur',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Route de connexion principale par userId (remplace toute la complexité email)
+router.post('/connexion-userid', async (req, res) => {
+  try {
+    console.log('[DEBUG] Route /connexion-userid appelée avec:', req.body);
+    const validatedData = userDataLoginByUserIdSchema.parse(req.body);
+    console.log("Connexion par userId :", validatedData.userId);
 
     const client = new Utilisateurs();
-
-    // Check if the user exists
-    const result = await client.validerConnexion(validatedData);
+    const result = await client.validerConnexionParUserId(validatedData.userId, validatedData.password);
 
     if (result.isFind) {
       res.status(200).json({ message: result.message, data: result.dataToStore });
@@ -70,19 +134,181 @@ router.post('/connexion', async (req, res) => {
       res.status(404).json({ message: result.message });
     }
   } catch (error) {
-    console.error('Erreur lors de la vérification de l\'utilisateur :', error);
-    res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'utilisateur.' });
+    console.error('Erreur lors de la connexion par userId :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la connexion.' });
   }
 });
 
-
-
-router.get('/', async (req: any, res: any) => { // Removed requireRole
+// Garder l'ancienne route email pour compatibilité (mais plus simple)
+router.post('/connexion', async (req, res) => {
   try {
+    const validatedData = userDataLoginSchema.parse(req.body);
+    console.log("Connexion par email (legacy) :", validatedData.email);
+
+    const client = new Utilisateurs();
+    const result = await client.validerConnexion(validatedData);
+    
+    if (result.isFind) {
+      res.status(200).json({ message: result.message, data: result.dataToStore });
+    } else {
+      res.status(404).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error('Erreur lors de la connexion :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la connexion.' });
+  }
+});
+
+// ✅ MAINTENANT le middleware d'authentification pour les autres routes
+router.use(verifyToken);
+
+// Routes PROTÉGÉES (après le middleware)
+router.put('/modifier', async (req:any, res:any) => {
+  console.log('[ROUTE] PUT /utilisateurs/modifier appelée');
+  try {
+    const { id, email, date_naissance, genres, grades, abonnement, status, password } = req.body;
+    console.log('[ROUTE] Body reçu:', req.body);
+
+    if (!id) {
+      return res.status(400).json({ message: "L'identifiant de l'utilisateur est requis." });
+    }
+
+    const client = new Utilisateurs();
+
+    // Prépare les données à modifier
+    const dataToUpdate: any = { id };
+    if (typeof email !== 'undefined') dataToUpdate.email = email;
+    if (typeof date_naissance !== 'undefined') dataToUpdate.date_naissance = date_naissance;
+    if (typeof genres !== 'undefined') dataToUpdate.genres = genres;
+    if (typeof grades !== 'undefined') dataToUpdate.grades = grades;
+    if (typeof abonnement !== 'undefined') dataToUpdate.abonnement = abonnement;
+    if (typeof status !== 'undefined') dataToUpdate.status = status;
+    
+    // Hashage du mot de passe s'il est fourni
+    if (typeof password !== 'undefined' && password.trim() !== '') {
+      console.log('[ROUTE] Hashage du mot de passe en cours...');
+      const hashedPassword = await bcrypt.hash(password, 10);
+      dataToUpdate.password = hashedPassword;
+      console.log('[ROUTE] Mot de passe hashé avec succès');
+    }
+
+    console.log('[ROUTE] Données à envoyer au client:', { ...dataToUpdate, password: dataToUpdate.password ? '[HASHED]' : undefined });
+
+    // Appel à la méthode du client qui gère la modification
+    const result = await client.modifierInfosUtilisateur(dataToUpdate);
+
+    if (result.isConfirm) {
+      res.status(200).json({ message: 'Utilisateur modifié avec succès.' });
+    } else {
+      res.status(400).json({ message: 'Aucune modification effectuée.' });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la modification de l'utilisateur :", error);
+    res.status(500).json({ message: 'Erreur serveur lors de la modification de l\'utilisateur.' });
+  }
+});
+
+// Modifier la route DELETE pour utiliser la désactivation
+router.delete('/supprimer/:id', async (req: any, res: any) => {
+  try {
+    const utilisateurId = Number(req.params.id);
+    console.log(`[DELETE] Reçu pour désactivation, id =`, utilisateurId);
+
+    if (!utilisateurId || isNaN(utilisateurId)) {
+      console.log(`[DELETE] ID utilisateur invalide :`, req.params.id);
+      return res.status(400).json({ isConfirm: false, message: "ID utilisateur invalide." });
+    }
+
+    const client = new Utilisateurs();
+
+    // Vérifier que l'utilisateur existe (actif ou inactif)
+    const utilisateurSimple = await client.obtenirUnUtilisateur(utilisateurId, true); // includeInactive = true
+    console.log(`[DELETE] Résultat de obtenirUnUtilisateur :`, utilisateurSimple);
+
+    if (!utilisateurSimple.isFind || !utilisateurSimple.data || utilisateurSimple.data.length === 0) {
+      console.log(`[DELETE] Utilisateur introuvable pour id =`, utilisateurId);
+      return res.status(404).json({ isConfirm: false, message: "Utilisateur introuvable." });
+    }
+
+    // Désactiver l'utilisateur au lieu de le supprimer
+    const result = await client.desactiverUtilisateur(utilisateurId);
+    console.log(`[DELETE] Résultat de desactiverUtilisateur :`, result);
+
+    if (result.isConfirm) {
+      console.log(`[DELETE] Désactivation réussie pour id =`, utilisateurId);
+      res.status(200).json({ 
+        isConfirm: true, 
+        message: result.message,
+        action: 'désactivé' // Indiquer l'action réelle
+      });
+    } else {
+      console.log(`[DELETE] La désactivation a échoué pour id =`, utilisateurId);
+      res.status(400).json({ isConfirm: false, message: result.message });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la désactivation de l'utilisateur :", error);
+    res.status(500).json({ isConfirm: false, message: 'Erreur serveur lors de la désactivation de l\'utilisateur.' });
+  }
+});
+
+// NOUVELLE route pour réactiver un utilisateur
+router.put('/reactiver/:id', async (req: any, res: any) => {
+  try {
+    const utilisateurId = Number(req.params.id);
+    console.log(`[PUT] Reçu pour réactivation, id =`, utilisateurId);
+
+    if (!utilisateurId || isNaN(utilisateurId)) {
+      console.log(`[PUT] ID utilisateur invalide :`, req.params.id);
+      return res.status(400).json({ isConfirm: false, message: "ID utilisateur invalide." });
+    }
+
+    const client = new Utilisateurs();
+
+    // Réactiver l'utilisateur
+    const result = await client.reactiverUtilisateur(utilisateurId);
+    console.log(`[PUT] Résultat de reactiverUtilisateur :`, result);
+
+    if (result.isConfirm) {
+      console.log(`[PUT] Réactivation réussie pour id =`, utilisateurId);
+      res.status(200).json({ 
+        isConfirm: true, 
+        message: result.message,
+        action: 'réactivé'
+      });
+    } else {
+      console.log(`[PUT] La réactivation a échoué pour id =`, utilisateurId);
+      res.status(400).json({ isConfirm: false, message: result.message });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la réactivation de l'utilisateur :", error);
+    res.status(500).json({ isConfirm: false, message: 'Erreur serveur lors de la réactivation de l\'utilisateur.' });
+  }
+});
+
+// NOUVELLE route pour obtenir les statistiques d'utilisateurs
+router.get('/statistiques', async (req: any, res: any) => {
+  try {
+    const client = new Utilisateurs();
+    const stats = await client.obtenirStatistiquesUtilisateurs();
+    
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des statistiques :", error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des statistiques.' });
+  }
+});
+
+// Modifier la route GET pour inclure un paramètre optionnel pour les inactifs
+router.get('/', async (req: any, res: any) => {
+  try {
+    const includeInactive = req.query.includeInactive === 'true';
     const client = new Utilisateurs();
     
     // Attendre la résolution de la méthode obtenirTousLesUtilisateurs
-    const utilisateurs = await client.obtenirTousLesUtilisateurs();
+    const utilisateurs = await client.obtenirTousLesUtilisateurs(includeInactive);
     
     // Vérifier si des utilisateurs ont été trouvés et renvoyer une réponse appropriée
     if (utilisateurs.isFind) {
@@ -180,107 +406,6 @@ router.post('/ajouter', async (req: any, res: any) => {
   } catch (error) {
     console.error("Erreur lors de l'ajout ou de la modification :", error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
-  }
-});
-
-router.delete('/supprimer/:id', async (req: any, res: any) => {
-  try {
-    const utilisateurId = Number(req.params.id);
-    console.log(`[DELETE] Reçu pour suppression, id =`, utilisateurId);
-
-    if (!utilisateurId || isNaN(utilisateurId)) {
-      console.log(`[DELETE] ID utilisateur invalide :`, req.params.id);
-      return res.status(400).json({ isConfirm: false, message: "ID utilisateur invalide." });
-    }
-
-    const client = new Utilisateurs();
-
-    // Vérifie si l'utilisateur existe avant suppression
-    const utilisateurSimple = await client.obtenirUnUtilisateur(utilisateurId);
-    console.log(`[DELETE] Résultat de obtenirUnUtilisateur :`, utilisateurSimple);
-
-    if (!utilisateurSimple.isFind || !utilisateurSimple.data || utilisateurSimple.data.length === 0) {
-      console.log(`[DELETE] Utilisateur introuvable pour id =`, utilisateurId);
-      return res.status(404).json({ isConfirm: false, message: "Utilisateur introuvable." });
-    }
-
-    // Supprime l'utilisateur
-    const result = await client.supprimerUtilisateur(utilisateurId);
-    console.log(`[DELETE] Résultat de supprimerUtilisateur :`, result);
-
-    if (result.isConfirm) {
-      console.log(`[DELETE] Suppression réussie pour id =`, utilisateurId);
-      res.status(200).json({ isConfirm: true, message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès.` });
-    } else {
-      console.log(`[DELETE] La suppression a échoué pour id =`, utilisateurId);
-      res.status(400).json({ isConfirm: false, message: "La suppression a échoué." });
-    }
-  } catch (error) {
-    console.error("Erreur lors de la suppression de l'utilisateur :", error);
-    res.status(500).json({ isConfirm: false, message: 'Erreur serveur lors de la suppression de l\'utilisateur.' });
-  }
-});
-
-// Nouvelle route pour modifier uniquement le status, le grade et l'abonnement d'un utilisateur
-router.put('/modifier', async (req:any, res:any) => {
-  console.log('[ROUTE] PUT /utilisateurs/modifier appelée');
-  try {
-    const { id, email, date_naissance, genres, grades, abonnement, status, password } = req.body;
-    console.log('[ROUTE] Body reçu:', req.body);
-
-    if (!id) {
-      return res.status(400).json({ message: "L'identifiant de l'utilisateur est requis." });
-    }
-
-    const client = new Utilisateurs();
-
-    // Prépare les données à modifier
-    const dataToUpdate: any = { id };
-    if (typeof email !== 'undefined') dataToUpdate.email = email;
-    if (typeof date_naissance !== 'undefined') dataToUpdate.date_naissance = date_naissance;
-    if (typeof genres !== 'undefined') dataToUpdate.genres = genres;
-    if (typeof grades !== 'undefined') dataToUpdate.grades = grades;
-    if (typeof abonnement !== 'undefined') dataToUpdate.abonnement = abonnement;
-    if (typeof status !== 'undefined') dataToUpdate.status = status;
-    
-    // Hashage du mot de passe s'il est fourni
-    if (typeof password !== 'undefined' && password.trim() !== '') {
-      console.log('[ROUTE] Hashage du mot de passe en cours...');
-      const hashedPassword = await bcrypt.hash(password, 10);
-      dataToUpdate.password = hashedPassword;
-      console.log('[ROUTE] Mot de passe hashé avec succès');
-    }
-
-    console.log('[ROUTE] Données à envoyer au client:', { ...dataToUpdate, password: dataToUpdate.password ? '[HASHED]' : undefined });
-
-    // Appel à la méthode du client qui gère la modification
-    const result = await client.modifierInfosUtilisateur(dataToUpdate);
-
-    if (result.isConfirm) {
-      res.status(200).json({ message: 'Utilisateur modifié avec succès.' });
-    } else {
-      res.status(400).json({ message: 'Aucune modification effectuée.' });
-    }
-  } catch (error) {
-    console.error("Erreur lors de la modification de l'utilisateur :", error);
-    res.status(500).json({ message: 'Erreur serveur lors de la modification de l\'utilisateur.' });
-  }
-});
-
-// Endpoint pour vérifier si une adresse email est déjà utilisée
-router.post('/verifier-email', async (req:any, res:any) => {
-  const { email, id } = req.body;
-  if (!email) {
-    return res.status(400).json({ message: "L'email est requis." });
-  }
-  try {
-    const client = new Utilisateurs();
-    // Appel à la méthode dédiée pour vérifier l'email
-    const exists = await client.verifierEmailExiste(email, id);
-    return res.json({ exists });
-  } catch (error) {
-    console.error('Erreur lors de la vérification de l\'email :', error);
-    return res.status(500).json({ message: 'Erreur serveur lors de la vérification de l\'email.' });
   }
 });
 

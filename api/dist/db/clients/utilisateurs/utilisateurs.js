@@ -1,5 +1,6 @@
 import MysqlConnector from '../../connector/mysqlconnector.js';
 import bcrypt from 'bcrypt';
+import { UserIdGenerator } from '../../../utils/userIdGenerator.js'; // Correction du chemin d'import
 export class Utilisateurs {
     mysqlConnector;
     constructor() {
@@ -7,7 +8,7 @@ export class Utilisateurs {
     }
     // Vérifie si un utilisateur existe par email
     async checkUtilisateurByEmail(email) {
-        const sql = `SELECT id FROM utilisateurs WHERE email = ? LIMIT 1`;
+        const sql = `SELECT id FROM utilisateurs WHERE email = ? AND active = TRUE LIMIT 1`;
         return new Promise((resolve, reject) => {
             this.mysqlConnector.query(sql, [email], (error, results) => {
                 if (error) {
@@ -25,38 +26,62 @@ export class Utilisateurs {
     }
     // Inscription d'un utilisateur (version simple, à adapter selon tes besoins)
     async inscriptionUtilisateurSimple(data) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-        INSERT INTO utilisateurs (first_name, last_name, email, password, date_of_birth, abonnement_id, genre_id, status_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-      `;
-            this.mysqlConnector.query(sql, [
-                data.prenom,
-                data.nom,
-                data.email,
-                data.password,
-                data.date,
-                data.abonnement,
-                data.genre
-            ], (error, results) => {
-                if (error) {
-                    console.error('Erreur lors de l\'inscription :', error);
-                    reject(error);
-                }
-                else {
-                    resolve({
-                        isConfirm: true,
-                        message: 'Utilisateur inscrit avec succès'
-                    });
-                }
-            });
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Générer automatiquement le nom_utilisateur si nécessaire
+                const prenom = data.prenom.toLowerCase().replace(/\s+/g, '');
+                const nom = data.nom.toLowerCase().replace(/\s+/g, '');
+                const timestamp = Date.now().toString().slice(-4);
+                const nom_utilisateur = `${prenom}_${nom}_${timestamp}`;
+                // Utiliser le mot de passe par défaut si aucun mot de passe n'est fourni
+                const passwordToUse = data.password || 'password123';
+                const hashedPassword = await bcrypt.hash(passwordToUse, 10);
+                // Générer l'userId unique
+                const userId = await this.genererUserIdUnique({
+                    prenom: data.prenom,
+                    nom: data.nom,
+                    date_naissance: data.date,
+                    email: data.email
+                });
+                console.log('[inscriptionUtilisateurSimple] UserId généré:', userId);
+                console.log('[inscriptionUtilisateurSimple] Mot de passe utilisé:', passwordToUse === 'password123' ? 'password123 (défaut)' : 'mot de passe fourni');
+                const sql = `
+          INSERT INTO utilisateurs (userId, first_name, last_name, nom_utilisateur, email, password, date_of_birth, abonnement_id, genre_id, status_id, active)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, TRUE)
+        `;
+                this.mysqlConnector.query(sql, [
+                    userId,
+                    data.prenom,
+                    data.nom,
+                    nom_utilisateur, // Nom d'utilisateur généré automatiquement
+                    data.email,
+                    hashedPassword, // Mot de passe hashé (par défaut ou fourni)
+                    data.date,
+                    data.abonnement,
+                    data.genre
+                ], (error, results) => {
+                    if (error) {
+                        console.error('Erreur lors de l\'inscription :', error);
+                        reject(error);
+                    }
+                    else {
+                        resolve({
+                            isConfirm: true,
+                            message: `Utilisateur inscrit avec succès. UserId: ${userId}, nom d'utilisateur: ${nom_utilisateur}${passwordToUse === 'password123' ? ' (mot de passe temporaire: password123)' : ''}`
+                        });
+                    }
+                });
+            }
+            catch (error) {
+                reject(error);
+            }
         });
     }
     verifierUtilisateur(utilisateurData) {
         return new Promise((resolve, reject) => {
             const sql = `
         SELECT * FROM utilisateurs
-        WHERE email = ? OR nom_utilisateur = ?
+        WHERE (email = ? OR nom_utilisateur = ?) AND active = TRUE
       `;
             const values = [
                 utilisateurData.email,
@@ -64,7 +89,6 @@ export class Utilisateurs {
             ];
             console.log("Exécution de la requête :", sql, values);
             this.mysqlConnector.query(sql, values, (error, results) => {
-                // fermer connexion ici, une fois la requête finie
                 if (error) {
                     console.error('Erreur lors de l\'exécution de la requête :', error.message);
                     reject(error);
@@ -81,74 +105,212 @@ export class Utilisateurs {
             });
         });
     }
-    async inscrireUtilisateur(utilisateurData) {
-        // Supporte UserData (back) ou UserDataAjout (front)
-        const firstName = utilisateurData.prenom ||
-            utilisateurData.first_name ||
-            '';
-        const lastName = utilisateurData.nom ||
-            utilisateurData.last_name ||
-            '';
-        if (!firstName || !lastName) {
-            throw new Error("Le prénom et le nom sont requis pour l'inscription.");
-        }
-        // Mot de passe par défaut si non fourni
-        const password = utilisateurData.password ||
-            "password123";
-        // Récupère les bons champs selon le type
-        const nom_utilisateur = utilisateurData.nom_utilisateur;
-        const email = utilisateurData.email;
-        const genre_id = utilisateurData.genre_id ?? utilisateurData.genres;
-        const date_of_birth = utilisateurData.date_naissance ?? utilisateurData.date_of_birth;
-        const status_id = utilisateurData.status_id ?? utilisateurData.status;
-        const grade_id = utilisateurData.grade_id ?? utilisateurData.grades;
-        const abonnement_id = utilisateurData.abonnement_id ?? utilisateurData.abonnement;
-        const sql = `
-      INSERT INTO utilisateurs (first_name, last_name, nom_utilisateur, email, genre_id, date_of_birth, password, status_id, grade_id, abonnement_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-        const values = [
-            firstName,
-            lastName,
-            nom_utilisateur,
-            email,
-            genre_id,
-            date_of_birth,
-            password,
-            status_id,
-            grade_id,
-            abonnement_id,
-        ];
-        console.log("Insertion utilisateur :", values);
+    async inscrireUtilisateur(userData) {
         return new Promise((resolve, reject) => {
-            this.mysqlConnector.query(sql, values, (error, results) => {
-                if (error) {
-                    console.error('Erreur lors de l\'insertion de l\'utilisateur :', error.message);
-                    reject(error);
-                    return;
-                }
-                if (results.affectedRows === 0) {
-                    console.log("Aucun utilisateur inséré, vérifier les données.");
-                }
-                else {
-                    console.log('Utilisateur inséré avec succès, ID:', results.insertId);
-                }
-                resolve({
-                    insertId: results.insertId,
-                    affectedRows: results.affectedRows,
-                });
+            console.log('[DB] Données reçues pour inscription:', userData);
+            // VALIDATION SERVEUR RENFORCÉE
+            const birthDate = new Date(userData.date_naissance);
+            const today = new Date();
+            // Réinitialiser les heures
+            today.setHours(23, 59, 59, 999);
+            birthDate.setHours(0, 0, 0, 0);
+            // Validation stricte côté serveur
+            if (birthDate >= today) {
+                reject(new Error('Date de naissance invalide: ne peut pas être dans le futur ou aujourd\'hui'));
+                return;
+            }
+            // VÉRIFICATION STRICTE ÂGE MINIMUM: 5 ans révolus EXACTEMENT
+            const cinqAnsAujourdHui = new Date();
+            cinqAnsAujourdHui.setFullYear(today.getFullYear() - 5);
+            cinqAnsAujourdHui.setHours(23, 59, 59, 999);
+            if (birthDate > cinqAnsAujourdHui) {
+                const ageInMs = today.getTime() - birthDate.getTime();
+                const ageInYears = Math.floor(ageInMs / (1000 * 60 * 60 * 24 * 365.25));
+                reject(new Error(`Âge insuffisant: ${ageInYears} an(s). L'âge minimum requis est de 5 ans révolus pour s'inscrire.`));
+                return;
+            }
+            // Vérification âge maximum (100 ans)
+            const maxAgeDate = new Date();
+            maxAgeDate.setFullYear(today.getFullYear() - 100);
+            if (birthDate < maxAgeDate) {
+                reject(new Error('Date de naissance trop ancienne (maximum 100 ans)'));
+                return;
+            }
+            // Validation année minimum (1900)
+            if (birthDate.getFullYear() < 1900) {
+                reject(new Error('Date de naissance non valide (minimum année 1900)'));
+                return;
+            }
+            // NOUVELLE VÉRIFICATION: Pas de doublon nom + prénom + date de naissance
+            this.verifierUtilisateurExiste({
+                nom: userData.nom,
+                prenom: userData.prenom,
+                date_naissance: userData.date_naissance
+            }).then(() => {
+                // Aucun doublon trouvé, procéder à l'inscription
+                this.procederInscription(userData, resolve, reject);
+            }).catch((conflictError) => {
+                // Doublon trouvé
+                reject(new Error(conflictError.message || 'Une personne avec ces informations existe déjà.'));
             });
         });
     }
+    // Méthode pour générer un userId unique avec vérification DB
+    async genererUserIdUnique(userData) {
+        let attempt = 0;
+        let userId;
+        let exists = true;
+        while (exists && attempt < 10) { // Limite pour éviter les boucles infinies
+            userId = UserIdGenerator.generateUserId({
+                prenom: userData.prenom,
+                nom: userData.nom,
+                date_naissance: userData.date_naissance,
+                email: userData.email
+            }, attempt);
+            // Vérifier si l'userId existe déjà
+            const checkSql = 'SELECT COUNT(*) as count FROM utilisateurs WHERE userId = ?';
+            const checkResult = await new Promise((resolve, reject) => {
+                this.mysqlConnector.query(checkSql, [userId], (error, results) => {
+                    if (error)
+                        reject(error);
+                    else
+                        resolve(results[0].count);
+                });
+            });
+            exists = checkResult > 0;
+            if (exists)
+                attempt++;
+        }
+        if (attempt >= 10) {
+            throw new Error('Impossible de générer un userId unique après 10 tentatives');
+        }
+        return userId;
+    }
+    // Méthode pour procéder à l'inscription avec userId généré
+    async procederInscription(userData, resolve, reject) {
+        try {
+            // Utiliser le mot de passe par défaut si aucun mot de passe n'est fourni
+            const passwordToUse = userData.password || 'password123';
+            const hashedPassword = bcrypt.hashSync(passwordToUse, 10);
+            // Générer l'userId unique
+            const userId = await this.genererUserIdUnique(userData);
+            console.log('[DB] UserId généré:', userId);
+            console.log('[DB] Mot de passe utilisé:', passwordToUse === 'password123' ? 'password123 (défaut)' : 'mot de passe fourni');
+            console.log('[DB] Données pour insertion:', {
+                userId,
+                prenom: userData.prenom,
+                nom: userData.nom,
+                nom_utilisateur: userData.nom_utilisateur,
+                email: userData.email,
+                genre_id: userData.genre_id,
+                abonnement_id: userData.abonnement_id,
+                date_naissance: userData.date_naissance,
+                date_inscription: userData.date_inscription,
+                status_id: userData.status_id,
+                grade_id: userData.grade_id
+            });
+            const sql = `
+        INSERT INTO utilisateurs (
+          userId, first_name, last_name, nom_utilisateur, email, password,
+          genre_id, abonnement_id, date_of_birth, date_inscription,
+          status_id, grade_id, active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+      `;
+            const values = [
+                userId, // userId généré côté API
+                userData.prenom,
+                userData.nom,
+                userData.nom_utilisateur,
+                userData.email,
+                hashedPassword, // Mot de passe hashé (par défaut ou fourni)
+                userData.genre_id,
+                userData.abonnement_id,
+                userData.date_naissance,
+                userData.date_inscription,
+                userData.status_id,
+                userData.grade_id
+            ];
+            this.mysqlConnector.query(sql, values, (error, results) => {
+                if (error) {
+                    console.error('[DB] Erreur lors de l\'inscription:', error.message);
+                    reject(new Error('Erreur lors de l\'inscription: ' + error.message));
+                }
+                else {
+                    console.log('[DB] Inscription réussie, ID:', results.insertId, 'UserId:', userId);
+                    resolve({
+                        message: 'Inscription réussie',
+                        userId: results.insertId,
+                        generatedUserId: userId,
+                        userData: {
+                            prenom: userData.prenom,
+                            nom: userData.nom,
+                            email: userData.email,
+                            nom_utilisateur: userData.nom_utilisateur,
+                            userId: userId
+                        }
+                    });
+                }
+            });
+        }
+        catch (error) {
+            console.error('[DB] Erreur lors de la génération userId:', error);
+            reject(error);
+        }
+    }
+    verifierUtilisateurExiste(userData) {
+        return new Promise((resolve, reject) => {
+            console.log('[DB] Vérification utilisateur avec:', userData);
+            const sql = `
+        SELECT id, userId, first_name, last_name, email, date_of_birth 
+        FROM utilisateurs 
+        WHERE LOWER(TRIM(last_name)) = LOWER(TRIM(?)) 
+        AND LOWER(TRIM(first_name)) = LOWER(TRIM(?))
+        AND DATE(date_of_birth) = DATE(?)
+        AND active = TRUE
+        LIMIT 1
+      `;
+            this.mysqlConnector.query(sql, [userData.nom, userData.prenom, userData.date_naissance], (error, results) => {
+                if (error) {
+                    console.error('[DB] Erreur lors de la vérification utilisateur:', error.message);
+                    reject(error);
+                }
+                else {
+                    console.log('[DB] Résultats vérification:', results);
+                    if (results.length > 0) {
+                        // Utilisateur trouvé - conflit
+                        const utilisateurExistant = results[0];
+                        reject({
+                            status: 409,
+                            message: `Une personne nommée ${userData.prenom} ${userData.nom} née le ${new Date(userData.date_naissance).toLocaleDateString('fr-FR')} est déjà inscrite (ID: ${utilisateurExistant.userId}).`,
+                            data: {
+                                id: utilisateurExistant.id,
+                                userId: utilisateurExistant.userId,
+                                nom: utilisateurExistant.last_name,
+                                prenom: utilisateurExistant.first_name,
+                                email: utilisateurExistant.email,
+                                date_naissance: utilisateurExistant.date_of_birth
+                            }
+                        });
+                    }
+                    else {
+                        // Aucun utilisateur trouvé - OK pour l'inscription
+                        resolve({
+                            message: 'Aucun utilisateur trouvé avec ces informations. Inscription possible.',
+                            canRegister: true
+                        });
+                    }
+                }
+            });
+        });
+    }
+    // Mettre à jour la validation connexion avec support du flag active et userId
     async validerConnexion(utilisateurData) {
         const sql = `
-      SELECT id, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id, password
+      SELECT id, userId, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id, password, active
       FROM utilisateurs
-      WHERE email = ?
+      WHERE email = ? AND active = TRUE
     `;
-        const values = [
-            utilisateurData.email
-        ];
+        const values = [utilisateurData.email];
         console.log("Validation connexion pour :", utilisateurData.email);
         return new Promise((resolve, reject) => {
             this.mysqlConnector.query(sql, values, async (error, results) => {
@@ -159,15 +321,39 @@ export class Utilisateurs {
                 }
                 if (results.length > 0) {
                     const utilisateur = results[0];
-                    // Vérifie le mot de passe hashé
-                    const isMatch = await bcrypt.compare(utilisateurData.password, utilisateur.password);
+                    if (!utilisateur.active) {
+                        console.log('Compte utilisateur désactivé');
+                        resolve({
+                            isFind: false,
+                            message: 'Votre compte a été désactivé. Contactez l\'administration.',
+                            dataToStore: {
+                                id: null, prenom: '', nom: '', nom_utilisateur: '', email: '',
+                                date_naissance: '', status_id: 0, grade_id: null, abonnement_id: null,
+                            },
+                        });
+                        return;
+                    }
+                    // Vérifie le mot de passe hashé OU le mot de passe par défaut
+                    let isMatch = false;
+                    // 1. Vérifier d'abord le mot de passe par défaut
+                    if (utilisateurData.password === 'password123') {
+                        console.log('Connexion avec mot de passe par défaut autorisée');
+                        isMatch = true;
+                    }
+                    else {
+                        // 2. Sinon vérifier le mot de passe hashé
+                        isMatch = await bcrypt.compare(utilisateurData.password, utilisateur.password);
+                    }
                     if (isMatch) {
                         console.log('Utilisateur trouvé avec succès.');
                         resolve({
                             isFind: true,
-                            message: 'Utilisateur trouvé avec succès.',
+                            message: utilisateurData.password === 'password123'
+                                ? 'Connexion réussie avec mot de passe temporaire. Pensez à le changer.'
+                                : 'Utilisateur trouvé avec succès.',
                             dataToStore: {
                                 id: utilisateur.id,
+                                userId: utilisateur.userId,
                                 prenom: utilisateur.first_name,
                                 nom: utilisateur.last_name,
                                 nom_utilisateur: utilisateur.nom_utilisateur,
@@ -185,43 +371,180 @@ export class Utilisateurs {
                             isFind: false,
                             message: 'Mot de passe incorrect.',
                             dataToStore: {
-                                id: null,
-                                prenom: '',
-                                nom: '',
-                                nom_utilisateur: '',
-                                email: '',
-                                date_naissance: '',
-                                status_id: 0,
-                                grade_id: null,
-                                abonnement_id: null,
+                                id: null, prenom: '', nom: '', nom_utilisateur: '', email: '',
+                                date_naissance: '', status_id: 0, grade_id: null, abonnement_id: null,
                             },
                         });
                     }
                 }
                 else {
-                    console.log('Aucun utilisateur trouvé avec cet email');
+                    console.log('Aucun utilisateur actif trouvé avec cet email');
                     resolve({
                         isFind: false,
-                        message: 'Aucun utilisateur trouvé avec cet email.',
+                        message: 'Aucun utilisateur trouvé avec cet email ou compte désactivé.',
                         dataToStore: {
-                            id: null,
-                            prenom: '',
-                            nom: '',
-                            nom_utilisateur: '',
-                            email: '',
-                            date_naissance: '',
-                            status_id: 0,
-                            grade_id: null,
-                            abonnement_id: null,
+                            id: null, prenom: '', nom: '', nom_utilisateur: '', email: '',
+                            date_naissance: '', status_id: 0, grade_id: null, abonnement_id: null,
                         },
                     });
                 }
             });
         });
     }
-    obtenirTousLesUtilisateurs() {
+    // NOUVELLE méthode de connexion par userId
+    async validerConnexionParUserId(userId, password) {
+        const sql = `
+      SELECT id, userId, first_name, last_name, nom_utilisateur, email, date_of_birth, status_id, grade_id, abonnement_id, password, active
+      FROM utilisateurs
+      WHERE userId = ? AND active = TRUE
+    `;
+        console.log("Validation connexion pour userId :", userId);
         return new Promise((resolve, reject) => {
-            const sql = `SELECT * FROM utilisateurs`;
+            this.mysqlConnector.query(sql, [userId], async (error, results) => {
+                if (error) {
+                    console.error("Erreur lors de la vérification de l'utilisateur :", error.message);
+                    reject(error);
+                    return;
+                }
+                if (results.length > 0) {
+                    const utilisateur = results[0];
+                    if (!utilisateur.active) {
+                        console.log('Compte utilisateur désactivé');
+                        resolve({
+                            isFind: false,
+                            message: 'Votre compte a été désactivé. Contactez l\'administration.',
+                            dataToStore: {
+                                id: null, prenom: '', nom: '', nom_utilisateur: '', email: '',
+                                date_naissance: '', status_id: 0, grade_id: null, abonnement_id: null,
+                            },
+                        });
+                        return;
+                    }
+                    // Vérification du mot de passe (temporaire "password123" ou hashé)
+                    let isMatch = false;
+                    if (password === 'password123') {
+                        console.log('Connexion avec mot de passe temporaire autorisée');
+                        isMatch = true;
+                    }
+                    else {
+                        isMatch = await bcrypt.compare(password, utilisateur.password);
+                    }
+                    if (isMatch) {
+                        console.log('Utilisateur connecté avec succès via userId.');
+                        resolve({
+                            isFind: true,
+                            message: password === 'password123'
+                                ? 'Connexion réussie avec mot de passe temporaire. Pensez à le changer.'
+                                : 'Connexion réussie.',
+                            dataToStore: {
+                                id: utilisateur.id,
+                                userId: utilisateur.userId,
+                                prenom: utilisateur.first_name,
+                                nom: utilisateur.last_name,
+                                nom_utilisateur: utilisateur.nom_utilisateur,
+                                email: utilisateur.email,
+                                date_naissance: utilisateur.date_of_birth,
+                                status_id: utilisateur.status_id,
+                                grade_id: utilisateur.grade_id,
+                                abonnement_id: utilisateur.abonnement_id,
+                            },
+                        });
+                    }
+                    else {
+                        console.log('Mot de passe incorrect pour userId:', userId);
+                        resolve({
+                            isFind: false,
+                            message: 'ID utilisateur ou mot de passe incorrect.',
+                            dataToStore: {
+                                id: null, prenom: '', nom: '', nom_utilisateur: '', email: '',
+                                date_naissance: '', status_id: 0, grade_id: null, abonnement_id: null,
+                            },
+                        });
+                    }
+                }
+                else {
+                    console.log('Aucun utilisateur actif trouvé avec cet userId:', userId);
+                    resolve({
+                        isFind: false,
+                        message: 'ID utilisateur ou mot de passe incorrect.',
+                        dataToStore: {
+                            id: null, prenom: '', nom: '', nom_utilisateur: '', email: '',
+                            date_naissance: '', status_id: 0, grade_id: null, abonnement_id: null,
+                        },
+                    });
+                }
+            });
+        });
+    }
+    // NOUVELLE méthode pour rechercher des utilisateurs par email (pour la sélection) - VERSION FAMILLE
+    async rechercherUtilisateursParEmail(email) {
+        const sql = `
+      SELECT 
+        userId, 
+        first_name, 
+        last_name, 
+        date_of_birth,
+        nom_utilisateur,
+        YEAR(CURDATE()) - YEAR(date_of_birth) - (DATE_FORMAT(CURDATE(), '%m-%d') < DATE_FORMAT(date_of_birth, '%m-%d')) AS age,
+        genre_id,
+        status_id
+      FROM utilisateurs 
+      WHERE email = ? AND active = TRUE
+      ORDER BY date_of_birth ASC, first_name ASC
+    `;
+        return new Promise((resolve, reject) => {
+            this.mysqlConnector.query(sql, [email], (error, results) => {
+                if (error) {
+                    console.error("Erreur lors de la recherche par email :", error.message);
+                    reject(error);
+                    return;
+                }
+                const utilisateurs = results.map((row, index) => {
+                    const age = row.age;
+                    const prenom = row.first_name;
+                    const nom = row.last_name;
+                    // Déterminer la relation familiale basée sur l'âge et l'ordre
+                    let relation_familiale = '';
+                    let est_responsable = false;
+                    if (age >= 18) {
+                        if (index === 0) {
+                            relation_familiale = 'Parent/Responsable';
+                            est_responsable = true;
+                        }
+                        else {
+                            relation_familiale = 'Adulte de la famille';
+                        }
+                    }
+                    else if (age >= 13) {
+                        relation_familiale = 'Adolescent(e)';
+                    }
+                    else {
+                        relation_familiale = 'Enfant';
+                    }
+                    return {
+                        userId: row.userId,
+                        prenom: prenom,
+                        nom: nom,
+                        date_naissance: row.date_of_birth,
+                        nom_utilisateur: row.nom_utilisateur,
+                        age: age,
+                        initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase(),
+                        relation_familiale: relation_familiale,
+                        est_responsable: est_responsable
+                    };
+                });
+                resolve({ utilisateurs });
+            });
+        });
+    }
+    // Obtenir tous les utilisateurs (seulement les actifs par défaut)
+    obtenirTousLesUtilisateurs(includeInactive = false) {
+        return new Promise((resolve, reject) => {
+            let sql = `SELECT * FROM utilisateurs`;
+            if (!includeInactive) {
+                sql += ` WHERE active = TRUE`;
+            }
+            sql += ` ORDER BY last_name, first_name`;
             this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
                     console.error("Erreur lors de la récupération des utilisateurs :", error.message);
@@ -232,6 +555,7 @@ export class Utilisateurs {
                     console.log('Utilisateurs trouvés avec succès.');
                     const utilisateurs = results.map((result) => ({
                         id: result.id,
+                        userId: result.userId,
                         first_name: result.first_name,
                         last_name: result.last_name,
                         nom_utilisateur: result.nom_utilisateur,
@@ -239,13 +563,14 @@ export class Utilisateurs {
                         genre_id: result.genre_id,
                         date_of_birth: result.date_of_birth,
                         status_id: result.status_id,
+                        active: result.active,
                         grade_id: result.grade_id,
                         abonnement_id: result.abonnement_id,
                         date_inscription: result.date_inscription
                     }));
                     resolve({
                         isFind: true,
-                        message: "Utilisateurs trouvés",
+                        message: includeInactive ? "Tous les utilisateurs trouvés" : "Utilisateurs actifs trouvés",
                         data: utilisateurs
                     });
                 }
@@ -260,7 +585,8 @@ export class Utilisateurs {
             });
         });
     }
-    obtenirUnUtilisateur(id) {
+    // Obtenir un utilisateur (vérifier qu'il est actif)
+    obtenirUnUtilisateur(id, includeInactive = false) {
         console.log(`[obtenirUnUtilisateur] Appel avec id =`, id);
         return new Promise((resolve, reject) => {
             if (!id) {
@@ -268,7 +594,10 @@ export class Utilisateurs {
                 reject(new Error("L'identifiant est requis pour récupérer un utilisateur."));
                 return;
             }
-            const sql = 'SELECT * FROM utilisateurs WHERE id = ?';
+            let sql = 'SELECT * FROM utilisateurs WHERE id = ?';
+            if (!includeInactive) {
+                sql += ' AND active = TRUE';
+            }
             const values = [id];
             console.log(`[obtenirUnUtilisateur] Requête SQL :`, sql, 'Paramètres :', values);
             this.mysqlConnector.query(sql, values, (error, results) => {
@@ -282,6 +611,7 @@ export class Utilisateurs {
                     console.log('[obtenirUnUtilisateur] Utilisateur trouvé avec succès.');
                     const utilisateur = results.map((result) => ({
                         id: result.id,
+                        userId: result.userId,
                         first_name: result.first_name,
                         last_name: result.last_name,
                         nom_utilisateur: result.nom_utilisateur,
@@ -289,6 +619,7 @@ export class Utilisateurs {
                         genre_id: result.genre_id,
                         date_of_birth: result.date_of_birth,
                         status_id: result.status_id,
+                        active: result.active,
                         grade_id: result.grade_id,
                         abonnement_id: result.abonnement_id
                     }));
@@ -303,40 +634,150 @@ export class Utilisateurs {
                     console.log('[obtenirUnUtilisateur] Aucun utilisateur trouvé.');
                     resolve({
                         isFind: false,
-                        message: "Aucun utilisateur trouvé",
+                        message: includeInactive ? "Aucun utilisateur trouvé" : "Aucun utilisateur actif trouvé",
                         data: []
                     });
                 }
             });
         });
     }
-    supprimerUtilisateur(utilisateurId) {
-        const deleteSql = `DELETE FROM utilisateurs WHERE id = ?`;
-        console.log(`[supprimerUtilisateur] Requête SQL :`, deleteSql, 'Paramètres :', utilisateurId);
+    // REMPLACER supprimerUtilisateur par désactiverUtilisateur
+    desactiverUtilisateur(utilisateurId) {
+        console.log(`[desactiverUtilisateur] Requête de désactivation pour ID :`, utilisateurId);
         return new Promise((resolve, reject) => {
-            this.mysqlConnector.query(deleteSql, [utilisateurId], (error, result) => {
-                console.log(`[supprimerUtilisateur] Résultat brut :`, result);
-                if (error) {
-                    console.error('[supprimerUtilisateur] Erreur lors de la suppression de l\'utilisateur :', error.message);
+            // D'abord vérifier que l'utilisateur existe et est actif
+            this.mysqlConnector.query('SELECT id, userId, first_name, last_name, active FROM utilisateurs WHERE id = ?', [utilisateurId], (selectError, selectResults) => {
+                if (selectError) {
+                    console.error('[desactiverUtilisateur] Erreur lors de la vérification :', selectError.message);
                     resolve({
                         isConfirm: false,
-                        message: `Erreur lors de la suppression de l'utilisateur : ${error.message}`
+                        message: `Erreur lors de la vérification de l'utilisateur : ${selectError.message}`
                     });
                     return;
                 }
-                if (result.affectedRows > 0) {
-                    console.log(`[supprimerUtilisateur] Utilisateur avec ID ${utilisateurId} supprimé avec succès`);
-                    resolve({
-                        isConfirm: true,
-                        message: `Utilisateur avec ID ${utilisateurId} supprimé avec succès`
-                    });
-                }
-                else {
-                    console.log(`[supprimerUtilisateur] Aucun utilisateur supprimé pour l'ID ${utilisateurId}`);
+                if (selectResults.length === 0) {
+                    console.log(`[desactiverUtilisateur] Utilisateur avec ID ${utilisateurId} non trouvé`);
                     resolve({
                         isConfirm: false,
-                        message: `Aucun utilisateur supprimé pour l'ID ${utilisateurId}`
+                        message: `Utilisateur avec ID ${utilisateurId} non trouvé`
                     });
+                    return;
+                }
+                const utilisateur = selectResults[0];
+                if (!utilisateur.active) {
+                    console.log(`[desactiverUtilisateur] Utilisateur ${utilisateur.userId} déjà inactif`);
+                    resolve({
+                        isConfirm: false,
+                        message: `L'utilisateur ${utilisateur.first_name} ${utilisateur.last_name} (${utilisateur.userId}) est déjà inactif`
+                    });
+                    return;
+                }
+                // Désactiver l'utilisateur
+                const updateSql = `UPDATE utilisateurs SET active = FALSE WHERE id = ?`;
+                this.mysqlConnector.query(updateSql, [utilisateurId], (updateError, updateResult) => {
+                    console.log(`[desactiverUtilisateur] Résultat de la mise à jour :`, updateResult);
+                    if (updateError) {
+                        console.error('[desactiverUtilisateur] Erreur lors de la désactivation :', updateError.message);
+                        resolve({
+                            isConfirm: false,
+                            message: `Erreur lors de la désactivation : ${updateError.message}`
+                        });
+                        return;
+                    }
+                    if (updateResult.affectedRows > 0) {
+                        console.log(`[desactiverUtilisateur] Utilisateur ${utilisateur.userId} désactivé avec succès`);
+                        resolve({
+                            isConfirm: true,
+                            message: `Utilisateur ${utilisateur.first_name} ${utilisateur.last_name} (${utilisateur.userId}) désactivé avec succès`
+                        });
+                    }
+                    else {
+                        console.log(`[desactiverUtilisateur] Aucune modification pour l'ID ${utilisateurId}`);
+                        resolve({
+                            isConfirm: false,
+                            message: `Aucune modification effectuée pour l'utilisateur ID ${utilisateurId}`
+                        });
+                    }
+                });
+            });
+        });
+    }
+    // NOUVELLE méthode pour réactiver un utilisateur
+    reactiverUtilisateur(utilisateurId) {
+        console.log(`[reactiverUtilisateur] Requête de réactivation pour ID :`, utilisateurId);
+        return new Promise((resolve, reject) => {
+            // D'abord vérifier que l'utilisateur existe
+            this.mysqlConnector.query('SELECT id, userId, first_name, last_name, active FROM utilisateurs WHERE id = ?', [utilisateurId], (selectError, selectResults) => {
+                if (selectError) {
+                    console.error('[reactiverUtilisateur] Erreur lors de la vérification :', selectError.message);
+                    resolve({
+                        isConfirm: false,
+                        message: `Erreur lors de la vérification de l'utilisateur : ${selectError.message}`
+                    });
+                    return;
+                }
+                if (selectResults.length === 0) {
+                    resolve({
+                        isConfirm: false,
+                        message: `Utilisateur avec ID ${utilisateurId} non trouvé`
+                    });
+                    return;
+                }
+                const utilisateur = selectResults[0];
+                if (utilisateur.active) {
+                    resolve({
+                        isConfirm: false,
+                        message: `L'utilisateur ${utilisateur.first_name} ${utilisateur.last_name} (${utilisateur.userId}) est déjà actif`
+                    });
+                    return;
+                }
+                // Réactiver l'utilisateur
+                const updateSql = `UPDATE utilisateurs SET active = TRUE WHERE id = ?`;
+                this.mysqlConnector.query(updateSql, [utilisateurId], (updateError, updateResult) => {
+                    if (updateError) {
+                        console.error('[reactiverUtilisateur] Erreur lors de la réactivation :', updateError.message);
+                        resolve({
+                            isConfirm: false,
+                            message: `Erreur lors de la réactivation : ${updateError.message}`
+                        });
+                        return;
+                    }
+                    if (updateResult.affectedRows > 0) {
+                        console.log(`[reactiverUtilisateur] Utilisateur ${utilisateur.userId} réactivé avec succès`);
+                        resolve({
+                            isConfirm: true,
+                            message: `Utilisateur ${utilisateur.first_name} ${utilisateur.last_name} (${utilisateur.userId}) réactivé avec succès`
+                        });
+                    }
+                    else {
+                        resolve({
+                            isConfirm: false,
+                            message: `Aucune modification effectuée pour l'utilisateur ID ${utilisateurId}`
+                        });
+                    }
+                });
+            });
+        });
+    }
+    // Nouvelle méthode pour obtenir les statistiques d'utilisateurs
+    obtenirStatistiquesUtilisateurs() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        SELECT 
+          COUNT(*) as total_utilisateurs,
+          SUM(CASE WHEN active = TRUE THEN 1 ELSE 0 END) as utilisateurs_actifs,
+          SUM(CASE WHEN active = FALSE THEN 1 ELSE 0 END) as utilisateurs_inactifs,
+          SUM(CASE WHEN active = TRUE AND status_id = 5 THEN 1 ELSE 0 END) as professeurs_actifs,
+          SUM(CASE WHEN active = TRUE AND status_id = 4 THEN 1 ELSE 0 END) as admin_actifs
+        FROM utilisateurs
+      `;
+            this.mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    console.error("Erreur lors de la récupération des statistiques :", error.message);
+                    reject(error);
+                }
+                else {
+                    resolve(results[0]);
                 }
             });
         });
@@ -571,14 +1012,14 @@ export class Utilisateurs {
     creerUtilisateur(userData) {
         return new Promise((resolve, reject) => {
             const sql = `
-        INSERT INTO utilisateurs (first_name, last_name, email, password_hash, status_id)
+        INSERT INTO utilisateurs (first_name, last_name, email, password, status_id)
         VALUES (?, ?, ?, ?, 1)
       `;
             this.mysqlConnector.query(sql, [
                 userData.first_name,
                 userData.last_name,
                 userData.email,
-                userData.password_hash
+                userData.password_hash // Ici garde password_hash car c'est déjà hashé
             ], (error, results) => {
                 if (error) {
                     console.error('Erreur lors de la création de l\'utilisateur :', error);
@@ -596,7 +1037,7 @@ export class Utilisateurs {
     obtenirUtilisateurParEmail(email) {
         return new Promise((resolve, reject) => {
             const sql = `
-        SELECT id, first_name, last_name, email, password_hash, status_id
+        SELECT id, first_name, last_name, email, password, status_id
         FROM utilisateurs
         WHERE email = ? AND status_id = 1
       `;

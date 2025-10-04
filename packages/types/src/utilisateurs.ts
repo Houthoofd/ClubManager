@@ -2,25 +2,12 @@
 import { z } from "zod";
 
 
-export type UserData = {
-  prenom: string;
-  nom: string;
-  nom_utilisateur: string;
-  email: string;
-  genre_id: number | null;
-  date_naissance: string;
-  password: string;
-  status_id: number;
-  grade_id: number | null;
-  abonnement_id: number | null;
-  date_inscription: string;
-};
-
-export type UserDataSession = {
+export interface UserDataSession {
   isFind: boolean;
   message: string;
   dataToStore: {
-    id: number | null,
+    id: number | null;
+    userId?: string; // Ajouter le userId optionnel
     prenom: string;
     nom: string;
     nom_utilisateur: string;
@@ -30,7 +17,7 @@ export type UserDataSession = {
     grade_id: number | null;
     abonnement_id: number | null;
   };
-};
+}
 
 export type Professeur = {
   id: string; // ou number si l'ID est un entier
@@ -132,10 +119,39 @@ export const  genresSchema = z.object({
   genre_name: z.string().min(1, "Le nom du genre est requis")
 });
 
-// Schéma Zod pour valider les données de Genres
+// NOUVEAU type pour la recherche par email
+export type UserSearchByEmail = {
+  email: string;
+};
+
+// Interface pour les utilisateurs trouvés - VERSION FAMILLE
+export interface AvailableUserForLogin {
+  userId: string;
+  prenom: string;
+  nom: string;
+  date_naissance: string;
+  nom_utilisateur: string;
+  age: number;
+  initiales: string;
+  relation_familiale?: string;
+  est_responsable?: boolean;
+}
+
+// Nouveau schéma pour la recherche par email
+export const userSearchByEmailSchema = z.object({
+  email: z.string().email("L'email est invalide"),
+});
+
+// Nouveau schéma Zod pour la connexion par userId
+export const userDataLoginByUserIdSchema = z.object({
+  userId: z.string().min(1, "L'userId est requis"),
+  password: z.string().min(1, "Le mot de passe est requis"), // Permettre tous les mots de passe y compris "password123"
+});
+
+// Schéma Zod pour valider les données de connexion
 export const userDataLoginSchema = z.object({
   email: z.string().email("L'email est invalide"),
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+  password: z.string().min(1, "Le mot de passe est requis"), // Permettre tous les mots de passe y compris "password123"
 });
 
 // Schéma Zod pour valider les données d'inscription utilisateur
@@ -197,9 +213,9 @@ export const userDataAjoutSchema = z.object({
 export const utilisateurInscriptionSchema = z.object({
   prenom: z.string().min(1, "Le prénom est requis"),
   nom: z.string().min(1, "Le nom est requis"),
-  nom_utilisateur: z.string().min(1, "Le nom d'utilisateur est requis"),
+  nom_utilisateur: z.string().min(1, "Le nom d'utilisateur est requis").optional().default(""), // Rendre optionnel avec défaut
   email: z.string().email("L'email est invalide"),
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+  password: z.string().min(1, "Le mot de passe est requis").optional().default("password123"), // Mot de passe par défaut
   genre_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("Le genre ID doit être un nombre positif")),
   abonnement_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("L'abonnement ID doit être un nombre positif")),
   date_naissance: z.preprocess(
@@ -225,3 +241,30 @@ export const utilisateurInscriptionSchema = z.object({
   status_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("Le status ID doit être un nombre positif")),
   grade_id: z.preprocess(val => val === undefined ? 1 : val, z.number().positive("Le grade ID doit être un nombre positif")),
 });
+
+export interface UserData {
+  id?: number;
+  userId?: string; // Ajouter le userId
+  prenom?: string;
+  nom?: string;
+  first_name?: string;
+  last_name?: string;
+  nom_utilisateur?: string;
+  email?: string;
+  genre_id?: number | null;
+  date_of_birth?: string;
+  date_naissance?: string;
+  password?: string;
+  status_id?: number;
+  active?: boolean; // Ajouter le flag active
+  grade_id?: number | null;
+  abonnement_id?: number | null;
+  date_inscription?: string;
+}
+
+// NOUVEAU type pour connexion par userId
+export type UserDataLoginByUserId = {
+  userId: string,
+  password: string,
+};
+

@@ -221,4 +221,3 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
 
 export default LoginPage;
 
-

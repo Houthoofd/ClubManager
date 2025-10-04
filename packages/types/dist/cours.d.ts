@@ -56,58 +56,22 @@ export declare const coursdataSchema: z.ZodObject<{
     type_cours: z.ZodString;
     heure_debut: z.ZodString;
     heure_fin: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    id: number;
-    date_cours: string;
-    type_cours: string;
-    heure_debut: string;
-    heure_fin: string;
-}, {
-    id: number;
-    date_cours: string;
-    type_cours: string;
-    heure_debut: string;
-    heure_fin: string;
-}>;
+}, z.core.$strip>;
 export declare const datareservationSchema: z.ZodObject<{
-    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    cours_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    cours_id: number;
-    utilisateur_nom: string;
-    utilisateur_prenom: string;
-}, {
-    utilisateur_nom: string;
-    utilisateur_prenom: string;
-    cours_id?: unknown;
-}>;
+}, z.core.$strip>;
 export declare const datannulationSchema: z.ZodObject<{
-    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    cours_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    cours_id: number;
-    utilisateur_nom: string;
-    utilisateur_prenom: string;
-}, {
-    utilisateur_nom: string;
-    utilisateur_prenom: string;
-    cours_id?: unknown;
-}>;
+}, z.core.$strip>;
 export declare const datavalidationSchema: z.ZodObject<{
-    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    cours_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    cours_id: number;
-    utilisateur_nom: string;
-    utilisateur_prenom: string;
-}, {
-    utilisateur_nom: string;
-    utilisateur_prenom: string;
-    cours_id?: unknown;
-}>;
+}, z.core.$strip>;
 export type CoursDataValidated = z.infer<typeof coursdataSchema>;
 export type DataReservationValidated = z.infer<typeof datareservationSchema>;
 export type DataAnnulationValidated = z.infer<typeof datannulationSchema>;

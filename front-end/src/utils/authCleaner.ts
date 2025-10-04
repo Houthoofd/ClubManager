@@ -58,79 +58,43 @@ export const clearServerCookies = async (): Promise<boolean> => {
  * Utilitaire pour nettoyer complètement toutes les données d'authentification
  */
 export const clearAllAuthData = async () => {
-  console.log('🧹 Nettoyage complet des données d\'authentification...');
+  console.log('🧹 Début du nettoyage complet des données d\'authentification...');
   
-  // 1. NOUVEAU: Nettoyer côté serveur en premier
-  await clearServerCookies();
+  // 1. Nettoyer le localStorage et sessionStorage
+  localStorage.removeItem('userData');
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('userRole'); // Nouveau: nettoyer aussi le rôle
+  sessionStorage.removeItem('userData');
+  sessionStorage.removeItem('authToken');
+  sessionStorage.removeItem('userRole'); // Nouveau: nettoyer aussi le rôle
   
-  // 2. Nettoyer localStorage
-  const localStorageKeys = [
-    'authToken', 'userData', 'token', 'user',
-    'auth_token', 'access_token', 'refresh_token'
-  ];
+  // 2. Définir les patterns de cookies d'authentification
+  const authCookiePatterns = ['auth', 'token', 'user', 'session', 'jwt', 'login', 'role'];
   
-  localStorageKeys.forEach(key => {
-    localStorage.removeItem(key);
-  });
-  
-  // 3. Nettoyer sessionStorage
-  localStorageKeys.forEach(key => {
-    sessionStorage.removeItem(key);
-  });
-  
-  // 4. Nettoyer les cookies côté client (pour ceux non HttpOnly)
-  const knownAuthCookies = [
-    'token', 'authToken', 'userData', 'user', 'auth_token',
-    'access_token', 'refresh_token', 'sessionId', 'session', 'jwt', 'JWT'
-  ];
-
-  knownAuthCookies.forEach(cookieName => {
-    const deletionStrategies = [
-      `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`,
-      `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`,
-      `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=`,
-      `${cookieName}=; max-age=0; path=/`,
-      `${cookieName}=deleted; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
-    ];
+  // 3. Nettoyer les cookies côté client de manière agressive
+  const cookies = document.cookie.split(';');
+  cookies.forEach(cookie => {
+    const [name] = cookie.split('=').map(s => s.trim());
     
-    deletionStrategies.forEach(strategy => {
-      document.cookie = strategy;
-    });
-  });
-
-  // 5. Nettoyer tous les autres cookies d'authentification détectés
-  const authCookiePatterns = ['auth', 'token', 'user', 'session', 'jwt'];
-  
-  document.cookie.split(";").forEach((cookie) => {
-    const name = cookie.split("=")[0].trim();
-    
-    if (name.length === 0) return;
-    
-    const isAuthCookie = authCookiePatterns.some(pattern => 
-      name.toLowerCase().includes(pattern.toLowerCase())
-    );
-    
-    if (isAuthCookie) {
-      console.log(`🎯 Cookie d'authentification côté client détecté: "${name}"`);
-      
-      const deletionStrategies = [
-        `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`,
-        `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`,
-        `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=`,
-        `${name}=; max-age=0; path=/`
-      ];
-      
-      deletionStrategies.forEach(strategy => {
-        document.cookie = strategy;
-      });
+    // Supprimer tous les cookies qui pourraient être liés à l'authentification
+    if (authCookiePatterns.some(pattern => name.toLowerCase().includes(pattern.toLowerCase()))) {
+      // Suppression standard
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      // Suppression avec domaine
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=;`;
+      // Suppression avec sous-domaines
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.${window.location.hostname};`;
     }
   });
 
-  // 6. Vérification finale et log des cookies restants
+  // 4. Nettoyer les cookies côté serveur
+  await clearServerCookies();
+
+  // 5. Vérification finale et log des cookies restants
   const remainingCookies = document.cookie.split(';').filter(c => c.trim().length > 0);
   if (remainingCookies.length > 0) {
     console.log('⚠️ Cookies restants après nettoyage:', remainingCookies);
-    
+
     // Dernière tentative agressive pour les cookies persistants
     remainingCookies.forEach(cookie => {
       const name = cookie.split('=')[0].trim();
@@ -147,7 +111,7 @@ export const clearAllAuthData = async () => {
     console.log('✅ Tous les cookies supprimés avec succès');
   }
   
-  // 7. Forcer le rafraîchissement de l'état d'authentification
+  // 6. Forcer le rafraîchissement de l'état d'authentification
   window.dispatchEvent(new Event('auth-cleared'));
   
   console.log('✅ Nettoyage complet terminé (client + serveur)');
@@ -168,6 +132,7 @@ export const useClearAuthOnMount = () => {
 export const isUserAuthenticated = (): boolean => {
   const token = localStorage.getItem('authToken');
   const userData = localStorage.getItem('userData');
+  const userRole = localStorage.getItem('userRole');
   
   if (!token || !userData) {
     return false;
@@ -175,14 +140,14 @@ export const isUserAuthenticated = (): boolean => {
 
   try {
     const userDataParsed = JSON.parse(userData);
-    return !!(userDataParsed.id && userDataParsed.email);
+    return !!(userDataParsed.id && userDataParsed.email && (userDataParsed.status_id || userRole));
   } catch {
     return false;
   }
 };
 
 /**
- * NOUVEAU: Fonction de diagnostic pour déboguer les cookies
+ * Fonction de diagnostic pour déboguer les cookies
  */
 export const debugCookies = () => {
   console.log('🔍 DIAGNOSTIC COOKIES:');

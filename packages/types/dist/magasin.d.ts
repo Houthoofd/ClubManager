@@ -55,152 +55,49 @@ export type ArticleNomCategorie = {
 };
 export declare const articleNomCategorieSchema: z.ZodObject<{
     nom: z.ZodString;
-    categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
-}, "strip", z.ZodTypeAny, {
-    nom: string;
-    categorie_id: number;
-}, {
-    nom: string;
-    categorie_id?: unknown;
-}>;
+    categorie_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+}, z.core.$strip>;
 export declare const articleCreationSchema: z.ZodObject<{
     nom: z.ZodString;
     description: z.ZodString;
-    prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
-    categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    prix: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString>>>;
+    categorie_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     stocks: z.ZodArray<z.ZodObject<{
         taille: z.ZodString;
-        quantite: z.ZodEffects<z.ZodNumber, number, unknown>;
-    }, "strip", z.ZodTypeAny, {
-        taille: string;
-        quantite: number;
-    }, {
-        taille: string;
-        quantite?: unknown;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    nom: string;
-    categorie_id: number;
-    description: string;
-    prix: number;
-    images: string[];
-    stocks: {
-        taille: string;
-        quantite: number;
-    }[];
-}, {
-    nom: string;
-    description: string;
-    stocks: {
-        taille: string;
-        quantite?: unknown;
-    }[];
-    categorie_id?: unknown;
-    prix?: unknown;
-    images?: string[] | undefined;
-}>;
+        quantite: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 export declare const articleDataValidationSchema: z.ZodObject<{
     nom: z.ZodString;
     description: z.ZodString;
-    prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
-    categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    prix: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString>>>;
+    categorie_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     stocks: z.ZodArray<z.ZodObject<{
         taille: z.ZodString;
-        quantite: z.ZodEffects<z.ZodNumber, number, unknown>;
-    }, "strip", z.ZodTypeAny, {
-        taille: string;
-        quantite: number;
-    }, {
-        taille: string;
-        quantite?: unknown;
-    }>, "many">;
-} & {
+        quantite: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    }, z.core.$strip>>;
     id: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    id: number;
-    nom: string;
-    categorie_id: number;
-    description: string;
-    prix: number;
-    images: string[];
-    stocks: {
-        taille: string;
-        quantite: number;
-    }[];
-}, {
-    id: number;
-    nom: string;
-    description: string;
-    stocks: {
-        taille: string;
-        quantite?: unknown;
-    }[];
-    categorie_id?: unknown;
-    prix?: unknown;
-    images?: string[] | undefined;
-}>;
+}, z.core.$strip>;
 export declare const nouvelleCommandeSchema: z.ZodObject<{
-    utilisateur_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    utilisateur_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     articles: z.ZodArray<z.ZodObject<{
-        article_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+        article_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
         taille: z.ZodOptional<z.ZodString>;
-        quantite: z.ZodEffects<z.ZodNumber, number, unknown>;
-        prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-    }, "strip", z.ZodTypeAny, {
-        prix: number;
-        quantite: number;
-        article_id: number;
-        taille?: string | undefined;
-    }, {
-        prix?: unknown;
-        taille?: string | undefined;
-        quantite?: unknown;
-        article_id?: unknown;
-    }>, "many">;
+        quantite: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+        prix: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    }, z.core.$strip>>;
     statut: z.ZodOptional<z.ZodString>;
     date: z.ZodOptional<z.ZodString>;
-    total: z.ZodEffects<z.ZodOptional<z.ZodNumber>, number | undefined, unknown>;
-}, "strip", z.ZodTypeAny, {
-    utilisateur_id: number;
-    articles: {
-        prix: number;
-        quantite: number;
-        article_id: number;
-        taille?: string | undefined;
-    }[];
-    date?: string | undefined;
-    statut?: string | undefined;
-    total?: number | undefined;
-}, {
-    articles: {
-        prix?: unknown;
-        taille?: string | undefined;
-        quantite?: unknown;
-        article_id?: unknown;
-    }[];
-    date?: string | undefined;
-    utilisateur_id?: unknown;
-    statut?: string | undefined;
-    total?: unknown;
-}>;
+    total: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodOptional<z.ZodNumber>>;
+}, z.core.$strip>;
 export declare const articleCommandeSchema: z.ZodObject<{
-    article_id: z.ZodEffects<z.ZodNumber, number, unknown>;
-    taille_id: z.ZodEffects<z.ZodOptional<z.ZodNumber>, number | undefined, unknown>;
-    quantite: z.ZodEffects<z.ZodNumber, number, unknown>;
-    prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-}, "strip", z.ZodTypeAny, {
-    prix: number;
-    quantite: number;
-    article_id: number;
-    taille_id?: number | undefined;
-}, {
-    prix?: unknown;
-    quantite?: unknown;
-    article_id?: unknown;
-    taille_id?: unknown;
-}>;
+    article_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    taille_id: z.ZodPipe<z.ZodTransform<number | undefined, unknown>, z.ZodOptional<z.ZodNumber>>;
+    quantite: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    prix: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+}, z.core.$strip>;
 export type ArticleCreationData = z.infer<typeof articleCreationSchema>;
 export type ArticleData = z.infer<typeof articleDataValidationSchema>;
 export type NouvelleCommande = z.infer<typeof nouvelleCommandeSchema>;

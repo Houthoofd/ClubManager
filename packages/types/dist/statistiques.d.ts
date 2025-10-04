@@ -25,123 +25,39 @@ export type StatistiquesProgressionUtilisateur = {
     niveauActuel: string;
 };
 export declare const frequentationParCoursSchema: z.ZodObject<{
-    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    cours_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     titre: z.ZodString;
-    frequentation: z.ZodEffects<z.ZodNumber, number, unknown>;
-}, "strip", z.ZodTypeAny, {
-    cours_id: number;
-    titre: string;
-    frequentation: number;
-}, {
-    titre: string;
-    cours_id?: unknown;
-    frequentation?: unknown;
-}>;
+    frequentation: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+}, z.core.$strip>;
 export declare const frequentationParMoisSchema: z.ZodObject<{
     mois: z.ZodString;
-    frequentation: z.ZodEffects<z.ZodNumber, number, unknown>;
-}, "strip", z.ZodTypeAny, {
-    frequentation: number;
-    mois: string;
-}, {
-    mois: string;
-    frequentation?: unknown;
-}>;
+    frequentation: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+}, z.core.$strip>;
 export declare const statistiquesFrequentationSchema: z.ZodObject<{
-    totalFrequentation: z.ZodEffects<z.ZodNumber, number, unknown>;
+    totalFrequentation: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     frequentationParCours: z.ZodArray<z.ZodObject<{
-        cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+        cours_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
         titre: z.ZodString;
-        frequentation: z.ZodEffects<z.ZodNumber, number, unknown>;
-    }, "strip", z.ZodTypeAny, {
-        cours_id: number;
-        titre: string;
-        frequentation: number;
-    }, {
-        titre: string;
-        cours_id?: unknown;
-        frequentation?: unknown;
-    }>, "many">;
+        frequentation: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    }, z.core.$strip>>;
     frequentationParMois: z.ZodArray<z.ZodObject<{
         mois: z.ZodString;
-        frequentation: z.ZodEffects<z.ZodNumber, number, unknown>;
-    }, "strip", z.ZodTypeAny, {
-        frequentation: number;
-        mois: string;
-    }, {
-        mois: string;
-        frequentation?: unknown;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    totalFrequentation: number;
-    frequentationParCours: {
-        cours_id: number;
-        titre: string;
-        frequentation: number;
-    }[];
-    frequentationParMois: {
-        frequentation: number;
-        mois: string;
-    }[];
-}, {
-    frequentationParCours: {
-        titre: string;
-        cours_id?: unknown;
-        frequentation?: unknown;
-    }[];
-    frequentationParMois: {
-        mois: string;
-        frequentation?: unknown;
-    }[];
-    totalFrequentation?: unknown;
-}>;
+        frequentation: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 export declare const progressionParCoursSchema: z.ZodObject<{
-    cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+    cours_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     titre: z.ZodString;
-    progression: z.ZodEffects<z.ZodNumber, number, unknown>;
-}, "strip", z.ZodTypeAny, {
-    cours_id: number;
-    titre: string;
-    progression: number;
-}, {
-    titre: string;
-    cours_id?: unknown;
-    progression?: unknown;
-}>;
+    progression: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+}, z.core.$strip>;
 export declare const statistiquesProgressionUtilisateurSchema: z.ZodObject<{
-    utilisateur_id: z.ZodEffects<z.ZodNumber, number, unknown>;
-    coursSuivis: z.ZodEffects<z.ZodNumber, number, unknown>;
+    utilisateur_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    coursSuivis: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
     progressionParCours: z.ZodArray<z.ZodObject<{
-        cours_id: z.ZodEffects<z.ZodNumber, number, unknown>;
+        cours_id: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
         titre: z.ZodString;
-        progression: z.ZodEffects<z.ZodNumber, number, unknown>;
-    }, "strip", z.ZodTypeAny, {
-        cours_id: number;
-        titre: string;
-        progression: number;
-    }, {
-        titre: string;
-        cours_id?: unknown;
-        progression?: unknown;
-    }>, "many">;
+        progression: z.ZodPipe<z.ZodTransform<number, unknown>, z.ZodNumber>;
+    }, z.core.$strip>>;
     niveauActuel: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    utilisateur_id: number;
-    coursSuivis: number;
-    progressionParCours: {
-        cours_id: number;
-        titre: string;
-        progression: number;
-    }[];
-    niveauActuel: string;
-}, {
-    progressionParCours: {
-        titre: string;
-        cours_id?: unknown;
-        progression?: unknown;
-    }[];
-    niveauActuel: string;
-    utilisateur_id?: unknown;
-    coursSuivis?: unknown;
-}>;
+}, z.core.$strip>;
 //# sourceMappingURL=statistiques.d.ts.map

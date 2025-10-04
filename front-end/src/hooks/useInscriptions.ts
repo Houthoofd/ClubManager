@@ -118,24 +118,43 @@ export const useGenreOptions = () => {
   });
 };
 
-// Hook pour vérifier si un utilisateur existe déjà
+// Hook pour vérifier si un utilisateur existe déjà (basé sur nom + prénom + date de naissance)
 export const useVerifierUtilisateur = () => {
   return useMutation({
-    mutationFn: async (email: string) => {
-      const response = await fetch(apiUrl('inscription/verification'), {
+    mutationFn: async (userData: { nom: string; prenom: string; date_naissance: string }) => {
+      console.log('[Hook] Vérification utilisateur pour:', userData);
+      
+      const response = await fetch(apiUrl('utilisateurs/verifier'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nom: userData.nom,
+          prenom: userData.prenom,
+          date_naissance: userData.date_naissance
+        }),
       });
-      if (response.status === 409) {
-        throw new Error('Cet utilisateur existe déjà.');
-      }
+
+      const data = await response.json();
+      console.log('[Hook] Réponse vérification:', data);
+
       if (!response.ok) {
-        throw new Error('Erreur lors de la vérification de l\'utilisateur.');
+        // Si l'utilisateur existe, le serveur retourne une erreur 409
+        if (response.status === 409) {
+          throw new Error(data.message || 'Un utilisateur avec ces informations existe déjà');
+        }
+        throw new Error(data.message || 'Erreur lors de la vérification');
       }
-      return response.json();
+
+      return data;
     },
+    onError: (error: any) => {
+      console.error('[Hook] Erreur lors de la vérification:', error);
+    },
+    onSuccess: (data) => {
+      console.log('[Hook] Vérification réussie:', data);
+    }
   });
 };
 
@@ -162,14 +181,32 @@ export const useInscrireUtilisateur = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        credentials: 'include',
       });
+      
+      const data = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erreur lors de l\'inscription.');
+        // Gestion spécifique des différents types d'erreurs
+        if (response.status === 409 && data.type === 'USER_EXISTS') {
+          throw new Error(data.message || 'Un utilisateur avec ces informations existe déjà');
+        }
+        if (response.status === 400 && data.type === 'AGE_INSUFFICIENT') {
+          throw new Error(data.message || 'Âge insuffisant pour l\'inscription');
+        }
+        if (response.status === 400 && data.type === 'INVALID_BIRTH_DATE') {
+          throw new Error(data.message || 'Date de naissance invalide');
+        }
+        throw new Error(data.message || 'Erreur lors de l\'inscription.');
       }
-      return response.json();
+      
+      return data;
     },
+    onError: (error: any) => {
+      console.error('[Hook] Erreur lors de l\'inscription:', error);
+    },
+    onSuccess: (data) => {
+      console.log('[Hook] Inscription réussie:', data);
+    }
   });
 };
 
