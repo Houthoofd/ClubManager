@@ -4,26 +4,12 @@ import logger from 'morgan';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import MysqlConnector from './db/connector/mysqlconnector.js';
-import { default as indexRouter } from './routes/index.js';
-import { default as utilisateursRouter } from './routes/utilisateurs.js';
-import { default as informationsRouter } from './routes/informations.js';
-import { default as coursRouter } from './routes/cours.js';
-import { default as compteRouter } from './routes/compte.js';
-import { default as paiementRouter } from './routes/paiements.js';
-import { default as statistiquesRouter } from './routes/statistiques.js';
-import { default as magasinRouter } from './routes/magasin.js';
-import { default as professeursRouter } from './routes/professeurs.js';
-import { default as messagesRouter } from './routes/messages.js';
-import {default as uploadRouter } from './routes/upload.js';
-import {default as inscriptionRouter } from './routes/inscription.js';
-import {default as verificationRouter } from './routes/verification.js';
-import { default as authRouter } from './routes/auth.js';
-
 import dotenv from 'dotenv';
-
 import http from 'http';
 import { Server } from 'socket.io';
+
+// Charger le .env en premier
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,106 +19,240 @@ console.log("Chemin du dossier public :", publicPath);
 
 const app = express();
 
-// Initialisation du connector MySQL avec singleton - SANS appeler setupGracefulShutdown encore
-const mysqlConnector = MysqlConnector.getInstance();
-
-// Charger le .env (une seule fois !)
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-
-app.use(express.json());
-
-// Configuration CORS
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  process.env.FRONTEND_URL_ALT,
-  process.env.FRONTEND_URL_LOCAL,
-  'http://localhost:5173', // Ajoute explicitement le front Vite en dev
-  'http://127.0.0.1:5173', // Ajoute aussi 127.0.0.1 pour compatibilité
-  'http://localhost:3000', // Pour tests éventuels
-].filter(Boolean) as string[];
-
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Autorise les requêtes sans origin (ex: curl, Postman) et celles venant des allowedOrigins
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+async function startServer() {
+  try {
+    console.log('🚀 [Server] Démarrage du serveur Club Manager...');
+    
+    // 1. Initialiser la base de données en premier
+    console.log('🔄 [Server] Initialisation de la base de données...');
+    const { default: MysqlConnector } = await import('./db/connector/mysqlconnector.js');
+    const mysqlConnector = MysqlConnector.getInstance();
+    
+    // Attendre que la DB soit prête avec retry
+    let dbReady = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!dbReady && attempts < maxAttempts) {
+      try {
+        await new Promise((resolve, reject) => {
+          mysqlConnector.query('SELECT 1 as db_ready', [], (error: any, results: any) => {
+            if (error) {
+              reject(error);
+            } else {
+              console.log('✅ [Server] Base de données prête');
+              resolve(results);
+            }
+          });
+        });
+        dbReady = true;
+      } catch (error) {
+        attempts++;
+        console.log(`⏳ [Server] Tentative DB ${attempts}/${maxAttempts}...`);
+        if (attempts >= maxAttempts) {
+          throw new Error(`Base de données non disponible après ${maxAttempts} tentatives`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     }
-  },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-};
+    
+    // 2. Initialiser les services email après la DB (sans erreur bloquante)
+    console.log('🔄 [Server] Initialisation des services email...');
+    try {
+      const { messageClient } = await import('./clients/messageClient.js');
+      await messageClient.initialiser();
+      console.log('✅ [Server] Services email initialisés');
+      
+    } catch (emailError) {
+      console.warn('⚠️ [Server] Services email non disponibles:', emailError);
+      console.warn('⚠️ [Server] Le serveur continuera sans les services email');
+    }
+    
+    // 3. Configuration de l'application Express
+    app.use(express.json());
 
-app.use(cors(corsOptions));
+    // Configuration CORS
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      process.env.FRONTEND_URL_ALT,
+      process.env.FRONTEND_URL_LOCAL,
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:3000',
+    ].filter(Boolean) as string[];
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+    const corsOptions = {
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      credentials: true,
+    };
 
-// Sert les images et uploads (public) dans tous les cas
-app.use('/public', express.static(path.join(__dirname, '../public')));
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+    app.use(cors(corsOptions));
+    app.use(logger('dev'));
+    app.use(express.urlencoded({ extended: false }));
+    app.use(cookieParser());
 
-// Routes principales (API)
-app.use('/auth', authRouter);
-app.use('/', indexRouter);
-app.use('/utilisateurs', utilisateursRouter);
-app.use('/informations', informationsRouter);
-app.use('/cours', coursRouter);
-app.use('/compte', compteRouter);
-app.use('/paiements', paiementRouter);
-app.use('/magasin', magasinRouter);
-app.use('/professeurs', professeursRouter);
-app.use('/messages', messagesRouter);
-app.use('/upload', uploadRouter);
-app.use('/inscription', inscriptionRouter);
-app.use('/verification', verificationRouter);
-app.use('/statistiques', statistiquesRouter);
+    // Servir les fichiers statiques
+    app.use('/public', express.static(path.join(__dirname, '../public')));
+    app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-// Sert le build Vite (React) uniquement en production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../dist')));
+    // 4. Charger les routes après l'initialisation DB
+    const { default: indexRouter } = await import('./routes/index.js');
+    const { default: utilisateursRouter } = await import('./routes/utilisateurs.js');
+    const { default: informationsRouter } = await import('./routes/informations.js');
+    const { default: coursRouter } = await import('./routes/cours.js');
+    const { default: compteRouter } = await import('./routes/compte.js');
+    const { default: paiementRouter } = await import('./routes/paiements.js');
+    const { default: statistiquesRouter } = await import('./routes/statistiques.js');
+    const { default: magasinRouter } = await import('./routes/magasin.js');
+    const { default: professeursRouter } = await import('./routes/professeurs.js');
+    const { default: messagesRouter } = await import('./routes/messages.js');
+    const { default: uploadRouter } = await import('./routes/upload.js');
+    const { default: inscriptionRouter } = await import('./routes/inscription.js');
+    const { default: verificationRouter } = await import('./routes/verification.js');
+    const { default: authRouter } = await import('./routes/auth.js');
 
-  // Fallback pour React Router (production uniquement)
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist', 'index.html'));
-  });
+    // Routes principales (API)
+    app.use('/auth', authRouter);
+    app.use('/email', messagesRouter);
+    app.use('/', indexRouter);
+    app.use('/utilisateurs', utilisateursRouter);
+    app.use('/informations', informationsRouter);
+    app.use('/cours', coursRouter);
+    app.use('/compte', compteRouter);
+    app.use('/paiements', paiementRouter);
+    app.use('/magasin', magasinRouter);
+    app.use('/professeurs', professeursRouter);
+    app.use('/messages', messagesRouter);
+    app.use('/upload', uploadRouter);
+    app.use('/inscription', inscriptionRouter);
+    app.use('/verification', verificationRouter);
+    app.use('/statistiques', statistiquesRouter);
+
+    // Servir le build Vite (React) uniquement en production
+    if (process.env.NODE_ENV === 'production') {
+      app.use(express.static(path.join(__dirname, '../dist')));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+      });
+    }
+
+    // 5. Routes de santé
+    app.get('/health/database', (req, res) => {
+      try {
+        const status = mysqlConnector.getPoolStatus();
+        res.json({
+          status: 'healthy',
+          database: status
+        });
+      } catch (error) {
+        res.status(500).json({
+          status: 'unhealthy',
+          error: (error as Error).message
+        });
+      }
+    });
+
+    app.get('/health/email', async (req, res) => {
+      try {
+        const emailConfigured = !!(process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL);
+        
+        if (!emailConfigured) {
+          return res.status(500).json({
+            status: 'unhealthy',
+            email: {
+              configured: false,
+              error: 'Variables SENDGRID_API_KEY et/ou SENDGRID_FROM_EMAIL manquantes'
+            }
+          });
+        }
+
+        // Test de configuration email (non bloquant)
+        try {
+          const { EmailService } = await import('./services/emailService.js');
+          const emailService = new EmailService();
+          const testResult = await emailService.testerConfiguration();
+          
+          res.json({
+            status: testResult.success ? 'healthy' : 'unhealthy',
+            email: {
+              configured: emailConfigured,
+              testResult: testResult.success ? 'Configuration valide' : testResult.details
+            }
+          });
+        } catch (emailError) {
+          res.json({
+            status: 'partial',
+            email: {
+              configured: emailConfigured,
+              warning: 'Service email non initialisé mais configuration présente'
+            }
+          });
+        }
+      } catch (error) {
+        res.status(500).json({
+          status: 'unhealthy',
+          error: (error as Error).message
+        });
+      }
+    });
+
+    // 6. Démarrer le serveur
+    const server = http.createServer(app);
+    
+    // Socket.io
+    const io = new Server(server, {
+      cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST"]
+      }
+    });
+
+    const PORT = process.env.PORT || 3000;
+    server.listen(PORT, () => {
+      console.log(`✅ [Server] Serveur démarré sur le port ${PORT}`);
+      console.log(`🌐 [Server] API disponible sur http://localhost:${PORT}`);
+      console.log(`📊 [Server] Environnement : ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📧 [Server] Emails: ${process.env.SENDGRID_FROM_EMAIL ? 'Configurés' : 'Non configurés'}`);
+      console.log(`💾 [Server] Base de données: ${process.env.DB_NAME || 'clubmanager'}`);
+      
+      // Setup graceful shutdown SEULEMENT après le démarrage réussi
+      mysqlConnector.setupGracefulShutdown();
+    });
+
+    // Gestion propre de l'arrêt du serveur
+    process.on('SIGTERM', () => {
+      console.log('🛑 [Server] SIGTERM reçu, arrêt du serveur...');
+      server.close(() => {
+        console.log('✅ [Server] Serveur arrêté proprement');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('🛑 [Server] SIGINT reçu, arrêt du serveur...');
+      server.close(() => {
+        console.log('✅ [Server] Serveur arrêté proprement');
+        process.exit(0);
+      });
+    });
+    
+  } catch (error) {
+    console.error('❌ [Server] Erreur critique lors du démarrage:', error);
+    process.exit(1);
+  }
 }
 
-// Crée le serveur HTTP avec Express
-const server = http.createServer(app);
-
-// Instancie Socket.io avec le serveur
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:8081",  // Frontend
-    methods: ["GET", "POST"]
-  }
+// Démarrer le serveur
+startServer().catch((error) => {
+  console.error('❌ [Server] Erreur fatale:', error);
+  process.exit(1);
 });
 
-// Route de santé pour vérifier le statut du pool
-app.get('/health/database', (req, res) => {
-  try {
-    const status = mysqlConnector.getPoolStatus();
-    res.json({
-      status: 'healthy',
-      database: status
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'unhealthy',
-      error: (error as Error).message
-    });
-  }
-});
-
-// Démarrer le serveur Express et Socket.io
-server.listen(3000, () => {
-  console.log('🚀 Server is running on port 3000');
-  console.log(`📊 Environnement : ${process.env.NODE_ENV || 'development'}`);
-  
-  // SEULEMENT MAINTENANT configurer le shutdown gracieux
-  mysqlConnector.setupGracefulShutdown();
-});
+export default app;

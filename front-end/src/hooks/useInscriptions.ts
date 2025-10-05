@@ -88,33 +88,62 @@ export const useAnnulerInscriptionParNomPrenom = () => {
 // Hook pour récupérer les options d'abonnements
 export const useAbonnementOptions = () => {
   return useQuery({
-    queryKey: ['abonnements'],
+    queryKey: ['abonnementOptions'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/abonnements'));
-      if (!response.ok) throw new Error('Erreur lors du chargement des abonnements');
-      const data = await response.json();
-      return data.map((item: any) => ({
-        value: String(item.id),
-        label: item.nom_plan,
-        prix: item.prix
-      }));
+      try {
+        const response = await fetch(apiUrl('informations/abonnements'), {
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des abonnements');
+        }
+        
+        const data = await response.json();
+        
+        const normalizedData = data.map((item: any) => ({
+          id: item.id,
+          nom_plan: item.nom_plan,
+          prix: item.prix,
+          periode: item.periode,
+          description: item.description
+        }));
+        
+        return normalizedData;
+      } catch (error) {
+        throw error;
+      }
     },
+    staleTime: 5 * 60 * 1000,
+    retry: 3
   });
 };
 
-// Hook pour récupérer les options de genres
 export const useGenreOptions = () => {
   return useQuery({
-    queryKey: ['genres'],
+    queryKey: ['genreOptions'],
     queryFn: async () => {
-      const response = await fetch(apiUrl('informations/genres'));
-      if (!response.ok) throw new Error('Erreur lors du chargement des genres');
-      const data = await response.json();
-      return data.map((item: any) => ({
-        value: String(item.id),
-        label: item.genre_name,
-      }));
+      try {
+        const response = await fetch(apiUrl('informations/genres'), {
+        });
+        
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des genres');
+        }
+        
+        const data = await response.json();
+        
+        const normalizedData = data.map((item: any) => ({
+          id: item.id,
+          genre_name: item.genre_name
+        }));
+        
+        return normalizedData;
+      } catch (error) {
+        throw error;
+      }
     },
+    staleTime: 5 * 60 * 1000,
+    retry: 3
   });
 };
 
@@ -122,8 +151,6 @@ export const useGenreOptions = () => {
 export const useVerifierUtilisateur = () => {
   return useMutation({
     mutationFn: async (userData: { nom: string; prenom: string; date_naissance: string }) => {
-      console.log('[Hook] Vérification utilisateur pour:', userData);
-      
       const response = await fetch(apiUrl('utilisateurs/verifier'), {
         method: 'POST',
         headers: {
@@ -137,7 +164,6 @@ export const useVerifierUtilisateur = () => {
       });
 
       const data = await response.json();
-      console.log('[Hook] Réponse vérification:', data);
 
       if (!response.ok) {
         // Si l'utilisateur existe, le serveur retourne une erreur 409
@@ -148,12 +174,6 @@ export const useVerifierUtilisateur = () => {
       }
 
       return data;
-    },
-    onError: (error: any) => {
-      console.error('[Hook] Erreur lors de la vérification:', error);
-    },
-    onSuccess: (data) => {
-      console.log('[Hook] Vérification réussie:', data);
     }
   });
 };
@@ -200,12 +220,6 @@ export const useInscrireUtilisateur = () => {
       }
       
       return data;
-    },
-    onError: (error: any) => {
-      console.error('[Hook] Erreur lors de l\'inscription:', error);
-    },
-    onSuccess: (data) => {
-      console.log('[Hook] Inscription réussie:', data);
     }
   });
 };
@@ -277,5 +291,49 @@ export const useUtilisateursPourTousLesCours = (coursList: { id: number }[]) => 
       },
       enabled: !!c.id
     }))
+  });
+};
+
+// NOUVEAU HOOK : Test de configuration email
+export const useTestEmailConfig = () => {
+  return useQuery({
+    queryKey: ['testEmailConfig'],
+    queryFn: async () => {
+      const response = await fetch(apiUrl('utilisateurs/test-email-config'), {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du test de configuration email');
+      }
+      
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+    enabled: process.env.NODE_ENV === 'development'
+  });
+};
+
+// NOUVEAU HOOK : Envoi d'email de test
+export const useTestEmail = () => {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      const response = await fetch(apiUrl('utilisateurs/test-email'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur lors de l\'envoi de l\'email de test');
+      }
+
+      return data;
+    }
   });
 };

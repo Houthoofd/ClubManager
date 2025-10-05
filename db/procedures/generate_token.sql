@@ -1,0 +1,10 @@
+DELIMITER //
+CREATE FUNCTION generate_token()
+RETURNS VARCHAR(64)
+DETERMINISTIC
+BEGIN
+    DECLARE random_string VARCHAR(64);
+    SET random_string = TO_BASE64(SHA2(CONCAT(NOW(), RAND(), UUID()), 256));
+    RETURN SUBSTRING(random_string, 1, 64);
+END//
+DELIMITER ;

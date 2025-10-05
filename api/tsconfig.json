@@ -9,6 +9,8 @@
     "strict": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "incremental": false,
+    "tsBuildInfoFile": null,
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
@@ -24,6 +26,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "src/__tests__"
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

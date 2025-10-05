@@ -1,59 +1,140 @@
 import express from 'express';
 import { verifyToken } from '../middleware/auth.js';
 import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
+import MysqlConnector from '../db/connector/mysqlconnector.js';
 import { z } from 'zod';
 import { UserData, utilisateurInscriptionSchema, userDataLoginSchema, userDataLoginByUserIdSchema, userSearchByEmailSchema, VerifyResultWithData, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
 import bcrypt from 'bcrypt';
+import { EmailService } from '../services/emailService.js';
+import { emailValidationService } from '../services/emailValidationService.js';
 
 const router = express.Router();
 
-// Routes PUBLIQUES (AVANT le middleware verifyToken)
+// Créer une instance du service email et du connecteur MySQL
+const emailService = new EmailService();
+const mysqlConnector = MysqlConnector.getInstance();
+
+// Route pour vérifier l'existence d'un utilisateur
 router.post('/verifier', async (req, res) => {
   try {
-    console.log('[Route] Vérification utilisateur - Body reçu:', req.body);
-    
     const { nom, prenom, date_naissance } = req.body;
     
-    // Validation des paramètres
     if (!nom || !prenom || !date_naissance) {
       return res.status(400).json({
-        message: 'Les paramètres nom, prenom et date_naissance sont requis'
+        message: 'Nom, prénom et date de naissance sont requis',
+        type: 'VALIDATION_ERROR'
       });
     }
-
-    // Validation du format de date
+    
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date_naissance)) {
       return res.status(400).json({
-        message: 'Format de date invalide. Utilisez YYYY-MM-DD'
+        message: 'Format de date invalide (YYYY-MM-DD requis)',
+        type: 'INVALID_DATE_FORMAT'
+      });
+    }
+    
+    const utilisateursDB = new Utilisateurs();
+    
+    try {
+      // Utiliser la méthode existante verifierUtilisateurExiste
+      await utilisateursDB.verifierUtilisateurExiste({ nom, prenom, date_naissance });
+      
+      // Si aucune erreur n'est levée, l'utilisateur n'existe pas
+      return res.status(200).json({
+        message: 'Aucun utilisateur trouvé avec ces informations',
+        type: 'USER_AVAILABLE',
+        userExists: false,
+        canRegister: true
+      });
+      
+    } catch (conflictError: any) {
+      // Si une erreur est levée, cela signifie qu'un utilisateur existe déjà
+      if (conflictError.status === 409) {
+        return res.status(409).json({
+          message: conflictError.message,
+          type: 'USER_EXISTS',
+          userExists: true,
+          userData: conflictError.data
+        });
+      } else {
+        // Autre type d'erreur (erreur de base de données, etc.)
+        throw conflictError;
+      }
+    }
+    
+  } catch (error: any) {
+    console.error('Erreur lors de la vérification utilisateur:', error);
+    res.status(500).json({
+      message: 'Erreur interne du serveur lors de la vérification',
+      type: 'SERVER_ERROR',
+      error: error.message || 'Erreur inconnue'
+    });
+  }
+});
+
+// NOUVELLE ROUTE : Test de configuration email
+router.get('/test-email-config', async (req, res) => {
+  try {
+    console.log('🔧 [Route] Test de configuration email demandé');
+    
+    const configTest = await emailService.testerConfiguration();
+    
+    res.json({
+      success: configTest.success,
+      message: configTest.success ? 'Configuration email OK' : 'Problèmes de configuration détectés',
+      details: configTest.details
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [Route] Erreur lors du test de config email:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du test de configuration',
+      error: error.message
+    });
+  }
+});
+
+// NOUVELLE ROUTE : Envoi d'email de test
+router.post('/test-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email requis pour le test'
       });
     }
 
-    const utilisateursClient = new Utilisateurs();
-    const result = await utilisateursClient.verifierUtilisateurExiste({
-      nom: nom.trim(),
-      prenom: prenom.trim(),
-      date_naissance: date_naissance
-    });
+    console.log('🧪 [Route] Test d\'envoi email vers:', email);
     
-    console.log('[Route] Vérification réussie:', result);
-    res.status(200).json(result);
+    const result = await emailService.envoyerEmailTest(email);
     
-  } catch (error: any) {
-    console.error('[Route] Erreur vérification:', error);
-    
-    if (error.status === 409) {
-      // Conflit - utilisateur existe
-      res.status(409).json({
-        message: error.message,
-        data: error.data
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Email de test envoyé avec succès',
+        messageId: result.messageId,
+        details: result.details
       });
     } else {
       res.status(500).json({
-        message: 'Erreur serveur lors de la vérification',
-        error: error.message
+        success: false,
+        message: 'Échec de l\'envoi de l\'email de test',
+        error: result.error,
+        details: result.details
       });
     }
+    
+  } catch (error: any) {
+    console.error('❌ [Route] Erreur lors du test d\'email:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du test d\'envoi d\'email',
+      error: error.message
+    });
   }
 });
 
@@ -107,7 +188,97 @@ router.post('/inscription', async (req: any, res: any) => {
     const result = await client.inscrireUtilisateur(mappedData);
 
     console.log('[Route] Résultat inscription:', result);
-    res.status(201).json(result);
+
+    // 🆕 MODIFICATION: Envoi email de vérification à VOTRE adresse au lieu de l'adresse saisie
+    if (result.userId) {
+      try {
+        console.log('📧 [Route] Démarrage envoi email de vérification...');
+        console.log(`📧 [Route] Email saisi par utilisateur: ${validatedData.email}`);
+        console.log(`📧 [Route] Email DE TEST (vers Benoit): houthoofd.benoit48@gmail.com`);
+        console.log(`📧 [Route] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`);
+        console.log(`📧 [Route] UserId généré: ${result.userId}`);
+
+        // INJECTION DE VOTRE EMAIL pour les tests
+        const emailDestinationTest = 'houthoofd.benoit48@gmail.com';
+        
+        // Envoyer l'email de vérification avec token à VOTRE adresse
+        const emailResult = await emailValidationService.sendValidationEmailWithUserId({
+          email: emailDestinationTest, // 🔄 MODIFICATION: Votre email au lieu de validatedData.email
+          prenom: validatedData.prenom,
+          nom: validatedData.nom,
+          userId: result.generatedUserId,
+          utilisateurId: result.userId
+        });
+
+        if (emailResult.success) {
+          console.log('✅ [Route] Email de vérification envoyé avec succès !');
+          console.log('✅ [Route] Message ID:', emailResult.details?.messageId);
+          console.log('✅ [Route] Détails:', emailResult.details);
+          
+          // Inclure les infos email dans la réponse
+          res.status(201).json({
+            message: 'Inscription réussie et email de vérification envoyé',
+            generatedUserId: result.userId,
+            inscriptionDetails: result,
+            emailStatus: {
+              sent: true,
+              messageId: emailResult.details?.messageId,
+              emailDestination: emailDestinationTest, // Indiquer où l'email a été envoyé
+              emailOriginal: validatedData.email, // L'email saisi par l'utilisateur
+              isTestMode: true, // Indiquer que c'est un mode test
+              note: 'Email de vérification envoyé à houthoofd.benoit48@gmail.com pour les tests'
+            }
+          });
+          
+        } else {
+          res.status(201).json({
+            message: 'Inscription réussie mais échec envoi email de vérification',
+            generatedUserId: result.userId,
+            inscriptionDetails: result,
+            emailStatus: {
+              sent: false,
+              error: emailResult,
+              details: emailResult.details,
+              emailDestination: emailDestinationTest,
+              emailOriginal: validatedData.email,
+              isTestMode: true
+            },
+            warning: 'L\'email de vérification n\'a pas pu être envoyé. Veuillez vérifier votre configuration.'
+          });
+        }
+
+      } catch (emailError: any) {
+        console.error('❌ [Route] Erreur critique lors de l\'envoi de l\'email:', emailError);
+        
+        // Inscription réussie mais erreur critique email
+        res.status(201).json({
+          message: 'Inscription réussie mais erreur lors de l\'envoi de l\'email',
+          generatedUserId: result.userId,
+          inscriptionDetails: result,
+          emailStatus: {
+            sent: false,
+            error: 'Erreur technique lors de l\'envoi',
+            details: { originalError: emailError.message },
+            emailDestination: 'houthoofd.benoit48@gmail.com',
+            emailOriginal: validatedData.email,
+            isTestMode: true
+          },
+          warning: 'Une erreur technique s\'est produite lors de l\'envoi de l\'email de vérification.'
+        });
+      }
+      
+    } else {
+      // Pas d'userId généré (cas anormal)
+      console.warn('⚠️ [Route] Inscription sans UserId généré - pas d\'email envoyé');
+      res.status(201).json({
+        message: 'Inscription réussie',
+        inscriptionDetails: result,
+        emailStatus: {
+          sent: false,
+          reason: 'Aucun UserId généré'
+        }
+      });
+    }
 
   } catch (error: any) {
     console.error('Erreur lors de l\'inscription de l\'utilisateur :', error);
@@ -406,6 +577,205 @@ router.post('/ajouter', async (req: any, res: any) => {
   } catch (error) {
     console.error("Erreur lors de l'ajout ou de la modification :", error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
+  }
+});
+
+// MISE À JOUR: Route pour envoyer l'email de vérification avec token sécurisé
+router.post('/send-verification-email', async (req, res) => {
+  try {
+    const { email, prenom, nom, userId } = req.body;
+    
+    if (!email || !prenom || !nom || !userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email, prénom, nom et userId requis'
+      });
+    }
+
+    console.log('📧 [Route] Demande d\'envoi email de vérification avec token:', { email, prenom, nom, userId });
+
+    // Récupérer l'ID numérique de l'utilisateur basé sur l'userId
+    const utilisateur = await new Promise((resolve, reject) => {
+      mysqlConnector.query(
+        'SELECT id, first_name, last_name, email, email_verified FROM utilisateurs WHERE userId = ? LIMIT 1',
+        [userId],
+        (error: any, results: any) => {
+          if (error) {
+            console.error('❌ Erreur DB lors de la recherche utilisateur:', error);
+            reject(error);
+          } else {
+            console.log('🔍 Résultat recherche utilisateur:', results);
+            resolve(results.length > 0 ? results[0] : null);
+          }
+        }
+      );
+    });
+
+    if (!utilisateur) {
+      console.warn('⚠️ Utilisateur non trouvé avec userId:', userId);
+      return res.status(404).json({
+        success: false,
+        error: 'Utilisateur non trouvé avec cet userId'
+      });
+    }
+
+    // Vérifier si l'email n'est pas déjà vérifié
+    if ((utilisateur as any).email_verified) {
+      console.log('⚠️ Email déjà vérifié pour userId:', userId);
+      return res.status(400).json({
+        success: false,
+        error: 'Cet email est déjà vérifié'
+      });
+    }
+
+    console.log('✅ Utilisateur trouvé, email non vérifié:', utilisateur);
+
+    // Envoyer l'email de vérification avec token
+    const result = await emailValidationService.sendValidationEmailWithUserId({
+      email,
+      prenom,
+      nom,
+      userId,
+      utilisateurId: (utilisateur as any).id
+    });
+
+    console.log('📧 Résultat envoi email:', result);
+    res.json(result);
+    
+  } catch (error: any) {
+    console.error('❌ Erreur envoi email vérification:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// NOUVELLE ROUTE: Valider le token d'email avec hash sécurisé
+router.post('/verify-email-token', async (req, res) => {
+  try {
+    const { token, userId } = req.body;
+    
+    if (!token || !userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Token et userId requis'
+      });
+    }
+
+    console.log('🔍 [Route] Validation token email avec hash:', { 
+      token: token.substring(0, 8) + '...', 
+      userId 
+    });
+
+    // Valider le token avec vérification hash
+    const result = await emailValidationService.validateEmailTokenWithHash(token, userId);
+
+    if (result.success) {
+      console.log('✅ [Route] Token validé avec succès (hash vérifié)');
+      res.json({
+        success: true,
+        message: result.message,
+        data: result.data,
+        security: 'Hash verified'
+      });
+    } else {
+      console.warn('⚠️ [Route] Échec validation token:', result.message);
+      res.status(400).json({
+        success: false,
+        error: result.message
+      });
+    }
+    
+  } catch (error: any) {
+    console.error('❌ [Route] Erreur validation token:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// NOUVELLE ROUTE: Test d'envoi d'email de vérification pour débugger
+router.post('/test-send-verification', async (req, res) => {
+  try {
+    const { email, prenom, nom, userId } = req.body;
+    
+    console.log('🧪 [Test] Test envoi email de vérification:', { email, prenom, nom, userId });
+
+    // Utiliser un utilisateur de test si pas fourni
+    const testData = {
+      email: email || 'houthoofd.benoit48@gmail.com',
+      prenom: prenom || 'Benoit',
+      nom: nom || 'Test',
+      userId: userId || 'USR2025TEST',
+      utilisateurId: 999 // ID de test
+    };
+
+    // Envoyer l'email de vérification
+    const result = await emailValidationService.sendValidationEmailWithUserId(testData);
+
+    console.log('📧 [Test] Résultat envoi email:', result);
+    
+    // Vérifier ce qui a été inséré en base
+    const checkTokenSql = 'SELECT * FROM validation_tokens ORDER BY created_at DESC LIMIT 5';
+    mysqlConnector.query(checkTokenSql, [], (checkError, tokenResults) => {
+      if (!checkError) {
+        console.log('🔍 [Test] Derniers tokens en base validation_tokens:', tokenResults);
+      }
+      
+      res.json({
+        ...result,
+        debug: {
+          testData,
+          tokensInDb: tokenResults || 'Erreur lecture'
+        }
+      });
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [Test] Erreur test email vérification:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// NOUVELLE ROUTE: Test rapide d'envoi d'email de vérification
+router.post('/test-verification-quick', async (req, res) => {
+  try {
+    console.log('🧪 [Test] Test rapide envoi email de vérification');
+
+    // Données de test minimales
+    const testData = {
+      email: 'houthoofd.benoit48@gmail.com', // Directement votre email
+      prenom: 'Benoit',
+      nom: 'Test',
+      userId: 'USR2025TEST' + Date.now(),
+      utilisateurId: 999 // ID de test
+    };
+
+    console.log('📧 [Test] Envoi vers:', testData.email);
+
+    // Envoyer l'email de vérification
+    const result = await emailValidationService.sendValidationEmailWithUserId(testData);
+
+    console.log('📧 [Test] Résultat:', result);
+    
+    res.json({
+      success: true,
+      message: 'Test d\'email de vérification envoyé',
+      result,
+      testData
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [Test] Erreur test email vérification:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 

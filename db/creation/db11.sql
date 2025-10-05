@@ -59,10 +59,12 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
     date_of_birth DATE NOT NULL,
     password VARCHAR(255) NOT NULL,
     status_id INT DEFAULT 1,
-    active BOOLEAN NOT NULL DEFAULT TRUE,  -- Nouveau champ pour soft delete
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     grade_id INT DEFAULT 1,
     abonnement_id INT,
     date_inscription TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    email_verified BOOLEAN DEFAULT FALSE,  -- NOUVEAU: Statut de vérification email
+    email_verified_at TIMESTAMP NULL,      -- NOUVEAU: Date de vérification email
     FOREIGN KEY (genre_id) REFERENCES genres(id),
     FOREIGN KEY (status_id) REFERENCES status(id),
     FOREIGN KEY (grade_id) REFERENCES grades(id),
@@ -73,7 +75,23 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
     INDEX idx_status (status_id),
     INDEX idx_active (active),
     INDEX idx_active_status (active, status_id),
+    INDEX idx_email_verified (email_verified),  -- NOUVEAU: Index pour les emails vérifiés
     CONSTRAINT unique_user_id UNIQUE (userId)
+) ENGINE=InnoDB;
+
+-- NOUVELLE TABLE: Tokens de validation d'email
+CREATE TABLE IF NOT EXISTS email_validation_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    type ENUM('email_confirmation', 'password_setup') NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_utilisateur_type (utilisateur_id, type),
+    INDEX idx_expires (expires_at)
 ) ENGINE=InnoDB;
 
 -- Fonction pour générer userId automatiquement avec salt
