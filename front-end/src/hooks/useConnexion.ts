@@ -77,6 +77,13 @@ export const useConnexion = () => {
     return data;
   };
 
+  // Mettre à jour les messages d'erreur pour mentionner Email/UserId
+  const errorMessages = {
+    400: 'Email/UserId et mot de passe requis',
+    401: 'Email/UserId ou mot de passe incorrect',
+    // ...existing code...
+  };
+
   return {
     ...mutation,
     isLoading: mutation.status === 'pending',

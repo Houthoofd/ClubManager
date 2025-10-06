@@ -27,6 +27,7 @@ import Paiements from './pages/paiements';
 import Messages from './pages/messages';
 
 import InscriptionPage from './pages/inscription';
+import VerifyEmail from './pages/verifyemail';
 
 import StatistiquesPage from './pages/statistiques';
 
@@ -41,6 +42,10 @@ const router = createBrowserRouter([
   {
     path: '/pages/inscription',
     element: <InscriptionPage />,
+  },
+  {
+    path: '/pages/verify-email',
+    element: <VerifyEmail />,
   },
   // Route principale avec layout protégé
   {

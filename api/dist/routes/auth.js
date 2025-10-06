@@ -22,17 +22,29 @@ router.post('/login', async (req, res) => {
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Email et mot de passe requis'
+                message: 'Email/UserId et mot de passe requis'
             });
         }
+        // Vérifier d'abord s'il y a plusieurs comptes avec le même email
+        const emailCheck = await queryAsync('SELECT COUNT(*) as count FROM utilisateurs WHERE email = ?', [email]);
+        // Si l'utilisateur saisit un email et qu'il y a plusieurs comptes
+        if (email.includes('@') && emailCheck[0].count > 1) {
+            return res.status(401).json({
+                success: false,
+                message: 'Plusieurs membres de votre famille utilisent cet email. Veuillez utiliser votre UserId unique pour vous connecter.'
+            });
+        }
+        // Rechercher l'utilisateur par email OU userId
         const user = await queryAsync(`SELECT 
           u.id,
+          u.userId,
           u.first_name,
           u.last_name,
           u.nom_utilisateur,
           u.email,
           u.password,
           u.status_id,
+          u.email_verified,
           g.genre_name AS genres,
           s.nom_role AS status,
           gr.grade_id AS grades,
@@ -49,11 +61,18 @@ router.post('/login', async (req, res) => {
         LEFT JOIN 
           plans_tarifaires a ON u.abonnement_id = a.id
         WHERE 
-          u.email = ?`, [email]);
+          u.email = ? OR u.userId = ?`, [email, email]);
         if (!user.length) {
             return res.status(401).json({
                 success: false,
-                message: 'Email ou mot de passe incorrect'
+                message: 'Email/UserId ou mot de passe incorrect'
+            });
+        }
+        // Vérifier si l'email est confirmé
+        if (user[0].email_verified !== 1) {
+            return res.status(401).json({
+                success: false,
+                message: 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte mail pour le lien de confirmation.'
             });
         }
         // Si le mot de passe en base est "password123" (mot de passe par défaut non hashé)
@@ -390,6 +409,73 @@ router.get('/status', verifyToken, async (req, res) => {
     catch (error) {
         console.log('[AUTH] /status - erreur serveur', error);
         res.status(500).json({ authentifie: false, user: null });
+    }
+});
+// Route pour confirmer l'email
+router.get('/confirm-email', async (req, res) => {
+    try {
+        const { userId, token } = req.query;
+        if (!userId || !token) {
+            return res.status(400).json({
+                success: false,
+                message: 'UserId et token requis'
+            });
+        }
+        // Vérifier si l'utilisateur existe
+        const users = await queryAsync('SELECT id, userId, email, email_verified, email_verified_at FROM utilisateurs WHERE userId = ?', [userId]);
+        if (!users.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Utilisateur non trouvé'
+            });
+        }
+        const user = users[0];
+        // Vérifier si le compte est déjà confirmé
+        if (user.email_verified === 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email déjà confirmé'
+            });
+        }
+        // Vérifier le token dans la table validation_tokens
+        const tokenRecords = await queryAsync(`SELECT id, expires_at, used, used_at 
+       FROM validation_tokens 
+       WHERE user_id_string = ? 
+         AND token = ? 
+         AND type = 'email_confirmation' 
+         AND used = 0 
+         AND expires_at > NOW()`, [userId, token]);
+        if (!tokenRecords.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token invalide, expiré ou déjà utilisé'
+            });
+        }
+        const tokenRecord = tokenRecords[0];
+        // Transaction pour activer le compte et marquer le token comme utilisé
+        try {
+            await queryAsync('START TRANSACTION', []);
+            // Activer le compte
+            await queryAsync('UPDATE utilisateurs SET email_verified = 1, email_verified_at = NOW() WHERE userId = ?', [userId]);
+            // Marquer le token comme utilisé
+            await queryAsync('UPDATE validation_tokens SET used = 1, used_at = NOW() WHERE id = ?', [tokenRecord.id]);
+            await queryAsync('COMMIT', []);
+            res.json({
+                success: true,
+                message: 'Email confirmé avec succès'
+            });
+        }
+        catch (transactionError) {
+            await queryAsync('ROLLBACK', []);
+            throw transactionError;
+        }
+    }
+    catch (error) {
+        console.error('Erreur confirmation email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur serveur'
+        });
     }
 });
 export default router;
