@@ -740,7 +740,7 @@ export class EmailService {
     );
   }
 
-  // NOUVELLE MÉTHODE : Envoyer un email personnalisé (pour le messageClient)
+  // NOUVEAU: Méthode pour envoyer un email personnalisé (pour le messageClient)
   async envoyerEmailPersonnalise(options: {
     to: string | string[];
     subject: string;
@@ -800,7 +800,7 @@ export class EmailService {
         }
       }
 
-      // 3. Préparation du message
+      // 3. Préparation du message avec CORRECTION du mode sandbox
       const msg: sgMail.MailDataRequired = {
         to: toEmails,
         from: {
@@ -817,7 +817,8 @@ export class EmailService {
         },
         mailSettings: {
           sandboxMode: {
-            enable: process.env.NODE_ENV === 'development' || process.env.SENDGRID_SANDBOX === 'true'
+            // CORRECTION CRUCIALE : Vérifier explicitement la variable d'environnement
+            enable: process.env.SENDGRID_SANDBOX === 'true'
           }
         }
       };
@@ -861,6 +862,8 @@ export class EmailService {
 
       console.log('📧 [EmailService] Configuration du message terminée');
       console.log('📧 [EmailService] Sandbox mode:', msg.mailSettings?.sandboxMode?.enable ? 'ACTIVÉ' : 'DÉSACTIVÉ');
+      console.log('📧 [EmailService] SENDGRID_SANDBOX env var:', process.env.SENDGRID_SANDBOX);
+      console.log('📧 [EmailService] NODE_ENV:', process.env.NODE_ENV);
       console.log('📧 [EmailService] From:', msg.from);
       console.log('📧 [EmailService] Subject:', msg.subject);
       console.log('📧 [EmailService] Destinataires:', msg.to);

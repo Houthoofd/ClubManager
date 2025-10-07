@@ -22,7 +22,6 @@ import { clearAllAuthData } from '../utils/authCleaner';
 const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
-  const [helpMessage, setHelpMessage] = useState<string | null>(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [resultModalMessage, setResultModalMessage] = useState('');
   const [countdown, setCountdown] = useState(5); // Changement de 3 à 5 secondes
@@ -38,7 +37,6 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setHelpMessage(null);
 
     try {
       const data = await connexion.mutateAsync(formData);
@@ -79,28 +77,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
       setIsResultModalOpen(true);
     } catch (err: any) {
       console.error('Erreur lors de la connexion:', err);
-      
-      // Analyser l'erreur pour proposer une aide
-      const errorMessage = err.message || 'Erreur lors de la tentative de connexion';
-      setError(errorMessage);
-
-      // Détecter si c'est un problème lié à plusieurs comptes
-      if (errorMessage.includes('plusieurs membres') || 
-          errorMessage.includes('multiple accounts') ||
-          (errorMessage.includes('incorrect') && formData.email.includes('@'))) {
-        
-        setHelpMessage(
-          `💡 Conseil : Si plusieurs membres de votre famille utilisent le même email, 
-          essayez de vous connecter avec votre UserId unique (ex: USR20257F8D10) 
-          au lieu de votre email. Vous avez reçu votre UserId lors de votre inscription.`
-        );
-      } else if (errorMessage.includes('email') && !formData.email.includes('@')) {
-        // Si l'utilisateur a saisi quelque chose qui ne ressemble pas à un email
-        setHelpMessage(
-          `💡 Conseil : Vous pouvez vous connecter avec votre email OU votre UserId unique. 
-          Si vous ne trouvez pas votre UserId, vérifiez l'email de confirmation que vous avez reçu.`
-        );
-      }
+      setError(err.message || 'Erreur lors de la tentative de connexion');
     }
   };
 
@@ -177,19 +154,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
                 </Alert>
               )}
 
-              {helpMessage && (
-                <Alert
-                  variant={AlertVariant.info}
-                  title="Aide à la connexion"
-                  isInline
-                  className="login-help"
-                  style={{ marginTop: '1rem' }}
-                >
-                  {helpMessage}
-                </Alert>
-              )}
-
-              <FormGroup label="Email ou UserId" isRequired fieldId="email" className="login-form-group">
+              <FormGroup label="UserId" isRequired fieldId="email" className="login-form-group">
                 <TextInput
                   isRequired
                   type="text"
@@ -197,7 +162,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
                   name="email"
                   value={formData.email}
                   onChange={(_event, value) => handleChange('email', value)}
-                  placeholder="exemple@email.com ou USR20257F8D10"
+                  placeholder="USR20257F8D10"
                   className="login-input"
                 />
               </FormGroup>
@@ -235,7 +200,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
                   </Link>
                 </p>
                 <p style={{ fontSize: '0.875rem', color: '#6c757d', marginTop: '0.5rem' }}>
-                  💡 Astuce : Votre UserId unique se trouve dans l'email de confirmation reçu lors de l'inscription
+                  💡 Votre UserId se trouve dans l'email de confirmation reçu lors de l'inscription
                 </p>
               </div>
             </Form>
@@ -258,4 +223,5 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
 };
 
 export default LoginPage;
+
 

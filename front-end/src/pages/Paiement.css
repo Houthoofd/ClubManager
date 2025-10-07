@@ -1,0 +1,237 @@
+.paiement-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.paiement-container h1 {
+  color: #2c3e50;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+.error-container,
+.success-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-container h2 {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.success-container h2 {
+  color: #27ae60;
+  margin-bottom: 1rem;
+}
+
+.error-details {
+  background: #ffeaea;
+  color: #c0392b;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.success-details {
+  background: #eafaf1;
+  color: #1e7e34;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.echeance-details h2 {
+  color: #34495e;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.detail-card {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+  border-left: 4px solid #3498db;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row .label {
+  font-weight: 600;
+  color: #2c3e50;
+  min-width: 150px;
+}
+
+.detail-row .value {
+  color: #34495e;
+  text-align: right;
+}
+
+.detail-row .value.montant {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #27ae60;
+}
+
+.detail-row .value.statut {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.detail-row .value.statut.en_attente,
+.detail-row .value.statut.en-attente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.detail-row .value.statut.payé,
+.detail-row .value.statut.paye {
+  background: #d4edda;
+  color: #155724;
+}
+
+.detail-row .value.statut.échu,
+.detail-row .value.statut.echu {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.payment-section {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  margin-bottom: 2rem;
+}
+
+.btn-payer {
+  background: #27ae60;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+  margin-bottom: 1rem;
+}
+
+.btn-payer:hover:not(:disabled) {
+  background: #219a52;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.btn-payer:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.payment-info {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.already-paid {
+  text-align: center;
+  padding: 2rem;
+  background: #d4edda;
+  color: #155724;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.already-paid p {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border-left: 4px solid #dc3545;
+}
+
+.navigation-buttons {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #ecf0f1;
+}
+
+.btn-retour,
+.btn-retour-simple {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+.btn-retour:hover,
+.btn-retour-simple:hover {
+  background: #5a6268;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .paiement-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .detail-row .value {
+    text-align: left;
+  }
+  
+  .btn-payer {
+    width: 100%;
+    min-width: auto;
+  }
+}

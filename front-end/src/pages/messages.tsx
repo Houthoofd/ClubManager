@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   PageSection,
   Spinner,
@@ -9,14 +10,17 @@ import {
   PaperPlaneIcon, 
   EditIcon, 
   ListIcon, 
-  InboxIcon
+  InboxIcon,
+  CheckCircleIcon
 } from '@patternfly/react-icons';
 import { PageHeader } from '../components/common/PageHeader';
 import { TabContainer } from '../components/common/TabContainer';
 import { ResultModal } from '../components/common/modal/ResultModal';
 import { ResumeConfirmModal } from '../components/common/modal/ResumeConfirmModal';
 import MessageDetailModal from '../components/messages/MessageDetailModal';
+import DeleteMessageModal from '../components/messages/DeleteMessageModal';
 import MessagesReceivedTab from '../components/messages/MessagesReceivedTab';
+import MessagesReadTab from '../components/messages/MessagesReadTab';
 import SendMessageForm from '../components/messages/SendMessageForm';
 import CreateMessageTypeForm from '../components/messages/CreateMessageTypeForm';
 import MessageTypesListTab from '../components/messages/MessageTypesListTab';
@@ -36,6 +40,7 @@ import {
 import '../styles/messages.css';
 
 const Messages: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<number>(0);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
@@ -52,6 +57,36 @@ const Messages: React.FC = () => {
   } | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [isMessageDetailOpen, setIsMessageDetailOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<any>(null);
+
+  // CORRIGÉ: Gérer l'onglet actif depuis les paramètres URL
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    console.log('🔍 [Messages] Paramètre tab depuis URL:', tabFromUrl);
+    console.log('🔍 [Messages] ActiveTab actuel:', activeTab);
+    
+    if (tabFromUrl === 'non-lus') {
+      console.log('✅ [Messages] Activation onglet Messages non lus (index 0)');
+      setActiveTab(0); // L'onglet "Messages non lus" est l'onglet 0
+    } else if (tabFromUrl === 'lus') {
+      console.log('✅ [Messages] Activation onglet Messages lus (index 1)');
+      setActiveTab(1); // L'onglet "Messages lus" est l'onglet 1
+    } else if (!tabFromUrl) {
+      // Si pas de paramètre tab, rester sur l'onglet par défaut
+      console.log('ℹ️ [Messages] Pas de paramètre tab, onglet par défaut');
+    }
+    
+    // Debug après changement
+    setTimeout(() => {
+      console.log('🔍 [Messages] ActiveTab après changement:', activeTab);
+    }, 100);
+  }, [searchParams]);
+
+  // NOUVEAU: Debug de l'activeTab
+  useEffect(() => {
+    console.log('🎯 [Messages] ActiveTab changé vers:', activeTab);
+  }, [activeTab]);
 
   // Hooks React Query
   const { data: utilisateurs = [], isLoading: loadingUsers, error: errorUsers } = useUtilisateurs();
@@ -66,7 +101,10 @@ const Messages: React.FC = () => {
 
   // Vérification des permissions
   const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-  const isSuperAdmin = userData.status === 'super-administrateur' || userData.status_id === 4;
+  const userRole = userData.status || userData.role || 'utilisateur';
+  const isSuperAdmin = userRole === 'super-administrateur' || userData.status_id === 4;
+  const canSendMessages = ['super-administrateur', 'administrateur', 'professeur'].includes(userRole);
+  const canManageMessageTypes = userRole === 'super-administrateur';
 
   // Handlers pour les messages reçus
   const handleMessageClick = (message: any) => {
@@ -103,6 +141,8 @@ const Messages: React.FC = () => {
         setResultModalMessage('Message supprimé avec succès.');
         setResultModalSuccess(true);
         setIsResultModalOpen(true);
+        setIsDeleteModalOpen(false);
+        setMessageToDelete(null);
       },
       onError: () => {
         setResultModalMessage('Erreur lors de la suppression du message.');
@@ -110,6 +150,23 @@ const Messages: React.FC = () => {
         setIsResultModalOpen(true);
       }
     });
+  };
+
+  // NOUVEAU: Handlers pour le modal de suppression
+  const handleShowDeleteModal = (message: any) => {
+    setMessageToDelete(message);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setMessageToDelete(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (messageToDelete) {
+      handleDeleteMessage(messageToDelete.id);
+    }
   };
 
   // Handlers pour l'envoi de messages
@@ -150,13 +207,28 @@ const Messages: React.FC = () => {
     setShowSendConfirmModal(false);
     
     try {
-      await envoyerMessage.mutateAsync({ destinataires: selectedUsers, type_message_id: selectedType });
-      setResultModalMessage(`Message envoyé avec succès à ${selectedUsers.length} destinataire${selectedUsers.length > 1 ? 's' : ''}.`);
+      const result = await envoyerMessage.mutateAsync({ 
+        destinataires: selectedUsers, 
+        type_message_id: selectedType,
+        envoyerEmail: true // Toujours essayer d'envoyer par email
+      });
+      
+      // Message de succès détaillé
+      let successMessage = `Message envoyé avec succès à ${selectedUsers.length} destinataire${selectedUsers.length > 1 ? 's' : ''}.`;
+      
+      if (result.data?.emailsEnvoyes) {
+        const emailsReussis = result.data.emailsEnvoyes.filter((e: any) => e.success).length;
+        successMessage += ` Emails envoyés: ${emailsReussis}/${result.data.emailsEnvoyes.length}`;
+      }
+      
+      setResultModalMessage(successMessage);
       setResultModalSuccess(true);
       setIsResultModalOpen(true);
       setSelectedUsers([]);
       setSelectedType('');
-    } catch (error) {
+      
+    } catch (error: any) {
+      console.error('Erreur envoi message:', error);
       setResultModalMessage('Erreur lors de l\'envoi du message. Veuillez réessayer.');
       setResultModalSuccess(false);
       setIsResultModalOpen(true);
@@ -286,24 +358,41 @@ const Messages: React.FC = () => {
     );
   }
 
-  // Configuration des onglets
+  // Configuration des onglets selon le rôle
   const messagesRecusTab = {
     key: 0,
-    title: 'Messages reçus',
+    title: 'Messages non lus',
     icon: <InboxIcon />,
     content: (
       <MessagesReceivedTab
-        messagesRecus={messagesRecus}
+        messagesRecus={messagesRecus.filter(message => !message.lu)} // MODIFIÉ: Filtrer seulement les non lus
         onMessageClick={handleMessageClick}
         onMarkAsRead={handleMarkAsRead}
         onDeleteMessage={handleDeleteMessage}
+        onShowDeleteModal={handleShowDeleteModal}
       />
     )
   };
 
-  const adminTabs = isSuperAdmin ? [
+  // NOUVEAU: Onglet pour les messages lus
+  const messagesLusTab = {
+    key: 1,
+    title: 'Messages lus',
+    icon: <CheckCircleIcon />,
+    content: (
+      <MessagesReadTab
+        messagesLus={messagesRecus.filter(message => message.lu)}
+        onMessageClick={handleMessageClick}
+        onDeleteMessage={handleDeleteMessage}
+        onShowDeleteModal={handleShowDeleteModal}
+      />
+    )
+  };
+
+  // Onglets pour ceux qui peuvent envoyer des messages (admin, professeur, super-admin)
+  const sendMessageTabs = canSendMessages ? [
     {
-      key: 1,
+      key: 2,
       title: 'Envoyer un message',
       icon: <PaperPlaneIcon />,
       content: (
@@ -319,9 +408,13 @@ const Messages: React.FC = () => {
           onSendMessage={handleSendMessage}
         />
       )
-    },
+    }
+  ] : [];
+
+  // Onglets pour la gestion des types de messages (super-admin uniquement)
+  const adminOnlyTabs = canManageMessageTypes ? [
     {
-      key: 2,
+      key: 3,
       title: 'Créer un type de message',
       icon: <EditIcon />,
       content: (
@@ -334,7 +427,7 @@ const Messages: React.FC = () => {
       )
     },
     {
-      key: 3,
+      key: 4,
       title: 'Messages existants',
       icon: <ListIcon />,
       content: (
@@ -352,7 +445,28 @@ const Messages: React.FC = () => {
     }
   ] : [];
 
-  const tabs = [messagesRecusTab, ...adminTabs];
+  const tabs = [messagesRecusTab, messagesLusTab, ...sendMessageTabs, ...adminOnlyTabs];
+
+  // Fonction pour obtenir le message d'information selon le rôle
+  const getAccessMessage = () => {
+    if (userRole === 'visiteur' || userRole === 'utilisateur') {
+      return {
+        variant: "info" as const,
+        title: "Accès limité",
+        message: "Vous avez accès en lecture seule aux messages. Seuls les administrateurs et professeurs peuvent envoyer des messages."
+      };
+    }
+    if (userRole === 'professeur' || userRole === 'administrateur') {
+      return {
+        variant: "info" as const,
+        title: "Permissions d'envoi",
+        message: "Vous pouvez consulter et envoyer des messages. La gestion des types de messages est réservée aux super-administrateurs."
+      };
+    }
+    return null;
+  };
+
+  const accessMessage = getAccessMessage();
 
   return (
     <div className="messages-page">
@@ -363,16 +477,21 @@ const Messages: React.FC = () => {
       />
 
       <PageSection className="messages-content">
-        {!isSuperAdmin && (
+        {accessMessage && (
           <Alert
-            variant="info"
-            title="Accès limité"
+            variant={accessMessage.variant}
+            title={accessMessage.title}
             isInline
             style={{ marginBottom: '2rem' }}
           >
-            Vous avez accès en lecture seule aux messages. Seuls les super-administrateurs peuvent envoyer et gérer les messages.
+            {accessMessage.message}
           </Alert>
         )}
+
+        {/* DEBUG: Afficher l'onglet actif */}
+        <div style={{ marginBottom: '1rem', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+          <strong>Debug:</strong> Onglet actif = {activeTab} | URL tab = {searchParams.get('tab')}
+        </div>
 
         <TabContainer
           tabs={tabs}
@@ -389,6 +508,15 @@ const Messages: React.FC = () => {
         message={selectedMessage}
         onMarkAsRead={handleMarkAsRead}
         onDelete={handleDeleteMessage}
+      />
+
+      {/* NOUVEAU: Modal de suppression */}
+      <DeleteMessageModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        message={messageToDelete}
+        isLoading={supprimerMessageRecu.isPending}
       />
 
       <ResumeConfirmModal
@@ -414,4 +542,3 @@ const Messages: React.FC = () => {
 };
 
 export default Messages;
-                      

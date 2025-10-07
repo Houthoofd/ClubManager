@@ -1,7 +1,7 @@
 import { RouterProvider } from 'react-router-dom';
 import router from './router';
 import ErrorBoundary from './components/ErrorBoundary';
-import { UserProvider } from './context/UserContext'; // Importer le UserProvider
+import { UserProvider } from './context/UserContext';
 
 const App = () => {
   return (

@@ -2,7 +2,6 @@ import jwt from 'jsonwebtoken';
 export const generateToken = (payload) => {
     const secret = process.env.JWT_SECRET || 'your-secret-key';
     const expiresIn = process.env.JWT_EXPIRES_IN;
-    // Correction stricte : cast explicite vers 'ms.StringValue' (qui est string) pour TypeScript
     let options = undefined;
     if (expiresIn) {
         if (!isNaN(Number(expiresIn))) {
@@ -30,11 +29,17 @@ export const verifyToken = (req, res, next) => {
             });
             return;
         }
-        // La clé secrète JWT NE DOIT PAS être codée en dur ici !
-        // Elle doit rester dans les variables d'environnement (process.env.JWT_SECRET)
         const secret = process.env.JWT_SECRET || 'your-secret-key';
         const decoded = jwt.verify(token, secret);
-        req.user = decoded;
+        // Mapper les données JWT vers le format attendu par Express
+        req.user = {
+            id: decoded.id,
+            email: decoded.email,
+            first_name: decoded.first_name || '',
+            last_name: decoded.last_name || '',
+            role: decoded.role || decoded.status_id?.toString(),
+            status: decoded.status || decoded.status_id?.toString()
+        };
         next();
     }
     catch (error) {
@@ -61,7 +66,15 @@ export const optionalAuth = (req, res, next) => {
         if (token) {
             const secret = process.env.JWT_SECRET || 'your-secret-key';
             const decoded = jwt.verify(token, secret);
-            req.user = decoded;
+            // Même mapping pour l'auth optionnelle
+            req.user = {
+                id: decoded.id,
+                email: decoded.email,
+                first_name: decoded.first_name || '',
+                last_name: decoded.last_name || '',
+                role: decoded.role || decoded.status_id?.toString(),
+                status: decoded.status || decoded.status_id?.toString()
+            };
         }
         next();
     }
@@ -78,7 +91,7 @@ export const requireRole = (roles) => {
             });
             return;
         }
-        if (!roles.includes(req.user.status_id)) {
+        if (!roles.includes(req.user.role)) {
             res.status(403).json({
                 success: false,
                 message: 'Permissions insuffisantes'

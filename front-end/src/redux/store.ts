@@ -5,8 +5,9 @@ import navigationReducer from './reducers/navigationReducers';
 import messageReducer from './reducers/messageReducers';
 import panierReducer from './slices/panierSlice';
 import authReducer from './reducers/authReducer';
+import messagesReducer from './slices/messagesSlice';
 
-const store = configureStore({
+export const store = configureStore({
   reducer: {
     settings: settingsReducer,
     notifications: notificationsReducer,
@@ -14,6 +15,7 @@ const store = configureStore({
     message: messageReducer,
     panier: panierReducer,
     auth: authReducer,
+    messages: messagesReducer,
   },
 });
 

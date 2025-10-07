@@ -25,25 +25,11 @@ router.post('/login', async (req: any, res: any) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email/UserId et mot de passe requis'
+        message: 'UserId et mot de passe requis'
       });
     }
 
-    // Vérifier d'abord s'il y a plusieurs comptes avec le même email
-    const emailCheck = await queryAsync(
-      'SELECT COUNT(*) as count FROM utilisateurs WHERE email = ?',
-      [email]
-    );
-
-    // Si l'utilisateur saisit un email et qu'il y a plusieurs comptes
-    if (email.includes('@') && emailCheck[0].count > 1) {
-      return res.status(401).json({
-        success: false,
-        message: 'Plusieurs membres de votre famille utilisent cet email. Veuillez utiliser votre UserId unique pour vous connecter.'
-      });
-    }
-
-    // Rechercher l'utilisateur par email OU userId
+    // Rechercher uniquement par userId
     const user = await queryAsync(
       `SELECT 
           u.id,
@@ -71,14 +57,14 @@ router.post('/login', async (req: any, res: any) => {
         LEFT JOIN 
           plans_tarifaires a ON u.abonnement_id = a.id
         WHERE 
-          u.email = ? OR u.userId = ?`,
-      [email, email]
+          u.userId = ?`,
+      [email]
     );
 
     if (!user.length) {
       return res.status(401).json({
         success: false,
-        message: 'Email/UserId ou mot de passe incorrect'
+        message: 'UserId ou mot de passe incorrect'
       });
     }
 
@@ -86,7 +72,7 @@ router.post('/login', async (req: any, res: any) => {
     if (user[0].email_verified !== 1) {
       return res.status(401).json({
         success: false,
-        message: 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte mail pour le lien de confirmation.'
+        message: 'Veuillez confirmer votre email avant de vous connecter'
       });
     }
 
@@ -97,7 +83,11 @@ router.post('/login', async (req: any, res: any) => {
         const token = generateToken({
           id: user[0].id,
           email: user[0].email,
-          status_id: user[0].status_id
+          first_name: user[0].first_name, // AJOUTÉ
+          last_name: user[0].last_name,   // AJOUTÉ
+          status_id: user[0].status_id,
+          role: user[0].status,           // AJOUTÉ
+          status: user[0].status          // AJOUTÉ
         });
 
         res.cookie('token', token, {
@@ -393,7 +383,7 @@ router.post('/refresh', verifyToken, (req: Request, res: Response) => {
   const newToken = generateToken({
     id: req.user!.id,
     email: req.user!.email,
-    status_id: req.user!.status_id
+    status_id: req.user!.role
   });
 
   res.cookie('token', newToken, {

@@ -4,16 +4,27 @@ import { Request, Response, NextFunction } from 'express';
 export interface JWTPayload {
   id: number;
   email: string;
-  status_id: string | number;
+  first_name?: string;
+  last_name?: string;
+  status_id?: string | number;
+  role?: string;
+  status?: string;
   iat?: number;
   exp?: number;
 }
 
-export const generateToken = (payload: { id: number; email: string; status_id?: string | number }): string => {
+export const generateToken = (payload: { 
+  id: number; 
+  email: string; 
+  first_name?: string;
+  last_name?: string;
+  status_id?: string | number;
+  role?: string;
+  status?: string;
+}): string => {
   const secret = process.env.JWT_SECRET || 'your-secret-key';
   const expiresIn = process.env.JWT_EXPIRES_IN;
 
-  // Correction stricte : cast explicite vers 'ms.StringValue' (qui est string) pour TypeScript
   let options: jwt.SignOptions | undefined = undefined;
   if (expiresIn) {
     if (!isNaN(Number(expiresIn))) {
@@ -42,11 +53,19 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction): vo
       return;
     }
 
-    // La clé secrète JWT NE DOIT PAS être codée en dur ici !
-    // Elle doit rester dans les variables d'environnement (process.env.JWT_SECRET)
     const secret = process.env.JWT_SECRET || 'your-secret-key';
     const decoded = jwt.verify(token, secret) as JWTPayload;
-    req.user = decoded;
+    
+    // Mapper les données JWT vers le format attendu par Express
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      first_name: decoded.first_name || '',
+      last_name: decoded.last_name || '',
+      role: decoded.role || decoded.status_id?.toString(),
+      status: decoded.status || decoded.status_id?.toString()
+    };
+    
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -75,7 +94,16 @@ export const optionalAuth = (req: Request, res: Response, next: NextFunction): v
     if (token) {
       const secret = process.env.JWT_SECRET || 'your-secret-key';
       const decoded = jwt.verify(token, secret) as JWTPayload;
-      req.user = decoded;
+      
+      // Même mapping pour l'auth optionnelle
+      req.user = {
+        id: decoded.id,
+        email: decoded.email,
+        first_name: decoded.first_name || '',
+        last_name: decoded.last_name || '',
+        role: decoded.role || decoded.status_id?.toString(),
+        status: decoded.status || decoded.status_id?.toString()
+      };
     }
     next();
   } catch (error) {
@@ -93,7 +121,7 @@ export const requireRole = (roles: string[]) => {
       return;
     }
 
-    if (!roles.includes(req.user.status_id as unknown as string)) {
+    if (!roles.includes(req.user.role as unknown as string)) {
       res.status(403).json({ 
         success: false, 
         message: 'Permissions insuffisantes' 
@@ -104,3 +132,19 @@ export const requireRole = (roles: string[]) => {
     next();
   };
 };
+
+// Étendre les types Express
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number;
+        email: string;
+        first_name: string;
+        last_name: string;
+        role?: string;
+        status?: string;
+      };
+    }
+  }
+}

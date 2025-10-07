@@ -1,17 +1,86 @@
-### Paiements endpoints
+### Authentification d'abord
 
-# Récupérer toutes les commandes
-GET http://localhost:3000/paiements/commandes
-
-### Récupérer les commandes d'un utilisateur
-GET http://localhost:3000/paiements/commandes/utilisateur/1
-
-### Créer une nouvelle commande
-POST http://localhost:3000/paiements/commandes/creer
+# Se connecter pour obtenir un token valide
+POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-  "utilisateur_id": 1,
+  "email": "benoit@club.com",
+  "password": "votre_mot_de_passe"
+}
+
+### Variables (à mettre à jour après login)
+@token = {{login.response.body.token}}
+
+### Paiements endpoints
+
+# Récupérer toutes les commandes
+GET http://localhost:3000/api/paiements
+Authorization: Bearer {{token}}
+
+# Récupérer toutes les commandes
+GET http://localhost:3000/api/paiements/commandes
+Authorization: Bearer {{token}}
+
+### Récupérer les échéances d'un utilisateur
+GET http://localhost:3000/api/paiements/echeances/165
+Authorization: Bearer {{token}}
+
+### Debug des échéances d'un utilisateur
+GET http://localhost:3000/api/paiements/debug/echeances/165
+Authorization: Bearer {{token}}
+
+### Forcer la mise à jour d'une échéance (pour debug)
+POST http://localhost:3000/api/paiements/debug/force-update-echeance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "echeanceId": 566,
+  "userId": 165,
+  "newStatus": "payé"
+}
+
+### Récupérer les commandes d'un utilisateur
+GET http://localhost:3000/api/paiements/commandes/utilisateur/165
+Authorization: Bearer {{token}}
+
+### Créer un PaymentIntent pour une échéance
+POST http://localhost:3000/api/paiements/create-payment-intent
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 4859,
+  "currency": "eur",
+  "echeanceId": 566,
+  "userId": 165,
+  "description": "Cotisation mensuelle - October 2025"
+}
+
+### Confirmer un paiement d'échéance
+POST http://localhost:3000/api/paiements/confirm-payment
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "paymentIntentId": "pi_xxxxxxxxxxxxxxx",
+  "echeanceId": 566,
+  "userId": 165,
+  "amount": 48.59
+}
+
+### Récupérer l'historique des paiements
+GET http://localhost:3000/api/paiements/historique/165
+Authorization: Bearer {{token}}
+
+### Créer une nouvelle commande
+POST http://localhost:3000/api/paiements/commandes/creer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "utilisateur_id": 165,
   "articles": [
     {
       "article_id": 1,
@@ -26,7 +95,8 @@ Content-Type: application/json
 }
 
 ### Traiter un paiement
-POST http://localhost:3000/paiements/traiter
+POST http://localhost:3000/api/paiements/traiter
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -35,14 +105,3 @@ Content-Type: application/json
   "methode_paiement": "carte",
   "token_paiement": "tok_1234567890"
 }
-
-### Confirmer un paiement
-PATCH http://localhost:3000/paiements/confirmer/1
-Content-Type: application/json
-
-{
-  "statut": "confirme"
-}
-
-### Récupérer l'historique des paiements
-GET http://localhost:3000/paiements/historique/1

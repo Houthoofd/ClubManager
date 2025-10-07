@@ -47,16 +47,71 @@ export const useCompteData = () => {
     error: errorEcheances 
   } = useEcheancesUtilisateur(utilisateurId || 0);
 
-  // Log pour debug
+  // Log pour debug - AMÉLIORÉ avec debug de l'ID utilisateur
   useEffect(() => {
     if (utilisateurId) {
-      console.log('🔍 Chargement des échéances pour l\'utilisateur:', utilisateurId);
+      console.log('🔍 [useCompteData] Chargement des échéances pour utilisateur:', utilisateurId);
+      
+      // DEBUG: Vérifier toutes les sources d'ID utilisateur
+      console.log('🔑 [useCompteData] Sources d\'ID utilisateur:', {
+        utilisateurIdCalcule: utilisateurId,
+        userDataId: userData?.id,
+        paramId: id,
+        localStorageUserId: localStorage.getItem('userId'),
+        localStorageUserData: !!localStorage.getItem('userData')
+      });
+      
+      // DEBUG: Vérifier l'état du token
+      const token = localStorage.getItem('token') || 
+                   localStorage.getItem('authToken') || 
+                   localStorage.getItem('jwt') || 
+                   localStorage.getItem('accessToken');
+      
+      console.log('🔑 [useCompteData] État du token:', {
+        tokenExists: !!token,
+        tokenLength: token?.length,
+        tokenStart: token?.substring(0, 20),
+        localStorageKeys: Object.keys(localStorage),
+        userDataInLS: !!localStorage.getItem('userData')
+      });
+
+      // DEBUG: Si pas de token, vérifier si l'utilisateur devrait être connecté
+      if (!token && localStorage.getItem('userData')) {
+        console.warn('⚠️ [useCompteData] userData présent mais pas de token - possible problème de déconnexion');
+        const userData = localStorage.getItem('userData');
+        try {
+          const user = JSON.parse(userData!);
+          console.log('👤 [useCompteData] Info utilisateur sans token:', {
+            id: user.id,
+            email: user.email,
+            role: user.role
+          });
+        } catch (e) {
+          console.error('❌ [useCompteData] Erreur parsing userData:', e);
+        }
+      }
     }
+    
     if (errorEcheances) {
-      console.error('❌ Erreur lors du chargement des échéances:', errorEcheances);
+      console.error('❌ [useCompteData] Erreur lors du chargement des échéances:', errorEcheances);
+      
+      // Vérifier si c'est une erreur d'authentification
+      if (errorEcheances.message?.includes('403') || 
+          errorEcheances.message?.includes('401') ||
+          errorEcheances.message?.includes('Token manquant')) {
+        console.error('🚨 [useCompteData] Erreur d\'authentification détectée');
+        console.log('🔄 [useCompteData] Suggestion: Reconnectez-vous pour obtenir un nouveau token');
+        console.log('🔄 [useCompteData] Debug localStorage complet:', {
+          allKeys: Object.keys(localStorage),
+          allValues: Object.keys(localStorage).reduce((acc, key) => {
+            acc[key] = localStorage.getItem(key)?.substring(0, 30) + '...';
+            return acc;
+          }, {} as Record<string, string>)
+        });
+      }
     }
     if (paiementsEcheances) {
-      console.log('✅ Échéances chargées:', paiementsEcheances);
+      console.log('✅ [useCompteData] Échéances chargées:', paiementsEcheances.length, 'échéances');
     }
   }, [utilisateurId, errorEcheances, paiementsEcheances]);
 

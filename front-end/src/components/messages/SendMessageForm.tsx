@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardBody,
   Title,
   Form,
-  Button
+  Button,
+  FormGroup,
+  Checkbox,
+  Alert
 } from '@patternfly/react-core';
 import { PaperPlaneIcon } from '@patternfly/react-icons';
 import UserSelector from './UserSelector';
@@ -33,6 +36,19 @@ const SendMessageForm: React.FC<SendMessageFormProps> = ({
   onTypeSelect,
   onSendMessage
 }) => {
+  const [envoyerEmail, setEnvoyerEmail] = useState<boolean>(true);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (selectedUsers.length === 0 || !selectedType) {
+      // Validation
+      return;
+    }
+
+    onSendMessage();
+  };
+
   return (
     <Card className="messages-card">
       <CardBody>
@@ -45,7 +61,7 @@ const SendMessageForm: React.FC<SendMessageFormProps> = ({
           </p>
         </div>
 
-        <Form className="messages-form">
+        <Form onSubmit={handleSubmit} className="messages-form">
           <div className="form-section">
             <UserSelector
               utilisateurs={utilisateurs}
@@ -62,6 +78,27 @@ const SendMessageForm: React.FC<SendMessageFormProps> = ({
               onTypeSelect={onTypeSelect}
             />
           </div>
+
+          <FormGroup>
+            <Checkbox
+              id="envoyer-email-checkbox"
+              label="Envoyer également une notification par email"
+              description="Les destinataires recevront le message dans leur boîte de réception ET par email"
+              isChecked={envoyerEmail}
+              onChange={(_event, checked) => setEnvoyerEmail(checked)}
+            />
+          </FormGroup>
+
+          <Alert 
+            variant="info" 
+            title="Mode d'envoi" 
+            isInline
+          >
+            {envoyerEmail 
+              ? "Le message sera envoyé en messagerie interne ET par email pour assurer que tous les destinataires soient informés."
+              : "Le message sera envoyé uniquement en messagerie interne. Les destinataires ne recevront pas d'email de notification."
+            }
+          </Alert>
 
           <div className="form-actions">
             <Button 

@@ -52,7 +52,7 @@ async function startServer() {
         // 2. Initialiser les services email après la DB (sans erreur bloquante)
         console.log('🔄 [Server] Initialisation des services email...');
         try {
-            const { messageClient } = await import('./clients/messageClient.js');
+            const { messageClient } = await import('./db/clients/messagerie/messageClient.js');
             await messageClient.initialiser();
             console.log('✅ [Server] Services email initialisés');
         }
@@ -107,7 +107,7 @@ async function startServer() {
         const { default: authRouter } = await import('./routes/auth.js');
         // Routes principales (API)
         app.use('/auth', authRouter);
-        app.use('/email', messagesRouter);
+        app.use('/email', messagesRouter); // PROBLÈME: Ceci utilise messagesRouter pour /email
         app.use('/', indexRouter);
         app.use('/utilisateurs', utilisateursRouter);
         app.use('/informations', informationsRouter);
@@ -116,7 +116,7 @@ async function startServer() {
         app.use('/paiements', paiementRouter);
         app.use('/magasin', magasinRouter);
         app.use('/professeurs', professeursRouter);
-        app.use('/messages', messagesRouter);
+        app.use('/messages', messagesRouter); // Il faut s'assurer que cette ligne existe
         app.use('/upload', uploadRouter);
         app.use('/inscription', inscriptionRouter);
         app.use('/verification', verificationRouter);

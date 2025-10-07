@@ -19,9 +19,13 @@ import {
   EditIcon,
   ShoppingCartIcon,
   CogIcon, 
-  PackageIcon
+  PackageIcon,
+  InboxIcon
 } from '@patternfly/react-icons';
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../redux/store';
+import { useMessagesNonLus } from '../hooks/useMessages.js';
 
 interface AppSidebarProps {
   isOpen: boolean;
@@ -50,42 +54,71 @@ const hasRole = (role: string | null, allowedRoles: string[]) => {
 };
 
 const AppSidebar = ({ isOpen }: AppSidebarProps) => {
-  console.log('Sidebar isOpen:', isOpen); // Ajoutez ce log pour vérifier la valeur
+  console.log('Sidebar isOpen:', isOpen);
 
   const [role, setRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null); // NOUVEAU
 
   useEffect(() => {
     const storedData = localStorage.getItem('userData');
     if (storedData) {
       const parsedData = JSON.parse(storedData);
-      const userRole = parsedData?.status; // Utiliser directement le champ `status`
+      const userRole = parsedData?.status;
+      const userIdNum = parsedData?.id; // NOUVEAU
       setRole(userRole);
+      setUserId(userIdNum); // NOUVEAU
     }
   }, []);
+
+  // UTILISER LE STATE REDUX pour le badge
+  const nombreMessagesNonLus = useSelector((state: RootState) => state.messages.nombreMessagesNonLus);
+
+  // Toujours appeler le hook pour maintenir la synchronisation
+  useMessagesNonLus(userId || 0);
 
   return (
     <PageSidebar isSidebarOpen={isOpen}>
       <Nav aria-label="Primary navigation">
         <NavList>
-          {/* Tableau de bord - uniquement pour admin, professeurs et super-admin */}
-          {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
+          {/* Tableau de bord - exclure les visiteurs */}
+          {hasRole(role, [ROLES.UTILISATEUR, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
             <>
               <div className="sidebar-section-title">Tableau de bord</div>
-              <NavItem itemId="dashboard" to="/pages/dashboard">
-                <TachometerAltIcon className="sidebar-icon" />
-                Accueil
-              </NavItem>
               
-              {/* Statistiques - uniquement pour admin et professeurs */}
-              <NavItem itemId="statistiques" to="/pages/statistiques">
-                <ClipboardCheckIcon className="sidebar-icon" />
-                Statistiques avancées
+              {/* MODIFIÉ: Ajouter le badge pour les messages */}
+              <NavItem to="/pages/messages" itemId="messages">
+                <InboxIcon style={iconStyle} />
+                Messages
+                {nombreMessagesNonLus > 0 && (
+                  <span style={{
+                    marginLeft: '8px',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    borderRadius: '50%',
+                    padding: '2px 6px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    minWidth: '18px',
+                    textAlign: 'center',
+                    display: 'inline-block'
+                  }}>
+                    {nombreMessagesNonLus > 99 ? '99+' : nombreMessagesNonLus}
+                  </span>
+                )}
               </NavItem>
+
+              {/* Statistiques - uniquement pour admin et professeurs */}
+              {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
+                <NavItem itemId="statistiques" to="/pages/statistiques">
+                  <ClipboardCheckIcon className="sidebar-icon" />
+                  Statistiques avancées
+                </NavItem>
+              )}
               <Divider className="sidebar-divider" />
             </>
           )}
 
-          {/* Cours - accessible à tous les utilisateurs connectés */}
+          {/* Cours - accessible à tous les utilisateurs connectés (y compris visiteurs) */}
           <div className="sidebar-section-title">Cours</div>
           <NavItem to="/pages/cours/inscription" data-item-id="inscription">
             <ClipboardCheckIcon className="sidebar-icon" />

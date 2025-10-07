@@ -321,7 +321,7 @@ export class EmailValidationService {
       const passwordSetupToken = await this.createPasswordSetupToken(utilisateurId);
 
       // Utilisation dynamique pour éviter les dépendances circulaires
-      const { messageClient } = await import('../clients/messageClient.js');
+      const { messageClient } = await import('../db/clients/messagerie/messageClient.js');
 
       // Envoyer l'email
       const result = await messageClient.envoyerValidationEmail({
@@ -562,7 +562,7 @@ export class EmailValidationService {
       });
 
       // Utilisation dynamique pour éviter les dépendances circulaires
-      const { messageClient } = await import('../clients/messageClient.js');
+      const { messageClient } = await import('../db/clients/messagerie/messageClient.js');
 
       // Envoyer l'email avec template spécialisé
       const result = await messageClient.envoyerEmailVerificationAvecToken({
@@ -706,7 +706,7 @@ export class EmailValidationService {
                 const user = userResults[0];
                 
                 // Utilisation dynamique pour éviter les dépendances circulaires
-                const { messageClient } = await import('../clients/messageClient.js');
+                const { messageClient } = await import('../db/clients/messagerie/messageClient.js');
                 
                 // Envoyer l'email de récupération
                 const emailResult = await messageClient.envoyerRecuperationUserId({

@@ -1,5 +1,5 @@
-import { EmailService } from '../services/emailService.js';
-import { emailTemplateService } from '../services/emailTemplateService.js';
+import { EmailService } from '../../../services/emailService.js';
+import { emailTemplateService } from '../../../services/emailTemplateService.js';
 export class EmailClient {
     static instance;
     constructor() { }

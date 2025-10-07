@@ -31,7 +31,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
 import { ouvrirPanier } from '../redux/slices/panierSlice';
-import { useMessagesNonLus } from '../hooks/useMessages';
+import { setUnreadCount, setNombreMessagesNonLus } from '../redux/slices/messagesSlice';
+import { apiUrl } from '../pages/apiUrl';
 import { clearAllAuthData } from '../utils/authCleaner';
 
 const avatarImg = '/assets/avatar.png'; // Chemin relatif à partir de `public`
@@ -70,9 +71,46 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const panierCount = useSelector((state: RootState) => state.panier.articles.length);
+  const nombreMessagesNonLus = useSelector((state: RootState) => state.messages.nombreMessagesNonLus);
 
-  // Hook pour récupérer le nombre de messages non lus
-  const { data: messagesNonLus = 0 } = useMessagesNonLus();
+  // Charger le nombre de messages non lus
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!userData?.id) return;
+      
+      try {
+        const token = localStorage.getItem('token') || 
+                     localStorage.getItem('authToken') || 
+                     JSON.parse(localStorage.getItem('userData') || '{}').token;
+
+        const response = await fetch(apiUrl(`messages/non-lus/${userData.id}`), {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            dispatch(setNombreMessagesNonLus(data.data.count));
+          }
+        } else {
+          console.warn('⚠️ [Header] Réponse non-OK pour messages non lus:', response.status);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération du nombre de messages non lus:', error);
+      }
+    };
+
+    fetchUnreadCount();
+    
+    // Actualiser toutes les 30 secondes
+    const interval = setInterval(fetchUnreadCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, [userData?.id, dispatch]);
 
   useEffect(() => {
     if (userData) {
@@ -108,8 +146,10 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
     navigate('/pages/magasin/magasin');
   };
 
-  const handleMessagesClick = () => {
-    navigate('/pages/messages');
+  // Fonction pour naviguer vers les messages non lus
+  const handleNavigateToMessages = () => {
+    // Naviguer vers la page des messages avec l'onglet "non-lus" activé
+    navigate('/pages/messages?tab=non-lus');
   };
 
   return (
@@ -138,15 +178,15 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
 
           {/* Bouton Messages avec notification */}
           <FlexItem>
-            <Tooltip content={`Messages${messagesNonLus > 0 ? ` (${messagesNonLus} non lus)` : ''}`}>
+            <Tooltip content={`Messages${nombreMessagesNonLus > 0 ? ` (${nombreMessagesNonLus} non lus)` : ''}`}>
               <Button
                 variant="plain"
-                aria-label={`Messages${messagesNonLus > 0 ? ` (${messagesNonLus} non lus)` : ''}`}
+                aria-label={`Messages${nombreMessagesNonLus > 0 ? ` (${nombreMessagesNonLus} non lus)` : ''}`}
                 style={{ position: 'relative' }}
-                onClick={handleMessagesClick}
+                onClick={handleNavigateToMessages}
               >
                 <EnvelopeIcon />
-                {messagesNonLus > 0 && (
+                {nombreMessagesNonLus > 0 && (
                   <span
                     style={{
                       position: 'absolute',
@@ -164,7 +204,7 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
                       fontWeight: 'bold',
                     }}
                   >
-                    {messagesNonLus > 99 ? '99+' : messagesNonLus}
+                    {nombreMessagesNonLus > 99 ? '99+' : nombreMessagesNonLus}
                   </span>
                 )}
               </Button>
@@ -213,7 +253,6 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
               </Flex>
             </Link>
           </FlexItem>
-
 
           <FlexItem>
             <MenuToggle

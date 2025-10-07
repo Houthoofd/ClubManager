@@ -1,9 +1,9 @@
-import { EmailService } from '../services/emailService.js';
-import { emailTemplateService } from '../services/emailTemplateService.js';
-import { emailValidationService } from '../services/emailValidationService.js';
-import { EmailResult, EmailTemplate } from '../types/emailTypes.js';
-import { EmailUtils } from '../utils/emailUtils.js';
-import MysqlConnector from '../db/connector/mysqlconnector.js';
+import { EmailService } from '../../../services/emailService.js';
+import { emailTemplateService } from '../../../services/emailTemplateService.js';
+import { emailValidationService } from '../../../services/emailValidationService.js';
+import { EmailResult, EmailTemplate } from '../../../types/emailTypes.js';
+import { EmailUtils } from '../../../utils/emailUtils.js';
+import MysqlConnector from '../../connector/mysqlconnector.js';
 
 export interface MessageClientOptions {
   to: string | string[];

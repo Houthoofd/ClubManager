@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import {
   Tabs,
   Tab,
@@ -9,7 +9,10 @@ import {
   Spinner,
   Alert,
   Button,
+  Flex,
+  FlexItem,
 } from '@patternfly/react-core';
+import { EnvelopeIcon, CreditCardIcon } from '@patternfly/react-icons';
 import { useUtilisateurById, useUpdateUtilisateur, checkEmailExists } from '../../hooks/useUtilisateurs';
 import { useFrequentationByUserId } from '../../hooks/useStatistiques';
 import { useAbonnements, useGrades, useStatus, useGenres } from '../../hooks/useInformations';
@@ -20,6 +23,7 @@ import StatistiquesTab from '../../components/compte/StatistiquesTab';
 import ConfirmModal from '../../components/common/modal/ConfirmModal';
 import ResultModal from '../../components/common/modal/ResultModal';
 import ResumeConfirmModal from '../../components/common/modal/ResumeConfirmModal';
+import { apiUrl } from '../../pages/apiUrl';
 
 function formatDateForInput(isoDateString: string): string {
   const date = new Date(isoDateString);
@@ -37,6 +41,7 @@ interface ModificationItem {
 
 const ConsulterUtilisateurPage = () => {
   const { id = '' } = useParams<{ id: string }>();
+  const location = useLocation();
   const [activeTabKey, setActiveTabKey] = useState(0);
   const [editingFields, setEditingFields] = useState<{ [key: string]: boolean }>({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -52,6 +57,8 @@ const ConsulterUtilisateurPage = () => {
   const [modalStep, setModalStep] = useState<'summary' | 'result'>('summary');
   const [pendingChanges, setPendingChanges] = useState<any | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showRappelModal, setShowRappelModal] = useState(false);
+  const [rappelLoading, setRappelLoading] = useState(false);
 
   // Hooks React Query
   const { data: userData, isLoading: loadingUser, error: userError } = useUtilisateurById(id);
@@ -360,6 +367,60 @@ const ConsulterUtilisateurPage = () => {
     setModificationsResume([]);
   };
 
+  // Fonction pour envoyer un rappel de paiement
+  const handleEnvoyerRappel = async () => {
+    if (!userData?.utilisateur?.id) return;
+    
+    setRappelLoading(true);
+    try {
+      const token = localStorage.getItem('token') || 
+                   localStorage.getItem('authToken') || 
+                   JSON.parse(localStorage.getItem('userData') || '{}').token;
+
+      const response = await fetch(apiUrl('messages/envoyer-rappel'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: userData.utilisateur.id,
+          typeRappel: 'paiement'
+        })
+      });
+
+      if (response.ok) {
+        setModalMessage('Rappel de paiement envoyé avec succès !');
+        setModalSuccess(true);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors de l\'envoi du rappel');
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur envoi rappel:', error);
+      setModalMessage('Erreur lors de l\'envoi du rappel. Veuillez réessayer.');
+      setModalSuccess(false);
+    } finally {
+      setRappelLoading(false);
+      setShowResultModal(true);
+    }
+  };
+
+  // MODIFIÉ: Fonction pour rediriger vers le paiement avec userId
+  const handleAllerPaiement = () => {
+    const userId = userData?.utilisateur?.id;
+    if (userId) {
+      // Format demandé: /pages/paiement?echeance=XXXX&userId=154
+      // Pour l'instant, sans échéance spécifique, on peut juste inclure l'userId
+      window.location.href = `/pages/paiement?userId=${userId}`;
+      console.log(`🔗 [ConsulterUtilisateur] Redirection vers paiement avec userId: ${userId}`);
+    } else {
+      console.error('❌ [ConsulterUtilisateur] Aucun userId trouvé pour la redirection');
+      window.location.href = '/pages/paiement';
+    }
+  };
+
   if (loadingUser) return <Spinner size="xl" />;
   if (userError) return <Alert variant="danger" title={(userError as Error).message || "Une erreur est survenue"} />;
 
@@ -367,11 +428,39 @@ const ConsulterUtilisateurPage = () => {
     `${userData.utilisateur.first_name} ${userData.utilisateur.last_name}` : 
     'Utilisateur inconnu';
 
+  // Déterminer si on est sur la page compte
+  const isComptePage = location.pathname.includes('/compte');
+  
   return (
     <PageSection>
-      <Title headingLevel="h1" style={{ marginBottom: '1rem' }}>
-        {userName}
-      </Title>
+      <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+        <FlexItem>
+          <Title headingLevel="h1" style={{ marginBottom: '1rem' }}>
+            {userName}
+          </Title>
+        </FlexItem>
+        <FlexItem>
+          {isComptePage ? (
+            <Button
+              variant="primary"
+              icon={<CreditCardIcon />}
+              onClick={handleAllerPaiement}
+            >
+              Payer
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              icon={<EnvelopeIcon />}
+              onClick={handleEnvoyerRappel}
+              isLoading={rappelLoading}
+              isDisabled={rappelLoading}
+            >
+              {rappelLoading ? 'Envoi en cours...' : 'Envoyer rappel'}
+            </Button>
+          )}
+        </FlexItem>
+      </Flex>
 
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
         <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
@@ -407,7 +496,10 @@ const ConsulterUtilisateurPage = () => {
         </Tab>
         
         <Tab eventKey={2} title={<TabTitleText>Paiements</TabTitleText>}>
-          <EcheancesPaiement paiementsEcheances={paiementsEcheances} />
+          <EcheancesPaiement 
+            paiementsEcheances={paiementsEcheances} 
+            userId={userData?.utilisateur?.id} // MODIFIÉ: Passer l'userId au composant EcheancesPaiement
+          />
         </Tab>
       </Tabs>
 

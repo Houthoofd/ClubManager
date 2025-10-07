@@ -1,5 +1,5 @@
-import { EmailService, EmailOptions } from '../services/emailService.js';
-import { emailTemplateService } from '../services/emailTemplateService.js';
+import { EmailService, EmailOptions } from '../../../services/emailService.js';
+import { emailTemplateService } from '../../../services/emailTemplateService.js';
 
 export interface EmailResult {
   success: boolean;

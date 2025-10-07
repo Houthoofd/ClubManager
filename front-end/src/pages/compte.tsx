@@ -337,6 +337,14 @@ const Compte = () => {
     setModificationsResume([]);
   };
 
+  // MODIFIÉ: Fonction pour générer l'URL de paiement avec userId automatique
+  const genererUrlPaiement = (echeanceId: number): string => {
+    // Récupérer l'ID utilisateur depuis les données du compte
+    const userId = utilisateurId || userData?.id;
+    console.log(`🔗 [Compte] Génération URL paiement pour échéance ${echeanceId}, utilisateur ${userId}`);
+    return `/pages/paiement?echeance=${echeanceId}&userId=${userId}`;
+  };
+
   const tabs = [
     {
       key: '0',
@@ -387,6 +395,8 @@ const Compte = () => {
         <PaiementsTab
           isDataReady={isDataReady}
           paiementsEcheances={paiementsEcheances}
+          userId={utilisateurId || userData?.id} // MODIFIÉ: Passer l'userId (avec fallback)
+          genererUrlPaiement={genererUrlPaiement} // AJOUTÉ: Passer la fonction
         />
       )
     }
@@ -456,6 +466,5 @@ const Compte = () => {
 };
 
 export default Compte;
-
 
 

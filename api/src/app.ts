@@ -87,7 +87,7 @@ async function startServer() {
     
     // 2. Initialiser les services email après la DB
     console.log('🔄 [Server] Initialisation des services email...');
-    const { messageClient } = await import('./clients/messageClient.js');
+    const { messageClient } = await import('./db/clients/messagerie/messageClient.js');
     await messageClient.initialiser();
     
     // 3. Démarrer le serveur Express

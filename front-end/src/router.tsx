@@ -32,6 +32,7 @@ import VerifyEmail from './pages/verifyemail';
 import StatistiquesPage from './pages/statistiques';
 
 import PaymentSuccessPage from './pages/magasin/success';
+import PaiementPage from './pages/paiement/paiement';
 
 const router = createBrowserRouter([
   // Route publique pour la page de connexion
@@ -188,6 +189,10 @@ const router = createBrowserRouter([
       {
         path: '/pages/magasin/success',
         element: <PaymentSuccessPage />,
+      },
+      {
+        path: 'pages/paiement',
+        element: <PaiementPage />,
       },
     ],
   },
