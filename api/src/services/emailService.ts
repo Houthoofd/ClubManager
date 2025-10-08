@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { promises as fs } from 'fs';
 import path from 'path';
 import sgMail from '@sendgrid/mail';
+import MysqlConnector from '../db/connector/mysqlconnector.js';
 
 export interface EmailOptions {
   to: string | string[];
@@ -24,12 +25,31 @@ export interface EmailTemplate {
   html: string;
 }
 
+export interface EmailMessage {
+  to: string;
+  subject: string;
+  message: string;
+  isHtml?: boolean;
+  saveToDb?: boolean;
+  utilisateurId?: number;
+}
+
+export interface EmailResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  details?: any;
+}
+
 export class EmailService {
-  private transporter!: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null; // Correction: permettre null
   private templatePath: string;
+  private mysqlConnector: MysqlConnector;
+  private initialized: boolean = false;
 
   constructor() {
     this.templatePath = path.join(process.cwd(), 'src', 'templates', 'emails');
+    this.mysqlConnector = MysqlConnector.getInstance();
     this.initializeTransporter();
     
     // NOUVEAU: Configuration SendGrid
@@ -55,6 +75,7 @@ export class EmailService {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.error('❌ Credentials email manquants - service désactivé');
       console.log('💡 Ajoutez EMAIL_USER et EMAIL_PASS dans votre fichier .env');
+      this.transporter = null; // Explicitement null
       return;
     }
 
@@ -105,7 +126,8 @@ export class EmailService {
       }
     });
 
-    this.transporter = nodemailer.createTransport(emailConfig);
+    this.transporter = nodemailer.createTransport(emailConfig); // CORRECTION: createTransport au lieu de createTransporter
+    this.initialized = true; // Marquer comme initialisé après création du transporter
 
     // Vérifier la configuration au démarrage
     this.verifyConnection();
@@ -363,6 +385,11 @@ export class EmailService {
   // Test de configuration email
   async testEmailConfiguration(): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
+      // CORRECTION: Vérifier que le transporter n'est pas null
+      if (!this.transporter) {
+        throw new Error('Service email non configuré - vérifiez les variables EMAIL_USER et EMAIL_PASS');
+      }
+
       await this.transporter.verify();
       
       // Envoyer un email de test à l'administrateur
@@ -970,6 +997,145 @@ export class EmailService {
         details: errorDetails
       };
     }
+  }
+
+  /**
+   * NOUVELLE MÉTHODE: Envoie un message email
+   */
+  async envoyerMessage(emailData: EmailMessage): Promise<EmailResult> {
+    try {
+      if (!this.initialized || !this.transporter) {
+        console.error('❌ [EmailService] Service email non initialisé');
+        return {
+          success: false,
+          error: 'Service email non initialisé'
+        };
+      }
+
+      console.log('📧 [EmailService] Envoi email vers:', emailData.to);
+
+      // Configuration de l'email
+      const mailOptions = {
+        from: process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_FROM || 'no-reply@clubmanagment.com',
+        to: emailData.to,
+        subject: emailData.subject,
+        [emailData.isHtml !== false ? 'html' : 'text']: emailData.message
+      };
+
+      // Envoyer l'email
+      const info = await this.transporter.sendMail(mailOptions);
+      
+      console.log('✅ [EmailService] Email envoyé avec succès:', info.messageId);
+
+      // Sauvegarder en base si demandé
+      if (emailData.saveToDb !== false && emailData.utilisateurId) {
+        await this.saveEmailToDatabase(emailData, info.messageId);
+      }
+
+      return {
+        success: true,
+        messageId: info.messageId,
+        details: {
+          accepted: info.accepted,
+          rejected: info.rejected,
+          response: info.response
+        }
+      };
+
+    } catch (error: any) {
+      console.error('❌ [EmailService] Erreur envoi email:', error);
+      
+      // Sauvegarder l'erreur en base si utilisateurId fourni
+      if (emailData.saveToDb !== false && emailData.utilisateurId) {
+        await this.saveEmailErrorToDatabase(emailData, error.message);
+      }
+
+      return {
+        success: false,
+        error: error.message,
+        details: error
+      };
+    }
+  }
+
+  /**
+   * Sauvegarde un email réussi en base de données
+   */
+  private async saveEmailToDatabase(emailData: EmailMessage, messageId: string): Promise<void> {
+    try {
+      const sql = `
+        INSERT INTO messages_personnalises 
+        (utilisateur_id, contenu, status_envoi, sendgrid_message_id, created_at)
+        VALUES (?, ?, 'sent', ?, NOW())
+      `;
+
+      await new Promise<void>((resolve, reject) => {
+        this.mysqlConnector.query(sql, [
+          emailData.utilisateurId,
+          emailData.message,
+          messageId
+        ], (error) => {
+          if (error) {
+            console.error('❌ Erreur sauvegarde email en DB:', error);
+            reject(error);
+          } else {
+            console.log('✅ Email sauvegardé en DB avec messageId:', messageId);
+            resolve();
+          }
+        });
+      });
+
+    } catch (error) {
+      console.error('❌ [EmailService] Erreur sauvegarde email DB:', error);
+    }
+  }
+
+  /**
+   * Sauvegarde une erreur d'email en base de données
+   */
+  private async saveEmailErrorToDatabase(emailData: EmailMessage, errorMessage: string): Promise<void> {
+    try {
+      const sql = `
+        INSERT INTO messages_personnalises 
+        (utilisateur_id, contenu, status_envoi, error_details, created_at)
+        VALUES (?, ?, 'failed', ?, NOW())
+      `;
+
+      await new Promise<void>((resolve, reject) => {
+        this.mysqlConnector.query(sql, [
+          emailData.utilisateurId,
+          emailData.message,
+          errorMessage
+        ], (error) => {
+          if (error) {
+            console.error('❌ Erreur sauvegarde erreur email en DB:', error);
+            reject(error);
+          } else {
+            console.log('📝 Erreur email sauvegardée en DB');
+            resolve();
+          }
+        });
+      });
+
+    } catch (error) {
+      console.error('❌ [EmailService] Erreur sauvegarde erreur email DB:', error);
+    }
+  }
+
+  /**
+   * Vérifie si le service est prêt
+   */
+  isReady(): boolean {
+    return this.initialized && this.transporter !== null;
+  }
+
+  /**
+   * Réinitialise le transporteur
+   */
+  async reinitialize(): Promise<void> {
+    this.initialized = false;
+    this.transporter = null;
+    this.initializeTransporter();
   }
 }
 

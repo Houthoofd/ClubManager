@@ -394,13 +394,43 @@ CREATE TABLE IF NOT EXISTS message_status (
     INDEX idx_message_utilisateur (message_id, utilisateur_id)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS messages_personnalises (
+
+
+-- Créer la table messages_personnalises avec toutes les fonctionnalités
+CREATE TABLE messages_personnalises (
     id INT AUTO_INCREMENT PRIMARY KEY,
     utilisateur_id INT NOT NULL,
     contenu TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Colonnes pour soft delete
+    deleted_at DATETIME NULL,
+    deleted_by INT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    -- Colonnes pour le tracking de lecture
+    lu BOOLEAN DEFAULT FALSE,
+    date_lecture DATETIME NULL,
+    
+    -- Colonnes pour le tracking d'envoi email
+    status_envoi ENUM('pending', 'sent', 'failed', 'delivered', 'bounced') DEFAULT 'pending',
+    sendgrid_message_id VARCHAR(255) NULL,
+    error_details TEXT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Contraintes de clés étrangères
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
-    INDEX idx_utilisateur (utilisateur_id)
+    FOREIGN KEY (deleted_by) REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    
+    -- Index pour optimiser les performances
+    INDEX idx_utilisateur (utilisateur_id),
+    INDEX idx_messages_personnalises_deleted (utilisateur_id, deleted_at),
+    INDEX idx_messages_personnalises_active (utilisateur_id, is_active),
+    INDEX idx_messages_personnalises_lu (utilisateur_id, lu),
+    INDEX idx_messages_personnalises_date_lecture (date_lecture),
+    INDEX idx_messages_personnalises_status_envoi (status_envoi),
+    INDEX idx_messages_personnalises_sendgrid_id (sendgrid_message_id),
+    INDEX idx_messages_personnalises_updated (updated_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS types_messages_personnalises (
@@ -441,6 +471,48 @@ CREATE TABLE IF NOT EXISTS statistiques (
     description TEXT,
     date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_type_periode (type_statistique, periode_debut, periode_fin)
+) ENGINE=InnoDB;
+
+-- Créer la table pour les tokens de validation
+CREATE TABLE IF NOT EXISTS email_validation_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    type ENUM('email_confirmation', 'password_setup', 'password_reset', 'userId_recovery') NOT NULL DEFAULT 'email_confirmation',
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    used_at TIMESTAMP NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_utilisateur_type (utilisateur_id, type),
+    INDEX idx_expires (expires_at),
+    INDEX idx_token_valid (token, used, expires_at)
+) ENGINE=InnoDB;
+
+-- Table validation_tokens (structure attendue par l'application)
+CREATE TABLE IF NOT EXISTS validation_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    type ENUM('email_confirmation', 'password_setup', 'password_reset', 'userId_recovery') NOT NULL DEFAULT 'email_confirmation',
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    used_at TIMESTAMP NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    user_id_string VARCHAR(20) NULL,
+    token_hash VARCHAR(255) NULL,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_token_hash (token_hash),
+    INDEX idx_user_id_string (user_id_string),
+    INDEX idx_utilisateur_type (utilisateur_id, type),
+    INDEX idx_expires (expires_at),
+    INDEX idx_token_valid (token, used, expires_at)
 ) ENGINE=InnoDB;
 
 -- ========== SYSTÈME D'ALERTES ==========
@@ -735,7 +807,6 @@ END//
 DELIMITER ;
 
 DELIMITER //
-
 CREATE TRIGGER after_utilisateur_update_abonnement
 AFTER UPDATE ON utilisateurs
 FOR EACH ROW
@@ -990,6 +1061,298 @@ END//
 DELIMITER ;
 
 
+DELIMITER //
+
+-- Procédure pour générer un token de validation
+CREATE PROCEDURE generer_token_validation(
+    IN p_utilisateur_id INT,
+    IN p_type ENUM('email_confirmation', 'password_setup', 'password_reset', 'userId_recovery'),
+    IN p_duree_heures INT,
+    OUT p_token VARCHAR(255)
+)
+BEGIN
+    DECLARE v_expires_at TIMESTAMP;
+    DECLARE v_token VARCHAR(255);
+    DECLARE v_token_exists INT DEFAULT 1;
+    DECLARE v_duree INT DEFAULT 24;
+    
+    -- Utiliser la durée fournie ou 24h par défaut
+    IF p_duree_heures IS NULL OR p_duree_heures <= 0 THEN
+        SET v_duree = 24;
+    ELSE
+        SET v_duree = p_duree_heures;
+    END IF;
+    
+    -- Calculer la date d'expiration
+    SET v_expires_at = DATE_ADD(NOW(), INTERVAL v_duree HOUR);
+    
+    -- Supprimer les anciens tokens du même type pour cet utilisateur
+    DELETE FROM email_validation_tokens 
+    WHERE utilisateur_id = p_utilisateur_id 
+    AND type = p_type 
+    AND (used = TRUE OR expires_at < NOW());
+    
+    -- Générer un token unique
+    WHILE v_token_exists > 0 DO
+        SET v_token = UPPER(CONCAT(
+            SUBSTRING(MD5(CONCAT(p_utilisateur_id, UNIX_TIMESTAMP(), RAND())), 1, 8),
+            '-',
+            SUBSTRING(MD5(CONCAT(p_type, NOW(), CONNECTION_ID())), 1, 4),
+            '-',
+            SUBSTRING(MD5(CONCAT(RAND(), p_utilisateur_id)), 1, 4),
+            '-',
+            SUBSTRING(MD5(CONCAT(NOW(), RAND())), 1, 4),
+            '-',
+            SUBSTRING(MD5(CONCAT(v_duree, RAND(), UNIX_TIMESTAMP())), 1, 12)
+        ));
+        
+        -- Vérifier l'unicité du token
+        SELECT COUNT(*) INTO v_token_exists 
+        FROM email_validation_tokens 
+        WHERE token = v_token;
+    END WHILE;
+    
+    -- Insérer le nouveau token
+    INSERT INTO email_validation_tokens (
+        utilisateur_id, 
+        token, 
+        type, 
+        expires_at
+    ) VALUES (
+        p_utilisateur_id, 
+        v_token, 
+        p_type, 
+        v_expires_at
+    );
+    
+    -- Retourner le token généré
+    SET p_token = v_token;
+    
+    SELECT 
+        v_token as token,
+        v_expires_at as expires_at,
+        p_type as type,
+        'Token généré avec succès' as message;
+END //
+
+-- Procédure pour valider un token
+CREATE PROCEDURE valider_token(
+    IN p_token VARCHAR(255),
+    IN p_ip_address VARCHAR(45),
+    IN p_user_agent TEXT,
+    OUT p_utilisateur_id INT,
+    OUT p_type VARCHAR(50),
+    OUT p_valide BOOLEAN
+)
+BEGIN
+    DECLARE v_utilisateur_id INT DEFAULT NULL;
+    DECLARE v_type VARCHAR(50) DEFAULT NULL;
+    DECLARE v_expires_at TIMESTAMP;
+    DECLARE v_used BOOLEAN DEFAULT FALSE;
+    
+    -- Initialiser les variables de sortie
+    SET p_utilisateur_id = NULL;
+    SET p_type = NULL;
+    SET p_valide = FALSE;
+    
+    -- Récupérer les informations du token
+    SELECT 
+        utilisateur_id, 
+        type, 
+        expires_at, 
+        used
+    INTO 
+        v_utilisateur_id, 
+        v_type, 
+        v_expires_at, 
+        v_used
+    FROM email_validation_tokens 
+    WHERE token = p_token
+    LIMIT 1;
+    
+    -- Vérifier si le token existe, n'est pas expiré et n'a pas été utilisé
+    IF v_utilisateur_id IS NOT NULL 
+       AND v_expires_at > NOW() 
+       AND v_used = FALSE THEN
+        
+        -- Marquer le token comme utilisé
+        UPDATE email_validation_tokens 
+        SET 
+            used = TRUE,
+            used_at = NOW(),
+            ip_address = p_ip_address,
+            user_agent = p_user_agent
+        WHERE token = p_token;
+        
+        -- Définir les variables de sortie
+        SET p_utilisateur_id = v_utilisateur_id;
+        SET p_type = v_type;
+        SET p_valide = TRUE;
+        
+        SELECT 
+            v_utilisateur_id as utilisateur_id,
+            v_type as type,
+            TRUE as valide,
+            'Token validé avec succès' as message;
+    ELSE
+        SELECT 
+            NULL as utilisateur_id,
+            NULL as type,
+            FALSE as valide,
+            CASE 
+                WHEN v_utilisateur_id IS NULL THEN 'Token invalide'
+                WHEN v_expires_at <= NOW() THEN 'Token expiré'
+                WHEN v_used = TRUE THEN 'Token déjà utilisé'
+                ELSE 'Erreur de validation'
+            END as message;
+    END IF;
+END //
+
+-- Procédure pour vérifier la validité d'un token sans le consommer
+CREATE PROCEDURE verifier_token(
+    IN p_token VARCHAR(255)
+)
+BEGIN
+    SELECT 
+        t.utilisateur_id,
+        t.type,
+        t.expires_at,
+        t.used,
+        t.created_at,
+        u.email,
+        u.first_name,
+        u.last_name,
+        CASE 
+            WHEN t.used = TRUE THEN 'Déjà utilisé'
+            WHEN t.expires_at <= NOW() THEN 'Expiré'
+            ELSE 'Valide'
+        END as statut,
+        CASE 
+            WHEN t.used = FALSE AND t.expires_at > NOW() THEN TRUE
+            ELSE FALSE
+        END as est_valide
+    FROM email_validation_tokens t
+    JOIN utilisateurs u ON t.utilisateur_id = u.id
+    WHERE t.token = p_token;
+END //
+
+-- Procédure pour nettoyer les tokens expirés
+CREATE PROCEDURE nettoyer_tokens_expires()
+BEGIN
+    DECLARE v_tokens_supprimes INT DEFAULT 0;
+    
+    -- Supprimer les tokens expirés depuis plus de 7 jours
+    DELETE FROM email_validation_tokens 
+    WHERE expires_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
+    
+    SET v_tokens_supprimes = ROW_COUNT();
+    
+    SELECT 
+        v_tokens_supprimes as tokens_supprimes,
+        'Nettoyage terminé' as message;
+END //
+
+-- Procédure pour obtenir l'historique des tokens d'un utilisateur
+CREATE PROCEDURE obtenir_historique_tokens(
+    IN p_utilisateur_id INT,
+    IN p_limit INT
+)
+BEGIN
+    DECLARE v_limit INT DEFAULT 10;
+    
+    -- Utiliser la limite fournie ou 10 par défaut
+    IF p_limit IS NULL OR p_limit <= 0 THEN
+        SET v_limit = 10;
+    ELSE
+        SET v_limit = p_limit;
+    END IF;
+    
+    SET @sql = CONCAT('
+        SELECT 
+            t.id,
+            t.type,
+            t.created_at,
+            t.expires_at,
+            t.used,
+            t.used_at,
+            t.ip_address,
+            CASE 
+                WHEN t.used = TRUE THEN "Utilisé"
+                WHEN t.expires_at <= NOW() THEN "Expiré"
+                ELSE "Actif"
+            END as statut
+        FROM email_validation_tokens t
+        WHERE t.utilisateur_id = ', p_utilisateur_id, '
+        ORDER BY t.created_at DESC
+        LIMIT ', v_limit
+    );
+    
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END //
+
+-- Procédure pour révoquer tous les tokens d'un utilisateur
+CREATE PROCEDURE revoquer_tokens_utilisateur(
+    IN p_utilisateur_id INT,
+    IN p_type VARCHAR(50)
+)
+BEGIN
+    DECLARE v_tokens_revoques INT DEFAULT 0;
+    
+    IF p_type IS NOT NULL AND p_type != '' THEN
+        -- Révoquer uniquement les tokens du type spécifié
+        UPDATE email_validation_tokens 
+        SET used = TRUE, used_at = NOW()
+        WHERE utilisateur_id = p_utilisateur_id 
+        AND type = p_type 
+        AND used = FALSE 
+        AND expires_at > NOW();
+    ELSE
+        -- Révoquer tous les tokens actifs
+        UPDATE email_validation_tokens 
+        SET used = TRUE, used_at = NOW()
+        WHERE utilisateur_id = p_utilisateur_id 
+        AND used = FALSE 
+        AND expires_at > NOW();
+    END IF;
+    
+    SET v_tokens_revoques = ROW_COUNT();
+    
+    SELECT 
+        v_tokens_revoques as tokens_revoques,
+        'Tokens révoqués avec succès' as message;
+END //
+
+-- Procédure simplifiée pour générer un token avec durée par défaut
+CREATE PROCEDURE generer_token_simple(
+    IN p_utilisateur_id INT,
+    IN p_type ENUM('email_confirmation', 'password_setup', 'password_reset', 'userId_recovery'),
+    OUT p_token VARCHAR(255)
+)
+BEGIN
+    CALL generer_token_validation(p_utilisateur_id, p_type, 24, p_token);
+END //
+
+DELIMITER ;
+
+-- ========== EVENT POUR NETTOYAGE AUTOMATIQUE ==========
+
+-- Activer le planificateur d'événements
+SET GLOBAL event_scheduler = ON;
+
+-- Créer un événement pour nettoyer automatiquement les tokens expirés
+DELIMITER //
+CREATE EVENT IF NOT EXISTS nettoyage_tokens_quotidien
+ON SCHEDULE EVERY 1 DAY
+STARTS TIMESTAMP(CURRENT_DATE + INTERVAL 1 DAY, '02:00:00')
+DO
+BEGIN
+    CALL nettoyer_tokens_expires();
+END //
+DELIMITER ;
+
+
 
 -- Insert des données
 INSERT INTO genres (genre_name) VALUES ('Masculin'), ('Féminin');
@@ -1174,7 +1537,7 @@ CALL upsert_utilisateur('Yóu', 'Kenna', 'hkenna25@europa.eu', 2, '1989-02-23', 
 CALL upsert_utilisateur('Laurène', 'Hanmore', 'jhanmore26@omniture.com', 2, '2009-05-02', 'laurene_hanmore', 3, 21, 3, '$2y$10$...', 'NOW()');
 CALL upsert_utilisateur('Lén', 'Whorlow', 'cwhorlow27@gov.uk', 2, '2014-08-28', 'len_whorlow', 4, 19, 3, '$2y$10$...', 'NOW()');
 CALL upsert_utilisateur('Irène', 'Trapp', 'ytrapp28@addthis.com', 2, '2004-11-29', 'irene_trapp', 1, 9, 3, '$2y$10$...', 'NOW()');
-CALL upsert_utilisateur('Marie-thérèse', 'Freshwater', 'efreshwater29@constantcontact.com', 2, '1985-04-09', 'marietherese_freshwater', 1, 11, 3, '$2y$10$...', 'NOW()');
+CALL upsert_utilisateur('Marie-thérèse', 'Freshwater', 'efreshwater29@constantcontact.com', 2, '1985-04-09', 'marie_helene_freshwater', 1, 11, 3, '$2y$10$...', 'NOW()');
 CALL upsert_utilisateur('Ophélie', 'Gulk', 'ygulk2a@ucoz.ru', 1, '2023-02-12', 'ophelie_gulk', 4, 10, 3, '$2y$10$...', 'NOW()');
 CALL upsert_utilisateur('Andréanne', 'Kynston', 'akynston2b@ebay.co.uk', 1, '1981-08-30', 'andreanne_kynston', 1, 9, 3, '$2y$10$...', 'NOW()');
 CALL upsert_utilisateur('Ráo', 'McConnal', 'emcconnal2c@ifeng.com', 2, '1970-02-22', 'rao_mcconnal', 1, 10, 3, '$2y$10$...', 'NOW()');

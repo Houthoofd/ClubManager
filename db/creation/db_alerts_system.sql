@@ -45,9 +45,13 @@ INSERT INTO alertes_types (code, nom, description, priorite) VALUES
 ('PAIEMENT_RETARD', 'Paiement en retard', 'Échéance de paiement dépassée', 'haute'),
 ('PAIEMENT_CRITIQUE', 'Paiement très en retard', 'Plus de 30 jours de retard', 'critique'),
 ('ABSENCE_PROLONGEE', 'Absence prolongée', 'Aucune présence depuis plus de 30 jours', 'normale'),
-('SANS_ABONNEMENT', 'Pas d\'abonnement', 'Utilisateur sans plan tarifaire', 'haute'),
-('INFORMATIONS_OBSOLETES', 'Informations obsolètes', 'Profil non mis à jour depuis longtemps', 'basse'),
-('GRADE_INCOHERENT', 'Grade incohérent', 'Grade ne correspond pas à l\'ancienneté', 'normale');
+('SANS_ABONNEMENT', "Pas d'abonnement", 'Utilisateur sans plan tarifaire', 'haute'),
+("INFORMATIONS_OBSOLETES", 'Informations obsolètes', 'Profil non mis à jour depuis longtemps', 'basse'),
+("GRADE_INCOHERENT", 'Grade incohérent', "Grade ne correspond pas à l'ancienneté", 'normale')
+ON DUPLICATE KEY UPDATE
+    nom = VALUES(nom),
+    description = VALUES(description),
+    priorite = VALUES(priorite);
 
 DELIMITER //
 

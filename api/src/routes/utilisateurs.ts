@@ -189,21 +189,17 @@ router.post('/inscription', async (req: any, res: any) => {
 
     console.log('[Route] Résultat inscription:', result);
 
-    // 🆕 MODIFICATION: Envoi email de vérification à VOTRE adresse au lieu de l'adresse saisie
+    // ✅ CORRECTION: Envoi email de vérification à l'adresse de l'utilisateur qui s'inscrit
     if (result.userId) {
       try {
         console.log('📧 [Route] Démarrage envoi email de vérification...');
-        console.log(`📧 [Route] Email saisi par utilisateur: ${validatedData.email}`);
-        console.log(`📧 [Route] Email DE TEST (vers Benoit): houthoofd.benoit48@gmail.com`);
+        console.log(`📧 [Route] Email destinataire: ${validatedData.email}`);
         console.log(`📧 [Route] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`);
         console.log(`📧 [Route] UserId généré: ${result.userId}`);
 
-        // INJECTION DE VOTRE EMAIL pour les tests
-        const emailDestinationTest = 'houthoofd.benoit48@gmail.com';
-        
-        // Envoyer l'email de vérification avec token à VOTRE adresse
+        // ✅ CORRECTION: Envoyer l'email de vérification à l'email de l'utilisateur
         const emailResult = await emailValidationService.sendValidationEmailWithUserId({
-          email: emailDestinationTest, // 🔄 MODIFICATION: Votre email au lieu de validatedData.email
+          email: validatedData.email, // ✅ CORRECTION: Utiliser l'email de l'utilisateur
           prenom: validatedData.prenom,
           nom: validatedData.nom,
           userId: result.generatedUserId,
@@ -223,10 +219,9 @@ router.post('/inscription', async (req: any, res: any) => {
             emailStatus: {
               sent: true,
               messageId: emailResult.details?.messageId,
-              emailDestination: emailDestinationTest, // Indiquer où l'email a été envoyé
-              emailOriginal: validatedData.email, // L'email saisi par l'utilisateur
-              isTestMode: true, // Indiquer que c'est un mode test
-              note: 'Email de vérification envoyé à houthoofd.benoit48@gmail.com pour les tests'
+              emailDestination: validatedData.email, // L'email réel de l'utilisateur
+              isTestMode: false, // ✅ CORRECTION: Plus en mode test
+              note: `Email de vérification envoyé à ${validatedData.email}`
             }
           });
           
@@ -239,9 +234,8 @@ router.post('/inscription', async (req: any, res: any) => {
               sent: false,
               error: emailResult,
               details: emailResult.details,
-              emailDestination: emailDestinationTest,
-              emailOriginal: validatedData.email,
-              isTestMode: true
+              emailDestination: validatedData.email,
+              isTestMode: false
             },
             warning: 'L\'email de vérification n\'a pas pu être envoyé. Veuillez vérifier votre configuration.'
           });
@@ -259,9 +253,8 @@ router.post('/inscription', async (req: any, res: any) => {
             sent: false,
             error: 'Erreur technique lors de l\'envoi',
             details: { originalError: emailError.message },
-            emailDestination: 'houthoofd.benoit48@gmail.com',
-            emailOriginal: validatedData.email,
-            isTestMode: true
+            emailDestination: validatedData.email,
+            isTestMode: false
           },
           warning: 'Une erreur technique s\'est produite lors de l\'envoi de l\'email de vérification.'
         });

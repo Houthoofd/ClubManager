@@ -131,7 +131,7 @@ router.post('/bancontact', async (req, res) => {
 
     console.log('Commande et paiement créés:', { 
       commandeId, 
-      paiementId: paiementResult.data?.id 
+      paiementId: paiementResult.id // CORRECTION: Accès direct à id au lieu de data?.id
     });
 
     res.status(200).json({
@@ -198,7 +198,7 @@ router.post('/bitcoin', async (req, res) => {
       bitcoinAddress,
       amount: amountBTC,
       qrCode: `bitcoin:${bitcoinAddress}?amount=${amountBTC}`,
-      paiementId: result.data?.id
+      paiementId: result.id // CORRECTION: Accès direct à id au lieu de data?.id
     });
   } catch (error) {
     console.error('Erreur Bitcoin:', error);
@@ -321,7 +321,7 @@ router.post('/confirm-payment', async (req, res) => {
     }
     
     console.log(`🎯 [Paiements] Mise à jour FORCÉE de l'échéance ${echeanceId} pour l'utilisateur ${userId}`);
-    const echeanceResult = await paiements.marquerEcheancePayee(parseInt(echeanceId), parseInt(userId));
+    const echeanceResult = await paiements.marquerEcheancePayee(parseInt(echeanceId)); // CORRECTION: Appel sans le deuxième paramètre
     console.log(`🎯 [Paiements] Résultat mise à jour échéance:`, echeanceResult);
     
     if (echeanceResult.isConfirm) {
@@ -338,11 +338,10 @@ router.post('/confirm-payment', async (req, res) => {
 
     // 6. Créer un enregistrement de paiement d'échéance
     const enregistrementResult = await paiements.enregistrerPaiementEcheance({
-      echeance_id: parseInt(echeanceId),
       utilisateur_id: parseInt(userId),
       montant: amount,
+      methode_paiement: 'stripe',
       stripe_payment_intent_id: paymentIntentId,
-      date_paiement: new Date(),
       statut: 'confirme'
     });
 
@@ -359,10 +358,11 @@ router.post('/confirm-payment', async (req, res) => {
       message: successMessage,
       echeance_id: echeanceId,
       payment_intent_id: paymentIntentId,
-      enregistrement_id: enregistrementResult.data?.id,
+      // SUPPRESSION: enregistrement_id qui utilisait result.data?.id
       premier_paiement: premierPaiement,
       statut_upgrade: premierPaiement ? 'visiteur → utilisateur' : null,
       echeance_mise_a_jour: echeanceResult.isConfirm,
+      enregistrement_confirme: enregistrementResult.isConfirm, // CORRECTION: Utiliser isConfirm
       debug: {
         echeanceAvant: echeanceCible,
         echeanceApres: echeanceApres,
@@ -379,7 +379,7 @@ router.post('/confirm-payment', async (req, res) => {
   }
 });
 
-// Webhook Stripe pour confirmer les paiements - AMÉLIORÉ avec récupération des metadata
+// Webhook Stripe pour confirmer les paiements
 router.post('/webhook/stripe', 
   express.json({ type: 'application/json' }), 
   async (req, res) => {
@@ -428,7 +428,7 @@ router.post('/webhook/stripe',
               console.log(`🎯 [Webhook] Mise à jour FORCÉE de l'échéance ${echeanceId} pour l'utilisateur ${userId}`);
               
               try {
-                const echeanceResult = await paiements.marquerEcheancePayee(parseInt(echeanceId), parseInt(userId));
+                const echeanceResult = await paiements.marquerEcheancePayee(parseInt(echeanceId)); // CORRECTION: Appel sans le deuxième paramètre
                 
                 if (echeanceResult.isConfirm) {
                   console.log(`✅ [Webhook] Échéance ${echeanceId} marquée comme payée via webhook`);
@@ -722,199 +722,6 @@ router.get('/echeances', async (req, res) => {
   }
 });
 
-// NOUVEAU: Route pour créer une nouvelle échéance
-router.post('/echeances', async (req, res) => {
-  try {
-    const { utilisateur_id, abonnement_id, montant, date_echeance, statut = 'en attente' } = req.body;
-    
-    console.log(`📝 [Paiements] Création nouvelle échéance:`, req.body);
-    
-    if (!utilisateur_id || !montant || !date_echeance) {
-      return res.status(400).json({ 
-        error: 'Données manquantes',
-        required: ['utilisateur_id', 'montant', 'date_echeance']
-      });
-    }
-
-    const paiements = new Paiements();
-    
-    const query = `
-      INSERT INTO echeances_paiements 
-      (utilisateur_id, abonnement_id, montant, date_echeance, statut)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-    
-    const results = await paiements.queryAsync(query, [
-      utilisateur_id,
-      abonnement_id || null,
-      montant,
-      date_echeance,
-      statut
-    ]);
-    
-    console.log(`✅ [Paiements] Échéance créée avec ID: ${results.insertId}`);
-    
-    // Récupérer l'échéance créée
-    const echeanceCreee = await paiements.queryAsync(
-      `SELECT * FROM echeances_paiements WHERE id = ?`, 
-      [results.insertId]
-    );
-    
-    res.status(201).json({
-      success: true,
-      message: 'Échéance créée avec succès',
-      data: echeanceCreee[0]
-    });
-
-  } catch (error: any) {
-    console.error('❌ [Paiements] Erreur création échéance:', error);
-    res.status(500).json({ 
-      error: 'Erreur lors de la création de l\'échéance',
-      details: error.message 
-    });
-  }
-});
-
-// NOUVEAU: Route pour mettre à jour une échéance
-router.put('/echeance/:echeanceId', async (req, res) => {
-  try {
-    const { echeanceId } = req.params;
-    const updates = req.body;
-    
-    console.log(`📝 [Paiements] Mise à jour échéance ${echeanceId}:`, updates);
-    
-    if (!echeanceId || isNaN(parseInt(echeanceId))) {
-      return res.status(400).json({ 
-        error: 'ID échéance invalide' 
-      });
-    }
-
-    const paiements = new Paiements();
-    
-    // Vérifier que l'échéance existe
-    const existingEcheance = await paiements.queryAsync(
-      `SELECT * FROM echeances_paiements WHERE id = ?`, 
-      [parseInt(echeanceId)]
-    );
-    
-    if (existingEcheance.length === 0) {
-      return res.status(404).json({ 
-        error: 'Échéance non trouvée' 
-      });
-    }
-    
-    // Construire la requête de mise à jour dynamiquement
-    const allowedFields = ['montant', 'date_echeance', 'statut', 'date_paiement'];
-    const updateFields: string[] = [];
-    const updateValues: any[] = [];
-    
-    Object.keys(updates).forEach(field => {
-      if (allowedFields.includes(field) && updates[field] !== undefined) {
-        updateFields.push(`${field} = ?`);
-        updateValues.push(updates[field]);
-      }
-    });
-    
-    if (updateFields.length === 0) {
-      return res.status(400).json({ 
-        error: 'Aucun champ valide à mettre à jour',
-        allowedFields 
-      });
-    }
-    
-    updateValues.push(parseInt(echeanceId));
-    
-    const updateQuery = `
-      UPDATE echeances_paiements 
-      SET ${updateFields.join(', ')}
-      WHERE id = ?
-    `;
-    
-    const results = await paiements.queryAsync(updateQuery, updateValues);
-    
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ 
-        error: 'Échéance non trouvée ou non modifiée' 
-      });
-    }
-    
-    // Récupérer l'échéance mise à jour
-    const echeanceMiseAJour = await paiements.queryAsync(
-      `SELECT * FROM echeances_paiements WHERE id = ?`, 
-      [parseInt(echeanceId)]
-    );
-    
-    console.log(`✅ [Paiements] Échéance ${echeanceId} mise à jour avec succès`);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Échéance mise à jour avec succès',
-      data: echeanceMiseAJour[0]
-    });
-
-  } catch (error: any) {
-    console.error('❌ [Paiements] Erreur mise à jour échéance:', error);
-    res.status(500).json({ 
-      error: 'Erreur lors de la mise à jour de l\'échéance',
-      details: error.message 
-    });
-  }
-});
-
-// NOUVEAU: Route pour supprimer une échéance
-router.delete('/echeance/:echeanceId', async (req, res) => {
-  try {
-    const { echeanceId } = req.params;
-    
-    console.log(`🗑️ [Paiements] Suppression échéance ${echeanceId}`);
-    
-    if (!echeanceId || isNaN(parseInt(echeanceId))) {
-      return res.status(400).json({ 
-        error: 'ID échéance invalide' 
-      });
-    }
-
-    const paiements = new Paiements();
-    
-    // Vérifier que l'échéance existe et n'est pas déjà payée
-    const existingEcheance = await paiements.queryAsync(
-      `SELECT * FROM echeances_paiements WHERE id = ?`, 
-      [parseInt(echeanceId)]
-    );
-    
-    if (existingEcheance.length === 0) {
-      return res.status(404).json({ 
-        error: 'Échéance non trouvée' 
-      });
-    }
-    
-    if (existingEcheance[0].statut === 'payé') {
-      return res.status(400).json({ 
-        error: 'Impossible de supprimer une échéance déjà payée' 
-      });
-    }
-    
-    const results = await paiements.queryAsync(
-      `DELETE FROM echeances_paiements WHERE id = ?`, 
-      [parseInt(echeanceId)]
-    );
-    
-    console.log(`✅ [Paiements] Échéance ${echeanceId} supprimée avec succès`);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Échéance supprimée avec succès'
-    });
-
-  } catch (error: any) {
-    console.error('❌ [Paiements] Erreur suppression échéance:', error);
-    res.status(500).json({ 
-      error: 'Erreur lors de la suppression de l\'échéance',
-      details: error.message 
-    });
-  }
-});
-
 // CORRIGÉ: Configuration Stripe PaymentIntent avec gestion d'erreur DB améliorée
 router.post('/create-payment-intent', async (req, res) => {
   try {
@@ -970,7 +777,7 @@ router.post('/create-payment-intent', async (req, res) => {
 
       console.log('✅ [Paiements] PaymentIntent créé avec succès:', paymentIntent.id);
 
-      // Enregistrer le paiement avec gestion d'erreur gracieuse
+      // Enregistrer le paiement avec gestion d'erreur gracieuse - CORRECTION: Ajouter echeance_id
       try {
         const paiementResult = await paiements.creerPaiement({
           utilisateur_id: parseInt(userId),
@@ -978,16 +785,16 @@ router.post('/create-payment-intent', async (req, res) => {
           methode_paiement: 'stripe',
           stripe_payment_intent_id: paymentIntent.id,
           statut: 'en_attente',
-          echeance_id: parseInt(echeanceId),
-          description: description || `Paiement échéance #${echeanceId}`
+          description: description || `Paiement échéance #${echeanceId}`,
+          echeance_id: parseInt(echeanceId) // CORRECTION: Maintenant supporté par l'interface
         });
 
-        console.log('💾 [Paiements] Paiement enregistré en base:', paiementResult.data?.id);
+        console.log('💾 [Paiements] Paiement enregistré en base:', paiementResult.id);
 
         res.status(200).json({
           client_secret: paymentIntent.client_secret,
           payment_intent_id: paymentIntent.id,
-          paiement_id: paiementResult.data?.id
+          paiement_id: paiementResult.id
         });
 
       } catch (dbError: any) {
@@ -1054,6 +861,188 @@ router.post('/create-payment-intent', async (req, res) => {
     console.error('❌ [Paiements] Stack trace:', error.stack);
     res.status(500).json({ 
       error: 'Erreur lors de la création du PaymentIntent',
+      details: error.message 
+    });
+  }
+});
+
+// CORRECTION: Route pour créer une échéance
+router.post('/echeances', verifyToken, async (req: any, res: any) => {
+  try {
+    const { utilisateur_id, abonnement_id, montant, date_echeance, statut = 'en attente' } = req.body;
+    
+    console.log(`📝 [Paiements] Création nouvelle échéance:`, req.body);
+    
+    if (!utilisateur_id || !montant || !date_echeance) {
+      return res.status(400).json({ 
+        error: 'Données manquantes',
+        required: ['utilisateur_id', 'montant', 'date_echeance']
+      });
+    }
+
+    const paiements = new Paiements();
+    
+    const echeanceCreee = await paiements.queryAsync(
+      'INSERT INTO echeances_paiements (utilisateur_id, abonnement_id, date_echeance, montant, statut) VALUES (?, ?, ?, ?, ?)',
+      [utilisateur_id, abonnement_id, date_echeance, montant, 'en attente']
+    );
+
+    // Récupérer l'échéance créée
+    const echeanceCreeeDetail = await paiements.queryAsync(
+      `SELECT * FROM echeances_paiements WHERE id = ?`, 
+      [echeanceCreee.insertId]
+    );
+    
+    res.status(201).json({
+      success: true,
+      message: 'Échéance créée avec succès',
+      data: echeanceCreeeDetail[0]
+    });
+
+  } catch (error: any) {
+    console.error('❌ [Paiements] Erreur création échéance:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la création de l\'échéance',
+      details: error.message 
+    });
+  }
+});
+
+// CORRECTION: Route pour mettre à jour une échéance
+router.put('/echeances/:id', verifyToken, async (req: any, res: any) => {
+  try {
+    const echeanceId = parseInt(req.params.id);
+    const updates = req.body;
+    
+    console.log(`📝 [Paiements] Mise à jour échéance ${echeanceId}:`, updates);
+    
+    if (isNaN(echeanceId)) {
+      return res.status(400).json({ 
+        error: 'ID échéance invalide' 
+      });
+    }
+
+    const paiements = new Paiements();
+    
+    // Vérifier que l'échéance existe
+    const existingEcheance = await paiements.queryAsync(
+      'SELECT * FROM echeances_paiements WHERE id = ?',
+      [echeanceId]
+    );
+    
+    if (existingEcheance.length === 0) {
+      return res.status(404).json({ 
+        error: 'Échéance non trouvée' 
+      });
+    }
+    
+    // Construire la requête de mise à jour dynamiquement
+    const allowedFields = ['montant', 'date_echeance', 'statut', 'date_paiement'];
+    const updateFields: string[] = [];
+    const updateValues: any[] = [];
+    
+    Object.keys(updates).forEach(field => {
+      if (allowedFields.includes(field) && updates[field] !== undefined) {
+        updateFields.push(`${field} = ?`);
+        updateValues.push(updates[field]);
+      }
+    });
+    
+    if (updateFields.length === 0) {
+      return res.status(400).json({ 
+        error: 'Aucun champ valide à mettre à jour',
+        allowedFields 
+      });
+    }
+    
+    updateValues.push(echeanceId);
+    
+    const updateQuery = `
+      UPDATE echeances_paiements 
+      SET ${updateFields.join(', ')}
+      WHERE id = ?
+    `;
+    
+    const results = await paiements.queryAsync(updateQuery, updateValues);
+    
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ 
+        error: 'Échéance non trouvée ou non modifiée' 
+      });
+    }
+    
+    // Récupérer l'échéance mise à jour
+    const echeanceMiseAJour = await paiements.queryAsync(
+      'SELECT * FROM echeances_paiements WHERE id = ?',
+      [echeanceId]
+    );
+    
+    console.log(`✅ [Paiements] Échéance ${echeanceId} mise à jour avec succès`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Échéance mise à jour avec succès',
+      data: echeanceMiseAJour[0]
+    });
+
+  } catch (error: any) {
+    console.error('❌ [Paiements] Erreur mise à jour échéance:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la mise à jour de l\'échéance',
+      details: error.message 
+    });
+  }
+});
+
+// CORRECTION: Route pour supprimer une échéance
+router.delete('/echeances/:id', verifyToken, async (req: any, res: any) => {
+  try {
+    const echeanceId = parseInt(req.params.id);
+    
+    console.log(`🗑️ [Paiements] Suppression échéance ${echeanceId}`);
+    
+    if (isNaN(echeanceId)) {
+      return res.status(400).json({ 
+        error: 'ID échéance invalide' 
+      });
+    }
+
+    const paiements = new Paiements();
+    
+    // Vérifier que l'échéance existe et n'est pas déjà payée
+    const existingEcheance = await paiements.queryAsync(
+      'SELECT * FROM echeances_paiements WHERE id = ?',
+      [echeanceId]
+    );
+    
+    if (existingEcheance.length === 0) {
+      return res.status(404).json({ 
+        error: 'Échéance non trouvée' 
+      });
+    }
+    
+    if (existingEcheance[0].statut === 'payé') {
+      return res.status(400).json({ 
+        error: 'Impossible de supprimer une échéance déjà payée' 
+      });
+    }
+    
+    const results = await paiements.queryAsync(
+      'DELETE FROM echeances_paiements WHERE id = ?',
+      [echeanceId]
+    );
+    
+    console.log(`✅ [Paiements] Échéance ${echeanceId} supprimée avec succès`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Échéance supprimée avec succès'
+    });
+
+  } catch (error: any) {
+    console.error('❌ [Paiements] Erreur suppression échéance:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la suppression de l\'échéance',
       details: error.message 
     });
   }

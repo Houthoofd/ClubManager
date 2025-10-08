@@ -15,10 +15,23 @@ export interface ValidationToken {
 export class EmailValidationService {
   private mysqlConnector: MysqlConnector;
   private initialized: boolean = false;
+  private emailService: any = null; // Déclaré comme any temporairement
 
   constructor() {
     this.mysqlConnector = MysqlConnector.getInstance();
-    // Ne pas initialiser automatiquement
+    // Initialisation différée pour éviter les dépendances circulaires
+    this.initEmailService();
+  }
+
+  private async initEmailService() {
+    try {
+      // Import dynamique pour éviter les dépendances circulaires
+      const { EmailService } = await import('./emailService.js');
+      this.emailService = new EmailService();
+      console.log('✅ [EmailValidationService] EmailService initialisé');
+    } catch (error) {
+      console.warn('⚠️ [EmailValidationService] EmailService non disponible:', error);
+    }
   }
 
   // Vérifier que les tables sont initialisées avant chaque opération
@@ -550,6 +563,15 @@ export class EmailValidationService {
     try {
       console.log('📧 [EmailValidationService] Envoi email de vérification avec hash sécurisé:', options.userId);
 
+      // Assurer que emailService est initialisé
+      if (!this.emailService) {
+        await this.initEmailService();
+      }
+
+      if (!this.emailService) {
+        throw new Error('EmailService non disponible');
+      }
+
       // Créer le token de validation avec hash
       const { token: validationToken, hashedToken } = await this.createEmailValidationTokenWithUserId(
         options.utilisateurId,
@@ -561,18 +583,69 @@ export class EmailValidationService {
         hash: hashedToken.substring(0, 8) + '...'
       });
 
-      // Utilisation dynamique pour éviter les dépendances circulaires
-      const { messageClient } = await import('../db/clients/messagerie/messageClient.js');
+      // Créer le lien de vérification
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verificationLink = `${frontendUrl}/pages/verify-email?token=${validationToken}&userId=${options.userId}`;
 
-      // Envoyer l'email avec template spécialisé
-      const result = await messageClient.envoyerEmailVerificationAvecToken({
-        email: options.email,
-        prenom: options.prenom,
-        nom: options.nom,
-        userId: options.userId,
-        validationToken: validationToken, // Utiliser le token base pour l'URL
-        utilisateurId: options.utilisateurId,
-        saveToDb: true
+      // Créer le contenu de l'email de validation
+      const emailContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #2c3e50; margin: 0; font-size: 28px;">🥋 Club Manager</h1>
+              <h2 style="color: #3498db; margin: 10px 0 0 0; font-size: 22px;">Vérification d'email</h2>
+            </div>
+            
+            <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
+                Bonjour <strong>${options.prenom}</strong>,
+              </p>
+              <p style="margin: 15px 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
+                Bienvenue au Club Manager ! Pour finaliser votre inscription, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous.
+              </p>
+            </div>
+
+            <div style="background-color: #3498db; color: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <h3 style="margin: 0 0 15px 0; color: white;">📋 Vos informations</h3>
+              <div style="background-color: rgba(255,255,255,0.2); padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <p style="margin: 5px 0; color: white;"><strong>👤 Nom :</strong> ${options.prenom} ${options.nom}</p>
+                <p style="margin: 5px 0; color: white;"><strong>📧 Email :</strong> ${options.email}</p>
+                <p style="margin: 5px 0; color: white;"><strong>🆔 UserId :</strong></p>
+                <p style="margin: 5px 0; font-size: 24px; font-family: monospace; color: #fff; background-color: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; display: inline-block;">${options.userId}</p>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationLink}" 
+                 style="background-color: #27ae60; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.2);">
+                ✉️ Vérifier mon email
+              </a>
+            </div>
+
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #856404;">🔐 Sécurité</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 14px;">
+                <li>Ce lien de validation est unique et sécurisé</li>
+                <li>Il expire dans <strong>24 heures</strong></li>
+                <li>Une fois validé, vous pourrez vous connecter avec votre UserId</li>
+              </ul>
+            </div>
+
+            <div style="border-top: 1px solid #bdc3c7; padding-top: 20px; margin-top: 30px; color: #7f8c8d; font-size: 12px; text-align: center;">
+              <p style="margin: 10px 0 0 0;"><strong>L'équipe Club Manager</strong></p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Envoyer l'email avec EmailService
+      const result = await this.emailService.envoyerMessage({
+        to: options.email,
+        subject: '✉️ Vérifiez votre email - Club Manager',
+        message: emailContent,
+        isHtml: true,
+        saveToDb: true,
+        utilisateurId: options.utilisateurId
       });
 
       if (result.success) {
@@ -589,14 +662,128 @@ export class EmailValidationService {
           }
         };
       } else {
-        console.error('❌ Échec envoi email de vérification:', result.error);
+        console.error('❌ Échec envoi email de vérification:', result);
         return {
           success: false,
-          message: result.error || 'Erreur lors de l\'envoi de l\'email'
+          message: 'Erreur lors de l\'envoi de l\'email'
         };
       }
     } catch (error: any) {
       console.error('❌ Erreur dans sendValidationEmailWithUserId:', error);
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  }
+
+  // NOUVELLE MÉTHODE: Envoyer l'email de récupération d'UserId
+  async sendUserIdRecovery(email: string): Promise<{ success: boolean; message: string }> {
+    await this.ensureInitialized();
+
+    try {
+      // Utiliser la procédure existante pour récupérer l'UserId
+      return new Promise((resolve, reject) => {
+        this.mysqlConnector.query('CALL recuperer_userId(?)', [email], async (error, results) => {
+          if (error) {
+            if (error.message.includes('Aucun compte trouvé')) {
+              resolve({
+                success: false,
+                message: 'Aucun compte trouvé avec cet email'
+              });
+            } else {
+              reject(error);
+            }
+          } else {
+            // Récupérer les informations utilisateur
+            const userSql = `
+              SELECT userId, first_name, id FROM utilisateurs WHERE email = ? LIMIT 1
+            `;
+            
+            this.mysqlConnector.query(userSql, [email], async (userError, userResults) => {
+              if (userError) {
+                reject(userError);
+              } else if (userResults.length === 0) {
+                resolve({
+                  success: false,
+                  message: 'Utilisateur non trouvé'
+                });
+              } else {
+                const user = userResults[0];
+                
+                // Assurer que emailService est initialisé
+                if (!this.emailService) {
+                  await this.initEmailService();
+                }
+
+                if (!this.emailService) {
+                  throw new Error('EmailService non disponible');
+                }
+
+                // Créer le contenu de l'email de récupération
+                const emailContent = `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+                    <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                      <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="color: #2c3e50; margin: 0; font-size: 28px;">🥋 Club Manager</h1>
+                        <h2 style="color: #3498db; margin: 10px 0 0 0; font-size: 22px;">Récupération UserId</h2>
+                      </div>
+                      
+                      <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
+                          Bonjour <strong>${user.first_name}</strong>,
+                        </p>
+                        <p style="margin: 15px 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
+                          Vous avez demandé la récupération de votre identifiant de connexion. Voici vos informations :
+                        </p>
+                      </div>
+
+                      <div style="background-color: #3498db; color: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                        <h3 style="margin: 0 0 15px 0; color: white;">🆔 Votre UserId</h3>
+                        <div style="background-color: rgba(255,255,255,0.2); padding: 15px; border-radius: 5px; margin: 15px 0;">
+                          <p style="margin: 5px 0; font-size: 24px; font-family: monospace; color: #fff; background-color: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; display: inline-block;">${user.userId}</p>
+                        </div>
+                        <p style="margin: 10px 0 0 0; color: white; font-size: 14px;">Utilisez cet identifiant pour vous connecter</p>
+                      </div>
+
+                      <div style="text-align: center; margin: 30px 0;">
+                        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/connexion" 
+                           style="background-color: #27ae60; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.2);">
+                          🚀 Se connecter maintenant
+                        </a>
+                      </div>
+
+                      <div style="border-top: 1px solid #bdc3c7; padding-top: 20px; margin-top: 30px; color: #7f8c8d; font-size: 12px; text-align: center;">
+                        <p style="margin: 10px 0 0 0;"><strong>L'équipe Club Manager</strong></p>
+                        <p style="margin: 5px 0 0 0;">Si vous n'avez pas demandé cette récupération, ignorez cet email.</p>
+                      </div>
+                    </div>
+                  </div>
+                `;
+
+                // Envoyer l'email de récupération
+                const emailResult = await this.emailService.envoyerMessage({
+                  to: email,
+                  subject: '🔑 Récupération UserId - Club Manager',
+                  message: emailContent,
+                  isHtml: true,
+                  saveToDb: true,
+                  utilisateurId: user.id
+                });
+
+                resolve({
+                  success: emailResult.success,
+                  message: emailResult.success 
+                    ? 'Email de récupération envoyé' 
+                    : emailResult.error || 'Erreur envoi email'
+                });
+              }
+            });
+          }
+        });
+      });
+    } catch (error: any) {
+      console.error('❌ Erreur récupération UserId:', error);
       return {
         success: false,
         message: error.message
@@ -658,84 +845,17 @@ export class EmailValidationService {
         DELETE FROM validation_tokens
         WHERE expires_at < NOW()
       `;
-
-      this.mysqlConnector.query(sql, [], (error, results) => {
+      this.mysqlConnector.query(sql, [], (error, result: any) => {
         if (error) {
-          console.error('❌ Erreur nettoyage tokens expirés:', error);
+          console.error('❌ Erreur lors du nettoyage des tokens expirés:', error);
           reject(error);
         } else {
-          console.log(`✅ ${results.affectedRows} token(s) expiré(s) supprimé(s)`);
-          resolve(results.affectedRows);
+          resolve(result.affectedRows);
         }
       });
     });
   }
 
-  // Envoyer l'email de récupération d'UserId (basé sur la procédure existante)
-  async sendUserIdRecovery(email: string): Promise<{ success: boolean; message: string }> {
-    await this.ensureInitialized();
-
-    try {
-      // Utiliser la procédure existante pour récupérer l'UserId
-      return new Promise((resolve, reject) => {
-        this.mysqlConnector.query('CALL recuperer_userId(?)', [email], async (error, results) => {
-          if (error) {
-            if (error.message.includes('Aucun compte trouvé')) {
-              resolve({
-                success: false,
-                message: 'Aucun compte trouvé avec cet email'
-              });
-            } else {
-              reject(error);
-            }
-          } else {
-            // Récupérer les informations utilisateur
-            const userSql = `
-              SELECT userId, first_name, id FROM utilisateurs WHERE email = ? LIMIT 1
-            `;
-            
-            this.mysqlConnector.query(userSql, [email], async (userError, userResults) => {
-              if (userError) {
-                reject(userError);
-              } else if (userResults.length === 0) {
-                resolve({
-                  success: false,
-                  message: 'Utilisateur non trouvé'
-                });
-              } else {
-                const user = userResults[0];
-                
-                // Utilisation dynamique pour éviter les dépendances circulaires
-                const { messageClient } = await import('../db/clients/messagerie/messageClient.js');
-                
-                // Envoyer l'email de récupération
-                const emailResult = await messageClient.envoyerRecuperationUserId({
-                  email,
-                  prenom: user.first_name,
-                  userId: user.userId,
-                  utilisateurId: user.id,
-                  saveToDb: true
-                });
-
-                resolve({
-                  success: emailResult.success,
-                  message: emailResult.success 
-                    ? 'Email de récupération envoyé' 
-                    : emailResult.error || 'Erreur envoi email'
-                });
-              }
-            });
-          }
-        });
-      });
-    } catch (error: any) {
-      console.error('❌ Erreur récupération UserId:', error);
-      return {
-        success: false,
-        message: error.message
-      };
-    }
-  }
 }
 
 // Export sans initialisation automatique
