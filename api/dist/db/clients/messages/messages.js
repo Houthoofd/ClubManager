@@ -682,6 +682,15 @@ Cet email a été envoyé automatiquement par Club Manager.
     // CORRIGÉ: Envoyer un rappel de paiement avec debug amélioré
     async envoyerRappelPaiementAvecEmail(senderId, receiverId, echeanceId, montant, dateEcheance) {
         try {
+            // AJOUTÉ: Debug configuration complète
+            console.log('🔧 [Messages] Configuration email complète:');
+            console.log('  SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? `${process.env.SENDGRID_API_KEY.substring(0, 10)}...` : 'NON DÉFINIE');
+            console.log('  SENDGRID_FROM_EMAIL:', process.env.SENDGRID_FROM_EMAIL);
+            console.log('  EMAIL_USER:', process.env.EMAIL_USER);
+            console.log('  EMAIL_PASS:', process.env.EMAIL_PASS ? `${process.env.EMAIL_PASS.substring(0, 10)}...` : 'NON DÉFINIE');
+            console.log('  EMAIL_HOST:', process.env.EMAIL_HOST);
+            console.log('  EMAIL_PORT:', process.env.EMAIL_PORT);
+            console.log('  SENDGRID_SANDBOX:', process.env.SENDGRID_SANDBOX);
             console.log(`📧 [Messages] Début envoi rappel - Destinataire: ${receiverId}, Échéance: ${echeanceId}`);
             // 1. Créer le message interne
             const titre = 'Rappel de paiement - Échéance dépassée';

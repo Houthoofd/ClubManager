@@ -1,0 +1,23 @@
+# Variables d'environnement API
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Logs API
+logs/
+*.log
+
+# Node modules
+node_modules/
+
+# Build
+dist/
+build/
+
+# Cache
+.cache/
+
+# Tests
+coverage/
