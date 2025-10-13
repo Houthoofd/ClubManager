@@ -143,9 +143,9 @@ export class Utilisateurs {
             }
             // NOUVELLE VÉRIFICATION: Pas de doublon nom + prénom + date de naissance
             this.verifierUtilisateurExiste({
-                nom: userData.nom,
-                prenom: userData.prenom,
-                date_naissance: userData.date_naissance
+                nom: userData.last_name, // Utiliser last_name au lieu de nom
+                prenom: userData.first_name, // Utiliser first_name au lieu de prenom
+                date_naissance: userData.date_of_birth // Utiliser date_of_birth au lieu de date_naissance
             }).then(() => {
                 // Aucun doublon trouvé, procéder à l'inscription
                 this.procederInscription(userData, resolve, reject);
@@ -162,9 +162,9 @@ export class Utilisateurs {
         let exists = true;
         while (exists && attempt < 10) { // Limite pour éviter les boucles infinies
             userId = UserIdGenerator.generateUserId({
-                prenom: userData.prenom,
-                nom: userData.nom,
-                date_naissance: userData.date_naissance,
+                prenom: userData.first_name, // Utiliser first_name
+                nom: userData.last_name, // Utiliser last_name
+                date_naissance: userData.date_of_birth, // Utiliser date_of_birth
                 email: userData.email
             }, attempt);
             // Vérifier si l'userId existe déjà
@@ -218,17 +218,17 @@ export class Utilisateurs {
       `;
             const values = [
                 userId, // userId généré côté API
-                userData.prenom,
-                userData.nom,
+                userData.first_name, // Utiliser first_name
+                userData.last_name, // Utiliser last_name
                 userData.nom_utilisateur,
                 userData.email,
                 hashedPassword, // Mot de passe hashé (par défaut ou fourni)
-                userData.genre_id,
-                userData.abonnement_id,
-                userData.date_naissance,
+                userData.genres,
+                userData.abonnement,
+                userData.date_of_birth, // Utiliser date_of_birth
                 userData.date_inscription,
-                userData.status_id,
-                userData.grade_id
+                userData.status,
+                userData.grades
             ];
             this.mysqlConnector.query(sql, values, (error, results) => {
                 if (error) {

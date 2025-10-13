@@ -157,21 +157,28 @@ const Utilisateur = () => {
     }
   };
 
-  const confirmAjoutUtilisateur = async () => {
+  const confirmAjouterUtilisateur = async () => {
     setShowConfirmAddModal(false);
     
     try {
+      // S'assurer que les champs requis sont présents et non vides
+      if (!formData.prenom || !formData.nom || !formData.email || !formData.date_naissance) {
+        throw new Error('Veuillez remplir tous les champs obligatoires');
+      }
+
       const userData = {
-        first_name: formData.prenom,
-        last_name: formData.nom,
+        first_name: formData.prenom.trim(),  // Backend expects first_name
+        last_name: formData.nom.trim(),      // Backend expects last_name
         nom_utilisateur: formData.nom_utilisateur,
-        email: formData.email,
-        date_of_birth: formData.date_naissance,
+        email: formData.email.trim(),
+        date_of_birth: formData.date_naissance,  // Backend expects date_of_birth
         genres: Number(formData.genres),
         grades: Number(formData.grade || formData.grades),
         abonnement: Number(formData.abonnement),
         status: Number(formData.statut),
       };
+      
+      console.log('Données à envoyer au backend:', userData);
       
       await ajouterUtilisateur.mutateAsync(userData);
       
@@ -552,7 +559,7 @@ const Utilisateur = () => {
       <ModalConfirmation
         isOpen={showConfirmAddModal}
         onClose={cancelAjoutUtilisateur}
-        onConfirm={confirmAjoutUtilisateur}
+        onConfirm={() => confirmAjouterUtilisateur()}
         title="Confirmer l'ajout"
         confirmText="Ajouter"
         cancelText="Annuler"

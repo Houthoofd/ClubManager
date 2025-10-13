@@ -40,7 +40,7 @@ export const useUtilisateurById = (id: string) => {
 
 // Fonction pour vérifier si un email existe déjà
 export const checkEmailExists = async (email: string, id?: number) => {
-  const response = await fetch(apiUrl('utilisateurs/verifier-email'), {
+  const response = await fetch(apiUrl('verification/verifier-email'), {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',

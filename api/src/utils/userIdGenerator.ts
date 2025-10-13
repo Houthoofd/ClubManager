@@ -14,16 +14,34 @@ export class UserIdGenerator {
   /**
    * Génère un userId unique basé sur les données personnelles
    */
-  static generateUserId(userData: UserPersonalData, attempt: number = 0): string {
+  static generateUserId(userData: any, attempt: number = 0): string {
+    console.log('[UserIdGenerator] Données reçues:', userData);
+    console.log('[UserIdGenerator] Clés disponibles:', Object.keys(userData || {}));
+    
+    // Support both French and English field names
+    const prenom = userData.prenom || userData.first_name;
+    const nom = userData.nom || userData.last_name;
+    const dateNaissance = userData.date_naissance || userData.date_of_birth;
+    const email = userData.email;
+
+    console.log('[UserIdGenerator] Extraction des champs:', { prenom, nom, dateNaissance, email });
+
+    // Validation des données d'entrée
+    if (!prenom || !nom || !dateNaissance || !email) {
+      console.log('Données manquantes pour UserID:', { prenom, nom, dateNaissance, email });
+      console.log('userData original:', JSON.stringify(userData, null, 2));
+      throw new Error('Données utilisateur incomplètes pour la génération de l\'userId');
+    }
+
     const currentYear = new Date().getFullYear();
     const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
     
-    // Normaliser les données personnelles
+    // Normaliser les données personnelles avec des vérifications
     const normalizedData = {
-      prenom: userData.prenom.trim().toUpperCase().replace(/\s+/g, ''),
-      nom: userData.nom.trim().toUpperCase().replace(/\s+/g, ''),
-      dateNaissance: userData.date_naissance.replace(/-/g, ''),
-      emailPrefix: userData.email.split('@')[0].slice(0, 3).toUpperCase()
+      prenom: prenom.trim().toUpperCase().replace(/\s+/g, ''),
+      nom: nom.trim().toUpperCase().replace(/\s+/g, ''),
+      dateNaissance: dateNaissance.replace(/-/g, ''),
+      emailPrefix: email.split('@')[0].slice(0, 3).toUpperCase()
     };
     
     // Créer le salt personnalisé
@@ -57,19 +75,29 @@ export class UserIdGenerator {
   /**
    * Génère un userId court (plus lisible)
    */
-  static generateShortUserId(userData: UserPersonalData, attempt: number = 0): string {
+  static generateShortUserId(userData: any, attempt: number = 0): string {
+    // Support both French and English field names
+    const prenom = userData.prenom || userData.first_name;
+    const nom = userData.nom || userData.last_name;
+    const dateNaissance = userData.date_naissance || userData.date_of_birth;
+
+    // Validation des données d'entrée
+    if (!prenom || !nom || !dateNaissance) {
+      throw new Error('Données utilisateur incomplètes pour la génération de l\'userId court');
+    }
+
     const currentYear = String(new Date().getFullYear()).slice(-2); // 2 derniers chiffres
     
     // Initiales + date de naissance (année) + hash court
-    const initiales = (userData.prenom[0] + userData.nom[0]).toUpperCase();
-    const birthYear = userData.date_naissance.split('-')[0].slice(-2);
+    const initiales = (prenom[0] + nom[0]).toUpperCase();
+    const birthYear = dateNaissance.split('-')[0].slice(-2);
     
     const miniHash = crypto
       .createHash('md5')
       .update([
-        userData.prenom,
-        userData.nom,
-        userData.date_naissance,
+        prenom,
+        nom,
+        dateNaissance,
         this.SECRET_SALT,
         attempt.toString()
       ].join(''))

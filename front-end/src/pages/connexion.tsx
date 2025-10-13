@@ -86,7 +86,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
     setIsResultModalOpen(false);
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
     const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
-      ? '/pages/cours' 
+      ? '/pages/cours/inscription' 
       : '/pages/dashboard';
     window.location.href = `${window.location.origin}${redirectPath}`;
   };
@@ -100,7 +100,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
             clearInterval(interval);
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
             const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
-              ? '/pages/cours' 
+              ? '/pages/cours/inscription' 
               : '/pages/dashboard';
             window.location.href = `${window.location.origin}${redirectPath}`;
             return 0;
