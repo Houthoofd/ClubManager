@@ -84,7 +84,11 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
   // Fonction pour gérer la fermeture de la modal et redirection
   const handleResultModalClose = () => {
     setIsResultModalOpen(false);
-    window.location.href = `${window.location.origin}/pages/dashboard`;
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
+      ? '/pages/cours' 
+      : '/pages/dashboard';
+    window.location.href = `${window.location.origin}${redirectPath}`;
   };
 
   // Effet pour redirection automatique avec timer
@@ -94,7 +98,11 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         setCountdown(prev => {
           if (prev <= 1) {
             clearInterval(interval);
-            window.location.href = `${window.location.origin}/pages/dashboard`;
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
+              ? '/pages/cours' 
+              : '/pages/dashboard';
+            window.location.href = `${window.location.origin}${redirectPath}`;
             return 0;
           }
           return prev - 1;
