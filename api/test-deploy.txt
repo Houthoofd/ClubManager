@@ -99,3 +99,136 @@ Modifier .gitignore pour inclure dist/ au lieu de l'ignorer
 
 STATUS: SOLUTION IDENTIFIÉE - BUILD LOCAL RECOMMANDÉ
 NEXT: Choisir entre build serveur vs build local + commit
+
+DERNIER TEST - ERREURS PERSISTENT APRÈS WORKFLOW MODIFIÉ:
+- GET https://clubmanagment.com/assets/index-CUSByqct.css net::ERR_ABORTED 404 (Not Found)
+- GET https://clubmanagment.com/assets/index-CxEj2CjF.js net::ERR_ABORTED 404 (Not Found)
+
+DIAGNOSTIC URGENT REQUIS:
+1. Vérifier les logs GitHub Actions pour voir si le build frontend a réussi
+2. SSH sur EC2: ls -la /usr/share/nginx/html/clubmanager/assets/
+3. Vérifier que les fichiers existent physiquement sur le serveur
+4. Tester l'accès direct aux URLs des assets
+
+COMMANDES SSH DE DIAGNOSTIC:
+cd /home/***/ClubManager/front-end
+npm run build
+ls -la dist/assets/
+echo "--- Vérification après copie vers nginx ---"
+sudo ls -la /usr/share/nginx/html/clubmanager/
+sudo ls -la /usr/share/nginx/html/clubmanager/assets/
+
+TEST SIMPLE RECOMMANDÉ:
+1. SSH sur EC2
+2. Créer un fichier test: sudo echo "test" > /usr/share/nginx/html/clubmanager/test.txt
+3. Tester: https://clubmanagment.com/test.txt
+4. Si ça marche -> problème de build/copie
+5. Si ça marche pas -> problème nginx config
+
+STATUS: DIAGNOSTIC EN COURS - VÉRIFIER LOGS + ACCÈS SSH
+PRIORITÉ ABSOLUE: Confirmer que les fichiers existent sur serveur
+
+RÉSULTATS SSH DIAGNOSTIC:
+✅ Le dossier clubmanager EXISTE dans nginx: /usr/share/nginx/html/clubmanager
+✅ Propriétaire: nginx:nginx (correct)
+❓ Contenu du dossier à vérifier
+
+PROCHAINES COMMANDES SSH À EXÉCUTER:
+cd /usr/share/nginx/html/clubmanager
+ls -la
+ls -la assets/
+cat index.html | grep "assets/"
+
+TEST DE CONNECTIVITÉ NGINX:
+sudo echo "TEST CONNECTIVITY" > /usr/share/nginx/html/clubmanager/test.txt
+# Puis tester: https://clubmanagment.com/test.txt
+
+HYPOTHÈSES RESTANTES:
+1. Dossier clubmanager existe MAIS est vide ou incomplet
+2. Assets non copiés lors du déploiement
+3. Build frontend a échoué sur EC2
+4. Chemins relatifs incorrects dans index.html
+
+STATUS: DOSSIER NGINX CONFIRMÉ - VÉRIFIER CONTENU
+NEXT: cd /usr/share/nginx/html/clubmanager && ls -la
+
+🎯 PROBLÈME IDENTIFIÉ - FICHIERS JS/CSS MANQUANTS:
+❌ Assets manquants: index-CxEj2CjF.js et index-CUSByqct.css
+✅ Assets présents: Seulement les fonts (woff2)
+❌ Le build frontend n'a PAS généré les fichiers JS/CSS ou ils n'ont pas été copiés
+
+CONTENU ACTUEL /usr/share/nginx/html/clubmanager/:
+- index.html ✅
+- vite.svg ✅ 
+- assets/ ✅ (mais incomplet)
+
+CONTENU assets/:
+- Seulement des fonts .woff2
+- MANQUE: index-CxEj2CjF.js
+- MANQUE: index-CUSByqct.css
+
+DIAGNOSTIC SUIVANT:
+1. Vérifier le contenu de index.html sur serveur
+2. Vérifier si le build frontend sur EC2 a échoué
+3. Comparer avec build local
+
+COMMANDES À EXÉCUTER:
+cat /usr/share/nginx/html/clubmanager/index.html
+cd /home/***/ClubManager/front-end && npm run build && ls -la dist/assets/
+
+STATUS: 🔴 CRITIQUE - BUILD FRONTEND INCOMPLET
+CAUSE: Les fichiers JS/CSS ne sont pas générés ou pas copiés
+NEXT: Vérifier pourquoi le build ne produit que les fonts
+
+🎯 CAUSE RACINE CONFIRMÉE - BUILD VITE DÉFAILLANT:
+✅ index.html référence: ./assets/index-CxEj2CjF.js et ./assets/index-CUSByqct.css
+❌ Ces fichiers n'existent PAS dans /usr/share/nginx/html/clubmanager/assets/
+❌ Le build Vite ne génère que les fonts, pas les JS/CSS principaux
+
+PROBLÈME CRITIQUE:
+Le processus de build sur EC2 échoue partiellement:
+- Génère index.html ✅
+- Copie les fonts ✅  
+- N'génère PAS les fichiers JS/CSS principaux ❌
+
+SOLUTION IMMÉDIATE:
+1. Refaire un build manuel sur EC2 avec logs complets
+2. Ou passer au build local + commit dist/
+
+COMMANDES DE TEST IMMÉDIAT:
+cd /home/***/ClubManager/front-end
+rm -rf dist/
+npm install
+npm run build 2>&1 | tee build.log
+ls -la dist/assets/
+
+STATUS: 🔴 CAUSE IDENTIFIÉE - BUILD VITE ÉCHOUE PARTIELLEMENT
+SOLUTION: Build manuel avec logs OU build local + commit
+URGENCE: HAUTE - Site non fonctionnel
+
+✅ SOLUTION CHOISIE: BUILD LOCAL + COMMIT DIST/
+Approche la plus simple et fiable pour résoudre le problème
+
+ÉTAPES À SUIVRE:
+1. Modifier .gitignore pour inclure dist/ au lieu de l'ignorer
+2. Build en local: npm run build
+3. Committer dist/: git add dist/ && git commit -m "Add built assets"
+4. Simplifier le workflow GitHub Actions
+5. Push et tester
+
+AVANTAGES CONFIRMÉS:
+✅ Pas de dépendances Node.js complexes sur serveur
+✅ Build reproductible (même environnement partout)
+✅ Déploiement plus rapide (copie directe)
+✅ Debugging facile (build local visible)
+✅ Moins de points de défaillance
+
+WORKFLOW SIMPLIFIÉ À IMPLÉMENTER:
+- git pull
+- copie dist/* vers nginx
+- restart services
+- Suppression de: npm install, npm run build frontend
+
+STATUS: ✅ SOLUTION VALIDÉE - BUILD LOCAL + COMMIT DIST/
+NEXT: Modifier .gitignore + simplifier workflow + premier déploiement test
+PRIORITÉ: Implémenter immédiatement pour résoudre le site cassé

@@ -5,8 +5,8 @@
 .env.production
 .env.test
 
-# Build
-dist/
+# Build - COMMENTÉ POUR PERMETTRE COMMIT DE DIST/
+# dist/
 build/
 
 # Node modules
