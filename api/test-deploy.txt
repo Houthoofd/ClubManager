@@ -232,3 +232,30 @@ WORKFLOW SIMPLIFIÉ À IMPLÉMENTER:
 STATUS: ✅ SOLUTION VALIDÉE - BUILD LOCAL + COMMIT DIST/
 NEXT: Modifier .gitignore + simplifier workflow + premier déploiement test
 PRIORITÉ: Implémenter immédiatement pour résoudre le site cassé
+
+🔄 MISE À JOUR APRÈS MODIFICATIONS:
+✅ .gitignore frontend modifié (dist/ commenté)
+✅ Workflow GitHub Actions simplifié 
+❌ Problème TOUJOURS présent: seulement fonts dans assets/
+
+SITUATION ACTUELLE:
+- Assets serveur: Seulement fonts .woff2 (aucun JS/CSS)
+- Workflow: Prêt pour copie directe du dist/ pré-buildé
+- .gitignore: Modifié pour permettre commit de dist/
+
+PROCHAINES ÉTAPES CRITIQUES:
+1. Build local: cd front-end && npm run build
+2. Vérifier: ls -la front-end/dist/assets/ (doit contenir JS/CSS)
+3. Commit: git add front-end/dist/
+4. Push: git commit -m "Add pre-built assets" && git push
+5. Déclencher workflow et vérifier déploiement
+
+TEST LOCAL REQUIS:
+cd front-end
+npm run build
+ls -la dist/assets/
+# Doit montrer: index-[hash].js, index-[hash].css + fonts
+
+STATUS: 🟡 PRÉPARATION TERMINÉE - BUILD LOCAL REQUIS
+NEXT: npm run build local + commit dist/ + push
+PRIORITÉ: Exécuter build local immédiatement
