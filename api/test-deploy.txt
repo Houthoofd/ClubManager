@@ -1,4 +1,27 @@
 test deploy 2025-07-19
 test deployement 2222 TFK
-uahduzf
-afa
+
+DEPLOYMENT ISSUE DETECTED:
+- Error: GET https://clubmanagment.com/assets/index-bd3qofVJ.js net::ERR_ABORTED 404 (Not Found)
+- HTML is referencing built assets that don't exist on server
+- Built files: index-bd3qofVJ.js, index-DnzpA7X2.css
+
+FRONTEND BUILD ISSUE SUSPECTED:
+- Problem likely in Vite build configuration or deployment process
+- Assets generated but not properly served from production
+
+FRONTEND TROUBLESHOOTING:
+1. Check vite.config.ts base path configuration
+2. Verify npm run build generates correct dist folder
+3. Confirm build output matches referenced asset names
+4. Check if assets are being uploaded to correct server directory
+5. Validate server nginx/apache configuration for static files
+6. Test build locally with npm run preview
+
+VITE CONFIG TO CHECK:
+- base: '/' or correct subdirectory path
+- build.outDir: 'dist'
+- build.assetsDir: 'assets'
+
+STATUS: FRONTEND BUILD/DEPLOYMENT ISSUE
+NEXT ACTION: Review Vite configuration and build process

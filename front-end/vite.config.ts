@@ -4,7 +4,11 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './', // Use relative paths for assets - crucial for deployment
   build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false, // Disable sourcemaps for production
     rollupOptions: {
       onwarn(warning, warn) {
         // Ignore TypeScript warnings during build
@@ -19,5 +23,15 @@ export default defineConfig({
       'this-is-undefined-in-esm': 'silent',
       'direct-eval': 'silent'
     }
+  },
+  // Configuration pour le serveur de développement
+  server: {
+    port: 3000,
+    host: true
+  },
+  // Configuration pour le serveur de preview
+  preview: {
+    port: 5173,
+    host: true
   }
 })
