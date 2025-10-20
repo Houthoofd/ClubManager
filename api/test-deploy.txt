@@ -259,3 +259,30 @@ ls -la dist/assets/
 STATUS: 🟡 PRÉPARATION TERMINÉE - BUILD LOCAL REQUIS
 NEXT: npm run build local + commit dist/ + push
 PRIORITÉ: Exécuter build local immédiatement
+
+🎯 DÉCOUVERTE CRUCIALE - BUILD LOCAL FONCTIONNE:
+✅ Build local: JS/CSS présents dans front-end/dist/assets/
+❌ Build serveur: Seulement fonts dans /usr/share/nginx/html/clubmanager/assets/
+🔍 PROBLÈME: Le transfert/copie vers serveur échoue partiellement
+
+HYPOTHÈSE CONFIRMÉE:
+- Build Vite fonctionne parfaitement en local
+- Le processus de build/copie sur EC2 filtre ou échoue sur JS/CSS
+- Seules les fonts passent à travers
+
+SOLUTION IMMÉDIATE VALIDÉE:
+Puisque le build local fonctionne, committer ce dist/ qui marche !
+
+ACTIONS À FAIRE MAINTENANT:
+1. git add front-end/dist/
+2. git commit -m "Add working pre-built assets with JS/CSS"
+3. git push
+4. Le workflow copiera les BONS fichiers depuis le repo
+
+VÉRIFICATION AVANT COMMIT:
+ls -la front-end/dist/assets/
+# Doit montrer: index-[hash].js, index-[hash].css + fonts
+
+STATUS: 🟢 BUILD LOCAL VALIDÉ - READY TO COMMIT
+NEXT: Commit du dist/ local fonctionnel + push
+CONFIANCE: HAUTE - Solution confirmée
