@@ -25,3 +25,77 @@ VITE CONFIG TO CHECK:
 
 STATUS: FRONTEND BUILD/DEPLOYMENT ISSUE
 NEXT ACTION: Review Vite configuration and build process
+
+UPDATE - NOUVELLES ERREURS ASSETS:
+- GET https://clubmanagment.com/assets/index-CxEj2CjF.js net::ERR_ABORTED 404 (Not Found)
+- GET https://clubmanagment.com/assets/index-CUSByqct.css net::ERR_ABORTED 404 (Not Found)
+
+DIAGNOSTIC REQUIS:
+1. Vérifier que le dossier dist/assets/ contient bien ces fichiers après build
+2. Confirmer que ces fichiers sont uploadés sur le serveur
+3. Tester l'accès direct: https://clubmanagment.com/assets/index-CxEj2CjF.js
+4. Vérifier la structure des dossiers sur le serveur web
+
+COMMANDES DE VÉRIFICATION:
+- ls dist/assets/ (après npm run build)
+- Accès FTP/SSH au serveur pour vérifier upload
+- Test direct des URLs des assets
+
+HYPOTHÈSES:
+- Les fichiers sont générés mais pas uploadés
+- Problème de permissions serveur
+- Mauvaise configuration du répertoire racine web
+
+STATUS: ASSETS TOUJOURS INTROUVABLES
+PRIORITÉ: Vérifier upload des fichiers build sur serveur
+
+PROCESSUS DE DÉPLOIEMENT IDENTIFIÉ:
+- Build local → Push code source → EC2 pull + rebuild automatique
+- Les assets ne sont PAS commités, ils sont regénérés sur EC2
+
+POINTS DE DÉFAILLANCE POSSIBLES:
+1. EC2 ne fait pas npm run build après le pull
+2. Build sur EC2 échoue silencieusement
+3. Serveur web pointe vers mauvais dossier (src/ au lieu de dist/)
+4. Permissions sur dossier dist/ du serveur
+5. Process de build EC2 utilise différente config
+
+DIAGNOSTIC EC2 REQUIS:
+- SSH sur EC2 et vérifier: ls dist/assets/
+- Logs du processus de build automatique
+- Vérifier que npm install + npm run build s'exécutent
+- Configuration nginx/apache: DocumentRoot pointe-t-il vers dist/ ?
+
+COMMANDES SSH À TESTER:
+cd /path/to/project && npm run build && ls -la dist/assets/
+
+STATUS: PROBLÈME DE BUILD/DEPLOYMENT SUR EC2
+NEXT: Vérifier process automatique EC2 + config serveur web
+
+SOLUTION ALTERNATIVE - BUILD LOCAL + COMMIT DIST:
+✅ PLUS SIMPLE: Build en local et commit le dossier dist/
+- npm run build en local
+- git add dist/ && git commit && git push
+- Workflow EC2 copie directement dist/ existant vers nginx
+- Pas de dépendances Node.js sur serveur de production
+
+AVANTAGES:
+- Déploiement plus rapide (pas de build sur serveur)
+- Moins de ressources serveur utilisées
+- Build reproductible (même environnement)
+- Debugging plus facile
+
+WORKFLOW À SIMPLIFIER:
+Supprimer les étapes npm install/build frontend du workflow
+Garder seulement: git pull → copie dist/ → restart services
+
+APPROCHES POSSIBLES:
+1. Build sur serveur (actuel) - plus complexe mais "propre"
+2. Build local + commit dist/ - plus simple et efficace
+
+RECOMMANDATION: 
+Utiliser approche #2 (build local) pour simplicité et fiabilité
+Modifier .gitignore pour inclure dist/ au lieu de l'ignorer
+
+STATUS: SOLUTION IDENTIFIÉE - BUILD LOCAL RECOMMANDÉ
+NEXT: Choisir entre build serveur vs build local + commit

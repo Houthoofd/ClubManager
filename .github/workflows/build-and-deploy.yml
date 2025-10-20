@@ -28,12 +28,35 @@ jobs:
             git clean -fd
             git pull origin back-up/hosting
 
+            echo "🔧 Installation des dépendances frontend..."
+            cd /home/***/ClubManager/front-end
+            npm install
+            
+            echo "🏗️ Build du frontend..."
+            npm run build
+            
+            echo "✅ Vérification que le build frontend a réussi..."
+            if [ ! -d "dist" ]; then
+              echo "❌ Erreur: Le dossier dist/ n'existe pas après le build"
+              exit 1
+            fi
+            
+            if [ ! -f "dist/index.html" ]; then
+              echo "❌ Erreur: index.html manquant dans dist/"
+              exit 1
+            fi
+            
+            echo "📦 Contenu du dossier dist/:"
+            ls -la dist/
+            echo "📦 Contenu du dossier dist/assets/:"
+            ls -la dist/assets/ || echo "Pas de dossier assets/"
+
             echo "🧹 Nettoyage de l'ancien contenu du dossier clubmanager..."
             sudo rm -rf /usr/share/nginx/html/clubmanager
 
             echo "📁 Création du dossier clubmanager et copie des fichiers..."
             sudo mkdir -p /usr/share/nginx/html/clubmanager
-            sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+            sudo cp -r dist/* /usr/share/nginx/html/clubmanager/
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
             sudo chmod -R 755 /usr/share/nginx/html/clubmanager
 
