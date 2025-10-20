@@ -1,5 +1,5 @@
 import React from 'react';
-import ModalWithHelp from './ModalWithHelp';
+import ModalWithHelp from './modalwithhelp';
 
 interface ModalConfirmationProps {
   title: string;
