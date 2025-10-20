@@ -1,4 +1,4 @@
-name: Deploy ClubManager (no build, only deploy)
+name: Deploy ClubManager (smart build/deploy)
 
 on:
   push:
@@ -28,14 +28,61 @@ jobs:
             git clean -fd
             git pull origin back-up/hosting
 
+            echo "🔍 Vérification du dossier dist/ dans le repo..."
+            if [ -d "front-end/dist" ]; then
+              echo "📦 Contenu actuel de front-end/dist/:"
+              ls -la front-end/dist/
+              echo "📦 Contenu de front-end/dist/assets/:"
+              ls -la front-end/dist/assets/ 2>/dev/null || echo "❌ Pas de dossier assets/"
+              
+              # Vérifier si les JS/CSS sont présents
+              JS_COUNT=$(find front-end/dist/assets/ -name "*.js" 2>/dev/null | wc -l)
+              CSS_COUNT=$(find front-end/dist/assets/ -name "*.css" 2>/dev/null | wc -l)
+              
+              if [ "$JS_COUNT" -gt 0 ] && [ "$CSS_COUNT" -gt 0 ]; then
+                echo "✅ Dist/ complet trouvé avec JS ($JS_COUNT) et CSS ($CSS_COUNT)"
+                USE_PREBUILT=true
+              else
+                echo "❌ Dist/ incomplet: JS=$JS_COUNT, CSS=$CSS_COUNT"
+                USE_PREBUILT=false
+              fi
+            else
+              echo "❌ Pas de dossier dist/ dans le repo"
+              USE_PREBUILT=false
+            fi
+
+            if [ "$USE_PREBUILT" = "true" ]; then
+              echo "📁 Utilisation du dist/ pré-buildé du repo..."
+              BUILD_SOURCE="front-end/dist"
+            else
+              echo "🏗️ Build du frontend nécessaire..."
+              cd front-end
+              npm install
+              npm run build
+              
+              echo "📦 Vérification du build généré:"
+              ls -la dist/assets/
+              BUILD_SOURCE="dist"
+              cd ..
+            fi
+
             echo "🧹 Nettoyage de l'ancien contenu du dossier clubmanager..."
             sudo rm -rf /usr/share/nginx/html/clubmanager
 
             echo "📁 Création du dossier clubmanager et copie des fichiers..."
             sudo mkdir -p /usr/share/nginx/html/clubmanager
-            sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+            
+            if [ "$USE_PREBUILT" = "true" ]; then
+              sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+            else
+              sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+            fi
+            
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
             sudo chmod -R 755 /usr/share/nginx/html/clubmanager
+            
+            echo "🔍 Vérification finale des assets copiés..."
+            sudo ls -la /usr/share/nginx/html/clubmanager/assets/
 
             echo "🔁 Rechargement de nginx et redémarrage du service clubmanager..."
             sudo systemctl reload nginx
