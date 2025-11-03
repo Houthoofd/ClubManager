@@ -50,6 +50,17 @@ export type AjoutCours = {
     type_cours: string;
     professeurs: string[];
 };
+export type PlanningCoursProfesseur = {
+    cours_recurrent_id: number;
+    type_cours: string;
+    jour_semaine: number | string;
+    heure_debut: string;
+    heure_fin: string;
+    est_recurrent_actif: boolean | number;
+    professeur_id: number;
+    professeur_nom: string;
+    professeur_prenom: string;
+};
 export declare const coursdataSchema: z.ZodObject<{
     id: z.ZodNumber;
     date_cours: z.ZodString;
@@ -72,8 +83,20 @@ export declare const datavalidationSchema: z.ZodObject<{
     utilisateur_nom: z.ZodString;
     utilisateur_prenom: z.ZodString;
 }, z.core.$strip>;
+export declare const planningCoursProfesseurSchema: z.ZodObject<{
+    cours_recurrent_id: z.ZodNumber;
+    type_cours: z.ZodString;
+    jour_semaine: z.ZodUnion<readonly [z.ZodNumber, z.ZodString]>;
+    heure_debut: z.ZodString;
+    heure_fin: z.ZodString;
+    est_recurrent_actif: z.ZodUnion<readonly [z.ZodBoolean, z.ZodNumber]>;
+    professeur_id: z.ZodNumber;
+    professeur_nom: z.ZodString;
+    professeur_prenom: z.ZodString;
+}, z.core.$strip>;
 export type CoursDataValidated = z.infer<typeof coursdataSchema>;
 export type DataReservationValidated = z.infer<typeof datareservationSchema>;
 export type DataAnnulationValidated = z.infer<typeof datannulationSchema>;
 export type DataValidationValidated = z.infer<typeof datavalidationSchema>;
+export type PlanningCoursProfesseurValidated = z.infer<typeof planningCoursProfesseurSchema>;
 //# sourceMappingURL=cours.d.ts.map

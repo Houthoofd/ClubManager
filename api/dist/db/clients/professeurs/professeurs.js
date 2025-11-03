@@ -201,4 +201,77 @@ export class Professeurs {
             }
         });
     }
+    // Nouvelle méthode pour récupérer le planning des cours d'un professeur
+    async obtenirPlanningCoursProfesseur(inputId) {
+        const sql = `
+      SELECT
+          cr.id AS cours_recurrent_id,
+          cr.type_cours,
+          cr.jour_semaine,
+          cr.heure_debut,
+          cr.heure_fin,
+          cr.active AS est_recurrent_actif,
+          p.id AS professeur_id,
+          p.nom AS professeur_nom,
+          p.prenom AS professeur_prenom
+      FROM
+          cours_recurrent cr
+      JOIN
+          cours_recurrent_professeur crp ON cr.id = crp.cours_recurrent_id
+      JOIN
+          professeurs p ON crp.professeur_id = p.id
+      WHERE
+          p.id = IF(
+              -- Vérifie si l'ID est dans la table professeurs
+              (SELECT COUNT(*) FROM professeurs WHERE id = ?),
+              ?,
+              -- Sinon, trouve l'ID du professeur correspondant à l'ID de l'utilisateur
+              (SELECT p2.id FROM professeurs p2 
+               JOIN utilisateurs u ON p2.nom = u.last_name AND p2.prenom = u.first_name 
+               WHERE u.id = ? LIMIT 1)
+          )
+      ORDER BY
+          cr.jour_semaine, cr.heure_debut;
+    `;
+        return new Promise((resolve, reject) => {
+            this.mysqlConnector.query(sql, [inputId, inputId, inputId], (error, results) => {
+                if (error) {
+                    console.error(`Erreur lors de la récupération du planning pour l'ID ${inputId} : ${error.message}`);
+                    return reject({
+                        isFind: false,
+                        message: error.message,
+                        data: []
+                    });
+                }
+                if (results.length > 0) {
+                    console.log(`Planning trouvé pour l'ID ${inputId} avec ${results.length} cours.`);
+                    // Mapper les résultats
+                    const planningCours = results.map((result) => ({
+                        cours_recurrent_id: result.cours_recurrent_id,
+                        type_cours: result.type_cours,
+                        jour_semaine: result.jour_semaine,
+                        heure_debut: result.heure_debut,
+                        heure_fin: result.heure_fin,
+                        est_recurrent_actif: result.est_recurrent_actif,
+                        professeur_id: result.professeur_id,
+                        professeur_nom: result.professeur_nom,
+                        professeur_prenom: result.professeur_prenom
+                    }));
+                    resolve({
+                        isFind: true,
+                        message: "Planning des cours trouvé",
+                        data: planningCours
+                    });
+                }
+                else {
+                    console.log(`Aucun cours trouvé pour l'ID ${inputId}.`);
+                    resolve({
+                        isFind: true,
+                        message: "Aucun cours trouvé pour cet utilisateur/professeur",
+                        data: []
+                    });
+                }
+            });
+        });
+    }
 }

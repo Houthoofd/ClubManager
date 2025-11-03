@@ -143,6 +143,14 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
                   </NavItem>
                 </>
               )}
+              {hasRole(role, [ROLES.PROFESSEUR]) && (
+                <>
+                  <NavItem to="/pages/professeurs/planning" itemId="planning-professeur">
+                    <GraduationCapIcon className="sidebar-icon" />
+                    Mon planning de cours
+                  </NavItem>
+                </>
+              )}
             </NavExpandable>
           )}
           <Divider className="sidebar-divider" />

@@ -66,4 +66,38 @@ router.post('/modifier', async (req: any, res: any) => {
   }
 });
 
+// Route pour récupérer le planning d'un professeur spécifique
+router.get('/:id/planning', async (req: any, res: any) => {
+  try {
+    const client = new Professeurs();
+    const { id } = req.params; // Récupère l'ID du professeur depuis l'URL
+    
+    // Valider que l'ID est un nombre
+    const professeurId = parseInt(id);
+    if (isNaN(professeurId)) {
+      return res.status(400).json({
+        isFind: false,
+        message: 'ID du professeur invalide',
+        data: []
+      });
+    }
+
+    console.log(`Récupération du planning pour le professeur ID: ${professeurId}`);
+
+    // Récupérer le planning du professeur
+    const planningResult = await client.obtenirPlanningCoursProfesseur(professeurId);
+
+    console.log('Planning récupéré:', planningResult);
+    res.status(200).json(planningResult);
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération du planning du professeur :', error);
+    res.status(500).json({
+      isFind: false,
+      message: 'Erreur serveur lors de la récupération du planning',
+      data: []
+    });
+  }
+});
+
 export default router;

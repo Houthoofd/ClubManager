@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
+import { useEffect, useState } from 'react';
 
 // Hook pour récupérer tous les professeurs
 export const useProfesseurs = () => {
@@ -236,5 +237,63 @@ export const useModifierCoursRecurrent = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cours'] });
     }
+  });
+};
+
+// Hook pour récupérer le planning des cours d'un professeur spécifique
+export const usePlanningCoursProfesseur = (professeurId?: number) => {
+  return useQuery({
+    queryKey: ['planningCoursProfesseur', professeurId],
+    queryFn: async () => {
+      if (!professeurId) throw new Error('ID du professeur requis');
+      
+      const response = await fetch(apiUrl(`professeurs/${professeurId}/planning`), {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement du planning des cours');
+      }
+      
+      const data = await response.json();
+      return data.data || [];
+    },
+    enabled: !!professeurId, // Ne lance la requête que si l'ID est fourni
+  });
+};
+
+// Hook pour récupérer le planning des cours du professeur connecté
+export const useMonPlanningCours = () => {
+  const [userId, setUserId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const storedData = localStorage.getItem('userData');
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setUserId(parsedData?.id || null);
+      console.log('ID utilisateur récupéré:', parsedData?.id); // Pour debug
+    }
+  }, []);
+
+  return useQuery({
+    queryKey: ['monPlanningCours', userId],
+    queryFn: async () => {
+      if (!userId) throw new Error('ID utilisateur requis');
+      
+      console.log('Appel API pour l\'utilisateur ID:', userId); // Pour debug
+      
+      const response = await fetch(apiUrl(`professeurs/${userId}/planning`), {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement de votre planning');
+      }
+      
+      const data = await response.json();
+      console.log('Données planning reçues:', data); // Pour debug
+      return data.data || [];
+    },
+    enabled: !!userId, // Ne lance la requête que si l'ID utilisateur est disponible
   });
 };

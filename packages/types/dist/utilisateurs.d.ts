@@ -101,6 +101,8 @@ export interface AvailableUserForLogin {
     nom_utilisateur: string;
     age: number;
     initiales: string;
+    relation_familiale?: string;
+    est_responsable?: boolean;
 }
 export declare const userSearchByEmailSchema: z.ZodObject<{
     email: z.ZodString;
