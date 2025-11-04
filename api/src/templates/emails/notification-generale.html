@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-notification">
+            <h1>{{title}}</h1>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour <strong>{{firstName}} {{lastName}}</strong>,</p>
+            
+            <div class="message-box">
+                {{message}}
+            </div>
+            
+            <p>Cordialement,<br><strong>L'équipe {{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification email - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">
+            <h1>📧 Vérifiez votre email</h1>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour <strong>{{firstName}} {{lastName}}</strong>,</p>
+            
+            <p>Pour finaliser votre inscription, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
+            
+            <div class="cta-container">
+                <a href="{{verificationUrl}}" class="cta-button" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">
+                    Vérifier mon email
+                </a>
+            </div>
+            
+            <p>Ce lien expire dans {{expirationTime}}.</p>
+            
+            <p>Cordialement,<br><strong>L'équipe {{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}}</p>
+        </div>
+    </div>
+</body>
+</html>

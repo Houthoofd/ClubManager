@@ -1,0 +1,365 @@
+/* ==================== STYLES GÉNÉRAUX ==================== */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 600px;
+    margin: 20px auto;
+    background-color: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.content {
+    padding: 30px;
+    background-color: white;
+}
+
+.footer {
+    background-color: #f8f9fa;
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+    color: #6c757d;
+    border-top: 1px solid #e9ecef;
+}
+
+.footer p {
+    margin: 5px 0;
+}
+
+/* ==================== HEADERS ==================== */
+.header {
+    color: white;
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+/* Header pour promotion professeur */
+.header-promotion {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+/* Header pour confirmation d'achat */
+.header-achat {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+}
+
+/* Header pour confirmation de paiement */
+.header-paiement {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+/* Header pour notification générale */
+.header-notification {
+    background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+}
+
+/* ==================== TEXTE ET TYPOGRAPHIE ==================== */
+.greeting {
+    font-size: 18px;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.signature {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    font-style: italic;
+    color: #495057;
+}
+
+/* ==================== BOÎTES D'INFORMATION ==================== */
+.highlight-box {
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #4CAF50;
+    margin: 20px 0;
+}
+
+.message-box {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.payment-summary {
+    background-color: #e8f5e8;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #4CAF50;
+    margin: 20px 0;
+}
+
+.order-summary {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.subscription-info {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.features-list {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.features-list h3 {
+    color: #2c3e50;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+}
+
+.features-list ul {
+    margin: 15px 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.features-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+}
+
+.features-list li:last-child {
+    border-bottom: none;
+}
+
+/* ==================== ICÔNES ET SYMBOLES ==================== */
+.check-icon {
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+/* ==================== LIGNES DE DÉTAILS ==================== */
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.item-row:last-child {
+    border-bottom: none;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+/* ==================== BOUTONS ==================== */
+.cta-container {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.cta-button {
+    display: inline-block;
+    color: white;
+    padding: 15px 30px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 16px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.cta-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Bouton promotion */
+.cta-button-promotion {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+/* Bouton achat */
+.cta-button-achat {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+}
+
+/* Bouton paiement */
+.cta-button-paiement {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+/* ==================== COULEURS DE STATUT ==================== */
+.status-active {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.status-pending {
+    color: #FF9800;
+    font-weight: bold;
+}
+
+.status-failed {
+    color: #f44336;
+    font-weight: bold;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media only screen and (max-width: 600px) {
+    .container {
+        margin: 10px;
+        border-radius: 8px;
+    }
+    
+    .content {
+        padding: 20px;
+    }
+    
+    .header {
+        padding: 20px 15px;
+    }
+    
+    .header h1 {
+        font-size: 24px;
+    }
+    
+    .item-row,
+    .detail-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .cta-button {
+        padding: 12px 24px;
+        font-size: 14px;
+    }
+}
+
+/* ==================== UTILITAIRES ==================== */
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mb-0 {
+    margin-bottom: 0;
+}
+
+.mb-10 {
+    margin-bottom: 10px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+.mt-10 {
+    margin-top: 10px;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.small {
+    font-size: 12px;
+}
+
+.large {
+    font-size: 18px;
+}
+
+/* ==================== TABLEAUX ==================== */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.table th,
+.table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #495057;
+}
+
+.table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* ==================== BORDURES ET SÉPARATEURS ==================== */
+.divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 20px 0;
+    border: none;
+}
+
+.border-radius {
+    border-radius: 8px;
+}
+
+.shadow {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-lg {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}

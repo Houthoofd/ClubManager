@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   PageSection,
   Tabs,
@@ -10,6 +10,12 @@ import {
   ModalFooter,
   ModalHeader,
   Button,
+  SearchInput,
+  Toolbar,
+  ToolbarContent,
+  ToolbarItem,
+  Card,
+  CardBody,
 } from '@patternfly/react-core';
 import { PageHeader } from '../../components/common/PageHeader';
 import { useProfesseurs, usePromouvoirProfesseurs, useRetirerPromotionProfesseur } from '../../hooks/useProfesseurs';
@@ -131,16 +137,58 @@ const AjouterProfesseur = () => {
     setRemoveModalOpen(true);
   };
 
-  const handleSelectAll = () => {
-    setSelectedUsers(utilisateurs);
+  // Nouveaux états pour la recherche
+  const [searchValue, setSearchValue] = useState('');
+
+  // Déplacer la définition de utilisateurs avant le useMemo
+  const utilisateurs = utilisateursData?.data || [];
+
+  // Filtrer d'abord les utilisateurs qui ne sont pas déjà professeurs
+  const utilisateursNonProfesseurs = useMemo(() => {
+    if (!professeurs.length) return utilisateurs;
+    
+    // Créer un Set des IDs des professeurs pour une recherche plus rapide
+    const professeursIds = new Set(professeurs.map((prof: any) => prof.id));
+    
+    // Filtrer les utilisateurs qui ne sont pas dans la liste des professeurs
+    return utilisateurs.filter((user: any) => !professeursIds.has(user.id));
+  }, [utilisateurs, professeurs]);
+
+  // Filtrage des utilisateurs basé sur la recherche (maintenant sur les non-professeurs)
+  const filteredUtilisateurs = useMemo(() => {
+    if (!searchValue.trim()) {
+      return utilisateursNonProfesseurs;
+    }
+
+    const searchTerm = searchValue.toLowerCase().trim();
+    return utilisateursNonProfesseurs.filter((user: any) => {
+      const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+      const email = user.email?.toLowerCase() || '';
+      const nomUtilisateur = user.nom_utilisateur?.toLowerCase() || '';
+      
+      return (
+        fullName.includes(searchTerm) ||
+        email.includes(searchTerm) ||
+        nomUtilisateur.includes(searchTerm) ||
+        user.first_name?.toLowerCase().includes(searchTerm) ||
+        user.last_name?.toLowerCase().includes(searchTerm)
+      );
+    });
+  }, [utilisateursNonProfesseurs, searchValue]);
+
+  // Fonction pour effacer la recherche
+  const handleClearSearch = () => {
+    setSearchValue('');
   };
 
-  const handleUserSelect = (user: any) => {
-    setSelectedUsers(prev =>
-      prev.some(u => u.id === user.id)
-        ? prev.filter(u => u.id !== user.id)
-        : [...prev, user]
-    );
+  // Fonction pour gérer le changement de recherche
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+  };
+
+  // Mise à jour de handleSelectAll pour utiliser les utilisateurs filtrés
+  const handleSelectAll = () => {
+    setSelectedUsers(filteredUtilisateurs.map(u => String(u.id)));
   };
 
   // Nouvelle fonction pour vérifier avant d'ouvrir la modal
@@ -190,8 +238,6 @@ const AjouterProfesseur = () => {
     );
   }
 
-  const utilisateurs = utilisateursData?.data || [];
-
   return (
     <div className="teachers-page">
       <PageHeader
@@ -210,20 +256,95 @@ const AjouterProfesseur = () => {
             eventKey={0} 
             title={<TabTitleText><span>Ajouter un professeur</span></TabTitleText>}
           >
-            {/* Sélecteur multiple */}
-            <SelectAllUsers
-              utilisateurs={utilisateurs}
-              selectedUsers={selectedUsers}
-              onSelectAll={handleSelectAll}
-              onUserSelect={setSelectedUsers}
-            />
+            {/* Informations sur le filtrage */}
+            {professeurs.length > 0 && (
+              <Card style={{ marginBottom: '1rem', backgroundColor: '#f0f8f0' }}>
+                <CardBody>
+                  <div style={{ fontSize: '0.875rem', color: '#28a745' }}>
+                    ℹ️ <strong>Information :</strong> Les utilisateurs déjà professeurs ({professeurs.length}) sont automatiquement masqués de cette liste.
+                    Seuls les utilisateurs pouvant être promus sont affichés ({utilisateursNonProfesseurs.length} disponibles).
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
+            {/* Barre de recherche */}
+            <Card style={{ marginBottom: '1rem' }}>
+              <CardBody>
+                <Toolbar>
+                  <ToolbarContent>
+                    <ToolbarItem style={{ flexGrow: 1 }}>
+                      <SearchInput
+                        placeholder="Rechercher un utilisateur par nom, prénom, email ou nom d'utilisateur..."
+                        value={searchValue}
+                        onChange={(_event, value) => handleSearchChange(value)}
+                        onClear={handleClearSearch}
+                        style={{ width: '100%' }}
+                      />
+                    </ToolbarItem>
+                    <ToolbarItem>
+                      <span style={{ fontSize: '0.875rem', color: '#6a6e73' }}>
+                        {filteredUtilisateurs.length} utilisateur{filteredUtilisateurs.length > 1 ? 's' : ''} trouvé{filteredUtilisateurs.length > 1 ? 's' : ''}
+                        {searchValue && ` sur ${utilisateursNonProfesseurs.length} disponibles`}
+                      </span>
+                    </ToolbarItem>
+                  </ToolbarContent>
+                </Toolbar>
+              </CardBody>
+            </Card>
+
+            {/* Message si aucun utilisateur non-professeur disponible */}
+            {utilisateursNonProfesseurs.length === 0 && (
+              <Card style={{ marginBottom: '1rem' }}>
+                <CardBody>
+                  <div style={{ textAlign: 'center', color: '#6a6e73' }}>
+                    <p>
+                      🎉 <strong>Tous les utilisateurs sont déjà professeurs !</strong>
+                      <br />
+                      Il n'y a plus d'utilisateurs à promouvoir.
+                    </p>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
+            {/* Message si aucun résultat de recherche */}
+            {searchValue && filteredUtilisateurs.length === 0 && utilisateursNonProfesseurs.length > 0 && (
+              <Card style={{ marginBottom: '1rem' }}>
+                <CardBody>
+                  <div style={{ textAlign: 'center', color: '#6a6e73' }}>
+                    <p>
+                      Aucun utilisateur trouvé pour "{searchValue}".
+                      <br />
+                      <Button 
+                        variant="link" 
+                        onClick={handleClearSearch}
+                        style={{ padding: 0, marginTop: '0.5rem' }}
+                      >
+                        Effacer la recherche
+                      </Button>
+                    </p>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
+            {/* Sélecteur multiple avec utilisateurs filtrés (uniquement si des utilisateurs sont disponibles) */}
+            {utilisateursNonProfesseurs.length > 0 && (
+              <SelectAllUsers
+                utilisateurs={filteredUtilisateurs}
+                selectedUsers={selectedUsers}
+                onSelectAll={handleSelectAll}
+                onUserSelect={setSelectedUsers}
+              />
+            )}
 
             {/* Visualisation des utilisateurs sélectionnés et bouton de promotion */}
             {selectedUsers.length > 0 && (
               <div style={{ margin: '1rem 0' }}>
-                <strong>Utilisateurs sélectionnés :</strong>
+                <strong>Utilisateurs sélectionnés ({selectedUsers.length}) :</strong>
                 <ul>
-                  {utilisateurs
+                  {utilisateursNonProfesseurs
                     .filter(u => selectedUsers.includes(String(u.id)))
                     .map(u => (
                       <li key={u.id}>{u.first_name} {u.last_name} ({u.email})</li>
@@ -235,7 +356,7 @@ const AjouterProfesseur = () => {
                   isLoading={promouvoirProfesseurs.isPending || verifierProfesseurs.isPending}
                   style={{ marginTop: 8 }}
                 >
-                  Promouvoir en professeur
+                  Promouvoir {selectedUsers.length} utilisateur{selectedUsers.length > 1 ? 's' : ''} en professeur{selectedUsers.length > 1 ? 's' : ''}
                 </Button>
                 {/* Message de promotion */}
                 {promotionMessage && (

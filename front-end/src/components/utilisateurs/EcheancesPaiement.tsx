@@ -64,7 +64,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
   const isComptePage = location.pathname.includes('/compte');
 
   // Fonction pour envoyer un rappel de paiement
-  // MODIFIÉ: Fonction pour envoyer un rappel avec plus de détails
+  // MODIFIÉ: Fonction pour envoyer un rappel avec le bon format
   const handleEnvoyerRappel = async (echeanceId: number, userId: number) => {
     setRappelLoading(prev => ({ ...prev, [echeanceId]: true }));
     
@@ -76,12 +76,20 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       // Trouver les détails de l'échéance
       const echeance = paiementsEcheances.find(e => e.id === echeanceId);
       
-      console.log('📧 [Frontend] Envoi rappel pour:', { 
+      console.log('📧 [EcheancesPaiement] Envoi rappel pour:', { 
         echeanceId, 
         userId, 
         montant: echeance?.montant,
         dateEcheance: echeance?.date_echeance 
       });
+
+      // CORRIGÉ: Utiliser le nouveau format avec echeanceIds en tableau
+      const requestBody = {
+        echeanceIds: [echeanceId], // Format attendu par le serveur
+        messagePersonnalise: ''
+      };
+
+      console.log('📤 [EcheancesPaiement] Envoi requête avec:', requestBody);
 
       const response = await fetch(apiUrl('messages/envoyer-rappel'), {
         method: 'POST',
@@ -90,13 +98,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
-        body: JSON.stringify({
-          userId: userId,
-          typeRappel: 'paiement',
-          echeanceId: echeanceId,
-          montant: echeance?.montant,
-          dateEcheance: echeance?.date_echeance
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const contentType = response.headers.get('content-type');
@@ -108,6 +110,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       }
 
       const data = await response.json();
+      console.log('📨 [EcheancesPaiement] Réponse serveur:', data);
 
       if (response.ok && data.success) {
         console.log('✅ Rappel envoyé avec succès:', data);

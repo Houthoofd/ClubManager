@@ -1,6 +1,6 @@
 import { ConfirmationResult, VerifyResultWithData } from '@clubmanager/types';
 import MysqlConnector from '../../connector/mysqlconnector.js';
-import { emailService } from '../../../services/emailService.js';
+import { emailClient } from '../../../clients/emailClient.js';
 
 export class Message {
   private mysqlConnector: MysqlConnector;
@@ -466,7 +466,7 @@ ${content}`;
     }
   }
 
-  // MODIFIÉ: Envoyer un message avec VRAI envoi d'emails
+  // MODIFIÉ: Envoyer un message avec VRAI envoi d'emails via EmailClient
   async envoyerMessageAvecEmails(
     destinataires: number[], 
     typeMessageId: number, 
@@ -502,7 +502,7 @@ ${content}`;
         messagesInternes.push(result);
       }
 
-      // 3. Si envoi email demandé, récupérer les emails et VRAIMENT les envoyer
+      // 3. Si envoi email demandé, utiliser EmailClient
       let emailsEnvoyes: Array<{
         id: number;
         email: string;
@@ -514,33 +514,32 @@ ${content}`;
       
       if (envoyerEmail) {
         const utilisateursAvecEmail = await this.obtenirEmailsDestinataires(destinataires);
-        console.log(`📧 [Messages] Envoi RÉEL d'emails à ${utilisateursAvecEmail.length} utilisateurs`);
-        
-        // AJOUT: Debug des variables d'environnement
-        console.log(`🔧 [Messages] Debug env - SENDGRID_SANDBOX: "${process.env.SENDGRID_SANDBOX}"`);
-        console.log(`🔧 [Messages] Debug env - NODE_ENV: "${process.env.NODE_ENV}"`);
+        console.log(`📧 [Messages] Envoi RÉEL d'emails à ${utilisateursAvecEmail.length} utilisateurs via EmailClient`);
         
         if (utilisateursAvecEmail.length > 0) {
-          // VRAIMENT envoyer les emails un par un avec vérification
+          // Utiliser EmailClient au lieu d'emailService
           for (const user of utilisateursAvecEmail) {
             try {
               console.log(`📧 [Messages] Envoi email à ${user.email} (${user.first_name} ${user.last_name})`);
               
-              // Vérifier explicitement le mode sandbox
-              const sandboxMode = process.env.SENDGRID_SANDBOX === 'true';
-              if (sandboxMode) {
-                console.warn(`⚠️ [Messages] MODE SANDBOX ACTIVÉ - L'email ne sera PAS réellement envoyé à ${user.email}`);
-                console.warn(`⚠️ [Messages] SENDGRID_SANDBOX="${process.env.SENDGRID_SANDBOX}" - Définissez SENDGRID_SANDBOX=false pour de vrais envois`);
-              } else {
-                console.log(`✅ [Messages] Mode production - L'email sera RÉELLEMENT envoyé à ${user.email}`);
-              }
-              
-              // Utiliser l'instance singleton du service email
-              const resultatEmail = await emailService.envoyerEmailPersonnalise({
+              // Utiliser EmailClient avec template personnalisé
+              const resultatEmail = await emailClient.sendTemplatedEmailFromFile({
                 to: user.email,
-                subject: `[ClubManager] ${typeMessage.title}`,
-                html: this.genererHTMLEmail(typeMessage.title, typeMessage.content, user.first_name),
-                text: this.genererTextEmail(typeMessage.title, typeMessage.content, user.first_name)
+                templateName: 'message-personnalise',
+                variables: {
+                  userName: `${user.first_name} ${user.last_name}`,
+                  firstName: user.first_name,
+                  lastName: user.last_name,
+                  title: typeMessage.title,
+                  content: typeMessage.content,
+                  messageTitle: typeMessage.title,
+                  clubName: 'Club Manager',
+                  currentYear: new Date().getFullYear().toString(),
+                  supportEmail: process.env.ADMIN_EMAIL || 'support@clubmanager.com',
+                  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173'
+                },
+                utilisateurId: user.id,
+                fallbackSubject: `[ClubManager] ${typeMessage.title}`
               });
 
               emailsEnvoyes.push({
@@ -549,20 +548,16 @@ ${content}`;
                 nom: `${user.first_name} ${user.last_name}`,
                 success: resultatEmail.success,
                 messageId: resultatEmail.messageId,
-                error: sandboxMode ? 'Mode sandbox - email simulé uniquement' : resultatEmail.error
+                error: resultatEmail.error
               });
 
               if (resultatEmail.success) {
-                if (sandboxMode) {
-                  console.log(`🧪 [Messages] Email SIMULÉ avec succès à ${user.email} - ID: ${resultatEmail.messageId} (MODE SANDBOX)`);
-                } else {
-                  console.log(`✅ [Messages] Email RÉELLEMENT envoyé à ${user.email} - ID: ${resultatEmail.messageId}`);
-                }
+                console.log(`✅ [Messages] Email envoyé avec succès à ${user.email} - ID: ${resultatEmail.messageId}`);
               } else {
                 console.error(`❌ [Messages] Échec envoi email à ${user.email}: ${resultatEmail.error}`);
               }
 
-              // Pause entre les envois pour éviter le spam
+              // Pause entre les envois
               await new Promise(resolve => setTimeout(resolve, 500));
 
             } catch (error: any) {
@@ -577,24 +572,16 @@ ${content}`;
             }
           }
 
-          // Log des résultats finaux avec clarification
+          // Log des résultats finaux
           const reussis = emailsEnvoyes.filter(e => e.success).length;
           const echecs = emailsEnvoyes.filter(e => !e.success).length;
-          const sandboxMode = process.env.SENDGRID_SANDBOX === 'true';
           
-          if (sandboxMode) {
-            console.log(`🧪 [Messages] Résultats emails (MODE SANDBOX): ${reussis}/${emailsEnvoyes.length} simulés avec succès`);
-            console.warn(`⚠️ [Messages] AUCUN EMAIL RÉEL N'A ÉTÉ ENVOYÉ - Pour recevoir de vrais emails, redémarrez le serveur après avoir vérifié SENDGRID_SANDBOX=false`);
-          } else {
-            console.log(`📊 [Messages] Résultats emails (MODE PRODUCTION): ${reussis}/${emailsEnvoyes.length} envoyés RÉELLEMENT`);
-          }
+          console.log(`📊 [Messages] Résultats emails: ${reussis}/${emailsEnvoyes.length} envoyés avec succès via EmailClient`);
           
           if (echecs > 0) {
             const erreursEmails = emailsEnvoyes.filter(e => !e.success);
             console.error(`❌ [Messages] Échecs d'envoi:`, erreursEmails.map(e => `${e.email}: ${e.error}`));
           }
-        } else {
-          console.warn(`⚠️ [Messages] Aucun utilisateur avec email valide trouvé parmi ${destinataires.length} destinataires`);
         }
       }
 
@@ -613,71 +600,181 @@ ${content}`;
     }
   }
 
-  // NOUVEAU: Générer le HTML pour l'email
-  private genererHTMLEmail(titre: string, contenu: string, prenom: string): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${titre}</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
-          .content { background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .header { text-align: center; margin-bottom: 30px; }
-          .header h1 { color: #2c3e50; margin: 0; font-size: 28px; }
-          .header h2 { color: #27ae60; margin: 10px 0 0 0; font-size: 22px; }
-          .message-content { background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .footer { border-top: 1px solid #bdc3c7; padding-top: 20px; margin-top: 30px; color: #7f8c8d; font-size: 14px; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="content">
-            <div class="header">
-              <h1>🥋 Club Manager</h1>
-              <h2>${titre}</h2>
-            </div>
-            
-            <div class="message-content">
-              <p style="margin: 0 0 15px 0; font-size: 16px;">
-                Bonjour <strong>${prenom}</strong>,
-              </p>
-              <div style="white-space: pre-line; font-size: 16px; line-height: 1.6;">
-                ${contenu}
-              </div>
-            </div>
+  // MODIFIÉ: Envoyer un rappel de paiement avec EmailClient
+  async envoyerRappelPaiementAvecEmail(
+    echeanceIds: number[], 
+    messagePersonnalise = ''
+  ): Promise<{
+    messageInterne: boolean;
+    emailEnvoye?: {
+      success: boolean;
+      messageId?: string;
+      error?: string;
+      email?: string;
+    };
+  }> {
+    try {
+      console.log(`📧 [Messages] Début envoi rappel pour échéances:`, echeanceIds);
 
-            <div class="footer">
-              <p style="margin: 0;">
-                Cet email a été envoyé automatiquement par Club Manager.
-              </p>
-              <p style="margin: 5px 0 0 0;">
-                © ${new Date().getFullYear()} Club Manager - Tous droits réservés
-              </p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+      // CORRIGÉ: Récupérer l'utilisateur depuis la première échéance
+      const receiverId = await this.obtenirUtilisateurDepuisEcheance(echeanceIds[0]);
+      
+      if (!receiverId) {
+        throw new Error(`Impossible de trouver l'utilisateur pour l'échéance ${echeanceIds[0]}`);
+      }
+
+      console.log(`👤 [Messages] Utilisateur trouvé: ${receiverId} pour échéance ${echeanceIds[0]}`);
+
+      // 1. Récupérer les informations de l'utilisateur pour l'email
+      const utilisateur = await this.obtenirEmailsDestinataires([receiverId]);
+      console.log(`👤 [Messages] Utilisateurs avec email:`, utilisateur);
+      
+      let emailEnvoye = undefined;
+      
+      if (utilisateur.length > 0 && utilisateur[0].email) {
+        const user = utilisateur[0];
+        
+        try {
+          console.log(`📧 [Messages] Tentative envoi email rappel à ${user.email} (${user.first_name} ${user.last_name})`);
+          
+          // Calculer le montant total des échéances
+          const montantTotal = await this.calculerMontantEcheances(echeanceIds);
+          
+          // Générer le lien de paiement
+          const lienPaiement = this.genererLienPaiement(receiverId, echeanceIds[0]);
+          console.log(`🔗 [Messages] Lien de paiement généré: ${lienPaiement}`);
+          
+          // Utiliser EmailClient avec le template de rappel de paiement
+          const resultatEmail = await emailClient.sendTemplatedEmailFromFile({
+            to: user.email,
+            templateName: 'rappel-paiement-1',
+            variables: {
+              userName: `${user.first_name} ${user.last_name}`,
+              firstName: user.first_name,
+              lastName: user.last_name,
+              amount: montantTotal.toFixed(2),
+              dueDate: new Date().toLocaleDateString('fr-FR'),
+              paymentLink: lienPaiement, // Ceci devrait être le bon lien vers /pages/paiement?echeance=304&userId=73
+              clubName: 'Club Manager',
+              currentYear: new Date().getFullYear().toString(),
+              supportEmail: process.env.ADMIN_EMAIL || 'support@clubmanager.com',
+              frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173'
+            },
+            utilisateurId: user.id,
+            fallbackSubject: '[ClubManager] Rappel de paiement - Action requise'
+          });
+          
+          console.log('📊 [Messages] Résultat envoi email:', resultatEmail);
+
+          emailEnvoye = {
+            success: resultatEmail.success,
+            messageId: resultatEmail.messageId,
+            error: resultatEmail.error,
+            email: user.email
+          };
+
+          if (resultatEmail.success) {
+            console.log(`✅ [Messages] Email de rappel envoyé avec succès à ${user.email} - ID: ${resultatEmail.messageId}`);
+          } else {
+            console.error(`❌ [Messages] Échec envoi email rappel à ${user.email}: ${resultatEmail.error}`);
+          }
+
+        } catch (error: any) {
+          console.error(`❌ [Messages] Erreur envoi email rappel:`, error);
+          emailEnvoye = {
+            success: false,
+            error: error.message,
+            email: user.email
+          };
+        }
+      } else {
+        console.warn(`⚠️ [Messages] Aucun email trouvé pour l'utilisateur ${receiverId}`);
+        console.warn(`⚠️ [Messages] Détails utilisateur récupéré:`, utilisateur);
+        emailEnvoye = {
+          success: false,
+          error: 'Aucun email configuré pour cet utilisateur',
+          email: 'Non disponible'
+        };
+      }
+
+      return {
+        messageInterne: true,
+        emailEnvoye
+      };
+
+    } catch (error: any) {
+      console.error('❌ [Messages] Erreur lors de l\'envoi du rappel:', error);
+      throw error;
+    }
   }
 
-  // NOUVEAU: Générer le texte simple pour l'email
-  private genererTextEmail(titre: string, contenu: string, prenom: string): string {
-    return `
-${titre}
+  // CORRIGÉ: Récupérer l'utilisateur depuis une échéance avec le bon nom de table
+  private async obtenirUtilisateurDepuisEcheance(echeanceId: number): Promise<number | null> {
+    try {
+      console.log(`🔍 [Messages] Recherche utilisateur pour échéance ID: ${echeanceId}`);
+      
+      // CORRIGÉ: Utiliser le vrai nom de table 'echeances_paiements'
+      const query = `
+        SELECT utilisateur_id 
+        FROM echeances_paiements 
+        WHERE id = ?
+      `;
+      
+      const results = await this.queryAsync(query, [echeanceId]);
+      console.log(`🔍 [Messages] Résultat requête échéance:`, results);
+      
+      if (results.length > 0) {
+        const userId = results[0].utilisateur_id;
+        console.log(`✅ [Messages] Utilisateur trouvé: ${userId} pour échéance ${echeanceId}`);
+        return userId;
+      }
+      
+      console.warn(`⚠️ [Messages] Aucun utilisateur trouvé pour l'échéance ${echeanceId}`);
+      return null;
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération de l\'utilisateur depuis l\'échéance:', error.message);
+      return null;
+    }
+  }
 
-Bonjour ${prenom},
+  // CORRIGÉ: Calculer le montant total des échéances avec le bon nom de table
+  private async calculerMontantEcheances(echeanceIds: number[]): Promise<number> {
+    try {
+      if (echeanceIds.length === 0) return 0;
+      
+      const placeholders = echeanceIds.map(() => '?').join(',');
+      // CORRIGÉ: Utiliser le vrai nom de table 'echeances_paiements'
+      const query = `
+        SELECT SUM(montant) as total
+        FROM echeances_paiements 
+        WHERE id IN (${placeholders})
+      `;
+      
+      const results = await this.queryAsync(query, echeanceIds);
+      console.log(`💰 [Messages] Montant calculé pour échéances ${echeanceIds}:`, results[0]?.total);
+      
+      return results[0]?.total || 0;
+    } catch (error: any) {
+      console.error('Erreur lors du calcul du montant des échéances:', error.message);
+      return 0;
+    }
+  }
 
-${contenu}
-
----
-Cet email a été envoyé automatiquement par Club Manager.
-© ${new Date().getFullYear()} Club Manager - Tous droits réservés
-    `.trim();
+  // VÉRIFIER: Générer un lien de paiement sécurisé avec debug
+  private genererLienPaiement(userId: number, echeanceId?: number): string {
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    
+    if (echeanceId) {
+      // Format demandé: /pages/paiement?echeance=304&userId=73
+      const lienGenere = `${baseUrl}/pages/paiement?echeance=${echeanceId}&userId=${userId}`;
+      console.log(`🔗 [Messages] Lien généré: ${lienGenere}`);
+      return lienGenere;
+    } else {
+      // Pour les paiements généraux sans échéance spécifique
+      const lienGenere = `${baseUrl}/pages/paiement?userId=${userId}`;
+      console.log(`🔗 [Messages] Lien général généré: ${lienGenere}`);
+      return lienGenere;
+    }
   }
 
   // NOUVEAU: Restaurer un message supprimé
@@ -728,7 +825,7 @@ Cet email a été envoyé automatiquement par Club Manager.
     }
   }
 
-  // NOUVEAU: Statistiques des messages supprimés (différent de obtenirStatistiquesMessages)
+  // NOUVEAU: Statistiques des messages supprimés
   async obtenirStatistiquesSuppressions(periode: 'jour' | 'semaine' | 'mois' = 'mois'): Promise<VerifyResultWithData> {
     try {
       let dateCondition = '';
@@ -768,344 +865,6 @@ Cet email a été envoyé automatiquement par Club Manager.
       console.error('Erreur lors de la récupération des statistiques de suppression:', error.message);
       throw error;
     }
-  }
-
-  // CORRIGÉ: Envoyer un rappel de paiement avec debug amélioré
-  async envoyerRappelPaiementAvecEmail(
-    senderId: number, 
-    receiverId: number, 
-    echeanceId?: number,
-    montant?: number,
-    dateEcheance?: string
-  ): Promise<{
-    messageInterne: ConfirmationResult;
-    emailEnvoye?: {
-      success: boolean;
-      messageId?: string;
-      error?: string;
-      email?: string;
-    };
-  }> {
-    try {
-      // AJOUTÉ: Debug configuration complète
-      console.log('🔧 [Messages] Configuration email complète:');
-      console.log('  SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? `${process.env.SENDGRID_API_KEY.substring(0, 10)}...` : 'NON DÉFINIE');
-      console.log('  SENDGRID_FROM_EMAIL:', process.env.SENDGRID_FROM_EMAIL);
-      console.log('  EMAIL_USER:', process.env.EMAIL_USER);
-      console.log('  EMAIL_PASS:', process.env.EMAIL_PASS ? `${process.env.EMAIL_PASS.substring(0, 10)}...` : 'NON DÉFINIE');
-      console.log('  EMAIL_HOST:', process.env.EMAIL_HOST);
-      console.log('  EMAIL_PORT:', process.env.EMAIL_PORT);
-      console.log('  SENDGRID_SANDBOX:', process.env.SENDGRID_SANDBOX);
-
-      console.log(`📧 [Messages] Début envoi rappel - Destinataire: ${receiverId}, Échéance: ${echeanceId}`);
-
-      // 1. Créer le message interne
-      const titre = 'Rappel de paiement - Échéance dépassée';
-      const contenu = `Bonjour,
-
-Nous vous informons qu'une échéance de paiement pour votre abonnement au club est dépassée.
-
-${echeanceId ? `Référence de l'échéance : #${echeanceId}` : ''}
-${montant ? `Montant : ${montant}€` : ''}
-${dateEcheance ? `Date d'échéance : ${new Date(dateEcheance).toLocaleDateString('fr-FR')}` : ''}
-
-Pour éviter toute interruption de service, nous vous invitons à régulariser votre situation dans les plus brefs délais.
-
-Vous pouvez effectuer votre paiement directement en ligne via votre espace personnel.
-
-En cas de difficulté, n'hésitez pas à nous contacter.
-
-Cordialement,
-L'équipe du Club Manager`;
-
-      const messageInterne = await this.envoyerMessagePersonnalise(
-        senderId,
-        receiverId,
-        titre,
-        contenu
-      );
-
-      console.log(`📬 [Messages] Message interne ${messageInterne.isConfirm ? 'envoyé' : 'échoué'}`);
-
-      // 2. Récupérer les informations de l'utilisateur pour l'email
-      const utilisateur = await this.obtenirEmailsDestinataires([receiverId]);
-      console.log(`👤 [Messages] Utilisateurs trouvés: ${utilisateur.length}`, utilisateur);
-      
-      let emailEnvoye = undefined;
-      
-      if (utilisateur.length > 0 && utilisateur[0].email) {
-        const user = utilisateur[0];
-        
-        try {
-          console.log(`📧 [Messages] Tentative envoi email à ${user.email} (${user.first_name} ${user.last_name})`);
-          
-          // Vérifier la configuration email
-          console.log('🔧 [Messages] Configuration email:');
-          console.log('  - emailService disponible:', !!emailService);
-          console.log('  - SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'Définie' : 'NON DÉFINIE');
-          console.log('  - SENDGRID_FROM_EMAIL:', process.env.SENDGRID_FROM_EMAIL || 'NON DÉFINIE');
-          
-          // Générer le lien de paiement sécurisé
-          const lienPaiement = this.genererLienPaiement(receiverId, echeanceId);
-          console.log(`🔗 [Messages] Lien de paiement généré: ${lienPaiement}`);
-          
-          const emailData = {
-            to: user.email,
-            subject: `[ClubManager] Rappel de paiement - Action requise`,
-            html: this.genererHTMLEmailRappel(
-              user.first_name, 
-              echeanceId, 
-              montant, 
-              dateEcheance, 
-              lienPaiement
-            ),
-            text: this.genererTextEmailRappel(
-              user.first_name, 
-              echeanceId, 
-              montant, 
-              dateEcheance, 
-              lienPaiement
-            )
-          };
-
-          console.log('📤 [Messages] Données email préparées:', {
-            to: emailData.to,
-            subject: emailData.subject,
-            htmlLength: emailData.html.length,
-            textLength: emailData.text.length
-          });
-
-          const resultatEmail = await emailService.envoyerEmailPersonnalise(emailData);
-          
-          console.log('📊 [Messages] Résultat envoi email:', resultatEmail);
-
-          emailEnvoye = {
-            success: resultatEmail.success,
-            messageId: resultatEmail.messageId,
-            error: resultatEmail.error,
-            email: user.email
-          };
-
-          if (resultatEmail.success) {
-            console.log(`✅ [Messages] Email de rappel envoyé avec succès à ${user.email} - ID: ${resultatEmail.messageId}`);
-          } else {
-            console.error(`❌ [Messages] Échec envoi email rappel à ${user.email}: ${resultatEmail.error}`);
-          }
-
-        } catch (error: any) {
-          console.error(`❌ [Messages] Erreur envoi email rappel:`, error);
-          console.error(`❌ [Messages] Stack trace:`, error.stack);
-          emailEnvoye = {
-            success: false,
-            error: error.message,
-            email: user.email
-          };
-        }
-      } else {
-        console.warn(`⚠️ [Messages] Aucun email trouvé pour l'utilisateur ${receiverId}`);
-        emailEnvoye = {
-          success: false,
-          error: 'Aucun email configuré pour cet utilisateur',
-          email: 'Non disponible'
-        };
-      }
-
-      return {
-        messageInterne,
-        emailEnvoye
-      };
-
-    } catch (error: any) {
-      console.error('❌ [Messages] Erreur lors de l\'envoi du rappel:', error);
-      console.error('❌ [Messages] Stack trace:', error.stack);
-      throw error;
-    }
-  }
-
-  // NOUVEAU: Générer un lien de paiement sécurisé
-  private genererLienPaiement(userId: number, echeanceId?: number): string {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    
-    if (echeanceId) {
-      // Format demandé: /pages/paiement?echeance=487&userId=154
-      return `${baseUrl}/pages/paiement?echeance=${echeanceId}&userId=${userId}`;
-    } else {
-      // Pour les paiements généraux sans échéance spécifique
-      return `${baseUrl}/pages/paiement?userId=${userId}`;
-    }
-  }
-
-  // NOUVEAU: Générer un token simple pour sécuriser le lien
-  private genererTokenPaiement(userId: number, echeanceId?: number): string {
-    const data = `${userId}-${echeanceId || 'general'}-${Date.now()}`;
-    // Dans un vrai projet, utilisez une librairie de cryptage plus robuste
-    return Buffer.from(data).toString('base64').replace(/[+/=]/g, '');
-  }
-
-  // NOUVEAU: Générer le HTML pour l'email de rappel avec bouton
-  private genererHTMLEmailRappel(
-    prenom: string, 
-    echeanceId?: number, 
-    montant?: number, 
-    dateEcheance?: string,
-    lienPaiement?: string
-  ): string {
-    const dateFormatee = dateEcheance ? new Date(dateEcheance).toLocaleDateString('fr-FR') : '';
-    
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Rappel de paiement - Action requise</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .content { background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-          .header { text-align: center; margin-bottom: 30px; }
-          .header h1 { color: #2c3e50; margin: 0; font-size: 28px; }
-          .header h2 { color: #27ae60; margin: 10px 0 0 0; font-size: 22px; }
-          .message-content { background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .footer { border-top: 1px solid #bdc3c7; padding-top: 20px; margin-top: 30px; color: #7f8c8d; font-size: 14px; text-align: center; }
-          .alert-box { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .payment-details { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545; }
-          .payment-button { text-align: center; margin: 30px 0; }
-          .btn-payment { 
-            background-color: #28a745; 
-            color: white; 
-            padding: 15px 30px; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            font-size: 18px; 
-            font-weight: bold; 
-            display: inline-block;
-            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
-            transition: background-color 0.3s ease;
-          }
-          .btn-payment:hover { background-color: #218838; }
-          .urgent { color: #dc3545; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="content">
-            <div class="header">
-              <h1>🥋 Club Manager</h1>
-              <h2 style="color: #dc3545; margin: 10px 0;">⚠️ Rappel de paiement</h2>
-            </div>
-            
-            <div class="alert-box">
-              <h3 style="margin: 0 0 10px 0; color: #495057;">Bonjour <strong>${prenom}</strong>,</h3>
-              <p style="margin: 0;">
-                <span class="urgent">Une échéance de paiement pour votre abonnement au club est dépassée.</span>
-              </p>
-            </div>
-
-            ${echeanceId || montant || dateEcheance ? `
-            <div class="payment-details">
-              <h4 style="margin: 0 0 15px 0; color: #495057;">📋 Détails du paiement :</h4>
-              ${echeanceId ? `<p style="margin: 5px 0;"><strong>Référence :</strong> #${echeanceId}</p>` : ''}
-              ${montant ? `<p style="margin: 5px 0;"><strong>Montant :</strong> <span style="color: #dc3545; font-size: 18px; font-weight: bold;">${montant}€</span></p>` : ''}
-              ${dateEcheance ? `<p style="margin: 5px 0;"><strong>Date d'échéance :</strong> ${dateFormatee}</p>` : ''}
-            </div>
-            ` : ''}
-
-            <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; font-size: 16px;">
-                Pour éviter toute interruption de service, nous vous invitons à régulariser votre situation <strong>dans les plus brefs délais</strong>.
-              </p>
-            </div>
-
-            ${lienPaiement ? `
-            <div class="payment-button">
-              <a href="${lienPaiement}" class="btn-payment">
-                💳 Payer maintenant
-              </a>
-            </div>
-            
-            <div style="text-align: center; margin: 20px 0;">
-              <p style="font-size: 14px; color: #6c757d;">
-                Ou copiez ce lien dans votre navigateur :<br>
-                <a href="${lienPaiement}" style="color: #007bff; word-break: break-all;">${lienPaiement}</a>
-              </p>
-            </div>
-            ` : ''}
-
-            <div style="background-color: #f1f3f4; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <h4 style="margin: 0 0 10px 0;">💡 Autres moyens de paiement :</h4>
-              <ul style="margin: 5px 0; padding-left: 20px;">
-                <li>Auprès de l'accueil du club</li>
-                <li>Par virement bancaire (contactez-nous pour les détails)</li>
-                <li>En ligne via votre espace personnel</li>
-              </ul>
-            </div>
-
-            <div style="text-align: center; padding: 20px; background-color: #fff8e1; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; font-size: 16px;">
-                <strong>❓ Besoin d'aide ?</strong><br>
-                N'hésitez pas à nous contacter pour toute question ou difficulté.
-              </p>
-            </div>
-
-            <div class="footer">
-              <p style="margin: 0;">
-                Cet email a été envoyé automatiquement par Club Manager.
-              </p>
-              <p style="margin: 5px 0 0 0;">
-                © ${new Date().getFullYear()} Club Manager - Tous droits réservés
-              </p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
-
-  // NOUVEAU: Générer le texte simple pour l'email de rappel
-  private genererTextEmailRappel(
-    prenom: string, 
-    echeanceId?: number, 
-    montant?: number, 
-    dateEcheance?: string,
-    lienPaiement?: string
-  ): string {
-    const dateFormatee = dateEcheance ? new Date(dateEcheance).toLocaleDateString('fr-FR') : '';
-    
-    return `
-🥋 CLUB MANAGER - RAPPEL DE PAIEMENT ⚠️
-
-Bonjour ${prenom},
-
-Une échéance de paiement pour votre abonnement au club est dépassée.
-
-DÉTAILS DU PAIEMENT :
-${echeanceId ? `- Référence : #${echeanceId}` : ''}
-${montant ? `- Montant : ${montant}€` : ''}
-${dateEcheance ? `- Date d'échéance : ${dateFormatee}` : ''}
-
-Pour éviter toute interruption de service, nous vous invitons à régulariser votre situation dans les plus brefs délais.
-
-${lienPaiement ? `
-PAYER EN LIGNE :
-${lienPaiement}
-` : ''}
-
-AUTRES MOYENS DE PAIEMENT :
-• Auprès de l'accueil du club
-• Par virement bancaire (contactez-nous pour les détails)
-• En ligne via votre espace personnel
-
-En cas de difficulté, n'hésitez pas à nous contacter.
-
-Cordialement,
-L'équipe du Club Manager
-
----
-Cet email a été envoyé automatiquement par Club Manager.
-© ${new Date().getFullYear()} Club Manager - Tous droits réservés
-    `.trim();
   }
 }
 

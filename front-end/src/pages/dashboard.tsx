@@ -31,6 +31,7 @@ import { ExpandableDataSection } from '../components/dashboard/ExpandableDataSec
 import { PageHeader } from '../components/common/PageHeader';
 import { useAuthRedirect } from '../hooks/useAuthRedirect';
 import AuthRequiredModal from '../components/common/modal/AuthRequiredModal';
+import AuthGuard from '../components/auth/AuthGuard';
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();

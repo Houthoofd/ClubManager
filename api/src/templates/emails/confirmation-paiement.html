@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement confirmé - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-success">
+            <h1>✅ Paiement confirmé</h1>
+            <p class="mb-0">Merci pour votre règlement</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Bonjour <strong>{{userName}}</strong>,
+            </div>
+            
+            <div class="success-box">
+                <p class="mb-0">
+                    ✅ Votre paiement a été traité avec succès !
+                </p>
+            </div>
+            
+            <div class="payment-details">
+                <h3>💳 Détails de la transaction :</h3>
+                <ul>
+                    <li><strong>Montant :</strong> {{amount}}€</li>
+                    <li><strong>Date :</strong> {{paymentDate}}</li>
+                    <li><strong>Statut :</strong> ✅ Confirmé</li>
+                </ul>
+            </div>
+            
+            <p>Votre compte est maintenant à jour. Vous pouvez continuer à profiter de tous nos services sans interruption.</p>
+            
+            <div class="cta-container">
+                <a href="{{dashboardUrl}}" class="cta-button cta-button-success">
+                    📱 Voir mon compte
+                </a>
+            </div>
+            
+            <p>Un reçu détaillé est disponible dans votre espace personnel.</p>
+            
+            <p>Merci de votre confiance !<br><strong>L'équipe {{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p>Support : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -49,7 +49,17 @@ async function startServer() {
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
-        // 2. Initialiser les services email après la DB (sans erreur bloquante)
+        // 2. Initialiser et vérifier SendGrid
+        console.log('🔄 [Server] Vérification de la configuration SendGrid...');
+        try {
+            const { emailClient } = await import('./clients/emailClient.js');
+            await emailClient.initializeAndVerify();
+        }
+        catch (emailError) {
+            console.warn('⚠️ [Server] Erreur lors de l\'initialisation SendGrid:', emailError);
+            console.warn('⚠️ [Server] Le serveur continuera sans les services email optimaux');
+        }
+        // 3. Initialiser les services email après la DB (sans erreur bloquante)
         console.log('🔄 [Server] Initialisation des services email...');
         try {
             const { messageClient } = await import('./db/clients/messagerie/messageClient.js');
@@ -200,6 +210,7 @@ async function startServer() {
             console.log(`✅ [Server] Serveur démarré sur le port ${PORT}`);
             console.log(`🌐 [Server] API disponible sur http://localhost:${PORT}`);
             console.log(`📊 [Server] Environnement : ${process.env.NODE_ENV || 'development'}`);
+            console.log(`📧 [Server] SendGrid: ${process.env.SENDGRID_API_KEY ? 'Configuré' : 'Non configuré'}`);
             console.log(`📧 [Server] Emails: ${process.env.SENDGRID_FROM_EMAIL ? 'Configurés' : 'Non configurés'}`);
             console.log(`💾 [Server] Base de données: ${process.env.DB_NAME || 'clubmanager'}`);
             // Setup graceful shutdown SEULEMENT après le démarrage réussi

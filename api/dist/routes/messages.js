@@ -579,114 +579,90 @@ router.get('/non-lus/:userId', async (req, res) => {
         });
     }
 });
-// CORRIGÉ: Route pour envoyer un rappel de paiement avec debug amélioré
-router.post('/envoyer-rappel', verifyToken, async (req, res) => {
+// CORRIGÉ: Route pour envoyer un rappel de paiement
+router.post('/envoyer-rappel', async (req, res) => {
     try {
-        const { userId, typeRappel = 'paiement', echeanceId, montant, dateEcheance } = req.body;
-        console.log('📧 [Messages] Requête de rappel reçue:', {
-            userId,
-            typeRappel,
-            echeanceId,
-            montant,
-            dateEcheance,
-            userFromToken: req.user?.id,
-            userRole: getUserRole(req)
+        console.log('📧 [Messages Route] Corps de la requête brut:', req.body);
+        const { echeanceIds, messagePersonnalise } = req.body;
+        console.log('📧 [Messages Route] Données extraites:', {
+            echeanceIds,
+            typeOfEcheanceIds: typeof echeanceIds,
+            isArray: Array.isArray(echeanceIds),
+            echeanceIdsLength: Array.isArray(echeanceIds) ? echeanceIds.length : 'N/A',
+            messagePersonnalise,
+            hasMessage: !!messagePersonnalise
         });
-        if (!userId) {
+        // Validation et conversion plus robuste des données
+        let validEcheanceIds = [];
+        if (Array.isArray(echeanceIds)) {
+            validEcheanceIds = echeanceIds.filter(id => typeof id === 'number' && !isNaN(id));
+        }
+        else if (typeof echeanceIds === 'number' && !isNaN(echeanceIds)) {
+            // Si c'est un seul nombre, le convertir en tableau
+            validEcheanceIds = [echeanceIds];
+        }
+        else if (typeof echeanceIds === 'string') {
+            // Si c'est une chaîne, essayer de la parser
+            try {
+                const parsed = JSON.parse(echeanceIds);
+                if (Array.isArray(parsed)) {
+                    validEcheanceIds = parsed.filter(id => typeof id === 'number' && !isNaN(id));
+                }
+                else if (typeof parsed === 'number') {
+                    validEcheanceIds = [parsed];
+                }
+            }
+            catch {
+                // Si le parsing échoue, essayer de convertir directement
+                const num = parseInt(echeanceIds);
+                if (!isNaN(num)) {
+                    validEcheanceIds = [num];
+                }
+            }
+        }
+        console.log('📧 [Messages Route] Échéances validées:', validEcheanceIds);
+        if (!validEcheanceIds || validEcheanceIds.length === 0) {
+            console.error('❌ [Messages Route] Aucune échéance valide trouvée');
             return res.status(400).json({
                 success: false,
-                message: 'ID utilisateur manquant'
+                message: 'Liste des échéances manquante ou vide',
+                debug: {
+                    received: echeanceIds,
+                    type: typeof echeanceIds,
+                    isArray: Array.isArray(echeanceIds),
+                    validEcheanceIds
+                }
             });
         }
-        // Vérifier les permissions
-        const userRole = getUserRole(req);
-        const currentUserId = req.user?.id;
-        const canSendReminder = ['super-administrateur', 'administrateur', 'professeur'].includes(userRole || '')
-            || parseInt(userId) === currentUserId;
-        if (!canSendReminder) {
-            console.log(`❌ [Messages] Permissions insuffisantes pour ${userRole}, userId: ${currentUserId}, targetUser: ${userId}`);
-            return res.status(403).json({
-                success: false,
-                message: 'Permissions insuffisantes pour envoyer des rappels'
+        console.log('📧 [Messages Route] Envoi rappel de paiement pour échéances:', validEcheanceIds);
+        const messageClient = new Message();
+        // Maintenant la signature est correcte : tableau d'IDs + message optionnel
+        const result = await messageClient.envoyerRappelPaiementAvecEmail(validEcheanceIds, messagePersonnalise || '');
+        console.log('📊 [Messages] Résultat envoi rappel:', result);
+        if (result.emailEnvoye?.success) {
+            res.status(200).json({
+                success: true,
+                message: 'Rappel de paiement envoyé avec succès',
+                data: result
             });
-        }
-        console.log(`📧 [Messages] Envoi rappel ${typeRappel} à l'utilisateur ${userId}${echeanceId ? ` pour l'échéance ${echeanceId}` : ''}`);
-        if (typeRappel === 'paiement') {
-            // CORRIGÉ: Debug des variables d'environnement
-            console.log('🔧 [Messages] Variables d\'environnement:');
-            console.log('  - SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'Définie' : 'NON DÉFINIE');
-            console.log('  - SENDGRID_FROM_EMAIL:', process.env.SENDGRID_FROM_EMAIL || 'NON DÉFINIE');
-            console.log('  - SENDGRID_SANDBOX:', process.env.SENDGRID_SANDBOX);
-            console.log('  - FRONTEND_URL:', process.env.FRONTEND_URL || 'NON DÉFINIE');
-            // Utiliser la nouvelle méthode avec email et lien
-            const result = await messageClient.envoyerRappelPaiementAvecEmail(currentUserId || 1, parseInt(userId), echeanceId ? parseInt(echeanceId) : undefined, montant ? parseFloat(montant) : undefined, dateEcheance);
-            console.log('📊 [Messages] Résultat envoi rappel:', {
-                messageInterne: result.messageInterne.isConfirm,
-                emailEnvoye: result.emailEnvoye
-            });
-            if (result.messageInterne.isConfirm) {
-                let responseMessage = 'Rappel de paiement envoyé avec succès';
-                if (result.emailEnvoye) {
-                    if (result.emailEnvoye.success) {
-                        responseMessage += ` et email envoyé à ${result.emailEnvoye.email}`;
-                        console.log(`✅ [Messages] Email envoyé avec succès à ${result.emailEnvoye.email} - ID: ${result.emailEnvoye.messageId}`);
-                    }
-                    else {
-                        responseMessage += ` mais échec de l'envoi email: ${result.emailEnvoye.error}`;
-                        console.error(`❌ [Messages] Échec envoi email: ${result.emailEnvoye.error}`);
-                    }
-                }
-                else {
-                    responseMessage += ' mais aucun email configuré pour cet utilisateur';
-                    console.warn(`⚠️ [Messages] Aucun email trouvé pour l'utilisateur ${userId}`);
-                }
-                res.json({
-                    success: true,
-                    message: responseMessage,
-                    data: {
-                        userId: parseInt(userId),
-                        typeRappel,
-                        echeanceId: echeanceId || null,
-                        messageInterne: result.messageInterne,
-                        emailEnvoye: result.emailEnvoye,
-                        timestamp: new Date().toISOString()
-                    }
-                });
-            }
-            else {
-                throw new Error(result.messageInterne.message || 'Échec de l\'envoi du message interne');
-            }
         }
         else {
-            // Pour les autres types de rappels, utiliser l'ancienne méthode
-            const titre = typeRappel === 'cours' ? 'Rappel de cours' : 'Rappel';
-            const contenu = typeRappel === 'cours'
-                ? 'Nous vous rappelons que vous avez des cours programmés cette semaine.'
-                : 'Ceci est un rappel automatique du club.';
-            const result = await messageClient.envoyerMessagePersonnalise(currentUserId || 1, parseInt(userId), titre, contenu);
-            if (result.isConfirm) {
-                res.json({
-                    success: true,
-                    message: `Rappel ${typeRappel} envoyé avec succès`,
-                    data: {
-                        userId: parseInt(userId),
-                        typeRappel,
-                        timestamp: new Date().toISOString()
-                    }
-                });
-            }
-            else {
-                throw new Error(result.message || 'Échec de l\'envoi du message');
-            }
+            res.status(200).json({
+                success: false,
+                message: result.emailEnvoye?.error || 'Erreur lors de l\'envoi du rappel',
+                data: result
+            });
         }
     }
     catch (error) {
-        console.error('❌ [Messages] Erreur lors de l\'envoi du rappel:', error);
-        console.error('❌ [Messages] Stack trace:', error.stack);
+        console.error('❌ [Messages] Erreur envoi rappel:', error);
         res.status(500).json({
             success: false,
-            message: 'Erreur serveur lors de l\'envoi du rappel',
-            error: error.message
+            message: 'Erreur serveur lors de l\'envoi du rappel de paiement',
+            error: error.message,
+            debug: {
+                requestBody: req.body
+            }
         });
     }
 });

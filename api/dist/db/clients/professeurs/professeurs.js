@@ -274,4 +274,25 @@ export class Professeurs {
             });
         });
     }
+    // Nouvelle méthode pour récupérer un utilisateur complet par ID
+    async obtenirUtilisateurParId(id) {
+        const sql = `SELECT * FROM utilisateurs WHERE id = ?`;
+        return new Promise((resolve, reject) => {
+            this.mysqlConnector.query(sql, [id], (error, results) => {
+                if (error) {
+                    console.error(`Erreur lors de la récupération de l'utilisateur ID ${id}:`, error);
+                    reject(error);
+                    return;
+                }
+                if (results.length > 0) {
+                    console.log(`✅ Utilisateur trouvé pour ID ${id}`);
+                    resolve(results[0]);
+                }
+                else {
+                    console.log(`⚠️ Aucun utilisateur trouvé pour ID ${id}`);
+                    resolve(null);
+                }
+            });
+        });
+    }
 }

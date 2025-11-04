@@ -371,11 +371,69 @@ const ConsulterUtilisateurPage = () => {
   const handleEnvoyerRappel = async () => {
     if (!userData?.utilisateur?.id) return;
     
+    console.log('🔍 [ConsulterUtilisateur] Données complètes paiementsEcheances:', paiementsEcheances);
+    console.log('🔍 [ConsulterUtilisateur] Type de paiementsEcheances:', typeof paiementsEcheances);
+    console.log('🔍 [ConsulterUtilisateur] Est un tableau:', Array.isArray(paiementsEcheances));
+    
+    // Vérifier si paiementsEcheances est bien un tableau
+    if (!Array.isArray(paiementsEcheances)) {
+      console.error('❌ [ConsulterUtilisateur] paiementsEcheances n\'est pas un tableau:', paiementsEcheances);
+      setModalMessage('Erreur: Impossible de récupérer les échéances de paiement.');
+      setModalSuccess(false);
+      setShowResultModal(true);
+      return;
+    }
+    
+    console.log('🔍 [ConsulterUtilisateur] Données disponibles pour rappel:', {
+      userId: userData.utilisateur.id,
+      paiementsEcheances_length: paiementsEcheances.length,
+      paiementsEcheances_type: typeof paiementsEcheances,
+      paiementsEcheances_isArray: Array.isArray(paiementsEcheances),
+      paiementsEcheances_contenu: paiementsEcheances
+    });
+    
+    // Extraire les IDs des échéances en attente avec plus de debug
+    const echeancesEnAttente = paiementsEcheances.filter((echeance, index) => {
+      console.log(`🔍 [ConsulterUtilisateur] Échéance ${index}:`, echeance);
+      console.log(`🔍 [ConsulterUtilisateur] Statut échéance ${index}:`, echeance?.statut);
+      return echeance && echeance.statut === 'en attente';
+    });
+    
+    console.log('🔍 [ConsulterUtilisateur] Échéances en attente filtrées:', echeancesEnAttente);
+    
+    const echeanceIds = echeancesEnAttente.map((echeance, index) => {
+      console.log(`🔍 [ConsulterUtilisateur] Extraction ID échéance ${index}:`, echeance.id);
+      return echeance.id;
+    }).filter(id => id !== undefined && id !== null);
+    
+    console.log('📧 [ConsulterUtilisateur] Échéances à rappeler:', {
+      totalEcheances: paiementsEcheances.length,
+      echeancesEnAttente: echeancesEnAttente.length,
+      echeanceIds,
+      echeanceIds_type: typeof echeanceIds,
+      echeanceIds_isArray: Array.isArray(echeanceIds)
+    });
+    
+    if (!Array.isArray(echeanceIds) || echeanceIds.length === 0) {
+      setModalMessage('Aucune échéance en attente trouvée pour cet utilisateur.');
+      setModalSuccess(false);
+      setShowResultModal(true);
+      return;
+    }
+    
     setRappelLoading(true);
     try {
       const token = localStorage.getItem('token') || 
                    localStorage.getItem('authToken') || 
                    JSON.parse(localStorage.getItem('userData') || '{}').token;
+
+      const requestBody = {
+        echeanceIds: echeanceIds,
+        messagePersonnalise: ''
+      };
+
+      console.log('📤 [ConsulterUtilisateur] Envoi requête rappel avec:', requestBody);
+      console.log('📤 [ConsulterUtilisateur] JSON.stringify du body:', JSON.stringify(requestBody));
 
       const response = await fetch(apiUrl('messages/envoyer-rappel'), {
         method: 'POST',
@@ -384,22 +442,71 @@ const ConsulterUtilisateurPage = () => {
           'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
-        body: JSON.stringify({
-          userId: userData.utilisateur.id,
-          typeRappel: 'paiement'
-        })
+        body: JSON.stringify(requestBody)
       });
 
-      if (response.ok) {
-        setModalMessage('Rappel de paiement envoyé avec succès !');
+      const responseData = await response.json();
+      console.log('📨 [ConsulterUtilisateur] Réponse serveur:', responseData);
+
+      if (response.ok && responseData.success) {
+        // MODIFIÉ: Message détaillé avec informations sur l'email
+        let successMessage = `✅ Rappel de paiement envoyé avec succès pour ${echeanceIds.length} échéance(s) !`;
+        
+        if (responseData.data?.emailEnvoye) {
+          const emailData = responseData.data.emailEnvoye;
+          if (emailData.success) {
+            successMessage += `\n\n📧 Email envoyé avec succès à : ${emailData.email}`;
+            if (emailData.messageId) {
+              successMessage += `\n🆔 ID du message : ${emailData.messageId}`;
+            }
+          } else {
+            successMessage += `\n\n⚠️ L'email n'a pas pu être envoyé à : ${emailData.email || 'email non spécifié'}`;
+            if (emailData.error) {
+              successMessage += `\n❌ Raison : ${emailData.error}`;
+            }
+          }
+        } else {
+          successMessage += '\n\n📧 Email : Aucune information disponible sur l\'envoi d\'email';
+        }
+
+        // AJOUTÉ: Informations sur les échéances concernées
+        if (echeancesEnAttente.length > 0) {
+          successMessage += '\n\n📋 Échéances concernées :';
+          echeancesEnAttente.forEach((echeance, index) => {
+            successMessage += `\n• Échéance #${echeance.id}: ${echeance.montant}€ (${new Date(echeance.date_echeance).toLocaleDateString('fr-FR')})`;
+          });
+        }
+
+        setModalMessage(successMessage);
         setModalSuccess(true);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de l\'envoi du rappel');
+        // MODIFIÉ: Message d'erreur détaillé
+        let errorMessage = responseData.message || 'Erreur lors de l\'envoi du rappel';
+        
+        if (responseData.data?.emailEnvoye?.error) {
+          errorMessage += `\n\n📧 Détails de l'erreur email : ${responseData.data.emailEnvoye.error}`;
+        }
+        
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
+      console.error('❌ Erreur serveur:', error);
       console.error('❌ Erreur envoi rappel:', error);
-      setModalMessage('Erreur lors de l\'envoi du rappel. Veuillez réessayer.');
+      
+      let errorMessage = `❌ Erreur lors de l'envoi du rappel: ${error.message}`;
+      
+      // AJOUTÉ: Suggestions d'action en cas d'erreur
+      if (error.message.includes('email')) {
+        errorMessage += '\n\n💡 Suggestions :';
+        errorMessage += '\n• Vérifiez que l\'utilisateur a une adresse email valide';
+        errorMessage += '\n• Contactez l\'administrateur si le problème persiste';
+      } else if (error.message.includes('échéance')) {
+        errorMessage += '\n\n💡 Suggestions :';
+        errorMessage += '\n• Vérifiez que les échéances existent dans la base de données';
+        errorMessage += '\n• Actualisez la page et réessayez';
+      }
+      
+      setModalMessage(errorMessage);
       setModalSuccess(false);
     } finally {
       setRappelLoading(false);
@@ -515,11 +622,8 @@ const ConsulterUtilisateurPage = () => {
       <ResultModal
         isOpen={showResultModal}
         onClose={() => setShowResultModal(false)}
-        title={modalSuccess ? 'Succès' : 'Erreur'}
-        message={modalSuccess 
-          ? 'Les modifications apportées ont été sauvegardées avec succès.'
-          : 'Une erreur est survenue lors de la sauvegarde des modifications. Veuillez réessayer.'
-        }
+        title={modalSuccess ? 'Rappel de paiement envoyé' : 'Erreur d\'envoi'}
+        message={modalMessage}
         isSuccess={modalSuccess}
       />
     </PageSection>
