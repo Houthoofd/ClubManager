@@ -146,8 +146,8 @@ const DashboardPage: React.FC = () => {
         ? `${p.first_name.charAt(0).toUpperCase()}${p.first_name.slice(1)} ${p.last_name.charAt(0).toUpperCase()}${p.last_name.slice(1)}`
         : p.nom_utilisateur?.replace(/_/g, ' ') || p.utilisateur_id,
       amount: `${p.montant} €`,
-      dueDate: p.periode_fin ? new Date(p.periode_fin).toLocaleDateString() : 'N/A',
-      status: p.statut,
+      dueDate: p.date_echeance ? new Date(p.date_echeance).toLocaleDateString('fr-FR') : 'N/A',
+      status: p.statut === 'payé' ? '✅ Payé' : p.statut === 'échu' ? '❌ Échu' : '⏳ En attente'
     }));
   };
 

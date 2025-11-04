@@ -32,6 +32,7 @@ const PaiementPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [clientSecret, setClientSecret] = useState<string>('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentIntentId, setPaymentIntentId] = useState<string>(''); // AJOUTÉ
 
   // CORRIGÉ: Récupérer les paramètres de l'URL avec vérifications de sécurité
   const echeanceId = searchParams.get('echeance');
@@ -207,6 +208,7 @@ const PaiementPage: React.FC = () => {
           const paymentData = await paymentIntentResponse.json();
           console.log('✅ [PaiementPage] PaymentIntent créé avec userId:', { userId, paymentData });
           setClientSecret(paymentData?.client_secret || '');
+          setPaymentIntentId(paymentData?.payment_intent_id || ''); // AJOUTÉ
         } else {
           const errorData = await paymentIntentResponse.json();
           console.error('❌ [PaiementPage] Erreur PaymentIntent:', errorData);
@@ -251,7 +253,78 @@ const PaiementPage: React.FC = () => {
     };
 
     loadEcheanceData();
-  }, [echeanceId, userId]); // Dépendances sécurisées
+  }, [echeanceId, userId]);
+
+  // NOUVEAU: Gérer le retour de Stripe après redirection (Bancontact, etc.)
+  useEffect(() => {
+    const handleStripeRedirectResult = async () => {
+      if (!clientSecret) return;
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentIntentClientSecret = urlParams.get('payment_intent_client_secret');
+      const redirectStatus = urlParams.get('redirect_status');
+
+      console.log('🔄 [PaiementPage] Vérification retour Stripe:', {
+        paymentIntentClientSecret,
+        redirectStatus,
+        currentClientSecret: clientSecret
+      });
+
+      if (paymentIntentClientSecret && redirectStatus) {
+        try {
+          const stripe = await stripePromise;
+          if (!stripe) {
+            throw new Error('Stripe non initialisé');
+          }
+
+          console.log('🔍 [PaiementPage] Récupération du statut PaymentIntent après redirection...');
+          
+          const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+          
+          console.log('📊 [PaiementPage] Statut PaymentIntent après redirection:', {
+            id: paymentIntent?.id,
+            status: paymentIntent?.status,
+            redirectStatus
+          });
+
+          if (paymentIntent) {
+            switch (paymentIntent.status) {
+              case 'succeeded':
+                console.log('✅ [PaiementPage] Paiement réussi après redirection');
+                await handlePaymentSuccess({ paymentIntent });
+                break;
+              
+              case 'processing':
+                console.log('⏳ [PaiementPage] Paiement en cours de traitement');
+                setError('Votre paiement est en cours de traitement. Vous recevrez une confirmation par email.');
+                break;
+              
+              case 'requires_payment_method':
+                console.log('❌ [PaiementPage] Paiement échoué - méthode de paiement requise');
+                setError('Le paiement a échoué. Veuillez réessayer avec une autre méthode de paiement.');
+                break;
+              
+              case 'canceled':
+                console.log('🚫 [PaiementPage] Paiement annulé');
+                setError('Le paiement a été annulé.');
+                break;
+              
+              default:
+                console.log('⚠️ [PaiementPage] Statut de paiement inattendu:', paymentIntent.status);
+                setError(`Statut de paiement inattendu: ${paymentIntent.status}`);
+            }
+          }
+        } catch (error: any) {
+          console.error('❌ [PaiementPage] Erreur lors de la vérification du paiement:', error);
+          setError('Erreur lors de la vérification du paiement. Veuillez contacter le support.');
+        }
+      }
+    };
+
+    // Vérifier le retour de Stripe après un délai pour s'assurer que clientSecret est défini
+    const timer = setTimeout(handleStripeRedirectResult, 1000);
+    return () => clearTimeout(timer);
+  }, [clientSecret]);
 
   const handlePaymentSuccess = async (paymentResult: any) => {
     console.log('🎉 [PaiementPage] Paiement réussi avec userId:', userId, paymentResult);
@@ -269,6 +342,13 @@ const PaiementPage: React.FC = () => {
       if (!echeanceData?.montant) {
         throw new Error('Montant de l\'échéance invalide');
       }
+
+      console.log('📤 [PaiementPage] Envoi confirmation paiement vers serveur:', {
+        paymentIntentId: paymentResult.paymentIntent.id,
+        echeanceId,
+        userId,
+        amount: echeanceData.montant
+      });
 
       // Notifier le serveur que le paiement est confirmé
       const response = await fetch(apiUrl('paiements/confirm-payment'), {
@@ -288,7 +368,7 @@ const PaiementPage: React.FC = () => {
 
       if (response.ok) {
         const confirmationData = await response.json();
-        console.log('✅ Confirmation reçue:', confirmationData);
+        console.log('✅ [PaiementPage] Confirmation reçue du serveur:', confirmationData);
         
         // Afficher un message spécial pour le premier paiement
         if (confirmationData?.premier_paiement) {
@@ -297,26 +377,57 @@ const PaiementPage: React.FC = () => {
         
         setPaymentSuccess(true);
         
-        // Rediriger après quelques secondes avec paramètres appropriés
+        // MODIFIÉ: Redirection adaptée selon qui effectue le paiement
         setTimeout(() => {
-          const redirectUrl = confirmationData?.premier_paiement 
-            ? '/pages/compte?tab=paiements&success=true&first_payment=true'
-            : '/pages/compte?tab=paiements&success=true';
-          navigate(redirectUrl);
+          const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+          const isAdmin = currentUserData?.status === 'administrateur' || currentUserData?.status === 'super-administrateur';
+          
+          if (isAdmin && currentUserData?.id !== parseInt(userId)) {
+            // Admin traitant le paiement d'un autre utilisateur
+            const redirectUrl = `/pages/utilisateurs/consulter/${userId}?tab=2&payment_success=true`;
+            console.log('🔄 [PaiementPage] Redirection admin vers:', redirectUrl);
+            navigate(redirectUrl);
+          } else {
+            // Utilisateur traitant son propre paiement
+            const redirectUrl = confirmationData?.premier_paiement 
+              ? '/pages/compte?tab=paiements&success=true&first_payment=true'
+              : '/pages/compte?tab=paiements&success=true';
+            console.log('🔄 [PaiementPage] Redirection utilisateur vers:', redirectUrl);
+            navigate(redirectUrl);
+          }
         }, 3000);
       } else {
         const errorData = await response.json();
+        console.error('❌ [PaiementPage] Erreur confirmation serveur:', errorData);
         throw new Error(errorData?.error || 'Erreur lors de la confirmation du paiement');
       }
     } catch (error: any) {
-      console.error('Erreur confirmation:', error);
+      console.error('❌ [PaiementPage] Erreur confirmation:', error);
       setError('Paiement effectué mais erreur de confirmation. Contactez le support.');
     }
   };
 
   const handlePaymentError = (error: any) => {
-    console.error('❌ Erreur de paiement:', error);
-    setError(`Erreur de paiement: ${error?.message || 'Erreur inconnue'}`);
+    console.error('❌ [PaiementPage] Erreur de paiement:', error);
+    
+    // AJOUTÉ: Gestion spécifique des erreurs Stripe
+    let errorMessage = 'Erreur inconnue';
+    
+    if (error?.type === 'card_error') {
+      errorMessage = `Erreur de carte: ${error.message}`;
+    } else if (error?.type === 'validation_error') {
+      errorMessage = `Erreur de validation: ${error.message}`;
+    } else if (error?.type === 'api_connection_error') {
+      errorMessage = 'Erreur de connexion. Veuillez réessayer.';
+    } else if (error?.type === 'authentication_error') {
+      errorMessage = 'Erreur d\'authentification du paiement.';
+    } else if (error?.type === 'rate_limit_error') {
+      errorMessage = 'Trop de tentatives. Veuillez attendre et réessayer.';
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+    
+    setError(`Erreur de paiement: ${errorMessage}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -533,6 +644,74 @@ const PaiementPage: React.FC = () => {
     );
   }
 
+  const handleCreatePaymentIntent = async () => {
+    if (!echeanceData || !userId) {
+      console.error('❌ Données manquantes pour créer PaymentIntent');
+      setError('Données de paiement manquantes');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('🏦 Création PaymentIntent pour:', {
+        echeanceId: echeanceData.id,
+        userId,
+        amount: Math.round(echeanceData.montant * 100)
+      });
+
+      const response = await fetch('/api/paiements/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: Math.round(echeanceData.montant * 100),
+          currency: 'eur',
+          echeanceId: echeanceData.id,
+          userId: userId,
+          description: `Paiement échéance #${echeanceData.id}`
+        })
+      });
+
+      const data = await response.json();
+      console.log('📨 Réponse create-payment-intent:', data);
+
+      if (!response.ok) {
+        // AJOUTÉ: Gestion spécifique des erreurs d'échéance
+        if (response.status === 404 && data.error?.includes('Échéance')) {
+          throw new Error(`Cette échéance n'existe pas ou n'est plus disponible. Veuillez actualiser la page.`);
+        } else if (response.status === 403 && data.error?.includes('appartient')) {
+          throw new Error(`Cette échéance ne vous appartient pas.`);
+        } else if (response.status === 400 && data.error?.includes('payée')) {
+          throw new Error(`Cette échéance est déjà payée.`);
+        }
+        
+        throw new Error(data.error || `Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      if (!data.client_secret) {
+        throw new Error('Client secret manquant dans la réponse serveur');
+      }
+
+      setClientSecret(data.client_secret);
+      setPaymentIntentId(data.payment_intent_id);
+      
+      console.log('✅ PaymentIntent créé avec succès:', {
+        paymentIntentId: data.payment_intent_id,
+        paiementId: data.paiement_id
+      });
+
+    } catch (error: any) {
+      console.error('❌ Erreur création PaymentIntent:', error);
+      setError(error.message || 'Erreur lors de la création du paiement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Page>
       <PageHeader
@@ -681,6 +860,7 @@ const PaiementPage: React.FC = () => {
                     onError={handlePaymentError}
                     echeanceId={echeanceId}
                     userId={userId}
+                    returnUrl={`${window.location.origin}/pages/paiement?echeance=${echeanceId}&userId=${userId}&payment_return=true`}
                   />
                 </Elements>
               ) : (

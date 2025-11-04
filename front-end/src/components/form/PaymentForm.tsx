@@ -9,23 +9,39 @@ import {
   Button,
   Alert,
   Spinner,
+  Form,
+  FormGroup,
   Card,
   CardBody,
   Title,
   Flex,
   FlexItem,
   Checkbox,
+  Badge,
+  Progress,
+  ProgressMeasureLocation,
 } from '@patternfly/react-core';
-import { CreditCardIcon, ShieldAltIcon } from '@patternfly/react-icons';
+import { CreditCardIcon, ShieldAltIcon, CheckCircleIcon, ExclamationTriangleIcon, InProgressIcon } from '@patternfly/react-icons';
+
+// NOUVEAU: Types pour le statut de paiement
+type PaymentStatus = 
+  | 'idle' 
+  | 'validating' 
+  | 'processing' 
+  | 'redirecting' 
+  | 'confirming' 
+  | 'succeeded' 
+  | 'failed';
 
 interface PaymentFormProps {
   clientSecret: string;
   amount: number;
-  description: string;
+  description?: string;
   onSuccess: (result: any) => void;
   onError: (error: any) => void;
-  echeanceId?: string | null;
-  userId?: string | null;
+  echeanceId: string;
+  userId: string;
+  returnUrl?: string;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -36,81 +52,223 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   onError,
   echeanceId,
   userId,
+  returnUrl // AJOUTÉ
 }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showBillingAddress, setShowBillingAddress] = useState(false);
+  
+  // NOUVEAU: État du statut de paiement
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
+  const [statusMessage, setStatusMessage] = useState<string>('');
+  const [progressValue, setProgressValue] = useState<number>(0);
 
-  const formatMontant = (montant: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(montant);
+  // NOUVEAU: Fonction pour mettre à jour le statut
+  const updatePaymentStatus = (status: PaymentStatus, message: string, progress: number = 0) => {
+    setPaymentStatus(status);
+    setStatusMessage(message);
+    setProgressValue(progress);
+    console.log(`📊 [PaymentForm] Statut: ${status} - ${message} (${progress}%)`);
+  };
+
+  // NOUVEAU: Composant de statut visuel
+  const PaymentStatusIndicator = () => {
+    const getStatusColor = (status: PaymentStatus) => {
+      switch (status) {
+        case 'idle': return 'blue';
+        case 'validating': return 'cyan';
+        case 'processing': return 'purple';
+        case 'redirecting': return 'orange';
+        case 'confirming': return 'blue';
+        case 'succeeded': return 'green';
+        case 'failed': return 'red';
+        default: return 'grey';
+      }
+    };
+
+    const getStatusIcon = (status: PaymentStatus) => {
+      switch (status) {
+        case 'succeeded': return <CheckCircleIcon style={{ color: '#28a745' }} />;
+        case 'failed': return <ExclamationTriangleIcon style={{ color: '#dc3545' }} />;
+        case 'idle': return <CreditCardIcon style={{ color: '#0570de' }} />;
+        default: return <InProgressIcon style={{ color: '#6f42c1' }} />;
+      }
+    };
+
+    const isActive = paymentStatus !== 'idle';
+
+    if (!isActive) return null;
+
+    return (
+      <Card style={{ marginBottom: '1rem', border: `2px solid ${getStatusColor(paymentStatus) === 'green' ? '#28a745' : '#6f42c1'}` }}>
+        <CardBody>
+          <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+            <FlexItem>
+              {getStatusIcon(paymentStatus)}
+            </FlexItem>
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                <Badge variant="outline" color={getStatusColor(paymentStatus)}>
+                  {paymentStatus.toUpperCase()}
+                </Badge>
+                <span style={{ marginLeft: '0.5rem' }}>{statusMessage}</span>
+              </div>
+              {(paymentStatus === 'processing' || paymentStatus === 'validating' || paymentStatus === 'confirming') && (
+                <Progress 
+                  value={progressValue} 
+                  measureLocation={ProgressMeasureLocation.outside}
+                  variant={paymentStatus === 'succeeded' ? 'success' : undefined}
+                />
+              )}
+            </FlexItem>
+            {(paymentStatus === 'processing' || paymentStatus === 'validating' || paymentStatus === 'confirming') && (
+              <FlexItem>
+                <Spinner size="md" />
+              </FlexItem>
+            )}
+          </Flex>
+        </CardBody>
+      </Card>
+    );
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !acceptTerms) {
-      if (!acceptTerms) {
-        setMessage('Veuillez accepter les conditions générales pour continuer.');
-      }
+    if (!stripe || !elements) {
+      setErrorMessage('Stripe n\'est pas encore chargé. Veuillez patienter.');
       return;
     }
 
-    setIsLoading(true);
-    setMessage('');
+    setIsProcessing(true);
+    setErrorMessage('');
 
     try {
+      // NOUVEAU: Phase 1 - Validation
+      updatePaymentStatus('validating', 'Validation des informations de paiement...', 10);
+
+      console.log('🚀 [PaymentForm] Début du processus de paiement:', {
+        echeanceId,
+        userId,
+        amount,
+        clientSecret: clientSecret.substring(0, 20) + '...'
+      });
+
+      // Simulation d'un délai pour montrer la validation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // NOUVEAU: Phase 2 - Traitement
+      updatePaymentStatus('processing', 'Traitement du paiement en cours...', 30);
+
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/pages/compte?tab=paiements&success=true`,
+          return_url: returnUrl || `${window.location.origin}/pages/compte?tab=paiements&success=true`,
           payment_method_data: {
             billing_details: {
-              name: 'Membre Club Manager',
+              name: 'Membre du club',
             },
           },
         },
         redirect: 'if_required',
       });
 
+      // NOUVEAU: Phase 3 - Analyse du résultat
+      updatePaymentStatus('confirming', 'Confirmation du paiement...', 70);
+
+      console.log('📊 [PaymentForm] Résultat confirmPayment:', {
+        error,
+        paymentIntent: paymentIntent ? {
+          id: paymentIntent.id,
+          status: paymentIntent.status,
+          amount: paymentIntent.amount
+        } : null
+      });
+
       if (error) {
-        console.error('Erreur Stripe:', error);
-        setMessage(error.message || 'Une erreur est survenue lors du paiement.');
+        // NOUVEAU: Statut d'échec
+        updatePaymentStatus('failed', `Échec du paiement: ${error.message}`, 0);
+        
+        console.error('❌ [PaymentForm] Erreur confirmation:', error);
+        
+        if (error.type === 'card_error' || error.type === 'validation_error') {
+          setErrorMessage(error.message || 'Erreur de paiement');
+        } else {
+          setErrorMessage('Une erreur inattendue s\'est produite.');
+        }
+        
         onError(error);
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('🎉 Paiement réussi:', paymentIntent);
-        setMessage('Paiement réussi ! Redirection en cours...');
-        onSuccess({ paymentIntent });
+      } else if (paymentIntent) {
+        switch (paymentIntent.status) {
+          case 'succeeded':
+            // NOUVEAU: Statut de succès
+            updatePaymentStatus('succeeded', 'Paiement réussi ! Redirection en cours...', 100);
+            console.log('✅ [PaymentForm] Paiement réussi immédiatement');
+            
+            // Délai pour montrer le succès
+            setTimeout(() => {
+              onSuccess({ paymentIntent });
+            }, 1500);
+            break;
+          
+          case 'processing':
+            // NOUVEAU: Statut de traitement
+            updatePaymentStatus('processing', 'Paiement en cours de traitement...', 80);
+            console.log('⏳ [PaymentForm] Paiement en cours de traitement');
+            setErrorMessage('Votre paiement est en cours de traitement. Vous recevrez une confirmation par email.');
+            break;
+          
+          case 'requires_payment_method':
+            // NOUVEAU: Statut d'échec - méthode requise
+            updatePaymentStatus('failed', 'Méthode de paiement requise', 0);
+            console.log('❌ [PaymentForm] Paiement nécessite une autre méthode');
+            setErrorMessage('Le paiement a échoué. Veuillez réessayer avec une autre méthode de paiement.');
+            onError({ type: 'payment_method_required', message: 'Méthode de paiement requise' });
+            break;
+          
+          case 'requires_action':
+            // NOUVEAU: Statut de redirection
+            updatePaymentStatus('redirecting', 'Redirection vers votre banque...', 50);
+            console.log('🔄 [PaymentForm] Action requise - redirection en cours');
+            break;
+          
+          default:
+            // NOUVEAU: Statut inconnu
+            updatePaymentStatus('failed', `Statut inattendu: ${paymentIntent.status}`, 0);
+            console.log('⚠️ [PaymentForm] Statut de paiement inattendu:', paymentIntent.status);
+            setErrorMessage(`Statut de paiement: ${paymentIntent.status}`);
+        }
       } else {
-        setMessage('Le paiement nécessite une action supplémentaire.');
+        // NOUVEAU: Redirection en cours
+        updatePaymentStatus('redirecting', 'Redirection en cours pour finaliser le paiement...', 60);
+        console.log('🔄 [PaymentForm] Redirection en cours pour action de paiement (ex: Bancontact)');
       }
-    } catch (err: any) {
-      console.error('Erreur lors du paiement:', err);
-      setMessage('Une erreur inattendue est survenue.');
-      onError(err);
+    } catch (unexpectedError: any) {
+      // NOUVEAU: Erreur inattendue
+      updatePaymentStatus('failed', 'Erreur inattendue lors du paiement', 0);
+      console.error('❌ [PaymentForm] Erreur inattendue:', unexpectedError);
+      setErrorMessage('Une erreur inattendue s\'est produite.');
+      onError(unexpectedError);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  const paymentElementOptions = {
-    layout: 'tabs' as const,
-    business: { name: 'Club Manager' },
-    fields: {
-      billingDetails: {
-        name: 'auto' as const,
-        email: 'auto' as const,
-      },
-    },
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <Form onSubmit={handleSubmit}>
+      {/* NOUVEAU: Indicateur de statut de paiement */}
+      <PaymentStatusIndicator />
+
       {/* Résumé du paiement */}
       <Card style={{ marginBottom: '2rem', border: '2px solid #e7f3ff' }}>
         <CardBody>
@@ -142,7 +300,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   Total à payer :
                 </FlexItem>
                 <FlexItem style={{ fontSize: '20px', fontWeight: 'bold', color: '#dc3545' }}>
-                  {formatMontant(amount)}
+                  {formatAmount(amount)}
                 </FlexItem>
               </Flex>
             </FlexItem>
@@ -157,7 +315,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             💳 Informations de paiement
           </Title>
           
-          <PaymentElement options={paymentElementOptions} />
+          <PaymentElement options={{
+            layout: 'tabs',
+            paymentMethodOrder: ['card', 'bancontact'],
+          }} />
         </CardBody>
       </Card>
 
@@ -224,36 +385,70 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       </div>
 
       {/* Messages d'erreur/succès */}
-      {message && (
+      {errorMessage && (
         <Alert 
-          variant={message.includes('réussi') ? 'success' : 'danger'} 
-          title={message.includes('réussi') ? 'Succès' : 'Erreur'}
-          style={{ marginBottom: '2rem' }}
+          variant="danger" 
+          title="Erreur de paiement" 
+          style={{ marginBottom: '1rem' }}
         >
-          {message}
+          {errorMessage}
         </Alert>
       )}
 
-      {/* Bouton de paiement */}
+      {/* MODIFIÉ: Bouton de paiement avec statut */}
       <Flex justifyContent={{ default: 'justifyContentCenter' }}>
         <FlexItem>
           <Button
             type="submit"
             variant="primary"
             size="lg"
-            icon={<CreditCardIcon />}
-            isLoading={isLoading}
-            isDisabled={!stripe || !elements || isLoading || !acceptTerms}
+            icon={paymentStatus === 'succeeded' ? <CheckCircleIcon /> : <CreditCardIcon />}
+            isLoading={isProcessing}
+            isDisabled={!stripe || !elements || isProcessing || !acceptTerms}
             style={{ 
               minWidth: '200px',
               fontSize: '16px',
-              padding: '12px 24px'
+              padding: '12px 24px',
+              backgroundColor: paymentStatus === 'succeeded' ? '#28a745' : undefined
             }}
           >
-            {isLoading ? 'Traitement...' : `Payer ${formatMontant(amount)}`}
+            {isProcessing ? (
+              <>
+                <Spinner size="sm" style={{ marginRight: '8px' }} />
+                {statusMessage || 'Traitement en cours...'}
+              </>
+            ) : paymentStatus === 'succeeded' ? (
+              'Paiement réussi ✅'
+            ) : (
+              `Payer ${formatAmount(amount)}`
+            )}
           </Button>
         </FlexItem>
       </Flex>
+
+      {/* NOUVEAU: Statut détaillé en bas */}
+      {paymentStatus !== 'idle' && (
+        <div style={{ 
+          marginTop: '1rem', 
+          padding: '1rem', 
+          backgroundColor: paymentStatus === 'succeeded' ? '#d4edda' : paymentStatus === 'failed' ? '#f8d7da' : '#e7f3ff',
+          borderRadius: '8px',
+          border: `1px solid ${paymentStatus === 'succeeded' ? '#c3e6cb' : paymentStatus === 'failed' ? '#f5c6cb' : '#bee5eb'}`,
+          textAlign: 'center'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            {paymentStatus === 'succeeded' && '🎉 Paiement réussi !'}
+            {paymentStatus === 'failed' && '❌ Paiement échoué'}
+            {paymentStatus === 'processing' && '⏳ Traitement en cours'}
+            {paymentStatus === 'redirecting' && '🔄 Redirection en cours'}
+            {paymentStatus === 'validating' && '🔍 Validation en cours'}
+            {paymentStatus === 'confirming' && '✅ Confirmation en cours'}
+          </div>
+          <div style={{ fontSize: '14px', color: '#6c757d' }}>
+            {statusMessage}
+          </div>
+        </div>
+      )}
 
       {/* Sécurité Stripe */}
       <div style={{ 
@@ -274,7 +469,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           </a>
         </p>
       </div>
-    </form>
+    </Form>
   );
 };
 
