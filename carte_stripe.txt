@@ -1,0 +1,4 @@
+Numéro : 4242424242424242
+Expiration : 12/2025
+CVC : 123
+Toujours acceptée par Stripe en mode test

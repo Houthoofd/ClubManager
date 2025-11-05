@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { apiUrl } from '../../../pages/apiUrl'; // AJOUTÉ: Import de la fonction apiUrl
 import {
   Drawer,
   DrawerContent,
@@ -43,6 +45,7 @@ const RightSidePanel = ({
   onUpdateQuantite,
   children
 }: RightSidePanelProps) => {
+  const navigate = useNavigate();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [selectedTaille, setSelectedTaille] = useState<Taille | null>(null);
   const [quantiteTemp, setQuantiteTemp] = useState<number>(1);
@@ -112,7 +115,7 @@ const RightSidePanel = ({
     }
   };
 
- const onPasserCommande = () => {
+ const onPasserCommande = async () => {
   const userData = localStorage.getItem('userData');
   if (!userData) {
     alert("Utilisateur non connecté.");
@@ -120,7 +123,7 @@ const RightSidePanel = ({
   }
 
   const user = JSON.parse(userData);
-  console.log('User data from localStorage:', user); // Debug log
+  console.log('🛒 [Panier] User data from localStorage:', user);
   
   // Corriger l'accès à l'ID utilisateur selon la structure réelle
   const utilisateur_id = Number(user.id || user.data?.id || user.user?.id);
@@ -131,6 +134,12 @@ const RightSidePanel = ({
     return;
   }
 
+  if (localArticles.length === 0) {
+    alert("Votre panier est vide.");
+    return;
+  }
+
+  // Préparer les articles pour la commande
   const articles = localArticles.map(article => ({
     article_id: Number(article.id),
     quantite: Number(article.quantite),
@@ -140,19 +149,96 @@ const RightSidePanel = ({
 
   const total = articles.reduce((acc, article) => acc + article.prix * article.quantite, 0);
 
+  // Créer la commande temporaire pour le panier
   const nouvelleCommande = {
-    utilisateur_id, // S'assurer que c'est bien défini
+    utilisateur_id,
     articles,
     total: Number(total.toFixed(2)),
     statut: 'en_attente',
     date: new Date().toISOString(),
   };
   
-  console.log('Commande créée avec utilisateur_id:', nouvelleCommande.utilisateur_id);
-  console.log('Commande complète:', nouvelleCommande);
-  
-  setCommande(nouvelleCommande);
-  setIsPaymentModalOpen(true);
+  console.log('🛒 [Panier] Commande préparée:', nouvelleCommande);
+
+  try {
+    // AJOUTÉ: Sauvegarder les données du panier dans localStorage AVANT l'API call
+    const panierPourSauvegarde = {
+      articles: localArticles.map(article => ({
+        id: article.id,
+        nom: article.nom,
+        prix: article.prix,
+        quantite: article.quantite,
+        taille: article.taille,
+        image: article.images?.[0] || null
+      })),
+      total: total,
+      timestamp: Date.now(),
+      utilisateur_id: utilisateur_id
+    };
+    
+    localStorage.setItem('dernierPanier', JSON.stringify(panierPourSauvegarde));
+    console.log('💾 [Panier] Données sauvegardées dans localStorage:', panierPourSauvegarde);
+
+    console.log('🔄 [Panier] Création PaymentIntent pour commande...');
+    
+    const token = localStorage.getItem('token') || 
+                 localStorage.getItem('authToken') || 
+                 JSON.parse(localStorage.getItem('userData') || '{}').token;
+
+    const response = await fetch(apiUrl('paiements'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        amount: Math.round(total * 100), // Montant en centimes
+        currency: 'eur',
+        commande: nouvelleCommande,
+        utilisateur_id: utilisateur_id,
+        description: `Commande magasin - ${articles.length} article(s)`
+      })
+    });
+
+    console.log('📡 [Panier] Réponse API:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ [Panier] Erreur API détaillée:', errorData);
+      throw new Error(errorData?.error || `Erreur ${response.status}: ${response.statusText}`);
+    }
+
+    const paymentData = await response.json();
+    console.log('✅ [Panier] PaymentIntent créé:', paymentData);
+
+    // Rediriger vers la page de paiement avec l'ID de commande
+    const commandeId = paymentData.commande_id;
+    if (commandeId) {
+      console.log(`🔗 [Panier] Redirection vers paiement commande ${commandeId}`);
+      
+      // Vider le panier local
+      setLocalArticles([]);
+      
+      // Fermer le panier
+      onClose();
+      
+      // Rediriger vers la page de paiement
+      navigate(`/pages/paiement?commande=${commandeId}&userId=${utilisateur_id}`);
+    } else {
+      throw new Error('ID de commande manquant dans la réponse');
+    }
+
+  } catch (error: any) {
+    console.error('❌ [Panier] Erreur création commande:', error);
+    // AJOUTÉ: Nettoyer localStorage en cas d'erreur
+    localStorage.removeItem('dernierPanier');
+    alert(`Erreur lors de la création de la commande: ${error.message}`);
+  }
 };
 
   const toggleSelect = (toggleRef: React.Ref<any>) => (
@@ -559,6 +645,8 @@ const RightSidePanel = ({
                     {totalPrice.toFixed(2)} €
                   </span>
                 </div>
+                
+                {/* MODIFIÉ: Bouton simplifié qui redirige vers la page de paiement */}
                 <Button
                   variant="primary"
                   onClick={onPasserCommande}
@@ -572,8 +660,17 @@ const RightSidePanel = ({
                     border: 'none'
                   }}
                 >
-                  Passer la commande
+                  🛒 Finaliser la commande
                 </Button>
+                
+                <div style={{ 
+                  fontSize: '0.8rem', 
+                  color: '#7f8c8d',
+                  textAlign: 'center',
+                  marginTop: '0.5rem'
+                }}>
+                  Vous serez redirigé vers la page de paiement sécurisée
+                </div>
               </div>
             )}
           </DrawerPanelContent>
@@ -584,21 +681,7 @@ const RightSidePanel = ({
         </DrawerContentBody>
       </DrawerContent>
 
-      {/* Modal de paiement - Correction des props */}
-      <Modal
-        variant="large"
-        title="Finaliser votre commande"
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-      >
-        {commande && (
-          <PaymentForm
-            totalAmount={commande.total}
-            commande={commande}
-            onClose={() => setIsPaymentModalOpen(false)}
-          />
-        )}
-      </Modal>
+      {/* SUPPRIMÉ: Modal de paiement - On utilise maintenant la page dédiée */}
     </Drawer>
   );
 };

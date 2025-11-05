@@ -43,6 +43,7 @@
     "stripe": "^17.7.0",
     "supertest": "^7.1.4",
     "svg-loader": "^0.0.2",
+    "uuid": "^9.0.0",
     "zod": "^3.25.64"
   },
   "devDependencies": {
@@ -60,6 +61,7 @@
     "@types/nodemailer": "^6.4.0",
     "@types/pg": "^8.15.5",
     "@types/supertest": "^2.0.12",
+    "@types/uuid": "^9.0.8",
     "jest": "^29.0.0",
     "supertest": "^6.3.0",
     "ts-jest": "^29.0.0",

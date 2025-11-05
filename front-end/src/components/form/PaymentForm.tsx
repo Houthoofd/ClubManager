@@ -22,6 +22,7 @@ import {
   ProgressMeasureLocation,
 } from '@patternfly/react-core';
 import { CreditCardIcon, ShieldAltIcon, CheckCircleIcon, ExclamationTriangleIcon, InProgressIcon } from '@patternfly/react-icons';
+import { apiUrl } from '../../pages/apiUrl'; // AJOUTÉ: Import manquant
 
 // NOUVEAU: Types pour le statut de paiement
 type PaymentStatus = 
@@ -39,7 +40,8 @@ interface PaymentFormProps {
   description?: string;
   onSuccess: (result: any) => void;
   onError: (error: any) => void;
-  echeanceId: string;
+  echeanceId?: string; // MODIFIÉ: Rendu optionnel
+  commandeId?: string; // AJOUTÉ: Nouvelle prop pour commandes
   userId: string;
   returnUrl?: string;
 }
@@ -51,6 +53,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   onSuccess,
   onError,
   echeanceId,
+  commandeId,
   userId,
   returnUrl
 }) => {
@@ -65,6 +68,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [progressValue, setProgressValue] = useState<number>(0);
+  const [hasAttemptedPayment, setHasAttemptedPayment] = useState(false); // AJOUTÉ: Prévenir les tentatives multiples
 
   // NOUVEAU: Fonction pour mettre à jour le statut
   const updatePaymentStatus = (status: PaymentStatus, message: string, progress: number = 0) => {
@@ -143,7 +147,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       return;
     }
 
+    // AJOUTÉ: Vérifier si un paiement est déjà en cours
+    if (isProcessing || hasAttemptedPayment) {
+      setErrorMessage('Un paiement est déjà en cours. Veuillez patienter ou actualiser la page.');
+      return;
+    }
+
     setIsProcessing(true);
+    setHasAttemptedPayment(true); // AJOUTÉ: Marquer qu'une tentative a eu lieu
     setErrorMessage('');
 
     try {
@@ -335,6 +346,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       onError(unexpectedError);
     } finally {
       setIsProcessing(false);
+      // NOTE: hasAttemptedPayment reste à true pour éviter les tentatives multiples
     }
   };
 
@@ -390,175 +402,135 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
   // NOUVEAU: Fonction pour simuler un paiement réussi
   const handleSimulatePayment = async () => {
-    setIsProcessing(true);
-    setErrorMessage('');
-    
     try {
-      updatePaymentStatus('validating', '🧪 Mode simulation - Validation...', 10);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('🧪 [PaymentForm] Démarrage simulation paiement...');
       
-      updatePaymentStatus('processing', '🧪 Simulation du paiement en cours...', 30);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // CORRIGÉ: Extraire le paymentIntentId depuis clientSecret
+      const paymentIntentId = getPaymentIntentId();
       
-      updatePaymentStatus('confirming', '🧪 Simulation de la confirmation...', 70);
-      
-      // Récupérer le token depuis localStorage
-      const token = localStorage.getItem('authToken') || 
-                   localStorage.getItem('token') || 
-                   JSON.parse(localStorage.getItem('userData') || '{}').token;
-
-      console.log('🧪 [PaymentForm] Simulation - Appel de force-payment-success:', {
+      console.log('🔍 [PaymentForm] Paramètres disponibles:', {
         echeanceId,
+        commandeId,
         userId,
-        paymentIntentId: clientSecret.split('_secret_')[0]
+        paymentIntentId,
+        clientSecret: clientSecret ? 'présent' : 'absent',
+        amount,
+        description
       });
 
-      const apiUrl = `${window.location.protocol}//${window.location.hostname}:3000/paiements/force-payment-success`;
+      if (!paymentIntentId) {
+        throw new Error('PaymentIntent ID introuvable dans clientSecret');
+      }
+
+      const token = localStorage.getItem('token') || 
+                   localStorage.getItem('authToken') || 
+                   JSON.parse(localStorage.getItem('userData') || '{}').token;
+
+      // CORRIGÉ: Construire le body selon le type de paiement
+      let simulationBody;
       
-      const response = await fetch(apiUrl, {
+      if (commandeId) {
+        // Pour les commandes
+        simulationBody = {
+          paymentIntentId: paymentIntentId,
+          commandeId: commandeId,
+          userId: userId,
+          amount: amount || 0,
+          description: description || `Simulation commande #${commandeId}`
+        };
+        console.log('🛒 [PaymentForm] Body simulation COMMANDE:', simulationBody);
+      } else if (echeanceId) {
+        // Pour les échéances
+        simulationBody = {
+          paymentIntentId: paymentIntentId,
+          echeanceId: echeanceId,
+          userId: userId,
+          amount: amount || 0,
+          description: description || `Simulation échéance #${echeanceId}`
+        };
+        console.log('💰 [PaymentForm] Body simulation ÉCHÉANCE:', simulationBody);
+      } else {
+        throw new Error('Aucun ID de commande ou d\'échéance disponible pour la simulation');
+      }
+
+      console.log('📡 [PaymentForm] Envoi simulation vers /paiements/force-payment-success...');
+
+      const response = await fetch(apiUrl('paiements/force-payment-success'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          paymentIntentId: clientSecret.split('_secret_')[0],
-          echeanceId: echeanceId,
-          userId: userId
-        })
+        credentials: 'include',
+        body: JSON.stringify(simulationBody)
       });
 
       console.log('📊 [PaymentForm] Réponse simulation:', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
-        headers: {
-          'content-type': response.headers.get('content-type')
-        }
+        headers: Object.fromEntries(response.headers.entries())
       });
 
-      if (response.ok) {
-        // AMÉLIORÉ: Gestion robuste de la réponse JSON
-        let result;
-        const contentType = response.headers.get('content-type');
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            result = await response.json();
-            console.log('✅ [PaymentForm] Réponse JSON parsée:', result);
-          } catch (jsonError) {
-            console.error('❌ [PaymentForm] Erreur parsing JSON:', jsonError);
-            const textResponse = await response.text();
-            console.log('📄 [PaymentForm] Réponse brute:', textResponse);
-            
-            // Si la réponse contient "success": true quelque part, considérer comme succès
-            if (textResponse.includes('"success":true') || textResponse.includes('success: true')) {
-              result = { 
-                success: true, 
-                message: 'Simulation réussie (parsing JSON échoué mais réponse positive détectée)',
-                rawResponse: textResponse 
-              };
-            } else {
-              throw new Error(`Réponse invalide du serveur: ${textResponse}`);
-            }
-          }
-        } else {
-          // Si ce n'est pas du JSON, traiter comme du texte
-          const textResponse = await response.text();
-          console.log('📄 [PaymentForm] Réponse texte:', textResponse);
-          
-          if (textResponse.includes('success') || response.status === 200) {
-            result = { 
-              success: true, 
-              message: 'Simulation réussie (réponse non-JSON)',
-              rawResponse: textResponse 
-            };
-          } else {
-            throw new Error(`Réponse inattendue: ${textResponse}`);
-          }
-        }
-
-        // VÉRIFIÉ: Vérifier le succès dans la réponse
-        if (result.success || result.isConfirm || response.status === 200) {
-          console.log('✅ [PaymentForm] Simulation validée comme réussie');
-          updatePaymentStatus('succeeded', '🎉 Simulation réussie ! Redirection en cours...', 100);
-          
-          setTimeout(() => {
-            onSuccess({ 
-              paymentIntent: { 
-                id: clientSecret.split('_secret_')[0],
-                status: 'succeeded',
-                amount: amount 
-              },
-              simulated: true,
-              simulationResult: result
-            });
-          }, 1500);
-        } else {
-          console.warn('⚠️ [PaymentForm] Réponse positive mais succès non confirmé:', result);
-          throw new Error(`Simulation échouée: ${result.message || 'Statut inconnu'}`);
-        }
-      } else {
-        // AMÉLIORÉ: Gestion des erreurs HTTP avec plus de détails
-        let errorDetails;
+      if (!response.ok) {
+        let errorBody;
         try {
-          errorDetails = await response.json();
+          errorBody = await response.json();
         } catch {
-          errorDetails = await response.text();
+          errorBody = await response.text();
         }
         
         console.error('❌ [PaymentForm] Erreur HTTP simulation:', {
           status: response.status,
           statusText: response.statusText,
-          body: errorDetails
+          body: errorBody
         });
         
-        throw new Error(`HTTP ${response.status}: ${response.statusText}${errorDetails ? ` - ${JSON.stringify(errorDetails)}` : ''}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${JSON.stringify(errorBody)}`);
       }
-      
+
+      const result = await response.json();
+      console.log('✅ [PaymentForm] Simulation réussie:', result);
+
+      // Simuler un objet PaymentIntent pour la cohérence
+      const simulatedPaymentResult = {
+        paymentIntent: {
+          id: paymentIntentId,
+          status: 'succeeded',
+          amount: simulationBody.amount,
+          currency: 'eur'
+        },
+        simulated: true,
+        simulationResult: result
+      };
+
+      console.log('🎉 [PaymentForm] Appel onSuccess avec résultat simulé:', simulatedPaymentResult);
+      onSuccess(simulatedPaymentResult);
+
     } catch (error: any) {
       console.error('❌ [PaymentForm] Erreur simulation complète:', error);
-      updatePaymentStatus('failed', 'Erreur de simulation', 0);
-      
-      // AMÉLIORÉ: Messages d'erreur plus informatifs
-      let errorMsg = '';
-      if (error.message.includes('404')) {
-        errorMsg = `❌ Route de simulation non trouvée (404)
-
-🔧 Solutions :
-• Vérifiez que le serveur API est démarré sur le port 3000
-• URL tentée : ${window.location.protocol}//${window.location.hostname}:3000/paiements/force-payment-success
-• Commande : npm run start:api:dev`;
-      } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        errorMsg = `❌ Impossible de contacter le serveur API
-
-🔧 Solutions :
-• Vérifiez que le serveur API est démarré
-• URL : ${window.location.protocol}//${window.location.hostname}:3000
-• Vérifiez les logs du serveur API`;
-      } else if (error.message.includes('JSON')) {
-        errorMsg = `⚠️ Problème de format de réponse du serveur
-
-🔧 Le serveur a répondu mais le format n'est pas valide
-• Vérifiez les logs du serveur API
-• La simulation a peut-être réussi malgré cette erreur
-
-📄 Détails : ${error.message}`;
-      } else {
-        errorMsg = `❌ Erreur de simulation : ${error.message}
-
-🔧 Si le problème persiste :
-• Vérifiez les logs du serveur API
-• Vérifiez que l'authentification est désactivée pour les tests
-• URL : ${window.location.protocol}//${window.location.hostname}:3000/paiements/force-payment-success`;
-      }
-      
-      setErrorMessage(errorMsg);
       onError(error);
-    } finally {
-      setIsProcessing(false);
     }
   };
+
+  // AJOUTÉ: Extraire le paymentIntentId depuis le clientSecret
+  const getPaymentIntentId = () => {
+    if (!clientSecret) return null;
+    // Le clientSecret a le format: "pi_xxxxx_secret_yyyy"
+    return clientSecret.split('_secret_')[0];
+  };
+
+  // AJOUTÉ: Debug des données au render
+  console.log('🔧 [PaymentForm] Render avec données:', {
+    echeanceId,
+    commandeId,
+    userId,
+    paymentIntentId: getPaymentIntentId(),
+    hasClientSecret: !!clientSecret,
+    clientSecretFormat: clientSecret ? clientSecret.substring(0, 10) + '...' : 'absent',
+    amount,
+    paymentType: commandeId ? 'commande' : 'echeance'
+  });
 
   return (
     <Form onSubmit={handleSubmit}>
@@ -751,13 +723,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             size="lg"
             icon={paymentStatus === 'succeeded' ? <CheckCircleIcon /> : <CreditCardIcon />}
             isLoading={isProcessing}
-            isDisabled={!stripe || !elements || isProcessing || !acceptTerms || isSimulationMode}
+            isDisabled={!stripe || !elements || isProcessing || !acceptTerms || isSimulationMode || hasAttemptedPayment}
             style={{ 
               minWidth: '200px',
               fontSize: '16px',
               padding: '12px 24px',
               backgroundColor: paymentStatus === 'succeeded' ? '#28a745' : undefined,
-              opacity: isSimulationMode ? 0.6 : 1
+              opacity: (isSimulationMode || hasAttemptedPayment) ? 0.6 : 1
             }}
           >
             {isProcessing ? (
@@ -767,6 +739,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               </>
             ) : paymentStatus === 'succeeded' ? (
               'Paiement réussi ✅'
+            ) : hasAttemptedPayment ? (
+              'Paiement en cours de traitement...'
             ) : isSimulationMode ? (
               `Payer ${formatAmount(amount)} (Mode simulation actif)`
             ) : (
@@ -776,15 +750,28 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         </FlexItem>
       </Flex>
 
-      {/* Bouton pour activer la simulation si désactivée */}
-      {!isSimulationMode && process.env.NODE_ENV === 'development' && (
-        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+      {/* AJOUTÉ: Message d'avertissement si paiement déjà tenté */}
+      {hasAttemptedPayment && !isProcessing && paymentStatus !== 'succeeded' && (
+        <div style={{ 
+          marginTop: '1rem', 
+          padding: '1rem', 
+          backgroundColor: '#fff3cd',
+          borderRadius: '8px',
+          border: '1px solid #ffeaa7',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#856404' }}>
+            ⚠️ Paiement en cours de traitement
+          </div>
+          <div style={{ fontSize: '14px', color: '#856404' }}>
+            Un paiement a déjà été initié. Actualisez la page pour vérifier le statut ou contactez le support si le problème persiste.
+          </div>
           <Button
             variant="link"
-            onClick={() => setIsSimulationMode(true)}
-            style={{ color: '#ffc107' }}
+            onClick={() => window.location.reload()}
+            style={{ color: '#856404', marginTop: '0.5rem' }}
           >
-            🧪 Activer le mode simulation (développement)
+            🔄 Actualiser la page
           </Button>
         </div>
       )}
@@ -836,6 +823,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           💡 En cas de refus, contactez votre banque. Aucun débit n'est effectué en cas d'échec.
         </p>
       </div>
+
+      {/* Bouton pour activer la simulation si désactivée */}
+      {!isSimulationMode && process.env.NODE_ENV === 'development' && (
+        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+          <Button
+            variant="link"
+            onClick={() => setIsSimulationMode(true)}
+            style={{ color: '#ffc107' }}
+          >
+            🧪 Activer le mode simulation (développement)
+          </Button>
+        </div>
+      )}
     </Form>
   );
 };

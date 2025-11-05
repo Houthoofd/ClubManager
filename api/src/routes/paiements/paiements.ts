@@ -87,4 +87,89 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// MODIFIÉ: Route de simulation unifiée pour échéances ET commandes
+router.post('/force-payment-success', async (req: any, res: any) => {
+  try {
+    const { paymentIntentId, echeanceId, commandeId, userId, amount, description } = req.body;
+
+    console.log('🧪 [Paiements] Simulation paiement reçue:', {
+      paymentIntentId,
+      echeanceId,
+      commandeId,
+      userId,
+      amount,
+      description,
+      type: echeanceId ? 'echéance' : 'commande'
+    });
+
+    // CORRIGÉ: Validation flexible
+    if (!paymentIntentId || !userId) {
+      return res.status(400).json({
+        error: 'paymentIntentId et userId requis'
+      });
+    }
+
+    if (!echeanceId && !commandeId) {
+      return res.status(400).json({
+        error: 'echeanceId OU commandeId requis'
+      });
+    }
+
+    if (echeanceId && commandeId) {
+      return res.status(400).json({
+        error: 'echeanceId et commandeId ne peuvent pas être fournis simultanément'
+      });
+    }
+
+    // Traitement selon le type
+    if (echeanceId) {
+      console.log('💰 [Paiements] Simulation échéance:', echeanceId);
+      
+      // Optionnel : Vérifier que l'échéance existe et appartient à l'utilisateur
+      // const paiements = new Paiements();
+      // const echeance = await paiements.verifierEcheance(echeanceId, userId);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Paiement échéance simulé avec succès',
+        data: {
+          paymentIntentId,
+          echeanceId,
+          userId,
+          amount,
+          type: 'echeance',
+          status: 'succeeded'
+        }
+      });
+      
+    } else if (commandeId) {
+      console.log('🛒 [Paiements] Simulation commande:', commandeId);
+      
+      // Optionnel : Vérifier que la commande existe et appartient à l'utilisateur
+      // const magasin = new Magasin();
+      // const commande = await magasin.verifierCommande(commandeId, userId);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Paiement commande simulé avec succès',
+        data: {
+          paymentIntentId,
+          commandeId,
+          userId,
+          amount,
+          type: 'commande',
+          status: 'succeeded'
+        }
+      });
+    }
+
+  } catch (error: any) {
+    console.error('❌ [Paiements] Erreur simulation:', error);
+    res.status(500).json({
+      error: 'Erreur lors de la simulation de paiement',
+      details: error.message
+    });
+  }
+});
+
 export { router as paiementsRoutes };
