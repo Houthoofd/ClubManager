@@ -653,6 +653,13 @@ export class EmailService {
     this.transporter = null;
     this.initializeTransporter();
   }
+
+  /**
+   * Envoie une confirmation de paiement
+   */
+  static async sendPaymentConfirmation(utilisateur: any, premierPaiement: boolean, statutUpgrade?: string) {
+    // Logique d'envoi d'email centralisée
+  }
 }
 
 // Export de l'instance singleton

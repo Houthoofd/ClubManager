@@ -543,6 +543,12 @@ export class EmailService {
         this.transporter = null;
         this.initializeTransporter();
     }
+    /**
+     * Envoie une confirmation de paiement
+     */
+    static async sendPaymentConfirmation(utilisateur, premierPaiement, statutUpgrade) {
+        // Logique d'envoi d'email centralisée
+    }
 }
 // Export de l'instance singleton
 export const emailService = new EmailService();

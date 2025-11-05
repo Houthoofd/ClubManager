@@ -644,8 +644,8 @@ export class Paiements {
      */
     async mettreAJourStatutUtilisateur(utilisateurId, nouveauStatut) {
         return new Promise((resolve, reject) => {
-            // D'abord, récupérer l'ID du statut "utilisateur"
-            const getStatusIdSql = `SELECT id FROM status WHERE nom_status = ?`;
+            // CORRIGÉ: Utiliser le bon nom de colonne
+            const getStatusIdSql = `SELECT id FROM status WHERE nom_role = ?`; // CHANGÉ: nom_status → nom_role
             this.mysqlConnector.query(getStatusIdSql, [nouveauStatut], (error, statusResults) => {
                 if (error) {
                     console.error('❌ Erreur récupération ID statut:', error);
@@ -658,12 +658,12 @@ export class Paiements {
                     return;
                 }
                 const statusId = statusResults[0].id;
-                // Ensuite, mettre à jour l'utilisateur
+                // CORRIGÉ: Utiliser le bon nom de colonne pour l'utilisateur
                 const updateUserSql = `
           UPDATE utilisateurs 
-          SET status = ? 
+          SET status_id = ? 
           WHERE id = ?
-        `;
+        `; // CHANGÉ: status → status_id
                 this.mysqlConnector.query(updateUserSql, [statusId, utilisateurId], (updateError, updateResults) => {
                     if (updateError) {
                         console.error('❌ Erreur mise à jour statut utilisateur:', updateError);

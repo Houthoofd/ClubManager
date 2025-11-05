@@ -9,9 +9,19 @@ import {
   Flex,
   FlexItem,
   Badge,
+  Divider
 } from '@patternfly/react-core';
-import { EnvelopeIcon, CreditCardIcon, ExclamationTriangleIcon } from '@patternfly/react-icons';
+import {
+  EnvelopeIcon,
+  CreditCardIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  CalendarAltIcon,
+  DollarSignIcon // CORRIGÉ: Utiliser DollarSignIcon au lieu de EuroIcon
+} from '@patternfly/react-icons';
 import { apiUrl } from '../../pages/apiUrl';
+import '../../styles/echeances.css';
 
 interface EcheancesPaiementProps {
   paiementsEcheances: any[];
@@ -188,214 +198,289 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
 
   // Fonction pour formater la date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR');
+    if (!dateString) return 'Date non définie';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return 'Date invalide';
+    }
+  };
+
+  const formatMontant = (montant: number) => {
+    if (typeof montant !== 'number' || isNaN(montant)) return '0,00 €';
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(montant);
   };
 
   // MODIFIÉ: Vérification de sécurité avant d'accéder à .length
   if (paiementsEcheances.length === 0) {
-    return <Alert variant="info" title="Aucune échéance de paiement pour cet utilisateur." />;
+    return (
+      <div style={{ textAlign: 'center', padding: '3rem' }}>
+        <CreditCardIcon style={{ fontSize: '3rem', color: '#6c757d', marginBottom: '1rem' }} />
+        <Title headingLevel="h3" size="lg" style={{ color: '#6c757d', marginBottom: '0.5rem' }}>
+          Aucune échéance
+        </Title>
+        <p style={{ color: '#6c757d' }}>
+          Vous n'avez actuellement aucune échéance de paiement.
+        </p>
+      </div>
+    );
   }
 
-  const getStatusColor = (statut: string, isOverdue: boolean) => {
-    const isPaid = statut === 'payé';
-    if (isPaid) return { bg: '#e8f5e8', text: '#2e7d32', border: '#4caf50' };
-    if (isOverdue) return { bg: '#ffebee', text: '#c62828', border: '#f44336' };
-    return { bg: '#fff3e0', text: '#ef6c00', border: '#ff9800' };
-  };
-
-  // Fonction pour calculer les jours restants (corrigée)
-  const calculateDaysRemaining = (echeance: string): number => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate day calculation
-    const echeanceDate = new Date(echeance);
-    echeanceDate.setHours(0, 0, 0, 0); // Reset time to midnight
-    
-    // Vérifier si la date est valide
-    if (isNaN(echeanceDate.getTime())) {
-      return 0; // Return 0 if date is invalid
-    }
-    
-    const diffTime = echeanceDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const calculateDaysDifference = (dateEcheance: Date) => {
-    const today = new Date();
-    const diffTime = dateEcheance.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const renderStatusIndicator = (paiement: any, diffDays: number) => {
-    const isPaid = paiement.statut === 'payé';
-    
-    if (isPaid) {
-      return (
-        <div style={{ color: '#2e7d32', fontSize: '0.9rem', fontWeight: '500' }}>
-          ✓ Payé
-        </div>
-      );
-    } else if (diffDays > 0) {
-      return (
-        <div style={{ color: '#ef6c00', fontSize: '0.9rem' }}>
-          Dans {diffDays} jour{diffDays > 1 ? 's' : ''}
-        </div>
-      );
-    } else if (diffDays === 0) {
-      return (
-        <div style={{ color: '#f57c00', fontSize: '0.9rem', fontWeight: '500' }}>
-          Échéance aujourd'hui
-        </div>
-      );
-    } else {
-      return (
-        <div style={{ color: '#c62828', fontSize: '0.9rem', fontWeight: '500' }}>
-          En retard de {Math.abs(diffDays)} jour{Math.abs(diffDays) > 1 ? 's' : ''}
-        </div>
-      );
-    }
-  };
-
-  // Trier les paiements par ordre de priorité (échéances les plus proches en premier)
-  const sortedPaiements = [...paiementsEcheances].sort((a, b) => {
-    const daysA = calculateDaysRemaining(a.date_echeance || a.echeance);
-    const daysB = calculateDaysRemaining(b.date_echeance || b.echeance);
-    return daysA - daysB; // Ordre croissant (échéances les plus proches en premier)
-  });
-
   return (
-    <div>
-      <Title headingLevel="h2" size="xl" style={{ marginBottom: '1rem' }}>
-        Échéances de paiement
+    <div style={{ padding: '1rem 0' }}>
+      <Title headingLevel="h2" size="xl" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <CreditCardIcon style={{ color: '#0066cc' }} />
+        Mes échéances de paiement
       </Title>
+      
+      <div style={{ display: 'grid', gap: '1.5rem' }}>
+        {paiementsEcheances.map((echeance, index) => {
+          if (!echeance || typeof echeance !== 'object') {
+            console.warn(`⚠️ [EcheancesPaiement] Échéance invalide à l'index ${index}:`, echeance);
+            return null;
+          }
 
-      {/* MODIFIÉ: Double vérification avec fallback sécurisé */}
-      {!paiementsEcheances || !Array.isArray(paiementsEcheances) || paiementsEcheances.length === 0 ? (
-        <Alert variant="info" title="Aucune échéance de paiement" />
-      ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          {paiementsEcheances.map((echeance, index) => {
-            // AJOUTÉ: Vérification de sécurité pour chaque échéance
-            if (!echeance || typeof echeance !== 'object') {
-              console.warn(`⚠️ [EcheancesPaiement] Échéance invalide à l'index ${index}:`, echeance);
-              return null;
+          const isPayee = echeance.statut?.toLowerCase() === 'payé';
+          const isEchu = isPaiementEchu(echeance.date_echeance);
+          
+          // CORRIGÉ: Fonction pour obtenir le style selon le statut
+          const getStatutStyle = (statut: string) => {
+            switch (statut?.toLowerCase()) {
+              case 'payé':
+                return {
+                  cardStyle: {
+                    background: 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)',
+                    border: '2px solid #28a745',
+                    boxShadow: '0 8px 25px rgba(40, 167, 69, 0.15)',
+                    position: 'relative' as const,
+                    overflow: 'hidden' as const,
+                    transition: 'all 0.3s ease'
+                  },
+                  badgeVariant: 'success' as const,
+                  icon: <CheckCircleIcon style={{ color: '#28a745', fontSize: '1.2rem' }} />,
+                  badgeText: '✅ Payé',
+                  headerStyle: {
+                    background: 'rgba(40, 167, 69, 0.1)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    marginBottom: '1rem'
+                  }
+                };
+              case 'en attente':
+                return {
+                  cardStyle: {
+                    background: 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)',
+                    border: '2px solid #ffc107',
+                    boxShadow: '0 4px 15px rgba(255, 193, 7, 0.2)'
+                  },
+                  badgeVariant: 'warning' as const,
+                  icon: <ClockIcon style={{ color: '#ffc107', fontSize: '1.2rem' }} />,
+                  badgeText: '⏳ En attente',
+                  headerStyle: {
+                    background: 'rgba(255, 193, 7, 0.1)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    marginBottom: '1rem'
+                  }
+                };
+              case 'échu':
+                return {
+                  cardStyle: {
+                    background: 'linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)',
+                    border: '2px solid #dc3545',
+                    boxShadow: '0 4px 15px rgba(220, 53, 69, 0.2)'
+                  },
+                  badgeVariant: 'danger' as const,
+                  icon: <ExclamationTriangleIcon style={{ color: '#dc3545', fontSize: '1.2rem' }} />,
+                  badgeText: '❌ Échu',
+                  headerStyle: {
+                    background: 'rgba(220, 53, 69, 0.1)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    marginBottom: '1rem'
+                  }
+                };
+              default:
+                return {
+                  cardStyle: {
+                    background: '#f8f9fa',
+                    border: '1px solid #dee2e6'
+                  },
+                  badgeVariant: 'secondary' as const,
+                  icon: <ClockIcon />,
+                  badgeText: statut || 'Statut inconnu',
+                  headerStyle: {}
+                };
             }
+          };
 
-            const isEchu = isPaiementEchu(echeance.date_echeance);
-            const isLoading = rappelLoading[echeance.id] || false;
-
-            return (
-              <Card key={echeance.id || `echeance-${index}`} style={{ 
-                border: isEchu ? '2px solid #dc3545' : '1px solid #dee2e6' 
-              }}>
-                <CardBody>
+          const { cardStyle, badgeVariant, icon, badgeText, headerStyle } = getStatutStyle(echeance.statut);
+          
+          return (
+            <Card 
+              key={echeance.id || index} 
+              style={{
+                ...cardStyle,
+                ...(isPayee && {
+                  ':hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 12px 35px rgba(40, 167, 69, 0.25)'
+                  }
+                })
+              }}
+              className={isPayee ? 'echeance-payee' : ''}
+            >
+              {/* Effet décoratif pour les échéances payées */}
+              {isPayee && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: '100px',
+                  height: '100px',
+                  background: 'linear-gradient(45deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.3) 100%)',
+                  borderRadius: '0 0 0 100px',
+                  zIndex: 1
+                }} />
+              )}
+              
+              <CardBody style={{ position: 'relative', zIndex: 2 }}>
+                {/* En-tête avec statut */}
+                <div style={headerStyle}>
                   <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem flex={{ default: 'flex_1' }}>
-                      <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsSm' }}>
-                        <FlexItem>
-                          <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
-                            <FlexItem>
-                              <Title headingLevel="h4" size="lg">
-                                {echeance.description || 'Paiement d\'abonnement'}
-                              </Title>
-                            </FlexItem>
-                            {isEchu && (
-                              <FlexItem>
-                                <Badge variant="outline" color="red">
-                                  <ExclamationTriangleIcon style={{ marginRight: '4px' }} />
-                                  Échu
-                                </Badge>
-                              </FlexItem>
-                            )}
-                          </Flex>
-                        </FlexItem>
-                        
-                        <FlexItem>
-                          <div style={{ color: '#6a6e73', fontSize: '14px' }}>
-                            <strong>Montant:</strong> {echeance.montant || 0}€
-                          </div>
-                        </FlexItem>
-                        
-                        <FlexItem>
-                          <div style={{ color: '#6a6e73', fontSize: '14px' }}>
-                            <strong>Date d'échéance:</strong> {formatDate(echeance.date_echeance)}
-                          </div>
-                        </FlexItem>
-                        
-                        <FlexItem>
-                          <div style={{ color: '#6a6e73', fontSize: '14px' }}>
-                            <strong>Statut:</strong> 
-                            <Badge 
-                              variant="outline" 
-                              color={echeance.statut === 'payé' ? 'green' : 'orange'}
-                              style={{ marginLeft: '8px' }}
-                            >
-                              {echeance.statut || 'En attente'}
-                            </Badge>
-                          </div>
-                        </FlexItem>
-                      </Flex>
+                    <FlexItem>
+                      <Title headingLevel="h3" size="lg" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                        {icon}
+                        Échéance #{echeance.id}
+                      </Title>
                     </FlexItem>
+                    <FlexItem>
+                      <Badge variant={badgeVariant} style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
+                        {badgeText}
+                      </Badge>
+                    </FlexItem>
+                  </Flex>
+                </div>
 
-                    {/* Boutons d'action pour les paiements échus */}
-                    {isEchu && echeance.statut !== 'payé' && (
+                {/* Informations principales */}
+                <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
+                  {/* Montant */}
+                  <FlexItem>
+                    <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
                       <FlexItem>
-                        <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsSm' }}>
-                          {isComptePage ? (
-                            <FlexItem>
-                              <Button
-                                variant="primary"
-                                icon={<CreditCardIcon />}
-                                onClick={() => handleAllerPaiement(echeance.id)}
-                                size="sm"
-                              >
-                                Payer maintenant
-                              </Button>
-                            </FlexItem>
-                          ) : (
-                            <FlexItem>
-                              <Button
-                                variant="secondary"
-                                icon={<EnvelopeIcon />}
-                                onClick={() => handleEnvoyerRappel(echeance.id, echeance.utilisateur_id)}
-                                isLoading={isLoading}
-                                isDisabled={isLoading}
-                                size="sm"
-                              >
-                                {isLoading ? 'Envoi...' : 'Envoyer rappel'}
-                              </Button>
-                            </FlexItem>
-                          )}
+                        <DollarSignIcon style={{ color: isPayee ? '#28a745' : '#0066cc', fontSize: '1.1rem' }} />
+                      </FlexItem>
+                      <FlexItem>
+                        <span style={{ fontWeight: 'bold' }}>
+                          Montant:
+                        </span>
+                      </FlexItem>
+                      <FlexItem>
+                        <Title 
+                          headingLevel="h4" 
+                          size="lg" 
+                          style={{ 
+                            color: isPayee ? '#28a745' : '#dc3545',
+                            fontWeight: 'bold',
+                            margin: 0
+                          }}
+                        >
+                          {formatMontant(echeance.montant)}
+                        </Title>
+                      </FlexItem>
+                    </Flex>
+                  </FlexItem>
+
+                  {/* Date d'échéance */}
+                  <FlexItem>
+                    <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+                      <FlexItem>
+                        <CalendarAltIcon style={{ color: '#6c757d', fontSize: '1.1rem' }} />
+                      </FlexItem>
+                      <FlexItem>
+                        <span style={{ fontWeight: 'bold' }}>
+                          Date d'échéance:
+                        </span> {formatDate(echeance.date_echeance)}
+                      </FlexItem>
+                    </Flex>
+                  </FlexItem>
+
+                  {/* Date de paiement (si payé) */}
+                  {isPayee && echeance.date_paiement && (
+                    <FlexItem>
+                      <div style={{
+                        background: 'rgba(40, 167, 69, 0.1)',
+                        border: '1px solid rgba(40, 167, 69, 0.3)',
+                        borderRadius: '6px',
+                        padding: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        <CheckCircleIcon style={{ color: '#28a745', fontSize: '1.1rem' }} />
+                        <span style={{ color: '#28a745', fontWeight: '500' }}>
+                          <strong>Payé le:</strong> {formatDate(echeance.date_paiement)}
+                        </span>
+                      </div>
+                    </FlexItem>
+                  )}
+
+                  {/* Description */}
+                  {echeance.description && (
+                    <FlexItem>
+                      <span style={{ color: '#6c757d', fontStyle: 'italic' }}>
+                        {echeance.description}
+                      </span>
+                    </FlexItem>
+                  )}
+
+                  {/* Action pour les échéances non payées */}
+                  {!isPayee && (
+                    <>
+                      <FlexItem>
+                        <Divider style={{ margin: '1rem 0' }} />
+                      </FlexItem>
+                      <FlexItem>
+                        <Flex justifyContent={{ default: 'justifyContentEnd' }}>
+                          <FlexItem>
+                            <Button
+                              variant="primary"
+                              size="lg"
+                              component="a"
+                              href={`/pages/paiement?echeance=${echeance.id}&userId=${userId}`}
+                              icon={<CreditCardIcon />}
+                              style={{
+                                background: 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
+                                border: 'none',
+                                boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)',
+                                transition: 'all 0.3s ease'
+                              }}
+                            >
+                              Payer maintenant
+                            </Button>
+                          </FlexItem>
                         </Flex>
                       </FlexItem>
-                    )}
-                  </Flex>
-
-                  {/* Message d'alerte pour les paiements échus */}
-                  {isEchu && echeance.statut !== 'payé' && (
-                    <Alert 
-                      variant="warning" 
-                      title="Paiement en retard" 
-                      style={{ marginTop: '1rem' }}
-                      isInline
-                    >
-                      Ce paiement est en retard depuis le {formatDate(echeance.date_echeance)}.
-                      {isComptePage 
-                        ? ' Cliquez sur "Payer maintenant" pour régulariser votre situation.'
-                        : ' Un rappel peut être envoyé à l\'utilisateur.'
-                      }
-                    </Alert>
+                    </>
                   )}
-                </CardBody>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                </Flex>
+              </CardBody>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };
 
-// MODIFIÉ: Fonctions utilitaires avec vérifications de sécurité
+// Fonctions utilitaires avec vérifications de sécurité
 const isPaiementEchu = (dateEcheance: string) => {
   if (!dateEcheance) return false;
   try {
@@ -405,16 +490,6 @@ const isPaiementEchu = (dateEcheance: string) => {
   } catch (e) {
     console.error('Erreur parsing date échéance:', dateEcheance);
     return false;
-  }
-};
-
-const formatDate = (dateString: string) => {
-  if (!dateString) return 'Date invalide';
-  try {
-    return new Date(dateString).toLocaleDateString('fr-FR');
-  } catch (e) {
-    console.error('Erreur formatage date:', dateString);
-    return 'Date invalide';
   }
 };
 

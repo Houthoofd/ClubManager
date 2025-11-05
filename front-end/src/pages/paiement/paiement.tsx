@@ -334,23 +334,56 @@ const PaiementPage: React.FC = () => {
                    localStorage.getItem('authToken') || 
                    JSON.parse(localStorage.getItem('userData') || '{}').token;
 
-      // AJOUTÉ: Vérifications de sécurité avant envoi
+      // NOUVEAU: Détection du mode simulation
+      const isSimulated = paymentResult.simulated || paymentResult.simulationResult;
+      
+      console.log('🔍 [PaiementPage] Type de paiement détecté:', {
+        isSimulated,
+        hasPaymentIntent: !!paymentResult?.paymentIntent?.id,
+        paymentIntentId: paymentResult?.paymentIntent?.id
+      });
+
+      // MODIFIÉ: Gestion spéciale pour les simulations
+      if (isSimulated) {
+        console.log('🧪 [PaiementPage] Simulation détectée - Traitement simplifié');
+        
+        // Pour les simulations, ne pas faire d'appel de confirmation supplémentaire
+        setPaymentSuccess(true);
+        
+        // Message de succès pour simulation
+        console.log('✅ [PaiementPage] Simulation traitée avec succès - Redirection...');
+        
+        setTimeout(() => {
+          const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+          const isAdmin = currentUserData?.status === 'administrateur' || currentUserData?.status === 'super-administrateur';
+          
+          if (isAdmin && currentUserData?.id !== parseInt(userId)) {
+            navigate(`/pages/utilisateurs/consulter/${userId}?tab=2&payment_success=simulation`);
+          } else {
+            navigate('/pages/compte?tab=2&success=simulation');
+          }
+        }, 2000);
+        
+        return; // IMPORTANT: Sortir ici pour éviter l'appel API
+      }
+
+      // AJOUTÉ: Vérifications de sécurité avant envoi pour les vrais paiements
       if (!paymentResult?.paymentIntent?.id) {
-        throw new Error('Données de paiement invalides');
+        throw new Error('Données de paiement invalides - PaymentIntent ID manquant');
       }
 
       if (!echeanceData?.montant) {
         throw new Error('Montant de l\'échéance invalide');
       }
 
-      console.log('📤 [PaiementPage] Envoi confirmation paiement vers serveur:', {
+      console.log('💳 [PaiementPage] Paiement Stripe réel - Envoi confirmation vers serveur:', {
         paymentIntentId: paymentResult.paymentIntent.id,
         echeanceId,
         userId,
         amount: echeanceData.montant
       });
 
-      // Notifier le serveur que le paiement est confirmé
+      // Notifier le serveur que le paiement est confirmé (SEULEMENT pour les vrais paiements)
       const response = await fetch(apiUrl('paiements/confirm-payment'), {
         method: 'POST',
         headers: {
@@ -366,6 +399,12 @@ const PaiementPage: React.FC = () => {
         }),
       });
 
+      console.log('📊 [PaiementPage] Réponse confirm-payment:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
+      });
+
       if (response.ok) {
         const confirmationData = await response.json();
         console.log('✅ [PaiementPage] Confirmation reçue du serveur:', confirmationData);
@@ -377,7 +416,7 @@ const PaiementPage: React.FC = () => {
         
         setPaymentSuccess(true);
         
-        // MODIFIÉ: Redirection adaptée selon qui effectue le paiement
+        // Redirection adaptée selon qui effectue le paiement
         setTimeout(() => {
           const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
           const isAdmin = currentUserData?.status === 'administrateur' || currentUserData?.status === 'super-administrateur';
@@ -390,20 +429,86 @@ const PaiementPage: React.FC = () => {
           } else {
             // Utilisateur traitant son propre paiement
             const redirectUrl = confirmationData?.premier_paiement 
-              ? '/pages/compte?tab=paiements&success=true&first_payment=true'
-              : '/pages/compte?tab=paiements&success=true';
+              ? '/pages/compte?tab=2&success=true&first_payment=true'
+              : '/pages/compte?tab=2&success=true';
             console.log('🔄 [PaiementPage] Redirection utilisateur vers:', redirectUrl);
             navigate(redirectUrl);
           }
         }, 3000);
       } else {
-        const errorData = await response.json();
-        console.error('❌ [PaiementPage] Erreur confirmation serveur:', errorData);
-        throw new Error(errorData?.error || 'Erreur lors de la confirmation du paiement');
+        // AMÉLIORÉ: Gestion d'erreur pour les vrais paiements
+        let errorDetails;
+        try {
+          errorDetails = await response.json();
+        } catch {
+          errorDetails = await response.text();
+        }
+        
+        console.error('❌ [PaiementPage] Erreur confirmation serveur:', {
+          status: response.status,
+          errorDetails
+        });
+
+        // Message d'erreur spécifique mais informatif
+        const errorMessage = `⚠️ Paiement traité mais problème de confirmation automatique
+
+💳 Votre paiement Stripe a été effectué avec succès
+📝 Référence : ${paymentResult.paymentIntent.id}
+
+🔧 Détails techniques :
+${typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails, null, 2)}
+
+💡 Que faire maintenant :
+• Votre compte sera mis à jour automatiquement dans quelques minutes
+• Vous pouvez vérifier votre compte pour voir les changements
+• En cas de doute, contactez le support avec cette référence
+
+🔄 Redirection vers votre compte...`;
+
+        setError(errorMessage);
+        
+        // Redirection même en cas d'erreur car le paiement a réussi
+        setTimeout(() => {
+          navigate('/pages/compte?tab=2&payment=' + paymentResult.paymentIntent.id);
+        }, 5000);
       }
+
     } catch (error: any) {
-      console.error('❌ [PaiementPage] Erreur confirmation:', error);
-      setError('Paiement effectué mais erreur de confirmation. Contactez le support.');
+      console.error('❌ [PaiementPage] Erreur lors de la gestion du succès:', error);
+      
+      // AMÉLIORÉ: Message d'erreur détaillé selon le contexte
+      let errorMessage = '';
+      
+      if (paymentResult.simulated) {
+        errorMessage = `🧪 Erreur lors de la simulation de paiement
+
+🔧 Détails : ${error.message}
+
+💡 La simulation a peut-être réussi malgré cette erreur
+🔄 Vérification de votre compte recommandée...`;
+      } else {
+        errorMessage = `⚠️ Paiement effectué mais erreur de traitement
+
+💳 Votre paiement a été traité par Stripe
+📝 Référence : ${paymentResult?.paymentIntent?.id || 'N/A'}
+
+🔧 Erreur technique : ${error.message}
+
+💡 Actions recommandées :
+• Votre compte sera mis à jour automatiquement
+• Vérifiez votre compte dans quelques minutes
+• Contactez le support si nécessaire
+• Conservez cette référence : ${paymentResult?.paymentIntent?.id || echeanceId}
+
+🔄 Redirection vers votre compte...`;
+      }
+
+      setError(errorMessage);
+      
+      // Redirection vers le compte même en cas d'erreur
+      setTimeout(() => {
+        navigate('/pages/compte?tab=2');
+      }, 5000);
     }
   };
 
@@ -510,20 +615,28 @@ const PaiementPage: React.FC = () => {
       <Page>
         <PageHeader
           title="Paiement en ligne"
-          subtitle="Régularisez votre situation rapidement et en toute sécurité"
+          subtitle="Information sur le traitement de votre paiement"
           variant="payment"
         />
         <PageSection>
-          <Alert variant="danger" title="Erreur">
+          {/* MODIFIÉ: Alerte avec style adapté selon le type d'erreur */}
+          <Alert 
+            variant={error.includes('⚠️') ? "warning" : "danger"} 
+            title={error.includes('⚠️') ? "Information importante" : "Erreur"}
+            style={{ 
+              whiteSpace: 'pre-line',
+              lineHeight: '1.6' 
+            }}
+          >
             {error}
           </Alert>
           <div style={{ marginTop: '2rem' }}>
             <Button 
               variant="primary" 
               icon={<ArrowLeftIcon />}
-              onClick={() => navigate('/pages/compte')}
+              onClick={() => navigate('/pages/compte?tab=2')}
             >
-              Retour au compte
+              Accéder à mon compte
             </Button>
           </div>
         </PageSection>
@@ -559,6 +672,12 @@ const PaiementPage: React.FC = () => {
                     <p>
                       Référence de l'échéance : <strong>#{echeanceData.id}</strong>
                     </p>
+                    {/* AJOUTÉ: Indication si c'est une simulation */}
+                    {window.location.href.includes('simulation') && (
+                      <p style={{ color: '#856404', fontStyle: 'italic' }}>
+                        🧪 <strong>Mode simulation</strong> - Paiement simulé pour les tests
+                      </p>
+                    )}
                   </Alert>
 
                   <div style={{ marginBottom: '2rem' }}>
@@ -569,7 +688,7 @@ const PaiementPage: React.FC = () => {
 
                   <Button 
                     variant="primary" 
-                    onClick={() => navigate('/pages/compte?tab=paiements&success=true')}
+                    onClick={() => navigate('/pages/compte?tab=2&success=true')}
                   >
                     Accéder à mon compte
                   </Button>

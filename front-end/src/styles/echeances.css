@@ -1,0 +1,87 @@
+/* Animation pour les échéances payées */
+.echeance-payee {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.echeance-payee:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(40, 167, 69, 0.25) !important;
+}
+
+/* Effet de brillance pour les échéances payées */
+.echeance-payee::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transition: all 0.6s;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.echeance-payee:hover::before {
+  left: 100%;
+}
+
+/* Animation d'apparition pour toutes les cartes */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.echeance-payee,
+.pf-c-card {
+  animation: slideInUp 0.5s ease-out;
+}
+
+/* Style pour les badges de statut */
+.pf-c-badge {
+  text-shadow: none;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Effets pour les boutons de paiement */
+.pf-c-button.pf-m-primary {
+  transition: all 0.3s ease;
+}
+
+.pf-c-button.pf-m-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.4) !important;
+}
+
+/* Style pour les icônes */
+.pf-c-card svg {
+  transition: all 0.3s ease;
+}
+
+.echeance-payee:hover svg {
+  transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .echeance-payee:hover {
+    transform: none;
+  }
+  
+  .echeance-payee::before {
+    display: none;
+  }
+}

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Spinner } from '@patternfly/react-core';
 import EcheancesPaiement from '../utilisateurs/EcheancesPaiement';
-import EcheancesPaiementsCards from '../utilisateurs/EcheancesPaiement'; // AJOUTÉ: Importer le vrai composant des cartes d'échéances
 
 interface PaiementsTabProps {
   isDataReady: boolean;
@@ -16,7 +15,7 @@ const PaiementsTab: React.FC<PaiementsTabProps> = ({
   userId,
   genererUrlPaiement
 }) => {
-  // AJOUTÉ: Debug et vérifications de sécurité
+  // Debug et vérifications de sécurité
   console.log('🔍 [PaiementsTab] Props reçues:', {
     isDataReady,
     paiementsEcheances: paiementsEcheances,
@@ -27,10 +26,10 @@ const PaiementsTab: React.FC<PaiementsTabProps> = ({
     genererUrlPaiement: !!genererUrlPaiement
   });
 
-  // AJOUTÉ: Vérification de sécurité
+  // Vérification de sécurité
   const echeancesSafe = Array.isArray(paiementsEcheances) ? paiementsEcheances : [];
 
-  // Afficher l'erreur d'authentification si présente (SANS redirection automatique)
+  // Afficher l'erreur d'authentification si présente
   if (echeancesSafe.errorEcheances && (echeancesSafe.errorEcheances.message?.includes('403') || echeancesSafe.errorEcheances.message?.includes('401'))) {
     return (
       <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -96,33 +95,9 @@ const PaiementsTab: React.FC<PaiementsTabProps> = ({
     <div className="paiements-tab">
       <EcheancesPaiement 
         paiementsEcheances={paiementsEcheances} 
-        userId={userId} // AJOUTÉ: Passer l'userId
-        genererUrlPaiement={genererUrlPaiement} // AJOUTÉ: Passer la fonction
-      />
-      
-      {/* Passer les nouvelles props au composant qui gère vraiment les cartes */}
-      <EcheancesPaiementsCards 
-        echeances={echeancesSafe} // MODIFIÉ: Utiliser echeancesSafe
         userId={userId}
         genererUrlPaiement={genererUrlPaiement}
       />
-      
-      {/* DEBUG: Afficher l'URL générée pour la première échéance */}
-      {echeancesSafe && echeancesSafe.length > 0 && genererUrlPaiement && (
-        <div style={{ 
-          margin: '1rem', 
-          padding: '1rem', 
-          background: '#f0f8ff', 
-          border: '1px solid #bee5eb',
-          borderRadius: '4px',
-          fontSize: '12px',
-          fontFamily: 'monospace'
-        }}>
-          <strong>🔧 DEBUG - URL générée pour première échéance:</strong>
-          <br />
-          Échéance #{echeancesSafe[0].id}: {genererUrlPaiement(echeancesSafe[0].id)}
-        </div>
-      )}
     </div>
   );
 };
