@@ -5,7 +5,7 @@ import {
   SelectOption,
   SelectList,
   Label,
-  NumberInput,
+  TextInput, // AJOUTÉ: Import de TextInput
 } from '@patternfly/react-core';
 import { ShoppingCartIcon, ChevronLeftIcon, ChevronRightIcon } from '@patternfly/react-icons';
 import BaseModal from '../common/modal/BaseModal';
@@ -33,6 +33,16 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedQuantite, setSelectedQuantite] = useState(1);
+  // AJOUTÉ: État local pour les stocks qui se met à jour automatiquement
+  const [stocksActuels, setStocksActuels] = useState(selectedArticle?.stocks || []);
+
+  // AJOUTÉ: Mettre à jour les stocks locaux quand l'article change
+  React.useEffect(() => {
+    if (selectedArticle?.stocks) {
+      console.log('📊 [Modal] Mise à jour stocks article:', selectedArticle.nom);
+      setStocksActuels(selectedArticle.stocks);
+    }
+  }, [selectedArticle?.stocks]);
 
   const nextImage = () => {
     if (selectedArticle?.images?.length > 1) {
@@ -52,8 +62,8 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
 
   // Fonction pour obtenir le stock maximum pour la taille sélectionnée
   const getMaxStock = () => {
-    if (!selectedTaille || !selectedArticle?.stocks) return 0;
-    const stock = selectedArticle.stocks.find((s: any) => s.taille === selectedTaille);
+    if (!selectedTaille || !stocksActuels) return 0;
+    const stock = stocksActuels.find((s: any) => s.taille === selectedTaille);
     return stock?.quantite || 0;
   };
 
@@ -68,11 +78,30 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
     setSelectedQuantite(1);
   }, [selectedArticle?.id]);
 
+  // MODIFIÉ: Reset la taille sélectionnée à chaque ouverture de modal
+  React.useEffect(() => {
+    if (isOpen && selectedArticle) {
+      console.log('🔄 [Modal] Ouverture modal - reset taille');
+      
+      // MODIFIÉ: Ne pas sélectionner automatiquement une taille
+      // Laisser l'utilisateur choisir explicitement
+      onTailleSelect(''); // Reset à vide
+    }
+  }, [isOpen, selectedArticle?.id]); // MODIFIÉ: Se déclencher à chaque ouverture
+
+  // CORRIGÉ: Fonction pour gérer les changements de quantité avec NumberInput
   const handleQuantiteChange = (event: React.FormEvent<HTMLInputElement>, value: number) => {
     const maxStock = getMaxStock();
     if (value >= 1 && value <= maxStock) {
       setSelectedQuantite(value);
     }
+  };
+
+  // AJOUTÉ: Fonction alternative pour gérer les changements directs de valeur
+  const handleQuantiteDirectChange = (value: number) => {
+    const maxStock = getMaxStock();
+    const newValue = Math.min(Math.max(1, value), maxStock);
+    setSelectedQuantite(newValue);
   };
 
   const incrementQuantite = () => {
@@ -90,7 +119,19 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
 
   const handleAjouterAuPanier = () => {
     if (selectedArticle && selectedTaille && selectedQuantite > 0) {
-      onAjouterAuPanier(selectedArticle, selectedTaille, selectedQuantite);
+      // MODIFIÉ: S'assurer que l'article contient les stocks à jour
+      const articleAvecStockActuel = {
+        ...selectedArticle,
+        // Forcer le rechargement des stocks si nécessaire
+        stocks: selectedArticle.stocks || []
+      };
+      
+      onAjouterAuPanier(articleAvecStockActuel, selectedTaille, selectedQuantite);
+      
+      // Reset des valeurs pour la prochaine utilisation
+      setSelectedQuantite(1);
+      setCurrentImageIndex(0);
+      
       onClose();
     }
   };
@@ -268,22 +309,20 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
               flexWrap: 'wrap',
               gap: '0.5rem'
             }}>
-              {selectedArticle.stocks
+              {/* MODIFIÉ: Utiliser stocksActuels au lieu de selectedArticle.stocks */}
+              {stocksActuels
                 ?.reduce((acc: any[], stock: any) => {
-                  // Vérifier si la taille existe déjà dans l'accumulateur
                   const existingStock = acc.find(s => s.taille === stock.taille);
                   if (existingStock) {
-                    // Additionner les quantités si la taille existe déjà
                     existingStock.quantite += stock.quantite;
                   } else {
-                    // Ajouter une nouvelle entrée si la taille n'existe pas
                     acc.push({ taille: stock.taille, quantite: stock.quantite });
                   }
                   return acc;
                 }, [])
                 ?.map((stock: any, i: any) => (
                   <div
-                    key={i}
+                    key={`${selectedArticle.id}-${stock.taille}-${i}-${stock.quantite}-${Date.now()}`} // MODIFIÉ: Clé unique avec timestamp
                     style={{
                       padding: '0.5rem 0.75rem',
                       background: stock.quantite > 0 ? '#e8f5e8' : '#ffebee',
@@ -295,8 +334,28 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                     }}
                   >
                     Taille {stock.taille} : {stock.quantite} en stock
+                    {/* Indicateur si stock ajusté */}
+                    {stock.quantite !== stock.quantiteOriginale && stock.quantiteOriginale && (
+                      <span style={{ 
+                        fontSize: '0.8rem', 
+                        fontWeight: 'normal', 
+                        color: '#666',
+                        marginLeft: '0.25rem'
+                      }}>
+                        (était {stock.quantiteOriginale})
+                      </span>
+                    )}
                   </div>
                 ))}
+            </div>
+            {/* Message informatif */}
+            <div style={{ 
+              marginTop: '0.5rem', 
+              fontSize: '0.85rem', 
+              color: '#666',
+              fontStyle: 'italic'
+            }}>
+              * Les stocks affichés se mettent à jour en temps réel selon votre panier
             </div>
           </div>
           
@@ -311,6 +370,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
               isOpen={isTailleOpen}
               selected={selectedTaille}
               onSelect={(_e, value) => {
+                console.log('🔄 [Modal] Sélection taille:', value);
                 onTailleSelect(value as string);
                 onTailleToggle(false);
               }}
@@ -327,25 +387,26 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                     borderRadius: '6px'
                   }}
                 >
-                  {selectedTaille || 'Sélectionner une taille'}
+                  {selectedTaille || 'Sélectionner une taille'} {/* MODIFIÉ: Toujours afficher le placeholder si rien n'est sélectionné */}
                 </Button>
               )}
               shouldFocusToggleOnSelect
             >
               <SelectList>
-                {selectedArticle.stocks
+                {/* MODIFIÉ: Utiliser stocksActuels et s'assurer que toutes les tailles disponibles sont affichées */}
+                {stocksActuels
                   ?.reduce((acc: any[], stock: any) => {
-                    // Même logique de déduplication pour le select
                     const existingStock = acc.find(s => s.taille === stock.taille);
                     if (existingStock) {
                       existingStock.quantite += stock.quantite;
-                    } else if (stock.quantite > 0) { // Seulement les stocks > 0
+                    } else if (stock.quantite > 0) { // MODIFIÉ: Afficher toutes les tailles avec stock > 0
                       acc.push({ taille: stock.taille, quantite: stock.quantite });
                     }
                     return acc;
                   }, [])
+                  ?.sort((a, b) => a.taille.localeCompare(b.taille)) // AJOUTÉ: Trier les tailles
                   ?.map((stock: any, i: any) => (
-                    <SelectOption key={i} value={stock.taille}>
+                    <SelectOption key={`option-${stock.taille}-${i}`} value={stock.taille}>
                       Taille {stock.taille} ({stock.quantite} en stock)
                     </SelectOption>
                   ))}
@@ -375,9 +436,13 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                     -
                   </Button>
                   
-                  <NumberInput
-                    value={selectedQuantite}
-                    onChange={handleQuantiteChange}
+                  <TextInput
+                    type="number"
+                    value={selectedQuantite.toString()}
+                    onChange={(event, value) => {
+                      const numValue = parseInt(value) || 1;
+                      handleQuantiteDirectChange(numValue);
+                    }}
                     min={1}
                     max={getMaxStock()}
                     style={{ 

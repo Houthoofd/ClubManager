@@ -18,6 +18,8 @@ interface CatalogueMagasinProps {
   onToggleCategorie: (nomCategorie: string) => void;
   onAjouterAuPanier: (article: Article, taille: string) => void;
   onOpenInfoModal: (article: Article) => void;
+  // AJOUTÉ: Pour forcer le rechargement si nécessaire
+  refreshKey?: string | number;
 }
 
 const CatalogueMagasin: React.FC<CatalogueMagasinProps> = ({
@@ -26,11 +28,12 @@ const CatalogueMagasin: React.FC<CatalogueMagasinProps> = ({
   onToggleCategorie,
   onAjouterAuPanier,
   onOpenInfoModal,
+  refreshKey,
 }) => {
   return (
     <PageSection>
       {Object.entries(articlesParCategorie || {}).map(([categorie, articles], idx) => (
-        <div key={categorie} style={{ marginBottom: '2rem' }}>
+        <div key={`${categorie}-${refreshKey || 0}`}>
           {idx > 0 && (
             <Divider style={{ margin: '2rem 0', borderTop: '2px solid #dee2e6' }} />
           )}
@@ -70,34 +73,40 @@ const CatalogueMagasin: React.FC<CatalogueMagasinProps> = ({
           >
             {Array.isArray(articles) && articles.length > 0 ? (
               <Gallery hasGutter minWidths={{ default: '300px' }} style={{ marginTop: '1rem' }}>
-                {articles.map((article: Article) => (
-                  <GalleryItem key={article.id}>
-                    <div style={{ 
-                      background: '#fff',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      border: '1px solid #dee2e6',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      transition: 'transform 0.2s ease-in-out'
-                    }}>
-                      <ArticleCard
-                        title={article.nom}
-                        description={article.description}
-                        imageUrl={article.images?.[0] || ''}
-                        prix={article.prix}
-                        stocks={article.stocks}
-                        onAddToCart={(taille: string) => onAjouterAuPanier(article, taille)}
-                        onOpenDetails={() => onOpenInfoModal(article)}
-                      />
+                {articles.map((article: Article) => {
+                  // CORRIGÉ: Créer une clé basée sur les stocks sans utiliser JSON.stringify dans JSX
+                  const stocksHash = article.stocks?.map(s => `${s.taille}-${s.quantite}`).join('|') || '';
+                  
+                  return (
+                    <GalleryItem key={`${article.id}-${refreshKey || 0}`}>
                       <div style={{ 
-                        padding: '0.75rem',
-                        background: '#f8f9fa',
-                        borderTop: '1px solid #dee2e6'
+                        background: '#fff',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: '1px solid #dee2e6',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        transition: 'transform 0.2s ease-in-out'
                       }}>
+                        <ArticleCard
+                          key={`card-${article.id}-${stocksHash}`} // CORRIGÉ: Clé simplifiée basée sur les stocks
+                          title={article.nom}
+                          description={article.description}
+                          imageUrl={article.images?.[0] || ''}
+                          prix={article.prix}
+                          stocks={article.stocks}
+                          onAddToCart={(taille: string) => onAjouterAuPanier(article, taille)}
+                          onOpenDetails={() => onOpenInfoModal(article)}
+                        />
+                        <div style={{ 
+                          padding: '0.75rem',
+                          background: '#f8f9fa',
+                          borderTop: '1px solid #dee2e6'
+                        }}>
+                        </div>
                       </div>
-                    </div>
-                  </GalleryItem>
-                ))}
+                    </GalleryItem>
+                  );
+                })}
               </Gallery>
             ) : (
               <div style={{ 

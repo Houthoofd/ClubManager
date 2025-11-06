@@ -49,6 +49,13 @@ const panierSlice = createSlice({
     },
     viderPanier: (state) => {
       state.articles = [];
+      state.isOpen = false;
+    },
+    synchroniserArticle: (state, action: PayloadAction<{ index: number; articleMisAJour: Article }>) => {
+      const { index, articleMisAJour } = action.payload;
+      if (index >= 0 && index < state.articles.length) {
+        state.articles[index] = { ...articleMisAJour, taille: state.articles[index].taille, quantite: state.articles[index].quantite };
+      }
     },
   },
 });
@@ -60,6 +67,7 @@ export const {
   modifierQuantite,
   ouvrirPanier,
   fermerPanier,
+  synchroniserArticle,
   viderPanier,
 } = panierSlice.actions;
 

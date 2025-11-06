@@ -157,7 +157,7 @@ export class Auth {
             const sql = `
         SELECT 
           u.id, u.email, u.last_name, u.first_name, 
-          u.date_of_birth, u.date_inscription, u.last_login_at,
+          u.date_of_birth, u.date_inscription,
           COUNT(DISTINCT p.id) as nb_paiements,
           COUNT(DISTINCT i.id) as nb_inscriptions,
           DATE(MAX(p.date_paiement)) as dernier_paiement
@@ -178,13 +178,13 @@ export class Auth {
             });
         });
     }
-    // AJOUTÉ: Créer un token de récupération de mot de passe (CORRIGÉ: utilisateur_id au lieu de user_id)
+    // CORRIGÉ: Créer un token de récupération avec user_id (comme dans votre schéma)
     creerTokenRecuperation(userId, token, expiresAt) {
         return new Promise((resolve, reject) => {
-            // D'abord supprimer les anciens tokens - CORRIGÉ: utilisateur_id
+            // D'abord supprimer les anciens tokens - CORRIGÉ: user_id
             const deleteOldTokens = `
         DELETE FROM password_reset_tokens 
-        WHERE utilisateur_id = ?
+        WHERE user_id = ?
       `;
             this.mysqlConnector.query(deleteOldTokens, [userId], (deleteError) => {
                 if (deleteError) {
@@ -192,9 +192,9 @@ export class Auth {
                     reject(deleteError);
                     return;
                 }
-                // Créer le nouveau token - CORRIGÉ: utilisateur_id
+                // Créer le nouveau token - CORRIGÉ: user_id
                 const insertToken = `
-          INSERT INTO password_reset_tokens (utilisateur_id, token, expires_at, created_at)
+          INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at)
           VALUES (?, ?, ?, ?)
         `;
                 this.mysqlConnector.query(insertToken, [userId, token, expiresAt, new Date()], (insertError) => {
@@ -212,13 +212,13 @@ export class Auth {
             });
         });
     }
-    // CORRIGÉ: Vérifier un token de récupération sans used_at
+    // CORRIGÉ: Vérifier un token de récupération avec user_id
     verifierTokenRecuperation(token) {
         return new Promise((resolve, reject) => {
             const sql = `
         SELECT prt.*, u.id as user_id, u.email, u.last_name, u.first_name
         FROM password_reset_tokens prt
-        JOIN utilisateurs u ON prt.utilisateur_id = u.id
+        JOIN utilisateurs u ON prt.user_id = u.id
         WHERE prt.token = ? AND prt.expires_at > ?
       `;
             this.mysqlConnector.query(sql, [token, new Date()], (error, results) => {
@@ -259,7 +259,7 @@ export class Auth {
             });
         });
     }
-    // CORRIGÉ: Réinitialiser le mot de passe avec token
+    // CORRIGÉ: Réinitialiser le mot de passe avec user_id
     reinitialiserMotDePasseAvecToken(token, newPasswordHash) {
         return new Promise(async (resolve, reject) => {
             try {
@@ -291,10 +291,10 @@ export class Auth {
                         });
                         return;
                     }
-                    // Supprimer le token utilisé et tous les autres tokens pour cet utilisateur
+                    // Supprimer le token utilisé et tous les autres tokens pour cet utilisateur - CORRIGÉ: user_id
                     const deleteAllTokens = `
             DELETE FROM password_reset_tokens 
-            WHERE utilisateur_id = ?
+            WHERE user_id = ?
           `;
                     this.mysqlConnector.query(deleteAllTokens, [tokenData.user_id], (deleteError) => {
                         if (deleteError) {

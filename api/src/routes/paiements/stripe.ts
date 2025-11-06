@@ -1155,42 +1155,54 @@ router.post('/confirm-payment-commande', async (req, res) => {
           }
         }
         
-        // CORRIGÉ: Variables d'email avec montant et détails commande
-        const emailVariables = {
-          userName: `${utilisateur.first_name} ${utilisateur.last_name}`,
-          amount: new Intl.NumberFormat('fr-FR', { 
-            style: 'currency', 
-            currency: 'EUR' 
-          }).format(totalCommande), // AJOUTÉ: Montant formaté requis
-          paymentDate: new Date().toLocaleDateString('fr-FR'),
-          // Détails spécifiques à la commande
-          commandeId: commandeId?.toString() || 'N/A',
-          transactionId: paymentIntentId,
-          commande: commandeDetails, // NOUVEAU: Détails complets de la commande
-          // Variables supplémentaires pour template commande
-          currency: 'EUR',
-          datePaiement: new Date().toLocaleDateString('fr-FR'),
-          paymentIntentId: paymentIntentId,
-          nombreArticles: commandeDetails?.articles?.length || 0,
-          listeArticles: commandeDetails?.articles || []
-        };
-        
-        console.log(`📧 [Paiements] Variables email commande:`, {
-          userName: emailVariables.userName,
-          amount: emailVariables.amount,
-          commandeId: emailVariables.commandeId,
-          nombreArticles: emailVariables.nombreArticles
-        });
-        
-        const emailResult = await emailClient.sendPaymentConfirmation(
+        // AJOUTÉ: Générer le HTML des articles pour l'email
+        let articlesDetailsHtml = '';
+        if (commandeDetails?.articles && commandeDetails.articles.length > 0) {
+          articlesDetailsHtml = commandeDetails.articles.map((article: any) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background-color: #f9f9f9; margin-bottom: 8px; border-radius: 4px;">
+              <div style="flex: 1;">
+                <div style="font-weight: bold; color: #333; margin-bottom: 4px;">${article.nom}</div>
+                <div style="font-size: 14px; color: #666;">
+                  Taille: ${article.taille || 'N/A'} | Quantité: ${article.quantite} | Prix unitaire: ${article.prix.toFixed(2)} €
+                </div>
+              </div>
+              <div style="text-align: right; font-weight: bold; color: #007bff;">
+                ${article.sousTotal} €
+              </div>
+            </div>
+          `).join('');
+        } else {
+          articlesDetailsHtml = '<div style="text-align: center; color: #666; font-style: italic; padding: 20px;">Aucun détail d\'article disponible</div>';
+        }
+
+        console.log('🔍 [Paiements] HTML articles généré:', articlesDetailsHtml); // AJOUTÉ: Debug
+
+        // MODIFIÉ: Utiliser sendOrderConfirmation avec articlesDetails
+        const emailResult = await emailClient.sendOrderConfirmation(
           utilisateur.email,
-          emailVariables,
-          parseInt(userId),
-          'confirmation-commande' // Template spécifique pour commandes
+          {
+            userName: `${utilisateur.first_name} ${utilisateur.last_name}`,
+            numeroCommande: commandeId?.toString() || 'N/A',
+            uniqueId: paymentIntentId,
+            dateCommande: new Date().toLocaleDateString('fr-FR'),
+            statutCommande: 'Confirmée et payée',
+            nbArticles: (commandeDetails?.articles?.length || 0).toString(),
+            totalCommande: totalCommande.toFixed(2),
+            articlesDetails: articlesDetailsHtml, // CORRIGÉ: S'assurer que cette variable est bien passée
+            // Variables optionnelles avec valeurs par défaut
+            delaiPreparation: '24-48 heures',
+            lieuRetrait: 'Accueil du club',
+            horaires: 'Lundi-Vendredi: 9h-18h, Samedi: 9h-12h',
+            conservation: 'Votre commande sera conservée 7 jours',
+            emailContact: process.env.SUPPORT_EMAIL || 'support@clubmanager.com',
+            telephoneContact: process.env.CLUB_PHONE || '01 23 45 67 89',
+            anneeActuelle: new Date().getFullYear().toString()
+          },
+          parseInt(userId)
         );
 
         if (emailResult.success) {
-          console.log('📧 [Paiements] Email de confirmation commande envoyé avec détails complets');
+          console.log('📧 [Paiements] Email de confirmation commande envoyé avec le bon template');
         } else {
           console.error('❌ [Paiements] Échec envoi email commande:', emailResult.error);
         }

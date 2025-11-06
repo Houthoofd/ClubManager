@@ -1,111 +1,171 @@
 import React from 'react';
-import { Card, Title, Grid, GridItem } from '@patternfly/react-core';
+import {
+  Card,
+  CardBody,
+  Grid,
+  GridItem,
+  Title,
+  Flex,
+  FlexItem,
+} from '@patternfly/react-core';
+import { 
+  ShoppingCartIcon, 
+  CheckCircleIcon, 
+  TruckIcon, 
+  TimesCircleIcon,
+  DollarSignIcon 
+} from '@patternfly/react-icons';
 
 interface StatistiquesCommandesProps {
   commandes: any[];
 }
 
 const StatistiquesCommandes: React.FC<StatistiquesCommandesProps> = ({ commandes }) => {
-  const statistiques = React.useMemo(() => {
+  // Calculer les statistiques à partir des commandes
+  const stats = React.useMemo(() => {
     const total = commandes.length;
-    const enAttente = commandes.filter(c => c.statut === 'En attente').length;
-    const expediees = commandes.filter(c => c.statut === 'Expédiée').length;
-    const enCours = commandes.filter(c => c.statut === 'En cours').length;
-    const annulees = commandes.filter(c => c.statut === 'Annulée').length;
+    const enAttente = commandes.filter(c => c.statut === 'en_attente').length;
+    const confirmees = commandes.filter(c => c.statut === 'confirmee').length;
+    const livrees = commandes.filter(c => c.statut === 'livree').length;
+    const annulees = commandes.filter(c => c.statut === 'annulee').length;
     
-    const chiffreAffaires = commandes
-      .filter(c => c.statut === 'Expédiée')
-      .reduce((sum, c) => sum + c.articles.reduce((articleSum: number, a: any) => articleSum + a.prix * a.quantite, 0), 0);
+    const chiffreAffairesTotal = commandes
+      .filter(c => c.statut !== 'annulee')
+      .reduce((sum, c) => sum + parseFloat(c.total || 0), 0);
+    
+    const maintenant = new Date();
+    const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
+    
+    const chiffreAffairesMois = commandes
+      .filter(c => {
+        const dateCommande = new Date(c.date_commande);
+        return dateCommande >= debutMois && c.statut !== 'annulee';
+      })
+      .reduce((sum, c) => sum + parseFloat(c.total || 0), 0);
 
-    return { total, enAttente, expediees, enCours, annulees, chiffreAffaires };
+    return {
+      total,
+      enAttente,
+      confirmees,
+      livrees,
+      annulees,
+      chiffreAffairesTotal,
+      chiffreAffairesMois
+    };
   }, [commandes]);
 
-  const StatCard: React.FC<{ 
-    title: string; 
-    value: string | number; 
-    color: string; 
+  const StatCard: React.FC<{
+    title: string;
+    value: string | number;
+    icon: React.ReactNode;
+    color: string;
     subtitle?: string;
-  }> = ({ title, value, color, subtitle }) => (
-    <Card style={{
-      padding: '1.5rem',
-      borderRadius: '12px',
-      border: `2px solid ${color}`,
-      background: `${color}08`,
-      textAlign: 'center',
-      transition: 'transform 0.2s ease-in-out'
-    }}>
-      <div style={{ 
-        fontSize: '2rem', 
-        fontWeight: 'bold', 
-        color,
-        marginBottom: '0.5rem'
-      }}>
-        {value}
-      </div>
-      <Title headingLevel="h4" size="sm" style={{ color: '#495057', margin: 0 }}>
-        {title}
-      </Title>
-      {subtitle && (
-        <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '0.25rem' }}>
-          {subtitle}
-        </div>
-      )}
+  }> = ({ title, value, icon, color, subtitle }) => (
+    <Card style={{ height: '100%' }}>
+      <CardBody>
+        <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsSm' }}>
+          <FlexItem>
+            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+              <FlexItem>
+                <div style={{ 
+                  color, 
+                  fontSize: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  {icon}
+                </div>
+              </FlexItem>
+              <FlexItem>
+                <Title headingLevel="h4" size="md" style={{ margin: 0, color: '#495057' }}>
+                  {title}
+                </Title>
+              </FlexItem>
+            </Flex>
+          </FlexItem>
+          <FlexItem>
+            <div style={{ 
+              fontSize: '2rem', 
+              fontWeight: 'bold', 
+              color: '#2c3e50',
+              lineHeight: 1
+            }}>
+              {value}
+            </div>
+            {subtitle && (
+              <div style={{ 
+                fontSize: '0.85rem', 
+                color: '#7f8c8d',
+                marginTop: '0.25rem'
+              }}>
+                {subtitle}
+              </div>
+            )}
+          </FlexItem>
+        </Flex>
+      </CardBody>
     </Card>
   );
 
   return (
     <div style={{ marginBottom: '2rem' }}>
-      <Title headingLevel="h3" style={{ marginBottom: '1rem', color: '#333' }}>
-        Aperçu des commandes
+      <Title headingLevel="h3" style={{ marginBottom: '1rem', color: '#495057' }}>
+        📊 Statistiques des commandes
       </Title>
       
       <Grid hasGutter>
-        <GridItem xl={2} lg={3} md={4} sm={6} xs={12}>
+        <GridItem span={4} md={2}>
           <StatCard
-            title="Total commandes"
-            value={statistiques.total}
-            color="#007bff"
+            title="Total"
+            value={stats.total}
+            icon={<ShoppingCartIcon />}
+            color="#3498db"
           />
         </GridItem>
         
-        <GridItem xl={2} lg={3} md={4} sm={6} xs={12}>
+        <GridItem span={4} md={2}>
           <StatCard
             title="En attente"
-            value={statistiques.enAttente}
-            color="#ffc107"
+            value={stats.enAttente}
+            icon={<TimesCircleIcon />}
+            color="#f39c12"
           />
         </GridItem>
         
-        <GridItem xl={2} lg={3} md={4} sm={6} xs={12}>
+        <GridItem span={4} md={2}>
           <StatCard
-            title="En cours"
-            value={statistiques.enCours}
-            color="#17a2b8"
+            title="Confirmées"
+            value={stats.confirmees}
+            icon={<CheckCircleIcon />}
+            color="#2ecc71"
           />
         </GridItem>
         
-        <GridItem xl={2} lg={3} md={4} sm={6} xs={12}>
+        <GridItem span={4} md={2}>
           <StatCard
-            title="Expédiées"
-            value={statistiques.expediees}
-            color="#28a745"
+            title="Livrées"
+            value={stats.livrees}
+            icon={<TruckIcon />}
+            color="#27ae60"
           />
         </GridItem>
         
-        <GridItem xl={2} lg={3} md={4} sm={6} xs={12}>
+        <GridItem span={4} md={2}>
           <StatCard
             title="Annulées"
-            value={statistiques.annulees}
-            color="#dc3545"
+            value={stats.annulees}
+            icon={<TimesCircleIcon />}
+            color="#e74c3c"
           />
         </GridItem>
         
-        <GridItem xl={2} lg={3} md={4} sm={6} xs={12}>
+        <GridItem span={8} md={2}>
           <StatCard
             title="Chiffre d'affaires"
-            value={`${statistiques.chiffreAffaires.toFixed(0)} €`}
-            color="#6f42c1"
-            subtitle="Commandes expédiées"
+            value={`${stats.chiffreAffairesTotal.toFixed(2)} €`}
+            icon={<DollarSignIcon />}
+            color="#9b59b6"
+            subtitle={`Ce mois: ${stats.chiffreAffairesMois.toFixed(2)} €`}
           />
         </GridItem>
       </Grid>

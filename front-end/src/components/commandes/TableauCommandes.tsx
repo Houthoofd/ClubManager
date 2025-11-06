@@ -6,8 +6,26 @@ import {
   Th,
   Tbody,
   Td,
+  ExpandableRowContent,
 } from '@patternfly/react-table';
-import { FormSelect, FormSelectOption, Title, Card, Badge } from '@patternfly/react-core';
+import { 
+  FormSelect, 
+  FormSelectOption, 
+  Title, 
+  Card, 
+  CardTitle,
+  CardBody,
+  Badge,
+  Label,
+  Button,
+  EmptyState,
+  EmptyStateBody
+} from '@patternfly/react-core';
+import { 
+  ShoppingCartIcon, 
+  AngleUpIcon, 
+  AngleDownIcon 
+} from '@patternfly/react-icons';
 
 interface TableauCommandesProps {
   commandes: any[];
@@ -17,7 +35,40 @@ interface TableauCommandesProps {
   onToggleRow: (rowIndex: number) => void;
   onSort: (event: React.MouseEvent, index: number, direction: 'asc' | 'desc') => void;
   onChangeStatut: (commandeId: string, newStatut: string) => void;
+  isUpdatingStatut?: string | null;
+  stocks?: any;
 }
+
+// AJOUTÉ: Composant StatutSelector
+const StatutSelector: React.FC<{
+  currentStatut: string;
+  onStatutChange: (newStatut: string) => void;
+  isLoading?: boolean;
+}> = ({ currentStatut, onStatutChange, isLoading }) => {
+  const statutsOptions = [
+    { value: 'en attente', label: 'En attente' },
+    { value: 'payée', label: 'Payée' },
+    { value: 'expédiée', label: 'Expédiée' },
+    { value: 'annulée', label: 'Annulée' }
+  ];
+
+  return (
+    <FormSelect
+      value={currentStatut}
+      onChange={(event, value) => onStatutChange(value)}
+      isDisabled={isLoading}
+      style={{ minWidth: '120px' }}
+    >
+      {statutsOptions.map((option) => (
+        <FormSelectOption 
+          key={option.value} 
+          value={option.value} 
+          label={option.label} 
+        />
+      ))}
+    </FormSelect>
+  );
+};
 
 const TableauCommandes: React.FC<TableauCommandesProps> = ({
   commandes,
@@ -27,199 +78,310 @@ const TableauCommandes: React.FC<TableauCommandesProps> = ({
   onToggleRow,
   onSort,
   onChangeStatut,
+  isUpdatingStatut,
+  stocks
 }) => {
-  const columns = [
-    { title: '', key: 'expander' },
-    { title: 'ID Commande', key: 'commande_id' },
-    { title: 'Date', key: 'date_commande' },
-    { title: 'Statut', key: 'statut' },
-    { title: "Nombre d'articles", key: 'nombre_articles' },
-    { title: 'Total (€)', key: 'total' },
-  ];
+  // AJOUTÉ: Fonction pour calculer le total des articles de manière sécurisée
+  const calculateTotal = (commande: any): number => {
+    if (!commande) return 0;
+    
+    // Si le total est déjà calculé dans la DB
+    if (commande.total) {
+      return parseFloat(commande.total);
+    }
+    
+    // Sinon calculer depuis les articles si disponibles
+    if (Array.isArray(commande.articles)) {
+      return commande.articles.reduce((sum: number, article: any) => {
+        const prix = parseFloat(article?.prix || 0);
+        const quantite = parseInt(article?.quantite || 0);
+        return sum + (prix * quantite);
+      }, 0);
+    }
+    
+    return 0;
+  };
 
-  const getStatutColor = (statut: string) => {
-    switch (statut.toLowerCase()) {
-      case 'en attente':
-        return { bg: '#fff3e0', text: '#ef6c00', border: '#ff9800' };
-      case 'expédiée':
-        return { bg: '#e8f5e8', text: '#2e7d32', border: '#4caf50' };
-      case 'annulée':
-        return { bg: '#ffebee', text: '#c62828', border: '#f44336' };
-      case 'en cours':
-        return { bg: '#e3f2fd', text: '#1976d2', border: '#2196f3' };
-      default:
-        return { bg: '#f5f5f5', text: '#666', border: '#ccc' };
+  // AJOUTÉ: Fonction pour obtenir les articles de manière sécurisée
+  const getArticles = (commande: any): any[] => {
+    if (!commande) return [];
+    
+    // Si les articles sont déjà parsés
+    if (Array.isArray(commande.articles)) {
+      return commande.articles;
+    }
+    
+    // Si les articles sont stockés en JSON string
+    if (typeof commande.articles === 'string') {
+      try {
+        return JSON.parse(commande.articles);
+      } catch {
+        return [];
+      }
+    }
+    
+    return [];
+  };
+
+  // AJOUTÉ: Fonction pour formater la date de manière sécurisée
+  const formatDate = (commande: any): string => {
+    if (!commande) return 'Date inconnue';
+    
+    const dateStr = commande.date_commande || commande.created_at;
+    if (!dateStr) return 'Date inconnue';
+    
+    try {
+      return new Date(dateStr).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Date invalide';
     }
   };
 
-  return (
-    <Card className="table-container">
-      <Table aria-label="Table des commandes" variant="compact" borders={false}>
-        <Thead>
-          <Tr className="table-header">
-            {columns.map((col, index) => (
-              <Th
-                key={col.key}
-                className="table-header"
-                sort={
-                  col.key !== 'expander'
-                    ? {
-                        sortBy: {
-                          index: activeSortIndex,
-                          direction: activeSortDirection || 'asc',
-                        },
-                        onSort,
-                        columnIndex: index,
-                      }
-                    : undefined
-                }
-              >
-                {col.title}
-              </Th>
-            ))}
-          </Tr>
-        </Thead>
-        <Tbody>
-          {commandes.length === 0 && (
-            <Tr>
-              <Td colSpan={columns.length} style={{ 
-                textAlign: 'center',
-                padding: '2rem',
-                color: '#6c757d',
-                fontStyle: 'italic'
-              }}>
-                Aucune commande trouvée
-              </Td>
-            </Tr>
-          )}
+  // AJOUTÉ: Fonction pour obtenir l'ID de commande
+  const getCommandeId = (commande: any): string => {
+    return commande?.numero_commande || commande?.unique_id || commande?.id?.toString() || 'N/A';
+  };
 
-          {commandes.map((commande, rowIndex) => {
-            const total = commande.articles.reduce((sum: number, a: any) => sum + a.prix * a.quantite, 0);
-            const statutColors = getStatutColor(commande.statut);
-            
-            return (
-              <React.Fragment key={commande.commande_id}>
-                <Tr className={expandedRows.has(rowIndex) ? "table-row-expanded" : "table-row"}>
-                  <Td
-                    expand={{
-                      rowIndex,
-                      isExpanded: expandedRows.has(rowIndex),
-                      onToggle: () => onToggleRow(rowIndex),
-                    }}
-                    className="table-cell"
-                  />
-                  <Td className="table-cell table-id">
-                    #{commande.commande_id}
-                  </Td>
-                  <Td className="table-cell" dataLabel="Date" style={{ padding: '1rem' }}>
-                    {new Date(commande.date_commande).toLocaleDateString('fr-FR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </Td>
-                  <Td className="table-cell" dataLabel="Statut" style={{ padding: '1rem' }}>
-                    <FormSelect
-                      value={commande.statut}
-                      onChange={(_event, value) => onChangeStatut(commande.commande_id, value)}
-                      aria-label="Modifier le statut"
-                      style={{ 
-                        minWidth: '150px',
-                        borderRadius: '6px',
-                        backgroundColor: statutColors.bg,
-                        borderColor: statutColors.border,
-                        color: statutColors.text,
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {['En attente', 'Expédiée', 'Annulée', 'En cours'].map((statut) => (
-                        <FormSelectOption key={statut} value={statut} label={statut} />
-                      ))}
-                    </FormSelect>
-                  </Td>
-                  <Td className="table-cell" dataLabel="Nombre d'articles" style={{ padding: '1rem' }}>
-                    <Badge style={{
-                      backgroundColor: '#007bff',
-                      color: 'white',
-                      fontSize: '0.9rem',
-                      padding: '0.25rem 0.5rem'
-                    }}>
-                      {commande.articles.length} article{commande.articles.length > 1 ? 's' : ''}
-                    </Badge>
-                  </Td>
-                  <Td className="table-cell" dataLabel="Total (€)" style={{ 
-                    padding: '1rem',
-                    fontWeight: 'bold',
-                    fontSize: '1.1rem',
-                    color: '#28a745'
-                  }}>
-                    {total.toFixed(2)} €
-                  </Td>
-                </Tr>
-                {expandedRows.has(rowIndex) && (
-                  <Tr isExpanded className="table-row-expanded">
-                    <Td />
-                    <Td colSpan={columns.length - 1} className="table-cell">
-                      <div className="table-detail-section">
-                        <Title headingLevel="h4" className="table-detail-title">
-                          Détail des articles
-                        </Title>
-                        <Table variant="compact" borders>
-                          <Thead>
-                            <Tr style={{ background: '#f8f9fa' }}>
-                              <Th style={{ fontWeight: 'bold', color: '#495057' }}>Article</Th>
-                              <Th style={{ fontWeight: 'bold', color: '#495057' }}>Taille</Th>
-                              <Th style={{ fontWeight: 'bold', color: '#495057' }}>Quantité</Th>
-                              <Th style={{ fontWeight: 'bold', color: '#495057' }}>Prix unitaire</Th>
-                              <Th style={{ fontWeight: 'bold', color: '#495057' }}>Sous-total</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {commande.articles.map((art: any, idx: number) => (
-                              <Tr key={idx} style={{ 
-                                borderBottom: idx < commande.articles.length - 1 ? '1px solid #dee2e6' : 'none'
-                              }}>
-                                <Td dataLabel="Article" style={{ fontWeight: '500' }}>
-                                  {art.article}
-                                </Td>
-                                <Td dataLabel="Taille">
-                                  <Badge style={{
-                                    backgroundColor: '#6c757d',
-                                    color: 'white'
-                                  }}>
-                                    {art.taille}
-                                  </Badge>
-                                </Td>
-                                <Td dataLabel="Quantité" style={{ textAlign: 'center' }}>
-                                  {art.quantite}
-                                </Td>
-                                <Td dataLabel="Prix unitaire" style={{ fontWeight: '500' }}>
-                                  {art.prix.toFixed(2)} €
-                                </Td>
-                                <Td dataLabel="Sous-total" style={{ 
-                                  fontWeight: 'bold',
-                                  color: '#28a745'
-                                }}>
-                                  {(art.prix * art.quantite).toFixed(2)} €
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </div>
-                    </Td>
-                  </Tr>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </Tbody>
-      </Table>
+  // AJOUTÉ: Fonction pour obtenir le nom du client
+  const getClientName = (commande: any): string => {
+    if (!commande) return 'Client inconnu';
+    
+    const firstName = commande.first_name || '';
+    const lastName = commande.last_name || '';
+    const username = commande.nom_utilisateur || '';
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    
+    if (username) {
+      return username;
+    }
+    
+    return `Utilisateur ${commande.utilisateur_id || 'inconnu'}`;
+  };
+
+  return (
+    <Card>
+      <CardTitle>
+        <Title headingLevel="h3">
+          Liste des commandes ({Array.isArray(commandes) ? commandes.length : 0})
+        </Title>
+      </CardTitle>
+      <CardBody>
+        {!Array.isArray(commandes) || commandes.length === 0 ? (
+          <EmptyState>
+            <EmptyState variant="large">
+              <ShoppingCartIcon style={{ fontSize: '64px', color: '#6c757d', marginBottom: '1rem' }} />
+              <Title headingLevel="h4" size="lg">
+                Aucune commande trouvée
+              </Title>
+              <EmptyStateBody>
+                {!Array.isArray(commandes) 
+                  ? "Erreur de chargement des données" 
+                  : "Aucune commande n'a été passée pour le moment."
+                }
+              </EmptyStateBody>
+            </EmptyState>
+          </EmptyState>
+        ) : (
+          <Table aria-label="Tableau des commandes" variant="compact">
+            <Thead>
+              <Tr>
+                <Th 
+                  sort={{
+                    sortBy: { index: activeSortIndex, direction: activeSortDirection },
+                    onSort: onSort,
+                    columnIndex: 0
+                  }}
+                >
+                  Numéro
+                </Th>
+                <Th 
+                  sort={{
+                    sortBy: { index: activeSortIndex, direction: activeSortDirection },
+                    onSort: onSort,
+                    columnIndex: 1
+                  }}
+                >
+                  Date
+                </Th>
+                <Th>Client</Th>
+                <Th 
+                  sort={{
+                    sortBy: { index: activeSortIndex, direction: activeSortDirection },
+                    onSort: onSort,
+                    columnIndex: 3
+                  }}
+                >
+                  Statut
+                </Th>
+                <Th 
+                  sort={{
+                    sortBy: { index: activeSortIndex, direction: activeSortDirection },
+                    onSort: onSort,
+                    columnIndex: 4
+                  }}
+                >
+                  Articles
+                </Th>
+                <Th 
+                  sort={{
+                    sortBy: { index: activeSortIndex, direction: activeSortDirection },
+                    onSort: onSort,
+                    columnIndex: 5
+                  }}
+                >
+                  Total
+                </Th>
+                <Th>Actions</Th>
+                <Th></Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {commandes.map((commande: any, rowIndex: number) => {
+                const isExpanded = expandedRows.has(rowIndex);
+                const commandeId = getCommandeId(commande);
+                const articles = getArticles(commande);
+                const total = calculateTotal(commande);
+
+                return (
+                  <React.Fragment key={`commande-${commande?.id || rowIndex}`}>
+                    <Tr>
+                      <Td dataLabel="Numéro">
+                        <strong>{commandeId}</strong>
+                      </Td>
+                      <Td dataLabel="Date">
+                        {formatDate(commande)}
+                      </Td>
+                      <Td dataLabel="Client">
+                        {getClientName(commande)}
+                      </Td>
+                      <Td dataLabel="Statut">
+                        <Label 
+                          color={getStatutColor(commande?.statut)}
+                          variant="filled"
+                        >
+                          {commande?.statut || 'Inconnu'}
+                        </Label>
+                      </Td>
+                      <Td dataLabel="Articles">
+                        {articles.length} article{articles.length > 1 ? 's' : ''}
+                      </Td>
+                      <Td dataLabel="Total">
+                        <strong>{total.toFixed(2)} €</strong>
+                      </Td>
+                      <Td dataLabel="Actions">
+                        <StatutSelector
+                          currentStatut={commande?.statut || 'en attente'}
+                          onStatutChange={(newStatut) => onChangeStatut(commandeId, newStatut)}
+                          isLoading={isUpdatingStatut === commandeId}
+                        />
+                      </Td>
+                      <Td isActionCell>
+                        <Button
+                          variant="plain"
+                          onClick={() => onToggleRow(rowIndex)}
+                          icon={isExpanded ? <AngleUpIcon /> : <AngleDownIcon />}
+                        />
+                      </Td>
+                    </Tr>
+                    
+                    {/* MODIFIÉ: Ligne étendue avec vérifications */}
+                    {isExpanded && (
+                      <Tr isExpanded>
+                        <Td colSpan={8}>
+                          <ExpandableRowContent>
+                            <div style={{ padding: '1rem' }}>
+                              <Title headingLevel="h5" size="md" style={{ marginBottom: '1rem' }}>
+                                Détails de la commande {commandeId}
+                              </Title>
+                              
+                              {/* Informations générales */}
+                              <div style={{ marginBottom: '1.5rem' }}>
+                                <strong>Informations générales :</strong>
+                                <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+                                  <li>ID interne: {commande?.id || 'N/A'}</li>
+                                  <li>ID unique: {commande?.unique_id || 'N/A'}</li>
+                                  <li>Utilisateur ID: {commande?.utilisateur_id || 'N/A'}</li>
+                                  <li>Email: {commande?.utilisateur_email || commande?.email || 'N/A'}</li>
+                                  {commande?.ip_address && <li>IP: {commande.ip_address}</li>}
+                                </ul>
+                              </div>
+
+                              {/* Articles */}
+                              <div>
+                                <strong>Articles commandés :</strong>
+                                {articles.length > 0 ? (
+                                  <Table aria-label="Articles de la commande" variant="compact" style={{ marginTop: '0.5rem' }}>
+                                    <Thead>
+                                      <Tr>
+                                        <Th>Article</Th>
+                                        <Th>Taille</Th>
+                                        <Th>Quantité</Th>
+                                        <Th>Prix unitaire</Th>
+                                        <Th>Sous-total</Th>
+                                      </Tr>
+                                    </Thead>
+                                    <Tbody>
+                                      {articles.map((article: any, index: number) => (
+                                        <Tr key={`article-${index}`}>
+                                          <Td>{article?.nom || article?.name || 'Article inconnu'}</Td>
+                                          <Td>{article?.taille || article?.size || 'N/A'}</Td>
+                                          <Td>{article?.quantite || article?.quantity || 0}</Td>
+                                          <Td>{parseFloat(article?.prix || article?.price || 0).toFixed(2)} €</Td>
+                                          <Td>
+                                            <strong>
+                                              {(parseFloat(article?.prix || article?.price || 0) * parseInt(article?.quantite || article?.quantity || 0)).toFixed(2)} €
+                                            </strong>
+                                          </Td>
+                                        </Tr>
+                                      ))}
+                                    </Tbody>
+                                  </Table>
+                                ) : (
+                                  <p style={{ marginTop: '0.5rem', fontStyle: 'italic', color: '#666' }}>
+                                    Aucun détail d'article disponible
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </ExpandableRowContent>
+                        </Td>
+                      </Tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </Tbody>
+          </Table>
+        )}
+      </CardBody>
     </Card>
   );
 };
 
+// AJOUTÉ: Fonction helper pour obtenir la couleur du statut
+const getStatutColor = (statut: string) => {
+  switch (statut) {
+    case 'en attente':
+      return 'orange';
+    case 'payée':
+      return 'green';
+    case 'expédiée':
+      return 'blue';
+    case 'annulée':
+      return 'red';
+    default:
+      return 'grey';
+  }
+};
+
 export default TableauCommandes;
-                              
+

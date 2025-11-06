@@ -24,6 +24,7 @@ import {
 import PaymentForm from '../../common/form/paymentForm';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
+
 // Import des types (à ajuster selon ton arborescence)
 import type { Article, Taille } from '@clubmanager/types';
 
@@ -50,68 +51,187 @@ const RightSidePanel = ({
   const [selectedTaille, setSelectedTaille] = useState<Taille | null>(null);
   const [quantiteTemp, setQuantiteTemp] = useState<number>(1);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const [localArticles, setLocalArticles] = useState<Article[]>(articles);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [commande, setCommande] = useState<any>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
 
+  // NETTOYÉ: Fonction pour calculer les stocks disponibles en tenant compte du panier
+  const calculerStocksDisponibles = (article: Article, articleIndex: number) => {
+    if (!article.stocks) return [];
 
-  useEffect(() => {
-    setLocalArticles(articles);
-  }, [articles]);
+    // Calculer les quantités réservées dans le panier pour cet article (INCLUANT l'article en cours d'édition)
+    const quantitesReservees: Record<string, number> = {};
+    
+    articles.forEach((item, index) => {
+      const sameArticle = item.id === article.id;
+      const isCurrentlyEditing = index === articleIndex;
+      
+      if (sameArticle && item.taille) {
+        if (isCurrentlyEditing) {
+          const quantiteActuelle = item.quantite || 0;
+          quantitesReservees[item.taille] = (quantitesReservees[item.taille] || 0) + quantiteActuelle;
+        } else {
+          quantitesReservees[item.taille] = (quantitesReservees[item.taille] || 0) + (item.quantite || 0);
+        }
+      }
+    });
+
+    // Ajuster les stocks en soustrayant les quantités réservées
+    const stocksAjustes = article.stocks.map((stock: any) => {
+      const quantiteReservee = quantitesReservees[stock.taille] || 0;
+      const nouvelleQuantite = Math.max(0, stock.quantite - quantiteReservee);
+      
+      return {
+        ...stock,
+        quantiteOriginale: stock.quantite,
+        quantite: nouvelleQuantite
+      };
+    });
+
+    return stocksAjustes;
+  };
+
+  // AJOUTÉ: Fonction pour obtenir le stock maximum disponible pour une taille
+  const getMaxStockForTaille = (article: Article, taille: string, articleIndex: number): number => {
+    const stocksDisponibles = calculerStocksDisponibles(article, articleIndex);
+    const stock = stocksDisponibles.find((s: any) => s.taille === taille);
+    return stock?.quantite || 0;
+  };
+
+  // CORRIGÉ: Fonction pour obtenir le stock maximum disponible pour une taille en tenant compte de la quantité temporaire
+  const getMaxStockForTailleAvecQuantiteTemp = (article: Article, taille: string, articleIndex: number): number => {
+    if (!article.stocks) return 0;
+    
+    // Calculer manuellement pour tenir compte de quantiteTemp
+    const stockOriginal = article.stocks.find((s: any) => s.taille === taille);
+    if (!stockOriginal) return 0;
+    
+    // Calculer les quantités réservées par les AUTRES articles du même type (même taille)
+    let quantiteReserveeParAutres = 0;
+    articles.forEach((item, index) => {
+      if (item.id === article.id && index !== articleIndex && item.taille === taille) {
+        quantiteReserveeParAutres += item.quantite || 0;
+      }
+    });
+    
+    // CORRIGÉ: Le stock disponible = stock original - quantité réservée par autres
+    // (on ne soustrait PAS la quantité en cours d'édition car on calcule combien on PEUT mettre)
+    const stockDisponible = Math.max(0, stockOriginal.quantite - quantiteReserveeParAutres);
+    
+    console.log(`🔢 [RightPanel] Calcul stock pour taille ${taille}:`, {
+      stockOriginal: stockOriginal.quantite,
+      quantiteReserveeParAutres,
+      stockDisponible,
+      note: "Stock disponible = stock original - réservé par autres (sans compter l'article en cours)"
+    });
+    
+    return stockDisponible;
+  };
+
+  // ALTERNATIVE: Si vous voulez vraiment soustraire la quantité de l'article en cours d'édition
+  const getMaxStockForTailleAvecQuantiteActuelle = (article: Article, taille: string, articleIndex: number): number => {
+    if (!article.stocks) return 0;
+    
+    const stockOriginal = article.stocks.find((s: any) => s.taille === taille);
+    if (!stockOriginal) return 0;
+    
+    // Calculer TOUTES les quantités réservées pour cette taille (y compris l'article en cours)
+    let quantiteReserveeTotal = 0;
+    articles.forEach((item, index) => {
+      if (item.id === article.id && item.taille === taille) {
+        if (index === articleIndex) {
+          // Pour l'article en cours d'édition, utiliser sa quantité ACTUELLE (avant modification)
+          quantiteReserveeTotal += item.quantite || 0;
+        } else {
+          // Pour les autres articles
+          quantiteReserveeTotal += item.quantite || 0;
+        }
+      }
+    });
+    
+    // Le stock disponible = stock original - TOUTES les quantités réservées
+    const stockDisponible = Math.max(0, stockOriginal.quantite - quantiteReserveeTotal);
+    
+    console.log(`🔢 [RightPanel] Calcul stock AVEC quantité actuelle pour taille ${taille}:`, {
+      stockOriginal: stockOriginal.quantite,
+      quantiteReserveeTotal,
+      stockDisponible,
+      note: "Stock disponible = stock original - TOUTES les réservations"
+    });
+    
+    // AJOUTÉ: Ajouter la quantité actuelle de l'article en cours car on peut la "récupérer"
+    const quantiteActuelle = articles[articleIndex]?.quantite || 0;
+    const stockMaxPossible = stockDisponible + quantiteActuelle;
+    
+    console.log(`🔢 [RightPanel] Stock max possible: ${stockDisponible} + ${quantiteActuelle} = ${stockMaxPossible}`);
+    
+    return stockMaxPossible;
+  };
+
+  // CORRIGÉ: Fonction pour afficher le stock disponible en tenant compte de TOUTES les réservations
+  const getStockReellementDisponible = (article: Article, taille: string, articleIndex: number): number => {
+    if (!article.stocks) return 0;
+    
+    const stockOriginal = article.stocks.find((s: any) => s.taille === taille);
+    if (!stockOriginal) return 0;
+    
+    // Calculer TOUTES les quantités réservées pour cette taille
+    let quantiteReserveeTotal = 0;
+    articles.forEach((item, index) => {
+      if (item.id === article.id && item.taille === taille) {
+        quantiteReserveeTotal += item.quantite || 0;
+      }
+    });
+    
+    return Math.max(0, stockOriginal.quantite - quantiteReserveeTotal);
+  };
+
+  // NETTOYÉ: Fonction pour calculer le maximum qu'on peut mettre pour cet article
+  const getMaxQuantitePossible = (article: Article, taille: string, articleIndex: number): number => {
+    if (!article.stocks) return 0;
+    
+    const stockOriginal = article.stocks.find((s: any) => s.taille === taille);
+    if (!stockOriginal) return 0;
+    
+    // Calculer les quantités réservées par les AUTRES articles du même type
+    let quantiteReserveeParAutres = 0;
+    articles.forEach((item, index) => {
+      if (item.id === article.id && index !== articleIndex && item.taille === taille) {
+        quantiteReserveeParAutres += item.quantite || 0;
+      }
+    });
+    
+    return Math.max(0, stockOriginal.quantite - quantiteReserveeParAutres);
+  };
 
   const startEditing = (index: number) => {
     setEditingIndex(index);
-    setSelectedTaille(localArticles[index].taille as Taille || null);
-    setQuantiteTemp(localArticles[index].quantite || 1);
+    setSelectedTaille(articles[index].taille as Taille || null);
+    setQuantiteTemp(articles[index].quantite || 1);
   };
 
   const validerEdition = (index: number) => {
-    console.log('=== DEBUT VALIDATION ===');
-    console.log('Index:', index);
-    console.log('selectedTaille:', selectedTaille);
-    console.log('quantiteTemp:', quantiteTemp);
-    console.log('localArticles[index]:', localArticles[index]);
-    
-    // Utiliser la taille actuelle si selectedTaille n'est pas définie
-    const tailleAUtiliser = selectedTaille || localArticles[index].taille;
+    const tailleAUtiliser = selectedTaille || articles[index].taille;
     const quantiteAUtiliser = quantiteTemp > 0 ? quantiteTemp : 1;
-    
-    console.log('tailleAUtiliser:', tailleAUtiliser);
-    console.log('quantiteAUtiliser:', quantiteAUtiliser);
-    console.log('Condition (tailleAUtiliser && quantiteAUtiliser > 0):', tailleAUtiliser && quantiteAUtiliser > 0);
+
+    // Vérifier si la quantité est disponible
+    const maxStock = getMaxStockForTaille(articles[index], tailleAUtiliser as string, index);
+
+    if (quantiteAUtiliser > maxStock) {
+      alert(`Stock insuffisant ! Maximum disponible pour la taille ${tailleAUtiliser}: ${maxStock}`);
+      return;
+    }
     
     if (tailleAUtiliser && quantiteAUtiliser > 0) {
-      console.log('Condition validée - Mise à jour...');
-      
-      const updatedArticles = [...localArticles];
-      // Créer une copie complète de l'objet article au lieu de modifier directement
-      updatedArticles[index] = {
-        ...updatedArticles[index],
-        quantite: quantiteAUtiliser,
-        taille: tailleAUtiliser
-      };
-      
-      console.log('updatedArticles[index] AVANT setLocalArticles:', updatedArticles[index]);
-      
-      setLocalArticles(updatedArticles);
-      
-      console.log('Appel onUpdateQuantite avec:', index, quantiteAUtiliser, tailleAUtiliser);
       onUpdateQuantite(index, quantiteAUtiliser, tailleAUtiliser as string);
       
-      console.log('Réinitialisation des états...');
-      // Réinitialiser les états d'édition
       setEditingIndex(null);
       setSelectedTaille(null);
       setQuantiteTemp(1);
       setIsSelectOpen(false);
-      
-      console.log('=== FIN VALIDATION SUCCESS ===');
     } else {
-      console.log('Condition échouée - Alert...');
       alert("Veuillez sélectionner une taille et une quantité valides.");
-      console.log('=== FIN VALIDATION ECHEC ===');
     }
   };
 
@@ -134,25 +254,26 @@ const RightSidePanel = ({
     return;
   }
 
-  if (localArticles.length === 0) {
+  // MODIFIÉ: Utiliser articles au lieu de localArticles
+  if (articles.length === 0) {
     alert("Votre panier est vide.");
     return;
   }
 
   // Préparer les articles pour la commande
-  const articles = localArticles.map(article => ({
+  const articlesCommande = articles.map(article => ({
     article_id: Number(article.id),
     quantite: Number(article.quantite),
     prix: Number(article.prix),
     taille: article.taille ?? undefined,
   }));
 
-  const total = articles.reduce((acc, article) => acc + article.prix * article.quantite, 0);
+  const total = articlesCommande.reduce((acc, article) => acc + article.prix * article.quantite, 0);
 
   // Créer la commande temporaire pour le panier
   const nouvelleCommande = {
     utilisateur_id,
-    articles,
+    articles: articlesCommande,
     total: Number(total.toFixed(2)),
     statut: 'en_attente',
     date: new Date().toISOString(),
@@ -161,9 +282,9 @@ const RightSidePanel = ({
   console.log('🛒 [Panier] Commande préparée:', nouvelleCommande);
 
   try {
-    // AJOUTÉ: Sauvegarder les données du panier dans localStorage AVANT l'API call
+    // MODIFIÉ: Utiliser articles au lieu de localArticles
     const panierPourSauvegarde = {
-      articles: localArticles.map(article => ({
+      articles: articles.map(article => ({
         id: article.id,
         nom: article.nom,
         prix: article.prix,
@@ -197,7 +318,7 @@ const RightSidePanel = ({
         currency: 'eur',
         commande: nouvelleCommande,
         utilisateur_id: utilisateur_id,
-        description: `Commande magasin - ${articles.length} article(s)`
+        description: `Commande magasin - ${articlesCommande.length} article(s)`
       })
     });
 
@@ -221,8 +342,8 @@ const RightSidePanel = ({
     if (commandeId) {
       console.log(`🔗 [Panier] Redirection vers paiement commande ${commandeId}`);
       
-      // Vider le panier local
-      setLocalArticles([]);
+      // AJOUTÉ: Sauvegarder l'état pour pouvoir vider le panier après paiement réussi
+      localStorage.setItem('pendingOrderClearCart', 'true');
       
       // Fermer le panier
       onClose();
@@ -235,7 +356,6 @@ const RightSidePanel = ({
 
   } catch (error: any) {
     console.error('❌ [Panier] Erreur création commande:', error);
-    // AJOUTÉ: Nettoyer localStorage en cas d'erreur
     localStorage.removeItem('dernierPanier');
     alert(`Erreur lors de la création de la commande: ${error.message}`);
   }
@@ -251,13 +371,12 @@ const RightSidePanel = ({
     </MenuToggle>
   );
 
-  const totalPrice = localArticles.reduce((total, article, index) => {
+  // MODIFIÉ: Calculer le total avec articles au lieu de localArticles
+  const totalPrice = articles.reduce((total, article, index) => {
     // Si l'article est en cours d'édition, utilise la quantité temporaire
     const quantite = editingIndex === index ? quantiteTemp : (article.quantite || 0);
     return total + article.prix * quantite;
   }, 0);
-
-  console.log(totalPrice)
 
   // Fonction pour dédupliquer les stocks par taille
   const deduplicateStocks = (stocks: Array<{ taille: string; quantite: number }>) => {
@@ -327,7 +446,6 @@ const RightSidePanel = ({
     <Drawer 
       isExpanded={isExpanded}
       style={{
-        // Supprimer le style qui perturbait le layout
         position: 'relative'
       }}
     >
@@ -385,7 +503,8 @@ const RightSidePanel = ({
               display: 'flex',
               flexDirection: 'column'
             }}>
-              {localArticles.length === 0 ? (
+              {/* MODIFIÉ: Utiliser articles au lieu de localArticles */}
+              {articles.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
                   padding: '3rem 1rem',
@@ -412,7 +531,8 @@ const RightSidePanel = ({
                     overflowY: 'auto',
                     marginBottom: '1rem'
                   }}>
-                    {localArticles.map((article, index) => (
+                    {/* MODIFIÉ: Utiliser articles au lieu de localArticles */}
+                    {articles.map((article, index) => (
                       <div 
                         key={`${article.id}-${index}`}
                         style={{
@@ -425,7 +545,7 @@ const RightSidePanel = ({
                         }}
                       >
                         {editingIndex === index ? (
-                          /* Mode édition - Design épuré */
+                          /* Mode édition avec stocks ajustés */
                           <div style={{ padding: '1.25rem' }}>
                             <div style={{ marginBottom: '1rem' }}>
                               <div style={{
@@ -436,23 +556,35 @@ const RightSidePanel = ({
                               }}>
                                 Taille
                               </div>
+                              
                               <Select
                                 isOpen={isSelectOpen}
                                 selected={selectedTaille}
                                 onSelect={(_e, value) => {
                                   setSelectedTaille(value as Taille);
                                   setIsSelectOpen(false);
+                                  setQuantiteTemp(1);
                                 }}
                                 onOpenChange={setIsSelectOpen}
                                 toggle={toggleSelect}
                                 style={{ width: '100%' }}
                               >
                                 <SelectList>
-                                  {deduplicateStocks(article.stocks || []).map((stock, i) => (
-                                    <SelectOption key={i} value={stock.taille}>
-                                      {stock.taille} ({stock.quantite} disponible)
-                                    </SelectOption>
-                                  ))}
+                                  {article.stocks
+                                    ?.filter((stock: any) => {
+                                      const maxPossible = getMaxQuantitePossible(article, stock.taille, index);
+                                      return maxPossible > 0;
+                                    })
+                                    .map((stock: any, i: number) => {
+                                      const stockReellement = getStockReellementDisponible(article, stock.taille, index);
+                                      const maxPossible = getMaxQuantitePossible(article, stock.taille, index);
+                                      
+                                      return (
+                                        <SelectOption key={`${stock.taille}-${i}-${quantiteTemp}`} value={stock.taille}>
+                                          Taille {stock.taille} ({stockReellement} dispo, max {maxPossible})
+                                        </SelectOption>
+                                      );
+                                    })}
                                 </SelectList>
                               </Select>
                             </div>
@@ -466,22 +598,82 @@ const RightSidePanel = ({
                               }}>
                                 Quantité
                               </div>
-                              <TextInput
-                                type="number"
-                                value={quantiteTemp}
-                                onChange={(_e, value) => setQuantiteTemp(Number(value))}
-                                min="1"
-                                max={article.stocks?.find(stock => stock.taille === selectedTaille)?.quantite || 1}
-                                style={{ 
-                                  borderRadius: '8px',
-                                  border: '1px solid #e0e0e0',
-                                  fontSize: '0.9rem'
-                                }}
-                              />
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem',
+                                marginBottom: '0.5rem'
+                              }}>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setQuantiteTemp(Math.max(1, quantiteTemp - 1))}
+                                  isDisabled={quantiteTemp <= 1}
+                                  style={{
+                                    minWidth: '32px',
+                                    height: '32px',
+                                    padding: 0,
+                                    borderRadius: '6px'
+                                  }}
+                                >
+                                  -
+                                </Button>
+                                <TextInput
+                                  type="number"
+                                  value={quantiteTemp}
+                                  onChange={(_e, value) => {
+                                    const newValue = parseInt(value) || 1;
+                                    const maxStock = selectedTaille ? 
+                                      getMaxQuantitePossible(article, selectedTaille, index) : 
+                                      0;
+                                    setQuantiteTemp(Math.min(Math.max(1, newValue), maxStock));
+                                  }}
+                                  min="1"
+                                  max={selectedTaille ? getMaxQuantitePossible(article, selectedTaille, index) : 1}
+                                  style={{ 
+                                    width: '60px',
+                                    textAlign: 'center',
+                                    borderRadius: '6px',
+                                    border: '1px solid #e0e0e0',
+                                    fontSize: '0.9rem'
+                                  }}
+                                />
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => {
+                                    const maxStock = selectedTaille ? 
+                                      getMaxQuantitePossible(article, selectedTaille, index) : 
+                                      0;
+                                    setQuantiteTemp(Math.min(quantiteTemp + 1, maxStock));
+                                  }}
+                                  isDisabled={
+                                    !selectedTaille || 
+                                    quantiteTemp >= getMaxQuantitePossible(article, selectedTaille, index)
+                                  }
+                                  style={{
+                                    minWidth: '32px',
+                                    height: '32px',
+                                    padding: 0,
+                                    borderRadius: '6px'
+                                  }}
+                                >
+                                  +
+                                </Button>
+                                <div style={{ 
+                                  fontSize: '0.8rem', 
+                                  color: '#7f8c8d',
+                                  marginLeft: '0.5rem'
+                                }}>
+                                  {selectedTaille && (
+                                    `max: ${getMaxQuantitePossible(article, selectedTaille, index)}`
+                                  )}
+                                </div>
+                              </div>
+                              
                               <div style={{ 
                                 fontSize: '0.8rem', 
                                 color: '#7f8c8d',
-                                marginTop: '0.5rem',
                                 fontWeight: '500'
                               }}>
                                 Sous-total: {(article.prix * quantiteTemp).toFixed(2)} €
@@ -617,7 +809,8 @@ const RightSidePanel = ({
             </div>
 
             {/* Total et commande - Fixé en bas */}
-            {localArticles.length > 0 && (
+            {/* MODIFIÉ: Utiliser articles au lieu de localArticles */}
+            {articles.length > 0 && (
               <div style={{
                 background: '#ffffff',
                 borderTop: '1px solid #e9ecef',
@@ -680,8 +873,6 @@ const RightSidePanel = ({
           {children}
         </DrawerContentBody>
       </DrawerContent>
-
-      {/* SUPPRIMÉ: Modal de paiement - On utilise maintenant la page dédiée */}
     </Drawer>
   );
 };

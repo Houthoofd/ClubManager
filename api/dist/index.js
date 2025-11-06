@@ -116,6 +116,8 @@ async function startServer() {
         const { default: verificationRouter } = await import('./routes/verification.js');
         const { default: authRouter } = await import('./routes/auth.js');
         const { default: webhooksRouter } = await import('./routes/webhooks.js');
+        const { default: commandesRouter } = await import('./routes/commandes.js');
+        const { default: stocksRouter } = await import('./routes/stocks.js');
         // Routes principales (API)
         app.use('/auth', authRouter);
         app.use('/email', messagesRouter); // PROBLÈME: Ceci utilise messagesRouter pour /email
@@ -133,6 +135,8 @@ async function startServer() {
         app.use('/verification', verificationRouter);
         app.use('/statistiques', statistiquesRouter);
         app.use('/webhooks', webhooksRouter);
+        app.use('/commandes', commandesRouter);
+        app.use('/stocks', stocksRouter);
         // Servir le build Vite (React) uniquement en production
         if (process.env.NODE_ENV === 'production') {
             app.use(express.static(path.join(__dirname, '../dist')));

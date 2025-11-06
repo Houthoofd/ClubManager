@@ -36,19 +36,6 @@ export interface ArticleCommande {
     quantite: number;
     prix: number;
 }
-export type Commande = {
-    user_id: number;
-    articles: {
-        id: number;
-        nom: string;
-        prix: number;
-        quantite?: number;
-        taille?: string;
-    }[];
-    total: number;
-    statut: string;
-    date: string;
-};
 export type ArticleNomCategorie = {
     nom: string;
     categorie_id: number;

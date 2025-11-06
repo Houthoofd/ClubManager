@@ -1028,6 +1028,102 @@ export class EmailClient {
       );
     }
   }
+
+  /**
+   * Envoie un email de confirmation de commande
+   */
+  async sendOrderConfirmation(to: string, variables: {
+    userName: string;
+    numeroCommande: string;
+    uniqueId?: string;
+    dateCommande: string;
+    statutCommande: string;
+    nbArticles: string;
+    totalCommande: string;
+    articlesDetails?: string; // AJOUTÉ: Variable pour les détails des articles
+    delaiPreparation?: string;
+    lieuRetrait?: string;
+    horaires?: string;
+    conservation?: string;
+    emailContact?: string;
+    telephoneContact?: string;
+    anneeActuelle?: string;
+  }, utilisateurId?: number, templateName: string = 'confirmation-commande'): Promise<EmailSendResult> {
+    try {
+      console.log('🛒 [EmailClient] Envoi confirmation commande vers:', to);
+      console.log('📧 [EmailClient] Variables reçues:', variables);
+      
+      const templateVariables = this.prepareCommonVariables({
+        // Variables de la commande
+        userName: variables.userName,
+        numeroCommande: variables.numeroCommande,
+        uniqueId: variables.uniqueId || variables.numeroCommande,
+        dateCommande: variables.dateCommande,
+        statutCommande: variables.statutCommande,
+        nbArticles: variables.nbArticles,
+        totalCommande: variables.totalCommande,
+        
+        // AJOUTÉ: Inclure articlesDetails avec valeur par défaut
+        articlesDetails: variables.articlesDetails || '<div style="text-align: center; color: #666; font-style: italic; padding: 20px;">Détails des articles non disponibles</div>',
+        
+        // Variables par défaut si non fournies
+        delaiPreparation: variables.delaiPreparation || '24-48 heures',
+        lieuRetrait: variables.lieuRetrait || 'Accueil du club',
+        horaires: variables.horaires || 'Lundi-Vendredi: 9h-18h, Samedi: 9h-12h',
+        conservation: variables.conservation || 'Votre commande sera conservée 7 jours',
+        emailContact: variables.emailContact || process.env.SUPPORT_EMAIL || 'support@clubmanager.com',
+        telephoneContact: variables.telephoneContact || process.env.CLUB_PHONE || '01 23 45 67 89',
+        anneeActuelle: variables.anneeActuelle || new Date().getFullYear().toString(),
+      });
+
+      console.log('📧 [EmailClient] Variables finales pour template:', templateVariables);
+
+      const { subject, htmlContent } = await this.loadEmailTemplate(
+        templateName,
+        templateVariables,
+        `Confirmation de commande ${variables.numeroCommande}`
+      );
+      
+      return await this.sendDirectViaSendGrid(
+        to,
+        subject,
+        htmlContent,
+        {
+          fallbackOnError: true,
+          saveToDb: true,
+          utilisateurId
+        }
+      );
+    } catch (error: any) {
+      console.error('❌ [EmailClient] Erreur confirmation commande:', error);
+      
+      // Fallback vers email simple si template non trouvé
+      const fallbackHtml = `
+        <h2>🛒 Commande confirmée !</h2>
+        <p>Bonjour ${variables.userName},</p>
+        <p>Votre commande <strong>${variables.numeroCommande}</strong> a été confirmée.</p>
+        <ul>
+          <li>Date : ${variables.dateCommande}</li>
+          <li>Statut : ${variables.statutCommande}</li>
+          <li>Articles : ${variables.nbArticles}</li>
+          <li>Total : ${variables.totalCommande} €</li>
+        </ul>
+        <p>Vous recevrez un email quand votre commande sera prête pour le retrait.</p>
+        <p>Cordialement,<br>L'équipe Club Manager</p>
+      `;
+      
+      return await this.sendDirectViaSendGrid(
+        to,
+        `Commande confirmée ${variables.numeroCommande} - Club Manager`,
+        fallbackHtml,
+        {
+          fallbackOnError: true,
+          saveToDb: true,
+          utilisateurId
+        }
+      );
+    }
+  }
 }
 
 // Instance singleton

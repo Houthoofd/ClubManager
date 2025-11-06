@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Title, Spinner, Alert, PageSection } from '@patternfly/react-core';
-import { useCommandes, useUpdateCommandeStatut } from '../../hooks/useCommandes';
+import { useCommandes, useUpdateCommandeStatut, useCommandesStats } from '../../hooks/useCommandes';
 import TableauCommandes from '../../components/commandes/TableauCommandes';
 import FiltrageCommandes from '../../components/commandes/FiltrageCommandes';
 import StatistiquesCommandes from '../../components/commandes/StatistiquesCommandes';
@@ -16,28 +16,52 @@ const Commandes = () => {
   const { data: commandes = [], isLoading, error } = useCommandes();
   const updateCommandeStatut = useUpdateCommandeStatut();
 
+  // CORRIGÉ: Utiliser le hook de statistiques avec vérification
+  const statistiques = useCommandesStats(commandes || []);
+
   const filteredData = useMemo(() => {
-    if (!filterInput) return commandes;
-    return commandes.filter(c =>
-      c.commande_id.toLowerCase().includes(filterInput.toLowerCase()) ||
-      c.statut.toLowerCase().includes(filterInput.toLowerCase())
-    );
+    // AJOUTÉ: Vérification de sécurité
+    if (!Array.isArray(commandes) || !filterInput) return commandes || [];
+    
+    return commandes.filter(c => {
+      if (!c) return false;
+      
+      const searchTerm = filterInput.toLowerCase();
+      return (
+        c.id?.toString().includes(searchTerm) ||
+        c.unique_id?.toLowerCase().includes(searchTerm) ||
+        c.numero_commande?.toLowerCase().includes(searchTerm) ||
+        c.statut?.toLowerCase().includes(searchTerm) ||
+        c.total?.toString().includes(searchTerm) ||
+        c.nom_utilisateur?.toLowerCase().includes(searchTerm) ||
+        c.first_name?.toLowerCase().includes(searchTerm) ||
+        c.last_name?.toLowerCase().includes(searchTerm)
+      );
+    });
   }, [commandes, filterInput]);
 
   const getSortableRowValues = (commande: any): (string | number)[] => [
-    commande.commande_id,
-    new Date(commande.date_commande).getTime(),
-    commande.statut,
-    commande.articles.length,
-    commande.articles.reduce((sum: number, a: any) => sum + a.prix * a.quantite, 0),
+    commande?.id || 0,
+    commande?.numero_commande || commande?.unique_id || '',
+    new Date(commande?.date_commande || commande?.created_at || 0).getTime(),
+    commande?.statut || '',
+    // MODIFIÉ: Gérer le cas où articles n'existe pas
+    Array.isArray(commande?.articles) ? commande.articles.length : 0,
+    parseFloat(commande?.total || '0'),
   ];
 
   const sortedData = useMemo(() => {
-    if (activeSortIndex === undefined || activeSortDirection === undefined) return filteredData;
+    // AJOUTÉ: Vérification de sécurité
+    if (!Array.isArray(filteredData) || activeSortIndex === undefined || activeSortDirection === undefined) {
+      return filteredData || [];
+    }
 
     return [...filteredData].sort((a, b) => {
+      if (!a || !b) return 0;
+      
       const aValue = getSortableRowValues(a)[activeSortIndex];
       const bValue = getSortableRowValues(b)[activeSortIndex];
+      
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return activeSortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       }
@@ -46,6 +70,16 @@ const Commandes = () => {
         : String(bValue).localeCompare(String(aValue));
     });
   }, [filteredData, activeSortIndex, activeSortDirection]);
+
+  // CORRIGÉ: Fonction pour obtenir les statistiques avancées avec vérifications
+  const getStatistiquesAvancees = useMemo(() => {
+    return {
+      ...statistiques,
+      lastUpdate: new Date().toLocaleTimeString('fr-FR'),
+      isStale: Array.isArray(commandes) && commandes.length > 0 ? 
+        Date.now() - new Date(commandes[0]?.created_at || 0).getTime() > 5 * 60 * 1000 : false
+    };
+  }, [statistiques, commandes]);
 
   const toggleRow = (rowIndex: number) => {
     const newExpanded = new Set(expandedRows);
