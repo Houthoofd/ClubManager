@@ -34,9 +34,12 @@ import StatistiquesPage from './pages/statistiques';
 
 import PaymentSuccessPage from './pages/magasin/success';
 import PaiementPage from './pages/paiement/paiement';
+import ConnexionPage from './pages/connexion';
+import ForgotPasswordPage from './pages/auth/ForgotPassword';
+import ResetPasswordPage from './pages/auth/ResetPassword';
 
 const router = createBrowserRouter([
-  // Route publique pour la page de connexion
+  // Routes publiques pour l'authentification (HORS de l'app)
   {
     path: '/pages/connexion',
     element: <LoginPage />,
@@ -49,6 +52,16 @@ const router = createBrowserRouter([
     path: '/pages/verify-email',
     element: <VerifyEmail />,
   },
+  // AJOUTÉ: Routes de récupération de mot de passe (HORS de l'app)
+  {
+    path: '/pages/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/pages/reset-password',
+    element: <ResetPasswordPage />,
+  },
+  
   // Route principale avec layout protégé
   {
     path: '/',
@@ -203,6 +216,19 @@ const router = createBrowserRouter([
         path: 'pages/paiement',
         element: <PaiementPage />,
       },
+      {
+        path: '/connexion',
+        element: <ConnexionPage />,
+      },
+      // SUPPRIMÉ: Routes de récupération déplacées vers les routes publiques
+      // {
+      //   path: '/forgot-password',
+      //   element: <ForgotPasswordPage />,
+      // },
+      // {
+      //   path: '/reset-password',
+      //   element: <ResetPasswordPage />,
+      // },
     ],
   },
 ]);

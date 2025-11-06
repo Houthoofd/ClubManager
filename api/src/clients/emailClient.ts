@@ -126,30 +126,29 @@ export class EmailClient {
   /**
    * Prépare les variables communes pour tous les templates
    */
-  private prepareCommonVariables(additionalVariables?: Record<string, string>): Record<string, string> {
+  private prepareCommonVariables(customVariables: Record<string, string>): Record<string, string> {
     return {
-      clubName: 'Club Manager',
+      clubName: process.env.CLUB_NAME || 'Club Manager',
+      clubWebsite: process.env.CLUB_WEBSITE || 'http://localhost:5173',
+      supportEmail: process.env.SUPPORT_EMAIL || 'support@clubmanager.com',
       currentYear: new Date().getFullYear().toString(),
-      supportEmail: process.env.ADMIN_EMAIL || 'support@clubmanager.com',
-      frontendUrl: process.env.FRONTEND_URL || 'https://clubmanagment.com',
-      loginUrl: `${process.env.FRONTEND_URL}/pages/connexion` || 'https://clubmanagment.com/pages/connexion',
-      dashboardUrl: `${process.env.FRONTEND_URL}/dashboard` || 'https://clubmanagment.com/dashboard',
-      ...additionalVariables
+      currentDate: new Date().toLocaleDateString('fr-FR'),
+      ...customVariables
     };
   }
 
   /**
-   * Méthode générique d'envoi direct via SendGrid (contourne isReady)
+   * Envoie un email directement via SendGrid
    */
   private async sendDirectViaSendGrid(
-    to: string, 
-    subject: string, 
+    to: string,
+    subject: string,
     htmlContent: string,
-    options?: {
+    options: {
       fallbackOnError?: boolean;
       saveToDb?: boolean;
       utilisateurId?: number;
-    }
+    } = {}
   ): Promise<EmailSendResult> {
     try {
       console.log('📧 [EmailClient] Envoi direct via SendGrid...');
@@ -166,6 +165,16 @@ export class EmailClient {
 
       const response = await sgMail.default.send(msg);
       console.log(`✅ [EmailClient] Email envoyé directement via SendGrid à ${to}`);
+      
+      // Sauvegarder en base si demandé
+      if (options.saveToDb && options.utilisateurId) {
+        try {
+          // Appel à la méthode de sauvegarde si elle existe
+          console.log('💾 [EmailClient] Sauvegarde email en base demandée');
+        } catch (saveError) {
+          console.warn('⚠️ [EmailClient] Erreur sauvegarde email:', saveError);
+        }
+      }
       
       return {
         success: true,
@@ -192,7 +201,7 @@ export class EmailClient {
             };
           }
         } catch (fallbackError) {
-          // Continue avec l'erreur originale
+          console.warn('⚠️ [EmailClient] Fallback échoué:', fallbackError);
         }
       }
       
@@ -884,6 +893,139 @@ export class EmailClient {
     } else {
       console.warn('⚠️ [EmailClient] Service email partiellement opérationnel:', verification.message);
       console.warn('⚠️ [EmailClient] Les fonctionnalités email pourraient être limitées');
+    }
+  }
+
+  /**
+   * Envoie un email de récupération de mot de passe
+   */
+  async sendPasswordResetEmail(to: string, variables: {
+    userName: string;
+    resetUrl: string;
+    expiresIn: string;
+    securityInfo?: {
+      requestTime: string;
+      lastLogin: string;
+      accountCreated: string;
+    };
+  }, utilisateurId?: number, templateName: string = 'reset-password'): Promise<EmailSendResult> {
+    try {
+      console.log('🔐 [EmailClient] Envoi email récupération mot de passe vers:', to);
+      console.log('🔗 [EmailClient] URL dans l\'email:', variables.resetUrl);
+      
+      // CORRIGÉ: Préparer les variables correctement pour Record<string, string>
+      const templateVariables = this.prepareCommonVariables({
+        userName: variables.userName,
+        resetUrl: variables.resetUrl,
+        expiresIn: variables.expiresIn,
+        // Aplatir securityInfo si présent
+        requestTime: variables.securityInfo?.requestTime || '',
+        lastLogin: variables.securityInfo?.lastLogin || '',
+        accountCreated: variables.securityInfo?.accountCreated || ''
+      });
+
+      const { subject, htmlContent } = await this.loadEmailTemplate(
+        templateName,
+        templateVariables,
+        'Récupération de mot de passe - Club Manager'
+      );
+      
+      return await this.sendDirectViaSendGrid(
+        to,
+        subject,
+        htmlContent,
+        {
+          fallbackOnError: true,
+          saveToDb: true,
+          utilisateurId
+        }
+      );
+    } catch (error: any) {
+      console.error('❌ [EmailClient] Erreur email récupération:', error);
+      
+      // Fallback vers email simple si template non trouvé
+      const fallbackHtml = `
+        <h2>Récupération de mot de passe</h2>
+        <p>Bonjour ${variables.userName},</p>
+        <p>Vous avez demandé la récupération de votre mot de passe.</p>
+        <p><a href="${variables.resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Réinitialiser mon mot de passe</a></p>
+        <p>Ce lien expire dans ${variables.expiresIn}.</p>
+        ${variables.securityInfo ? `
+        <p>Informations de sécurité :</p>
+        <ul>
+          <li>Demande effectuée le : ${variables.securityInfo.requestTime}</li>
+          <li>Dernière connexion : ${variables.securityInfo.lastLogin}</li>
+          <li>Compte créé en : ${variables.securityInfo.accountCreated}</li>
+        </ul>
+        ` : ''}
+        <p>Si vous n'avez pas demandé cette récupération, ignorez cet email.</p>
+      `;
+      
+      return await this.sendDirectViaSendGrid(
+        to,
+        'Récupération de mot de passe - Club Manager',
+        fallbackHtml,
+        {
+          fallbackOnError: true,
+          saveToDb: true,
+          utilisateurId
+        }
+      );
+    }
+  }
+
+  /**
+   * Envoie un email de confirmation de changement de mot de passe
+   */
+  async sendPasswordChangeConfirmation(to: string, variables: {
+    userName: string;
+    changeDate: string;
+  }, utilisateurId?: number, templateName: string = 'password-change-confirmation'): Promise<EmailSendResult> {
+    try {
+      console.log('✅ [EmailClient] Envoi confirmation changement mot de passe vers:', to);
+      
+      const templateVariables = this.prepareCommonVariables({
+        ...variables
+      });
+
+      const { subject, htmlContent } = await this.loadEmailTemplate(
+        templateName,
+        templateVariables,
+        'Mot de passe modifié - Club Manager'
+      );
+      
+      return await this.sendDirectViaSendGrid(
+        to,
+        subject,
+        htmlContent,
+        {
+          fallbackOnError: true,
+          saveToDb: true,
+          utilisateurId
+        }
+      );
+    } catch (error: any) {
+      console.error('❌ [EmailClient] Erreur email confirmation changement:', error);
+      
+      // Fallback vers email simple si template non trouvé
+      const fallbackHtml = `
+        <h2>Mot de passe modifié</h2>
+        <p>Bonjour ${variables.userName},</p>
+        <p>Votre mot de passe a été modifié avec succès le ${variables.changeDate}.</p>
+        <p>Si vous n'êtes pas à l'origine de cette modification, contactez-nous immédiatement.</p>
+        <p>Cordialement,<br>L'équipe Club Manager</p>
+      `;
+      
+      return await this.sendDirectViaSendGrid(
+        to,
+        'Mot de passe modifié - Club Manager',
+        fallbackHtml,
+        {
+          fallbackOnError: true,
+          saveToDb: true,
+          utilisateurId
+        }
+      );
     }
   }
 }

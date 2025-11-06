@@ -198,6 +198,17 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
                 >
                   {connexion.isPending ? 'Connexion en cours...' : 'Se connecter'}
                 </Button>
+
+                {/* MODIFIÉ: Lien mot de passe oublié vers la nouvelle route */}
+                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                  <Button 
+                    variant="link" 
+                    onClick={() => navigate('/pages/forgot-password')}
+                    style={{ fontSize: '14px' }}
+                  >
+                    Mot de passe oublié ?
+                  </Button>
+                </div>
               </div>
 
               <div className="login-footer">
