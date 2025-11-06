@@ -33,9 +33,8 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedQuantite, setSelectedQuantite] = useState(1);
+  // AJOUTÉ: État local pour les stocks qui se met à jour automatiquement
   const [stocksActuels, setStocksActuels] = useState(selectedArticle?.stocks || []);
-  // AJOUTÉ: État pour empêcher les double-clics
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // AJOUTÉ: Mettre à jour les stocks locaux quand l'article change
   React.useEffect(() => {
@@ -118,56 +117,24 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
     }
   };
 
-  const handleAjouterAuPanier = async () => {
-    // AJOUTÉ: Empêcher les double-clics
-    if (isAddingToCart) {
-      console.log('⚠️ [Modal] Ajout au panier déjà en cours, ignoré');
-      return;
-    }
-
+  const handleAjouterAuPanier = () => {
     if (selectedArticle && selectedTaille && selectedQuantite > 0) {
-      setIsAddingToCart(true);
+      // MODIFIÉ: S'assurer que l'article contient les stocks à jour
+      const articleAvecStockActuel = {
+        ...selectedArticle,
+        // Forcer le rechargement des stocks si nécessaire
+        stocks: selectedArticle.stocks || []
+      };
       
-      try {
-        console.log('🛒 [Modal] Ajout au panier avec protection doublon:', {
-          article: selectedArticle.nom,
-          taille: selectedTaille,
-          quantite: selectedQuantite
-        });
-        
-        const articleAvecStockActuel = {
-          ...selectedArticle,
-          stocks: selectedArticle.stocks || []
-        };
-        
-        await onAjouterAuPanier(articleAvecStockActuel, selectedTaille, selectedQuantite);
-        
-        // Reset des valeurs pour la prochaine utilisation
-        setSelectedQuantite(1);
-        setCurrentImageIndex(0);
-        
-        // Fermer la modal avec un petit délai
-        setTimeout(() => {
-          onClose();
-        }, 100);
-        
-      } catch (error) {
-        console.error('❌ [Modal] Erreur ajout panier:', error);
-      } finally {
-        // Réactiver le bouton après 2 secondes
-        setTimeout(() => {
-          setIsAddingToCart(false);
-        }, 2000);
-      }
+      onAjouterAuPanier(articleAvecStockActuel, selectedTaille, selectedQuantite);
+      
+      // Reset des valeurs pour la prochaine utilisation
+      setSelectedQuantite(1);
+      setCurrentImageIndex(0);
+      
+      onClose();
     }
   };
-
-  // AJOUTÉ: Reset du state isAddingToCart quand la modal se ferme
-  React.useEffect(() => {
-    if (!isOpen) {
-      setIsAddingToCart(false);
-    }
-  }, [isOpen]);
 
   return (
     <BaseModal
@@ -179,14 +146,13 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
         <Button 
           key="add-to-cart"
           variant="primary" 
-          onClick={handleAjouterAuPanier}
-          isDisabled={!selectedTaille || selectedQuantite < 1 || isAddingToCart}
-          isLoading={isAddingToCart}
+          onClick={handleAjouterAuPanier} // Utiliser la fonction locale
+          isDisabled={!selectedTaille || selectedQuantite < 1}
           size="lg"
           style={{ padding: '0.75rem 2rem' }}
           icon={<ShoppingCartIcon />}
         >
-          {isAddingToCart ? 'Ajout en cours...' : `Ajouter au panier (${selectedQuantite})`}
+          Ajouter au panier ({selectedQuantite})
         </Button>,
         <Button key="cancel" variant="link" onClick={onClose}>
           Annuler

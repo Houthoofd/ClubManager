@@ -1,31 +1,52 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiUrl } from '../pages/apiUrl';
 
-// Types pour les commandes selon votre structure DB réelle
+// CORRIGÉ: Types pour les commandes avec articles détaillés selon la structure DB
+export interface CommandeArticle {
+  commande_article_id: number;
+  commande_id: number;
+  article_id: number;
+  taille_id: number;
+  quantite: number;
+  prix: string; // Prix au moment de la commande
+  // Données de l'article via JOIN
+  article_nom: string;
+  article_description?: string;
+  prix_unitaire: string; // Prix actuel de l'article
+  taille: string; // Nom de la taille (ex: "M", "L", "XL")
+  categorie_nom?: string;
+  images?: string[]; // URLs des images
+  image_url?: string; // Image principale (fallback)
+  // Aliases pour compatibilité
+  nom?: string;
+}
+
 export interface Commande {
   id: number;
   unique_id: string;
   numero_commande: string;
   utilisateur_id: number;
-  total: string; // decimal(10,2) from DB
-  date_commande: string; // timestamp
-  statut: 'en attente' | 'payée' | 'expédiée' | 'annulée'; // enum from DB
+  total: string; // DECIMAL(10,2) depuis la DB
+  date_commande: string;
+  statut: 'en attente' | 'payée' | 'expédiée' | 'annulée';
   ip_address?: string;
   user_agent?: string;
-  created_at: string; // timestamp
-  // Données liées via JOIN
-  articles?: any[];
+  created_at: string;
+  // Données utilisateur via JOIN
   utilisateur_nom?: string;
   utilisateur_email?: string;
-  nom_utilisateur?: string;
-  first_name?: string;
-  last_name?: string;
+  nom_utilisateur: string;
+  first_name: string;
+  last_name: string;
+  user_id: string; // userId de l'utilisateur
+  // Articles détaillés avec toutes les relations
+  articles: CommandeArticle[];
 }
 
 // Service API pour les commandes
 const commandesApi = {
   getAll: async (): Promise<Commande[]> => {
-    console.log('🔄 [API] Récupération des commandes...');
+    console.log('🔄 [API] Récupération des commandes avec détails...');
     
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -58,19 +79,24 @@ const commandesApi = {
     }
     
     const data = await response.json();
-    console.log('✅ [API] Commandes récupérées:', {
+    console.log('✅ [API] Commandes avec détails récupérées:', {
       count: data.length,
       statuts: data.reduce((acc: any, cmd: Commande) => {
         acc[cmd.statut] = (acc[cmd.statut] || 0) + 1;
         return acc;
       }, {}),
-      sample: data.slice(0, 2).map((cmd: Commande) => ({
-        id: cmd.id,
-        numero: cmd.numero_commande,
-        statut: cmd.statut,
-        total: cmd.total,
-        date: cmd.date_commande || cmd.created_at
-      }))
+      totalArticles: data.reduce((sum: number, cmd: Commande) => sum + (cmd.articles?.length || 0), 0),
+      articlesParCommande: data.map((cmd: Commande) => ({
+        commandeId: cmd.id,
+        nbArticles: cmd.articles?.length || 0,
+        articles: cmd.articles?.map(a => ({
+          nom: a.article_nom,
+          taille: a.taille,
+          quantite: a.quantite,
+          prixCommande: a.prix,
+          prixActuel: a.prix_unitaire
+        }))
+      })).slice(0, 3) // Afficher seulement les 3 premières pour debug
     });
     
     return data;
@@ -111,40 +137,7 @@ const commandesApi = {
     return data;
   },
 
-  // AJOUTÉ: Méthode pour récupérer les données de la DB avec détails
-  getAllWithDetails: async (): Promise<Commande[]> => {
-    console.log('🔄 [API] Récupération commandes avec détails...');
-    
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      throw new Error('Token d\'authentification requis');
-    }
-
-    const response = await fetch(apiUrl('commandes?with_details=true'), {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache', // Forcer la récupération depuis la DB
-      },
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Erreur lors de la récupération des commandes détaillées');
-    }
-    
-    const data = await response.json();
-    console.log('✅ [API] Commandes avec détails récupérées:', {
-      count: data.length,
-      withArticles: data.filter((c: Commande) => c.articles && c.articles.length > 0).length,
-      sample: data.slice(0, 1)
-    });
-    
-    return data;
-  },
-
-  // AJOUTÉ: Test de structure des données
+  // AJOUTÉ: Méthode pour tester la structure des données
   testStructure: async (): Promise<any> => {
     const token = localStorage.getItem('authToken');
     const response = await fetch(apiUrl('commandes/debug/structure'), {
@@ -168,12 +161,11 @@ export const useCommandes = () => {
   return useQuery({
     queryKey: ['commandes'],
     queryFn: commandesApi.getAll,
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000, // AUGMENTÉ: 2 minutes au lieu de 1
+    gcTime: 10 * 60 * 1000, // AUGMENTÉ: 10 minutes au lieu de 5
+    refetchOnWindowFocus: false, // DÉSACTIVÉ pour éviter les refetch intempestifs
     refetchOnMount: true,
-    // Polling pour s'assurer d'avoir les données à jour
-    refetchInterval: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: false, // DÉSACTIVÉ le polling automatique
   });
 };
 
@@ -189,42 +181,58 @@ export const useCommandesWithDetails = () => {
   });
 };
 
-// Hook pour mettre à jour le statut d'une commande
+// Hook pour mettre à jour le statut d'une commande - VERSION OPTIMISÉE
 export const useUpdateCommandeStatut = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: ({ commandeId, newStatut }: { commandeId: string; newStatut: string }) =>
       commandesApi.updateStatut(commandeId, newStatut),
-    onSuccess: (updatedCommande, variables) => {
-      console.log('✅ [Hook] Statut mis à jour avec succès:', updatedCommande);
+    onMutate: async ({ commandeId, newStatut }) => {
+      // AJOUTÉ: Mise à jour optimiste immédiate pour une meilleure UX
+      await queryClient.cancelQueries({ queryKey: ['commandes'] });
       
-      // Invalider toutes les queries de commandes
-      queryClient.invalidateQueries({ queryKey: ['commandes'] });
+      const previousCommandes = queryClient.getQueryData(['commandes']);
       
-      // AJOUTÉ: Forcer un refetch immédiat pour s'assurer d'avoir les données à jour
-      queryClient.refetchQueries({ queryKey: ['commandes'] });
-      queryClient.refetchQueries({ queryKey: ['commandes', 'details'] });
-      
-      // Mise à jour optimiste du cache
       queryClient.setQueryData(['commandes'], (oldData: Commande[] | undefined) => {
         if (!oldData) return oldData;
         
         return oldData.map(commande => 
-          commande.id.toString() === variables.commandeId ||
-          commande.unique_id === variables.commandeId ||
-          commande.numero_commande === variables.commandeId
-            ? { ...commande, statut: variables.newStatut as any }
+          commande.id.toString() === commandeId ||
+          commande.unique_id === commandeId ||
+          commande.numero_commande === commandeId
+            ? { ...commande, statut: newStatut as any }
             : commande
         );
       });
-    },
-    onError: (error, variables) => {
-      console.error('❌ [Hook] Erreur mise à jour statut:', error, variables);
       
-      // Forcer un refetch en cas d'erreur
+      return { previousCommandes };
+    },
+    onSuccess: (updatedCommande, variables, context) => {
+      console.log('🚀 [Hook] Statut mis à jour avec optimisation:', {
+        optimized: updatedCommande.optimized,
+        articlesTraites: updatedCommande.articlesTraites
+      });
+      
+      // Invalider les stocks seulement si nécessaire
+      if (updatedCommande.stocksAffectes) {
+        queryClient.invalidateQueries({ queryKey: ['stocks'] });
+        console.log('📦 [Hook] Stocks invalidés car modifiés');
+      }
+      
+      // Rafraîchir les commandes pour être sûr
       queryClient.invalidateQueries({ queryKey: ['commandes'] });
     },
+    onError: (error, variables, context) => {
+      // AJOUTÉ: Restaurer les données précédentes en cas d'erreur
+      if (context?.previousCommandes) {
+        queryClient.setQueryData(['commandes'], context.previousCommandes);
+      }
+      console.error('❌ [Hook] Erreur mise à jour:', error);
+    },
+    // AJOUTÉ: Options pour améliorer la performance
+    retry: false, // Pas de retry automatique pour éviter les conflits
+    
   });
 };
 
@@ -252,7 +260,7 @@ export const useTestCommandesStructure = () => {
   return useQuery({
     queryKey: ['commandes', 'structure'],
     queryFn: commandesApi.testStructure,
-    enabled: false, // Ne s'exécute que quand appelé manuellement
+    enabled: false,
   });
 };
 

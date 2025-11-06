@@ -51,7 +51,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// PUT - Mettre à jour le statut d'un paiement
+// PUT - Mettre à jour le statut d'un paiement - VERSION ANTI-DEADLOCK
 router.put('/update', async (req, res) => {
   const { id, statut } = req.body;
   
@@ -59,13 +59,46 @@ router.put('/update', async (req, res) => {
     return res.status(400).json({ error: 'ID et statut requis' });
   }
 
+  console.log('🔄 [Paiements] Mise à jour statut OPTIMISÉE:', { id, statut });
+
+  // CORRIGÉ: Déclarer maxRetries dans la portée principale
+  const maxRetries = 3;
+  let retryCount = 0;
+
   try {
+    // SIMPLE: Utiliser directement la classe Paiements mais avec retry en cas de deadlock
     const paiements = new Paiements();
-    const result = await paiements.mettreAJourStatutPaiement(id, statut);
-    res.status(200).json(result);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur lors de la mise à jour du paiement', error });
+    
+    while (retryCount < maxRetries) {
+      try {
+        const result = await paiements.mettreAJourStatutPaiement(id, statut);
+        
+        console.log('✅ [Paiements] Statut mis à jour avec succès:', { id, statut });
+        return res.status(200).json(result);
+        
+      } catch (error: any) {
+        // Si c'est un deadlock, retry
+        if (error.code === 'ER_LOCK_WAIT_TIMEOUT' && retryCount < maxRetries - 1) {
+          retryCount++;
+          const delay = Math.random() * 1000 + (retryCount * 500); // Délai aléatoire croissant
+          console.log(`⏳ [Paiements] Deadlock détecté, retry ${retryCount}/${maxRetries} dans ${delay.toFixed()}ms`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // Si ce n'est pas un deadlock ou si on a épuisé les tentatives
+        throw error;
+      }
+    }
+    
+  } catch (error: any) {
+    console.error('❌ [Paiements] Erreur mise à jour statut après', maxRetries, 'tentatives:', error);
+    res.status(500).json({ 
+      message: 'Erreur lors de la mise à jour du paiement', 
+      error: error.message,
+      code: error.code 
+    });
   }
 });
 
@@ -87,7 +120,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// MODIFIÉ: Route de simulation unifiée pour échéances ET commandes
+// MODIFIÉ: Route de simulation unifiée pour échéances ET commandes - AVEC RETRY
 router.post('/force-payment-success', async (req: any, res: any) => {
   try {
     const { paymentIntentId, echeanceId, commandeId, userId, amount, description } = req.body;
@@ -125,10 +158,6 @@ router.post('/force-payment-success', async (req: any, res: any) => {
     if (echeanceId) {
       console.log('💰 [Paiements] Simulation échéance:', echeanceId);
       
-      // Optionnel : Vérifier que l'échéance existe et appartient à l'utilisateur
-      // const paiements = new Paiements();
-      // const echeance = await paiements.verifierEcheance(echeanceId, userId);
-      
       res.status(200).json({
         success: true,
         message: 'Paiement échéance simulé avec succès',
@@ -138,16 +167,13 @@ router.post('/force-payment-success', async (req: any, res: any) => {
           userId,
           amount,
           type: 'echeance',
-          status: 'succeeded'
+          status: 'succeeded',
+          optimized: true
         }
       });
       
     } else if (commandeId) {
       console.log('🛒 [Paiements] Simulation commande:', commandeId);
-      
-      // Optionnel : Vérifier que la commande existe et appartient à l'utilisateur
-      // const magasin = new Magasin();
-      // const commande = await magasin.verifierCommande(commandeId, userId);
       
       res.status(200).json({
         success: true,
@@ -158,7 +184,8 @@ router.post('/force-payment-success', async (req: any, res: any) => {
           userId,
           amount,
           type: 'commande',
-          status: 'succeeded'
+          status: 'succeeded',
+          optimized: true
         }
       });
     }

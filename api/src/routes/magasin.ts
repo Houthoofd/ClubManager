@@ -13,6 +13,24 @@ import crypto from 'crypto'; // AJOUTÉ: Pour générer des IDs sécurisés
 
 const router = express.Router();
 
+// AJOUTÉ: Cache pour empêcher les doublons de commandes
+const commandesEnCours = new Map<string, { timestamp: number, promesse: Promise<any> }>();
+
+// AJOUTÉ: Fonction pour nettoyer le cache des commandes anciennes
+const nettoyerCacheCommandes = () => {
+  const maintenant = Date.now();
+  const EXPIRATION = 5 * 60 * 1000; // 5 minutes
+  
+  for (const [key, value] of commandesEnCours.entries()) {
+    if (maintenant - value.timestamp > EXPIRATION) {
+      commandesEnCours.delete(key);
+    }
+  }
+};
+
+// Nettoyer le cache toutes les minutes
+setInterval(nettoyerCacheCommandes, 60 * 1000);
+
 // Routes protégées pour la gestion
 router.use(verifyToken);
 
@@ -235,9 +253,57 @@ router.post('/commandes/ajouter', async (req:any, res:any) => {
 
     const data = nouvelleCommandeSchema.parse(req.body);
     const { utilisateur_id, articles, statut, date, total } = data;
+    
+    // CORRIGÉ: Ne plus référencer taille_id du tout, seulement utiliser les propriétés existantes
+    const cacheKey = `${utilisateur_id}-${total}-${JSON.stringify(articles.map(a => ({ 
+      id: a.article_id, 
+      taille: a.taille, // Utiliser uniquement la propriété 'taille' qui existe
+      quantite: a.quantite 
+    })))}`;
+    const maintenant = Date.now();
+    
+    console.log('🔍 [Magasin] Vérification doublon commande:', {
+      cacheKey: cacheKey.substring(0, 50) + '...',
+      utilisateur_id,
+      total,
+      nbArticles: articles.length
+    });
+    
+    // Vérifier si une commande identique est déjà en cours
+    const commandeEnCours = commandesEnCours.get(cacheKey);
+    if (commandeEnCours) {
+      const delaiDepuisCommande = maintenant - commandeEnCours.timestamp;
+      
+      if (delaiDepuisCommande < 30000) { // 30 secondes
+        console.log('⚠️ [Magasin] Commande identique détectée, attente de la première...', {
+          delaiDepuisCommande: `${delaiDepuisCommande}ms`,
+          cacheKey: cacheKey.substring(0, 30) + '...'
+        });
+        
+        try {
+          // Attendre que la première commande se termine
+          const resultatPremiere = await commandeEnCours.promesse;
+          console.log('✅ [Magasin] Première commande terminée, retour du même résultat');
+          
+          return res.status(201).json({
+            message: "Commande existante retournée (doublon évité)",
+            commande: resultatPremiere,
+            isDuplicate: true
+          });
+          
+        } catch (error) {
+          console.log('❌ [Magasin] Première commande a échoué, on continue avec la nouvelle');
+          commandesEnCours.delete(cacheKey);
+        }
+      } else {
+        // Commande trop ancienne, on la supprime du cache
+        commandesEnCours.delete(cacheKey);
+      }
+    }
+
     const client = new Magasin();
 
-    // CORRIGÉ: Générer un ID unique pour la commande sans paramètre
+    // Générer les IDs de manière plus robuste
     const uniqueCommandeId = generateUniqueCommandeId(utilisateur_id);
     const numeroCommande = await generateSequentialCommandeNumber();
     
@@ -247,51 +313,81 @@ router.post('/commandes/ajouter', async (req:any, res:any) => {
       utilisateur_id
     });
 
-    try {
-      const commandeData = {
-        utilisateur_id,
-        articles,
-        total,
-        date,
-        statut,
-        // AJOUTÉ: Inclure les nouveaux identifiants
-        unique_id: uniqueCommandeId,
-        numero_commande: numeroCommande,
-        // SUPPRIMÉ: ip_address et user_agent pour l'instant
-        // ip_address: req.ip || req.connection.remoteAddress,
-        // user_agent: req.headers['user-agent'],
-        created_at: new Date().toISOString()
-      };
-      
-      const result = await client.ajouterCommande(commandeData);
-      
-      // AJOUTÉ: Envoyer l'email de confirmation après succès de la commande
+    // Créer une promesse pour cette commande et la stocker
+    const promesseCommande = (async () => {
       try {
-        const userData = await recupererDonneesUtilisateur(utilisateur_id);
-        if (userData) {
-          await envoyerEmailConfirmationCommande(commandeData, userData.email, userData.nom);
-        } else {
-          console.warn('⚠️ [Magasin] Impossible d\'envoyer l\'email - utilisateur non trouvé');
+        const commandeData = {
+          utilisateur_id,
+          articles,
+          total,
+          date,
+          statut,
+          unique_id: uniqueCommandeId,
+          numero_commande: numeroCommande,
+          created_at: new Date().toISOString()
+        };
+        
+        const result = await client.ajouterCommande(commandeData);
+        
+        // Envoyer l'email de confirmation après succès
+        try {
+          const userData = await recupererDonneesUtilisateur(utilisateur_id);
+          if (userData) {
+            await envoyerEmailConfirmationCommande(commandeData, userData.email, userData.nom);
+          } else {
+            console.warn('⚠️ [Magasin] Impossible d\'envoyer l\'email - utilisateur non trouvé');
+          }
+        } catch (emailError) {
+          console.error('❌ [Magasin] Erreur lors de l\'envoi de l\'email de confirmation:', emailError);
         }
-      } catch (emailError) {
-        console.error('❌ [Magasin] Erreur lors de l\'envoi de l\'email de confirmation:', emailError);
-        // Continue sans faire échouer la commande
-      }
-      
-      // AJOUTÉ: Retourner les nouveaux identifiants dans la réponse
-      res.status(201).json({ 
-        message: "Commande créée avec succès", 
-        commande: {
+        
+        return {
           ...result,
           unique_id: uniqueCommandeId,
           numero_commande: numeroCommande
-        }
-      });
-    } catch (error) {
-      console.error('Erreur création commande:', error);
-      res.status(500).json({ message: "Erreur lors de la création de la commande" });
-    }
+        };
+        
+      } finally {
+        // Nettoyer le cache après traitement
+        setTimeout(() => {
+          commandesEnCours.delete(cacheKey);
+        }, 5000); // Garder 5 secondes pour les requêtes très rapprochées
+      }
+    })();
+
+    // Stocker la promesse dans le cache
+    commandesEnCours.set(cacheKey, {
+      timestamp: maintenant,
+      promesse: promesseCommande
+    });
+
+    // Attendre le résultat
+    const resultatCommande = await promesseCommande;
+    
+    console.log('✅ [Magasin] Commande créée avec protection doublon:', {
+      unique_id: uniqueCommandeId,
+      numero_commande: numeroCommande
+    });
+    
+    res.status(201).json({ 
+      message: "Commande créée avec succès", 
+      commande: resultatCommande,
+      isDuplicate: false
+    });
+    
   } catch (error) {
+    // Nettoyer le cache en cas d'erreur
+    if (req.body) {
+      const data = req.body;
+      // CORRIGÉ: Même correction pour la partie catch
+      const cacheKey = `${data.utilisateur_id}-${data.total}-${JSON.stringify((data.articles || []).map((a: any) => ({ 
+        id: a.article_id, 
+        taille: a.taille, // Utiliser uniquement la propriété 'taille' qui existe
+        quantite: a.quantite 
+      })))}`;
+      commandesEnCours.delete(cacheKey);
+    }
+    
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         message: "Données de commande invalides.",
