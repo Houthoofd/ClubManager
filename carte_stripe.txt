@@ -3,3 +3,4 @@ Expiration : 12/2025
 CVC : 123
 Toujours acceptée par Stripe en mode test
 aizfhaizfeafezf
+test pull depuis branche back-up/hosting
