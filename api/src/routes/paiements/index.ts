@@ -1,20 +1,75 @@
 import express from 'express';
-import confirmationRoutes from './confirmation.js'; // AJOUTÉ: Import du module de confirmation
 
 const router = express.Router();
 
 console.log('🔧 [Paiements] Initialisation du module de paiements modulaire');
 
-// Import des modules existants seulement
-console.log('📦 [Paiements] Chargement des modules disponibles...');
+// Variables pour stocker les modules une fois chargés
+let stripeRoutes: any = null;
+let paiementsRoutes: any = null;
+let webhooksRoutes: any = null;
+let testRoutes: any = null;
+let echeancesRoutes: any = null;
+let modulesLoaded = false;
 
-// Module stripe (existant) - EN PREMIER
-try {
-  const { stripeRoutes } = await import('./stripe.js');
-  router.use('/stripe', stripeRoutes);
-  console.log('✅ [Paiements] Module stripe chargé');
-} catch (error) {
-  console.warn('⚠️ [Paiements] Module stripe non disponible');
+// Fonction pour charger tous les modules
+async function loadAllModules() {
+  if (modulesLoaded) return;
+  
+  console.log('📦 [Paiements] Chargement des modules disponibles...');
+
+  // Module stripe (existant) - EN PREMIER
+  try {
+    const stripeModule = await import('./stripe.js');
+    stripeRoutes = stripeModule.stripeRoutes;
+    router.use('/stripe', stripeRoutes);
+    console.log('✅ [Paiements] Module stripe chargé');
+  } catch (error) {
+    console.warn('⚠️ [Paiements] Module stripe non disponible');
+  }
+
+  // Module paiements CRUD (existant) - APRÈS les routes spécifiques
+  try {
+    const paiementsModule = await import('./paiements.js');
+    paiementsRoutes = paiementsModule.paiementsRoutes;
+    router.use('/', paiementsRoutes);
+    console.log('✅ [Paiements] Module paiements CRUD chargé');
+  } catch (error) {
+    console.warn('⚠️ [Paiements] Module paiements CRUD non disponible');
+  }
+
+  // Module webhooks (existant)
+  try {
+    const webhooksModule = await import('./webhooks.js');
+    webhooksRoutes = webhooksModule.webhooksRoutes;
+    router.use('/webhook', webhooksRoutes);
+    console.log('✅ [Paiements] Module webhooks chargé');
+  } catch (error) {
+    console.warn('⚠️ [Paiements] Module webhooks non disponible');
+  }
+
+  // Module test (existant)
+  try {
+    const testModule = await import('./test.js');
+    testRoutes = testModule.testRoutes;
+    router.use('/test', testRoutes);
+    console.log('✅ [Paiements] Module test chargé');
+  } catch (error) {
+    console.warn('⚠️ [Paiements] Module test non disponible');
+  }
+
+  // Module echeances EN DERNIER pour éviter les conflits - UNE SEULE FOIS
+  try {
+    const echeancesModule = await import('./echeances.js');
+    echeancesRoutes = echeancesModule.echeancesRoutes;
+    router.use('/echeances', echeancesRoutes);
+    console.log('✅ [Paiements] Module echeances chargé');
+  } catch (error) {
+    console.warn('⚠️ [Paiements] Module echeances non disponible');
+  }
+
+  modulesLoaded = true;
+  console.log('✅ [Paiements] Module modulaire initialisé');
 }
 
 // Route de compatibilité pour POST /paiements - Détection automatique du type
@@ -23,6 +78,8 @@ router.post('/', async (req, res) => {
   console.log('🔄 [Paiements] Route POST / appelée - Détection automatique du type:', req.body);
   
   try {
+    await loadAllModules();
+    
     const { amount, echeanceId, commande, userId, currency = 'eur', description } = req.body;
     
     // Détection automatique du type de paiement
@@ -30,7 +87,9 @@ router.post('/', async (req, res) => {
       // PAIEMENT D'ÉCHÉANCE
       console.log('🏦 [Paiements] Détecté: Paiement d\'échéance - Redirection vers /stripe/create-payment-intent');
       
-      const { stripeRoutes } = await import('./stripe.js');
+      if (!stripeRoutes) {
+        return res.status(503).json({ error: 'Module stripe non disponible' });
+      }
       
       const newReq = {
         ...req,
@@ -59,7 +118,9 @@ router.post('/', async (req, res) => {
       // PAIEMENT DE COMMANDE MAGASIN
       console.log('🛒 [Paiements] Détecté: Paiement de commande magasin - Redirection vers /stripe/create-payment-intent-commande');
       
-      const { stripeRoutes } = await import('./stripe.js');
+      if (!stripeRoutes) {
+        return res.status(503).json({ error: 'Module stripe non disponible' });
+      }
       
       const newReq = {
         ...req,
@@ -119,7 +180,11 @@ router.post('/', async (req, res) => {
 router.post('/create-payment-intent', async (req, res) => {
   console.log(`🔄 [Paiements] Redirection /create-payment-intent → /stripe/create-payment-intent`);
   try {
-    const { stripeRoutes } = await import('./stripe.js');
+    await loadAllModules();
+    
+    if (!stripeRoutes) {
+      return res.status(503).json({ error: 'Module stripe non disponible' });
+    }
     
     const newReq = {
       ...req,
@@ -149,13 +214,17 @@ router.post('/confirm-payment', async (req, res) => {
   console.log('🔄 [Paiements] Route POST /confirm-payment appelée - Détection automatique:', req.body);
   
   try {
+    await loadAllModules();
+    
     const { paymentIntentId, echeanceId, commandeId, userId } = req.body;
+    
+    if (!stripeRoutes) {
+      return res.status(503).json({ error: 'Module stripe non disponible' });
+    }
     
     if (echeanceId && !commandeId) {
       // CONFIRMATION PAIEMENT D'ÉCHÉANCE
       console.log('🏦 [Paiements] Détecté: Confirmation paiement échéance - Redirection vers /stripe/confirm-payment');
-      
-      const { stripeRoutes } = await import('./stripe.js');
       
       const newReq = {
         ...req,
@@ -176,8 +245,6 @@ router.post('/confirm-payment', async (req, res) => {
     } else if (commandeId && !echeanceId) {
       // CONFIRMATION PAIEMENT DE COMMANDE
       console.log('🛒 [Paiements] Détecté: Confirmation paiement commande - Redirection vers /stripe/confirm-payment-commande');
-      
-      const { stripeRoutes } = await import('./stripe.js');
       
       const newReq = {
         ...req,
@@ -228,7 +295,11 @@ router.post('/confirm-payment', async (req, res) => {
 router.post('/create-payment-intent-commande', async (req, res) => {
   console.log(`🔄 [Paiements] Redirection /create-payment-intent-commande → /stripe/create-payment-intent-commande`);
   try {
-    const { stripeRoutes } = await import('./stripe.js');
+    await loadAllModules();
+    
+    if (!stripeRoutes) {
+      return res.status(503).json({ error: 'Module stripe non disponible' });
+    }
     
     const newReq = {
       ...req,
@@ -256,7 +327,11 @@ router.post('/create-payment-intent-commande', async (req, res) => {
 router.post('/confirm-payment-commande', async (req, res) => {
   console.log(`🔄 [Paiements] Redirection /confirm-payment-commande → /stripe/confirm-payment-commande`);
   try {
-    const { stripeRoutes } = await import('./stripe.js');
+    await loadAllModules();
+    
+    if (!stripeRoutes) {
+      return res.status(503).json({ error: 'Module stripe non disponible' });
+    }
     
     const newReq = {
       ...req,
@@ -281,38 +356,15 @@ router.post('/confirm-payment-commande', async (req, res) => {
   }
 });
 
-// Module paiements CRUD (existant) - APRÈS les routes spécifiques
-try {
-  const { paiementsRoutes } = await import('./paiements.js');
-  router.use('/', paiementsRoutes);
-  console.log('✅ [Paiements] Module paiements CRUD chargé');
-} catch (error) {
-  console.warn('⚠️ [Paiements] Module paiements CRUD non disponible');
-}
-
-// Module webhooks (existant)
-try {
-  const { webhooksRoutes } = await import('./webhooks.js');
-  router.use('/webhook', webhooksRoutes);
-  console.log('✅ [Paiements] Module webhooks chargé');
-} catch (error) {
-  console.warn('⚠️ [Paiements] Module webhooks non disponible');
-}
-
-// Module test (existant)
-try {
-  const { testRoutes } = await import('./test.js');
-  router.use('/test', testRoutes);
-  console.log('✅ [Paiements] Module test chargé');
-} catch (error) {
-  console.warn('⚠️ [Paiements] Module test non disponible');
-}
-
 // Routes de compatibilité pour les tests
 router.post('/force-payment-success', async (req, res) => {
   console.log(`🔄 [Paiements] Redirection /force-payment-success → /test/force-payment-success`);
   try {
-    const { testRoutes } = await import('./test.js');
+    await loadAllModules();
+    
+    if (!testRoutes) {
+      return res.status(503).json({ error: 'Module test non disponible' });
+    }
     
     const newReq = {
       ...req,
@@ -337,49 +389,53 @@ router.post('/force-payment-success', async (req, res) => {
   }
 });
 
-// Module echeances EN DERNIER pour éviter les conflits - UNE SEULE FOIS
-try {
-  const { echeancesRoutes } = await import('./echeances.js');
-  router.use('/echeances', echeancesRoutes);
-  
-  // Route de compatibilité pour les échéances
-  router.get('/echeance/:echeanceId', async (req, res) => {
-    console.log(`🔄 [Paiements] Redirection /echeance/${req.params.echeanceId} → /echeances/echeance/`);
-    try {
-      const newReq = {
-        ...req,
-        url: `/echeance/${req.params.echeanceId}`,
-        originalUrl: req.originalUrl.replace('/echeance/', '/echeances/echeance/'),
-        path: `/echeance/${req.params.echeanceId}`
-      };
-      
-      echeancesRoutes(newReq as any, res, (err: any) => {
-        if (err) {
-          console.error('❌ [Paiements] Erreur redirection echeances:', err);
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Erreur de redirection interne' });
-          }
-        }
-      });
-    } catch (error) {
-      console.error('❌ [Paiements] Erreur redirection echeances:', error);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Module echeances non disponible' });
-      }
+// Route de compatibilité pour les échéances
+router.get('/echeance/:echeanceId', async (req, res) => {
+  console.log(`🔄 [Paiements] Redirection /echeance/${req.params.echeanceId} → /echeances/echeance/`);
+  try {
+    await loadAllModules();
+    
+    if (!echeancesRoutes) {
+      return res.status(503).json({ error: 'Module echeances non disponible' });
     }
-  });
-  
-  console.log('✅ [Paiements] Module echeances chargé');
-} catch (error) {
-  console.warn('⚠️ [Paiements] Module echeances non disponible');
-}
+    
+    const newReq = {
+      ...req,
+      url: `/echeance/${req.params.echeanceId}`,
+      originalUrl: req.originalUrl.replace('/echeance/', '/echeances/echeance/'),
+      path: `/echeance/${req.params.echeanceId}`
+    };
+    
+    echeancesRoutes(newReq as any, res, (err: any) => {
+      if (err) {
+        console.error('❌ [Paiements] Erreur redirection echeances:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Erreur de redirection interne' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ [Paiements] Erreur redirection echeances:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Module echeances non disponible' });
+    }
+  }
+});
 
 // Route de santé minimaliste
-router.get('/health', (req, res) => {
+router.get('/health', async (req, res) => {
+  await loadAllModules();
+  
   res.json({ 
     status: 'Module paiements modulaire actif',
     timestamp: new Date().toISOString(),
-    modules: ['paiements', 'stripe', 'echeances', 'webhooks', 'test'],
+    modules: {
+      stripe: !!stripeRoutes,
+      paiements: !!paiementsRoutes,
+      webhooks: !!webhooksRoutes,
+      test: !!testRoutes,
+      echeances: !!echeancesRoutes
+    },
     compatibility: [
       'GET /paiements/echeance/:id → /paiements/echeances/echeance/:id',
       'POST /paiements/create-payment-intent → /paiements/stripe/create-payment-intent',
@@ -392,7 +448,5 @@ router.get('/health', (req, res) => {
     ]
   });
 });
-
-console.log('✅ [Paiements] Module modulaire initialisé');
 
 export default router;

@@ -59,19 +59,34 @@ async function startServer() {
     // 2. Initialiser et vérifier SendGrid
     console.log('🔄 [Server] Vérification de la configuration SendGrid...');
     try {
-      const { emailClient } = await import('./clients/emailClient.js');
-      await emailClient.initializeAndVerify();
+      const { EmailClient } = await import('./clients/emailClient.js');
+      const emailClient = new EmailClient();
+      console.log('✅ [Server] EmailClient prêt');
     } catch (emailError) {
-      console.warn('⚠️ [Server] Erreur lors de l\'initialisation SendGrid:', emailError);
+      console.warn('⚠️ [Server] Erreur lors de l\'initialisation EmailClient:', emailError);
       console.warn('⚠️ [Server] Le serveur continuera sans les services email optimaux');
     }
     
-    // 3. Initialiser les services email après la DB (sans erreur bloquante)
+    // 3. Initialiser les services email après la DB
     console.log('🔄 [Server] Initialisation des services email...');
     try {
+      // AJOUTÉ: Importer et initialiser EmailValidationService
+      const { EmailValidationService } = await import('./services/emailValidationService.js');
+      const emailValidationService = new EmailValidationService();
+      await emailValidationService.initializeTables();
+      console.log('✅ [Server] EmailValidationService initialisé');
+      
+      // AJOUTÉ: Importer EmailClient comme service secondaire
+      const { emailClient } = await import('./clients/emailClient.js');
+      await emailClient.initializeAndVerify();
+      console.log('✅ [Server] EmailClient singleton initialisé');
+      
+      // Initialiser messageClient comme avant
       const { messageClient } = await import('./db/clients/messagerie/messageClient.js');
       await messageClient.initialiser();
-      console.log('✅ [Server] Services email initialisés');
+      console.log('✅ [Server] MessageClient initialisé');
+      
+      console.log('✅ [Server] Services email initialisés (EmailValidationService + EmailClient + MessageClient)');
       
     } catch (emailError) {
       console.warn('⚠️ [Server] Services email non disponibles:', emailError);
