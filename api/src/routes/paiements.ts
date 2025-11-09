@@ -724,7 +724,7 @@ router.post('/webhook/stripe', async (req, res) => {
   try {
     console.log('🔔 [Webhook] Stripe webhook reçu');
     
-    // CORRIGÉ: Traitement simple du webhook sans express.raw
+    // Traitement simple du webhook
     const event = req.body;
     
     console.log('🔔 [Webhook] Event type:', event?.type);
@@ -734,12 +734,10 @@ router.post('/webhook/stripe', async (req, res) => {
     switch (event?.type) {
       case 'payment_intent.succeeded':
         console.log('💳 [Webhook] Payment succeeded:', event.data?.object?.id);
-        // Ici vous pouvez traiter le paiement réussi
         break;
         
       case 'payment_intent.payment_failed':
         console.log('❌ [Webhook] Payment failed:', event.data?.object?.id);
-        // Ici vous pouvez traiter l'échec de paiement
         break;
         
       default:

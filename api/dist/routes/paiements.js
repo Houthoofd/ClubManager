@@ -607,15 +607,27 @@ router.post('/force-payment-success', async (req, res) => {
 });
 // ===== ROUTES WEBHOOK =====
 // POST - Webhook Stripe
-router.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook/stripe', async (req, res) => {
     if (!stripe) {
         return res.status(503).json({ error: 'Service Stripe non disponible' });
     }
     try {
         console.log('🔔 [Webhook] Stripe webhook reçu');
-        // Ici vous pouvez traiter les webhooks Stripe
-        // const sig = req.headers['stripe-signature'];
-        // const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        // Traitement simple du webhook
+        const event = req.body;
+        console.log('🔔 [Webhook] Event type:', event?.type);
+        console.log('🔔 [Webhook] Event ID:', event?.id);
+        // Traitement basique des événements Stripe
+        switch (event?.type) {
+            case 'payment_intent.succeeded':
+                console.log('💳 [Webhook] Payment succeeded:', event.data?.object?.id);
+                break;
+            case 'payment_intent.payment_failed':
+                console.log('❌ [Webhook] Payment failed:', event.data?.object?.id);
+                break;
+            default:
+                console.log('ℹ️ [Webhook] Événement non traité:', event?.type);
+        }
         res.status(200).json({ received: true });
     }
     catch (error) {
