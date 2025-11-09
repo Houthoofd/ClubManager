@@ -72,7 +72,6 @@ jobs:
             echo "📁 Création du dossier clubmanager et copie des fichiers..."
             sudo mkdir -p /usr/share/nginx/html/clubmanager
 
-            sudo cp -r front-end/dist/index.html /usr/share/nginx/html/clubmanager/index.html
             
             if [ "$USE_PREBUILT" = "true" ]; then
               sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
