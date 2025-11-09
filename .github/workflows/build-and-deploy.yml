@@ -114,17 +114,40 @@ jobs:
             fi
 
             echo "🔐 Application des permissions nginx..."
-            # CORRIGÉ: Application des permissions nginx avec propriétaire
-            sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
-            sudo chmod -R 755 /usr/share/nginx/html/clubmanager
+            # CORRIGÉ: Forcer les permissions d'écriture avant de copier
+            echo "🔓 Correction des permissions d'écriture..."
+            sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 664 {} \; 2>/dev/null || echo "Pas de fichiers existants"
+            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 775 {} \; 2>/dev/null || echo "Pas de dossiers existants"
             
-            # AJOUTÉ: Permissions spécifiques pour les fichiers
+            # AJOUTÉ: Forcer la suppression complète avec les bonnes permissions
+            sudo chmod -R 777 /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Dossier n'existe pas encore"
+            sudo rm -rf /usr/share/nginx/html/clubmanager
+            sudo mkdir -p /usr/share/nginx/html/clubmanager
+            
+            # AJOUTÉ: Copie avec force et permissions immédiates
+            echo "📋 Copie FORCÉE avec permissions étendues..."
+            sudo cp -rf front-end/dist/* /usr/share/nginx/html/clubmanager/
+            
+            # CORRIGÉ: Application des permissions nginx avec propriétaire et permissions étendues
+            sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
+            
+            # AJOUTÉ: Permissions étendues pour éviter les problèmes d'écriture
+            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 755 {} \;
             sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 644 {} \;
+            
+            # AJOUTÉ: Permissions spéciales pour index.html pour éviter "unwritable"
+            sudo chmod 644 /usr/share/nginx/html/clubmanager/index.html
+            sudo chown nginx:nginx /usr/share/nginx/html/clubmanager/index.html
+            
+            # AJOUTÉ: Vérifier que le fichier index.html est maintenant accessible
+            echo "🔍 Vérification permissions index.html:"
+            sudo ls -la /usr/share/nginx/html/clubmanager/index.html
             
             echo "✅ Permissions appliquées:"
             echo "  - Propriétaire: nginx:nginx"
             echo "  - Dossiers: 755"
             echo "  - Fichiers: 644"
+            echo "  - index.html: 644 (lecture/écriture pour nginx)"
 
             echo "♻️ Rechargement nginx..."
             sudo systemctl reload nginx
