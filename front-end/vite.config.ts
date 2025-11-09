@@ -1,37 +1,37 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // Use relative paths for assets - crucial for deployment
+  base: '/', // IMPORTANT pour le déploiement
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false, // Disable sourcemaps for production
+    sourcemap: false, // Désactiver en production
+    minify: 'terser',
     rollupOptions: {
-      onwarn(warning, warn) {
-        // Ignore TypeScript warnings during build
-        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return
-        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return
-        warn(warning)
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          patternfly: ['@patternfly/react-core', '@patternfly/react-icons']
+        }
       }
     }
   },
-  esbuild: {
-    logOverride: { 
-      'this-is-undefined-in-esm': 'silent',
-      'direct-eval': 'silent'
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      }
     }
   },
-  // Configuration pour le serveur de développement
-  server: {
-    port: 3000,
-    host: true
-  },
-  // Configuration pour le serveur de preview
-  preview: {
-    port: 5173,
-    host: true
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
   }
 })

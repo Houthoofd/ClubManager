@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import http from 'http';
 import { Server } from 'socket.io';
+import fs from 'fs';
 
 // Charger le .env en premier
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -229,12 +230,40 @@ async function startServer() {
       console.log('⚠️ [Server] Route stocks en mode fallback');
     }
 
-    // Servir le build Vite (React) uniquement en production
-    if (process.env.NODE_ENV === 'production') {
-      app.use(express.static(path.join(__dirname, '../dist')));
+    // MODIFIÉ: Servir le build React en production ET développement si les fichiers existent
+    const frontendPath = path.join(__dirname, '../../../front-end/dist');
+    const nginxFrontendPath = '/usr/share/nginx/html/clubmanager';
+    
+    // Vérifier quel chemin utiliser
+    let staticPath = null;
+    if (fs.existsSync(frontendPath)) {
+      staticPath = frontendPath;
+      console.log('📂 [Server] Frontend servi depuis:', frontendPath);
+    } else if (fs.existsSync(nginxFrontendPath)) {
+      staticPath = nginxFrontendPath;
+      console.log('📂 [Server] Frontend servi depuis nginx:', nginxFrontendPath);
+    }
+
+    if (staticPath) {
+      // Servir les fichiers statiques du build React
+      app.use(express.static(staticPath));
+      
+      // SPA fallback - rediriger toutes les routes vers index.html
       app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+        // Éviter de rediriger les routes API
+        if (req.path.startsWith('/api/') || 
+            req.path.startsWith('/health/') || 
+            req.path.startsWith('/public/') ||
+            req.path.startsWith('/uploads/')) {
+          return res.status(404).json({ error: 'Route API non trouvée' });
+        }
+        
+        res.sendFile(path.join(staticPath, 'index.html'));
       });
+      
+      console.log('✅ [Server] Frontend React configuré avec SPA routing');
+    } else {
+      console.warn('⚠️ [Server] Aucun build frontend trouvé - API seulement');
     }
 
     // 5. Routes de santé
