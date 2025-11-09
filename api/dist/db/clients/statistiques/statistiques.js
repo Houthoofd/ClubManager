@@ -311,7 +311,7 @@ export class Statistiques {
         FROM paiements
         WHERE MONTH(date_paiement) = MONTH(CURRENT_DATE())
           AND YEAR(date_paiement) = YEAR(CURRENT_DATE())
-          AND statut = 'confirmé'
+          AND statut IN ('validé', 'confirmé')
       `;
             this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
@@ -319,7 +319,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results[0].total);
+                    console.log('📊 getTotalPaiementsMois - Raw results:', results);
+                    resolve(results[0]?.total || 0);
                 }
             });
         });
@@ -333,7 +334,7 @@ export class Statistiques {
         SELECT COUNT(*) AS count
         FROM paiements
         WHERE date_paiement >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
-          AND statut = 'confirmé'
+          AND statut IN ('validé', 'confirmé')
       `;
             this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
@@ -341,7 +342,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results[0].count);
+                    console.log('📊 getPaiementsRecents - Raw results:', results);
+                    resolve(results[0]?.count || 0);
                 }
             });
         });
@@ -354,7 +356,7 @@ export class Statistiques {
             const sql = `
         SELECT COUNT(*) AS count
         FROM paiements
-        WHERE statut = 'en attente'
+        WHERE statut = 'en_attente'
       `;
             this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
@@ -362,7 +364,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results[0].count);
+                    console.log('📊 getPaiementsEnAttente - Raw results:', results);
+                    resolve(results[0]?.count || 0);
                 }
             });
         });
@@ -379,7 +382,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results[0]?.count ?? 0);
+                    console.log('📊 getPlansActifs - Raw results:', results);
+                    resolve(results[0]?.count || 0);
                 }
             });
         });
@@ -392,7 +396,7 @@ export class Statistiques {
             const sql = `
         SELECT
           ROUND(
-            (SELECT COUNT(*) FROM paiements WHERE statut = 'validé' AND periode_fin >= CURRENT_DATE()) * 100.0 /
+            (SELECT COUNT(*) FROM paiements WHERE statut IN ('validé', 'confirmé') AND periode_fin >= CURRENT_DATE()) * 100.0 /
             NULLIF((SELECT COUNT(*) FROM paiements WHERE periode_fin >= CURRENT_DATE()), 0), 2
           ) AS taux
       `;
@@ -402,7 +406,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results[0]?.taux ?? 0);
+                    console.log('📊 getTauxRenouvellement - Raw results:', results);
+                    resolve(results[0]?.taux || 0);
                 }
             });
         });
@@ -415,9 +420,10 @@ export class Statistiques {
             const sql = `
         SELECT
           DATE_FORMAT(date_paiement, '%b') AS mois,
-          SUM(montant) AS total
+          COALESCE(SUM(montant), 0) AS total
         FROM paiements
-        WHERE statut = 'validé'
+        WHERE statut IN ('validé', 'confirmé')
+          AND date_paiement >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
         GROUP BY YEAR(date_paiement), MONTH(date_paiement)
         ORDER BY YEAR(date_paiement) DESC, MONTH(date_paiement) DESC
         LIMIT 12
@@ -428,7 +434,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results);
+                    console.log('📊 getPaiementsParMois - Raw results:', results);
+                    resolve(results || []);
                 }
             });
         });
@@ -439,9 +446,11 @@ export class Statistiques {
     async getMembresParPlan() {
         return new Promise((resolve, reject) => {
             const sql = `
-        SELECT pt.nom_plan AS plan, COUNT(u.id) AS value
+        SELECT 
+          COALESCE(pt.nom_plan, 'Sans plan') AS plan, 
+          COUNT(u.id) AS value
         FROM utilisateurs u
-        JOIN plans_tarifaires pt ON u.abonnement_id = pt.id
+        LEFT JOIN plans_tarifaires pt ON u.abonnement_id = pt.id
         WHERE u.status_id IN (1,2,3,4,5)
         GROUP BY pt.nom_plan
       `;
@@ -451,7 +460,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results);
+                    console.log('📊 getMembresParPlan - Raw results:', results);
+                    resolve(results || []);
                 }
             });
         });
@@ -459,10 +469,16 @@ export class Statistiques {
     async getDerniersPaiements() {
         return new Promise((resolve, reject) => {
             const sql = `
-        SELECT p.*, u.nom_utilisateur
+        SELECT 
+          p.montant,
+          p.date_paiement,
+          p.statut,
+          u.first_name,
+          u.last_name,
+          u.nom_utilisateur
         FROM paiements p
         JOIN utilisateurs u ON p.utilisateur_id = u.id
-        WHERE p.statut = 'confirmé'
+        WHERE p.statut IN ('validé', 'confirmé')
         ORDER BY p.date_paiement DESC
         LIMIT 10
       `;
@@ -472,7 +488,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results);
+                    console.log('📊 getDerniersPaiements - Raw results:', results);
+                    resolve(results || []);
                 }
             });
         });
@@ -481,11 +498,19 @@ export class Statistiques {
         return new Promise((resolve, reject) => {
             const sql = `
         SELECT 
-          COUNT(*) AS count
+          ep.montant,
+          ep.date_echeance,
+          ep.statut,
+          u.first_name,
+          u.last_name,
+          u.nom_utilisateur,
+          u.id as utilisateur_id
         FROM echeances_paiements ep
         JOIN utilisateurs u ON ep.utilisateur_id = u.id
         WHERE ep.date_echeance < CURRENT_DATE()
-          AND ep.statut = 'en_attente'
+          AND ep.statut IN ('en attente', 'échu')
+        ORDER BY ep.date_echeance DESC
+        LIMIT 10
       `;
             this.mysqlConnector.query(sql, [], (error, results) => {
                 if (error) {
@@ -493,7 +518,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results);
+                    console.log('📊 getPaiementsEchus - Raw results:', results);
+                    resolve(results || []);
                 }
             });
         });
@@ -501,8 +527,14 @@ export class Statistiques {
     async getNouveauxMembres() {
         return new Promise((resolve, reject) => {
             const sql = `
-        SELECT u.first_name, u.last_name, u.date_inscription
+        SELECT 
+          u.first_name, 
+          u.last_name, 
+          u.email,
+          u.date_inscription,
+          pt.nom_plan as plan_name
         FROM utilisateurs u
+        LEFT JOIN plans_tarifaires pt ON u.abonnement_id = pt.id
         WHERE u.date_inscription >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
         ORDER BY u.date_inscription DESC
         LIMIT 10
@@ -513,7 +545,8 @@ export class Statistiques {
                     reject(error);
                 }
                 else {
-                    resolve(results);
+                    console.log('📊 getNouveauxMembres - Raw results:', results);
+                    resolve(results || []);
                 }
             });
         });

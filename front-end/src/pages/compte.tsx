@@ -27,6 +27,8 @@ import CompteInfoTab from '../components/compte/CompteInfoTab';
 import ResultModal from '../components/common/modal/ResultModal';
 import ConfirmModal from '../components/common/modal/ConfirmModal';
 import ResumeConfirmModal from '../components/common/modal/ResumeConfirmModal';
+import { useCheckEmail } from '../hooks/useVerification';
+import { useQueryClient } from '@tanstack/react-query';
 
 function formatDateForInput(isoDateString: string): string {
   if (!isoDateString) return '';
@@ -65,6 +67,11 @@ const Compte = () => {
   const [disabledFields, setDisabledFields] = useState<{ [key: string]: boolean }>({});
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  // AJOUTÉ: Hook pour vérifier l'email
+  const checkEmail = useCheckEmail();
+  // AJOUTÉ: Query client pour invalider le cache
+  const queryClient = useQueryClient();
+
   const {
     userData,
     utilisateurId,
@@ -100,24 +107,72 @@ const Compte = () => {
   // initialisation du formulaire
   useEffect(() => {
     if (compteInfo) {
+      console.log('🔍 CompteInfo data COMPLET:', JSON.stringify(compteInfo, null, 2));
+      
+      // GARDÉ: Extraction plus robuste des valeurs
+      const extractValue = (field: string) => {
+        let value = compteInfo[field] || compteInfo.utilisateur?.[field];
+        
+        // Si c'est un objet, essayons d'extraire une propriété utile
+        if (typeof value === 'object' && value !== null) {
+          console.log(`⚠️ Field ${field} is an object:`, value);
+          
+          // Pour les objets, essayons de prendre la première propriété string
+          if (value.hasOwnProperty('id')) value = value.id;
+          else if (value.hasOwnProperty('name')) value = value.name;
+          else if (value.hasOwnProperty('nom')) value = value.nom;
+          else if (value.hasOwnProperty('email')) value = value.email;
+          else {
+            // Si c'est toujours un objet, convertissons-le
+            value = String(value);
+          }
+        }
+        
+        const result = String(value || '');
+        console.log(`📝 Extracted ${field}:`, result);
+        return result;
+      };
+
       setShowPasswordField(!compteInfo.mot_de_passe);
-      setForm({
-        email: compteInfo.email || '',
-        date_naissance: formatDateForInput(compteInfo.date_naissance) || '',
-        genres: compteInfo.genres || '',
-        grades: compteInfo.grades || '',
-        abonnement: compteInfo.abonnement || '',
-        status: compteInfo.status || '',
+      
+      const formData = {
+        email: extractValue('email'),
+        date_naissance: formatDateForInput(compteInfo.date_naissance || compteInfo.utilisateur?.date_of_birth || '') || '',
+        genres: extractValue('genres') || extractValue('genre_id'),
+        grades: extractValue('grades') || extractValue('grade_id'),
+        abonnement: extractValue('abonnement') || extractValue('abonnement_id'),
+        status: extractValue('status') || extractValue('status_id'),
         password: ''
-      });
+      };
+
+      console.log('📝 Form data final:', formData);
+      setForm(formData);
 
       // Définir les champs désactivés selon le rôle
       setDisabledFields({
-        status: !canEditStatus(), // Seuls les super-admin peuvent modifier le statut
-        grades: !canEditStatus()  // Optionnel: restreindre aussi les grades aux super-admin
+        status: !canEditStatus(),
+        grades: !canEditStatus()
       });
     }
   }, [compteInfo, userRole]);
+
+  // GARDÉ: Handler pour les changements avec validation
+  const handleEmailChangeSecure = async (value: string) => {
+    console.log('📧 Email change:', value, typeof value);
+    const safeValue = typeof value === 'string' ? value : String(value || '');
+    setForm(prev => ({ ...prev, email: safeValue }));
+    
+    // Validation supplémentaire côté parent si nécessaire
+    if (editingFields['email'] && safeValue) {
+      // La validation est gérée dans FormulaireCompte
+    }
+  };
+
+  const handleFormChangeSecure = (field: string, value: string) => {
+    console.log(`📝 Form change ${field}:`, value, typeof value);
+    const safeValue = typeof value === 'string' ? value : String(value || '');
+    setForm(prev => ({ ...prev, [field]: safeValue }));
+  };
 
   // handlers
   const handleTabClick = (_event: React.SyntheticEvent, eventKey: string | number) => {
@@ -136,11 +191,13 @@ const Compte = () => {
     setEditingFields(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  // AJOUTÉ: Handlers manquants
   const handleFormChange = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleEmailChange = (value: string) => setForm(prev => ({ ...prev, email: value }));
+  
   const handlePasswordChange = (value: string) => {
     setForm(prev => ({ ...prev, password: value }));
   };
@@ -153,7 +210,7 @@ const Compte = () => {
     return changes;
   };
 
-  // Gestion des résultats de mutation
+  // MODIFIÉ: Gestion des résultats de mutation avec invalidation complète
   useEffect(() => {
     if (updateCompte.isSuccess) {
       setResultModalMessage('Les modifications apportées ont été sauvegardées avec succès.');
@@ -161,57 +218,130 @@ const Compte = () => {
       setIsResultModalOpen(true);
       setEditingFields({});
       setDisabledFields({});
+      
+      // MODIFIÉ: Invalidation complète du cache incluant les échéances
+      queryClient.invalidateQueries({ queryKey: ['compteData'] });
+      queryClient.invalidateQueries({ queryKey: ['userData'] });
+      queryClient.invalidateQueries({ queryKey: ['echeancesUtilisateur'] }); // AJOUTÉ
+      queryClient.invalidateQueries({ queryKey: ['paiements'] }); // AJOUTÉ
+      
+      // AJOUTÉ: Invalider spécifiquement pour cet utilisateur
+      if (utilisateurId) {
+        queryClient.invalidateQueries({ queryKey: ['echeancesUtilisateur', utilisateurId] });
+        queryClient.invalidateQueries({ queryKey: ['echeances', 'utilisateur', utilisateurId] });
+        queryClient.invalidateQueries({ queryKey: ['paiements', 'utilisateur', utilisateurId] });
+        console.log('💰 [Compte] Échéances invalidées pour utilisateur après mise à jour:', utilisateurId);
+      }
+      
+      // AJOUTÉ: Mettre à jour le localStorage si l'email a changé
+      const storedData = localStorage.getItem('userData');
+      if (storedData && form.email) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          if (parsedData.email !== form.email) {
+            parsedData.email = form.email;
+            localStorage.setItem('userData', JSON.stringify(parsedData));
+            console.log('📧 Email mis à jour dans localStorage');
+          }
+        } catch (error) {
+          console.error('❌ Erreur mise à jour localStorage:', error);
+        }
+      }
+      
+      console.log('✅ Cache et localStorage invalidés après mise à jour du compte (y compris échéances)');
     }
     if (updateCompte.isError) {
       setResultModalMessage('Une erreur est survenue lors de la sauvegarde des modifications. Veuillez réessayer.');
       setResultModalSuccess(false);
       setIsResultModalOpen(true);
     }
-  }, [updateCompte.isSuccess, updateCompte.isError, updateCompte.error]);
+  }, [updateCompte.isSuccess, updateCompte.isError, updateCompte.error, queryClient, form.email, utilisateurId]);
 
   // Fonction pour obtenir le nom d'affichage d'une valeur
   const getDisplayValue = (key: string, value: any) => {
-    if (!value || value === '') return 'Non défini';
+    if (!value || value === '' || value === null || value === undefined) return 'Non défini';
+    
+    console.log(`🔍 getDisplayValue - key: ${key}, value:`, value, 'type:', typeof value);
+    
+    const stringValue = String(value);
     
     switch (key) {
       case 'genres':
-        const genre = genres?.find(g => g.id == value);
-        return genre?.genre_name || value;
+        const genre = genres?.find(g => String(g.id) === stringValue || g.genre_name === stringValue);
+        return genre?.genre_name || stringValue;
       case 'grades':
-        const grade = grades?.find(g => g.id == value);
-        return grade?.grade_id || value;
+        const grade = grades?.find(g => String(g.id) === stringValue || g.grade_id === stringValue);
+        return grade?.grade_id || stringValue;
       case 'abonnement':
-        const abonnement = abonnements?.find(a => a.id == value);
-        return abonnement?.nom_plan || value;
+        const abonnement = abonnements?.find(a => String(a.id) === stringValue || a.nom_plan === stringValue);
+        return abonnement?.nom_plan || stringValue;
       case 'status':
-        const statusItem = status?.find(s => s.id == value);
-        return statusItem?.nom_status || value;
+        const statusItem = status?.find(s => String(s.id) === stringValue || s.nom_status === stringValue);
+        return statusItem?.nom_status || stringValue;
       case 'mot_de_passe':
         return '••••••••';
+      case 'email':
+        return stringValue;
       default:
-        return value;
+        return stringValue;
     }
   };
 
   // Affiche le résumé des changements dans la modal avant modification
-  const handleApplyChanges = () => {
+  const handleApplyChanges = async () => {
     const changes = getChangesSummary();
+    
+    // Vérification spéciale pour l'email si modifié
+    if (editingFields['email'] && changes['email']) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(changes['email'])) {
+        setResultModalMessage('Veuillez entrer une adresse email valide.');
+        setResultModalSuccess(false);
+        setIsResultModalOpen(true);
+        return;
+      }
+      
+      // Vérification de l'unicité
+      const currentEmail = compteInfo?.utilisateur?.email;
+      if (changes['email'] !== currentEmail) {
+        try {
+          console.log('🔍 Vérification unicité email:', changes['email']);
+          const emailExists = await checkEmail(changes['email']);
+          console.log('📧 Email exists result:', emailExists);
+          
+          if (emailExists) {
+            setResultModalMessage('Cette adresse email est déjà utilisée par un autre utilisateur.');
+            setResultModalSuccess(false);
+            setIsResultModalOpen(true);
+            return;
+          }
+        } catch (error) {
+          console.error('❌ Erreur vérification email:', error);
+          setResultModalMessage('Erreur lors de la vérification de l\'email. Veuillez réessayer.');
+          setResultModalSuccess(false);
+          setIsResultModalOpen(true);
+          return;
+        }
+      }
+    }
+    
     // Ajout du mot de passe s'il a été modifié
     if (editingFields.password && form.password.trim() !== '') {
       changes['password'] = form.password;
     }
 
+    console.log('📝 Changes to apply:', changes);
+
     if (Object.keys(changes).length > 0) {
       const modifications: ModificationItem[] = Object.entries(changes)
         .map(([key, newValue]) => {
-          // Récupérer la valeur originale depuis compteInfo.utilisateur
-          let originalValue = compteInfo?.utilisateur?.[key];
+          let originalValue = compteInfo?.utilisateur?.[key] || compteInfo?.[key];
           
-          // Obtenir les noms d'affichage avec fallback
+          console.log(`🔍 Processing field ${key}:`, { originalValue, newValue });
+          
           let originalDisplay = 'Non défini';
           let newDisplay = String(newValue || 'Vide');
           
-          // Mapping des noms de champs pour l'affichage
           const fieldDisplayNames: { [key: string]: string } = {
             'email': 'Email',
             'date_naissance': 'Date de naissance',
@@ -222,69 +352,55 @@ const Compte = () => {
             'password': 'Mot de passe'
           };
           
-          // Conversion des valeurs originales
-          if (originalValue && originalValue !== '' && originalValue !== null) {
+          if (originalValue && originalValue !== '' && originalValue !== null && originalValue !== undefined) {
+            const originalString = String(originalValue);
+            
             if (key === 'genres' && genres) {
-              let genre = genres.find(g => g.genre_name === originalValue);
-              if (!genre) {
-                genre = genres.find(g => String(g.id) === String(originalValue));
-              }
-              originalDisplay = genre?.genre_name || `Genre: ${originalValue}`;
+              let genre = genres.find(g => g.genre_name === originalString) || 
+                          genres.find(g => String(g.id) === originalString);
+              originalDisplay = genre?.genre_name || `Genre: ${originalString}`;
             } else if (key === 'grades' && grades) {
-              let grade = grades.find(g => g.grade_id === originalValue);
-              if (!grade) {
-                grade = grades.find(g => String(g.id) === String(originalValue));
-              }
-              originalDisplay = grade?.grade_id || `Grade: ${originalValue}`;
+              let grade = grades.find(g => g.grade_id === originalString) ||
+                          grades.find(g => String(g.id) === originalString);
+              originalDisplay = grade?.grade_id || `Grade: ${originalString}`;
             } else if (key === 'abonnement' && abonnements) {
-              let abonnement = abonnements.find(a => a.nom_plan === originalValue);
-              if (!abonnement) {
-                abonnement = abonnements.find(a => String(a.id) === String(originalValue));
-              }
-              originalDisplay = abonnement?.nom_plan || `Abonnement: ${originalValue}`;
+              let abonnement = abonnements.find(a => a.nom_plan === originalString) ||
+                              abonnements.find(a => String(a.id) === originalString);
+              originalDisplay = abonnement?.nom_plan || `Abonnement: ${originalString}`;
             } else if (key === 'status' && status) {
-              let statusItem = status.find(s => s.nom_status === originalValue);
-              if (!statusItem) {
-                statusItem = status.find(s => String(s.id) === String(originalValue));
-              }
-              originalDisplay = statusItem?.nom_status || `Status: ${originalValue}`;
+              let statusItem = status.find(s => s.nom_status === originalString) ||
+                              status.find(s => String(s.id) === originalString);
+              originalDisplay = statusItem?.nom_status || `Status: ${originalString}`;
             } else if (key === 'password') {
               originalDisplay = '••••••••';
             } else {
-              originalDisplay = String(originalValue);
+              originalDisplay = originalString;
             }
           }
           
-          // Conversion des nouvelles valeurs
           if (newValue && newValue !== '') {
+            const newString = String(newValue);
+            
             if (key === 'genres' && genres) {
-              let genre = genres.find(g => g.genre_name === newValue);
-              if (!genre) {
-                genre = genres.find(g => String(g.id) === String(newValue));
-              }
-              newDisplay = genre?.genre_name || newValue;
+              let genre = genres.find(g => g.genre_name === newString) ||
+                          genres.find(g => String(g.id) === newString);
+              newDisplay = genre?.genre_name || newString;
             } else if (key === 'grades' && grades) {
-              let grade = grades.find(g => g.grade_id === newValue);
-              if (!grade) {
-                grade = grades.find(g => String(g.id) === String(newValue));
-              }
-              newDisplay = grade?.grade_id || newValue;
+              let grade = grades.find(g => g.grade_id === newString) ||
+                          grades.find(g => String(g.id) === newString);
+              newDisplay = grade?.grade_id || newString;
             } else if (key === 'abonnement' && abonnements) {
-              let abonnement = abonnements.find(a => a.nom_plan === newValue);
-              if (!abonnement) {
-                abonnement = abonnements.find(a => String(a.id) === String(newValue));
-              }
-              newDisplay = abonnement?.nom_plan || newValue;
+              let abonnement = abonnements.find(a => a.nom_plan === newString) ||
+                              abonnements.find(a => String(a.id) === newString);
+              newDisplay = abonnement?.nom_plan || newString;
             } else if (key === 'status' && status) {
-              let statusItem = status.find(s => s.nom_status === newValue);
-              if (!statusItem) {
-                statusItem = status.find(s => String(s.id) === String(newValue));
-              }
-              newDisplay = statusItem?.nom_status || newValue;
+              let statusItem = status.find(s => s.nom_status === newString) ||
+                              status.find(s => String(s.id) === newString);
+              newDisplay = statusItem?.nom_status || newString;
             } else if (key === 'password') {
               newDisplay = 'Nouveau mot de passe';
             } else {
-              newDisplay = String(newValue);
+              newDisplay = newString;
             }
           }
           
@@ -294,6 +410,8 @@ const Compte = () => {
             newValue: newDisplay
           };
         });
+      
+      console.log('📝 Modifications resume:', modifications);
       
       setModificationsResume(modifications);
       setShowConfirmModal(true);
@@ -363,14 +481,14 @@ const Compte = () => {
           status={status}
           genres={genres}
           onEditClick={handleEditClick}
-          onEmailChange={handleEmailChange}
-          onFormChange={handleFormChange}
+          onEmailChange={handleEmailChangeSecure}
+          onFormChange={handleFormChangeSecure}
           onPasswordChange={handlePasswordChange}
           onApplyChanges={handleApplyChanges}
           isLoading={updateCompte.isPending}
           formatDateForInput={formatDateForInput}
           disabledFields={disabledFields}
-          canEditStatus={canEditStatus()} // Passer l'information au composant
+          canEditStatus={canEditStatus()}
         />
       )
     },
@@ -395,8 +513,8 @@ const Compte = () => {
         <PaiementsTab
           isDataReady={isDataReady}
           paiementsEcheances={paiementsEcheances}
-          userId={utilisateurId || userData?.id} // MODIFIÉ: Passer l'userId (avec fallback)
-          genererUrlPaiement={genererUrlPaiement} // AJOUTÉ: Passer la fonction
+          userId={utilisateurId || userData?.id}
+          genererUrlPaiement={genererUrlPaiement}
         />
       )
     }

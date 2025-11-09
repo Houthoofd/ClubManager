@@ -38,6 +38,11 @@ interface FormulaireUtilisateurProps {
   formatDateForInput: (date: string) => string;
   canEditStatus: boolean; // Ajout de canEditStatus
   disabledFields?: { [key: string]: boolean }; // Ajout de disabledFields
+  emailValidation?: { // AJOUTÉ: Nouvelle prop optionnelle
+    isValid: boolean;
+    message: string;
+    isChecking: boolean;
+  };
 }
 
 const FormulaireUtilisateur: React.FC<FormulaireUtilisateurProps> = ({
@@ -56,8 +61,20 @@ const FormulaireUtilisateur: React.FC<FormulaireUtilisateurProps> = ({
   isLoading,
   formatDateForInput,
   canEditStatus,
-  disabledFields = {}
+  disabledFields = {},
+  emailValidation = { isValid: true, message: '', isChecking: false }, // AJOUTÉ: Valeur par défaut
 }) => {
+  // AJOUTÉ: Fonction pour s'assurer que les valeurs sont des strings
+  const safeStringValue = (value: any): string => {
+    if (typeof value === 'string') return value;
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') {
+      console.warn('⚠️ Object value detected:', value);
+      return String(value);
+    }
+    return String(value);
+  };
+
   return (
     <>
       <Card style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
@@ -120,43 +137,47 @@ const FormulaireUtilisateur: React.FC<FormulaireUtilisateurProps> = ({
                 <FormGroup 
                   label="Adresse email" 
                   fieldId="email"
-                  helperText={emailCheckMessage ? emailCheckMessage : "Cliquez sur l'icône pour modifier"}
-                  helperTextInvalid={emailCheckMessage && emailCheckMessage.includes("déjà utilisée")}
+                  validated={editingFields['email'] ? (emailValidation.isValid ? 'success' : 'error') : 'default'} // AJOUTÉ: Validation visuelle
+                  helperText={editingFields['email'] && emailValidation.message ? emailValidation.message : emailCheckMessage} // MODIFIÉ: Utiliser emailValidation ou emailCheckMessage
+                  helperTextInvalid={editingFields['email'] && !emailValidation.isValid ? emailValidation.message : undefined} // AJOUTÉ: Message d'erreur
                 >
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    background: editingFields['email'] ? '#fff' : '#f8f9fa',
-                    border: `1px solid ${editingFields['email'] ? '#007bff' : '#ced4da'}`,
-                    borderRadius: '4px',
-                    padding: '0.5rem',
-                    transition: 'all 0.2s'
-                  }}>
-                    <TextInput
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={form.email}
-                      isDisabled={!editingFields['email']}
-                      onChange={onEmailChange}
-                      style={{ 
-                        flexGrow: 1, 
-                        border: 'none',
-                        background: 'transparent'
-                      }}
-                    />
-                    <Button 
-                      variant="plain" 
-                      aria-label={editingFields['email'] ? "Valider" : "Éditer"} 
-                      onClick={() => onEditClick('email')}
-                      style={{ 
-                        marginLeft: '10px',
-                        color: editingFields['email'] ? '#28a745' : '#007bff'
-                      }}
-                    >
-                      {editingFields['email'] ? <CheckIcon /> : <PencilAltIcon />}
-                    </Button>
-                  </div>
+                  <Flex alignItems={{ default: 'alignItemsCenter' }}>
+                    <FlexItem flex={{ default: 'flex_1' }}>
+                      <TextInput
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={safeStringValue(form.email)} // MODIFIÉ: Utiliser safeStringValue
+                        onChange={(_event, value) => onEmailChange(String(value))} // MODIFIÉ: Conversion en string
+                        isDisabled={!editingFields['email']}
+                        validated={editingFields['email'] ? (emailValidation.isValid ? 'success' : 'error') : 'default'} // AJOUTÉ: Validation visuelle
+                      />
+                    </FlexItem>
+                    {/* AJOUTÉ: Indicateur de vérification */}
+                    {editingFields['email'] && emailValidation.isChecking && (
+                      <FlexItem>
+                        <span style={{ marginLeft: '8px', color: '#6c757d' }}>⏳</span>
+                      </FlexItem>
+                    )}
+                    {/* AJOUTÉ: Indicateur de validation */}
+                    {editingFields['email'] && !emailValidation.isChecking && (
+                      <FlexItem>
+                        <span style={{ 
+                          marginLeft: '8px', 
+                          color: emailValidation.isValid ? '#28a745' : '#dc3545' 
+                        }}>
+                          {emailValidation.isValid ? '✓' : '✗'}
+                        </span>
+                      </FlexItem>
+                    )}
+                    <FlexItem>
+                      <Button 
+                        variant="plain" 
+                        onClick={() => onEditClick('email')}
+                        icon={editingFields['email'] ? <CheckIcon /> : <PencilAltIcon />}
+                      />
+                    </FlexItem>
+                  </Flex>
                 </FormGroup>
               </div>
             </FlexItem>

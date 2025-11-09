@@ -51,20 +51,34 @@ const DashboardPage: React.FC = () => {
     customMessage: "Votre session a expiré. Vous devez vous reconnecter pour accéder au tableau de bord."
   });
 
-  console.log('DashboardPage mounted');
+  console.log('🏠 DashboardPage mounted');
 
-  // Utilisation des hooks React Query
-  const { data: membresCount = 0 } = useMembresCount();
-  const { data: paiementsMois = 0 } = usePaiementsMois();
-  const { data: paiementsRecents = 0 } = usePaiementsRecents();
-  const { data: paiementsEnAttente = 0 } = usePaiementsEnAttente();
-  const { data: plansActifs = 0 } = usePlansActifs();
-  const { data: tauxRenouvellement = 0 } = useTauxRenouvellement();
+  // Utilisation des hooks React Query avec logs
+  const { data: membresCount = 0, isLoading: loadingMembres, error: errorMembres } = useMembresCount();
+  const { data: paiementsMois = 0, isLoading: loadingPaiementsMois, error: errorPaiementsMois } = usePaiementsMois();
+  const { data: paiementsRecents = 0, isLoading: loadingPaiementsRecents, error: errorPaiementsRecents } = usePaiementsRecents();
+  const { data: paiementsEnAttente = 0, isLoading: loadingPaiementsAttente, error: errorPaiementsAttente } = usePaiementsEnAttente();
+  const { data: plansActifs = 0, isLoading: loadingPlans, error: errorPlans } = usePlansActifs();
+  const { data: tauxRenouvellement = 0, isLoading: loadingTaux, error: errorTaux } = useTauxRenouvellement();
   const { data: paiementsParMois = [] } = usePaiementsParMois();
   const { data: membresParPlan = [] } = useMembresParPlan();
   const { data: derniersPaiements = [] } = useDerniersPaiements();
   const { data: paiementsEchus = [] } = usePaiementsEchus();
   const { data: nouveauxMembres = [] } = useNouveauxMembres();
+
+  // Debug logs pour les données finales
+  console.log('📊 Dashboard Data Summary:');
+  console.log('- Membres Count:', membresCount, 'Loading:', loadingMembres, 'Error:', errorMembres);
+  console.log('- Paiements Mois:', paiementsMois, 'Loading:', loadingPaiementsMois, 'Error:', errorPaiementsMois);
+  console.log('- Paiements Récents:', paiementsRecents, 'Loading:', loadingPaiementsRecents, 'Error:', errorPaiementsRecents);
+  console.log('- Paiements Attente:', paiementsEnAttente, 'Loading:', loadingPaiementsAttente, 'Error:', errorPaiementsAttente);
+  console.log('- Plans Actifs:', plansActifs, 'Loading:', loadingPlans, 'Error:', errorPlans);
+  console.log('- Taux Renouvellement:', tauxRenouvellement, 'Loading:', loadingTaux, 'Error:', errorTaux);
+  console.log('- Paiements Par Mois:', paiementsParMois);
+  console.log('- Membres Par Plan:', membresParPlan);
+  console.log('- Derniers Paiements:', derniersPaiements);
+  console.log('- Paiements Échus:', paiementsEchus);
+  console.log('- Nouveaux Membres:', nouveauxMembres);
 
   const metrics = [
     {
@@ -109,6 +123,8 @@ const DashboardPage: React.FC = () => {
       trendType: 'positive' as const,
     },
   ];
+
+  console.log('📈 Final Metrics Configuration:', metrics);
 
   const paymentsColumns = [
     { key: 'user', label: 'Utilisateur' },

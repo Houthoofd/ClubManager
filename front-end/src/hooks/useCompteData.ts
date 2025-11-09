@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiUrl } from '../pages/apiUrl';
 import {
   useCompteInfo,
-  useUpdateCompte,
   useAbonnements,
   useGrades,
   useStatus,
@@ -115,7 +116,60 @@ export const useCompteData = () => {
     }
   }, [utilisateurId, errorEcheances, paiementsEcheances]);
 
-  const updateCompte = useUpdateCompte();
+  const queryClient = useQueryClient();
+
+  // MODIFIÉ: Mutation avec invalidation complète du cache
+  const updateCompte = useMutation({
+    mutationFn: async (data: any) => {
+      console.log('📝 updateCompte - Données à envoyer:', data);
+      
+      const response = await fetch(apiUrl('compte/update'), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      
+      console.log('📡 updateCompte - Réponse HTTP:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ updateCompte - Erreur HTTP:', response.status, errorText);
+        throw new Error(`Erreur ${response.status}: ${errorText || 'Erreur lors de la mise à jour'}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ updateCompte - Résultat:', result);
+      return result;
+    },
+    onSuccess: (data) => {
+      console.log('✅ updateCompte - Mutation réussie:', data);
+      
+      // MODIFIÉ: Invalidation complète du cache incluant les échéances
+      queryClient.invalidateQueries({ queryKey: ['compteData'] });
+      queryClient.invalidateQueries({ queryKey: ['userData'] });
+      queryClient.invalidateQueries({ queryKey: ['userInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['compteInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['echeancesUtilisateur'] }); // AJOUTÉ: Invalider les échéances
+      queryClient.invalidateQueries({ queryKey: ['paiements'] }); // AJOUTÉ: Invalider les paiements
+      queryClient.invalidateQueries({ queryKey: ['echeances'] }); // AJOUTÉ: Invalider toutes les échéances
+      
+      // AJOUTÉ: Invalider spécifiquement les échéances pour cet utilisateur
+      if (utilisateurId) {
+        queryClient.invalidateQueries({ queryKey: ['echeancesUtilisateur', utilisateurId] });
+        queryClient.invalidateQueries({ queryKey: ['echeances', 'utilisateur', utilisateurId] });
+        console.log('💰 Échéances invalidées pour utilisateur:', utilisateurId);
+      }
+      
+      console.log('✅ Cache automatiquement invalidé par la mutation (y compris échéances)');
+    },
+    onError: (error) => {
+      console.error('❌ Erreur lors de la mise à jour:', error);
+    }
+  });
+
   const { data: abonnements = [] } = useAbonnements();
   const { data: grades = [] } = useGrades();
   const { data: status = [] } = useStatus();

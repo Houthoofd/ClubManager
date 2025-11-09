@@ -81,30 +81,14 @@ const AppSidebar = ({ isOpen }: AppSidebarProps) => {
       <Nav aria-label="Primary navigation">
         <NavList>
           {/* Tableau de bord - exclure les visiteurs */}
-          {hasRole(role, [ROLES.UTILISATEUR, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
+          {hasRole(role, [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.PROFESSEUR]) && (
             <>
               <div className="sidebar-section-title">Tableau de bord</div>
               
-              {/* MODIFIÉ: Ajouter le badge pour les messages */}
-              <NavItem to="/pages/messages" itemId="messages">
-                <InboxIcon style={iconStyle} />
-                Messages
-                {nombreMessagesNonLus > 0 && (
-                  <span style={{
-                    marginLeft: '8px',
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    borderRadius: '50%',
-                    padding: '2px 6px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    minWidth: '18px',
-                    textAlign: 'center',
-                    display: 'inline-block'
-                  }}>
-                    {nombreMessagesNonLus > 99 ? '99+' : nombreMessagesNonLus}
-                  </span>
-                )}
+              {/* MODIFIÉ: Remplacer l'icône InboxIcon par TachometerAltIcon */}
+              <NavItem to="/pages/dashboard" itemId="dashboard">
+                <TachometerAltIcon style={iconStyle} />
+                Tableau de bord
               </NavItem>
 
               {/* Statistiques - uniquement pour admin et professeurs */}

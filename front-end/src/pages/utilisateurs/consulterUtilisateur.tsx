@@ -24,6 +24,7 @@ import ConfirmModal from '../../components/common/modal/ConfirmModal';
 import ResultModal from '../../components/common/modal/ResultModal';
 import ResumeConfirmModal from '../../components/common/modal/ResumeConfirmModal';
 import { apiUrl } from '../../pages/apiUrl';
+import { useCheckEmail } from '../../hooks/useVerification';
 
 function formatDateForInput(isoDateString: string): string {
   const date = new Date(isoDateString);
@@ -69,6 +70,7 @@ const ConsulterUtilisateurPage = () => {
   const { data: paiementsEcheances = [] } = useEcheancesByUserId(id);
   const { data: genresList = [] } = useGenres(); // Ajout du hook pour les genres
   const updateUtilisateur = useUpdateUtilisateur();
+  const checkEmail = useCheckEmail();
 
 
   // État du formulaire
@@ -172,10 +174,87 @@ const ConsulterUtilisateurPage = () => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
+  // AJOUTÉ: États pour la validation email
+  const [emailValidation, setEmailValidation] = useState({
+    isValid: true,
+    message: '',
+    isChecking: false
+  });
+
+  // AJOUTÉ: Fonction de validation du format email
+  const isValidEmailFormat = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // AJOUTÉ: Handler pour la validation de l'email
+  const handleEmailValidation = async (email: string) => {
+    console.log('🔍 handleEmailValidation: Début validation pour:', email);
+    setEmailValidation({ isValid: true, message: '', isChecking: true });
+    
+    // Vérification du format
+    if (!email.trim()) {
+      console.log('❌ handleEmailValidation: Email vide');
+      setEmailValidation({ isValid: false, message: 'L\'email est requis', isChecking: false });
+      return false;
+    }
+    
+    if (!isValidEmailFormat(email)) {
+      console.log('❌ handleEmailValidation: Format invalide');
+      setEmailValidation({ isValid: false, message: 'Format d\'email invalide', isChecking: false });
+      return false;
+    }
+    
+    // Vérification de l'unicité avec le hook
+    try {
+      console.log('🔍 handleEmailValidation: Vérification unicité...');
+      const emailExists = await checkEmail(email);
+      
+      // Si l'email existe ET que ce n'est pas le même que l'email actuel
+      const currentEmail = userData?.utilisateur?.email;
+      console.log('📧 handleEmailValidation: Email actuel:', currentEmail, '| Email saisi:', email, '| Existe:', emailExists);
+      
+      if (emailExists && email !== currentEmail) {
+        console.log('❌ handleEmailValidation: Email déjà utilisé');
+        setEmailValidation({ 
+          isValid: false, 
+          message: 'Cette adresse email est déjà utilisée par un autre utilisateur', 
+          isChecking: false 
+        });
+        setEmailCheckMessage('Cette adresse email est déjà utilisée par un autre utilisateur');
+        return false;
+      }
+      
+      console.log('✅ handleEmailValidation: Email valide');
+      setEmailValidation({ isValid: true, message: 'Email valide', isChecking: false });
+      setEmailCheckMessage('Email valide ✓');
+      return true;
+    } catch (error) {
+      console.error('❌ handleEmailValidation: Erreur:', error);
+      setEmailValidation({ 
+        isValid: false, 
+        message: 'Erreur lors de la vérification de l\'email', 
+        isChecking: false 
+      });
+      setEmailCheckMessage('Erreur lors de la vérification de l\'email');
+      return false;
+    }
+  };
+
+  // MODIFIÉ: Handler pour l'email avec validation
   const handleEmailChange = (value: string) => {
     if (emailCheckTimeout) clearTimeout(emailCheckTimeout);
     setForm(prev => ({ ...prev, email: value }));
     setEmailCheckMessage('');
+    setEmailValidation({ isValid: true, message: '', isChecking: false });
+    
+    // Délai pour éviter trop de requêtes
+    if (editingFields['email'] && value.trim()) {
+      const timeout = setTimeout(() => {
+        handleEmailValidation(value);
+      }, 500);
+      setEmailCheckTimeout(timeout);
+    }
   };
 
   const handleInputChange = (value: string, event: React.FormEvent<HTMLInputElement>) => {
@@ -305,8 +384,39 @@ const ConsulterUtilisateurPage = () => {
   };
 
   // Fonction pour valider les changements
-  const handleValidateChanges = () => {
+  const handleValidateChanges = async () => {
     if (!form.id) return;
+
+    // Vérification spéciale pour l'email si modifié
+    if (editingFields['email'] && form.email !== userData?.utilisateur?.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email)) {
+        setModalMessage('Veuillez entrer une adresse email valide.');
+        setModalSuccess(false);
+        setShowResultModal(true);
+        return;
+      }
+      
+      // Vérification de l'unicité
+      try {
+        console.log('🔍 Vérification unicité email avant sauvegarde:', form.email);
+        const emailExists = await checkEmail(form.email);
+        console.log('📧 Email exists result:', emailExists);
+        
+        if (emailExists) {
+          setModalMessage('Cette adresse email est déjà utilisée par un autre utilisateur.');
+          setModalSuccess(false);
+          setShowResultModal(true);
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Erreur vérification email:', error);
+        setModalMessage('Erreur lors de la vérification de l\'email. Veuillez réessayer.');
+        setModalSuccess(false);
+        setShowResultModal(true);
+        return;
+      }
+    }
 
     const modifications = formatModifications();
 
@@ -575,10 +685,11 @@ const ConsulterUtilisateurPage = () => {
             form={form}
             editingFields={editingFields}
             emailCheckMessage={emailCheckMessage}
+            emailValidation={emailValidation} // AJOUTÉ: Passer l'état de validation
             abonnements={abonnements}
             gradesList={gradesList}
-            statusList={statusList} // Passer la liste des statuts
-            genresList={genresList} // Passer la liste des genres
+            statusList={statusList}
+            genresList={genresList}
             onEditClick={handleEditClick}
             onEmailChange={handleEmailChange}
             onInputChange={handleInputChange}
@@ -586,9 +697,9 @@ const ConsulterUtilisateurPage = () => {
             onValidateChanges={handleValidateChanges}
             isLoading={updateUtilisateur.isPending}
             formatDateForInput={formatDateForInput}
-            canEditStatus={canEditStatus()} // Passer l'autorisation
+            canEditStatus={canEditStatus()}
             disabledFields={{
-              status: !canEditStatus() // Désactiver le champ statut si pas autorisé
+              status: !canEditStatus()
             }}
           />
         </Tab>

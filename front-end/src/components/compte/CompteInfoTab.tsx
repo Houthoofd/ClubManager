@@ -24,6 +24,7 @@ interface CompteInfoTabProps {
   isLoading: boolean;
   formatDateForInput: (date: string) => string;
   disabledFields: { [key: string]: boolean };
+  canEditStatus: boolean; // AJOUTÉ: Prop manquante
 }
 
 const CompteInfoTab: React.FC<CompteInfoTabProps> = ({
@@ -45,6 +46,7 @@ const CompteInfoTab: React.FC<CompteInfoTabProps> = ({
   isLoading,
   formatDateForInput,
   disabledFields,
+  canEditStatus, // AJOUTÉ: Destructuring de la prop
 }) => {
   if (!isDataReady) {
     return (
@@ -72,6 +74,7 @@ const CompteInfoTab: React.FC<CompteInfoTabProps> = ({
           genres={genres}
           formatDateForInput={formatDateForInput}
           disabledFields={disabledFields}
+          canEditStatus={canEditStatus} // AJOUTÉ: Transmission de la prop
           includePassword={true}
         />
 
@@ -109,4 +112,4 @@ const CompteInfoTab: React.FC<CompteInfoTabProps> = ({
 };
 
 export default CompteInfoTab;
-          
+

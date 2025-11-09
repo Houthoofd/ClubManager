@@ -65,3 +65,46 @@ export function useCheckCoursPlanning() {
     return !!data.exists;
   };
 }
+
+// MODIFIÉ: Hook pour vérifier l'unicité de l'email avec meilleur debugging
+export function useCheckEmail() {
+  return async (email: string): Promise<boolean> => {
+    if (!email) {
+      console.log('🔍 useCheckEmail: Email vide, retour false');
+      return false;
+    }
+    
+    try {
+      console.log('🔍 useCheckEmail: Vérification de l\'email:', email);
+      
+      const res = await fetch(apiUrl('verification/verifier-email'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email }),
+        credentials: 'include',
+      });
+      
+      console.log('📡 useCheckEmail: Réponse HTTP status:', res.status);
+      
+      if (!res.ok) {
+        console.error('❌ useCheckEmail: Erreur HTTP:', res.status, res.statusText);
+        throw new Error(`Erreur HTTP ${res.status}`);
+      }
+      
+      const data = await res.json();
+      console.log('📊 useCheckEmail: Données reçues:', data);
+      
+      // La méthode checkUtilisateurByEmail retourne { isFind, message }
+      // Si isFind est true, l'email existe déjà
+      const emailExists = data.exists === true;
+      console.log('📧 useCheckEmail: Email existe?', emailExists);
+      
+      return emailExists;
+    } catch (error) {
+      console.error('❌ useCheckEmail: Erreur lors de la vérification de l\'email:', error);
+      throw error; // Re-throw pour que le composant puisse gérer l'erreur
+    }
+  };
+}

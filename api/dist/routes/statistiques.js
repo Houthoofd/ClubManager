@@ -121,10 +121,13 @@ router.get('/presence-raw/:userId', async (req, res) => {
  */
 router.get('/membres/count', async (_req, res) => {
     try {
+        console.log('🔍 Route: /membres/count called');
         const count = await statistiques.getNombreMembres();
-        res.json({ count });
+        console.log('📊 Membres count result:', count);
+        res.json(count);
     }
     catch (err) {
+        console.error('❌ Error in /membres/count:', err);
         res.status(500).json({ error: 'Erreur lors du comptage des membres' });
     }
 });
@@ -134,10 +137,13 @@ router.get('/membres/count', async (_req, res) => {
  */
 router.get('/paiements/mois', async (_req, res) => {
     try {
+        console.log('🔍 Route: /paiements/mois called');
         const total = await statistiques.getTotalPaiementsMois();
-        res.json({ total });
+        console.log('📊 Paiements mois result:', total);
+        res.json(total);
     }
     catch (err) {
+        console.error('❌ Error in /paiements/mois:', err);
         res.status(500).json({ error: 'Erreur lors du calcul du total du mois' });
     }
 });
@@ -147,10 +153,13 @@ router.get('/paiements/mois', async (_req, res) => {
  */
 router.get('/paiements/recents', async (_req, res) => {
     try {
+        console.log('🔍 Route: /paiements/recents called');
         const count = await statistiques.getPaiementsRecents();
-        res.json({ count });
+        console.log('📊 Paiements récents result:', count);
+        res.json(count);
     }
     catch (err) {
+        console.error('❌ Error in /paiements/recents:', err);
         res.status(500).json({ error: 'Erreur lors du comptage des paiements récents' });
     }
 });
@@ -160,23 +169,29 @@ router.get('/paiements/recents', async (_req, res) => {
  */
 router.get('/paiements/en-attente', async (_req, res) => {
     try {
+        console.log('🔍 Route: /paiements/en-attente called');
         const count = await statistiques.getPaiementsEnAttente();
-        res.json({ count });
+        console.log('📊 Paiements en attente result:', count);
+        res.json(count);
     }
     catch (err) {
+        console.error('❌ Error in /paiements/en-attente:', err);
         res.status(500).json({ error: 'Erreur lors du comptage des paiements en attente' });
     }
 });
 /**
  * @route   GET /statistiques/plans/actifs
- * @desc    Nombre de plans d’abonnement actifs
+ * @desc    Nombre de plans d'abonnement actifs
  */
 router.get('/plans/actifs', async (_req, res) => {
     try {
+        console.log('🔍 Route: /plans/actifs called');
         const count = await statistiques.getPlansActifs();
-        res.json({ count });
+        console.log('📊 Plans actifs result:', count);
+        res.json(count);
     }
     catch (err) {
+        console.error('❌ Error in /plans/actifs:', err);
         res.status(500).json({ error: 'Erreur lors du comptage des plans actifs' });
     }
 });
@@ -186,10 +201,13 @@ router.get('/plans/actifs', async (_req, res) => {
  */
 router.get('/plans/taux-renouvellement', async (_req, res) => {
     try {
+        console.log('🔍 Route: /plans/taux-renouvellement called');
         const taux = await statistiques.getTauxRenouvellement();
-        res.json({ taux });
+        console.log('📊 Taux renouvellement result:', taux);
+        res.json(taux);
     }
     catch (err) {
+        console.error('❌ Error in /plans/taux-renouvellement:', err);
         res.status(500).json({ error: 'Erreur lors du calcul du taux de renouvellement' });
     }
 });
@@ -199,10 +217,13 @@ router.get('/plans/taux-renouvellement', async (_req, res) => {
  */
 router.get('/paiements/par-mois', async (_req, res) => {
     try {
+        console.log('🔍 Route: /paiements/par-mois called');
         const data = await statistiques.getPaiementsParMois();
+        console.log('📊 Paiements par mois result:', data);
         res.json(data);
     }
     catch (err) {
+        console.error('❌ Error in /paiements/par-mois:', err);
         res.status(500).json({ error: 'Erreur lors de la récupération des paiements par mois' });
     }
 });
@@ -212,10 +233,13 @@ router.get('/paiements/par-mois', async (_req, res) => {
  */
 router.get('/membres/par-plan', async (_req, res) => {
     try {
+        console.log('🔍 Route: /membres/par-plan called');
         const data = await statistiques.getMembresParPlan();
+        console.log('📊 Membres par plan result:', data);
         res.json(data);
     }
     catch (err) {
+        console.error('❌ Error in /membres/par-plan:', err);
         res.status(500).json({ error: 'Erreur lors de la récupération des membres par plan' });
     }
 });
@@ -225,10 +249,13 @@ router.get('/membres/par-plan', async (_req, res) => {
  */
 router.get('/paiements/derniers', async (_req, res) => {
     try {
+        console.log('🔍 Route: /paiements/derniers called');
         const data = await statistiques.getDerniersPaiements();
+        console.log('📊 Derniers paiements result:', data);
         res.json(data);
     }
     catch (err) {
+        console.error('❌ Error in /paiements/derniers:', err);
         res.status(500).json({ error: 'Erreur lors de la récupération des derniers paiements' });
     }
 });
@@ -238,10 +265,13 @@ router.get('/paiements/derniers', async (_req, res) => {
  */
 router.get('/paiements/echus', async (_req, res) => {
     try {
+        console.log('🔍 Route: /paiements/echus called');
         const data = await statistiques.getPaiementsEchus();
+        console.log('📊 Paiements échus result:', data);
         res.json(data);
     }
     catch (err) {
+        console.error('❌ Error in /paiements/echus:', err);
         res.status(500).json({ error: 'Erreur lors de la récupération des paiements échus' });
     }
 });
@@ -251,10 +281,13 @@ router.get('/paiements/echus', async (_req, res) => {
  */
 router.get('/membres/nouveaux', async (_req, res) => {
     try {
+        console.log('🔍 Route: /membres/nouveaux called');
         const data = await statistiques.getNouveauxMembres();
+        console.log('📊 Nouveaux membres result:', data);
         res.json(data);
     }
     catch (err) {
+        console.error('❌ Error in /membres/nouveaux:', err);
         res.status(500).json({ error: 'Erreur lors de la récupération des nouveaux membres' });
     }
 });

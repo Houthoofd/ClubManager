@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Form,
   FormGroup,
@@ -8,9 +8,9 @@ import {
   Title,
   Flex,
   FlexItem,
-  Spinner,
 } from '@patternfly/react-core';
 import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
+import { useCheckEmail } from '../../hooks/useVerification';
 
 interface FormulaireCompteProps {
   compteInfo: any;
@@ -36,8 +36,10 @@ interface FormulaireCompteProps {
   onApplyChanges: () => void;
   isLoading: boolean;
   formatDateForInput: (date: string) => string;
-  disabledFields?: { [key: string]: boolean }; // Ajout de la prop
+  disabledFields?: { [key: string]: boolean };
   includePassword?: boolean;
+  canEditStatus?: boolean;
+  currentUserId?: number; // AJOUTÉ: Pour exclure l'utilisateur actuel de la vérification
 }
 
 const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
@@ -60,96 +62,99 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
   disabledFields = {},
   includePassword = false,
 }) => {
-  const fields = [
-    { key: 'email', label: 'Email', type: 'email' },
-    { key: 'date_naissance', label: 'Date de naissance', type: 'date' },
-    { key: 'genres', label: 'Genre', type: 'select', options: genres, optionValue: 'genre_name', optionLabel: 'genre_name' },
-    { key: 'grades', label: 'Grade', type: 'select', options: grades, optionValue: 'grade_id', optionLabel: 'grade_id' },
-    { key: 'abonnement', label: 'Abonnement', type: 'select', options: abonnements, optionValue: 'nom_plan', optionLabel: 'nom_plan' },
-    { key: 'status', label: 'Statut', type: 'select', options: status, optionValue: 'nom_role', optionLabel: 'nom_role' },
-    ...(includePassword ? [{ key: 'password', label: 'Mot de passe', type: 'password' }] : [])
-  ];
+  
+  // AJOUTÉ: Hook pour vérifier l'email
+  const checkEmail = useCheckEmail();
+  
+  // AJOUTÉ: États pour la validation email
+  const [emailValidation, setEmailValidation] = useState({
+    isValid: true,
+    message: '',
+    isChecking: false
+  });
 
-  const renderField = (field: any) => {
-    const { key, label, type, options, optionValue, optionLabel } = field;
-    const isEditing = editingFields[key];
-    const isDisabled = disabledFields[key];
-    const value = key === 'password' ? password : (form[key] || compteInfo?.[key] || '');
-    const displayValue = key === 'password' ? '••••••••' : (compteInfo?.[key] || 'Non défini');
+  // AJOUTÉ: Fonction de validation du format email
+  const isValidEmailFormat = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
-    return (
-      <div className="field-row" key={key}>
-        <div className="field-label">{label}</div>
-        <div className="field-content">
-          {!isEditing ? (
-            <div className="field-display">
-              <span className="field-value">{displayValue}</span>
-              {!isDisabled && (
-                <Button 
-                  variant="link" 
-                  className="edit-button" 
-                  onClick={() => onEditClick(key)}
-                  icon={<PencilAltIcon />}
-                >
-                  Modifier
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="field-edit">
-              {type === 'select' ? (
-                <select
-                  id={key}
-                  value={form[key]}
-                  onChange={(e) => onFormChange(key, e.target.value)}
-                  disabled={isDisabled}
-                  style={{
-                    flex: 1,
-                    border: 'none',
-                    background: 'transparent',
-                    padding: '0.25rem',
-                    fontSize: '1rem',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">Sélectionnez {label.toLowerCase()}</option>
-                  {options?.map((option: any) => (
-                    <option key={option.id} value={option[optionValue]}>
-                      {option[optionLabel]}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <TextInput
-                  type={type}
-                  value={key === 'password' ? password : value}
-                  onChange={(_event, value) => {
-                    if (key === 'email') {
-                      onEmailChange(value);
-                    } else if (key === 'password') {
-                      onPasswordChange(value);
-                    } else {
-                      onFormChange(key, value);
-                    }
-                  }}
-                  placeholder={key === 'password' ? 'Nouveau mot de passe' : `Entrez votre ${label.toLowerCase()}`}
-                  aria-label={label}
-                  className="form-control"
-                />
-              )}
-              <Button 
-                variant="link" 
-                className="cancel-button" 
-                onClick={() => onEditClick(key)}
-                icon={<PencilAltIcon />}
-              >
-                Annuler
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  // MODIFIÉ: Handler pour la validation de l'email avec meilleur debugging
+  const handleEmailValidation = async (email: string) => {
+    console.log('🔍 handleEmailValidation: Début validation pour:', email);
+    setEmailValidation({ isValid: true, message: '', isChecking: true });
+    
+    // Vérification du format
+    if (!email.trim()) {
+      console.log('❌ handleEmailValidation: Email vide');
+      setEmailValidation({ isValid: false, message: 'L\'email est requis', isChecking: false });
+      return false;
+    }
+    
+    if (!isValidEmailFormat(email)) {
+      console.log('❌ handleEmailValidation: Format invalide');
+      setEmailValidation({ isValid: false, message: 'Format d\'email invalide', isChecking: false });
+      return false;
+    }
+    
+    // Vérification de l'unicité avec le hook
+    try {
+      console.log('🔍 handleEmailValidation: Vérification unicité...');
+      const emailExists = await checkEmail(email);
+      
+      // Si l'email existe ET que ce n'est pas le même que l'email actuel
+      const currentEmail = compteInfo?.utilisateur?.email;
+      console.log('📧 handleEmailValidation: Email actuel:', currentEmail, '| Email saisi:', email, '| Existe:', emailExists);
+      
+      if (emailExists && email !== currentEmail) {
+        console.log('❌ handleEmailValidation: Email déjà utilisé');
+        setEmailValidation({ 
+          isValid: false, 
+          message: 'Cette adresse email est déjà utilisée par un autre utilisateur', 
+          isChecking: false 
+        });
+        return false;
+      }
+      
+      console.log('✅ handleEmailValidation: Email valide');
+      setEmailValidation({ isValid: true, message: 'Email valide', isChecking: false });
+      return true;
+    } catch (error) {
+      console.error('❌ handleEmailValidation: Erreur:', error);
+      setEmailValidation({ 
+        isValid: false, 
+        message: 'Erreur lors de la vérification de l\'email', 
+        isChecking: false 
+      });
+      return false;
+    }
+  };
+
+  // AJOUTÉ: Handler modifié pour l'email avec validation
+  const handleEmailChangeWithValidation = async (value: string) => {
+    onEmailChange(value);
+    
+    // Délai pour éviter trop de requêtes
+    if (editingFields['email']) {
+      setTimeout(async () => {
+        const isValid = await handleEmailValidation(value);
+        
+        // AJOUTÉ: Si l'email est valide et différent de l'original, on peut préparer la mise à jour
+        if (isValid && value !== compteInfo?.utilisateur?.email) {
+          console.log('📧 Email valide et différent, prêt pour la sauvegarde');
+        }
+      }, 500);
+    }
+  };
+
+  // AJOUTÉ: Fonction pour s'assurer que les valeurs sont des strings
+  const safeStringValue = (value: any): string => {
+    if (typeof value === 'string') return value;
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') {
+      return String(value);
+    }
+    return String(value);
   };
 
   return (
@@ -210,12 +215,24 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                 <Title headingLevel="h4" size="md" style={{ marginBottom: '1rem', color: '#495057' }}>
                   Contact
                 </Title>
-                <FormGroup label="Email" fieldId="email">
+                <FormGroup 
+                  label="Email" 
+                  fieldId="email"
+                  validated={editingFields['email'] ? (emailValidation.isValid ? 'success' : 'error') : 'default'}
+                  helperText={editingFields['email'] && emailValidation.message ? emailValidation.message : undefined}
+                  helperTextInvalid={editingFields['email'] && !emailValidation.isValid ? emailValidation.message : undefined}
+                >
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center',
                     background: editingFields['email'] ? '#fff' : '#f8f9fa',
-                    border: `1px solid ${editingFields['email'] ? '#007bff' : '#ced4da'}`,
+                    border: `1px solid ${
+                      editingFields['email'] 
+                        ? emailValidation.isValid 
+                          ? '#007bff' 
+                          : '#dc3545'
+                        : '#ced4da'
+                    }`,
                     borderRadius: '4px',
                     padding: '0.5rem',
                     transition: 'all 0.2s'
@@ -223,15 +240,31 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                     <TextInput
                       type="email"
                       id="email"
-                      value={form.email || compteInfo?.utilisateur?.email || ''}
+                      value={editingFields['email'] ? safeStringValue(form.email) : safeStringValue(compteInfo?.utilisateur?.email || '')}
                       isDisabled={!editingFields['email'] || disabledFields['email']}
-                      onChange={onEmailChange}
+                      onChange={(_event, value) => handleEmailChangeWithValidation(String(value))} // MODIFIÉ: Utiliser le handler avec validation
+                      validated={editingFields['email'] ? (emailValidation.isValid ? 'success' : 'error') : 'default'}
                       style={{ 
                         flexGrow: 1, 
                         border: 'none',
                         background: 'transparent'
                       }}
                     />
+                    {/* AJOUTÉ: Indicateur de vérification */}
+                    {editingFields['email'] && emailValidation.isChecking && (
+                      <span style={{ marginLeft: '8px', color: '#6c757d' }}>
+                        ⏳
+                      </span>
+                    )}
+                    {/* AJOUTÉ: Indicateur de validation */}
+                    {editingFields['email'] && !emailValidation.isChecking && (
+                      <span style={{ 
+                        marginLeft: '8px', 
+                        color: emailValidation.isValid ? '#28a745' : '#dc3545' 
+                      }}>
+                        {emailValidation.isValid ? '✓' : '✗'}
+                      </span>
+                    )}
                     <Button 
                       variant="plain" 
                       onClick={() => onEditClick('email')}
@@ -258,8 +291,8 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                     <TextInput
                       type="date"
                       id="date_naissance"
-                      value={formatDateForInput(form.date_naissance || compteInfo?.utilisateur?.date_naissance)}
-                      onChange={(value) => onFormChange('date_naissance', value)}
+                      value={editingFields['date_naissance'] ? formatDateForInput(form.date_naissance) : formatDateForInput(compteInfo?.utilisateur?.date_of_birth)} // CORRIGÉ: Même logique
+                      onChange={(_event, value) => onFormChange('date_naissance', String(value))}
                       isDisabled={!editingFields['date_naissance'] || disabledFields['date_naissance']}
                       style={{ 
                         flexGrow: 1, 
@@ -284,20 +317,20 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center',
-                    justifyContent: 'space-between', // Force l'espacement entre le contenu et le bouton
+                    justifyContent: 'space-between',
                     background: editingFields['password'] ? '#fff' : '#f8f9fa',
                     border: `1px solid ${editingFields['password'] ? '#007bff' : '#ced4da'}`,
                     borderRadius: '4px',
                     padding: '0.5rem',
                     transition: 'all 0.2s',
-                    width: '100%' // S'assure que le conteneur prend toute la largeur
+                    width: '100%'
                   }}>
                     {editingFields['password'] ? (
                       <TextInput
                         id="password"
                         type="password"
-                        value={password}
-                        onChange={(_event, value) => onPasswordChange(value)}
+                        value={safeStringValue(password)} // CORRIGÉ: Utiliser safeStringValue
+                        onChange={(_event, value) => onPasswordChange(String(value))} // CORRIGÉ: Conversion en string
                         placeholder="Entrez votre nouveau mot de passe"
                         style={{
                           flex: 1,
@@ -306,7 +339,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                           padding: '0.25rem',
                           fontSize: '1rem',
                           outline: 'none',
-                          marginRight: '10px' // Espace entre le champ et le bouton
+                          marginRight: '10px'
                         }}
                       />
                     ) : (
@@ -323,9 +356,9 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                       variant="plain"
                       onClick={() => onEditClick('password')}
                       style={{ 
-                        marginLeft: 'auto', // Force le bouton complètement à droite
+                        marginLeft: 'auto',
                         color: editingFields['password'] ? '#28a745' : '#007bff',
-                        flexShrink: 0 // Empêche le bouton de se réduire
+                        flexShrink: 0
                       }}
                     >
                       {editingFields['password'] ? <CheckIcon /> : <PencilAltIcon />}
@@ -360,7 +393,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                       }}>
                         <select
                           id="genres"
-                          value={form.genres || compteInfo?.utilisateur?.genres || ''}
+                          value={editingFields['genres'] ? safeStringValue(form.genres) : safeStringValue(compteInfo?.utilisateur?.genres || '')} // CORRIGÉ: Même logique
                           onChange={e => onFormChange('genres', e.target.value)}
                           disabled={disabledFields['genres'] ? true : !editingFields['genres']}
                           style={{
@@ -404,7 +437,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                       }}>
                         <select
                           id="grades"
-                          value={form.grades || compteInfo?.utilisateur?.grades || ''}
+                          value={editingFields['grades'] ? safeStringValue(form.grades) : safeStringValue(compteInfo?.utilisateur?.grades || '')} // CORRIGÉ: Même logique
                           onChange={e => onFormChange('grades', e.target.value)}
                           disabled={disabledFields['grades'] ? true : !editingFields['grades']}
                           style={{
@@ -448,7 +481,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                       }}>
                         <select
                           id="status"
-                          value={form.status || compteInfo?.utilisateur?.status || ''}
+                          value={editingFields['status'] ? safeStringValue(form.status) : safeStringValue(compteInfo?.utilisateur?.status || '')} // CORRIGÉ: Même logique
                           onChange={e => onFormChange('status', e.target.value)}
                           disabled={disabledFields['status'] ? true : !editingFields['status']}
                           style={{
@@ -492,7 +525,7 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
                       }}>
                         <select
                           id="abonnement"
-                          value={form.abonnement || compteInfo?.utilisateur?.abonnement || ''}
+                          value={editingFields['abonnement'] ? safeStringValue(form.abonnement) : safeStringValue(compteInfo?.utilisateur?.abonnement || '')} // CORRIGÉ: Même logique
                           onChange={e => onFormChange('abonnement', e.target.value)}
                           disabled={disabledFields['abonnement'] ? true : !editingFields['abonnement']}
                           style={{
@@ -528,8 +561,6 @@ const FormulaireCompte: React.FC<FormulaireCompteProps> = ({
           </Flex>
         </Form>
       </Card>
-      
-      {/* Supprimer le bouton d'enregistrement - gardé seulement dans CompteInfoTab */}
     </>
   );
 };

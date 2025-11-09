@@ -52,13 +52,13 @@ const router = createBrowserRouter([
     path: '/pages/verify-email',
     element: <VerifyEmail />,
   },
-  // AJOUTÉ: Routes de récupération de mot de passe (HORS de l'app)
+  // CORRIGÉ: Routes de récupération de mot de passe avec les bonnes paths
   {
-    path: '/pages/forgot-password',
+    path: '/pages/auth/forgot-password',
     element: <ForgotPasswordPage />,
   },
   {
-    path: '/pages/reset-password',
+    path: '/pages/auth/reset-password',
     element: <ResetPasswordPage />,
   },
   
@@ -229,8 +229,18 @@ const router = createBrowserRouter([
       //   path: '/reset-password',
       //   element: <ResetPasswordPage />,
       // },
+      // AJOUTÉ: Route catch-all pour gérer les 404 dans l'app
+      {
+        path: '*',
+        element: <Navigate to="/pages/cours/inscription" replace />
+      }
     ],
   },
+  // AJOUTÉ: Route catch-all globale pour rediriger vers connexion
+  {
+    path: '*',
+    element: <Navigate to="/pages/connexion" replace />
+  }
 ]);
 
 export default router;
