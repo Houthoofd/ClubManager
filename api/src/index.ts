@@ -142,35 +142,10 @@ async function startServer() {
     const { default: inscriptionRouter } = await import('./routes/inscription.js');
     const { default: verificationRouter } = await import('./routes/verification.js');
     const { default: authRouter } = await import('./routes/auth.js');
+    const { default: stocksRouter } = await import('./routes/stocks.js');
+    const { default: commandesRouter } = await import('./routes/commandes.js');
+    const { default: webhooksRouter } = await import('./routes/webhooks.js');
     
-    // SOLUTION: Import conditionnel pour les modules optionnels
-    let webhooksRouter = null;
-    let commandesRouter = null;
-    let stocksRouter = null;
-    
-    try {
-      const webhooksModule = await import('./routes/webhooks.js');
-      webhooksRouter = webhooksModule.default;
-      console.log('✅ [Server] Module webhooks chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module webhooks non disponible:', error);
-    }
-    
-    try {
-      const commandesModule = await import('./routes/commandes.js');
-      commandesRouter = commandesModule.default;
-      console.log('✅ [Server] Module commandes chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module commandes non disponible:', error);
-    }
-    
-    try {
-      const stocksModule = await import('./routes/stocks.js');
-      stocksRouter = stocksModule.default;
-      console.log('✅ [Server] Module stocks chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module stocks non disponible:', error);
-    }
 
     // Routes principales (API)
     app.use('/auth', authRouter);
