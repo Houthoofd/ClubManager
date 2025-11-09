@@ -3,10 +3,28 @@ import bcrypt from 'bcrypt';
 import { generateToken, verifyToken } from '../middleware/auth.js';
 import MysqlConnector from '../db/connector/mysqlconnector.js';
 import { User } from '../types/user.js';
-import passwordResetRouter from './auth/password-reset.js'; // AJOUTÉ
 
 const router = express.Router();
 const mysqlConnector = MysqlConnector.getInstance();
+
+// SOLUTION : Import conditionnel du module password-reset
+let passwordResetRoutes: any = null;
+
+async function loadPasswordResetRoutes() {
+  if (passwordResetRoutes !== null) return passwordResetRoutes;
+  
+  try {
+    console.log('📦 [Auth] Tentative de chargement du module password-reset...');
+    const passwordResetModule = await import('./auth/password-reset.js');
+    passwordResetRoutes = passwordResetModule.default;
+    console.log('✅ [Auth] Module password-reset chargé avec succès');
+    return passwordResetRoutes;
+  } catch (error) {
+    console.warn('⚠️ [Auth] Module password-reset non disponible, routes de fallback activées:', error);
+    passwordResetRoutes = false; // Marquer comme échoué
+    return false;
+  }
+}
 
 // Utilitaire pour utiliser le client avec Promise
 function queryAsync(sql: string, values: any[]): Promise<any[]> {
@@ -555,7 +573,53 @@ router.get('/confirm-email', async (req: Request, res: Response) => {
   }
 });
 
-// AJOUTÉ: Monter les routes de reset password
-router.use('/password-reset', passwordResetRouter);
+// Monter les routes password-reset de manière conditionnelle
+router.use('/password-reset', async (req, res, next) => {
+  const passwordResetRouter = await loadPasswordResetRoutes();
+  
+  if (passwordResetRouter) {
+    console.log(`🔄 [Auth] Redirection vers module password-reset: ${req.method} ${req.path}`);
+    passwordResetRouter(req, res, next);
+  } else {
+    // Routes de fallback pour password-reset
+    if (req.method === 'POST' && req.path === '/forgot-password') {
+      return res.status(503).json({
+        error: 'Service de récupération de mot de passe temporairement indisponible',
+        message: 'Le module password-reset n\'est pas disponible',
+        suggestion: 'Veuillez réessayer plus tard ou contacter l\'administrateur'
+      });
+    }
+    
+    if (req.method === 'GET' && req.path.startsWith('/verify-token/')) {
+      return res.status(503).json({
+        error: 'Service de vérification de token temporairement indisponible',
+        message: 'Le module password-reset n\'est pas disponible'
+      });
+    }
+    
+    if (req.method === 'POST' && req.path === '/reset-password') {
+      return res.status(503).json({
+        error: 'Service de réinitialisation temporairement indisponible',
+        message: 'Le module password-reset n\'est pas disponible'
+      });
+    }
+    
+    // Route de santé pour password-reset
+    if (req.method === 'GET' && req.path === '/health') {
+      return res.json({
+        status: 'Password-reset en mode fallback',
+        available: false,
+        mode: 'degraded'
+      });
+    }
+    
+    // Autres routes non gérées
+    res.status(503).json({
+      error: 'Route password-reset non disponible',
+      path: req.path,
+      method: req.method
+    });
+  }
+});
 
 export default router;
