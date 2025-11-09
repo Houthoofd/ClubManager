@@ -1,4 +1,4 @@
-name: Deploy ClubManager (smart build/deploy)
+name: Deploy ClubManager (ultra-fast)
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Deploy to EC2 via SSH
+      - name: Ultra-Fast Deploy to EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -22,232 +22,139 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             cd /home/ec2-user/ClubManager
-
-            echo "🔄 Pull depuis la branche hosting..."
-            git reset --hard HEAD
-            git clean -fd
-            git pull origin back-up/hosting
-
-            # AJOUTÉ: Diagnostic complet avant traitement
-            echo "🔍 DIAGNOSTIC COMPLET - État actuel:"
-            echo "📂 Contenu dossier racine:"
-            ls -la
-            echo "📂 Contenu dossier front-end:"
-            ls -la front-end/ 2>/dev/null || echo "❌ Dossier front-end non trouvé"
-            echo "📂 Contenu front-end/dist (si existe):"
-            ls -la front-end/dist/ 2>/dev/null || echo "❌ Dossier front-end/dist non trouvé"
-            echo "📂 Contenu front-end/dist/assets (si existe):"
-            ls -la front-end/dist/assets/ 2>/dev/null || echo "❌ Dossier front-end/dist/assets non trouvé"
-
-            # CORRIGÉ: Forcer un build complet dans tous les cas pour éviter les problèmes
-            echo "🏗️ FORCE BUILD - Reconstruction complète du frontend..."
-            cd front-end
-
-            # Vérifier que nous sommes dans le bon dossier
-            echo "📍 Dossier actuel: $(pwd)"
-            echo "📂 Contenu du dossier frontend:"
-            ls -la
-
-            # AJOUTÉ: Vérification package.json
-            if [ ! -f "package.json" ]; then
-              echo "❌ ERREUR: package.json non trouvé dans front-end/"
-              echo "📂 Contenu détaillé:"
-              find . -name "package.json" -type f
-              exit 1
-            fi
-
-            echo "✅ package.json trouvé"
-            echo "📄 Scripts disponibles:"
-            grep -A 10 '"scripts"' package.json || echo "❌ Section scripts non trouvée"
-
-            # AJOUTÉ: Nettoyage complet et complet
-            echo "🧹 Nettoyage complet..."
-            rm -rf dist/
-            rm -rf node_modules/.vite/
-            rm -rf node_modules/.cache/
-            rm -rf .vite/
-            rm -rf node_modules/ # Nettoyage complet des modules aussi
-
-            # AJOUTÉ: Vérification de Node.js
-            echo "🔧 Vérification environnement Node.js:"
-            node --version || echo "❌ Node.js non disponible"
-            npm --version || echo "❌ npm non disponible"
-
-            # Installation propre des dépendances
-            echo "📦 Installation propre des dépendances..."
-            npm ci --no-audit --no-fund || {
-              echo "❌ npm ci a échoué, tentative avec npm install..."
-              npm install --no-audit --no-fund || {
-                echo "❌ Installation des dépendances échouée"
-                exit 1
-              }
-            }
-
-            # AJOUTÉ: Vérification post-installation
-            echo "📦 Vérification post-installation:"
-            ls -la node_modules/ | head -10
-            echo "Nombre de modules installés: $(ls node_modules/ | wc -l)"
-
-            # Build avec gestion d'erreur améliorée
-            echo "🏗️ Build du frontend avec diagnostic..."
-            npm run build 2>&1 | tee build.log || {
-              echo "❌ Build échoué - Affichage des erreurs:"
-              cat build.log
-              echo "📂 État du dossier après échec:"
-              ls -la
-              exit 1
-            }
-
-            # AJOUTÉ: Vérification complète post-build
-            echo "📦 Vérification complète du build généré:"
-            if [ ! -d "dist" ]; then
-              echo "❌ ERREUR CRITIQUE: Dossier dist non créé"
-              echo "📂 Contenu actuel:"
-              ls -la
-              exit 1
-            fi
-
-            echo "✅ Dossier dist créé"
-            echo "📂 Contenu de dist/:"
-            ls -la dist/
-
-            if [ ! -d "dist/assets" ]; then
-              echo "❌ ERREUR CRITIQUE: Dossier dist/assets non créé"
-              echo "📂 Contenu de dist/:"
-              find dist/ -type f
-              exit 1
-            fi
-
-            echo "✅ Dossier dist/assets créé"
-            echo "📂 Contenu de dist/assets/:"
-            ls -la dist/assets/
-
-            # Compter les fichiers critiques
-            JS_COUNT=$(find dist/assets/ -name "*.js" 2>/dev/null | wc -l)
-            CSS_COUNT=$(find dist/assets/ -name "*.css" 2>/dev/null | wc -l)
-            FONT_COUNT=$(find dist/assets/ -name "*.woff2" 2>/dev/null | wc -l)
-
-            echo "📊 Fichiers générés:"
-            echo "  - JS: $JS_COUNT"
-            echo "  - CSS: $CSS_COUNT"
-            echo "  - Fonts: $FONT_COUNT"
-
-            if [ "$JS_COUNT" -eq 0 ] || [ "$CSS_COUNT" -eq 0 ]; then
-              echo "❌ ERREUR CRITIQUE: Assets JS ou CSS manquants"
-              echo "📂 Tous les fichiers dans dist/:"
-              find dist/ -type f
-              exit 1
-            fi
-
-            # Vérifier index.html
-            if [ ! -f "dist/index.html" ]; then
-              echo "❌ ERREUR CRITIQUE: index.html manquant"
-              exit 1
-            fi
-
-            echo "✅ index.html présent"
-            echo "📄 Références dans index.html:"
-            HTML_JS=$(grep -oE "index-[a-zA-Z0-9]+\.js" dist/index.html | head -1)
-            HTML_CSS=$(grep -oE "index-[a-zA-Z0-9]+\.css" dist/index.html | head -1)
-
-            echo "  - JS référencé: $HTML_JS"
-            echo "  - CSS référencé: $HTML_CSS"
-
-            # Vérifier cohérence
-            if [ -n "$HTML_JS" ] && [ -f "dist/assets/$HTML_JS" ] && [ -n "$HTML_CSS" ] && [ -f "dist/assets/$HTML_CSS" ]; then
-              echo "✅ Build cohérent - tous les assets référencés existent"
-            else
-              echo "❌ ERREUR: Build incohérent"
-              echo "📂 Assets disponibles:"
-              ls -la dist/assets/
-              exit 1
-            fi
-
-            cd ..
-
-            # DÉPLOIEMENT avec vérifications renforcées
-            echo "🚀 DÉPLOIEMENT vers Nginx..."
-
-            # Sauvegarde de sécurité
-            if [ -d "/usr/share/nginx/html/clubmanager" ]; then
-              echo "💾 Sauvegarde de l'ancienne version..."
-              sudo cp -r /usr/share/nginx/html/clubmanager "/tmp/clubmanager-backup-$(date +%Y%m%d-%H%M%S)"
-            fi
-
-            # Nettoyage
-            echo "🧹 Nettoyage du dossier de destination..."
-            sudo rm -rf /usr/share/nginx/html/clubmanager
-
-            # Création et copie
-            echo "📁 Création du dossier et copie des assets..."
-            sudo mkdir -p /usr/share/nginx/html/clubmanager
-
-            # COPIE avec vérification
-            sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/ || {
-              echo "❌ ERREUR lors de la copie"
-              exit 1
-            }
-
-            # Permissions
-            sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
-            sudo chmod -R 755 /usr/share/nginx/html/clubmanager
-
-            # VÉRIFICATION FINALE COMPLÈTE
-            echo "🔍 VÉRIFICATION FINALE COMPLÈTE:"
-            echo "📂 Contenu copié dans Nginx:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/
-
-            echo "📂 Assets copiés:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/assets/ || {
-              echo "❌ ERREUR CRITIQUE: Dossier assets manquant après copie"
-              echo "📂 Contenu réel:"
-              sudo find /usr/share/nginx/html/clubmanager/ -type f
-              exit 1
-            }
-
-            # Compter les fichiers copiés
-            COPIED_JS=$(sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.js" 2>/dev/null | wc -l)
-            COPIED_CSS=$(sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.css" 2>/dev/null | wc -l)
             
-            echo "📊 Fichiers copiés:"
-            echo "  - JS: $COPIED_JS"
-            echo "  - CSS: $COPIED_CSS"
-
-            if [ "$COPIED_JS" -eq 0 ] || [ "$COPIED_CSS" -eq 0 ]; then
-              echo "❌ ERREUR FINALE: Assets manquants après copie"
-              exit 1
+            echo "⚡ [Deploy] Déploiement ultra-rapide ClubManager..."
+            START_TIME=$(date +%s)
+            
+            # 1. GIT - Pull rapide sans reset complet
+            echo "📥 [Git] Pull rapide..."
+            git pull origin back-up/hosting --ff-only || {
+              echo "🔄 [Git] Conflit détecté, résolution rapide..."
+              git reset --hard origin/back-up/hosting
+            }
+            
+            # 2. DÉTECTION INTELLIGENTE - Quoi construire?
+            echo "🔍 [Detection] Analyse des changements..."
+            
+            # Vérifier si le frontend a changé
+            FRONTEND_CHANGED=false
+            if git diff --name-only HEAD~1 HEAD | grep -E "^front-end/" > /dev/null; then
+              FRONTEND_CHANGED=true
+              echo "📱 [Detection] Frontend modifié - Build requis"
+            else
+              echo "📱 [Detection] Frontend inchangé - Skip build"
             fi
-
-            # Vérification cohérence finale
-            if [ -f "/usr/share/nginx/html/clubmanager/index.html" ]; then
-              FINAL_JS=$(sudo grep -oE "index-[a-zA-Z0-9]+\.js" /usr/share/nginx/html/clubmanager/index.html | head -1)
-              FINAL_CSS=$(sudo grep -oE "index-[a-zA-Z0-9]+\.css" /usr/share/nginx/html/clubmanager/index.html | head -1)
+            
+            # Vérifier si le backend a changé
+            BACKEND_CHANGED=false
+            if git diff --name-only HEAD~1 HEAD | grep -E "^api/" > /dev/null; then
+              BACKEND_CHANGED=true
+              echo "⚙️ [Detection] Backend modifié - Restart requis"
+            else
+              echo "⚙️ [Detection] Backend inchangé - Skip restart"
+            fi
+            
+            # 3. BUILD CONDITIONNEL - Seulement si nécessaire
+            if [ "$FRONTEND_CHANGED" = "true" ]; then
+              echo "🏗️ [Build] Construction frontend..."
+              cd front-end
               
-              echo "📄 Références finales:"
-              echo "  - JS: $FINAL_JS"
-              echo "  - CSS: $FINAL_CSS"
-              
-              if sudo test -f "/usr/share/nginx/html/clubmanager/assets/$FINAL_JS" && sudo test -f "/usr/share/nginx/html/clubmanager/assets/$FINAL_CSS"; then
-                echo "✅ DÉPLOIEMENT RÉUSSI - Assets cohérents"
+              # Installation rapide (utiliser cache si possible)
+              if [ -d "node_modules" ] && [ -f "package-lock.json" ]; then
+                echo "📦 [Build] Vérification cache npm..."
+                npm ci --prefer-offline --no-audit --silent
               else
-                echo "❌ DÉPLOIEMENT INCOHÉRENT"
-                echo "📂 Assets réellement présents:"
-                sudo ls -la /usr/share/nginx/html/clubmanager/assets/
+                echo "📦 [Build] Installation complète npm..."
+                npm install --no-audit --silent
+              fi
+              
+              # Build rapide
+              echo "⚡ [Build] Build Vite en cours..."
+              npm run build -- --silent
+              
+              # Vérification rapide
+              if [ ! -d "dist/assets" ] || [ $(ls dist/assets/*.js 2>/dev/null | wc -l) -eq 0 ]; then
+                echo "❌ [Build] Build échoué"
                 exit 1
               fi
+              
+              echo "✅ [Build] Build terminé ($(ls -1 dist/assets/*.js | wc -l) JS, $(ls -1 dist/assets/*.css | wc -l) CSS)"
+              cd ..
             else
-              echo "❌ index.html manquant après copie"
-              exit 1
+              echo "⏭️ [Build] Skip - Frontend inchangé"
             fi
-
-            echo "🔄 Redémarrage des services..."
-            sudo systemctl reload nginx || echo "⚠️ Erreur reload nginx"
-            sudo systemctl restart clubmanager.service || echo "⚠️ Erreur restart clubmanager"
-
-            echo "✅ DÉPLOIEMENT TERMINÉ AVEC SUCCÈS"
-            echo "🌐 Application disponible sur: https://clubmanagment.com"
-            echo "📊 Résumé:"
-            echo "  - Build: ✅ Réussi"
-            echo "  - Assets JS: $COPIED_JS fichiers"
-            echo "  - Assets CSS: $COPIED_CSS fichiers"
-            echo "  - Cohérence: ✅ Validée"
+            
+            # 4. DÉPLOIEMENT FRONTEND - Seulement si build effectué
+            if [ "$FRONTEND_CHANGED" = "true" ]; then
+              echo "🚀 [Deploy] Déploiement assets..."
+              
+              # Copie rapide sans sauvegarde extensive
+              sudo rm -rf /usr/share/nginx/html/clubmanager/*
+              sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+              sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
+              
+              # Vérification rapide
+              if [ ! -f "/usr/share/nginx/html/clubmanager/index.html" ]; then
+                echo "❌ [Deploy] Déploiement échoué"
+                exit 1
+              fi
+              
+              echo "✅ [Deploy] Assets déployés"
+              sudo systemctl reload nginx
+            else
+              echo "⏭️ [Deploy] Skip - Assets inchangés"
+            fi
+            
+            # 5. BACKEND - Seulement si changé
+            if [ "$BACKEND_CHANGED" = "true" ]; then
+              echo "⚙️ [Backend] Mise à jour backend..."
+              cd api
+              
+              # Build TypeScript rapide
+              if [ -f "package.json" ] && [ -d "src" ]; then
+                # Installation rapide si nécessaire
+                if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
+                  echo "📦 [Backend] Installation dépendances..."
+                  npm ci --prefer-offline --no-audit --silent
+                fi
+                
+                # Compilation TypeScript
+                echo "🔧 [Backend] Compilation TypeScript..."
+                npm run build --silent || {
+                  echo "❌ [Backend] Compilation échouée"
+                  exit 1
+                }
+              fi
+              
+              cd ..
+              
+              # Restart service
+              echo "🔄 [Backend] Restart service..."
+              sudo systemctl restart clubmanager.service
+              
+              # Attente rapide (3s au lieu de 5s)
+              sleep 3
+              
+              if ! sudo systemctl is-active --quiet clubmanager.service; then
+                echo "❌ [Backend] Service non actif après restart"
+                exit 1
+              fi
+              
+              echo "✅ [Backend] Service redémarré"
+            else
+              echo "⏭️ [Backend] Skip - Code inchangé"
+            fi
+            
+            # 6. RÉSUMÉ FINAL
+            END_TIME=$(date +%s)
+            DURATION=$((END_TIME - START_TIME))
+            
+            echo ""
+            echo "🎉 [Deploy] DÉPLOIEMENT TERMINÉ EN ${DURATION}s"
+            echo "📊 [Deploy] Actions effectuées:"
+            echo "  - Frontend: $([ "$FRONTEND_CHANGED" = "true" ] && echo "✅ Buildé & déployé" || echo "⏭️ Skippé")"
+            echo "  - Backend: $([ "$BACKEND_CHANGED" = "true" ] && echo "✅ Compilé & redémarré" || echo "⏭️ Skippé")"
+            echo "  - Durée: ${DURATION}s"
+            echo ""
+            echo "🌐 Application: https://clubmanagment.com"
+            echo "🔗 API: https://clubmanagment.com/health/database"
