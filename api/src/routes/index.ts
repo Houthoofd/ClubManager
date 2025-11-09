@@ -8,7 +8,7 @@ import statistiquesRouter from './statistiques.js';
 import magasinRouter from './magasin.js';
 import inscriptionRouter from './inscription.js'
 import verificationRouter from './verification.js'
-import passwordResetRoutes from './auth/password-reset.js';
+import authRouter from './auth.js'; // CORRIGÉ: Import du router auth principal
 
 const router = express.Router();
 
@@ -22,6 +22,6 @@ router.use('/paiements', paiementRouter);
 router.use('/magasin', magasinRouter);
 router.use('/inscription', inscriptionRouter);
 router.use('/verification', verificationRouter);
-router.use('/auth', passwordResetRoutes); // Corrigé: supprimé '/api'
+router.use('/auth', authRouter); // CORRIGÉ: Utiliser le router auth principal
 
 export default router;
