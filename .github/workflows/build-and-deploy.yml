@@ -32,10 +32,52 @@ jobs:
             if [ -f "front-end/dist/index.html" ]; then
               echo "✅ index.html trouvé dans front-end/dist/"
               
+              # AJOUTÉ: Afficher le contenu complet pour debug
+              echo "📄 Contenu index.html du repo:"
+              cat front-end/dist/index.html
+              
               if [ -d "front-end/dist/assets" ]; then
                 echo "✅ Dossier assets trouvé"
-                echo "📦 Contenu du dossier assets:"
+                echo "📦 Contenu COMPLET du dossier assets:"
                 ls -la front-end/dist/assets/
+                
+                # AJOUTÉ: Identifier précisément les fichiers JS et CSS
+                echo "🎯 Fichiers JS dans le repo:"
+                find front-end/dist/assets/ -name "*.js" -type f
+                echo "🎨 Fichiers CSS dans le repo:"
+                find front-end/dist/assets/ -name "*.css" -type f
+                
+                # AJOUTÉ: Vérifier les liens dans index.html vs fichiers réels
+                echo "🔗 Liens JS/CSS dans index.html:"
+                grep -E "(\.js|\.css)" front-end/dist/index.html || echo "Aucun lien trouvé"
+                
+                # AJOUTÉ: Validation cohérence
+                JS_IN_HTML=$(grep -o 'assets/[^"]*\.js' front-end/dist/index.html)
+                CSS_IN_HTML=$(grep -o 'assets/[^"]*\.css' front-end/dist/index.html)
+                
+                echo "📋 Validation cohérence:"
+                echo "  JS dans HTML: $JS_IN_HTML"
+                echo "  CSS dans HTML: $CSS_IN_HTML"
+                
+                # Vérifier que les fichiers référencés existent
+                for js_file in $JS_IN_HTML; do
+                  if [ -f "front-end/dist/$js_file" ]; then
+                    echo "✅ $js_file existe dans le repo"
+                  else
+                    echo "❌ $js_file MANQUANT dans le repo!"
+                    exit 1
+                  fi
+                done
+                
+                for css_file in $CSS_IN_HTML; do
+                  if [ -f "front-end/dist/$css_file" ]; then
+                    echo "✅ $css_file existe dans le repo"
+                  else
+                    echo "❌ $css_file MANQUANT dans le repo!"
+                    exit 1
+                  fi
+                done
+                
               else
                 echo "❌ Dossier assets manquant"
                 exit 1
@@ -43,6 +85,16 @@ jobs:
             else
               echo "❌ index.html manquant dans front-end/dist/"
               exit 1
+            fi
+
+            # AJOUTÉ: Comparaison avec l'existant AVANT suppression
+            if [ -d "/usr/share/nginx/html/clubmanager" ]; then
+              echo "🔍 Comparaison avec l'existant dans nginx:"
+              echo "📁 Contenu actuel nginx:"
+              sudo ls -la /usr/share/nginx/html/clubmanager/assets/ 2>/dev/null || echo "Pas d'assets actuels"
+              
+              echo "📄 Liens actuels dans index.html nginx:"
+              sudo grep -E "(\.js|\.css)" /usr/share/nginx/html/clubmanager/index.html 2>/dev/null || echo "Pas d'index.html actuel"
             fi
 
             echo "🔓 APPLICATION COMPLÈTE DES DROITS avant suppression..."
@@ -87,9 +139,57 @@ jobs:
             echo "📁 Création du nouveau dossier clubmanager..."
             sudo mkdir -p /usr/share/nginx/html/clubmanager
 
-            echo "📋 Copie COMPLÈTE du contenu dist..."
+            echo "📋 Copie COMPLÈTE du contenu dist avec vérification temps réel..."
             sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
             
+            # AJOUTÉ: Vérification immédiate post-copie
+            echo "🔍 Vérification IMMÉDIATE après copie:"
+            
+            echo "📄 index.html copié:"
+            sudo ls -la /usr/share/nginx/html/clubmanager/index.html
+            
+            echo "📁 assets/ copié:"
+            sudo ls -la /usr/share/nginx/html/clubmanager/assets/
+            
+            echo "🎯 Fichiers JS copiés:"
+            sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.js" -exec ls -la {} \;
+            
+            echo "🎨 Fichiers CSS copiés:"
+            sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.css" -exec ls -la {} \;
+            
+            echo "🔗 Liens dans index.html APRÈS copie:"
+            sudo grep -E "(\.js|\.css)" /usr/share/nginx/html/clubmanager/index.html || echo "Aucun lien trouvé"
+            
+            # AJOUTÉ: Validation finale des liens vs fichiers
+            echo "✅ Validation finale cohérence liens/fichiers:"
+            
+            JS_LINKS=$(sudo grep -o 'assets/[^"]*\.js' /usr/share/nginx/html/clubmanager/index.html)
+            CSS_LINKS=$(sudo grep -o 'assets/[^"]*\.css' /usr/share/nginx/html/clubmanager/index.html)
+            
+            echo "🎯 Vérification liens JS:"
+            for js_link in $JS_LINKS; do
+              if sudo test -f "/usr/share/nginx/html/clubmanager/$js_link"; then
+                echo "  ✅ $js_link → EXISTE"
+              else
+                echo "  ❌ $js_link → MANQUANT"
+                echo "  📋 Fichiers JS disponibles:"
+                sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.js"
+                exit 1
+              fi
+            done
+            
+            echo "🎨 Vérification liens CSS:"
+            for css_link in $CSS_LINKS; do
+              if sudo test -f "/usr/share/nginx/html/clubmanager/$css_link"; then
+                echo "  ✅ $css_link → EXISTE"
+              else
+                echo "  ❌ $css_link → MANQUANT"
+                echo "  📋 Fichiers CSS disponibles:"
+                sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.css"
+                exit 1
+              fi
+            done
+
             echo "🔐 REMISE EN PLACE DES PERMISSIONS NGINX SÉCURISÉES..."
             
             # ÉTAPE 1: Propriétaire nginx:nginx
@@ -197,14 +297,13 @@ jobs:
 
             echo "🎉 DÉPLOIEMENT TERMINÉ AVEC SUCCÈS!"
             echo ""
-            echo "📋 RÉCAPITULATIF SÉCURITÉ:"
-            echo "  ✅ Fichiers copiés et synchronisés"
+            echo "📋 RÉCAPITULATIF SYNCHRONISATION:"
+            echo "  ✅ Fichiers du repo copiés exactement"
+            echo "  ✅ Liens HTML ↔ Fichiers: cohérents"
+            echo "  ✅ JS: $(echo $JS_LINKS | wc -w) lien(s) validé(s)"
+            echo "  ✅ CSS: $(echo $CSS_LINKS | wc -w) lien(s) validé(s)"
             echo "  ✅ Propriétaire: nginx:nginx" 
-            echo "  ✅ Dossiers: 755 (sécurisé)"
-            echo "  ✅ Fichiers: 644 (lecture seule publique)"
-            echo "  ✅ Assets JS/CSS: protection lecture seule"
-            echo "  ✅ Nginx: configuration testée et rechargé"
-            echo "  ✅ $JS_COUNT fichiers JS et $CSS_COUNT fichiers CSS déployés"
+            echo "  ✅ Permissions sécurisées appliquées"
             echo ""
             echo "🌐 Votre site est maintenant disponible sur https://clubmanagment.com"
             echo "🔒 Permissions sécurisées appliquées pour la production"
