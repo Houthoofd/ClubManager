@@ -112,7 +112,7 @@ async function startServer() {
         // Servir les fichiers statiques
         app.use('/public', express.static(path.join(__dirname, '../public')));
         app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
-        // 4. Charger les routes après l'initialisation DB
+        // 4. Charger les routes après l'initialisation DB avec imports conditionnels
         const { default: indexRouter } = await import('./routes/index.js');
         const { default: utilisateursRouter } = await import('./routes/utilisateurs.js');
         const { default: informationsRouter } = await import('./routes/informations.js');
@@ -127,12 +127,37 @@ async function startServer() {
         const { default: inscriptionRouter } = await import('./routes/inscription.js');
         const { default: verificationRouter } = await import('./routes/verification.js');
         const { default: authRouter } = await import('./routes/auth.js');
-        const { default: webhooksRouter } = await import('./routes/webhooks.js');
-        const { default: commandesRouter } = await import('./routes/commandes.js');
-        const { default: stocksRouter } = await import('./routes/stocks.js');
+        // SOLUTION: Import conditionnel pour les modules optionnels
+        let webhooksRouter = null;
+        let commandesRouter = null;
+        let stocksRouter = null;
+        try {
+            const webhooksModule = await import('./routes/webhooks.js');
+            webhooksRouter = webhooksModule.default;
+            console.log('✅ [Server] Module webhooks chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module webhooks non disponible:', error);
+        }
+        try {
+            const commandesModule = await import('./routes/commandes.js');
+            commandesRouter = commandesModule.default;
+            console.log('✅ [Server] Module commandes chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module commandes non disponible:', error);
+        }
+        try {
+            const stocksModule = await import('./routes/stocks.js');
+            stocksRouter = stocksModule.default;
+            console.log('✅ [Server] Module stocks chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module stocks non disponible:', error);
+        }
         // Routes principales (API)
         app.use('/auth', authRouter);
-        app.use('/email', messagesRouter); // PROBLÈME: Ceci utilise messagesRouter pour /email
+        app.use('/email', messagesRouter);
         app.use('/', indexRouter);
         app.use('/utilisateurs', utilisateursRouter);
         app.use('/informations', informationsRouter);
@@ -141,14 +166,54 @@ async function startServer() {
         app.use('/paiements', paiementRouter);
         app.use('/magasin', magasinRouter);
         app.use('/professeurs', professeursRouter);
-        app.use('/messages', messagesRouter); // Il faut s'assurer que cette ligne existe
+        app.use('/messages', messagesRouter);
         app.use('/upload', uploadRouter);
         app.use('/inscription', inscriptionRouter);
         app.use('/verification', verificationRouter);
         app.use('/statistiques', statistiquesRouter);
-        app.use('/webhooks', webhooksRouter);
-        app.use('/commandes', commandesRouter);
-        app.use('/stocks', stocksRouter);
+        // SOLUTION: Monter les routes optionnelles conditionnellement
+        if (webhooksRouter) {
+            app.use('/webhooks', webhooksRouter);
+            console.log('✅ [Server] Route webhooks montée');
+        }
+        else {
+            // Route de fallback pour webhooks
+            app.use('/webhooks', (req, res) => {
+                res.status(503).json({
+                    error: 'Service webhooks temporairement indisponible',
+                    message: 'Le module webhooks n\'est pas disponible'
+                });
+            });
+            console.log('⚠️ [Server] Route webhooks en mode fallback');
+        }
+        if (commandesRouter) {
+            app.use('/commandes', commandesRouter);
+            console.log('✅ [Server] Route commandes montée');
+        }
+        else {
+            // Route de fallback pour commandes
+            app.use('/commandes', (req, res) => {
+                res.status(503).json({
+                    error: 'Service commandes temporairement indisponible',
+                    message: 'Le module commandes n\'est pas disponible'
+                });
+            });
+            console.log('⚠️ [Server] Route commandes en mode fallback');
+        }
+        if (stocksRouter) {
+            app.use('/stocks', stocksRouter);
+            console.log('✅ [Server] Route stocks montée');
+        }
+        else {
+            // Route de fallback pour stocks
+            app.use('/stocks', (req, res) => {
+                res.status(503).json({
+                    error: 'Service stocks temporairement indisponible',
+                    message: 'Le module stocks n\'est pas disponible'
+                });
+            });
+            console.log('⚠️ [Server] Route stocks en mode fallback');
+        }
         // Servir le build Vite (React) uniquement en production
         if (process.env.NODE_ENV === 'production') {
             app.use(express.static(path.join(__dirname, '../dist')));
