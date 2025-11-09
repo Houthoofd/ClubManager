@@ -1,4 +1,4 @@
-name: Deploy ClubManager (sync complete dist)
+name: Deploy ClubManager (sync complete dist with full permissions)
 
 on:
   push:
@@ -90,44 +90,103 @@ jobs:
               fi
             fi
 
-            echo "🧹 Suppression complète de l'ancien contenu nginx..."
-            sudo rm -rf /usr/share/nginx/html/clubmanager/*
+            echo "🧹 Suppression COMPLÈTE de l'ancien contenu nginx avec sudo..."
+            sudo rm -rf /usr/share/nginx/html/clubmanager
             sudo mkdir -p /usr/share/nginx/html/clubmanager
 
-            echo "📋 Copie COMPLÈTE du contenu dist (index.html + assets + tout)..."
+            echo "📋 Copie COMPLÈTE avec préservation des permissions..."
             
-            # Copier TOUT le contenu du dossier dist
+            # CORRIGÉ: Copier avec sudo et forcer les permissions immédiatement
             sudo cp -r ${SOURCE_DIR}/* /usr/share/nginx/html/clubmanager/
             
-            # Vérifier que tout est copié
-            echo "🔍 Vérification de la copie complète:"
-            echo "📄 index.html:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/index.html
-            echo "📁 assets/:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/assets/
-            echo "🎯 Fichiers JS:"
-            sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.js"
-            echo "🎨 Fichiers CSS:"
-            sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.css"
-
-            # Vérifier les liens dans index.html
-            echo "🔗 Vérification des liens dans index.html:"
-            sudo head -n 20 /usr/share/nginx/html/clubmanager/index.html | grep -E "(\.js|\.css)"
-
-            echo "🔐 Application des permissions nginx..."
-            sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
-            sudo chmod -R 644 /usr/share/nginx/html/clubmanager
-            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 755 {} \;
-
-            echo "♻️ Rechargement nginx..."
-            sudo systemctl reload nginx
+            echo "🔐 Application des permissions COMPLÈTES..."
             
-            echo "🔄 Redémarrage du service clubmanager..."
-            sudo systemctl restart clubmanager.service || echo "⚠️ Service clubmanager non trouvé (normal si pas configuré)"
+            # AJOUTÉ: Permissions étendues pour nginx et www-data
+            sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
+            sudo chown -R www-data:www-data /usr/share/nginx/html/clubmanager || echo "www-data user not found, continuing with nginx"
+            
+            # CORRIGÉ: Permissions de lecture pour TOUS (755 pour dossiers, 644 pour fichiers)
+            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 755 {} \;
+            sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 644 {} \;
+            
+            # AJOUTÉ: Permissions spéciales pour les assets JS/CSS
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.js" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.css" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.map" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.woff*" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.ttf" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.eot" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.svg" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.png" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.jpg" -exec chmod 644 {} \;
+            sudo find /usr/share/nginx/html/clubmanager/assets -name "*.ico" -exec chmod 644 {} \;
+            
+            # AJOUTÉ: Permissions pour index.html
+            sudo chmod 644 /usr/share/nginx/html/clubmanager/index.html
+            
+            # AJOUTÉ: Permissions pour manifest et autres fichiers root
+            sudo chmod 644 /usr/share/nginx/html/clubmanager/manifest.json 2>/dev/null || echo "No manifest.json"
+            sudo chmod 644 /usr/share/nginx/html/clubmanager/favicon.ico 2>/dev/null || echo "No favicon.ico"
+            sudo chmod 644 /usr/share/nginx/html/clubmanager/robots.txt 2>/dev/null || echo "No robots.txt"
 
-            echo "✅ Déploiement complet terminé!"
-            echo "📊 Résumé:"
-            echo "  - index.html synchronisé"
-            echo "  - Assets JS/CSS synchronisés"
-            echo "  - Liens cohérents garantis"
-            echo "  - Permissions nginx appliquées"
+            echo "🔍 Vérification détaillée des permissions et contenu:"
+            echo "📁 Structure complète:"
+            sudo ls -laR /usr/share/nginx/html/clubmanager/
+            
+            echo "📄 Permissions index.html:"
+            sudo ls -la /usr/share/nginx/html/clubmanager/index.html
+            
+            echo "📁 Permissions dossier assets:"
+            sudo ls -la /usr/share/nginx/html/clubmanager/assets/
+            
+            echo "🎯 Fichiers JS avec permissions:"
+            sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.js" -exec ls -la {} \;
+            
+            echo "🎨 Fichiers CSS avec permissions:"
+            sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.css" -exec ls -la {} \;
+
+            echo "🔗 Contenu de index.html (premiers liens):"
+            sudo head -n 50 /usr/share/nginx/html/clubmanager/index.html | grep -E "(assets/|href|src)" || echo "Aucun lien trouvé"
+
+            echo "🌐 Vérification de la configuration nginx..."
+            
+            # AJOUTÉ: Test de configuration nginx
+            sudo nginx -t
+            
+            echo "♻️ Rechargement nginx avec verification..."
+            sudo systemctl reload nginx
+            sudo systemctl status nginx --no-pager -l
+            
+            echo "🔄 Redémarrage optionnel du service clubmanager..."
+            sudo systemctl restart clubmanager.service 2>/dev/null || echo "⚠️ Service clubmanager non trouvé (normal si pas configuré)"
+
+            echo "🧪 Test d'accès aux fichiers critiques..."
+            
+            # AJOUTÉ: Tests d'accès direct aux fichiers
+            echo "Test lecture index.html:"
+            sudo head -n 5 /usr/share/nginx/html/clubmanager/index.html || echo "❌ Impossible de lire index.html"
+            
+            echo "Test accès assets:"
+            sudo ls /usr/share/nginx/html/clubmanager/assets/ | head -5 || echo "❌ Impossible de lister assets"
+            
+            echo "Test existence fichiers JS/CSS:"
+            JS_FILES=$(sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.js" | wc -l)
+            CSS_FILES=$(sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.css" | wc -l)
+            echo "Fichiers JS trouvés: $JS_FILES"
+            echo "Fichiers CSS trouvés: $CSS_FILES"
+            
+            if [ "$JS_FILES" -eq 0 ] || [ "$CSS_FILES" -eq 0 ]; then
+              echo "❌ ERREUR: Assets manquants après déploiement!"
+              exit 1
+            fi
+
+            echo "✅ Déploiement complet terminé avec succès!"
+            echo "📊 Résumé final:"
+            echo "  ✅ index.html synchronisé avec permissions 644"
+            echo "  ✅ Assets JS/CSS synchronisés avec permissions 644"
+            echo "  ✅ Dossiers avec permissions 755"
+            echo "  ✅ Propriétaire: nginx:nginx"
+            echo "  ✅ Nginx rechargé et testé"
+            echo "  ✅ $JS_FILES fichiers JS et $CSS_FILES fichiers CSS déployés"
+            
+            echo "🌐 Votre site devrait maintenant être accessible sur https://clubmanagment.com"
