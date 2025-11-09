@@ -113,13 +113,18 @@ jobs:
               fi
             fi
 
+            echo "🔐 Application des permissions nginx..."
+            # CORRIGÉ: Application des permissions nginx avec propriétaire
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
             sudo chmod -R 755 /usr/share/nginx/html/clubmanager
-
-            echo "🔐 Application des permissions complètes..."
-            sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
-            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 755 {} \;
+            
+            # AJOUTÉ: Permissions spécifiques pour les fichiers
             sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 644 {} \;
+            
+            echo "✅ Permissions appliquées:"
+            echo "  - Propriétaire: nginx:nginx"
+            echo "  - Dossiers: 755"
+            echo "  - Fichiers: 644"
 
             echo "♻️ Rechargement nginx..."
             sudo systemctl reload nginx
@@ -132,7 +137,7 @@ jobs:
             echo "  ✅ Tout le contenu de dist/ copié vers nginx"
             echo "  ✅ index.html synchronisé avec les bons liens"
             echo "  ✅ Assets JS/CSS synchronisés"
-            echo "  ✅ Permissions nginx appliquées"
+            echo "  ✅ Permissions nginx appliquées (nginx:nginx, 755/644)"
             
             echo "🌐 Votre site devrait maintenant fonctionner sur https://clubmanagment.com"
             
