@@ -1,4 +1,4 @@
-name: Deploy ClubManager (ultra-fast)
+name: Deploy ClubManager (no build, only deploy)
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Ultra-Fast Deploy to EC2
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -21,140 +21,24 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            cd /home/ec2-user/ClubManager
-            
-            echo "⚡ [Deploy] Déploiement ultra-rapide ClubManager..."
-            START_TIME=$(date +%s)
-            
-            # 1. GIT - Pull rapide sans reset complet
-            echo "📥 [Git] Pull rapide..."
-            git pull origin back-up/hosting --ff-only || {
-              echo "🔄 [Git] Conflit détecté, résolution rapide..."
-              git reset --hard origin/back-up/hosting
-            }
-            
-            # 2. DÉTECTION INTELLIGENTE - Quoi construire?
-            echo "🔍 [Detection] Analyse des changements..."
-            
-            # Vérifier si le frontend a changé
-            FRONTEND_CHANGED=false
-            if git diff --name-only HEAD~1 HEAD | grep -E "^front-end/" > /dev/null; then
-              FRONTEND_CHANGED=true
-              echo "📱 [Detection] Frontend modifié - Build requis"
-            else
-              echo "📱 [Detection] Frontend inchangé - Skip build"
-            fi
-            
-            # Vérifier si le backend a changé
-            BACKEND_CHANGED=false
-            if git diff --name-only HEAD~1 HEAD | grep -E "^api/" > /dev/null; then
-              BACKEND_CHANGED=true
-              echo "⚙️ [Detection] Backend modifié - Restart requis"
-            else
-              echo "⚙️ [Detection] Backend inchangé - Skip restart"
-            fi
-            
-            # 3. BUILD CONDITIONNEL - Seulement si nécessaire
-            if [ "$FRONTEND_CHANGED" = "true" ]; then
-              echo "🏗️ [Build] Construction frontend..."
-              cd front-end
-              
-              # Installation rapide (utiliser cache si possible)
-              if [ -d "node_modules" ] && [ -f "package-lock.json" ]; then
-                echo "📦 [Build] Vérification cache npm..."
-                npm ci --prefer-offline --no-audit --silent
-              else
-                echo "📦 [Build] Installation complète npm..."
-                npm install --no-audit --silent
-              fi
-              
-              # Build rapide
-              echo "⚡ [Build] Build Vite en cours..."
-              npm run build -- --silent
-              
-              # Vérification rapide
-              if [ ! -d "dist/assets" ] || [ $(ls dist/assets/*.js 2>/dev/null | wc -l) -eq 0 ]; then
-                echo "❌ [Build] Build échoué"
-                exit 1
-              fi
-              
-              echo "✅ [Build] Build terminé ($(ls -1 dist/assets/*.js | wc -l) JS, $(ls -1 dist/assets/*.css | wc -l) CSS)"
-              cd ..
-            else
-              echo "⏭️ [Build] Skip - Frontend inchangé"
-            fi
-            
-            # 4. DÉPLOIEMENT FRONTEND - Seulement si build effectué
-            if [ "$FRONTEND_CHANGED" = "true" ]; then
-              echo "🚀 [Deploy] Déploiement assets..."
-              
-              # Copie rapide sans sauvegarde extensive
-              sudo rm -rf /usr/share/nginx/html/clubmanager/*
-              sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
-              sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
-              
-              # Vérification rapide
-              if [ ! -f "/usr/share/nginx/html/clubmanager/index.html" ]; then
-                echo "❌ [Deploy] Déploiement échoué"
-                exit 1
-              fi
-              
-              echo "✅ [Deploy] Assets déployés"
-              sudo systemctl reload nginx
-            else
-              echo "⏭️ [Deploy] Skip - Assets inchangés"
-            fi
-            
-            # 5. BACKEND - Seulement si changé
-            if [ "$BACKEND_CHANGED" = "true" ]; then
-              echo "⚙️ [Backend] Mise à jour backend..."
-              cd api
-              
-              # Build TypeScript rapide
-              if [ -f "package.json" ] && [ -d "src" ]; then
-                # Installation rapide si nécessaire
-                if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
-                  echo "📦 [Backend] Installation dépendances..."
-                  npm ci --prefer-offline --no-audit --silent
-                fi
-                
-                # Compilation TypeScript
-                echo "🔧 [Backend] Compilation TypeScript..."
-                npm run build --silent || {
-                  echo "❌ [Backend] Compilation échouée"
-                  exit 1
-                }
-              fi
-              
-              cd ..
-              
-              # Restart service
-              echo "🔄 [Backend] Restart service..."
-              sudo systemctl restart clubmanager.service
-              
-              # Attente rapide (3s au lieu de 5s)
-              sleep 3
-              
-              if ! sudo systemctl is-active --quiet clubmanager.service; then
-                echo "❌ [Backend] Service non actif après restart"
-                exit 1
-              fi
-              
-              echo "✅ [Backend] Service redémarré"
-            else
-              echo "⏭️ [Backend] Skip - Code inchangé"
-            fi
-            
-            # 6. RÉSUMÉ FINAL
-            END_TIME=$(date +%s)
-            DURATION=$((END_TIME - START_TIME))
-            
-            echo ""
-            echo "🎉 [Deploy] DÉPLOIEMENT TERMINÉ EN ${DURATION}s"
-            echo "📊 [Deploy] Actions effectuées:"
-            echo "  - Frontend: $([ "$FRONTEND_CHANGED" = "true" ] && echo "✅ Buildé & déployé" || echo "⏭️ Skippé")"
-            echo "  - Backend: $([ "$BACKEND_CHANGED" = "true" ] && echo "✅ Compilé & redémarré" || echo "⏭️ Skippé")"
-            echo "  - Durée: ${DURATION}s"
-            echo ""
-            echo "🌐 Application: https://clubmanagment.com"
-            echo "🔗 API: https://clubmanagment.com/health/database"
+            cd /home/***/ClubManager
+
+            echo "🔄 Pull depuis la branche hosting..."
+            git reset --hard HEAD
+            git clean -fd
+            git pull origin back-up/hosting
+
+            echo "🧹 Nettoyage de l'ancien contenu du dossier clubmanager..."
+            sudo rm -rf /usr/share/nginx/html/clubmanager
+
+            echo "📁 Création du dossier clubmanager et copie des fichiers..."
+            sudo mkdir -p /usr/share/nginx/html/clubmanager
+            sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+            sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
+            sudo chmod -R 755 /usr/share/nginx/html/clubmanager
+
+            echo "🔁 Rechargement de nginx et redémarrage du service clubmanager..."
+            sudo systemctl reload nginx
+            sudo systemctl restart clubmanager.service
+
+            echo "✅ Déploiement terminé avec succès"
