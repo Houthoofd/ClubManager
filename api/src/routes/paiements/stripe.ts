@@ -1227,4 +1227,163 @@ router.post('/confirm-payment-commande', async (req, res) => {
   }
 });
 
+// AJOUTÉ: Route de diagnostic Stripe
+router.get('/debug/stripe-config', async (req, res) => {
+  try {
+    console.log('🔍 [Stripe Debug] Vérification configuration Stripe...');
+    
+    const stripeKeyType = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') ? 'TEST' : 
+                         process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') ? 'LIVE' : 'UNKNOWN';
+    
+    const publishableKeyType = process.env.STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_') ? 'TEST' : 
+                              process.env.STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live_') ? 'LIVE' : 'UNKNOWN';
+    
+    // Test de connectivité Stripe
+    let stripeConnectionTest = false;
+    let stripeError = null;
+    
+    try {
+      const balance = await stripe.balance.retrieve();
+      stripeConnectionTest = true;
+      console.log('✅ [Stripe Debug] Connexion Stripe réussie');
+    } catch (error: any) {
+      stripeError = error.message;
+      console.error('❌ [Stripe Debug] Erreur connexion Stripe:', error.message);
+    }
+    
+    // CORRIGÉ: Typer explicitement paymentMethodsAvailable
+    let paymentMethodsAvailable: string[] = [];
+    try {
+      const paymentMethods = await stripe.paymentMethods.list({
+        type: 'card',
+        limit: 1
+      });
+      paymentMethodsAvailable = ['card']; // Au minimum card devrait être disponible
+    } catch (error: any) {
+      console.warn('⚠️ [Stripe Debug] Impossible de lister les méthodes de paiement:', error.message);
+    }
+    
+    const config = {
+      environment: process.env.NODE_ENV || 'development',
+      stripe_secret_key_type: stripeKeyType,
+      stripe_publishable_key_type: publishableKeyType,
+      stripe_connection: stripeConnectionTest,
+      stripe_error: stripeError,
+      payment_methods_available: paymentMethodsAvailable,
+      stripe_secret_key_prefix: process.env.STRIPE_SECRET_KEY?.substring(0, 12) + '...',
+      stripe_publishable_key_prefix: process.env.STRIPE_PUBLISHABLE_KEY?.substring(0, 12) + '...',
+      webhook_secret_configured: !!process.env.STRIPE_WEBHOOK_SECRET,
+      automatic_payment_methods_enabled: true,
+      // AJOUTÉ: Informations sur la configuration des PaymentIntents
+      payment_intent_config: {
+        automatic_payment_methods: { enabled: true },
+        supported_methods: ['card', 'bancontact', 'sepa_debit', 'ideal', 'sofort']
+      }
+    };
+    
+    console.log('🔍 [Stripe Debug] Configuration détectée:', config);
+    
+    res.json({
+      success: true,
+      config,
+      recommendations: stripeKeyType === 'TEST' ? [
+        'Vous utilisez les clés de test Stripe',
+        'Utilisez des numéros de carte de test: 4242424242424242',
+        'CVV de test: 123, Date d\'expiration future'
+      ] : [
+        'Vous utilisez les clés live Stripe',
+        'Seules les vraies cartes de crédit fonctionneront',
+        'Vérifiez que votre compte Stripe est complètement activé'
+      ]
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [Stripe Debug] Erreur diagnostic:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// AJOUTÉ: Route pour tester la création d'un PaymentIntent simple
+router.post('/debug/test-payment-intent', async (req, res) => {
+  try {
+    console.log('🧪 [Stripe Debug] Test création PaymentIntent...');
+    
+    const testPaymentIntent = await stripe.paymentIntents.create({
+      amount: 100, // 1€ en centimes
+      currency: 'eur',
+      description: 'Test PaymentIntent - Debug',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      metadata: {
+        test: 'true',
+        debug: 'payment_intent_creation'
+      }
+    });
+    
+    console.log('✅ [Stripe Debug] PaymentIntent test créé:', testPaymentIntent.id);
+    
+    res.json({
+      success: true,
+      payment_intent: {
+        id: testPaymentIntent.id,
+        client_secret: testPaymentIntent.client_secret,
+        status: testPaymentIntent.status,
+        automatic_payment_methods: testPaymentIntent.automatic_payment_methods,
+        payment_method_types: testPaymentIntent.payment_method_types
+      },
+      message: 'PaymentIntent de test créé avec succès'
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [Stripe Debug] Erreur test PaymentIntent:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      error_type: error.type,
+      error_code: error.code
+    });
+  }
+});
+
+// AJOUTÉ: Route pour retourner la clé publique Stripe côté frontend
+router.get('/config', async (req, res) => {
+  try {
+    const config = {
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+      environment: process.env.NODE_ENV || 'development',
+      isTestMode: process.env.STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_') || false,
+      isLiveMode: process.env.STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live_') || false,
+      // AJOUTÉ: Informations pour le frontend
+      paymentMethods: {
+        card: true,
+        bancontact: true,
+        sepa_debit: true,
+        ideal: true
+      },
+      // Ne pas exposer les clés secrètes, juste indiquer qu'elles existent
+      secretKeyConfigured: !!process.env.STRIPE_SECRET_KEY,
+      webhookSecretConfigured: !!process.env.STRIPE_WEBHOOK_SECRET
+    };
+    
+    console.log('🔧 [Stripe Config] Configuration envoyée au frontend:', {
+      publishableKeyPrefix: config.publishableKey?.substring(0, 12) + '...',
+      environment: config.environment,
+      isTestMode: config.isTestMode,
+      isLiveMode: config.isLiveMode
+    });
+    
+    res.json(config);
+    
+  } catch (error: any) {
+    console.error('❌ [Stripe Config] Erreur récupération config:', error);
+    res.status(500).json({
+      error: 'Erreur lors de la récupération de la configuration Stripe'
+    });
+  }
+});
+
 export { router as stripeRoutes };
