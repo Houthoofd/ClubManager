@@ -104,8 +104,19 @@ router.get('/:coursId', async (req: any, res: any) => {
 
 router.post('/inscription', async (req: any, res: any) => {
   try {
-    // Validation des données entrantes
-    const validatedData:DataReservation = datareservationSchema.parse(req.body);
+    // CORRIGÉ: Validation avec vérification explicite de cours_id
+    const parsedData = datareservationSchema.parse(req.body);
+    
+    if (!parsedData.cours_id) {
+      return res.status(400).json({ message: 'cours_id est requis' });
+    }
+    
+    const validatedData: DataReservation = {
+      utilisateur_nom: parsedData.utilisateur_nom,
+      utilisateur_prenom: parsedData.utilisateur_prenom,
+      cours_id: parsedData.cours_id
+    };
+    
     console.log("Données validées :", validatedData);
 
     const client = new Cours();
@@ -164,9 +175,20 @@ router.post('/inscription', async (req: any, res: any) => {
 
 router.patch("/inscription/annulation", async (req: any, res: any) => {
   try {
-    // Validation des données entrantes
+    // CORRIGÉ: Validation avec vérification explicite de cours_id
     console.log("annulation" + req.body)
-    const validatedData: DataAnnulation = datannulationSchema.parse(req.body);
+    const parsedData = datannulationSchema.parse(req.body);
+    
+    if (!parsedData.cours_id) {
+      return res.status(400).json({ message: 'cours_id est requis' });
+    }
+    
+    const validatedData: DataAnnulation = {
+      utilisateur_nom: parsedData.utilisateur_nom,
+      utilisateur_prenom: parsedData.utilisateur_prenom,
+      cours_id: parsedData.cours_id
+    };
+    
     console.log("Données validées :", validatedData);
 
     const client = new Cours();
@@ -185,9 +207,20 @@ router.patch("/inscription/annulation", async (req: any, res: any) => {
 
 router.patch("/inscription/validation", async (req: any, res: any) => {
   try {
-    // Validation des données entrantes
+    // CORRIGÉ: Validation avec vérification explicite de cours_id
     console.log("validation" + req.body)
-    const validatedData: DataValidation = datavalidationSchema.parse(req.body);
+    const parsedData = datavalidationSchema.parse(req.body);
+    
+    if (!parsedData.cours_id) {
+      return res.status(400).json({ message: 'cours_id est requis' });
+    }
+    
+    const validatedData: DataValidation = {
+      utilisateur_nom: parsedData.utilisateur_nom,
+      utilisateur_prenom: parsedData.utilisateur_prenom,
+      cours_id: parsedData.cours_id
+    };
+    
     console.log("Données validées :", validatedData);
 
     const client = new Cours();
@@ -210,8 +243,19 @@ router.patch("/inscription/validation", async (req: any, res: any) => {
 
 router.delete("/annulation", async (req: any, res: any) => {
   try {
-    // Validation des données entrantes
-    const validatedData: DataAnnulation = datannulationSchema.parse(req.body);
+    // CORRIGÉ: Validation avec vérification explicite de cours_id
+    const parsedData = datannulationSchema.parse(req.body);
+    
+    if (!parsedData.cours_id) {
+      return res.status(400).json({ message: 'cours_id est requis' });
+    }
+    
+    const validatedData: DataAnnulation = {
+      utilisateur_nom: parsedData.utilisateur_nom,
+      utilisateur_prenom: parsedData.utilisateur_prenom,
+      cours_id: parsedData.cours_id
+    };
+    
     console.log("Données validées :", validatedData);
 
     const client = new Cours();

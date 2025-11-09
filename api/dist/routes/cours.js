@@ -65,8 +65,16 @@ router.get('/:coursId', async (req, res) => {
 });
 router.post('/inscription', async (req, res) => {
     try {
-        // Validation des données entrantes
-        const validatedData = datareservationSchema.parse(req.body);
+        // CORRIGÉ: Validation avec vérification explicite de cours_id
+        const parsedData = datareservationSchema.parse(req.body);
+        if (!parsedData.cours_id) {
+            return res.status(400).json({ message: 'cours_id est requis' });
+        }
+        const validatedData = {
+            utilisateur_nom: parsedData.utilisateur_nom,
+            utilisateur_prenom: parsedData.utilisateur_prenom,
+            cours_id: parsedData.cours_id
+        };
         console.log("Données validées :", validatedData);
         const client = new Cours();
         // Vérification si l'utilisateur est déjà inscrit
@@ -119,9 +127,17 @@ router.post('/inscription', async (req, res) => {
 });
 router.patch("/inscription/annulation", async (req, res) => {
     try {
-        // Validation des données entrantes
+        // CORRIGÉ: Validation avec vérification explicite de cours_id
         console.log("annulation" + req.body);
-        const validatedData = datannulationSchema.parse(req.body);
+        const parsedData = datannulationSchema.parse(req.body);
+        if (!parsedData.cours_id) {
+            return res.status(400).json({ message: 'cours_id est requis' });
+        }
+        const validatedData = {
+            utilisateur_nom: parsedData.utilisateur_nom,
+            utilisateur_prenom: parsedData.utilisateur_prenom,
+            cours_id: parsedData.cours_id
+        };
         console.log("Données validées :", validatedData);
         const client = new Cours();
         const annulationReussie = await client.annulerUtilisateurAuCours(validatedData);
@@ -139,9 +155,17 @@ router.patch("/inscription/annulation", async (req, res) => {
 });
 router.patch("/inscription/validation", async (req, res) => {
     try {
-        // Validation des données entrantes
+        // CORRIGÉ: Validation avec vérification explicite de cours_id
         console.log("validation" + req.body);
-        const validatedData = datavalidationSchema.parse(req.body);
+        const parsedData = datavalidationSchema.parse(req.body);
+        if (!parsedData.cours_id) {
+            return res.status(400).json({ message: 'cours_id est requis' });
+        }
+        const validatedData = {
+            utilisateur_nom: parsedData.utilisateur_nom,
+            utilisateur_prenom: parsedData.utilisateur_prenom,
+            cours_id: parsedData.cours_id
+        };
         console.log("Données validées :", validatedData);
         const client = new Cours();
         const validationReussie = await client.validerUtilisateurAuCours(validatedData);
@@ -159,8 +183,16 @@ router.patch("/inscription/validation", async (req, res) => {
 });
 router.delete("/annulation", async (req, res) => {
     try {
-        // Validation des données entrantes
-        const validatedData = datannulationSchema.parse(req.body);
+        // CORRIGÉ: Validation avec vérification explicite de cours_id
+        const parsedData = datannulationSchema.parse(req.body);
+        if (!parsedData.cours_id) {
+            return res.status(400).json({ message: 'cours_id est requis' });
+        }
+        const validatedData = {
+            utilisateur_nom: parsedData.utilisateur_nom,
+            utilisateur_prenom: parsedData.utilisateur_prenom,
+            cours_id: parsedData.cours_id
+        };
         console.log("Données validées :", validatedData);
         const client = new Cours();
         const annulationReussie = await client.desinscrireUtilisateurDuCours(validatedData);
