@@ -34,7 +34,8 @@ export type RightSidePanelProps = {
   articles: Article[];
   onRemoveArticle: (index: number) => void;
   onUpdateQuantite: (index: number, quantite: number, taille: string) => void;
-  onUpdateTaille: (index: number, nouvelleTaille: string) => void; // à ajouter
+  onUpdateTaille: (index: number, nouvelleTaille: string) => void;
+  onViderPanier?: () => void; // AJOUTÉ: Prop optionnelle pour vider le panier
   children?: ReactNode;
 };
 
@@ -44,6 +45,7 @@ const RightSidePanel = ({
   articles,
   onRemoveArticle,
   onUpdateQuantite,
+  onViderPanier, // AJOUTÉ: Récupération de la prop
   children
 }: RightSidePanelProps) => {
   const navigate = useNavigate();
@@ -55,6 +57,18 @@ const RightSidePanel = ({
   const [commande, setCommande] = useState<any>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
+
+  // AJOUTÉ: Fonction locale pour vider le panier si la prop n'est pas fournie
+  const viderPanier = () => {
+    if (onViderPanier) {
+      onViderPanier();
+    } else {
+      // Fallback: retirer tous les articles un par un
+      for (let i = articles.length - 1; i >= 0; i--) {
+        onRemoveArticle(i);
+      }
+    }
+  };
 
   // NETTOYÉ: Fonction pour calculer les stocks disponibles en tenant compte du panier
   const calculerStocksDisponibles = (article: Article, articleIndex: number) => {
@@ -328,30 +342,47 @@ const RightSidePanel = ({
       url: response.url
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ [Panier] Erreur API détaillée:', errorData);
-      throw new Error(errorData?.error || `Erreur ${response.status}: ${response.statusText}`);
-    }
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ [Panier] Paiement créé avec succès:', data);
 
-    const paymentData = await response.json();
-    console.log('✅ [Panier] PaymentIntent créé:', paymentData);
+      // CORRIGÉ: Gérer les différents formats de réponse
+      const commandeId = data.commandeId || data.commande_id;
+      const paymentIntentId = data.paymentIntentId || data.payment_intent_id;
+      
+      if (!commandeId) {
+        console.error('❌ [Panier] ID de commande manquant dans la réponse:', data);
+        throw new Error('ID de commande manquant dans la réponse du serveur');
+      }
 
-    // Rediriger vers la page de paiement avec l'ID de commande
-    const commandeId = paymentData.commande_id;
-    if (commandeId) {
-      console.log(`🔗 [Panier] Redirection vers paiement commande ${commandeId}`);
-      
-      // AJOUTÉ: Sauvegarder l'état pour pouvoir vider le panier après paiement réussi
-      localStorage.setItem('pendingOrderClearCart', 'true');
-      
-      // Fermer le panier
-      onClose();
-      
+      // Sauvegarder les données dans localStorage pour le processus de paiement
+      localStorage.setItem('dernierPanier', JSON.stringify({
+        articles: articles,
+        total: total,
+        commandeId: commandeId,
+        paymentIntentId: paymentIntentId
+      }));
+
       // Rediriger vers la page de paiement
-      navigate(`/pages/paiement?commande=${commandeId}&userId=${utilisateur_id}`);
+      const paiementUrl = `/pages/paiement?commande=${commandeId}&userId=${utilisateur_id}`;
+      console.log('🔄 [Panier] Redirection vers:', paiementUrl);
+      
+      navigate(paiementUrl);
+      
+      // CORRIGÉ: Utiliser la fonction locale viderPanier
+      viderPanier();
+      
     } else {
-      throw new Error('ID de commande manquant dans la réponse');
+      let errorMessage = 'Erreur lors de la création de la commande';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+        console.error('❌ [Panier] Détails erreur API:', errorData);
+      } catch (parseError) {
+        console.error('❌ [Panier] Impossible de parser l\'erreur:', parseError);
+      }
+      
+      setError(errorMessage);
     }
 
   } catch (error: any) {

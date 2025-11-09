@@ -150,12 +150,12 @@ router.post('/confirm-payment', async (req: any, res: any) => {
     }
     
     // 5. Récupérer les données utilisateur pour l'email
-    const userQuery = `SELECT email, nom, prenom FROM utilisateurs WHERE id = ?`;
+    const userQuery = `SELECT email, first_name, last_name FROM utilisateurs WHERE id = ?`;
     const userResults = await paiements.queryAsync(userQuery, [userId]);
     
     if (userResults.length > 0) {
       const user = userResults[0];
-      const userName = `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Membre';
+      const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Membre';
       
       try {
         // 6. Envoyer l'email de confirmation
@@ -178,7 +178,6 @@ router.post('/confirm-payment', async (req: any, res: any) => {
         console.log('✅ [Paiements] Email de confirmation envoyé pour échéance');
       } catch (emailError) {
         console.error('❌ [Paiements] Erreur envoi email confirmation échéance:', emailError);
-        // Ne pas faire échouer le paiement si l'email échoue
       }
     }
     
@@ -336,12 +335,12 @@ router.post('/confirm-payment-commande', async (req: any, res: any) => {
     }
     
     // 5. Récupérer les données utilisateur pour l'email
-    const userQuery = `SELECT email, nom, prenom FROM utilisateurs WHERE id = ?`;
+    const userQuery = `SELECT email, first_name, last_name FROM utilisateurs WHERE id = ?`;
     const userResults = await paiements.queryAsync(userQuery, [userId]);
     
     if (userResults.length > 0) {
       const user = userResults[0];
-      const userName = `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Membre';
+      const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Membre';
       
       try {
         // 6. Envoyer l'email de confirmation de paiement
@@ -364,7 +363,6 @@ router.post('/confirm-payment-commande', async (req: any, res: any) => {
         console.log('✅ [Paiements] Email de confirmation paiement envoyé pour commande');
       } catch (emailError) {
         console.error('❌ [Paiements] Erreur envoi email confirmation paiement commande:', emailError);
-        // Ne pas faire échouer le paiement si l'email échoue
       }
     }
     

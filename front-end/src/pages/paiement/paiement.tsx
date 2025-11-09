@@ -157,7 +157,7 @@ const PaiementPage: React.FC = () => {
           const echeance = echeanceResult?.data || echeanceResult;
           setEcheanceData(echeance);
 
-          // Créer PaymentIntent pour échéance
+          // CORRIGÉ: Créer PaymentIntent via la route consolidée
           const paymentIntentResponse = await fetch(apiUrl('paiements/create-payment-intent'), {
             method: 'POST',
             headers: {
@@ -184,7 +184,7 @@ const PaiementPage: React.FC = () => {
           }
 
         } else if (paymentType === 'commande' && validCommandeId) {
-          // SIMPLIFIÉ: Pour les commandes - SEULEMENT si on a un commandeId valide
+          // CORRIGÉ: Utiliser la route consolidée pour les commandes
           console.log('🛒 [PaiementPage] Traitement commande:', { validCommandeId, validUserId });
 
           // CORRIGÉ: Déclarer commandeGenerique au début du bloc
@@ -280,7 +280,7 @@ const PaiementPage: React.FC = () => {
             console.log('🆕 [PaiementPage] Création nouveau PaymentIntent car aucun existant:', existingError.message);
             
             // CORRIGÉ: Utiliser commandeGenerique qui est maintenant défini
-            const createPaymentResponse = await fetch(apiUrl('paiements'), {
+            const createPaymentResponse = await fetch(apiUrl('paiements/create-payment-intent-commande'), {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -368,29 +368,25 @@ const PaiementPage: React.FC = () => {
                    localStorage.getItem('authToken') || 
                    JSON.parse(localStorage.getItem('userData') || '{}').token;
 
-      // SUPPRIMÉ: Toute la logique de simulation
+      // CORRIGÉ: Récupérer le montant depuis les données disponibles
+      let amount = 0;
       
-      // Vérifications pour paiements Stripe
-      if (!paymentResult?.paymentIntent?.id) {
-        throw new Error('Données de paiement invalides - PaymentIntent ID manquant');
+      if (paymentType === 'echeance' && echeanceData) {
+        amount = echeanceData.montant;
+      } else if (paymentType === 'commande' && commandeData) {
+        amount = commandeData.total;
+      } else {
+        // Fallback: essayer de récupérer depuis paymentResult
+        amount = paymentResult?.amount || paymentResult?.paymentIntent?.amount / 100 || 0;
       }
 
-      const currentData = paymentType === 'echeance' ? echeanceData : commandeData;
-      const amount = paymentType === 'echeance' ? currentData?.montant : currentData?.total;
+      console.log('💰 [PaiementPage] Montant calculé:', { amount, paymentType, echeanceData: !!echeanceData, commandeData: !!commandeData });
+
+      // CORRIGÉ: Utiliser les routes du module paiements consolidé (sans sous-modules)
+      const confirmEndpoint = paymentType === 'echeance' ? 
+        apiUrl('paiements/confirm-payment') : 
+        apiUrl('paiements/confirm-payment-commande');
       
-      if (!amount) {
-        throw new Error(`Montant de ${paymentType === 'echeance' ? 'l\'échéance' : 'la commande'} invalide`);
-      }
-
-      console.log(`💳 [PaiementPage] Paiement ${paymentType} Stripe - Envoi confirmation:`, {
-        paymentIntentId: paymentResult.paymentIntent.id,
-        id: paymentType === 'echeance' ? echeanceId : commandeId,
-        userId,
-        amount
-      });
-
-      // Appeler l'API de confirmation
-      const confirmEndpoint = paymentType === 'echeance' ? 'paiements/confirm-payment' : 'paiements/confirm-payment-commande';
       const confirmBody = paymentType === 'echeance' ? {
         paymentIntentId: paymentResult.paymentIntent.id,
         echeanceId: echeanceId,
@@ -402,7 +398,13 @@ const PaiementPage: React.FC = () => {
         userId: userId
       };
 
-      const response = await fetch(apiUrl(confirmEndpoint), {
+      console.log(`🚀 [PaiementPage] Appel API:`, {
+        endpoint: confirmEndpoint,
+        method: 'POST',
+        body: confirmBody
+      });
+
+      const response = await fetch(confirmEndpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -412,50 +414,72 @@ const PaiementPage: React.FC = () => {
         body: JSON.stringify(confirmBody),
       });
 
+      // CORRIGÉ: Meilleure gestion de la réponse
+      console.log(`📡 [PaiementPage] Réponse API:`, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (response.ok) {
-        const confirmationData = await response.json();
-        console.log(`✅ [PaiementPage] Confirmation ${paymentType} reçue:`, confirmationData);
-        
-        setPaymentSuccess(true);
-        
-        // Afficher message spécial pour premier paiement
-        if (confirmationData?.premier_paiement) {
-          console.log('🎉 [PaiementPage] Premier paiement détecté - promotion visiteur → utilisateur');
-        }
-        
-        // Redirection selon le type de paiement
-        setTimeout(() => {
-          const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
-          const isAdmin = currentUserData?.status === 'administrateur' || currentUserData?.status === 'super-administrateur';
+        try {
+          const confirmationData = await response.json();
+          console.log(`✅ [PaiementPage] Confirmation ${paymentType} reçue:`, confirmationData);
           
-          if (paymentType === 'commande') {
-            navigate('/pages/magasin/magasin?payment_success=true');
-          } else {
-            if (isAdmin && currentUserData?.id !== parseInt(userId)) {
-              navigate(`/pages/utilisateurs/consulter/${userId}?tab=2&payment_success=true`);
+          setPaymentSuccess(true);
+          
+          // Message spécial pour premier paiement
+          if (confirmationData?.premier_paiement) {
+            console.log('🎉 [PaiementPage] Premier paiement détecté - promotion visiteur → utilisateur');
+          }
+          
+          // Redirection selon le type de paiement
+          setTimeout(() => {
+            const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const isAdmin = currentUserData?.status === 'administrateur' || currentUserData?.status === 'super-administrateur';
+            
+            if (paymentType === 'commande') {
+              navigate('/pages/magasin/magasin?payment_success=true');
             } else {
-              const redirectUrl = confirmationData?.premier_paiement 
-                ? '/pages/compte?tab=2&success=true&first_payment=true'
-                : '/pages/compte?tab=2&success=true';
-              navigate(redirectUrl);
+              if (isAdmin && currentUserData?.id !== parseInt(userId)) {
+                navigate(`/pages/utilisateurs/consulter/${userId}?tab=2&payment_success=true`);
+              } else {
+                const redirectUrl = confirmationData?.premier_paiement 
+                  ? '/pages/compte?tab=2&success=true&first_payment=true'
+                  : '/pages/compte?tab=2&success=true';
+                navigate(redirectUrl);
+              }
+            }
+          }, 3000);
+          
+        } catch (jsonError) {
+          console.error('❌ [PaiementPage] Erreur parsing JSON réponse:', jsonError);
+          throw new Error('Réponse serveur invalide (JSON malformé)');
+        }
+      } else {
+        // CORRIGÉ: Gestion d'erreur avec lecture sécurisée de la réponse
+        let errorDetails = 'Détails non disponibles';
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorDetails = JSON.stringify(errorJson, null, 2);
+            } catch {
+              errorDetails = errorText;
             }
           }
-        }, 3000);
-      } else {
-        // Gestion d'erreur mais paiement réussi
-        let errorDetails;
-        try {
-          errorDetails = await response.json();
-        } catch {
-          errorDetails = await response.text();
+        } catch (readError) {
+          console.error('❌ [PaiementPage] Impossible de lire la réponse d\'erreur:', readError);
         }
-        
+
         const errorMessage = `⚠️ Paiement traité mais problème de confirmation
 
 💳 Votre paiement Stripe a été effectué avec succès
 📝 Référence : ${paymentResult.paymentIntent.id}
 
-🔧 Détails techniques : ${typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails, null, 2)}
+🔧 Statut HTTP : ${response.status} ${response.statusText}
+🔧 Détails techniques : ${errorDetails}
 
 🔄 Redirection...`;
 
@@ -961,6 +985,7 @@ const PaiementPage: React.FC = () => {
                 </Alert>
               </div>
 
+              {/* CORRIGÉ: Affichage du formulaire Stripe SANS simulation */}
               {clientSecret && stripePromise ? (
                 <Elements options={options} stripe={stripePromise}>
                   <PaymentForm
@@ -976,18 +1001,17 @@ const PaiementPage: React.FC = () => {
                   />
                 </Elements>
               ) : (
-                <Alert variant="danger" title="Configuration Stripe requise" style={{ marginBottom: '2rem' }}>
-                  <p>Le système de paiement Stripe n'est pas correctement configuré.</p>
-                  <p>Veuillez contacter l'administration pour résoudre ce problème.</p>
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                  <Spinner size="lg" />
                   <div style={{ marginTop: '1rem' }}>
-                    <Button 
-                      variant="secondary" 
-                      onClick={() => navigate(paymentType === 'echeance' ? '/pages/compte' : '/pages/magasin/magasin')}
-                    >
-                      Retour
-                    </Button>
+                    Chargement du système de paiement sécurisé...
                   </div>
-                </Alert>
+                  {!clientSecret && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '14px', color: '#666' }}>
+                      Initialisation de Stripe en cours...
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Informations supplémentaires */}

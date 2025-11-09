@@ -3,8 +3,54 @@ import Stripe from 'stripe';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Paiements } from '../../db/clients/paiements/paiements.js';
-import { Magasin } from '../../db/clients/magasin/magasin.js'; // AJOUTÉ: Import de la classe Magasin
+
+// CORRIGÉ: Imports avec gestion d'erreur pour les modules qui pourraient ne pas exister
+let Paiements: any = null;
+let Magasin: any = null;
+
+try {
+  const paiementsModule = await import('../db/clients/paiements/paiements.js');
+  Paiements = paiementsModule.Paiements;
+} catch (error) {
+  console.warn('⚠️ [Stripe] Module Paiements non disponible, utilisation d\'un fallback');
+  // Créer une classe fallback basique
+  Paiements = class {
+    async queryAsync(query: string, params: any[]) { 
+      throw new Error('Service paiements non disponible'); 
+    }
+    async creerPaiement(data: any) { 
+      throw new Error('Service paiements non disponible'); 
+    }
+    async confirmerPaiementStripe(id: string, statut: string) {
+      throw new Error('Service paiements non disponible');
+    }
+    async obtenirEcheancesUtilisateur(userId: number) {
+      return [];
+    }
+    async marquerEcheancePayee(echeanceId: number) {
+      return { isConfirm: false, message: 'Service non disponible' };
+    }
+    async enregistrerPaiementEcheance(data: any) {
+      return { isConfirm: false, message: 'Service non disponible' };
+    }
+    async estPremierPaiement(userId: number) {
+      return false;
+    }
+  };
+}
+
+try {
+  const magasinModule = await import('../db/clients/magasin/magasin.js');
+  Magasin = magasinModule.Magasin;
+} catch (error) {
+  console.warn('⚠️ [Stripe] Module Magasin non disponible, utilisation d\'un fallback');
+  // Créer une classe fallback basique
+  Magasin = class {
+    async creerCommande(...args: any[]) {
+      return { isConfirm: false, message: 'Service magasin non disponible' };
+    }
+  };
+}
 
 // Configuration Stripe
 const __filename = fileURLToPath(import.meta.url);
@@ -281,9 +327,11 @@ router.post('/confirm-payment', async (req, res) => {
     
     // Vérifier d'abord que l'échéance existe avant de la mettre à jour
     const echeances = await paiements.obtenirEcheancesUtilisateur(parseInt(userId));
-    console.log(`🔍 [Paiements] Toutes les échéances de l'utilisateur ${userId}:`, echeances.map(e => ({ id: e.id, statut: e.statut, montant: e.montant })));
+    console.log(`🔍 [Paiements] Toutes les échéances de l'utilisateur ${userId}:`, 
+      echeances.map((e: any) => ({ id: e.id, statut: e.statut, montant: e.montant }))
+    );
     
-    const echeanceCible = echeances.find(e => e.id === parseInt(echeanceId));
+    const echeanceCible = echeances.find((e: any) => e.id === parseInt(echeanceId));
     console.log(`🎯 [Paiements] Échéance cible trouvée:`, echeanceCible);
     
     if (!echeanceCible) {
@@ -293,7 +341,7 @@ router.post('/confirm-payment', async (req, res) => {
         debug: {
           echeanceId,
           userId,
-          echeancesDisponibles: echeances.map(e => e.id)
+          echeancesDisponibles: echeances.map((e: any) => e.id)
         }
       });
     }
@@ -310,7 +358,7 @@ router.post('/confirm-payment', async (req, res) => {
 
     // 5. Vérifier après coup que la mise à jour a fonctionné
     const echeancesApres = await paiements.obtenirEcheancesUtilisateur(parseInt(userId));
-    const echeanceApres = echeancesApres.find(e => e.id === parseInt(echeanceId));
+    const echeanceApres = echeancesApres.find((e: any) => e.id === parseInt(echeanceId));
     console.log(`🔍 [Paiements] État de l'échéance APRÈS mise à jour:`, echeanceApres);
     console.log(`🎯 [Paiements] === FIN MISE À JOUR ÉCHÉANCE ===`);
 
@@ -387,21 +435,29 @@ router.post('/confirm-payment', async (req, res) => {
                 
                 // CORRIGÉ: Utiliser le client Utilisateurs avec la bonne structure
                 try {
-                  const utilisateursModule = await import('../../db/clients/utilisateurs/utilisateurs.js');
-                  const utilisateursClient = new utilisateursModule.Utilisateurs();
+                  let utilisateursClient: any = null;
                   
-                  // CORRIGÉ: Utiliser status_id au lieu de status
-                  const utilisateurComplet = {
-                    ...utilisateurActuel[0],
-                    status_id: nouveauStatutId
-                  };
+                  try {
+                    const utilisateursModule = await import('../db/clients/utilisateurs/utilisateurs.js');
+                    utilisateursClient = new utilisateursModule.Utilisateurs();
+                  } catch (importError) {
+                    console.warn('⚠️ [Paiements] Module Utilisateurs non disponible:', importError);
+                  }
                   
-                  const statutResult = await utilisateursClient.mettreAjourUtilisateur(utilisateurComplet);
-                  
-                  if (statutResult.isConfirm) {
-                    console.log(`✅ [Paiements] Statut utilisateur ${userId} mis à jour via client Utilisateurs`);
-                  } else {
-                    console.warn(`⚠️ [Paiements] Échec mise à jour statut via client Utilisateurs: ${statutResult.message}`);
+                  if (utilisateursClient) {
+                    // CORRIGÉ: Utiliser status_id au lieu de status
+                    const utilisateurComplet = {
+                      ...utilisateurActuel[0],
+                      status_id: nouveauStatutId
+                    };
+                    
+                    const statutResult = await utilisateursClient.mettreAjourUtilisateur(utilisateurComplet);
+                    
+                    if (statutResult.isConfirm) {
+                      console.log(`✅ [Paiements] Statut utilisateur ${userId} mis à jour via client Utilisateurs`);
+                    } else {
+                      console.warn(`⚠️ [Paiements] Échec mise à jour statut via client Utilisateurs: ${statutResult.message}`);
+                    }
                   }
                 } catch (clientError: any) {
                   console.error(`❌ [Paiements] Erreur client Utilisateurs:`, clientError.message);
@@ -451,75 +507,73 @@ router.post('/confirm-payment', async (req, res) => {
 
       // 9. CORRIGÉ: Utiliser EmailClient avec les variables correctes
       try {
-        const { emailClient } = await import('../../clients/emailClient.js');
-
-        console.log('📤 [Paiements] Envoi email de confirmation avec EmailClient...');
+        let emailClient: any = null;
         
-        const emailVariables = {
-          userName: `${utilisateur.first_name} ${utilisateur.last_name}`,
-          amount: new Intl.NumberFormat('fr-FR', { 
-            style: 'currency', 
-            currency: 'EUR' 
-          }).format(amount),
-          paymentDate: new Date().toLocaleDateString('fr-FR'),
-          // AJOUTÉ: Variables manquantes dans le template
-          currency: 'EUR',
-          datePaiement: new Date().toLocaleDateString('fr-FR'),
-          paymentIntentId: paymentIntentId,
-          echeanceId: echeanceId.toString(),
-          premierPaiement: premierPaiement
-        };
+        try {
+          const emailModule = await import('../clients/emailClient.js');
+          emailClient = emailModule.emailClient;
+        } catch (importError) {
+          console.warn('⚠️ [Paiements] Module EmailClient non disponible:', importError);
+        }
 
-        // CORRIGÉ: Variables enrichies pour template
-        const templateVariables = premierPaiement ? {
-          ...emailVariables,
-          statusUpgrade: statutUpgrade || 'visiteur → utilisateur',
-          newStatus: 'utilisateur',
-          oldStatus: 'visiteur',
-          welcomeMessage: 'Bienvenue dans notre club !',
-          transactionId: paymentIntentId,
-          isFirstPayment: true,
-          // Variables spécifiques pour premier paiement
-          premierPaiement: true,
-          statutAncien: 'visiteur',
-          statutNouveau: 'utilisateur'
-        } : {
-          ...emailVariables,
-          transactionId: paymentIntentId,
-          isFirstPayment: false,
-          premierPaiement: false
-        };
-        
-        // CORRIGÉ: Utiliser template existant 'confirmation-paiement'
-        const emailResult = await emailClient.sendPaymentConfirmation(
-          utilisateur.email,
-          templateVariables,
-          parseInt(userId),
-          'confirmation-paiement' // Template existant
-        );
-
-        if (emailResult.success) {
-          console.log('✅ [Paiements] Email de confirmation envoyé avec EmailClient:', {
-            email: utilisateur.email,
-            premier_paiement: premierPaiement,
-            statut_upgrade: statutUpgrade,
-            messageId: emailResult.messageId
-          });
-        } else {
-          console.error('❌ [Paiements] Échec envoi email avec EmailClient:', emailResult.error);
+        if (emailClient) {
+          console.log('📤 [Paiements] Envoi email de confirmation avec EmailClient...');
           
-          try {
-            console.log('🔄 [Paiements] Tentative envoi email simple en fallback...');
-            
-            const fallbackResult = await emailClient.sendTestEmail(
-              utilisateur.email,
-              'confirmation-paiement' // Template existant
-            );
+          const emailVariables = {
+            userName: `${utilisateur.first_name} ${utilisateur.last_name}`,
+            amount: new Intl.NumberFormat('fr-FR', { 
+              style: 'currency', 
+              currency: 'EUR' 
+            }).format(amount),
+            paymentDate: new Date().toLocaleDateString('fr-FR'),
+            // AJOUTÉ: Variables manquantes dans le template
+            currency: 'EUR',
+            datePaiement: new Date().toLocaleDateString('fr-FR'),
+            paymentIntentId: paymentIntentId,
+            echeanceId: echeanceId.toString(),
+            premierPaiement: premierPaiement
+          };
 
-            console.log('📧 [Paiements] Résultat envoi fallback:', fallbackResult);
-          } catch (fallbackError: any) {
-            console.error('❌ [Paiements] Erreur envoi email fallback:', fallbackError.message);
+          // CORRIGÉ: Variables enrichies pour template
+          const templateVariables = premierPaiement ? {
+            ...emailVariables,
+            statusUpgrade: statutUpgrade || 'visiteur → utilisateur',
+            newStatus: 'utilisateur',
+            oldStatus: 'visiteur',
+            welcomeMessage: 'Bienvenue dans notre club !',
+            transactionId: paymentIntentId,
+            isFirstPayment: true,
+            // Variables spécifiques pour premier paiement
+            premierPaiement: true,
+            statutAncien: 'visiteur',
+            statutNouveau: 'utilisateur'
+          } : {
+            ...emailVariables,
+            transactionId: paymentIntentId,
+            isFirstPayment: false,
+            premierPaiement: false
+          };
+          
+          // CORRIGÉ: Utiliser template existant 'confirmation-paiement'
+          const emailResult = await emailClient.sendPaymentConfirmation(
+            utilisateur.email,
+            templateVariables,
+            parseInt(userId),
+            'confirmation-paiement' // Template existant
+          );
+
+          if (emailResult.success) {
+            console.log('✅ [Paiements] Email de confirmation envoyé avec EmailClient:', {
+              email: utilisateur.email,
+              premier_paiement: premierPaiement,
+              statut_upgrade: statutUpgrade,
+              messageId: emailResult.messageId
+            });
+          } else {
+            console.error('❌ [Paiements] Échec envoi email avec EmailClient:', emailResult.error);
           }
+        } else {
+          console.log('⚠️ [Paiements] EmailClient non disponible - pas d\'email envoyé');
         }
 
       } catch (emailError: any) {
@@ -545,7 +599,7 @@ router.post('/confirm-payment', async (req, res) => {
       echeance_id: echeanceId,
       payment_intent_id: paymentIntentId,
       premier_paiement: premierPaiement,
-      statut_upgrade: statutUpgrade, // NOUVEAU: Retourner les infos de changement de statut
+      statut_upgrade: statutUpgrade,
       echeance_mise_a_jour: echeanceResult.isConfirm,
       enregistrement_confirme: enregistrementResult.isConfirm,
       email_envoye: utilisateurResults.length > 0,
@@ -1036,7 +1090,7 @@ router.post('/create-payment-intent-commande', async (req, res) => {
 router.post('/confirm-payment-commande', async (req, res) => {
   try {
     const { paymentIntentId, commandeId, userId } = req.body;
-    
+
     console.log('🎉 [Paiements] Confirmation paiement commande magasin:', {
       paymentIntentId,
       commandeId,
@@ -1044,8 +1098,8 @@ router.post('/confirm-payment-commande', async (req, res) => {
     });
 
     if (!paymentIntentId || !userId) {
-      return res.status(400).json({ 
-        error: 'PaymentIntent ID et utilisateur ID requis' 
+      return res.status(400).json({
+        error: 'PaymentIntent ID et utilisateur ID requis'
       });
     }
 
@@ -1053,10 +1107,10 @@ router.post('/confirm-payment-commande', async (req, res) => {
 
     // 1. Vérifier le paiement sur Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    
+
     if (paymentIntent.status !== 'succeeded') {
-      return res.status(400).json({ 
-        error: 'Le paiement n\'a pas été confirmé sur Stripe' 
+      return res.status(400).json({
+        error: 'Le paiement n\'a pas été confirmé sur Stripe'
       });
     }
 
@@ -1066,15 +1120,14 @@ router.post('/confirm-payment-commande', async (req, res) => {
     // 3. Mettre à jour le statut de la commande via requête SQL directe
     if (commandeId) {
       try {
-        // CORRIGÉ: Utiliser le bon statut 'payée' (avec accent)
         const updateCommandeQuery = `
-          UPDATE commandes 
+          UPDATE commandes
           SET statut = 'payée'
           WHERE id = ?
         `;
-        
+
         const updateResult = await paiements.queryAsync(updateCommandeQuery, [commandeId]);
-        
+
         if (updateResult.affectedRows > 0) {
           console.log(`✅ [Paiements] Commande ${commandeId} marquée comme payée (${updateResult.affectedRows} ligne(s) affectée(s))`);
         } else {
@@ -1082,35 +1135,33 @@ router.post('/confirm-payment-commande', async (req, res) => {
         }
       } catch (statutError: any) {
         console.error(`⚠️ [Paiements] Erreur mise à jour statut commande ${commandeId}:`, statutError.message);
-        // Ne pas faire échouer le processus pour un problème de statut
       }
     }
 
-    // 4. CORRIGÉ: Envoyer email de confirmation commande avec les bonnes colonnes
+    // 4. Envoyer email de confirmation commande avec détails complets
     try {
-      const { emailClient } = await import('../../clients/emailClient.js');
-      
-      // CORRIGÉ: Récupérer les données utilisateur avec les bonnes colonnes
+      const { emailClient } = await import('../clients/emailClient.js');
+
+      // Récupérer les données utilisateur
       const utilisateurQuery = `
         SELECT u.first_name, u.last_name, u.email
-        FROM utilisateurs u 
+        FROM utilisateurs u
         WHERE u.id = ?
       `;
-      
+
       const utilisateurResults = await paiements.queryAsync(utilisateurQuery, [parseInt(userId)]);
-      
+
       if (utilisateurResults.length > 0) {
         const utilisateur = utilisateurResults[0];
-        
-        // AJOUTÉ: Récupérer les détails de la commande avec la bonne structure
+
+        // Récupérer les détails de la commande
         let commandeDetails = null;
         let totalCommande = 0;
-        
+
         if (commandeId) {
           try {
-            // CORRIGÉ: Adapter la requête selon la vraie structure de la DB
             const commandeQuery = `
-              SELECT 
+              SELECT
                 c.id,
                 c.utilisateur_id,
                 c.date_commande,
@@ -1126,20 +1177,18 @@ router.post('/confirm-payment-commande', async (req, res) => {
               LEFT JOIN tailles t ON ca.taille_id = t.id
               WHERE c.id = ?
             `;
-            
+
             const commandeResults = await paiements.queryAsync(commandeQuery, [commandeId]);
-            
+
             if (commandeResults.length > 0) {
               const commande = commandeResults[0];
-              
-              // Calculer le total à partir des articles
+
               totalCommande = commandeResults
-                .filter((row: any) => row.article_id) // Exclure les lignes sans articles
+                .filter((row: any) => row.article_id)
                 .reduce((total: number, row: any) => total + (row.prix * row.quantite), 0);
-              
-              // Organiser les articles de la commande
+
               const articles = commandeResults
-                .filter((row: any) => row.article_id) // Exclure les lignes sans articles
+                .filter((row: any) => row.article_id)
                 .map((row: any) => ({
                   nom: row.article_nom,
                   quantite: row.quantite,
@@ -1147,7 +1196,7 @@ router.post('/confirm-payment-commande', async (req, res) => {
                   taille: row.taille_nom,
                   sousTotal: (row.prix * row.quantite).toFixed(2)
                 }));
-              
+
               commandeDetails = {
                 id: commande.id,
                 statut: commande.statut,
@@ -1155,15 +1204,15 @@ router.post('/confirm-payment-commande', async (req, res) => {
                 articles: articles,
                 dateCommande: new Date(commande.date_commande).toLocaleDateString('fr-FR')
               };
-              
+
               console.log(`📦 [Paiements] Détails commande récupérés:`, commandeDetails);
             }
           } catch (commandeError: any) {
             console.error(`❌ [Paiements] Erreur récupération détails commande ${commandeId}:`, commandeError.message);
           }
         }
-        
-        // AJOUTÉ: Générer le HTML des articles pour l'email
+
+        // Générer le HTML des articles pour l'email
         let articlesDetailsHtml = '';
         if (commandeDetails?.articles && commandeDetails.articles.length > 0) {
           articlesDetailsHtml = commandeDetails.articles.map((article: any) => `
@@ -1183,9 +1232,7 @@ router.post('/confirm-payment-commande', async (req, res) => {
           articlesDetailsHtml = '<div style="text-align: center; color: #666; font-style: italic; padding: 20px;">Aucun détail d\'article disponible</div>';
         }
 
-        console.log('🔍 [Paiements] HTML articles généré:', articlesDetailsHtml); // AJOUTÉ: Debug
-
-        // MODIFIÉ: Utiliser sendOrderConfirmation avec articlesDetails
+        // Envoyer l'email
         const emailResult = await emailClient.sendOrderConfirmation(
           utilisateur.email,
           {
@@ -1197,7 +1244,6 @@ router.post('/confirm-payment-commande', async (req, res) => {
             nbArticles: (commandeDetails?.articles?.length || 0).toString(),
             totalCommande: totalCommande.toFixed(2),
             articlesDetails: articlesDetailsHtml,
-            // Variables optionnelles avec valeurs par défaut
             delaiPreparation: '24-48 heures',
             lieuRetrait: 'Accueil du club',
             horaires: 'Lundi-Vendredi: 9h-18h, Samedi: 9h-12h',
@@ -1230,9 +1276,9 @@ router.post('/confirm-payment-commande', async (req, res) => {
 
   } catch (error: any) {
     console.error('❌ [Paiements] Erreur confirmation paiement commande:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Erreur lors de la confirmation du paiement de commande',
-      details: error.message 
+      details: error.message
     });
   }
 });

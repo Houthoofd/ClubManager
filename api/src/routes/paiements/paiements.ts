@@ -120,7 +120,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// MODIFIÉ: Route de simulation unifiée pour échéances ET commandes - AVEC RETRY
+// MODIFIÉ: Route de simulation unifiée pour échéances ET commandes - CORRIGÉE
 router.post('/force-payment-success', async (req: any, res: any) => {
   try {
     const { paymentIntentId, echeanceId, commandeId, userId, amount, description } = req.body;
@@ -132,69 +132,204 @@ router.post('/force-payment-success', async (req: any, res: any) => {
       userId,
       amount,
       description,
-      type: echeanceId ? 'echéance' : 'commande'
+      type: echeanceId ? 'echéance' : commandeId ? 'commande' : 'unknown'
     });
 
-    // CORRIGÉ: Validation flexible
+    // CORRIGÉ: Validation stricte
     if (!paymentIntentId || !userId) {
       return res.status(400).json({
-        error: 'paymentIntentId et userId requis'
+        error: 'paymentIntentId et userId requis',
+        received: { paymentIntentId, userId }
       });
     }
 
     if (!echeanceId && !commandeId) {
       return res.status(400).json({
-        error: 'echeanceId OU commandeId requis'
+        error: 'echeanceId OU commandeId requis',
+        received: { echeanceId, commandeId }
       });
     }
 
     if (echeanceId && commandeId) {
       return res.status(400).json({
-        error: 'echeanceId et commandeId ne peuvent pas être fournis simultanément'
+        error: 'echeanceId et commandeId ne peuvent pas être fournis simultanément',
+        received: { echeanceId, commandeId }
       });
     }
 
-    // Traitement selon le type
+    const paiements = new Paiements();
+
+    // CORRIGÉ: Traitement selon le type avec vraie simulation
     if (echeanceId) {
       console.log('💰 [Paiements] Simulation échéance:', echeanceId);
       
-      res.status(200).json({
-        success: true,
-        message: 'Paiement échéance simulé avec succès',
-        data: {
-          paymentIntentId,
-          echeanceId,
-          userId,
-          amount,
-          type: 'echeance',
-          status: 'succeeded',
-          optimized: true
+      try {
+        // AJOUTÉ: Simuler vraiment la confirmation de paiement d'échéance
+        console.log('🔄 [Paiements] Simulation confirmation paiement échéance...');
+        
+        // 1. Vérifier que l'échéance existe
+        const echeanceQuery = `
+          SELECT id, utilisateur_id, montant, statut 
+          FROM echeances_paiements 
+          WHERE id = ? AND utilisateur_id = ?
+        `;
+        const echeanceResults = await paiements.queryAsync(echeanceQuery, [parseInt(echeanceId), parseInt(userId)]);
+        
+        if (echeanceResults.length === 0) {
+          return res.status(404).json({
+            error: 'Échéance non trouvée ou n\'appartient pas à cet utilisateur',
+            debug: { echeanceId, userId }
+          });
         }
-      });
+
+        const echeance = echeanceResults[0];
+        
+        if (echeance.statut === 'payé') {
+          return res.status(400).json({
+            error: 'Cette échéance est déjà payée',
+            debug: { echeanceId, currentStatus: echeance.statut }
+          });
+        }
+
+        // 2. SIMULER: Marquer l'échéance comme payée
+        const updateEcheanceQuery = `
+          UPDATE echeances_paiements 
+          SET statut = 'payé', date_paiement = CURDATE()
+          WHERE id = ?
+        `;
+        await paiements.queryAsync(updateEcheanceQuery, [parseInt(echeanceId)]);
+
+        // 3. SIMULER: Créer un enregistrement de paiement
+        const paiementData = {
+          utilisateur_id: parseInt(userId),
+          montant: parseFloat(amount) || echeance.montant,
+          methode_paiement: 'stripe',
+          stripe_payment_intent_id: paymentIntentId,
+          statut: 'validé',
+          description: description || `Paiement simulé échéance #${echeanceId}`,
+          date_paiement: new Date().toISOString().split('T')[0]
+        };
+
+        const paiementResult = await paiements.creerPaiement(paiementData);
+        
+        console.log('✅ [Paiements] Simulation échéance terminée avec succès');
+
+        return res.status(200).json({
+          success: true,
+          message: 'Paiement échéance simulé avec succès',
+          data: {
+            type: 'echeance',
+            echeanceId: parseInt(echeanceId),
+            paiementId: paiementResult.id,
+            paymentIntentId,
+            userId: parseInt(userId),
+            amount: paiementData.montant,
+            status: 'succeeded',
+            simulated: true,
+            echeanceStatus: 'payé',
+            dateSimulation: new Date().toISOString()
+          }
+        });
+
+      } catch (echeanceError: any) {
+        console.error('❌ [Paiements] Erreur simulation échéance:', echeanceError);
+        return res.status(500).json({
+          error: 'Erreur lors de la simulation de paiement d\'échéance',
+          details: echeanceError.message
+        });
+      }
       
     } else if (commandeId) {
       console.log('🛒 [Paiements] Simulation commande:', commandeId);
       
-      res.status(200).json({
-        success: true,
-        message: 'Paiement commande simulé avec succès',
-        data: {
-          paymentIntentId,
-          commandeId,
-          userId,
-          amount,
-          type: 'commande',
-          status: 'succeeded',
-          optimized: true
+      try {
+        // AJOUTÉ: Simuler vraiment la confirmation de paiement de commande
+        console.log('🔄 [Paiements] Simulation confirmation paiement commande...');
+        
+        // 1. Vérifier que la commande existe
+        const commandeQuery = `
+          SELECT c.id, c.utilisateur_id, c.statut, c.total,
+                 COUNT(ca.id) as nb_articles
+          FROM commandes c
+          LEFT JOIN commande_articles ca ON c.id = ca.commande_id
+          WHERE c.id = ? AND c.utilisateur_id = ?
+          GROUP BY c.id
+        `;
+        const commandeResults = await paiements.queryAsync(commandeQuery, [parseInt(commandeId), parseInt(userId)]);
+        
+        if (commandeResults.length === 0) {
+          return res.status(404).json({
+            error: 'Commande non trouvée ou n\'appartient pas à cet utilisateur',
+            debug: { commandeId, userId }
+          });
         }
-      });
+
+        const commande = commandeResults[0];
+        
+        if (commande.statut === 'payée') {
+          return res.status(400).json({
+            error: 'Cette commande est déjà payée',
+            debug: { commandeId, currentStatus: commande.statut }
+          });
+        }
+
+        // 2. SIMULER: Marquer la commande comme payée
+        const updateCommandeQuery = `
+          UPDATE commandes 
+          SET statut = 'payée'
+          WHERE id = ?
+        `;
+        await paiements.queryAsync(updateCommandeQuery, [parseInt(commandeId)]);
+
+        // 3. SIMULER: Créer un enregistrement de paiement
+        const paiementData = {
+          commande_id: parseInt(commandeId),
+          utilisateur_id: parseInt(userId),
+          montant: parseFloat(amount) || commande.total,
+          methode_paiement: 'stripe',
+          stripe_payment_intent_id: paymentIntentId,
+          statut: 'validé',
+          description: description || `Paiement simulé commande #${commandeId}`,
+          date_paiement: new Date().toISOString().split('T')[0]
+        };
+
+        const paiementResult = await paiements.creerPaiement(paiementData);
+        
+        console.log('✅ [Paiements] Simulation commande terminée avec succès');
+
+        return res.status(200).json({
+          success: true,
+          message: 'Paiement commande simulé avec succès',
+          data: {
+            type: 'commande',
+            commandeId: parseInt(commandeId),
+            paiementId: paiementResult.id,
+            paymentIntentId,
+            userId: parseInt(userId),
+            amount: paiementData.montant,
+            status: 'succeeded',
+            simulated: true,
+            commandeStatus: 'payée',
+            nbArticles: commande.nb_articles,
+            dateSimulation: new Date().toISOString()
+          }
+        });
+
+      } catch (commandeError: any) {
+        console.error('❌ [Paiements] Erreur simulation commande:', commandeError);
+        return res.status(500).json({
+          error: 'Erreur lors de la simulation de paiement de commande',
+          details: commandeError.message
+        });
+      }
     }
 
   } catch (error: any) {
-    console.error('❌ [Paiements] Erreur simulation:', error);
+    console.error('❌ [Paiements] Erreur générale simulation:', error);
     res.status(500).json({
       error: 'Erreur lors de la simulation de paiement',
-      details: error.message
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

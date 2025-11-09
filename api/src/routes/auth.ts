@@ -7,25 +7,6 @@ import { User } from '../types/user.js';
 const router = express.Router();
 const mysqlConnector = MysqlConnector.getInstance();
 
-// SOLUTION : Import conditionnel du module password-reset
-let passwordResetRoutes: any = null;
-
-async function loadPasswordResetRoutes() {
-  if (passwordResetRoutes !== null) return passwordResetRoutes;
-  
-  try {
-    console.log('📦 [Auth] Tentative de chargement du module password-reset...');
-    const passwordResetModule = await import('./auth/password-reset.js');
-    passwordResetRoutes = passwordResetModule.default;
-    console.log('✅ [Auth] Module password-reset chargé avec succès');
-    return passwordResetRoutes;
-  } catch (error) {
-    console.warn('⚠️ [Auth] Module password-reset non disponible, routes de fallback activées:', error);
-    passwordResetRoutes = false; // Marquer comme échoué
-    return false;
-  }
-}
-
 // Utilitaire pour utiliser le client avec Promise
 function queryAsync(sql: string, values: any[]): Promise<any[]> {
   return new Promise((resolve, reject) => {
@@ -315,77 +296,197 @@ router.post('/logout', verifyToken, async (req, res) => {
   }
 });
 
-// CORRECTION: Route de nettoyage d'urgence avec typage correct
-router.post('/cleanup-cookies', async (req, res) => {
+// POST - Demande de réinitialisation de mot de passe
+router.post('/forgot-password', async (req, res) => {
   try {
-    console.log('🧹 Nettoyage d\'urgence des cookies demandé');
+    const { email } = req.body;
     
-    // NOUVEAU: Suppression spécifique et exhaustive du cookie 'token'
-    const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
+    if (!email) {
+      return res.status(400).json({ error: 'Email requis' });
+    }
     
-    // Toutes les combinaisons possibles pour supprimer le cookie 'token'
-    const tokenDeletionHeaders = [
-      `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
-      `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly; SameSite=Strict`,
-      `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly`,
-      `token=; expires=${expiredDate}; path=/; HttpOnly; SameSite=Lax`,
-      `token=; expires=${expiredDate}; path=/; HttpOnly`,
-      `token=; expires=${expiredDate}; path=/; domain=localhost`,
-      `token=; expires=${expiredDate}; path=/`,
-      `token=; max-age=0; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
-      `token=; max-age=0; path=/; HttpOnly; SameSite=Lax`,
-      `token=; max-age=0; path=/; domain=localhost`,
-      `token=; max-age=0; path=/`,
-      `token=deleted; expires=${expiredDate}; path=/; domain=localhost; HttpOnly`,
-      `token=deleted; expires=${expiredDate}; path=/`
-    ];
-
-    // Appliquer chaque header individuellement
-    tokenDeletionHeaders.forEach((header, index) => {
-      res.setHeader(`Set-Cookie-${index}`, header);
-      console.log(`🔥 Suppression forcée ${index + 1}: ${header}`);
-    });
-
-    // Méthodes clearCookie avec typage correct
-    const cookieVariants = [
-      { httpOnly: true, secure: false, sameSite: 'lax' as const, domain: 'localhost', path: '/' },
-      { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/' },
-      { httpOnly: true, path: '/' },
-      { path: '/', domain: 'localhost' },
-      { path: '/' }
-    ];
-
-    cookieVariants.forEach((variant, index) => {
-      res.clearCookie('token', variant);
-      console.log(`🧹 clearCookie variant ${index + 1}:`, variant);
-    });
-
-    // Autres cookies d'authentification
-    const authCookieNames = [
-      'authToken', 'userData', 'user', 'auth_token', 
-      'access_token', 'refresh_token', 'sessionId', 'session', 'jwt', 'JWT'
-    ];
-
-    authCookieNames.forEach(cookieName => {
-      res.clearCookie(cookieName);
-      res.clearCookie(cookieName, { path: '/', domain: 'localhost' });
-      res.clearCookie(cookieName, { path: '/', httpOnly: true });
-    });
-
-    // Headers de nettoyage global
-    res.setHeader('Clear-Site-Data', '"cookies", "storage"');
+    console.log('🔄 [Auth] Demande réinitialisation mot de passe pour:', email);
     
-    res.status(200).json({
-      success: true,
-      message: 'Nettoyage d\'urgence effectué avec suppression exhaustive du cookie token'
+    // Vérifier si l'utilisateur existe
+    const userQuery = `SELECT id, email, first_name, last_name FROM utilisateurs WHERE email = ?`;
+    const userResults = await queryAsync(userQuery, [email]);
+    
+    if (userResults.length === 0) {
+      // Ne pas révéler que l'email n'existe pas pour des raisons de sécurité
+      return res.json({ 
+        message: 'Si cette adresse email est associée à un compte, vous recevrez un lien de récupération.'
+      });
+    }
+    
+    const user = userResults[0];
+    
+    // Générer un token de réinitialisation
+    const crypto = await import('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 heure
+    
+    // CORRIGÉ: Utiliser la table password_reset_tokens au lieu de modifier utilisateurs
+    try {
+      // Supprimer les anciens tokens de cet utilisateur
+      const deleteOldTokensQuery = `
+        DELETE FROM password_reset_tokens 
+        WHERE utilisateur_id = ? OR expires_at < NOW()
+      `;
+      await queryAsync(deleteOldTokensQuery, [user.id]);
+      
+      // Insérer le nouveau token dans password_reset_tokens
+      const insertTokenQuery = `
+        INSERT INTO password_reset_tokens (utilisateur_id, token, expires_at)
+        VALUES (?, ?, ?)
+      `;
+      await queryAsync(insertTokenQuery, [user.id, resetToken, resetTokenExpiry]);
+      
+      console.log('✅ [Auth] Token de réinitialisation créé dans password_reset_tokens');
+    } catch (tokenError: any) {
+      console.error('❌ [Auth] Erreur création token:', tokenError);
+      throw new Error('Erreur lors de la création du token de réinitialisation');
+    }
+    
+    // Envoyer l'email de réinitialisation
+    try {
+      const { EmailClient } = await import('../clients/emailClient.js');
+      const emailClient = new EmailClient();
+      
+      const resetUrl = `${process.env.FRONTEND_URL}/pages/auth/reset-password?token=${resetToken}`;
+      
+      await emailClient.sendPasswordResetEmail(user.email, {
+        userName: `${user.first_name} ${user.last_name}`,
+        resetUrl: resetUrl,
+        expiresIn: '1 heure'
+      }, user.id);
+      
+      console.log('✅ [Auth] Email de réinitialisation envoyé à:', email);
+      
+    } catch (emailError) {
+      console.error('❌ [Auth] Erreur envoi email:', emailError);
+      // Continuer même si l'email échoue
+    }
+    
+    res.json({ 
+      message: 'Si cette adresse email est associée à un compte, vous recevrez un lien de récupération.'
     });
+    
+  } catch (error: any) {
+    console.error('❌ [Auth] Erreur forgot-password:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
-  } catch (error) {
-    console.error('❌ Erreur lors du nettoyage d\'urgence:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors du nettoyage des cookies'
+// GET - Vérifier un token de réinitialisation
+router.get('/verify-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    console.log('🔍 [Auth] Vérification token:', token.substring(0, 10) + '...');
+    
+    // CORRIGÉ: Utiliser password_reset_tokens au lieu de utilisateurs
+    const query = `
+      SELECT 
+        prt.utilisateur_id,
+        prt.expires_at,
+        u.email, 
+        u.first_name, 
+        u.last_name
+      FROM password_reset_tokens prt
+      JOIN utilisateurs u ON prt.utilisateur_id = u.id
+      WHERE prt.token = ? AND prt.expires_at > NOW() AND prt.used_at IS NULL
+    `;
+    
+    const results = await queryAsync(query, [token]);
+    
+    if (results.length === 0) {
+      return res.status(400).json({ 
+        valid: false,
+        error: 'Token invalide ou expiré'
+      });
+    }
+    
+    const tokenData = results[0];
+    
+    res.json({
+      valid: true,
+      email: tokenData.email,
+      userName: `${tokenData.first_name} ${tokenData.last_name}`
     });
+    
+  } catch (error: any) {
+    console.error('❌ [Auth] Erreur verify-token:', error);
+    res.status(500).json({ 
+      valid: false,
+      error: 'Erreur serveur'
+    });
+  }
+});
+
+// POST - Réinitialiser le mot de passe
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
+    }
+    
+    console.log('🔄 [Auth] Réinitialisation mot de passe avec token:', token.substring(0, 10) + '...');
+    
+    // CORRIGÉ: Vérifier le token dans password_reset_tokens
+    const verifyQuery = `
+      SELECT 
+        prt.utilisateur_id,
+        u.email, 
+        u.first_name, 
+        u.last_name
+      FROM password_reset_tokens prt
+      JOIN utilisateurs u ON prt.utilisateur_id = u.id
+      WHERE prt.token = ? AND prt.expires_at > NOW() AND prt.used_at IS NULL
+    `;
+    
+    const tokenResults = await queryAsync(verifyQuery, [token]);
+    
+    if (tokenResults.length === 0) {
+      return res.status(400).json({ error: 'Token invalide ou expiré' });
+    }
+    
+    const tokenData = tokenResults[0];
+    
+    // Hasher le nouveau mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Transaction pour mettre à jour le mot de passe et marquer le token comme utilisé
+    try {
+      // Mettre à jour le mot de passe
+      const updatePasswordQuery = `
+        UPDATE utilisateurs 
+        SET password = ? 
+        WHERE id = ?
+      `;
+      await queryAsync(updatePasswordQuery, [hashedPassword, tokenData.utilisateur_id]);
+      
+      // Marquer le token comme utilisé
+      const markTokenUsedQuery = `
+        UPDATE password_reset_tokens 
+        SET used_at = NOW() 
+        WHERE token = ?
+      `;
+      await queryAsync(markTokenUsedQuery, [token]);
+      
+      console.log('✅ [Auth] Mot de passe réinitialisé pour:', tokenData.email);
+      
+      res.json({ message: 'Mot de passe réinitialisé avec succès' });
+      
+    } catch (updateError: any) {
+      console.error('❌ [Auth] Erreur mise à jour mot de passe:', updateError);
+      throw new Error('Erreur lors de la mise à jour du mot de passe');
+    }
+    
+  } catch (error: any) {
+    console.error('❌ [Auth] Erreur reset-password:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -569,55 +670,6 @@ router.get('/confirm-email', async (req: Request, res: Response) => {
     res.status(500).json({ 
       success: false, 
       message: 'Erreur serveur' 
-    });
-  }
-});
-
-// Monter les routes password-reset de manière conditionnelle
-router.use('/password-reset', async (req, res, next) => {
-  const passwordResetRouter = await loadPasswordResetRoutes();
-  
-  if (passwordResetRouter) {
-    console.log(`🔄 [Auth] Redirection vers module password-reset: ${req.method} ${req.path}`);
-    passwordResetRouter(req, res, next);
-  } else {
-    // Routes de fallback pour password-reset
-    if (req.method === 'POST' && req.path === '/forgot-password') {
-      return res.status(503).json({
-        error: 'Service de récupération de mot de passe temporairement indisponible',
-        message: 'Le module password-reset n\'est pas disponible',
-        suggestion: 'Veuillez réessayer plus tard ou contacter l\'administrateur'
-      });
-    }
-    
-    if (req.method === 'GET' && req.path.startsWith('/verify-token/')) {
-      return res.status(503).json({
-        error: 'Service de vérification de token temporairement indisponible',
-        message: 'Le module password-reset n\'est pas disponible'
-      });
-    }
-    
-    if (req.method === 'POST' && req.path === '/reset-password') {
-      return res.status(503).json({
-        error: 'Service de réinitialisation temporairement indisponible',
-        message: 'Le module password-reset n\'est pas disponible'
-      });
-    }
-    
-    // Route de santé pour password-reset
-    if (req.method === 'GET' && req.path === '/health') {
-      return res.json({
-        status: 'Password-reset en mode fallback',
-        available: false,
-        mode: 'degraded'
-      });
-    }
-    
-    // Autres routes non gérées
-    res.status(503).json({
-      error: 'Route password-reset non disponible',
-      path: req.path,
-      method: req.method
     });
   }
 });

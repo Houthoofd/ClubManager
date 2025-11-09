@@ -1,48 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useStripe,
   useElements,
   PaymentElement,
-  AddressElement,
+  AddressElement
 } from '@stripe/react-stripe-js';
 import {
   Button,
   Alert,
   Spinner,
-  Form,
-  FormGroup,
   Card,
   CardBody,
   Title,
   Flex,
-  FlexItem,
-  Checkbox,
-  Badge,
-  Progress,
-  ProgressMeasureLocation,
+  FlexItem
 } from '@patternfly/react-core';
-import { CreditCardIcon, ShieldAltIcon, CheckCircleIcon, ExclamationTriangleIcon, InProgressIcon } from '@patternfly/react-icons';
-import { apiUrl } from '../../pages/apiUrl'; // AJOUTÉ: Import manquant
-
-// NOUVEAU: Types pour le statut de paiement
-type PaymentStatus = 
-  | 'idle' 
-  | 'validating' 
-  | 'processing' 
-  | 'redirecting' 
-  | 'confirming' 
-  | 'succeeded' 
-  | 'failed';
+import { CreditCardIcon, ExclamationTriangleIcon, InfoCircleIcon } from '@patternfly/react-icons';
 
 interface PaymentFormProps {
   clientSecret: string;
-  amount: number;
+  amount?: number;
   description?: string;
   onSuccess: (result: any) => void;
   onError: (error: any) => void;
-  echeanceId?: string; // MODIFIÉ: Rendu optionnel
-  commandeId?: string; // AJOUTÉ: Nouvelle prop pour commandes
-  userId: string;
+  echeanceId?: string;
+  commandeId?: string;
+  userId?: string;
   returnUrl?: string;
 }
 
@@ -59,784 +42,265 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [showBillingAddress, setShowBillingAddress] = useState(false);
   
-  // NOUVEAU: État du statut de paiement
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
-  const [statusMessage, setStatusMessage] = useState<string>('');
-  const [progressValue, setProgressValue] = useState<number>(0);
-  const [hasAttemptedPayment, setHasAttemptedPayment] = useState(false); // AJOUTÉ: Prévenir les tentatives multiples
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [message, setMessage] = useState<string>('');
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // NOUVEAU: Fonction pour mettre à jour le statut
-  const updatePaymentStatus = (status: PaymentStatus, message: string, progress: number = 0) => {
-    setPaymentStatus(status);
-    setStatusMessage(message);
-    setProgressValue(progress);
-    console.log(`📊 [PaymentForm] Statut: ${status} - ${message} (${progress}%)`);
-  };
+  useEffect(() => {
+    if (!stripe) {
+      return;
+    }
 
-  // NOUVEAU: Composant de statut visuel
-  const PaymentStatusIndicator = () => {
-    const getStatusColor = (status: PaymentStatus) => {
-      switch (status) {
-        case 'idle': return 'blue';
-        case 'validating': return 'cyan';
-        case 'processing': return 'purple';
-        case 'redirecting': return 'orange';
-        case 'confirming': return 'blue';
-        case 'succeeded': return 'green';
-        case 'failed': return 'red';
-        default: return 'grey';
+    if (!clientSecret) {
+      setMessage('Configuration de paiement manquante');
+      return;
+    }
+
+    // Vérifier le statut du PaymentIntent
+    stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
+      if (paymentIntent) {
+        switch (paymentIntent.status) {
+          case 'succeeded':
+            setMessage('Paiement réussi !');
+            onSuccess({ paymentIntent });
+            break;
+          case 'processing':
+            setMessage('Paiement en cours de traitement...');
+            break;
+          case 'requires_payment_method':
+            setMessage('Prêt pour le paiement');
+            setIsLoaded(true);
+            break;
+          default:
+            setMessage('Une erreur est survenue');
+            break;
+        }
+      } else {
+        setMessage('Configuration de paiement invalide');
       }
-    };
-
-    const getStatusIcon = (status: PaymentStatus) => {
-      switch (status) {
-        case 'succeeded': return <CheckCircleIcon style={{ color: '#28a745' }} />;
-        case 'failed': return <ExclamationTriangleIcon style={{ color: '#dc3545' }} />;
-        case 'idle': return <CreditCardIcon style={{ color: '#0570de' }} />;
-        default: return <InProgressIcon style={{ color: '#6f42c1' }} />;
-      }
-    };
-
-    const isActive = paymentStatus !== 'idle';
-
-    if (!isActive) return null;
-
-    return (
-      <Card style={{ marginBottom: '1rem', border: `2px solid ${getStatusColor(paymentStatus) === 'green' ? '#28a745' : '#6f42c1'}` }}>
-        <CardBody>
-          <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
-            <FlexItem>
-              {getStatusIcon(paymentStatus)}
-            </FlexItem>
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                <Badge variant="outline" color={getStatusColor(paymentStatus)}>
-                  {paymentStatus.toUpperCase()}
-                </Badge>
-                <span style={{ marginLeft: '0.5rem' }}>{statusMessage}</span>
-              </div>
-              {(paymentStatus === 'processing' || paymentStatus === 'validating' || paymentStatus === 'confirming') && (
-                <Progress 
-                  value={progressValue} 
-                  measureLocation={ProgressMeasureLocation.outside}
-                  variant={paymentStatus === 'succeeded' ? 'success' : undefined}
-                />
-              )}
-            </FlexItem>
-            {(paymentStatus === 'processing' || paymentStatus === 'validating' || paymentStatus === 'confirming') && (
-              <FlexItem>
-                <Spinner size="md" />
-              </FlexItem>
-            )}
-          </Flex>
-        </CardBody>
-      </Card>
-    );
-  };
+    });
+  }, [stripe, clientSecret, onSuccess]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements) {
-      setErrorMessage('Stripe n\'est pas encore chargé. Veuillez patienter.');
-      return;
-    }
-
-    // AJOUTÉ: Vérifier si un paiement est déjà en cours
-    if (isProcessing || hasAttemptedPayment) {
-      setErrorMessage('Un paiement est déjà en cours. Veuillez patienter ou actualiser la page.');
+    if (!stripe || !elements || !clientSecret) {
+      setMessage('Stripe n\'est pas encore chargé. Veuillez patienter.');
       return;
     }
 
     setIsProcessing(true);
-    setHasAttemptedPayment(true); // AJOUTÉ: Marquer qu'une tentative a eu lieu
-    setErrorMessage('');
+    setMessage('');
 
     try {
-      // Phase 1 - Validation
-      updatePaymentStatus('validating', 'Validation des informations de paiement...', 10);
-
-      console.log('🚀 [PaymentForm] Début du processus de paiement:', {
-        echeanceId,
-        userId,
-        amount,
-        clientSecret: clientSecret.substring(0, 20) + '...'
-      });
-
-      // Simulation d'un délai pour montrer la validation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Phase 2 - Traitement
-      updatePaymentStatus('processing', 'Traitement du paiement en cours...', 30);
-
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: returnUrl || `${window.location.origin}/pages/compte?tab=paiements&success=true`,
+          return_url: returnUrl || `${window.location.origin}/pages/paiement/success`,
           payment_method_data: {
             billing_details: {
-              name: 'Membre du club',
+              name: 'Client Club Manager',
             },
           },
         },
-        redirect: 'if_required',
-      });
-
-      // Phase 3 - Analyse du résultat
-      updatePaymentStatus('confirming', 'Confirmation du paiement...', 70);
-
-      console.log('📊 [PaymentForm] Résultat confirmPayment:', {
-        error,
-        paymentIntent: paymentIntent ? {
-          id: paymentIntent.id,
-          status: paymentIntent.status,
-          amount: paymentIntent.amount
-        } : null
+        redirect: 'if_required'
       });
 
       if (error) {
-        updatePaymentStatus('failed', `Échec du paiement: ${error.message}`, 0);
+        console.error('❌ [PaymentForm] Erreur Stripe:', error);
         
-        console.error('❌ [PaymentForm] Erreur confirmation:', error);
-        
-        // AMÉLIORÉ: Gestion spécifique des erreurs de refus de carte
-        if (error.type === 'card_error') {
-          let userFriendlyMessage = '';
-          
-          switch (error.code) {
-            case 'payment_intent_payment_attempt_failed':
-            case 'card_declined':
-            case 'generic_decline':
-              userFriendlyMessage = `🚫 Votre carte a été refusée par votre banque.
-
-💡 Solutions possibles :
-• Vérifiez que vous avez suffisamment de fonds
-• Vérifiez les limites de votre carte (montant/géographiques)
-• Contactez votre banque pour autoriser le paiement
-• Essayez avec une autre carte
-• Le paiement peut être bloqué pour sécurité (paiement à l'étranger)
-
-💳 Détails techniques : ${error.message}
-
-📞 Si le problème persiste, contactez votre banque en mentionnant :
-- Tentative de paiement de ${formatAmount(amount)}
-- Site marchand : Stripe
-- Code erreur : ${error.code}`;
-              break;
-              
-            case 'insufficient_funds':
-              userFriendlyMessage = `💰 Fonds insuffisants sur votre carte.
-
-💡 Solutions :
-• Vérifiez le solde de votre compte
-• Utilisez une autre carte
-• Effectuez un virement sur votre compte`;
-              break;
-              
-            case 'expired_card':
-              userFriendlyMessage = `📅 Votre carte a expiré.
-
-💡 Solution :
-• Utilisez une carte valide
-• Contactez votre banque pour une nouvelle carte`;
-              break;
-              
-            case 'incorrect_cvc':
-              userFriendlyMessage = `🔐 Code de sécurité (CVC) incorrect.
-
-💡 Solution :
-• Vérifiez les 3 chiffres au dos de votre carte
-• Ressaisissez votre carte`;
-              break;
-              
-            case 'processing_error':
-              userFriendlyMessage = `⚙️ Erreur de traitement temporaire.
-
-💡 Solutions :
-• Réessayez dans quelques minutes
-• Vérifiez votre connexion internet
-• Utilisez une autre carte si le problème persiste`;
-              break;
-              
-            default:
-              userFriendlyMessage = `❌ Problème avec votre carte : ${error.message}
-
-💡 Solutions générales :
-• Vérifiez les informations saisies
-• Contactez votre banque
-• Essayez avec une autre carte
-• Code d'erreur : ${error.code}`;
-          }
-          
-          setErrorMessage(userFriendlyMessage);
-        } else if (error.type === 'validation_error') {
-          setErrorMessage(`⚠️ Informations invalides : ${error.message}\n\n💡 Veuillez vérifier et corriger les données saisies.`);
+        if (error.type === 'card_error' || error.type === 'validation_error') {
+          setMessage(`Erreur: ${error.message}`);
         } else {
-          setErrorMessage(`❌ Erreur inattendue : ${error.message}\n\n💡 Veuillez réessayer ou contacter le support.`);
+          setMessage('Erreur inattendue lors du paiement.');
         }
         
         onError(error);
-      } else if (paymentIntent) {
-        switch (paymentIntent.status) {
-          case 'succeeded':
-            updatePaymentStatus('succeeded', 'Paiement réussi ! Redirection en cours...', 100);
-            console.log('✅ [PaymentForm] Paiement réussi immédiatement');
-            
-            setTimeout(() => {
-              onSuccess({ paymentIntent });
-            }, 1500);
-            break;
-          
-          case 'processing':
-            updatePaymentStatus('processing', 'Paiement en cours de traitement...', 80);
-            console.log('⏳ [PaymentForm] Paiement en cours de traitement');
-            setErrorMessage(`ℹ️ Votre paiement est en cours de traitement.
-
-📧 Vous recevrez une confirmation par email une fois le traitement terminé.
-⏱️ Cela peut prendre quelques minutes à quelques heures selon votre banque.
-
-💡 Ne fermez pas cette page et n'effectuez pas un nouveau paiement.`);
-            break;
-          
-          case 'requires_payment_method':
-            updatePaymentStatus('failed', 'Méthode de paiement requise', 0);
-            console.log('❌ [PaymentForm] Paiement nécessite une autre méthode');
-            setErrorMessage(`🚫 Votre méthode de paiement a été refusée.
-
-💡 Solutions :
-• Essayez avec une autre carte
-• Vérifiez les informations saisies
-• Contactez votre banque
-• Utilisez un autre moyen de paiement si disponible`);
-            onError({ type: 'payment_method_required', message: 'Méthode de paiement requise' });
-            break;
-          
-          case 'requires_action':
-            updatePaymentStatus('redirecting', 'Redirection vers votre banque...', 50);
-            console.log('🔄 [PaymentForm] Action requise - redirection en cours');
-            break;
-          
-          default:
-            updatePaymentStatus('failed', `Statut inattendu: ${paymentIntent.status}`, 0);
-            console.log('⚠️ [PaymentForm] Statut de paiement inattendu:', paymentIntent.status);
-            setErrorMessage(`⚠️ Statut de paiement inattendu : ${paymentIntent.status}
-
-💡 Veuillez vérifier votre compte ou contacter le support.`);
-        }
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        console.log('✅ [PaymentForm] Paiement réussi:', paymentIntent.id);
+        setMessage('Paiement réussi !');
+        onSuccess({ paymentIntent });
       } else {
-        updatePaymentStatus('redirecting', 'Redirection en cours pour finaliser le paiement...', 60);
-        console.log('🔄 [PaymentForm] Redirection en cours pour action de paiement (ex: Bancontact)');
+        console.log('⏳ [PaymentForm] Paiement en attente:', paymentIntent?.status);
+        setMessage('Paiement en cours de vérification...');
       }
-    } catch (unexpectedError: any) {
-      updatePaymentStatus('failed', 'Erreur inattendue lors du paiement', 0);
-      console.error('❌ [PaymentForm] Erreur inattendue:', unexpectedError);
-      setErrorMessage(`❌ Une erreur technique inattendue s'est produite.
-
-💡 Solutions :
-• Actualisez la page et réessayez
-• Vérifiez votre connexion internet
-• Contactez le support si le problème persiste
-
-🔧 Détails : ${unexpectedError.message}`);
-      onError(unexpectedError);
+    } catch (error: any) {
+      console.error('❌ [PaymentForm] Erreur lors du traitement:', error);
+      setMessage('Erreur lors du traitement du paiement.');
+      onError(error);
     } finally {
       setIsProcessing(false);
-      // NOTE: hasAttemptedPayment reste à true pour éviter les tentatives multiples
     }
   };
 
-  const formatAmount = (amount: number) => {
+  const formatAmount = (amount?: number) => {
+    if (!amount) return '0,00 €';
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'EUR'
     }).format(amount);
   };
 
-  // AMÉLIORÉ: Composant d'erreur avec style et solutions
-  const ErrorAlert = () => {
-    if (!errorMessage) return null;
-    
-    const isCardDeclined = errorMessage.includes('refusée') || errorMessage.includes('declined');
-    const isInsufficientFunds = errorMessage.includes('Fonds insuffisants');
-    
+  // Affichage pendant le chargement de Stripe
+  if (!stripe || !elements) {
     return (
-      <Alert 
-        variant="danger" 
-        title={
-          isCardDeclined ? "🚫 Paiement refusé par votre banque" :
-          isInsufficientFunds ? "💰 Fonds insuffisants" :
-          "❌ Erreur de paiement"
-        }
-        style={{ 
-          marginBottom: '1rem',
-          whiteSpace: 'pre-line' // Pour afficher les retours à la ligne
-        }}
-      >
-        <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
-          {errorMessage}
-        </div>
-        
-        {isCardDeclined && (
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '1rem', 
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffeaa7',
-            borderRadius: '6px'
-          }}>
-            <strong>🔔 Important :</strong> Ce refus vient de votre banque, pas de notre système. 
-            Votre compte n'a pas été débité.
-          </div>
-        )}
-      </Alert>
-    );
-  };
-
-  // NOUVEAU: Mode simulation pour forcer le succès du paiement
-  const [isSimulationMode, setIsSimulationMode] = useState(process.env.NODE_ENV === 'development');
-
-  // NOUVEAU: Fonction pour simuler un paiement réussi
-  const handleSimulatePayment = async () => {
-    try {
-      console.log('🧪 [PaymentForm] Démarrage simulation paiement...');
-      
-      // CORRIGÉ: Extraire le paymentIntentId depuis clientSecret
-      const paymentIntentId = getPaymentIntentId();
-      
-      console.log('🔍 [PaymentForm] Paramètres disponibles:', {
-        echeanceId,
-        commandeId,
-        userId,
-        paymentIntentId,
-        clientSecret: clientSecret ? 'présent' : 'absent',
-        amount,
-        description
-      });
-
-      if (!paymentIntentId) {
-        throw new Error('PaymentIntent ID introuvable dans clientSecret');
-      }
-
-      const token = localStorage.getItem('token') || 
-                   localStorage.getItem('authToken') || 
-                   JSON.parse(localStorage.getItem('userData') || '{}').token;
-
-      // CORRIGÉ: Construire le body selon le type de paiement
-      let simulationBody;
-      
-      if (commandeId) {
-        // Pour les commandes
-        simulationBody = {
-          paymentIntentId: paymentIntentId,
-          commandeId: commandeId,
-          userId: userId,
-          amount: amount || 0,
-          description: description || `Simulation commande #${commandeId}`
-        };
-        console.log('🛒 [PaymentForm] Body simulation COMMANDE:', simulationBody);
-      } else if (echeanceId) {
-        // Pour les échéances
-        simulationBody = {
-          paymentIntentId: paymentIntentId,
-          echeanceId: echeanceId,
-          userId: userId,
-          amount: amount || 0,
-          description: description || `Simulation échéance #${echeanceId}`
-        };
-        console.log('💰 [PaymentForm] Body simulation ÉCHÉANCE:', simulationBody);
-      } else {
-        throw new Error('Aucun ID de commande ou d\'échéance disponible pour la simulation');
-      }
-
-      console.log('📡 [PaymentForm] Envoi simulation vers /paiements/force-payment-success...');
-
-      const response = await fetch(apiUrl('paiements/force-payment-success'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        credentials: 'include',
-        body: JSON.stringify(simulationBody)
-      });
-
-      console.log('📊 [PaymentForm] Réponse simulation:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        let errorBody;
-        try {
-          errorBody = await response.json();
-        } catch {
-          errorBody = await response.text();
-        }
-        
-        console.error('❌ [PaymentForm] Erreur HTTP simulation:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorBody
-        });
-        
-        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${JSON.stringify(errorBody)}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ [PaymentForm] Simulation réussie:', result);
-
-      // Simuler un objet PaymentIntent pour la cohérence
-      const simulatedPaymentResult = {
-        paymentIntent: {
-          id: paymentIntentId,
-          status: 'succeeded',
-          amount: simulationBody.amount,
-          currency: 'eur'
-        },
-        simulated: true,
-        simulationResult: result
-      };
-
-      console.log('🎉 [PaymentForm] Appel onSuccess avec résultat simulé:', simulatedPaymentResult);
-      onSuccess(simulatedPaymentResult);
-
-    } catch (error: any) {
-      console.error('❌ [PaymentForm] Erreur simulation complète:', error);
-      onError(error);
-    }
-  };
-
-  // AJOUTÉ: Extraire le paymentIntentId depuis le clientSecret
-  const getPaymentIntentId = () => {
-    if (!clientSecret) return null;
-    // Le clientSecret a le format: "pi_xxxxx_secret_yyyy"
-    return clientSecret.split('_secret_')[0];
-  };
-
-  // AJOUTÉ: Debug des données au render
-  console.log('🔧 [PaymentForm] Render avec données:', {
-    echeanceId,
-    commandeId,
-    userId,
-    paymentIntentId: getPaymentIntentId(),
-    hasClientSecret: !!clientSecret,
-    clientSecretFormat: clientSecret ? clientSecret.substring(0, 10) + '...' : 'absent',
-    amount,
-    paymentType: commandeId ? 'commande' : 'echeance'
-  });
-
-  return (
-    <Form onSubmit={handleSubmit}>
-      {/* Indicateur de statut de paiement */}
-      <PaymentStatusIndicator />
-
-      {/* NOUVEAU: Mode simulation pour développement */}
-      {isSimulationMode && (
-        <Card style={{ marginBottom: '2rem', border: '2px solid #ffc107', backgroundColor: '#fff3cd' }}>
-          <CardBody>
-            <Title headingLevel="h3" size="lg" style={{ marginBottom: '1rem', color: '#856404' }}>
-              🧪 Mode Développement - Simulation
-            </Title>
-            
-            <div style={{ marginBottom: '1rem', color: '#856404' }}>
-              <p><strong>🎯 Mode test activé !</strong></p>
-              <p>Vous pouvez simuler un paiement réussi sans utiliser Stripe.</p>
-              <p>Cette fonction utilise l'API <code>/force-payment-success</code> pour marquer l'échéance comme payée.</p>
-              
-              {/* AJOUTÉ: Informations de debug */}
-              <div style={{ 
-                marginTop: '1rem', 
-                padding: '0.75rem', 
-                backgroundColor: 'rgba(0,0,0,0.1)', 
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontFamily: 'monospace'
-              }}>
-                <strong>🔧 Debug Info:</strong><br/>
-                • API URL: {`${window.location.protocol}//${window.location.hostname}:3000/paiements/force-payment-success`}<br/>
-                • PaymentIntent ID: {clientSecret.split('_secret_')[0]}<br/>
-                • Échéance ID: {echeanceId}<br/>
-                • Utilisateur ID: {userId}
-              </div>
-            </div>
-            
-            <Flex spaceItems={{ default: 'spaceItemsSm' }}>
-              <FlexItem>
-                <Button
-                  variant="warning"
-                  onClick={handleSimulatePayment}
-                  isDisabled={isProcessing}
-                  icon={<CheckCircleIcon />}
-                >
-                  🧪 Simuler un paiement réussi
-                </Button>
-              </FlexItem>
-              <FlexItem>
-                <Button
-                  variant="link"
-                  onClick={() => setIsSimulationMode(false)}
-                  style={{ color: '#856404' }}
-                >
-                  Désactiver la simulation
-                </Button>
-              </FlexItem>
-            </Flex>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* Résumé du paiement */}
-      <Card style={{ marginBottom: '2rem', border: '2px solid #e7f3ff' }}>
+      <Card>
         <CardBody>
-          <Title headingLevel="h3" size="lg" style={{ marginBottom: '1rem' }}>
-            <ShieldAltIcon style={{ marginRight: '8px', color: '#0570de' }} />
-            Résumé du paiement
-          </Title>
-          
-          <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsSm' }}>
-            <FlexItem>
-              <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
-                <FlexItem>Description :</FlexItem>
-                <FlexItem style={{ fontWeight: 'bold' }}>{description}</FlexItem>
-              </Flex>
-            </FlexItem>
-            
-            {echeanceId && (
-              <FlexItem>
-                <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
-                  <FlexItem>Référence :</FlexItem>
-                  <FlexItem style={{ fontWeight: 'bold' }}>#{echeanceId}</FlexItem>
-                </Flex>
-              </FlexItem>
-            )}
-            
-            <FlexItem style={{ borderTop: '1px solid #dee2e6', paddingTop: '0.5rem' }}>
-              <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }}>
-                <FlexItem style={{ fontSize: '18px', fontWeight: 'bold' }}>
-                  Total à payer :
-                </FlexItem>
-                <FlexItem style={{ fontSize: '20px', fontWeight: 'bold', color: '#dc3545' }}>
-                  {formatAmount(amount)}
-                </FlexItem>
-              </Flex>
-            </FlexItem>
-          </Flex>
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <Spinner size="lg" />
+            <div style={{ marginTop: '1rem' }}>
+              Chargement du formulaire de paiement sécurisé...
+            </div>
+            <div style={{ marginTop: '0.5rem', fontSize: '14px', color: '#666' }}>
+              Initialisation de Stripe en cours
+            </div>
+          </div>
         </CardBody>
       </Card>
+    );
+  }
 
-      {/* Élément de paiement Stripe - Masqué en mode simulation */}
-      {!isSimulationMode && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <CardBody>
-            <Title headingLevel="h3" size="lg" style={{ marginBottom: '1rem' }}>
-              💳 Informations de paiement
-            </Title>
-            
-            <PaymentElement options={{
-              layout: 'tabs',
-              paymentMethodOrder: ['card', 'bancontact'],
-            }} />
-          </CardBody>
-        </Card>
-      )}
+  // Affichage si le clientSecret n'est pas disponible
+  if (!clientSecret) {
+    return (
+      <Card>
+        <CardBody>
+          <Alert variant="danger" title="Erreur de configuration">
+            <p>La configuration de paiement n'est pas disponible.</p>
+            <p>Veuillez rafraîchir la page ou contacter le support.</p>
+          </Alert>
+        </CardBody>
+      </Card>
+    );
+  }
 
-      {/* Option pour l'adresse de facturation - OPTIONNELLE */}
-      {!isSimulationMode && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <CardBody>
-            <Checkbox
-              id="show-billing"
-              name="showBilling"
-              label="Ajouter une adresse de facturation (optionnel)"
-              isChecked={showBillingAddress}
-              onChange={setShowBillingAddress}
-              style={{ marginBottom: showBillingAddress ? '1rem' : '0' }}
-            />
-            
-            {showBillingAddress && (
-              <div style={{ marginTop: '1rem' }}>
-                <Title headingLevel="h4" size="md" style={{ marginBottom: '1rem' }}>
-                  📍 Adresse de facturation
-                </Title>
-                
-                <AddressElement 
-                  options={{
-                    mode: 'billing',
-                    fields: {
-                      phone: 'never',
-                    },
-                  }}
-                />
-                
-                <div style={{ 
-                  marginTop: '0.5rem', 
-                  fontSize: '14px', 
-                  color: '#6c757d' 
-                }}>
-                  ℹ️ Cette adresse sera utilisée pour la facturation uniquement
+  return (
+    <Card>
+      <CardBody>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <Title headingLevel="h3" size="lg" style={{ marginBottom: '0.5rem' }}>
+            <CreditCardIcon style={{ marginRight: '0.5rem' }} />
+            Informations de paiement
+          </Title>
+          
+          {amount && (
+            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+              <FlexItem>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2c3e50' }}>
+                  Montant à payer : {formatAmount(amount)}
                 </div>
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      )}
+              </FlexItem>
+            </Flex>
+          )}
+          
+          {description && (
+            <div style={{ color: '#666', marginTop: '0.5rem' }}>
+              {description}
+            </div>
+          )}
+        </div>
 
-      {/* Conditions générales */}
-      <div style={{ marginBottom: '2rem' }}>
-        <Checkbox
-          id="accept-terms"
-          name="acceptTerms"
-          label={
-            <span>
-              J'accepte les{' '}
-              <a href="/terms" target="_blank" rel="noopener noreferrer">
-                conditions générales
-              </a>{' '}
-              et la{' '}
-              <a href="/privacy" target="_blank" rel="noopener noreferrer">
-                politique de confidentialité
-              </a>
-            </span>
-          }
-          isChecked={acceptTerms}
-          onChange={setAcceptTerms}
-          isRequired
-        />
-      </div>
+        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+          {/* Élément de paiement Stripe */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <PaymentElement 
+              options={{
+                layout: 'tabs',
+                paymentMethodOrder: ['card', 'bancontact', 'sepa_debit']
+              }}
+            />
+          </div>
 
-      {/* AMÉLIORÉ: Affichage des erreurs avec style */}
-      <ErrorAlert />
+          {/* Adresse de facturation */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <Title headingLevel="h4" size="md" style={{ marginBottom: '0.5rem' }}>
+              Adresse de facturation
+            </Title>
+            <AddressElement 
+              options={{
+                mode: 'billing',
+                allowedCountries: ['FR', 'BE', 'CH', 'LU']
+              }}
+            />
+          </div>
 
-      {/* Bouton de paiement avec statut */}
-      <Flex justifyContent={{ default: 'justifyContentCenter' }}>
-        <FlexItem>
+          {/* Messages d'erreur ou d'information */}
+          {message && (
+            <div style={{ marginBottom: '1rem' }}>
+              <Alert 
+                variant={message.includes('Erreur') || message.includes('erreur') ? 'danger' : 'info'}
+                title={message.includes('Erreur') || message.includes('erreur') ? 'Erreur' : 'Information'}
+                isInline
+              >
+                {message}
+              </Alert>
+            </div>
+          )}
+
+          {/* Informations de sécurité */}
+          <div style={{ 
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #0ea5e9',
+            borderRadius: '6px'
+          }}>
+            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
+              <FlexItem>
+                <InfoCircleIcon style={{ color: '#0ea5e9' }} />
+              </FlexItem>
+              <FlexItem>
+                <div style={{ fontSize: '14px', color: '#0369a1' }}>
+                  <strong>Paiement 100% sécurisé</strong> - Vos données sont protégées par le chiffrement SSL et Stripe
+                </div>
+              </FlexItem>
+            </Flex>
+          </div>
+
+          {/* Bouton de paiement */}
           <Button
             type="submit"
             variant="primary"
             size="lg"
-            icon={paymentStatus === 'succeeded' ? <CheckCircleIcon /> : <CreditCardIcon />}
+            isDisabled={!stripe || !isLoaded || isProcessing}
             isLoading={isProcessing}
-            isDisabled={!stripe || !elements || isProcessing || !acceptTerms || isSimulationMode || hasAttemptedPayment}
             style={{ 
-              minWidth: '200px',
+              width: '100%',
+              padding: '1rem',
               fontSize: '16px',
-              padding: '12px 24px',
-              backgroundColor: paymentStatus === 'succeeded' ? '#28a745' : undefined,
-              opacity: (isSimulationMode || hasAttemptedPayment) ? 0.6 : 1
+              fontWeight: 'bold'
             }}
           >
             {isProcessing ? (
               <>
-                <Spinner size="sm" style={{ marginRight: '8px' }} />
-                {statusMessage || 'Traitement en cours...'}
+                <Spinner size="sm" style={{ marginRight: '0.5rem' }} />
+                Traitement en cours...
               </>
-            ) : paymentStatus === 'succeeded' ? (
-              'Paiement réussi ✅'
-            ) : hasAttemptedPayment ? (
-              'Paiement en cours de traitement...'
-            ) : isSimulationMode ? (
-              `Payer ${formatAmount(amount)} (Mode simulation actif)`
             ) : (
-              `Payer ${formatAmount(amount)}`
+              <>
+                <CreditCardIcon style={{ marginRight: '0.5rem' }} />
+                Payer {formatAmount(amount)}
+              </>
             )}
           </Button>
-        </FlexItem>
-      </Flex>
 
-      {/* AJOUTÉ: Message d'avertissement si paiement déjà tenté */}
-      {hasAttemptedPayment && !isProcessing && paymentStatus !== 'succeeded' && (
-        <div style={{ 
-          marginTop: '1rem', 
-          padding: '1rem', 
-          backgroundColor: '#fff3cd',
-          borderRadius: '8px',
-          border: '1px solid #ffeaa7',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#856404' }}>
-            ⚠️ Paiement en cours de traitement
+          {/* Informations légales */}
+          <div style={{ 
+            marginTop: '1rem',
+            padding: '0.75rem',
+            fontSize: '12px',
+            color: '#666',
+            textAlign: 'center',
+            borderTop: '1px solid #e5e7eb'
+          }}>
+            En cliquant sur "Payer", vous acceptez nos conditions générales de vente.
+            <br />
+            Aucune donnée de carte bancaire n'est stockée sur nos serveurs.
           </div>
-          <div style={{ fontSize: '14px', color: '#856404' }}>
-            Un paiement a déjà été initié. Actualisez la page pour vérifier le statut ou contactez le support si le problème persiste.
-          </div>
-          <Button
-            variant="link"
-            onClick={() => window.location.reload()}
-            style={{ color: '#856404', marginTop: '0.5rem' }}
-          >
-            🔄 Actualiser la page
-          </Button>
-        </div>
-      )}
-
-      {/* NOUVEAU: Statut détaillé en bas */}
-      {paymentStatus !== 'idle' && (
-        <div style={{ 
-          marginTop: '1rem', 
-          padding: '1rem', 
-          backgroundColor: paymentStatus === 'succeeded' ? '#d4edda' : paymentStatus === 'failed' ? '#f8d7da' : '#e7f3ff',
-          borderRadius: '8px',
-          border: `1px solid ${paymentStatus === 'succeeded' ? '#c3e6cb' : paymentStatus === 'failed' ? '#f5c6cb' : '#bee5eb'}`,
-          textAlign: 'center'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            {paymentStatus === 'succeeded' && '🎉 Paiement réussi !'}
-            {paymentStatus === 'failed' && '❌ Paiement échoué'}
-            {paymentStatus === 'processing' && '⏳ Traitement en cours'}
-            {paymentStatus === 'redirecting' && '🔄 Redirection en cours'}
-            {paymentStatus === 'validating' && '🔍 Validation en cours'}
-            {paymentStatus === 'confirming' && '✅ Confirmation en cours'}
-          </div>
-          <div style={{ fontSize: '14px', color: '#6c757d' }}>
-            {statusMessage}
-          </div>
-        </div>
-      )}
-
-      {/* Sécurité Stripe */}
-      <div style={{ 
-        textAlign: 'center', 
-        marginTop: '1rem', 
-        color: '#6c757d', 
-        fontSize: '14px' 
-      }}>
-        <p>
-          🔒 Paiement sécurisé par{' '}
-          <a 
-            href="https://stripe.com" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ color: '#635bff', textDecoration: 'none' }}
-          >
-            Stripe
-          </a>
-          {isSimulationMode && <span style={{ color: '#ffc107' }}> (Mode simulation actif)</span>}
-        </p>
-        <p style={{ fontSize: '12px', marginTop: '0.5rem' }}>
-          💡 En cas de refus, contactez votre banque. Aucun débit n'est effectué en cas d'échec.
-        </p>
-      </div>
-
-      {/* Bouton pour activer la simulation si désactivée */}
-      {!isSimulationMode && process.env.NODE_ENV === 'development' && (
-        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-          <Button
-            variant="link"
-            onClick={() => setIsSimulationMode(true)}
-            style={{ color: '#ffc107' }}
-          >
-            🧪 Activer le mode simulation (développement)
-          </Button>
-        </div>
-      )}
-    </Form>
+        </form>
+      </CardBody>
+    </Card>
   );
 };
 

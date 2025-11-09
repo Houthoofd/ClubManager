@@ -164,6 +164,7 @@ async function startServer() {
         app.use('/informations', informationsRouter);
         app.use('/cours', coursRouter);
         app.use('/compte', compteRouter);
+        // CORRIGÉ: Monter les routes paiements avec le préfixe /paiements
         app.use('/paiements', paiementRouter);
         app.use('/magasin', magasinRouter);
         app.use('/professeurs', professeursRouter);
