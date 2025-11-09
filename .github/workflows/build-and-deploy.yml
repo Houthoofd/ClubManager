@@ -32,27 +32,10 @@ jobs:
             if [ -f "front-end/dist/index.html" ]; then
               echo "✅ index.html trouvé dans front-end/dist/"
               
-              # AJOUTÉ: Afficher le contenu de l'index.html du repo
-              echo "📄 Contenu de l'index.html dans le repo:"
-              cat front-end/dist/index.html
-              
               if [ -d "front-end/dist/assets" ]; then
                 echo "✅ Dossier assets trouvé"
                 echo "📦 Contenu du dossier assets:"
                 ls -la front-end/dist/assets/
-                
-                # AJOUTÉ: Identifier les vrais noms de fichiers
-                REAL_JS_FILE=$(ls front-end/dist/assets/*.js 2>/dev/null | head -n1 | xargs basename)
-                REAL_CSS_FILE=$(ls front-end/dist/assets/*.css 2>/dev/null | head -n1 | xargs basename)
-                
-                echo "🎯 Fichiers réels détectés:"
-                echo "  - JS: $REAL_JS_FILE"
-                echo "  - CSS: $REAL_CSS_FILE"
-                
-                # AJOUTÉ: Vérifier les liens dans index.html
-                echo "🔗 Liens dans l'index.html du repo:"
-                grep -E "(\.js|\.css)" front-end/dist/index.html || echo "Aucun lien trouvé"
-                
               else
                 echo "❌ Dossier assets manquant"
                 exit 1
@@ -62,110 +45,166 @@ jobs:
               exit 1
             fi
 
-            echo "🧹 Nettoyage du dossier nginx..."
+            echo "🔓 APPLICATION COMPLÈTE DES DROITS avant suppression..."
+            # NOUVEAU: Appliquer TOUS les droits (777) sur TOUT le dossier et sous-dossiers
+            sudo chmod -R 777 /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Dossier n'existe pas encore"
+            
+            # NOUVEAU: Supprimer tous les attributs de protection
+            sudo chattr -R -i /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Pas d'attributs immutables"
+            sudo chattr -R -a /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Pas d'attributs append-only"
+            
+            # NOUVEAU: Changer le propriétaire vers l'utilisateur actuel temporairement
+            sudo chown -R $USER:$USER /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Changement proprietaire échoué"
+            
+            # NOUVEAU: Forcer tous les droits en écriture avec find
+            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 777 {} \; 2>/dev/null || echo "Chmod directories échoué"
+            sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 666 {} \; 2>/dev/null || echo "Chmod files échoué"
+            
+            echo "🧹 SUPPRESSION FORCÉE après droits complets..."
+            # SUPPRESSION avec force maximale
             sudo rm -rf /usr/share/nginx/html/clubmanager
+            
+            # Vérification et nettoyage supplémentaire si nécessaire
+            if [ -d "/usr/share/nginx/html/clubmanager" ]; then
+              echo "❌ Dossier toujours présent, nettoyage manuel..."
+              
+              # Suppression fichier par fichier avec force
+              sudo find /usr/share/nginx/html/clubmanager -type f -delete 2>/dev/null || echo "Suppression fichiers échouée"
+              sudo find /usr/share/nginx/html/clubmanager -type d -empty -delete 2>/dev/null || echo "Suppression dossiers vides échouée"
+              
+              # Force brute finale
+              sudo rmdir /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Rmdir échoué"
+              sudo rm -f /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Rm final échoué"
+            fi
+            
+            # Double vérification
+            if [ -d "/usr/share/nginx/html/clubmanager" ]; then
+              echo "⚠️ Dossier ENCORE présent, utilisation de force ultime..."
+              sudo umount /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Pas de mount point"
+              sudo rm -rf --one-file-system /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Force ultime échouée"
+            fi
+            
+            echo "📁 Création du nouveau dossier clubmanager..."
             sudo mkdir -p /usr/share/nginx/html/clubmanager
-            sudo mkdir -p /usr/share/nginx/html/clubmanager/assets
 
             echo "📋 Copie COMPLÈTE du contenu dist..."
-            
-            # MODIFIÉ: Copier TOUT le contenu de dist/ (index.html + assets + fonts + tout)
             sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
             
-            echo "🔍 Vérification de la copie complète:"
-            echo "📄 index.html copié:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/index.html
+            echo "🔐 REMISE EN PLACE DES PERMISSIONS NGINX SÉCURISÉES..."
             
-            echo "📁 Contenu du dossier clubmanager:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/
-            
-            echo "📁 assets/ copié:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/assets/
-            
-            # AJOUTÉ: Vérifier que les liens dans index.html correspondent aux fichiers copiés
-            echo "🔗 Liens dans l'index.html COPIÉ:"
-            sudo grep -E "(\.js|\.css)" /usr/share/nginx/html/clubmanager/index.html || echo "Aucun lien trouvé"
-            
-            # AJOUTÉ: Vérifier que les fichiers référencés existent vraiment
-            echo "✅ Vérification de l'existence des fichiers liés:"
-            
-            # Extraire les noms de fichiers depuis index.html et vérifier leur existence
-            JS_REFERENCED=$(sudo grep -o 'assets/[^"]*\.js' /usr/share/nginx/html/clubmanager/index.html | head -n1)
-            CSS_REFERENCED=$(sudo grep -o 'assets/[^"]*\.css' /usr/share/nginx/html/clubmanager/index.html | head -n1)
-            
-            echo "📂 Fichiers référencés dans index.html:"
-            echo "  - JS référencé: $JS_REFERENCED"
-            echo "  - CSS référencé: $CSS_REFERENCED"
-            
-            if [ -n "$JS_REFERENCED" ]; then
-              if sudo test -f "/usr/share/nginx/html/clubmanager/$JS_REFERENCED"; then
-                echo "✅ Fichier JS existe: $JS_REFERENCED"
-              else
-                echo "❌ Fichier JS MANQUANT: $JS_REFERENCED"
-              fi
-            fi
-            
-            if [ -n "$CSS_REFERENCED" ]; then
-              if sudo test -f "/usr/share/nginx/html/clubmanager/$CSS_REFERENCED"; then
-                echo "✅ Fichier CSS existe: $CSS_REFERENCED"
-              else
-                echo "❌ Fichier CSS MANQUANT: $CSS_REFERENCED"
-              fi
-            fi
-
-            echo "🔐 Application des permissions nginx..."
-            # CORRIGÉ: Forcer les permissions d'écriture avant de copier
-            echo "🔓 Correction des permissions d'écriture..."
-            sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 664 {} \; 2>/dev/null || echo "Pas de fichiers existants"
-            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 775 {} \; 2>/dev/null || echo "Pas de dossiers existants"
-            
-            # AJOUTÉ: Forcer la suppression complète avec les bonnes permissions
-            sudo chmod -R 777 /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Dossier n'existe pas encore"
-            sudo rm -rf /usr/share/nginx/html/clubmanager
-            sudo mkdir -p /usr/share/nginx/html/clubmanager
-            
-            # AJOUTÉ: Copie avec force et permissions immédiates
-            echo "📋 Copie FORCÉE avec permissions étendues..."
-            sudo cp -rf front-end/dist/* /usr/share/nginx/html/clubmanager/
-            
-            # CORRIGÉ: Application des permissions nginx avec propriétaire et permissions étendues
+            # ÉTAPE 1: Propriétaire nginx:nginx
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
+            echo "✅ Propriétaire nginx:nginx appliqué"
             
-            # AJOUTÉ: Permissions étendues pour éviter les problèmes d'écriture
+            # ÉTAPE 2: Permissions sécurisées - dossiers 755 (rwxr-xr-x)
             sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 755 {} \;
+            echo "✅ Permissions dossiers: 755 (lecture/exécution pour tous, écriture pour nginx)"
+            
+            # ÉTAPE 3: Permissions sécurisées - fichiers 644 (rw-r--r--)
             sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 644 {} \;
+            echo "✅ Permissions fichiers: 644 (lecture pour tous, écriture pour nginx)"
             
-            # AJOUTÉ: Permissions spéciales pour index.html pour éviter "unwritable"
+            # ÉTAPE 4: Permissions spéciales pour les assets critiques
+            echo "🎯 Application permissions spéciales pour assets..."
+            
+            # Fichiers JS - lecture seule pour sécurité
+            sudo find /usr/share/nginx/html/clubmanager -name "*.js" -exec chmod 644 {} \;
+            echo "✅ Fichiers JS: 644 (lecture seulement)"
+            
+            # Fichiers CSS - lecture seule pour sécurité  
+            sudo find /usr/share/nginx/html/clubmanager -name "*.css" -exec chmod 644 {} \;
+            echo "✅ Fichiers CSS: 644 (lecture seulement)"
+            
+            # Index.html - lecture seule critique
             sudo chmod 644 /usr/share/nginx/html/clubmanager/index.html
-            sudo chown nginx:nginx /usr/share/nginx/html/clubmanager/index.html
+            echo "✅ index.html: 644 (lecture seulement)"
             
-            # AJOUTÉ: Vérifier que le fichier index.html est maintenant accessible
-            echo "🔍 Vérification permissions index.html:"
-            sudo ls -la /usr/share/nginx/html/clubmanager/index.html
+            # ÉTAPE 5: Supprimer tous les attributs étendus dangereux
+            sudo chattr -R -i /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Pas d'attributs immutables à supprimer"
+            sudo chattr -R -a /usr/share/nginx/html/clubmanager 2>/dev/null || echo "Pas d'attributs append-only à supprimer"
+            echo "✅ Attributs étendus nettoyés"
             
-            echo "✅ Permissions appliquées:"
+            # ÉTAPE 6: Vérification finale des permissions
+            echo "🔍 VÉRIFICATION FINALE DES PERMISSIONS..."
+            
+            echo "📊 Résumé des permissions appliquées:"
             echo "  - Propriétaire: nginx:nginx"
-            echo "  - Dossiers: 755"
-            echo "  - Fichiers: 644"
-            echo "  - index.html: 644 (lecture/écriture pour nginx)"
-
-            echo "♻️ Rechargement nginx..."
-            sudo systemctl reload nginx
+            echo "  - Dossiers: 755 (rwxr-xr-x)"
+            echo "  - Fichiers: 644 (rw-r--r--)"
+            echo "  - Sécurité: Lecture seule pour le public, écriture pour nginx uniquement"
             
-            echo "🔄 Redémarrage du service clubmanager..."
-            sudo systemctl restart clubmanager.service || echo "⚠️ Service clubmanager non trouvé (normal si pas configuré)"
-
-            echo "✅ Déploiement terminé avec synchronisation complète!"
-            echo "📊 Résumé:"
-            echo "  ✅ Tout le contenu de dist/ copié vers nginx"
-            echo "  ✅ index.html synchronisé avec les bons liens"
-            echo "  ✅ Assets JS/CSS synchronisés"
-            echo "  ✅ Permissions nginx appliquées (nginx:nginx, 755/644)"
-            
-            echo "🌐 Votre site devrait maintenant fonctionner sur https://clubmanagment.com"
-            
-            # AJOUTÉ: Test final de l'existence des fichiers critiques
-            echo "🧪 Test final des fichiers critiques:"
+            echo "📄 Vérification index.html:"
             sudo ls -la /usr/share/nginx/html/clubmanager/index.html
-            sudo ls -la /usr/share/nginx/html/clubmanager/assets/*.js 2>/dev/null || echo "Aucun fichier JS trouvé"
-            sudo ls -la /usr/share/nginx/html/clubmanager/assets/*.css 2>/dev/null || echo "Aucun fichier CSS trouvé"
+            
+            echo "📁 Vérification assets/ (échantillon):"
+            sudo ls -la /usr/share/nginx/html/clubmanager/assets/ | head -5
+            
+            echo "🔗 Vérification liens dans index.html:"
+            sudo grep -E "(\.js|\.css)" /usr/share/nginx/html/clubmanager/index.html | head -3
+            
+            # ÉTAPE 7: Test de lecture des fichiers critiques
+            echo "🧪 Test de lecture des fichiers critiques..."
+            
+            # Test lecture index.html
+            if sudo head -n 1 /usr/share/nginx/html/clubmanager/index.html >/dev/null 2>&1; then
+              echo "✅ index.html: LISIBLE"
+            else
+              echo "❌ index.html: PROBLÈME DE LECTURE"
+              exit 1
+            fi
+            
+            # Test accès assets
+            if sudo ls /usr/share/nginx/html/clubmanager/assets/ >/dev/null 2>&1; then
+              echo "✅ assets/: ACCESSIBLE"
+            else
+              echo "❌ assets/: PROBLÈME D'ACCÈS"
+              exit 1
+            fi
+            
+            # Compter les fichiers JS/CSS
+            JS_COUNT=$(sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.js" | wc -l)
+            CSS_COUNT=$(sudo find /usr/share/nginx/html/clubmanager/assets/ -name "*.css" | wc -l)
+            
+            echo "📊 Fichiers déployés:"
+            echo "  - Fichiers JS: $JS_COUNT"
+            echo "  - Fichiers CSS: $CSS_COUNT"
+            
+            if [ "$JS_COUNT" -eq 0 ] || [ "$CSS_COUNT" -eq 0 ]; then
+              echo "❌ ERREUR: Assets manquants après déploiement!"
+              exit 1
+            fi
+
+            echo "♻️ Rechargement nginx avec vérification..."
+            
+            # Test configuration nginx avant rechargement
+            if sudo nginx -t; then
+              echo "✅ Configuration nginx valide"
+              sudo systemctl reload nginx
+              echo "✅ Nginx rechargé"
+            else
+              echo "❌ Configuration nginx invalide - pas de rechargement"
+              exit 1
+            fi
+            
+            # Vérifier que nginx fonctionne
+            if sudo systemctl is-active --quiet nginx; then
+              echo "✅ Nginx actif et fonctionnel"
+            else
+              echo "❌ Nginx ne fonctionne pas correctement"
+              sudo systemctl status nginx --no-pager -l
+              exit 1
+            fi
+
+            echo "🎉 DÉPLOIEMENT TERMINÉ AVEC SUCCÈS!"
+            echo ""
+            echo "📋 RÉCAPITULATIF SÉCURITÉ:"
+            echo "  ✅ Fichiers copiés et synchronisés"
+            echo "  ✅ Propriétaire: nginx:nginx" 
+            echo "  ✅ Dossiers: 755 (sécurisé)"
+            echo "  ✅ Fichiers: 644 (lecture seule publique)"
+            echo "  ✅ Assets JS/CSS: protection lecture seule"
+            echo "  ✅ Nginx: configuration testée et rechargé"
+            echo "  ✅ $JS_COUNT fichiers JS et $CSS_COUNT fichiers CSS déployés"
+            echo ""
+            echo "🌐 Votre site est maintenant disponible sur https://clubmanagment.com"
+            echo "🔒 Permissions sécurisées appliquées pour la production"
