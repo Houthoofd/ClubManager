@@ -21,7 +21,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            cd /home/***/ClubManager
+            cd /home/ec2-user/ClubManager
 
             echo "🔄 Pull depuis la branche hosting..."
             git reset --hard HEAD
@@ -35,15 +35,53 @@ jobs:
               echo "📦 Contenu de front-end/dist/assets/:"
               ls -la front-end/dist/assets/ 2>/dev/null || echo "❌ Pas de dossier assets/"
               
+              # AJOUTÉ: Vérifier le contenu d'index.html pour voir les références
+              echo "🔍 Vérification des références dans index.html:"
+              if [ -f "front-end/dist/index.html" ]; then
+                echo "📄 Références JS/CSS dans index.html:"
+                grep -E "(index-[a-zA-Z0-9]+\.(js|css))" front-end/dist/index.html || echo "Aucune référence trouvée"
+                
+                # Extraire les noms de fichiers référencés dans index.html
+                HTML_JS=$(grep -oE "index-[a-zA-Z0-9]+\.js" front-end/dist/index.html | head -1)
+                HTML_CSS=$(grep -oE "index-[a-zA-Z0-9]+\.css" front-end/dist/index.html | head -1)
+                
+                echo "📄 JS référencé dans HTML: $HTML_JS"
+                echo "📄 CSS référencé dans HTML: $HTML_CSS"
+                
+                # Vérifier si les fichiers référencés existent réellement
+                if [ -n "$HTML_JS" ] && [ -f "front-end/dist/assets/$HTML_JS" ]; then
+                  echo "✅ Fichier JS $HTML_JS existe"
+                  JS_MATCH=true
+                else
+                  echo "❌ Fichier JS $HTML_JS manquant"
+                  JS_MATCH=false
+                fi
+                
+                if [ -n "$HTML_CSS" ] && [ -f "front-end/dist/assets/$HTML_CSS" ]; then
+                  echo "✅ Fichier CSS $HTML_CSS existe"
+                  CSS_MATCH=true
+                else
+                  echo "❌ Fichier CSS $HTML_CSS manquant"
+                  CSS_MATCH=false
+                fi
+                
+              else
+                echo "❌ Fichier index.html manquant"
+                JS_MATCH=false
+                CSS_MATCH=false
+              fi
+              
               # Vérifier si les JS/CSS sont présents
               JS_COUNT=$(find front-end/dist/assets/ -name "*.js" 2>/dev/null | wc -l)
               CSS_COUNT=$(find front-end/dist/assets/ -name "*.css" 2>/dev/null | wc -l)
               
-              if [ "$JS_COUNT" -gt 0 ] && [ "$CSS_COUNT" -gt 0 ]; then
-                echo "✅ Dist/ complet trouvé avec JS ($JS_COUNT) et CSS ($CSS_COUNT)"
+              # MODIFIÉ: Condition plus stricte - les fichiers doivent correspondre à index.html
+              if [ "$JS_COUNT" -gt 0 ] && [ "$CSS_COUNT" -gt 0 ] && [ "$JS_MATCH" = "true" ] && [ "$CSS_MATCH" = "true" ]; then
+                echo "✅ Dist/ complet et cohérent trouvé avec JS ($JS_COUNT) et CSS ($CSS_COUNT)"
                 USE_PREBUILT=true
               else
-                echo "❌ Dist/ incomplet: JS=$JS_COUNT, CSS=$CSS_COUNT"
+                echo "❌ Dist/ incomplet ou incohérent: JS=$JS_COUNT, CSS=$CSS_COUNT, JS_Match=$JS_MATCH, CSS_Match=$CSS_MATCH"
+                echo "🔄 Reconstruction nécessaire pour synchroniser index.html avec les assets"
                 USE_PREBUILT=false
               fi
             else
@@ -55,13 +93,39 @@ jobs:
               echo "📁 Utilisation du dist/ pré-buildé du repo..."
               BUILD_SOURCE="front-end/dist"
             else
-              echo "🏗️ Build du frontend nécessaire..."
+              echo "🏗️ Build du frontend nécessaire pour synchroniser les assets..."
               cd front-end
+              
+              # AJOUTÉ: Nettoyage complet avant build
+              echo "🧹 Nettoyage complet du cache et dist..."
+              rm -rf dist/ node_modules/.vite/ node_modules/.cache/
+              
+              echo "📦 Installation des dépendances..."
               npm install
+              
+              echo "🏗️ Build du frontend..."
               npm run build
               
               echo "📦 Vérification du build généré:"
               ls -la dist/assets/
+              
+              # AJOUTÉ: Vérifier que le nouveau build est cohérent
+              if [ -f "dist/index.html" ]; then
+                echo "🔍 Vérification cohérence nouveau build:"
+                NEW_JS=$(grep -oE "index-[a-zA-Z0-9]+\.js" dist/index.html | head -1)
+                NEW_CSS=$(grep -oE "index-[a-zA-Z0-9]+\.css" dist/index.html | head -1)
+                
+                echo "📄 Nouveau JS: $NEW_JS"
+                echo "📄 Nouveau CSS: $NEW_CSS"
+                
+                if [ -f "dist/assets/$NEW_JS" ] && [ -f "dist/assets/$NEW_CSS" ]; then
+                  echo "✅ Nouveau build cohérent"
+                else
+                  echo "❌ Nouveau build incohérent - erreur de build"
+                  exit 1
+                fi
+              fi
+              
               BUILD_SOURCE="dist"
               cd ..
             fi
@@ -74,8 +138,10 @@ jobs:
             
             if [ "$USE_PREBUILT" = "true" ]; then
               sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+              echo "📄 Assets du build pré-existant copiés"
             else
               sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+              echo "📄 Assets du nouveau build copiés"
             fi
             
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
@@ -83,9 +149,28 @@ jobs:
             
             echo "🔍 Vérification finale des assets copiés..."
             sudo ls -la /usr/share/nginx/html/clubmanager/assets/
+            
+            # AJOUTÉ: Vérification cohérence finale
+            echo "🔍 Vérification cohérence finale index.html vs assets:"
+            if [ -f "/usr/share/nginx/html/clubmanager/index.html" ]; then
+              FINAL_JS=$(sudo grep -oE "index-[a-zA-Z0-9]+\.js" /usr/share/nginx/html/clubmanager/index.html | head -1)
+              FINAL_CSS=$(sudo grep -oE "index-[a-zA-Z0-9]+\.css" /usr/share/nginx/html/clubmanager/index.html | head -1)
+              
+              echo "📄 JS final dans index.html: $FINAL_JS"
+              echo "📄 CSS final dans index.html: $FINAL_CSS"
+              
+              if sudo test -f "/usr/share/nginx/html/clubmanager/assets/$FINAL_JS" && sudo test -f "/usr/share/nginx/html/clubmanager/assets/$FINAL_CSS"; then
+                echo "✅ Déploiement cohérent - assets correspondent à index.html"
+              else
+                echo "❌ Déploiement incohérent - assets ne correspondent pas à index.html"
+                echo "🔍 Assets disponibles:"
+                sudo ls -la /usr/share/nginx/html/clubmanager/assets/*.js /usr/share/nginx/html/clubmanager/assets/*.css
+              fi
+            fi
 
             echo "🔁 Rechargement de nginx et redémarrage du service clubmanager..."
             sudo systemctl reload nginx
             sudo systemctl restart clubmanager.service
 
             echo "✅ Déploiement terminé avec succès"
+            echo "🌐 Vérifiez https://clubmanagment.com pour confirmer le bon fonctionnement"
