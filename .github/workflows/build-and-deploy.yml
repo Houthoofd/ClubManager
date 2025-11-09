@@ -32,18 +32,16 @@ jobs:
             sudo rm -rf /usr/share/nginx/html/clubmanager
             sudo mkdir -p /usr/share/nginx/html/clubmanager
 
-            # Fix permissions sur le dossier
-            sudo chmod 755 /usr/share/nginx/html/clubmanager
-            sudo chown nginx:nginx /usr/share/nginx/html/clubmanager
-
-            echo "📁 Copie des fichiers front-end compilés..."
+            echo "📁 Vérification du dossier front-end/dist..."
             if [ ! -d "front-end/dist" ]; then
               echo "❌ ERREUR : le dossier front-end/dist n'existe pas !"
               exit 1
             fi
+
+            echo "📁 Copie des fichiers front-end compilés..."
             sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
 
-            # Permissions fichiers et dossiers
+            echo "🔧 Fix permissions sur les fichiers et dossiers..."
             sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 755 {} \;
             sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 644 {} \;
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
