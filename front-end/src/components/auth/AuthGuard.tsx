@@ -52,6 +52,22 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     window.location.href = `${window.location.origin}/pages/inscription`;
   };
 
+  // AJOUTÉ: Fonction pour vérifier la présence du cookie token
+  const getCookie = (name: string): string | null => {
+    try {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        const cookieValue = parts.pop()?.split(';').shift();
+        return cookieValue || null;
+      }
+      return null;
+    } catch (error) {
+      console.warn('⚠️ [AuthGuard] Erreur lecture cookie:', error);
+      return null;
+    }
+  };
+
   const verifyAuthentication = async () => {
     try {
       console.log('🔐 [AuthGuard] Vérification authentification (production mode)...');
@@ -59,22 +75,26 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       // ÉTAPE 1: Vérifier d'abord localStorage
       const localUserData = localStorage.getItem('userData');
       const authToken = localStorage.getItem('authToken');
+      const cookieToken = getCookie('token');
       
       console.log('🔍 [AuthGuard] Données locales:', {
         hasUserData: !!localUserData,
-        hasToken: !!authToken,
+        hasLocalStorageToken: !!authToken,
+        hasCookieToken: !!cookieToken,
         userDataPreview: localUserData ? JSON.parse(localUserData).email : 'none'
       });
 
-      if (localUserData && authToken) {
+      // MODIFIÉ: Considérer comme authentifié si on a userData ET un token
+      const hasValidToken = authToken || cookieToken;
+      const hasValidUserData = localUserData;
+
+      if (hasValidUserData && hasValidToken) {
         try {
           const userData = JSON.parse(localUserData);
           
-          // Vérifier la validité des données
           if (userData.id && userData.email && userData.status) {
-            console.log('✅ [AuthGuard] Données locales valides trouvées');
+            console.log('✅ [AuthGuard] Données locales ET token valides trouvés');
             
-            // CORRIGÉ: Utiliser setUser importé directement
             dispatch(setUser({
               id: userData.id,
               email: userData.email,
@@ -91,7 +111,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
             setAuthError(null);
             setRetryCount(0);
-            console.log('✅ [AuthGuard] Authentification locale réussie');
+            console.log('✅ [AuthGuard] Authentification locale réussie (userData + token)');
             return true;
           } else {
             console.warn('⚠️ [AuthGuard] Données locales incomplètes');
@@ -103,97 +123,65 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         }
       }
 
-      // ÉTAPE 2: Vérification serveur
+      // ÉTAPE 2: Vérification serveur seulement si nécessaire
       console.log('🔍 [AuthGuard] Tentative vérification serveur...');
       
+      // CORRIGÉ: Construire l'URL correctement selon l'environnement
       const apiBaseUrl = process.env.NODE_ENV === 'production' 
         ? window.location.origin 
         : 'http://localhost:3000';
       
-      const verifyUrl = `${apiBaseUrl}/auth/status`;
+      // AJOUTÉ: Vérifier si on est sur le bon domaine
+      const currentDomain = window.location.hostname;
+      console.log('🌐 [AuthGuard] Domaine actuel:', currentDomain);
+      
+      let verifyUrl: string;
+      if (process.env.NODE_ENV === 'production') {
+        // En production, utiliser le même domaine
+        verifyUrl = `${window.location.origin}/auth/status`;
+      } else {
+        // En développement, utiliser l'API backend
+        verifyUrl = `http://localhost:3000/auth/status`;
+      }
+      
       console.log('🌐 [AuthGuard] URL de vérification:', verifyUrl);
 
-      const response = await fetch(verifyUrl, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
-        },
-        signal: AbortSignal.timeout(10000)
-      });
-
-      console.log('🔐 [AuthGuard] Réponse serveur:', {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🔐 [AuthGuard] Données serveur:', data);
-        
-        if (data.authentifie && data.user) {
-          const userData = {
-            id: data.user.id,
-            email: data.user.email,
-            firstName: data.user.first_name,
-            lastName: data.user.last_name,
-            userName: data.user.nom_utilisateur || '',
-            status: data.user.status,
-            role: data.user.status,
-            genres: data.user.genres,
-            grades: data.user.grades,
-            abonnement: data.user.abonnement,
-            dateOfBirth: data.user.date_of_birth
-          };
-
-          // CORRIGÉ: Utiliser setUser importé directement
-          dispatch(setUser(userData));
-          
-          localStorage.setItem('userData', JSON.stringify({
-            ...userData,
-            first_name: userData.firstName,
-            last_name: userData.lastName,
-            nom_utilisateur: userData.userName,
-            date_of_birth: userData.dateOfBirth
-          }));
-          
-          setAuthError(null);
-          setRetryCount(0);
-          console.log('✅ [AuthGuard] Authentification serveur réussie');
-          return true;
-        } else {
-          console.warn('⚠️ [AuthGuard] Serveur indique utilisateur non authentifié');
-          return false;
-        }
-      } else if (response.status === 401) {
-        console.warn('🚫 [AuthGuard] Session expirée (401)');
-        return false;
-      } else {
-        throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
-      }
-
-    } catch (error: any) {
-      console.error('❌ [AuthGuard] Erreur vérification authentification:', error);
+      const tokenToUse = cookieToken || authToken;
       
-      if (error.name === 'TimeoutError') {
-        setAuthError('Délai de connexion au serveur dépassé');
-      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        setAuthError('Impossible de contacter le serveur');
-      } else {
-        setAuthError(`Erreur de vérification: ${error.message}`);
-      }
-      
-      // Fallback sur les données locales en cas d'erreur serveur
-      const localUserData = localStorage.getItem('userData');
-      if (localUserData) {
-        try {
-          const userData = JSON.parse(localUserData);
-          if (userData.id && userData.email) {
-            console.log('⚠️ [AuthGuard] Fallback sur données locales suite à erreur serveur');
+      try {
+        const response = await fetch(verifyUrl, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(tokenToUse && { 'Authorization': `Bearer ${tokenToUse}` })
+          },
+          signal: AbortSignal.timeout(8000) // Réduire le timeout
+        });
+
+        console.log('🔐 [AuthGuard] Réponse serveur:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type'),
+          url: response.url,
+          tokenUsed: tokenToUse ? 'Bearer token' : 'cookies only'
+        });
+
+        // AJOUTÉ: Vérifier le content-type avant de parser
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('❌ [AuthGuard] Réponse non-JSON reçue:', {
+            contentType,
+            status: response.status,
+            url: response.url
+          });
+          
+          // En production, si l'API n'est pas accessible, utiliser les données locales
+          if (process.env.NODE_ENV === 'production' && localUserData && hasValidToken) {
+            console.log('🔄 [AuthGuard] Fallback production - utilisation des données locales');
+            const userData = JSON.parse(localUserData);
             
-            // CORRIGÉ: Utiliser setUser importé directement
             dispatch(setUser({
               id: userData.id,
               email: userData.email,
@@ -208,14 +196,137 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               dateOfBirth: userData.date_of_birth || userData.dateOfBirth || null
             }));
             
-            setAuthError('Mode hors ligne - données locales utilisées');
+            setAuthError('Mode hors ligne - API non accessible');
             return true;
           }
-        } catch (parseError) {
-          console.error('❌ [AuthGuard] Erreur parsing fallback:', parseError);
+          
+          throw new Error(`Réponse non-JSON: ${contentType} (status: ${response.status})`);
         }
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🔐 [AuthGuard] Données serveur:', data);
+          
+          if (data.authentifie && data.user) {
+            const userData = {
+              id: data.user.id,
+              email: data.user.email,
+              firstName: data.user.first_name,
+              lastName: data.user.last_name,
+              userName: data.user.nom_utilisateur || '',
+              status: data.user.status,
+              role: data.user.status,
+              genres: data.user.genres,
+              grades: data.user.grades,
+              abonnement: data.user.abonnement,
+              dateOfBirth: data.user.date_of_birth
+            };
+
+            dispatch(setUser(userData));
+            
+            localStorage.setItem('userData', JSON.stringify({
+              ...userData,
+              first_name: userData.firstName,
+              last_name: userData.lastName,
+              nom_utilisateur: userData.userName,
+              date_of_birth: userData.dateOfBirth
+            }));
+
+            if (data.token) {
+              localStorage.setItem('authToken', data.token);
+            }
+            
+            setAuthError(null);
+            setRetryCount(0);
+            console.log('✅ [AuthGuard] Authentification serveur réussie');
+            return true;
+          } else {
+            console.warn('⚠️ [AuthGuard] Serveur indique utilisateur non authentifié');
+            return false;
+          }
+        } else if (response.status === 401) {
+          console.warn('🚫 [AuthGuard] Session expirée (401)');
+          return false;
+        } else if (response.status === 404) {
+          console.warn('🚫 [AuthGuard] Route auth/status non trouvée (404)');
+          
+          // AJOUTÉ: En cas de 404, utiliser les données locales si disponibles
+          if (localUserData && hasValidToken) {
+            console.log('🔄 [AuthGuard] Fallback 404 - utilisation des données locales');
+            const userData = JSON.parse(localUserData);
+            
+            dispatch(setUser({
+              id: userData.id,
+              email: userData.email,
+              firstName: userData.first_name || userData.firstName || '',
+              lastName: userData.last_name || userData.lastName || '',
+              userName: userData.nom_utilisateur || userData.userName || '',
+              status: userData.status,
+              role: userData.status,
+              genres: userData.genres || null,
+              grades: userData.grades || null,
+              abonnement: userData.abonnement || null,
+              dateOfBirth: userData.date_of_birth || userData.dateOfBirth || null
+            }));
+            
+            setAuthError('API non disponible - données locales utilisées');
+            return true;
+          }
+          
+          return false;
+        } else {
+          throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
+        }
+
+      } catch (fetchError: any) {
+        console.error('❌ [AuthGuard] Erreur fetch:', fetchError);
+        
+        // AJOUTÉ: Gestion spécifique des erreurs de réseau
+        if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
+          setAuthError('Impossible de contacter le serveur d\'authentification');
+        } else if (fetchError.name === 'TimeoutError') {
+          setAuthError('Délai de connexion au serveur dépassé');
+        } else if (fetchError.message.includes('Unexpected token')) {
+          setAuthError('Erreur de communication avec le serveur (réponse invalide)');
+        } else {
+          setAuthError(`Erreur de vérification: ${fetchError.message}`);
+        }
+        
+        // Fallback intelligent sur les données locales
+        if (localUserData && hasValidToken) {
+          try {
+            const userData = JSON.parse(localUserData);
+            if (userData.id && userData.email) {
+              console.log('⚠️ [AuthGuard] Fallback sur données locales suite à erreur serveur');
+              
+              dispatch(setUser({
+                id: userData.id,
+                email: userData.email,
+                firstName: userData.first_name || userData.firstName || '',
+                lastName: userData.last_name || userData.lastName || '',
+                userName: userData.nom_utilisateur || userData.userName || '',
+                status: userData.status,
+                role: userData.status,
+                genres: userData.genres || null,
+                grades: userData.grades || null,
+                abonnement: userData.abonnement || null,
+                dateOfBirth: userData.date_of_birth || userData.dateOfBirth || null
+              }));
+              
+              setAuthError('Mode hors ligne - données locales utilisées');
+              return true;
+            }
+          } catch (parseError) {
+            console.error('❌ [AuthGuard] Erreur parsing fallback:', parseError);
+          }
+        }
+        
+        return false;
       }
-      
+
+    } catch (error: any) {
+      console.error('❌ [AuthGuard] Erreur générale vérification authentification:', error);
+      setAuthError(`Erreur système: ${error.message}`);
       return false;
     }
   };
@@ -236,27 +347,30 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       return;
     }
 
-    console.log('🔐 [AuthGuard] Route protégée - vérification authentification...');
+    console.log('🔐 [AuthGuard] Route protégée - vérification authentification complète...');
     
     const checkAuthentication = async () => {
+      // Vérifier d'abord Redux
       if (isAuthenticated && user) {
         console.log('✅ [AuthGuard] Utilisateur déjà authentifié dans Redux');
         setIsVerifying(false);
         return;
       }
       
+      // Sinon, vérifier via la fonction de vérification complète
       const authResult = await verifyAuthentication();
       
       if (authResult === true) {
-        console.log('✅ [AuthGuard] Authentification réussie');
+        console.log('✅ [AuthGuard] Authentification complète réussie');
         setIsVerifying(false);
         setShowRedirectPage(false);
       } else {
-        console.log('❌ [AuthGuard] Authentification échouée');
-        // CORRIGÉ: Utiliser logout importé directement
+        console.log('❌ [AuthGuard] Authentification complète échouée');
+        // Nettoyer toutes les données d'authentification
         dispatch(logout());
         localStorage.removeItem('userData');
         localStorage.removeItem('authToken');
+        // Note: On ne peut pas supprimer les cookies depuis le client, ils seront gérés côté serveur
         setShowRedirectPage(true);
         setIsVerifying(false);
       }
@@ -265,7 +379,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     checkAuthentication();
   }, [isAuthenticated, user, dispatch]);
 
-  // CORRIGÉ: Vérification de route publique au rendu
+  // MODIFIÉ: Vérification finale avant le rendu plus stricte
   const currentPath = window.location.pathname;
   const isPublicRoute = publicRoutes.some(route => {
     return currentPath === route || 
@@ -315,11 +429,14 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     );
   }
 
-  // Page de redirection si non authentifié
+  // MODIFIÉ: Vérification finale plus stricte avant d'afficher la page de redirection
   const userData = localStorage.getItem('userData');
+  const authToken = localStorage.getItem('authToken');
+  const cookieToken = getCookie('token');
   const reduxAuthenticated = isAuthenticated && user;
-  
-  if (!reduxAuthenticated && (!userData || showRedirectPage)) {
+  const hasCompleteAuth = userData && (authToken || cookieToken);
+
+  if (!reduxAuthenticated && (!hasCompleteAuth || showRedirectPage)) {
     return (
       <div style={{
         position: 'fixed',
@@ -379,6 +496,22 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                         ℹ️ L'application fonctionne avec vos données sauvegardées
                       </div>
                     )}
+                  </Alert>
+                </FlexItem>
+              )}
+
+              {/* AJOUTÉ: Debug info en développement */}
+              {process.env.NODE_ENV === 'development' && (
+                <FlexItem spacer={{ default: 'spacerMd' }} style={{ width: '100%' }}>
+                  <Alert 
+                    variant="info" 
+                    title="Debug Authentication (Dev Mode)"
+                    style={{ marginBottom: '1.5rem', textAlign: 'left', fontSize: '0.8rem' }}
+                  >
+                    <div>userData: {!!userData ? '✅' : '❌'}</div>
+                    <div>authToken (localStorage): {!!authToken ? '✅' : '❌'}</div>
+                    <div>token (cookie): {!!cookieToken ? '✅' : '❌'}</div>
+                    <div>Redux user: {!!user ? '✅' : '❌'}</div>
                   </Alert>
                 </FlexItem>
               )}
@@ -445,7 +578,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     );
   }
 
-  console.log('✅ [AuthGuard] Utilisateur authentifié, accès accordé');
+  console.log('✅ [AuthGuard] Utilisateur authentifié avec données complètes, accès accordé');
   return <>{children}</>;
 };
 
