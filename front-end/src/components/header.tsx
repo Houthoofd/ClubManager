@@ -19,7 +19,6 @@ import {
 } from '@patternfly/react-core';
 import {
   BarsIcon,
-  BellIcon,
   EnvelopeIcon,
   ShoppingCartIcon,
   UserIcon,
@@ -31,37 +30,16 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
 import { ouvrirPanier } from '../redux/slices/panierSlice';
-import { setUnreadCount, setNombreMessagesNonLus } from '../redux/slices/messagesSlice';
+import { setNombreMessagesNonLus } from '../redux/slices/messagesSlice';
 import { apiUrl } from '../pages/apiUrl';
 import { clearAllAuthData } from '../utils/authCleaner';
 
-const avatarImg = '/assets/avatar.png'; // Chemin relatif à partir de `public`
-
 interface AppPanelHeaderProps {
   username: string;
-  onSidebarToggle: () => void; // Fonction pour basculer la sidebar
+  onSidebarToggle: () => void;
   onLogout?: () => void;
-  userData: any; // Ajout de la propriété userData
+  userData: any;
 }
-
-const ROLES = {
-  VISITEUR: 'Visiteur',
-  UTILISATEUR: 'Utilisateur',
-  ADMIN: 'Administrateur',
-  SUPER_ADMIN: 'Super-Administrateur',
-  PROFESSEUR: 'Professeur'
-};
-
-const mapRole = (id: number): string => {
-  switch (id) {
-    case 1: return ROLES.VISITEUR;
-    case 2: return ROLES.UTILISATEUR;
-    case 3: return ROLES.ADMIN;
-    case 4: return ROLES.SUPER_ADMIN;
-    case 5: return ROLES.PROFESSEUR;
-    default: return 'Inconnu';
-  }
-};
 
 const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -127,18 +105,29 @@ const AppPanelHeader = ({ onSidebarToggle, onLogout, userData }: AppPanelHeaderP
   const handleSelect = () => setIsDropdownOpen(false);
 
   const handleLogout = async () => {
-    console.log('🚪 Début de la déconnexion...');
+    console.log('🚪 [Header] Début de la déconnexion...');
     
-    // CORRECTION: Utiliser la version async de clearAllAuthData
-    await clearAllAuthData();
-    
-    // Appeler le callback de déconnexion
-    onLogout?.();
-    
-    console.log('✅ Déconnexion terminée, redirection...');
-    
-    // Rediriger vers la page de connexion
-    navigate('/pages/connexion');
+    try {
+      // MODIFIÉ: Utiliser la version async de clearAllAuthData qui appelle le serveur
+      await clearAllAuthData();
+      
+      // Appeler le callback de déconnexion
+      onLogout?.();
+      
+      console.log('✅ [Header] Déconnexion terminée (serveur + client), redirection...');
+      
+      // AJOUTÉ: Petit délai pour s'assurer que les cookies sont bien supprimés
+      setTimeout(() => {
+        // Rediriger vers la page de connexion
+        navigate('/pages/connexion');
+      }, 100);
+      
+    } catch (error) {
+      console.error('❌ [Header] Erreur lors de la déconnexion:', error);
+      
+      // Même en cas d'erreur, rediriger vers la connexion
+      navigate('/pages/connexion');
+    }
   };
 
   const handleOuvrirPanier = () => {

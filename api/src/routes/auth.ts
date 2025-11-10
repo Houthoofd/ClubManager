@@ -200,47 +200,41 @@ router.post('/logout', verifyToken, async (req, res) => {
       path: '/'
     };
 
-    // Supprimer le cookie 'token' avec les attributs exacts
-    res.clearCookie('token', cookieOptions);
-    
-    // NOUVEAU: Suppression exhaustive avec typage correct
+    // NOUVEAU: Supprimer le cookie 'token' avec TOUS les attributs possibles
     const cookieVariants = [
-      // Variante 1: Attributs exacts comme à la création
-      { httpOnly: true, secure: false, sameSite: 'lax' as const, domain: 'localhost', path: '/' },
+      // Variante exacte de production
+      { httpOnly: true, secure: true, sameSite: 'strict' as const, domain: 'clubmanagment.com', path: '/' },
       
-      // Variante 2: Sans domaine
+      // Variantes de développement
+      { httpOnly: true, secure: false, sameSite: 'lax' as const, domain: 'localhost', path: '/' },
       { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/' },
       
-      // Variante 3: Domaine undefined
-      { httpOnly: true, secure: false, sameSite: 'lax' as const, domain: undefined, path: '/' },
-      
-      // Variante 4: Sans sameSite
+      // Variantes sans domaine
       { httpOnly: true, secure: false, path: '/' },
-      
-      // Variante 5: Minimum d'attributs
+      { httpOnly: true, path: '/' },
       { path: '/' },
       
-      // Variante 6: Avec différents sameSite
-      { httpOnly: true, secure: false, sameSite: 'strict' as const, domain: 'localhost', path: '/' },
-      { httpOnly: true, secure: false, sameSite: 'none' as const, domain: 'localhost', path: '/' },
+      // Variantes avec différents sameSite
+      { httpOnly: true, secure: false, sameSite: 'strict' as const, path: '/' },
+      { httpOnly: true, secure: false, sameSite: 'none' as const, path: '/' },
       
-      // Variante 7: Pour développement et production
-      { httpOnly: true, secure: true, sameSite: 'strict' as const, domain: 'clubmanagment.com', path: '/' }
+      // Variante minimale
+      {}
     ];
 
-    // Appliquer toutes les variantes de suppression
+    // Appliquer toutes les variantes de suppression pour le cookie 'token'
     cookieVariants.forEach((variant, index) => {
       try {
         res.clearCookie('token', variant);
-        console.log(`🗑️ Tentative suppression cookie variant ${index + 1}:`, variant);
+        console.log(`🗑️ [Logout] Suppression cookie 'token' variant ${index + 1}:`, variant);
       } catch (error: any) {
-        console.log(`⚠️ Échec variant ${index + 1}:`, error.message);
+        console.log(`⚠️ [Logout] Échec variant ${index + 1}:`, error.message);
       }
     });
 
-    // NOUVEAU: Forcer la suppression avec headers Set-Cookie directs
+    // NOUVEAU: Forcer la suppression avec headers Set-Cookie directs pour 'token'
     const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
-    const cookieHeaders = [
+    const tokenCookieHeaders = [
       `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
       `token=; expires=${expiredDate}; path=/; HttpOnly; SameSite=Lax`,
       `token=; expires=${expiredDate}; path=/; domain=localhost`,
@@ -249,30 +243,45 @@ router.post('/logout', verifyToken, async (req, res) => {
       `token=; max-age=0; path=/; HttpOnly`,
       `token=; max-age=0; path=/`,
       `token=deleted; expires=${expiredDate}; path=/; domain=localhost; HttpOnly`,
-      `token=deleted; expires=${expiredDate}; path=/`
+      `token=deleted; expires=${expiredDate}; path=/`,
+      // AJOUTÉ: Headers pour production
+      `token=; expires=${expiredDate}; path=/; domain=clubmanagment.com; HttpOnly; SameSite=Strict; Secure`,
+      `token=; max-age=0; path=/; domain=clubmanagment.com; HttpOnly; SameSite=Strict; Secure`
     ];
 
-    // Appliquer tous les headers de suppression
-    cookieHeaders.forEach((header, index) => {
+    // Appliquer tous les headers de suppression pour 'token'
+    const allHeaders: string[] = [];
+    tokenCookieHeaders.forEach((header, index) => {
       try {
-        res.setHeader('Set-Cookie', header);
-        console.log(`🔨 Header suppression ${index + 1}: ${header}`);
+        allHeaders.push(header);
+        console.log(`🔨 [Logout] Header suppression token ${index + 1}: ${header}`);
       } catch (error) {
-        console.log(`⚠️ Échec header ${index + 1}:`, error);
+        console.log(`⚠️ [Logout] Échec header token ${index + 1}:`, error);
       }
     });
 
-    // Supprimer les autres cookies potentiels
+    // CORRIGÉ: Définir tous les headers Set-Cookie d'un coup
+    if (allHeaders.length > 0) {
+      res.setHeader('Set-Cookie', allHeaders);
+      console.log(`🔨 [Logout] ${allHeaders.length} headers Set-Cookie définis pour suppression token`);
+    }
+
+    // Supprimer les autres cookies potentiels (comme avant)
     const authCookieNames = [
       'authToken', 'userData', 'user', 'auth_token',
       'access_token', 'refresh_token', 'sessionId', 'session', 'jwt', 'JWT'
     ];
 
     authCookieNames.forEach(cookieName => {
-      res.clearCookie(cookieName);
-      res.clearCookie(cookieName, { path: '/', domain: 'localhost' });
-      res.clearCookie(cookieName, { path: '/', httpOnly: true });
-      console.log(`🗑️ Cookie "${cookieName}" supprimé`);
+      // Appliquer les mêmes variantes pour chaque cookie
+      cookieVariants.forEach(variant => {
+        try {
+          res.clearCookie(cookieName, variant);
+        } catch (error: any) {
+          // Ignorer les erreurs pour les cookies secondaires
+        }
+      });
+      console.log(`🗑️ [Logout] Cookie "${cookieName}" supprimé avec toutes les variantes`);
     });
 
     // Headers additionnels pour forcer la suppression
@@ -281,15 +290,17 @@ router.post('/logout', verifyToken, async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
 
-    console.log('✅ Déconnexion côté serveur terminée avec suppression exhaustive');
+    console.log('✅ [Logout] Déconnexion côté serveur terminée avec suppression exhaustive des cookies');
 
     res.status(200).json({
       success: true,
-      message: 'Déconnexion réussie - Tous les cookies ont été supprimés'
+      message: 'Déconnexion réussie - Tous les cookies ont été supprimés',
+      cookiesCleared: ['token', ...authCookieNames],
+      headersSet: allHeaders.length
     });
 
   } catch (error) {
-    console.error('❌ Erreur lors de la déconnexion:', error);
+    console.error('❌ [Logout] Erreur lors de la déconnexion:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la déconnexion'
