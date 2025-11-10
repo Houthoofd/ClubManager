@@ -9,7 +9,9 @@ import {
   Flex,
   FlexItem,
   Badge,
-  Divider
+  Divider,
+  Modal,
+  ModalVariant
 } from '@patternfly/react-core';
 import {
   EnvelopeIcon,
@@ -22,6 +24,7 @@ import {
 } from '@patternfly/react-icons';
 import { apiUrl } from '../../pages/apiUrl';
 import '../../styles/echeances.css';
+import ResultModal from '../common/modal/ResultModal'; // AJOUTÉ: Import du composant modal
 
 interface EcheancesPaiementProps {
   paiementsEcheances: any[];
@@ -34,9 +37,22 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
 }) => {
   const location = useLocation();
   const [rappelLoading, setRappelLoading] = useState<{ [key: number]: boolean }>({});
+  // MODIFIÉ: États pour les modals
   const [showResultModal, setShowResultModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalSuccess, setModalSuccess] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+
+  // AJOUTÉ: Déterminer le type de page selon l'URL
+  const isConsultationPage = location.pathname.includes('/utilisateurs/consulter/');
+  const isComptePage = location.pathname.includes('/compte');
+  
+  console.log('🔍 [EcheancesPaiement] Type de page détecté:', {
+    pathname: location.pathname,
+    isConsultationPage,
+    isComptePage,
+    userId
+  });
 
   // AJOUTÉ: Vérifications de sécurité pour éviter l'erreur undefined.length
   console.log('🔍 [EcheancesPaiement] Props reçues:', {
@@ -69,9 +85,6 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       </Alert>
     );
   }
-
-  // Déterminer si on est sur la page compte
-  const isComptePage = location.pathname.includes('/compte');
 
   // Fonction pour envoyer un rappel de paiement
   // MODIFIÉ: Fonction pour envoyer un rappel avec le bon format
@@ -125,22 +138,30 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       if (response.ok && data.success) {
         console.log('✅ Rappel envoyé avec succès:', data);
         
-        let successMessage = 'Rappel de paiement envoyé avec succès !';
+        // MODIFIÉ: Construire le message de succès pour la modal
+        let successMessage = 'Le rappel de paiement a été envoyé avec succès !';
         
         if (data.data?.emailEnvoye) {
           if (data.data.emailEnvoye.success) {
-            successMessage += `\n📧 Email envoyé à ${data.data.emailEnvoye.email}`;
+            successMessage += `\n\n📧 Email envoyé à : ${data.data.emailEnvoye.email}`;
             if (data.data.emailEnvoye.messageId) {
-              successMessage += `\n🆔 ID: ${data.data.emailEnvoye.messageId}`;
+              successMessage += `\n🆔 ID du message : ${data.data.emailEnvoye.messageId}`;
             }
+            successMessage += `\n💰 Montant de l'échéance : ${echeance?.montant ? `${echeance.montant}€` : 'N/A'}`;
+            successMessage += `\n📅 Date d'échéance : ${echeance?.date_echeance ? formatDate(echeance.date_echeance) : 'N/A'}`;
           } else {
-            successMessage += `\n⚠️ Email non envoyé: ${data.data.emailEnvoye.error}`;
+            successMessage += `\n\n⚠️ Problème lors de l'envoi de l'email : ${data.data.emailEnvoye.error}`;
           }
         } else {
-          successMessage += '\n⚠️ Aucun email configuré pour cet utilisateur';
+          successMessage += '\n\n⚠️ Aucune adresse email configurée pour cet utilisateur';
         }
         
-        alert(successMessage);
+        // AJOUTÉ: Afficher la modal de succès
+        setModalTitle('Rappel de paiement envoyé');
+        setModalMessage(successMessage);
+        setModalSuccess(true);
+        setShowResultModal(true);
+        
       } else {
         console.error('❌ Erreur serveur:', data);
         throw new Error(data.message || `Erreur ${response.status}: ${response.statusText}`);
@@ -149,18 +170,27 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       console.error('❌ Erreur envoi rappel:', error);
       
       let errorMessage = 'Erreur lors de l\'envoi du rappel.';
+      let errorTitle = 'Erreur d\'envoi';
       
       if (error.message.includes('403') || error.message.includes('Permissions')) {
-        errorMessage = 'Vous n\'avez pas les permissions pour envoyer des rappels.';
+        errorTitle = 'Permissions insuffisantes';
+        errorMessage = 'Vous n\'avez pas les permissions nécessaires pour envoyer des rappels de paiement.';
       } else if (error.message.includes('404')) {
-        errorMessage = 'Service de rappel non disponible.';
+        errorTitle = 'Service non disponible';
+        errorMessage = 'Le service de rappel de paiement n\'est pas disponible actuellement. Veuillez réessayer plus tard.';
       } else if (error.message.includes('non-JSON')) {
-        errorMessage = 'Erreur de communication avec le serveur.';
+        errorTitle = 'Erreur de communication';
+        errorMessage = 'Erreur de communication avec le serveur. Vérifiez votre connexion internet et réessayez.';
       } else if (error.message) {
+        errorTitle = 'Erreur du serveur';
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      // AJOUTÉ: Afficher la modal d'erreur
+      setModalTitle(errorTitle);
+      setModalMessage(errorMessage);
+      setModalSuccess(false);
+      setShowResultModal(true);
     } finally {
       setRappelLoading(prev => ({ ...prev, [echeanceId]: false }));
     }
@@ -237,7 +267,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
     <div style={{ padding: '1rem 0' }}>
       <Title headingLevel="h2" size="xl" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <CreditCardIcon style={{ color: '#0066cc' }} />
-        Mes échéances de paiement
+        {isConsultationPage ? 'Échéances de paiement' : 'Mes échéances de paiement'}
       </Title>
       
       <div style={{ display: 'grid', gap: '1.5rem' }}>
@@ -448,25 +478,113 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                         <Divider style={{ margin: '1rem 0' }} />
                       </FlexItem>
                       <FlexItem>
-                        <Flex justifyContent={{ default: 'justifyContentEnd' }}>
-                          <FlexItem>
-                            <Button
-                              variant="primary"
-                              size="lg"
-                              component="a"
-                              href={`/pages/paiement?echeance=${echeance.id}&userId=${userId}`}
-                              icon={<CreditCardIcon />}
-                              style={{
-                                background: 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
-                                border: 'none',
-                                boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)',
-                                transition: 'all 0.3s ease'
-                              }}
-                            >
-                              Payer maintenant
-                            </Button>
-                          </FlexItem>
-                        </Flex>
+                        {/* CONSULTATION PAGE - Affichage administrateur */}
+                        {isConsultationPage ? (
+                          <Flex 
+                            justifyContent={{ default: 'justifyContentSpaceBetween' }} 
+                            alignItems={{ default: 'alignItemsCenter' }}
+                            gap={{ default: 'gapMd' }}
+                          >
+                            {/* Bouton Envoyer rappel pour les échéances échues (admin seulement) */}
+                            {isEchu && (
+                              <FlexItem>
+                                <Button
+                                  variant="secondary"
+                                  size="lg"
+                                  onClick={() => handleEnvoyerRappel(echeance.id, echeance.utilisateur_id || userId)}
+                                  icon={<EnvelopeIcon />}
+                                  isLoading={rappelLoading[echeance.id]}
+                                  isDisabled={rappelLoading[echeance.id]}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                                    border: 'none',
+                                    color: 'white',
+                                    boxShadow: '0 4px 12px rgba(108, 117, 125, 0.3)',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                >
+                                  {rappelLoading[echeance.id] ? 'Envoi...' : 'Envoyer rappel'}
+                                </Button>
+                              </FlexItem>
+                            )}
+                            
+                            {/* Informations pour l'admin - pas de bouton payer */}
+                            <FlexItem>
+                              <div style={{
+                                background: isEchu ? 'rgba(220, 53, 69, 0.1)' : 'rgba(0, 123, 255, 0.1)',
+                                border: `1px solid ${isEchu ? '#dc3545' : '#007bff'}`,
+                                borderRadius: '6px',
+                                padding: '0.75rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                fontWeight: 'bold'
+                              }}>
+                                <CreditCardIcon style={{ 
+                                  color: isEchu ? '#dc3545' : '#007bff', 
+                                  fontSize: '1.1rem' 
+                                }} />
+                                <span style={{ 
+                                  color: isEchu ? '#dc3545' : '#007bff' 
+                                }}>
+                                  {isEchu ? 'Paiement en retard' : 'En attente de paiement'}
+                                </span>
+                              </div>
+                            </FlexItem>
+                          </Flex>
+                        ) : (
+                          /* PAGE COMPTE - Affichage utilisateur avec possibilité de payer */
+                          <Flex 
+                            justifyContent={{ default: 'justifyContentSpaceBetween' }} 
+                            alignItems={{ default: 'alignItemsCenter' }}
+                            gap={{ default: 'gapMd' }}
+                          >
+                            {/* Bouton Envoyer rappel seulement pour les échéances échues (pas sur la page compte) */}
+                            {isEchu && !isComptePage && (
+                              <FlexItem>
+                                <Button
+                                  variant="secondary"
+                                  size="lg"
+                                  onClick={() => handleEnvoyerRappel(echeance.id, echeance.utilisateur_id || userId)}
+                                  icon={<EnvelopeIcon />}
+                                  isLoading={rappelLoading[echeance.id]}
+                                  isDisabled={rappelLoading[echeance.id]}
+                                  style={{
+                                    background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                                    border: 'none',
+                                    color: 'white',
+                                    boxShadow: '0 4px 12px rgba(108, 117, 125, 0.3)',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                >
+                                  {rappelLoading[echeance.id] ? 'Envoi...' : 'Envoyer rappel'}
+                                </Button>
+                              </FlexItem>
+                            )}
+                            
+                            {/* Bouton payer pour l'utilisateur */}
+                            <FlexItem>
+                              <Button
+                                variant="primary"
+                                size="lg"
+                                onClick={() => handleAllerPaiement(echeance.id)}
+                                icon={<CreditCardIcon />}
+                                style={{
+                                  background: isEchu 
+                                    ? 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)' 
+                                    : 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
+                                  border: 'none',
+                                  boxShadow: isEchu 
+                                    ? '0 4px 12px rgba(220, 53, 69, 0.3)' 
+                                    : '0 4px 12px rgba(0, 123, 255, 0.3)',
+                                  transition: 'all 0.3s ease'
+                                }}
+                              >
+                                {isEchu ? 'Payer en retard' : 'Payer maintenant'}
+                              </Button>
+                            </FlexItem>
+                          </Flex>
+                        )}
                       </FlexItem>
                     </>
                   )}
@@ -476,6 +594,15 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
           );
         })}
       </div>
+      
+      {/* AJOUTÉ: Modal de résultat pour les rappels */}
+      <ResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        title={modalTitle}
+        message={modalMessage}
+        isSuccess={modalSuccess}
+      />
     </div>
   );
 };

@@ -60,7 +60,7 @@ async function loadAllModules() {
 
   // Module echeances EN DERNIER pour éviter les conflits - UNE SEULE FOIS
   try {
-    const echeancesModule = await import('./echeances.js');
+    const echeancesModule = await import('../echeances.js');
     echeancesRoutes = echeancesModule.echeancesRoutes;
     router.use('/echeances', echeancesRoutes);
     console.log('✅ [Paiements] Module echeances chargé');

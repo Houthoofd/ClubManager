@@ -1,6 +1,6 @@
 import express from 'express';
-import { verifyToken } from '../../middleware/auth.js';
-import { Paiements } from '../../db/clients/paiements/paiements.js';
+import { verifyToken } from '../middleware/auth.js';
+import { Paiements } from '../db/clients/paiements/paiements.js';
 
 const router = express.Router();
 
@@ -45,7 +45,7 @@ router.get('/detail/:echeanceId', async (req, res) => {
     const { echeanceId } = req.params;
     const userId = req.query.userId;
     
-    console.log(`🔍 [Paiements] Récupération échéance ${echeanceId} pour utilisateur ${userId}`);
+    console.log(`🔐 [Paiements] Vérification accès sécurisé échéance ${echeanceId} pour utilisateur ${userId}`);
     
     if (!echeanceId || isNaN(parseInt(echeanceId))) {
       return res.status(400).json({ 
@@ -56,31 +56,67 @@ router.get('/detail/:echeanceId', async (req, res) => {
 
     const paiements = new Paiements();
     
-    // Si userId fourni, vérifier que l'échéance appartient à cet utilisateur
+    // SÉCURITÉ RENFORCÉE: Si userId fourni, vérification stricte d'appartenance
     if (userId && !isNaN(parseInt(userId as string))) {
-      const echeances = await paiements.obtenirEcheancesUtilisateur(parseInt(userId as string));
-      const echeance = echeances.find((e: any) => e.id === parseInt(echeanceId));
+      console.log(`🛡️ [Paiements] Vérification stricte - échéance ${echeanceId} doit appartenir à utilisateur ${userId}`);
       
-      console.log(`🔍 [Paiements] Échéances trouvées pour utilisateur ${userId}: ${echeances.length}`);
-      console.log(`🔍 [Paiements] Échéance cible:`, echeance);
+      // 1. Récupérer TOUTES les échéances de cet utilisateur
+      const echeancesUtilisateur = await paiements.obtenirEcheancesUtilisateur(parseInt(userId as string));
+      console.log(`📋 [Paiements] Utilisateur ${userId} a ${echeancesUtilisateur.length} échéances`);
       
-      if (!echeance) {
-        return res.status(404).json({ 
-          error: 'Échéance non trouvée',
+      // 2. Vérifier que l'échéance demandée est dans cette liste
+      const echeanceAutorisee = echeancesUtilisateur.find((e: any) => e.id === parseInt(echeanceId));
+      
+      if (!echeanceAutorisee) {
+        console.error(`❌ [Paiements] SÉCURITÉ: Échéance ${echeanceId} n'appartient pas à l'utilisateur ${userId}`);
+        console.error(`📋 [Paiements] Échéances autorisées:`, echeancesUtilisateur.map((e: any) => ({ id: e.id, montant: e.montant })));
+        
+        return res.status(403).json({ 
+          error: 'Accès refusé - Cette échéance ne vous appartient pas',
           debug: {
             echeanceId: parseInt(echeanceId),
             userId: parseInt(userId as string),
-            echeancesDisponibles: echeances.map((e: any) => ({ id: e.id, montant: e.montant, statut: e.statut }))
+            message: 'Échéance non trouvée dans la liste des échéances autorisées pour cet utilisateur'
           }
         });
       }
 
+      console.log(`✅ [Paiements] Accès autorisé - Échéance ${echeanceId} appartient bien à l'utilisateur ${userId}`);
+      
+      // 3. Vérifier que l'échéance n'est pas déjà payée
+      if (echeanceAutorisee.statut?.toLowerCase() === 'payé') {
+        console.warn(`⚠️ [Paiements] Échéance ${echeanceId} déjà payée`);
+        return res.status(400).json({ 
+          error: 'Cette échéance est déjà payée',
+          debug: {
+            echeanceId: parseInt(echeanceId),
+            statut: echeanceAutorisee.statut,
+            datePaiement: echeanceAutorisee.date_paiement
+          }
+        });
+      }
+
+      // 4. Retourner l'échéance avec enrichissement des données
+      const echeanceEnrichie = {
+        ...echeanceAutorisee,
+        description: echeanceAutorisee.description || `Cotisation mensuelle - ${new Date(echeanceAutorisee.date_echeance).toLocaleDateString('fr-FR')}`,
+        utilisateur_autorise: true,
+        verification_passed: true
+      };
+
       return res.status(200).json({
         success: true,
-        data: echeance
+        data: echeanceEnrichie,
+        security: {
+          access_verified: true,
+          user_id: parseInt(userId as string),
+          echeance_owner: true
+        }
       });
     } else {
-      // Si pas d'userId, chercher l'échéance directement
+      // ACCÈS SANS VÉRIFICATION UTILISATEUR (moins sécurisé, pour compatibilité)
+      console.warn(`⚠️ [Paiements] Accès échéance ${echeanceId} sans vérification utilisateur (moins sécurisé)`);
+      
       try {
         const query = `SELECT * FROM echeances_paiements WHERE id = ?`;
         const results = await paiements.queryAsync(query, [parseInt(echeanceId)]);
@@ -97,13 +133,34 @@ router.get('/detail/:echeanceId', async (req, res) => {
         }
 
         const echeance = results[0];
-        console.log(`🔍 [Paiements] Échéance trouvée directement:`, echeance);
+        
+        // Vérifier que l'échéance n'est pas déjà payée
+        if (echeance.statut?.toLowerCase() === 'payé') {
+          return res.status(400).json({ 
+            error: 'Cette échéance est déjà payée',
+            debug: {
+              echeanceId: parseInt(echeanceId),
+              statut: echeance.statut,
+              datePaiement: echeance.date_paiement
+            }
+          });
+        }
+
+        console.log(`✅ [Paiements] Échéance ${echeanceId} trouvée (sans vérification utilisateur)`);
 
         return res.status(200).json({
           success: true,
           data: {
             ...echeance,
-            description: `Cotisation mensuelle - ${new Date(echeance.date_echeance).toLocaleDateString('fr-FR')}`
+            description: echeance.description || `Cotisation mensuelle - ${new Date(echeance.date_echeance).toLocaleDateString('fr-FR')}`,
+            utilisateur_autorise: false, // Non vérifié
+            verification_passed: false
+          },
+          security: {
+            access_verified: false,
+            user_id: null,
+            echeance_owner: false,
+            warning: 'Accès sans vérification utilisateur'
           }
         });
       } catch (dbError: any) {
@@ -116,7 +173,7 @@ router.get('/detail/:echeanceId', async (req, res) => {
     }
 
   } catch (error: any) {
-    console.error('❌ [Paiements] Erreur récupération échéance:', error);
+    console.error('❌ [Paiements] Erreur récupération échéance sécurisée:', error);
     res.status(500).json({ 
       error: 'Erreur lors de la récupération de l\'échéance',
       details: error.message 
