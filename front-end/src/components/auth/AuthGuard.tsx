@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/store';
 // CORRIGÉ: Import direct des actions exportées
 import { setUser, logout } from '../../redux/slices/authSlice';
-import { apiUrl } from '../../pages/apiUrl';
 import {
   Card,
   CardBody,
@@ -31,45 +30,111 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Routes qui ne nécessitent pas d'authentification
-  const publicRoutes = ['/pages/connexion', '/pages/inscription', '/login', '/register', '/pages/auth/forgot-password', '/pages/auth/reset-password'];
+  // Routes publiques plus complètes
+  const publicRoutes = [
+    '/pages/connexion', 
+    '/pages/inscription', 
+    '/pages/auth/forgot-password', 
+    '/pages/auth/reset-password',
+    '/login', 
+    '/register',
+    '/auth',
+    '/'
+  ];
 
-  // Fonction pour redirection vers connexion
   const handleLoginRedirect = () => {
     console.log('🔄 [AuthGuard] Redirection vers la page de connexion');
     window.location.href = `${window.location.origin}/pages/connexion`;
   };
 
-  // Fonction pour redirection vers inscription
   const handleRegisterRedirect = () => {
     console.log('🔄 [AuthGuard] Redirection vers la page d\'inscription');
     window.location.href = `${window.location.origin}/pages/inscription`;
   };
 
-  // Fonction pour vérifier l'authentification côté serveur avec apiUrl
-  const verifyServerAuthentication = async () => {
+  const verifyAuthentication = async () => {
     try {
-      console.log('🔐 [AuthGuard] Vérification authentification serveur...');
+      console.log('🔐 [AuthGuard] Vérification authentification (production mode)...');
       
-      const url = apiUrl('auth/status');
+      // ÉTAPE 1: Vérifier d'abord localStorage
+      const localUserData = localStorage.getItem('userData');
+      const authToken = localStorage.getItem('authToken');
       
-      const response = await fetch(url, {
+      console.log('🔍 [AuthGuard] Données locales:', {
+        hasUserData: !!localUserData,
+        hasToken: !!authToken,
+        userDataPreview: localUserData ? JSON.parse(localUserData).email : 'none'
+      });
+
+      if (localUserData && authToken) {
+        try {
+          const userData = JSON.parse(localUserData);
+          
+          // Vérifier la validité des données
+          if (userData.id && userData.email && userData.status) {
+            console.log('✅ [AuthGuard] Données locales valides trouvées');
+            
+            // CORRIGÉ: Utiliser setUser importé directement
+            dispatch(setUser({
+              id: userData.id,
+              email: userData.email,
+              firstName: userData.first_name || userData.firstName || '',
+              lastName: userData.last_name || userData.lastName || '',
+              userName: userData.nom_utilisateur || userData.userName || '',
+              status: userData.status,
+              role: userData.status,
+              genres: userData.genres || null,
+              grades: userData.grades || null,
+              abonnement: userData.abonnement || null,
+              dateOfBirth: userData.date_of_birth || userData.dateOfBirth || null
+            }));
+
+            setAuthError(null);
+            setRetryCount(0);
+            console.log('✅ [AuthGuard] Authentification locale réussie');
+            return true;
+          } else {
+            console.warn('⚠️ [AuthGuard] Données locales incomplètes');
+          }
+        } catch (parseError) {
+          console.error('❌ [AuthGuard] Erreur parsing données locales:', parseError);
+          localStorage.removeItem('userData');
+          localStorage.removeItem('authToken');
+        }
+      }
+
+      // ÉTAPE 2: Vérification serveur
+      console.log('🔍 [AuthGuard] Tentative vérification serveur...');
+      
+      const apiBaseUrl = process.env.NODE_ENV === 'production' 
+        ? window.location.origin 
+        : 'http://localhost:3000';
+      
+      const verifyUrl = `${apiBaseUrl}/auth/status`;
+      console.log('🌐 [AuthGuard] URL de vérification:', verifyUrl);
+
+      const response = await fetch(verifyUrl, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
+        signal: AbortSignal.timeout(10000)
       });
 
-      console.log('🔐 [AuthGuard] Réponse serveur:', response.status);
+      console.log('🔐 [AuthGuard] Réponse serveur:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔐 [AuthGuard] Données utilisateur serveur:', data);
+        console.log('🔐 [AuthGuard] Données serveur:', data);
         
         if (data.authentifie && data.user) {
-          // CORRIGÉ: Utiliser les actions importées directement
-          dispatch(setUser({
+          const userData = {
             id: data.user.id,
             email: data.user.email,
             firstName: data.user.first_name,
@@ -81,22 +146,22 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
             grades: data.user.grades,
             abonnement: data.user.abonnement,
             dateOfBirth: data.user.date_of_birth
-          }));
+          };
+
+          // CORRIGÉ: Utiliser setUser importé directement
+          dispatch(setUser(userData));
           
-          // Synchroniser avec localStorage pour compatibilité
           localStorage.setItem('userData', JSON.stringify({
-            id: data.user.id,
-            email: data.user.email,
-            firstName: data.user.first_name,
-            lastName: data.user.last_name,
-            userName: data.user.nom_utilisateur || '',
-            status: data.user.status,
-            isAuthenticated: true
+            ...userData,
+            first_name: userData.firstName,
+            last_name: userData.lastName,
+            nom_utilisateur: userData.userName,
+            date_of_birth: userData.dateOfBirth
           }));
           
           setAuthError(null);
           setRetryCount(0);
-          console.log('✅ [AuthGuard] Utilisateur authentifié par le serveur');
+          console.log('✅ [AuthGuard] Authentification serveur réussie');
           return true;
         } else {
           console.warn('⚠️ [AuthGuard] Serveur indique utilisateur non authentifié');
@@ -106,86 +171,114 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         console.warn('🚫 [AuthGuard] Session expirée (401)');
         return false;
       } else {
-        throw new Error(`Erreur serveur: ${response.status}`);
+        throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
       }
+
     } catch (error: any) {
-      console.error('❌ [AuthGuard] Erreur vérification serveur:', error);
+      console.error('❌ [AuthGuard] Erreur vérification authentification:', error);
       
-      if (retryCount < 2) {
-        console.log(`🔄 [AuthGuard] Tentative ${retryCount + 1}/3 dans 2s...`);
-        setRetryCount(prev => prev + 1);
-        setTimeout(() => verifyServerAuthentication(), 2000);
-        return null;
+      if (error.name === 'TimeoutError') {
+        setAuthError('Délai de connexion au serveur dépassé');
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setAuthError('Impossible de contacter le serveur');
+      } else {
+        setAuthError(`Erreur de vérification: ${error.message}`);
       }
       
-      setAuthError(`Erreur de connexion: ${error.message}`);
+      // Fallback sur les données locales en cas d'erreur serveur
+      const localUserData = localStorage.getItem('userData');
+      if (localUserData) {
+        try {
+          const userData = JSON.parse(localUserData);
+          if (userData.id && userData.email) {
+            console.log('⚠️ [AuthGuard] Fallback sur données locales suite à erreur serveur');
+            
+            // CORRIGÉ: Utiliser setUser importé directement
+            dispatch(setUser({
+              id: userData.id,
+              email: userData.email,
+              firstName: userData.first_name || userData.firstName || '',
+              lastName: userData.last_name || userData.lastName || '',
+              userName: userData.nom_utilisateur || userData.userName || '',
+              status: userData.status,
+              role: userData.status,
+              genres: userData.genres || null,
+              grades: userData.grades || null,
+              abonnement: userData.abonnement || null,
+              dateOfBirth: userData.date_of_birth || userData.dateOfBirth || null
+            }));
+            
+            setAuthError('Mode hors ligne - données locales utilisées');
+            return true;
+          }
+        } catch (parseError) {
+          console.error('❌ [AuthGuard] Erreur parsing fallback:', parseError);
+        }
+      }
+      
       return false;
     }
   };
 
   useEffect(() => {
-    // Ne pas vérifier l'auth sur les routes publiques
-    if (publicRoutes.some(route => window.location.pathname.startsWith(route))) {
-      console.log('🌍 [AuthGuard] Route publique détectée:', window.location.pathname);
+    const currentPath = window.location.pathname;
+    console.log('🔍 [AuthGuard] Vérification route:', currentPath);
+    
+    const isPublicRoute = publicRoutes.some(route => {
+      return currentPath === route || 
+             currentPath.startsWith(route + '/') || 
+             (route === '/' && currentPath === '/');
+    });
+
+    if (isPublicRoute) {
+      console.log('🌍 [AuthGuard] Route publique détectée:', currentPath);
       setIsVerifying(false);
       return;
     }
 
-    console.log('🔐 [AuthGuard] Initialisation vérification authentification...');
+    console.log('🔐 [AuthGuard] Route protégée - vérification authentification...');
     
     const checkAuthentication = async () => {
-      // ÉTAPE 1: Vérifier Redux d'abord (plus rapide)
       if (isAuthenticated && user) {
         console.log('✅ [AuthGuard] Utilisateur déjà authentifié dans Redux');
         setIsVerifying(false);
         return;
       }
       
-      // ÉTAPE 2: Vérifier localStorage comme fallback
-      const localUserData = localStorage.getItem('userData');
-      if (localUserData) {
-        try {
-          const userData = JSON.parse(localUserData);
-          if (userData.isAuthenticated) {
-            console.log('🔍 [AuthGuard] Utilisateur trouvé dans localStorage, vérification serveur...');
-          }
-        } catch (e) {
-          console.warn('⚠️ [AuthGuard] Données localStorage corrompues');
-          localStorage.removeItem('userData');
-        }
-      }
+      const authResult = await verifyAuthentication();
       
-      // ÉTAPE 3: Vérification serveur (obligatoire en production)
-      const serverAuthResult = await verifyServerAuthentication();
-      
-      if (serverAuthResult === null) {
-        return;
-      }
-      
-      if (serverAuthResult === true) {
-        console.log('✅ [AuthGuard] Authentification serveur réussie');
+      if (authResult === true) {
+        console.log('✅ [AuthGuard] Authentification réussie');
         setIsVerifying(false);
+        setShowRedirectPage(false);
       } else {
-        console.log('❌ [AuthGuard] Authentification serveur échouée');
-        // CORRIGÉ: Utiliser l'action logout importée directement
+        console.log('❌ [AuthGuard] Authentification échouée');
+        // CORRIGÉ: Utiliser logout importé directement
         dispatch(logout());
         localStorage.removeItem('userData');
-        setAuthError('Session expirée ou invalide');
+        localStorage.removeItem('authToken');
         setShowRedirectPage(true);
         setIsVerifying(false);
       }
     };
 
     checkAuthentication();
-  }, [isAuthenticated, user, dispatch, retryCount]);
+  }, [isAuthenticated, user, dispatch]);
 
-  // Pour les routes publiques, afficher directement le contenu
-  if (publicRoutes.some(route => window.location.pathname.startsWith(route))) {
-    console.log('🌍 [AuthGuard] Route publique, accès autorisé');
+  // CORRIGÉ: Vérification de route publique au rendu
+  const currentPath = window.location.pathname;
+  const isPublicRoute = publicRoutes.some(route => {
+    return currentPath === route || 
+           currentPath.startsWith(route + '/') || 
+           (route === '/' && currentPath === '/');
+  });
+
+  if (isPublicRoute) {
+    console.log('🌍 [AuthGuard] Route publique au rendu, accès autorisé');
     return <>{children}</>;
   }
 
-  // État de chargement pendant la vérification
+  // État de chargement
   if (isVerifying) {
     return (
       <div style={{
@@ -214,7 +307,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               }
             </div>
             <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#adb5bd' }}>
-              Connexion au serveur en cours...
+              {process.env.NODE_ENV === 'production' ? 'Mode production' : 'Mode développement'}
             </div>
           </CardBody>
         </Card>
@@ -222,7 +315,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     );
   }
 
-  // Vérifier à nouveau avant le rendu pour les routes protégées
+  // Page de redirection si non authentifié
   const userData = localStorage.getItem('userData');
   const reduxAuthenticated = isAuthenticated && user;
   
@@ -281,9 +374,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                     style={{ marginBottom: '1.5rem', textAlign: 'left' }}
                   >
                     {authError}
-                    {retryCount > 0 && (
+                    {authError.includes('hors ligne') && (
                       <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-                        Tentatives de reconnexion : {retryCount}/3
+                        ℹ️ L'application fonctionne avec vos données sauvegardées
                       </div>
                     )}
                   </Alert>
@@ -329,8 +422,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                     fontSize: '0.9rem', 
                     color: '#6c757d' 
                   }}>
-                    💡 <strong>Session expirée ?</strong><br />
-                    Reconnectez-vous pour accéder à votre espace personnel et continuer à utiliser l'application.
+                    💡 <strong>Problème de connexion ?</strong><br />
+                    Vérifiez votre connexion internet et réessayez.
+                    {process.env.NODE_ENV === 'production' && <><br />Mode production actif.</>}
                   </p>
                 </div>
               </FlexItem>
@@ -341,7 +435,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                   color: '#adb5bd',
                   margin: 0
                 }}>
-                  Club Manager - Authentification sécurisée
+                  Club Manager - Protection des données utilisateur
                 </p>
               </FlexItem>
             </Flex>

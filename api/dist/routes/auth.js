@@ -1,5 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { generateToken, verifyToken } from '../middleware/auth.js';
 import MysqlConnector from '../db/connector/mysqlconnector.js';
 const router = express.Router();
@@ -452,55 +453,118 @@ router.post('/refresh', verifyToken, (req, res) => {
 router.get('/test', (req, res) => {
     res.json({ ok: true });
 });
-// Status
-router.get('/status', verifyToken, async (req, res) => {
-    console.log('[AUTH] /status route called, user:', req.user);
-    if (!req.user || !req.user.id) {
-        console.log('[AUTH] /status - utilisateur non authentifié ou token absent');
-        return res.status(401).json({ authentifie: false, user: null });
-    }
+// CORRIGÉ: Route /auth/status pour vérifier l'authentification
+router.get('/status', async (req, res) => {
     try {
-        const userId = req.user.id;
-        console.log('[AUTH] /status - userId:', userId, 'token:', req.cookies?.token);
-        // Ajoute un log pour vérifier la requête SQL et le paramètre
-        console.log('[AUTH] /status - requête SQL utilisateur id:', userId);
-        const users = await queryAsync(`SELECT 
+        console.log('🔍 [Auth] Vérification du statut d\'authentification...');
+        console.log('🔍 [Auth] Headers reçus:', {
+            authorization: req.headers.authorization ? 'Present' : 'Missing',
+            cookie: req.headers.cookie ? 'Present' : 'Missing',
+            userAgent: req.headers['user-agent']
+        });
+        // MÉTHODE 1: Vérifier le token Bearer
+        const authHeader = req.headers.authorization;
+        let token = null;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7);
+            console.log('🔑 [Auth] Token Bearer détecté');
+        }
+        // MÉTHODE 2: Vérifier les cookies de session
+        const sessionToken = req.cookies?.authToken || req.cookies?.sessionId || req.cookies?.token;
+        if (!token && sessionToken) {
+            token = sessionToken;
+            console.log('🍪 [Auth] Token de session détecté');
+        }
+        if (!token) {
+            console.log('❌ [Auth] Aucun token trouvé');
+            return res.status(401).json({
+                authentifie: false,
+                error: 'Token d\'authentification manquant'
+            });
+        }
+        // Vérifier et décoder le token
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'votre-secret-jwt');
+            console.log('✅ [Auth] Token valide, utilisateur:', decoded.id);
+        }
+        catch (tokenError) {
+            console.log('❌ [Auth] Token invalide:', tokenError.message);
+            return res.status(401).json({
+                authentifie: false,
+                error: 'Token invalide ou expiré'
+            });
+        }
+        // CORRIGÉ: Récupérer les informations utilisateur directement depuis la base
+        try {
+            const userQuery = `
+        SELECT 
           u.id,
+          u.userId,
           u.first_name,
           u.last_name,
           u.nom_utilisateur,
           u.email,
-          g.genre_name AS genres,  
-          s.nom_role AS status,  
-          gr.grade_id AS grades,  
-          a.nom_plan AS abonnement,  
+          u.status_id,
+          g.genre_name AS genres,
+          s.nom_role AS status,
+          gr.grade_id AS grades,
+          a.nom_plan AS abonnement,
           u.date_of_birth
-        FROM 
-          utilisateurs u
-        LEFT JOIN 
-          genres g ON u.genre_id = g.id  
-        LEFT JOIN 
-          status s ON u.status_id = s.id  
-        LEFT JOIN 
-          grades gr ON u.grade_id = gr.id  
-        LEFT JOIN 
-          plans_tarifaires a ON u.abonnement_id = a.id  
-        WHERE 
-          u.id = ?`, [userId]);
-        console.log('[AUTH] /status - résultat SQL:', users);
-        const user = users && users.length > 0 ? users[0] : null;
-        if (!user) {
-            console.log('[AUTH] /status - utilisateur non trouvé, retour 401');
-            return res.status(401).json({ authentifie: false, user: null });
+        FROM utilisateurs u
+        LEFT JOIN genres g ON u.genre_id = g.id
+        LEFT JOIN status s ON u.status_id = s.id
+        LEFT JOIN grades gr ON u.grade_id = gr.id
+        LEFT JOIN plans_tarifaires a ON u.abonnement_id = a.id
+        WHERE u.id = ?
+      `;
+            const userResults = await queryAsync(userQuery, [decoded.id]);
+            if (userResults.length === 0) {
+                console.log('❌ [Auth] Utilisateur non trouvé:', decoded.id);
+                return res.status(401).json({
+                    authentifie: false,
+                    error: 'Utilisateur non trouvé'
+                });
+            }
+            const utilisateur = userResults[0];
+            console.log('✅ [Auth] Utilisateur authentifié:', {
+                id: utilisateur.id,
+                email: utilisateur.email,
+                status: utilisateur.status
+            });
+            // Retourner les données dans le format attendu par AuthGuard
+            res.status(200).json({
+                authentifie: true,
+                user: {
+                    id: utilisateur.id,
+                    email: utilisateur.email,
+                    first_name: utilisateur.first_name,
+                    last_name: utilisateur.last_name,
+                    nom_utilisateur: utilisateur.nom_utilisateur,
+                    status: utilisateur.status,
+                    genres: utilisateur.genres,
+                    grades: utilisateur.grades,
+                    abonnement: utilisateur.abonnement,
+                    date_of_birth: utilisateur.date_of_birth
+                },
+                token: token,
+                timestamp: new Date().toISOString()
+            });
         }
-        res.json({
-            authentifie: true,
-            user
-        });
+        catch (dbError) {
+            console.error('❌ [Auth] Erreur base de données:', dbError);
+            return res.status(500).json({
+                authentifie: false,
+                error: 'Erreur lors de la vérification de l\'utilisateur'
+            });
+        }
     }
     catch (error) {
-        console.log('[AUTH] /status - erreur serveur', error);
-        res.status(500).json({ authentifie: false, user: null });
+        console.error('❌ [Auth] Erreur vérification statut:', error);
+        res.status(500).json({
+            authentifie: false,
+            error: 'Erreur interne du serveur'
+        });
     }
 });
 // Route pour confirmer l'email
