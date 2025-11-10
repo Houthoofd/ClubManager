@@ -131,7 +131,7 @@ const ForgotPasswordPage: React.FC = () => {
                 Vous vous souvenez de votre mot de passe ?{' '}
                 <Button
                   variant="link"
-                  onClick={() => navigate('/pages/connexion')}
+                  onClick={() => window.location.href = `${window.location.origin}/pages/connexion`}
                   style={{ padding: 0, fontSize: 'inherit' }}
                 >
                   Retour à la connexion

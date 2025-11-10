@@ -88,6 +88,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
     const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
       ? '/pages/cours/inscription' 
       : '/pages/dashboard';
+    // CORRIGÉ: Utiliser window.location.href au lieu de navigate
     window.location.href = `${window.location.origin}${redirectPath}`;
   };
 
@@ -102,6 +103,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
             const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
               ? '/pages/cours/inscription' 
               : '/pages/dashboard';
+            // CORRIGÉ: Utiliser window.location.href au lieu de navigate
             window.location.href = `${window.location.origin}${redirectPath}`;
             return 0;
           }
@@ -199,11 +201,11 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
                   {connexion.isPending ? 'Connexion en cours...' : 'Se connecter'}
                 </Button>
 
-                {/* CORRIGÉ: Lien mot de passe oublié vers la bonne route */}
+                {/* CORRIGÉ: Utiliser window.location.href pour le lien mot de passe oublié */}
                 <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                   <Button 
                     variant="link" 
-                    onClick={() => navigate('/pages/auth/forgot-password')}
+                    onClick={() => window.location.href = `${window.location.origin}/pages/auth/forgot-password`}
                     style={{ fontSize: '14px' }}
                   >
                     Mot de passe oublié ?
@@ -214,9 +216,15 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
               <div className="login-footer">
                 <p>
                   Pas encore de compte ?{' '}
-                  <Link to="/pages/inscription" className="register-link">
+                  {/* CORRIGÉ: Utiliser window.location.href au lieu de Link */}
+                  <Button
+                    variant="link"
+                    onClick={() => window.location.href = `${window.location.origin}/pages/inscription`}
+                    style={{ padding: 0, fontSize: 'inherit' }}
+                    className="register-link"
+                  >
                     Inscrivez-vous ici
-                  </Link>
+                  </Button>
                 </p>
                 <p style={{ fontSize: '0.875rem', color: '#6c757d', marginTop: '0.5rem' }}>
                   💡 Votre UserId se trouve dans l'email de confirmation reçu lors de l'inscription

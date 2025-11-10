@@ -158,8 +158,9 @@ const ResetPasswordPage: React.FC = () => {
 
       if (response.ok) {
         setSuccess(true);
+        // CORRIGÉ: Utiliser window.location.href au lieu de navigate
         setTimeout(() => {
-          navigate('/pages/connexion?reset=success');
+          window.location.href = `${window.location.origin}/pages/connexion?reset=success`;
         }, 3000);
       } else {
         setError(data.error || 'Erreur lors de la réinitialisation');
@@ -227,8 +228,8 @@ const ResetPasswordPage: React.FC = () => {
                 <div className="login-actions">
                   <Button 
                     variant="primary" 
-                    // CORRIGÉ: Utiliser la bonne route pour forgot-password
-                    onClick={() => navigate('/pages/auth/forgot-password')}
+                    // CORRIGÉ: Utiliser window.location.href au lieu de navigate
+                    onClick={() => window.location.href = `${window.location.origin}/pages/auth/forgot-password`}
                     className="login-button"
                   >
                     Demander un nouveau lien
@@ -240,7 +241,8 @@ const ResetPasswordPage: React.FC = () => {
                 <p>
                   <Button 
                     variant="link" 
-                    onClick={() => navigate('/pages/connexion')}
+                    // CORRIGÉ: Utiliser window.location.href au lieu de navigate
+                    onClick={() => window.location.href = `${window.location.origin}/pages/connexion`}
                     style={{ padding: 0, fontSize: 'inherit' }}
                   >
                     Retour à la connexion
@@ -283,7 +285,7 @@ const ResetPasswordPage: React.FC = () => {
                 <div className="login-actions">
                   <Button 
                     variant="primary" 
-                    onClick={() => navigate('/pages/connexion')}
+                    onClick={() => window.location.href = `${window.location.origin}/pages/connexion`}
                     className="login-button"
                   >
                     Se connecter maintenant
@@ -545,7 +547,8 @@ const ResetPasswordPage: React.FC = () => {
               <p>
                 <Button 
                   variant="link" 
-                  onClick={() => navigate('/pages/connexion')}
+                  // CORRIGÉ: Utiliser window.location.href au lieu de navigate
+                  onClick={() => window.location.href = `${window.location.origin}/pages/connexion`}
                   style={{ padding: 0, fontSize: 'inherit' }}
                 >
                   Retour à la connexion
