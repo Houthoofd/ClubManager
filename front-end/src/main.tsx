@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
+import AuthGuard from './components/auth/AuthGuard';
 import store from './redux/store';
 import '@patternfly/react-core/dist/styles/base.css';
 import './styles/global.css';
@@ -22,6 +23,7 @@ import './styles/inscription.css';
 import './styles/dashboard.css';
 import './styles/users.css';
 import './styles/pages.css';
+import './styles/auth-guard.css'; // AJOUTÉ: Import du CSS AuthGuard
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,7 +45,9 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <AuthGuard>
+          <App />
+        </AuthGuard>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </Provider>
