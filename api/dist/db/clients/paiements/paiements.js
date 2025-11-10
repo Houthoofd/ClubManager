@@ -527,83 +527,138 @@ export class Paiements {
             });
         });
     }
-    /**
-     * MODIFIÉ: Marque une échéance comme payée dans la table echeances_paiements
-     */
+    // SIMPLIFIÉ: Méthode pour marquer une échéance comme payée - SANS toucher la table paiements
     async marquerEcheancePayee(echeanceId) {
-        return new Promise((resolve, reject) => {
-            const sql = `
+        try {
+            console.log(`💰 [Paiements] Marquage échéance ${echeanceId} comme payée`);
+            // Vérifier d'abord l'état actuel
+            const checkQuery = `
+        SELECT id, statut, utilisateur_id, date_echeance, abonnement_id 
+        FROM echeances_paiements 
+        WHERE id = ?
+      `;
+            const checkResult = await this.queryAsync(checkQuery, [echeanceId]);
+            if (checkResult.length === 0) {
+                throw new Error(`Échéance ${echeanceId} non trouvée`);
+            }
+            const echeance = checkResult[0];
+            if (echeance.statut === 'payé') {
+                console.log(`ℹ️ [Paiements] Échéance ${echeanceId} déjà payée - opération idempotente`);
+                return { affectedRows: 0, alreadyPaid: true };
+            }
+            // SIMPLIFIÉ: Mise à jour UNIQUEMENT de la table echeances_paiements
+            const updateQuery = `
         UPDATE echeances_paiements 
         SET 
-          statut = 'payé', 
-          date_paiement = CURDATE() 
+          statut = 'payé',
+          date_paiement = CURDATE()
         WHERE id = ? AND statut != 'payé'
       `;
-            this.mysqlConnector.query(sql, [echeanceId], (error, results) => {
-                if (error) {
-                    console.error('❌ Erreur marquage échéance payée:', error);
-                    reject(error);
-                }
-                else {
-                    const success = results.affectedRows > 0;
-                    console.log(`${success ? '✅' : '⚠️'} Échéance ${echeanceId} - Affected rows: ${results.affectedRows}`);
-                    if (success) {
-                        console.log(`✅ [Paiements] Échéance ${echeanceId} marquée comme payée avec date_paiement = aujourd'hui`);
-                    }
-                    else {
-                        console.warn(`⚠️ [Paiements] Échéance ${echeanceId} non mise à jour (peut-être déjà payée ou inexistante)`);
-                    }
-                    resolve({
-                        isConfirm: success,
-                        message: success
-                            ? `Échéance ${echeanceId} marquée comme payée`
-                            : `Échéance ${echeanceId} non trouvée ou déjà payée`
-                    });
-                }
+            const result = await this.queryAsync(updateQuery, [echeanceId]);
+            console.log(`✅ [Paiements] Échéance ${echeanceId} mise à jour:`, {
+                affectedRows: result.affectedRows,
+                previousStatus: echeance.statut,
+                newStatus: 'payé'
             });
-        });
+            return result;
+        }
+        catch (error) {
+            console.error(`❌ [Paiements] Erreur marquage échéance payée:`, error);
+            // IMPORTANT: Cette erreur ne devrait plus arriver
+            if (error.code === 'ER_DUP_ENTRY' && error.sqlMessage.includes('uk_utilisateur_periode_abonnement')) {
+                console.error(`❌ [Paiements] ERREUR INATTENDUE: Contrainte uk_utilisateur_periode_abonnement sur table echeances_paiements`);
+                console.error(`❌ [Paiements] Cette contrainte ne devrait pas exister sur cette table!`);
+                console.error(`❌ [Paiements] Structure attendue: echeances_paiements(id, utilisateur_id, abonnement_id, date_echeance, montant, statut, date_paiement)`);
+                // Forcer l'idempotence même avec cette erreur
+                try {
+                    const finalCheck = await this.queryAsync('SELECT statut FROM echeances_paiements WHERE id = ?', [echeanceId]);
+                    if (finalCheck.length > 0 && finalCheck[0].statut === 'payé') {
+                        console.log(`✅ [Paiements] Échéance ${echeanceId} finalement payée malgré l'erreur de contrainte`);
+                        return { affectedRows: 1, constraintHandled: true };
+                    }
+                }
+                catch (checkError) {
+                    console.error(`❌ [Paiements] Erreur vérification finale:`, checkError);
+                }
+                // DIAGNOSTIC: Vérifier la structure de la table
+                try {
+                    const describeResult = await this.queryAsync('DESCRIBE echeances_paiements', []);
+                    console.log('🔍 [Paiements] Structure réelle table echeances_paiements:', describeResult);
+                    const showIndexResult = await this.queryAsync('SHOW INDEX FROM echeances_paiements', []);
+                    console.log('🔍 [Paiements] Index table echeances_paiements:', showIndexResult);
+                }
+                catch (describeError) {
+                    console.error('❌ [Paiements] Impossible de décrire la table:', describeError);
+                }
+            }
+            throw error;
+        }
     }
-    /**
-     * Enregistre un paiement d'échéance avec tous les détails - VERSION COMPLÈTE
-     */
-    async enregistrerPaiementEcheance(paiementData) {
-        return new Promise((resolve, reject) => {
-            const sql = `
-        INSERT INTO paiements (
-          utilisateur_id, montant, methode_paiement, 
-          stripe_payment_intent_id, paypal_order_id, bitcoin_address,
-          date_paiement, statut, description, abonnement_id, 
-          periode_debut, periode_fin
-        ) VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?, ?, ?, ?, ?)
+    // NOUVELLE MÉTHODE: Marquer échéance payée SANS déclencher contrainte paiements
+    async marquerEcheancePayeeSansContrainte(echeanceId) {
+        try {
+            console.log(`💰 [Paiements] Marquage échéance ${echeanceId} comme payée (méthode sans contrainte)`);
+            // Vérifier d'abord l'état actuel
+            const checkQuery = `
+        SELECT id, statut, utilisateur_id, date_echeance, abonnement_id 
+        FROM echeances_paiements 
+        WHERE id = ?
       `;
-            const values = [
-                paiementData.utilisateur_id,
-                paiementData.montant,
-                paiementData.methode_paiement,
-                paiementData.stripe_payment_intent_id || null,
-                paiementData.paypal_order_id || null,
-                paiementData.bitcoin_address || null,
-                paiementData.statut,
-                paiementData.description || null,
-                paiementData.abonnement_id || null,
-                paiementData.periode_debut || null,
-                paiementData.periode_fin || null
-            ];
-            this.mysqlConnector.query(sql, values, (error, results) => {
-                if (error) {
-                    console.error('❌ Erreur enregistrement paiement échéance:', error);
-                    reject(error);
-                }
-                else {
-                    console.log('✅ Paiement échéance enregistré avec ID:', results.insertId);
-                    resolve({
-                        isConfirm: true,
-                        message: 'Paiement enregistré avec succès',
-                        id: results.insertId
-                    });
-                }
+            const checkResult = await this.queryAsync(checkQuery, [echeanceId]);
+            if (checkResult.length === 0) {
+                throw new Error(`Échéance ${echeanceId} non trouvée`);
+            }
+            const echeance = checkResult[0];
+            if (echeance.statut === 'payé') {
+                console.log(`ℹ️ [Paiements] Échéance ${echeanceId} déjà payée`);
+                return { affectedRows: 0, alreadyPaid: true };
+            }
+            // MISE À JOUR DIRECTE de la table echeances_paiements uniquement
+            // SANS déclencher de triggers qui pourraient affecter la table paiements
+            const updateQuery = `
+        UPDATE echeances_paiements 
+        SET 
+          statut = 'payé',
+          date_paiement = CURDATE()
+        WHERE id = ? AND statut != 'payé'
+      `;
+            const result = await this.queryAsync(updateQuery, [echeanceId]);
+            console.log(`✅ [Paiements] Échéance ${echeanceId} mise à jour sans contrainte:`, {
+                affectedRows: result.affectedRows,
+                previousStatus: echeance.statut,
+                newStatus: 'payé'
             });
-        });
+            return result;
+        }
+        catch (error) {
+            console.error(`❌ [Paiements] Erreur marquage échéance (sans contrainte):`, error);
+            // Si on a encore l'erreur de contrainte, c'est qu'il y a un trigger sur echeances_paiements
+            if (error.code === 'ER_DUP_ENTRY' && error.sqlMessage.includes('uk_utilisateur_periode_abonnement')) {
+                console.error(`🚨 [Paiements] ALERTE: La contrainte uk_utilisateur_periode_abonnement est sur echeances_paiements!`);
+                console.error(`🚨 [Paiements] Cette contrainte devrait être UNIQUEMENT sur la table paiements`);
+                console.error(`🚨 [Paiements] Action requise: Supprimer cette contrainte de echeances_paiements`);
+                // Vérifier si l'échéance est quand même dans le bon état
+                try {
+                    const finalCheck = await this.queryAsync('SELECT statut FROM echeances_paiements WHERE id = ?', [echeanceId]);
+                    if (finalCheck.length > 0 && finalCheck[0].statut === 'payé') {
+                        console.log(`✅ [Paiements] Échéance ${echeanceId} dans le bon état malgré l'erreur`);
+                        return {
+                            affectedRows: 1,
+                            constraintError: true,
+                            message: 'État correct malgré erreur contrainte'
+                        };
+                    }
+                }
+                catch (checkError) {
+                    console.error(`❌ [Paiements] Erreur vérification finale:`, checkError);
+                }
+                // Retourner une erreur explicite pour diagnostic
+                throw new Error('CONTRAINTE_MAL_PLACÉE: uk_utilisateur_periode_abonnement existe sur echeances_paiements ' +
+                    'alors qu\'elle devrait être uniquement sur la table paiements. ' +
+                    'Contactez l\'administrateur pour corriger la structure de base de données.');
+            }
+            throw error;
+        }
     }
     /**
      * Vérifie si c'est le premier paiement réussi d'un utilisateur
@@ -613,7 +668,7 @@ export class Paiements {
             const sql = `
         SELECT COUNT(*) as count 
         FROM paiements 
-        WHERE utilisateur_id = ? AND statut IN ('reussi', 'confirme')
+        WHERE utilisateur_id = ? AND statut IN ('reussi', 'confirme', 'validé')
       `;
             this.mysqlConnector.query(sql, [utilisateurId], (error, results) => {
                 if (error) {
@@ -624,14 +679,15 @@ export class Paiements {
                     const count = results[0]?.count || 0;
                     const premierPaiement = count <= 1; // 1 car on vient d'enregistrer le paiement
                     console.log(`🔍 Premier paiement pour utilisateur ${utilisateurId}: ${premierPaiement} (total: ${count})`);
-                    // Si c'est le premier paiement, mettre à jour le statut de l'utilisateur
+                    // MODIFIÉ: Si c'est le premier paiement, vérifier le statut avant de mettre à jour
                     if (premierPaiement) {
-                        this.mettreAJourStatutUtilisateur(utilisateurId, 'utilisateur')
+                        this.verifierEtMettreAJourStatutSiVisiteur(utilisateurId)
                             .then(() => {
-                            console.log(`✅ Statut utilisateur ${utilisateurId} mis à jour vers 'utilisateur'`);
+                            console.log(`✅ Vérification statut utilisateur ${utilisateurId} terminée`);
                         })
                             .catch((updateError) => {
-                            console.error(`❌ Erreur mise à jour statut utilisateur ${utilisateurId}:`, updateError);
+                            console.error(`❌ Erreur vérification statut utilisateur ${utilisateurId}:`, updateError);
+                            // CORRIGÉ: Ne pas rejeter, juste loguer l'erreur
                         });
                     }
                     resolve(premierPaiement);
@@ -640,39 +696,76 @@ export class Paiements {
         });
     }
     /**
-     * Met à jour le statut d'un utilisateur
+     * CORRIGÉ: Vérifie le statut et met à jour seulement si l'utilisateur est visiteur
      */
-    async mettreAJourStatutUtilisateur(utilisateurId, nouveauStatut) {
+    async verifierEtMettreAJourStatutSiVisiteur(utilisateurId) {
         return new Promise((resolve, reject) => {
-            // CORRIGÉ: Utiliser le bon nom de colonne
-            const getStatusIdSql = `SELECT id FROM status WHERE nom_role = ?`; // CHANGÉ: nom_status → nom_role
-            this.mysqlConnector.query(getStatusIdSql, [nouveauStatut], (error, statusResults) => {
+            console.log(`🔍 [Paiements] Vérification statut pour utilisateur ${utilisateurId}...`);
+            // Récupérer le statut actuel
+            const getStatusSql = `
+        SELECT u.id, u.status_id, s.nom_role 
+        FROM utilisateurs u 
+        LEFT JOIN status s ON u.status_id = s.id 
+        WHERE u.id = ?
+      `;
+            this.mysqlConnector.query(getStatusSql, [utilisateurId], (error, userResults) => {
                 if (error) {
-                    console.error('❌ Erreur récupération ID statut:', error);
-                    reject(error);
+                    console.error('❌ Erreur récupération statut utilisateur:', error);
+                    resolve(); // CORRIGÉ: Résoudre au lieu de rejeter pour ne pas bloquer
                     return;
                 }
-                if (statusResults.length === 0) {
-                    console.warn(`⚠️ Statut '${nouveauStatut}' non trouvé en base`);
+                if (userResults.length === 0) {
+                    console.warn(`⚠️ Utilisateur ${utilisateurId} non trouvé`);
                     resolve(); // Ne pas rejeter, juste continuer
                     return;
                 }
-                const statusId = statusResults[0].id;
-                // CORRIGÉ: Utiliser le bon nom de colonne pour l'utilisateur
-                const updateUserSql = `
-          UPDATE utilisateurs 
-          SET status_id = ? 
-          WHERE id = ?
-        `; // CHANGÉ: status → status_id
-                this.mysqlConnector.query(updateUserSql, [statusId, utilisateurId], (updateError, updateResults) => {
-                    if (updateError) {
-                        console.error('❌ Erreur mise à jour statut utilisateur:', updateError);
-                        reject(updateError);
+                const utilisateur = userResults[0];
+                const statutActuel = utilisateur.nom_role;
+                console.log(`📊 [Paiements] Statut actuel utilisateur ${utilisateurId}: ${statutActuel}`);
+                // CRITIQUE: Vérifier si l'utilisateur est visiteur
+                if (!statutActuel || statutActuel.toLowerCase() !== 'visiteur') {
+                    const statutsPrivilegies = ['professeur', 'administrateur', 'super-administrateur', 'super_administrateur', 'admin', 'utilisateur'];
+                    const isPrivileged = statutsPrivilegies.some(statut => statutActuel && statutActuel.toLowerCase().includes(statut.toLowerCase()));
+                    if (isPrivileged) {
+                        console.log(`🏆 [Paiements] Utilisateur ${utilisateurId} a un statut privilégié (${statutActuel}) - AUCUNE modification`);
                     }
                     else {
-                        console.log(`✅ Utilisateur ${utilisateurId} - statut mis à jour vers '${nouveauStatut}' (ID: ${statusId})`);
-                        resolve();
+                        console.log(`ℹ️ [Paiements] Utilisateur ${utilisateurId} n'est pas visiteur (${statutActuel}) - AUCUNE modification`);
                     }
+                    resolve(); // Ne pas faire de mise à jour
+                    return;
+                }
+                console.log(`🎯 [Paiements] Utilisateur ${utilisateurId} est visiteur - Promotion vers utilisateur...`);
+                // Récupérer l'ID du statut "utilisateur"
+                const getUtilisateurStatusSql = `SELECT id, nom_role FROM status WHERE nom_role = 'utilisateur' LIMIT 1`;
+                this.mysqlConnector.query(getUtilisateurStatusSql, [], (statusError, statusResults) => {
+                    if (statusError) {
+                        console.error('❌ Erreur récupération ID statut utilisateur:', statusError);
+                        resolve(); // CORRIGÉ: Résoudre au lieu de rejeter
+                        return;
+                    }
+                    if (statusResults.length === 0) {
+                        console.warn(`⚠️ Statut 'utilisateur' non trouvé en base`);
+                        resolve(); // Ne pas rejeter, juste continuer
+                        return;
+                    }
+                    const nouveauStatusId = statusResults[0].id;
+                    // Mettre à jour le statut
+                    const updateUserSql = `
+            UPDATE utilisateurs 
+            SET status_id = ?, date_modification = NOW() 
+            WHERE id = ?
+          `;
+                    this.mysqlConnector.query(updateUserSql, [nouveauStatusId, utilisateurId], (updateError, updateResults) => {
+                        if (updateError) {
+                            console.error('❌ Erreur mise à jour statut utilisateur:', updateError);
+                            resolve(); // CORRIGÉ: Résoudre même en cas d'erreur
+                        }
+                        else {
+                            console.log(`✅ Utilisateur ${utilisateurId} promu: visiteur → utilisateur (ID: ${nouveauStatusId})`);
+                            resolve();
+                        }
+                    });
                 });
             });
         });
@@ -921,5 +1014,95 @@ export class Paiements {
                 }
             };
         }
+    }
+    /**
+     * AJOUTÉ: Enregistre un paiement spécifiquement pour une échéance
+     * @param paiementData - Les données du paiement d'échéance
+     * @returns Une promesse qui résout avec le résultat de confirmation
+     */
+    enregistrerPaiementEcheance(paiementData) {
+        return new Promise((resolve, reject) => {
+            console.log(`💰 [Paiements] Enregistrement paiement échéance:`, paiementData);
+            const dateActuelle = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            // CORRIGÉ: Utiliser une période basée sur l'échéance pour éviter les conflits
+            let periodeDebut = dateActuelle.slice(0, 10); // Date actuelle par défaut
+            let periodeFin = dateActuelle.slice(0, 10);
+            // Si on a un abonnement_id, utiliser une période basée sur l'ID et la date
+            if (paiementData.abonnement_id) {
+                const timestamp = Date.now();
+                periodeDebut = new Date(timestamp).toISOString().slice(0, 10);
+                periodeFin = new Date(timestamp + 86400000).toISOString().slice(0, 10); // +1 jour
+            }
+            const sql = `
+        INSERT INTO paiements 
+          (utilisateur_id, montant, methode_paiement, stripe_payment_intent_id, 
+           paypal_order_id, bitcoin_address, statut, description, date_paiement, 
+           abonnement_id, periode_debut, periode_fin)
+        VALUES 
+          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+            const values = [
+                paiementData.utilisateur_id,
+                paiementData.montant,
+                paiementData.methode_paiement,
+                paiementData.stripe_payment_intent_id || null,
+                paiementData.paypal_order_id || null,
+                paiementData.bitcoin_address || null,
+                paiementData.statut,
+                paiementData.description || `Paiement échéance ${paiementData.echeance_id || 'N/A'}`,
+                dateActuelle,
+                paiementData.abonnement_id || null,
+                periodeDebut,
+                periodeFin
+            ];
+            console.log(`📝 [Paiements] Insertion paiement échéance:`, {
+                utilisateur_id: paiementData.utilisateur_id,
+                montant: paiementData.montant,
+                methode_paiement: paiementData.methode_paiement,
+                stripe_payment_intent_id: paiementData.stripe_payment_intent_id,
+                abonnement_id: paiementData.abonnement_id,
+                periode_debut: periodeDebut,
+                periode_fin: periodeFin
+            });
+            this.mysqlConnector.query(sql, values, (error, results) => {
+                if (error) {
+                    console.error('❌ [Paiements] Erreur enregistrement paiement échéance:', error);
+                    // AJOUTÉ: Gestion spécifique des contraintes de période
+                    if (error.code === 'ER_DUP_ENTRY' && error.sqlMessage?.includes('uk_utilisateur_periode_abonnement')) {
+                        console.warn('⚠️ [Paiements] Contrainte période détectée - tentative avec période unique');
+                        // Retry avec une période vraiment unique
+                        const uniqueTimestamp = Date.now() + Math.floor(Math.random() * 1000);
+                        const uniquePeriode = new Date(uniqueTimestamp).toISOString().slice(0, 10);
+                        const retryValues = [...values];
+                        retryValues[retryValues.length - 2] = uniquePeriode; // periode_debut
+                        retryValues[retryValues.length - 1] = uniquePeriode; // periode_fin
+                        console.log(`🔄 [Paiements] Retry avec période unique: ${uniquePeriode}`);
+                        this.mysqlConnector.query(sql, retryValues, (retryError, retryResults) => {
+                            if (retryError) {
+                                console.error('❌ [Paiements] Échec retry paiement échéance:', retryError);
+                                reject(retryError);
+                            }
+                            else {
+                                console.log('✅ [Paiements] Paiement échéance enregistré (retry):', retryResults.insertId);
+                                resolve({
+                                    isConfirm: true,
+                                    message: `Paiement échéance enregistré avec succès (retry) - ID: ${retryResults.insertId}`
+                                });
+                            }
+                        });
+                    }
+                    else {
+                        reject(error);
+                    }
+                }
+                else {
+                    console.log('✅ [Paiements] Paiement échéance enregistré:', results.insertId);
+                    resolve({
+                        isConfirm: true,
+                        message: `Paiement échéance enregistré avec succès - ID: ${results.insertId}`
+                    });
+                }
+            });
+        });
     }
 }

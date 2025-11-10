@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import http from 'http';
 import { Server } from 'socket.io';
 import fs from 'fs';
+import { Router } from 'express';
 
 // Charger le .env en premier
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -134,7 +135,22 @@ async function startServer() {
     const { default: informationsRouter } = await import('./routes/informations.js');
     const { default: coursRouter } = await import('./routes/cours.js');
     const { default: compteRouter } = await import('./routes/compte.js');
-    const { default: paiementRouter } = await import('./routes/paiements.js');
+    
+    // OPTIMISÉ: Import et validation du router paiements modulaire
+    console.log('🔄 [Server] Chargement du module paiements modulaire...');
+    let paiementRouter: Router | null = null;
+    try {
+      const paiementModule = await import('./routes/paiements.js');
+      paiementRouter = paiementModule.default;
+      if (!paiementRouter) {
+        throw new Error('Aucun export par défaut dans le module paiements');
+      }
+      console.log('✅ [Server] Module paiements modulaire chargé avec succès');
+    } catch (error) {
+      console.error('❌ [Server] Erreur critique lors du chargement du module paiements:', error);
+      throw new Error(`Module paiements requis mais non disponible: ${(error as Error).message}`);
+    }
+    
     const { default: statistiquesRouter } = await import('./routes/statistiques.js');
     const { default: magasinRouter } = await import('./routes/magasin.js');
     const { default: professeursRouter } = await import('./routes/professeurs.js');
@@ -144,17 +160,22 @@ async function startServer() {
     const { default: verificationRouter } = await import('./routes/verification.js');
     const { default: authRouter } = await import('./routes/auth.js');
     
+    // SUPPRIMÉ: Imports en double qui causaient des conflits
+    // const { default: echeancesRouter } = await import('./routes/echeances.js');
+    // const { default: stripeRouter } = await import('./routes/stripe.js');
+    
     // CORRIGÉ: Import conditionnel pour tous les modules qui peuvent manquer
     let webhooksRouter = null;
     let commandesRouter = null;
     let stocksRouter = null;
+    let echeancesRouter = null; // AJOUTÉ: Garder pour compatibilité si existe
     
     try {
       const webhooksModule = await import('./routes/webhooks.js');
       webhooksRouter = webhooksModule.default;
       console.log('✅ [Server] Module webhooks chargé');
     } catch (error) {
-      console.warn('⚠️ [Server] Module webhooks non disponible:', error);
+      console.warn('⚠️ [Server] Module webhooks non disponible - utilisation du module intégré dans paiements');
     }
     
     try {
@@ -173,7 +194,16 @@ async function startServer() {
       console.warn('⚠️ [Server] Module stocks non disponible:', error);
     }
 
-    // Routes principales (API) - CORRIGÉ: Vérifier l'ordre des routes
+    // AJOUTÉ: Import conditionnel du module échéances standalone (si existe)
+    try {
+      const echeancesModule = await import('./routes/echeances.js');
+      echeancesRouter = echeancesModule.default;
+      console.log('✅ [Server] Module échéances standalone chargé');
+    } catch (error) {
+      console.warn('⚠️ [Server] Module échéances standalone non disponible - utilisation du module intégré dans paiements');
+    }
+
+    // Routes principales (API) - CRITIQUE: Module paiements en priorité
     app.use('/auth', authRouter);
     app.use('/email', messagesRouter);
     app.use('/', indexRouter);
@@ -181,8 +211,29 @@ async function startServer() {
     app.use('/informations', informationsRouter);
     app.use('/cours', coursRouter);
     app.use('/compte', compteRouter);
-    // CORRIGÉ: Monter les routes paiements avec le préfixe /paiements
-    app.use('/paiements', paiementRouter);
+    
+    // CRITIQUE: Monter le module paiements AVEC validation correcte
+    if (paiementRouter !== null) {
+      console.log('🔧 [Server] Montage du module paiements modulaire...');
+      app.use('/paiements', paiementRouter);
+      console.log('✅ [Server] Module paiements monté → /paiements/ (avec sous-modules intégrés)');
+      console.log('  → /paiements/crud/ (CRUD principal)');
+      console.log('  → /paiements/stripe/ (Intégration Stripe)'); 
+      console.log('  → /paiements/echeances/ (Gestion échéances)');
+      console.log('  → /paiements/confirmation/ (Confirmation paiements)');
+      console.log('  → /paiements/webhooks/ (Webhooks Stripe)');
+    } else {
+      console.error('❌ [Server] CRITIQUE: Module paiements non disponible - fonctionnalités de paiement désactivées');
+      // Route de fallback pour les paiements
+      app.use('/paiements', (req, res) => {
+        res.status(503).json({
+          error: 'Service paiements temporairement indisponible',
+          message: 'Le module paiements modulaire n\'a pas pu être chargé',
+          timestamp: new Date().toISOString()
+        });
+      });
+    }
+    
     app.use('/magasin', magasinRouter);
     app.use('/professeurs', professeursRouter);
     app.use('/messages', messagesRouter);
@@ -191,18 +242,20 @@ async function startServer() {
     app.use('/verification', verificationRouter);
     app.use('/statistiques', statistiquesRouter);
     
-    // CORRIGÉ: Monter les routes conditionnellement avec app.use()
+    // MODIFIÉ: Monter échéances seulement si module standalone existe
+    if (echeancesRouter) {
+      app.use('/echeances', echeancesRouter);
+      console.log('✅ [Server] Route échéances standalone montée');
+    } else {
+      console.log('ℹ️ [Server] Échéances gérées via /paiements/echeances/');
+    }
+    
+    // CORRIGÉ: Monter les autres routes conditionnellement
     if (webhooksRouter) {
       app.use('/webhooks', webhooksRouter);
-      console.log('✅ [Server] Route webhooks montée');
+      console.log('✅ [Server] Route webhooks standalone montée');
     } else {
-      app.use('/webhooks', (req, res) => {
-        res.status(503).json({
-          error: 'Service webhooks temporairement indisponible',
-          message: 'Le module webhooks n\'est pas disponible'
-        });
-      });
-      console.log('⚠️ [Server] Route webhooks en mode fallback');
+      console.log('ℹ️ [Server] Webhooks gérés via /paiements/webhooks/');
     }
     
     if (commandesRouter) {
@@ -251,33 +304,16 @@ async function startServer() {
       
       // SPA fallback - rediriger toutes les routes vers index.html
       app.get('*', (req, res) => {
-        // CORRIGÉ: Éviter de rediriger les routes API
-        if (req.path.startsWith('/api/') || 
-            req.path.startsWith('/auth/') ||  // AJOUTÉ: Protéger les routes auth
-            req.path.startsWith('/health/') || 
-            req.path.startsWith('/public/') ||
-            req.path.startsWith('/uploads/') ||
-            req.path.startsWith('/test-')) {   // AJOUTÉ: Protéger les routes de test
-          return res.status(404).json({ 
-            error: 'Route API non trouvée',
-            path: req.path,
-            method: req.method
-          });
-        }
-        
-        res.sendFile(path.join(staticPath, 'index.html'));
-      });
-      
-      console.log('✅ [Server] Frontend React configuré avec SPA routing');
-    } else {
-      console.warn('⚠️ [Server] Aucun build frontend trouvé - API seulement');
-      
-      // AJOUTÉ: En mode API seulement, afficher les routes disponibles
-      app.get('*', (req, res) => {
-        if (req.path.startsWith('/api/') || 
-            req.path.startsWith('/auth/') || 
-            req.path.startsWith('/health/') || 
-            req.path.startsWith('/test-')) {
+        // CORRIGÉ: Liste complète des routes API à exclure du SPA routing
+        const apiRoutes = [
+          '/api/', '/auth/', '/health/', '/public/', '/uploads/',
+          '/paiements/', '/utilisateurs/', '/cours/', '/magasin/',
+          '/messages/', '/compte/', '/professeurs/', '/statistiques/',
+          '/inscription/', '/verification/', '/informations/', '/upload/',
+          '/webhooks/', '/commandes/', '/stocks/', '/echeances/', '/test-'
+        ];
+
+        if (apiRoutes.some(route => req.path.startsWith(route))) {
           return res.status(404).json({ 
             error: 'Route API non trouvée',
             path: req.path,
@@ -286,10 +322,71 @@ async function startServer() {
               '/auth/status',
               '/auth/login', 
               '/auth/logout',
-              '/api/test',
-              '/test-auth-status',
+              '/paiements/health',
+              '/paiements/echeances/:userId',
+              '/paiements/stripe/create-payment-intent',
+              '/paiements/stripe/confirm-payment',
+              '/paiements/confirmation/confirm-payment',
+              '/paiements/webhooks/stripe',
+              '/utilisateurs/:id',
+              '/cours',
+              '/magasin/articles',
               '/health/database',
               '/health/email'
+            ],
+            debug: {
+              paymentsModuleStructure: {
+                '/paiements/': 'Module principal (CRUD)',
+                '/paiements/stripe/': 'Intégration Stripe',
+                '/paiements/echeances/': 'Gestion échéances',
+                '/paiements/confirmation/': 'Confirmation paiements',
+                '/paiements/webhooks/': 'Webhooks Stripe'
+              }
+            }
+          });
+        }
+        
+        res.sendFile(path.join(staticPath, 'index.html'));
+      });
+      
+      console.log('✅ [Server] Frontend React configuré avec SPA routing et paiements modulaires');
+    } else {
+      console.warn('⚠️ [Server] Aucun build frontend trouvé - API seulement');
+      
+      // CORRIGÉ: Même logique pour mode API seulement
+      app.get('*', (req, res) => {
+        const apiRoutes = [
+          '/api/', '/auth/', '/health/', '/paiements/',
+          '/utilisateurs/', '/cours/', '/magasin/', '/messages/',
+          '/compte/', '/professeurs/', '/statistiques/', '/inscription/',
+          '/verification/', '/informations/', '/upload/', '/webhooks/',
+          '/commandes/', '/stocks/', '/echeances/', '/test-'
+        ];
+
+        if (apiRoutes.some(route => req.path.startsWith(route))) {
+          return res.status(404).json({ 
+            error: 'Route API non trouvée',
+            path: req.path,
+            method: req.method,
+            debug: {
+              expectedRoute: req.path,
+              method: req.method,
+              isPaymentsRoute: req.path.startsWith('/paiements/'),
+              paymentsSubmodule: req.path.startsWith('/paiements/stripe/') ? 'stripe' :
+                                req.path.startsWith('/paiements/echeances/') ? 'echeances' :
+                                req.path.startsWith('/paiements/confirmation/') ? 'confirmation' :
+                                req.path.startsWith('/paiements/webhooks/') ? 'webhooks' : 'main',
+              timestamp: new Date().toISOString()
+            },
+            availableRoutes: [
+              '/auth/status',
+              '/paiements/health',
+              '/paiements/echeances/:userId',
+              '/paiements/stripe/create-payment-intent',
+              '/paiements/stripe/confirm-payment',
+              '/paiements/confirmation/confirm-payment',
+              '/utilisateurs/:id',
+              '/health/database'
             ]
           });
         }
@@ -297,11 +394,14 @@ async function startServer() {
         res.status(404).json({
           error: 'Frontend non disponible',
           message: 'Ce serveur fonctionne en mode API seulement',
-          availableRoutes: [
-            '/auth/status',
-            '/api/test',
-            '/health/database'
-          ]
+          requestedPath: req.path,
+          paymentsModuleInfo: {
+            structure: 'Modulaire avec sous-modules',
+            mainRoute: '/paiements/',
+            submodules: ['stripe', 'echeances', 'confirmation', 'webhooks'],
+            healthCheck: '/paiements/health'
+          },
+          suggestion: 'Utilisez les routes API directement ou vérifiez que le frontend est déployé'
         });
       });
     }
@@ -381,10 +481,33 @@ async function startServer() {
     server.listen(PORT, () => {
       console.log(`✅ [Server] Serveur démarré sur le port ${PORT}`);
       console.log(`🌐 [Server] API disponible sur http://localhost:${PORT}`);
+      
+      // AMÉLIORÉ: Logging conditionnel pour les paiements
+      if (paiementRouter !== null) {
+        console.log(`💳 [Server] Module paiements modulaire: http://localhost:${PORT}/paiements/`);
+        console.log('🏗️ [Server] Structure module paiements:');
+        console.log('  📂 /paiements/crud/ → CRUD principal');
+        console.log('  📂 /paiements/stripe/ → Intégration Stripe');
+        console.log('  📂 /paiements/echeances/ → Gestion échéances');
+        console.log('  📂 /paiements/confirmation/ → Confirmation paiements');
+        console.log('  📂 /paiements/webhooks/ → Webhooks Stripe');
+        console.log('  🔍 /paiements/health → Statut du module');
+      } else {
+        console.log('❌ [Server] Module paiements: INDISPONIBLE');
+      }
+      
       console.log(`📊 [Server] Environnement : ${process.env.NODE_ENV || 'development'}`);
       console.log(`📧 [Server] SendGrid: ${process.env.SENDGRID_API_KEY ? 'Configuré' : 'Non configuré'}`);
-      console.log(`📧 [Server] Emails: ${process.env.SENDGRID_FROM_EMAIL ? 'Configurés' : 'Non configurés'}`);
       console.log(`💾 [Server] Base de données: ${process.env.DB_NAME || 'clubmanager'}`);
+      
+      // AJOUTÉ: Log de la structure des paiements
+      console.log('🏗️ [Server] Structure module paiements:');
+      console.log('  📂 /paiements/ → CRUD principal');
+      console.log('  📂 /paiements/stripe/ → Intégration Stripe');
+      console.log('  📂 /paiements/echeances/ → Gestion échéances');
+      console.log('  📂 /paiements/confirmation/ → Confirmation paiements');
+      console.log('  📂 /paiements/webhooks/ → Webhooks Stripe');
+      console.log('  🔍 /paiements/health → Statut du module');
       
       // Setup graceful shutdown SEULEMENT après le démarrage réussi
       mysqlConnector.setupGracefulShutdown();

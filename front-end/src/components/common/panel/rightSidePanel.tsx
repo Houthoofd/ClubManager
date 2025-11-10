@@ -22,8 +22,9 @@ import {
   Modal
 } from '@patternfly/react-core';
 import PaymentForm from '../../common/form/paymentForm';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../../redux/store';
+import { debugPanier } from '../../../redux/slices/panierSlice'; // AJOUTÉ
 
 // Import des types (à ajuster selon ton arborescence)
 import type { Article, Taille } from '@clubmanager/types';
@@ -45,10 +46,15 @@ const RightSidePanel = ({
   articles,
   onRemoveArticle,
   onUpdateQuantite,
-  onViderPanier, // AJOUTÉ: Récupération de la prop
+  onViderPanier,
   children
 }: RightSidePanelProps) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  // CORRIGÉ: Déplacer useSelector au niveau racine du composant
+  const panierRedux = useSelector((state: RootState) => state.panier);
+  
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [selectedTaille, setSelectedTaille] = useState<Taille | null>(null);
   const [quantiteTemp, setQuantiteTemp] = useState<number>(1);
@@ -250,145 +256,393 @@ const RightSidePanel = ({
   };
 
  const onPasserCommande = async () => {
+  console.log('🛒 [Panier] DÉMARRAGE onPasserCommande');
+  
+  // AJOUTÉ: Debug Redux avant tout traitement
+  console.log('🔍 [Panier] DEBUG REDUX - Déclenchement debug panier...');
+  dispatch(debugPanier());
+  
+  // CRITIQUE: Sauvegarder IMMÉDIATEMENT dans userData avant tout traitement
+  const articlesSnapshot = [...articles];
+  
+  // NOUVEAU: Sauvegarder dans userData avec structure enrichie
+  try {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    
+    // CRITIQUE: Sauvegarder à plusieurs endroits pour récupération
+    userData.panierCommande = {
+      articles: articlesSnapshot,
+      timestamp: new Date().toISOString(),
+      utilisateur_id: user?.id || userData.id || userData.data?.id,
+      source: 'rightSidePanel_onPasserCommande'
+    };
+    
+    userData.lastArticles = articlesSnapshot; // Sauvegarde simple
+    userData.commandeInProgress = true; // Flag de commande en cours
+    
+    localStorage.setItem('userData', JSON.stringify(userData));
+    localStorage.setItem('panierBackup', JSON.stringify({
+      articles: articlesSnapshot,
+      timestamp: new Date().toISOString(),
+      source: 'onPasserCommande'
+    }));
+    
+    console.log('💾 [Panier] SAUVEGARDE CRITIQUE effectuée dans userData et localStorage:', {
+      articlesCount: articlesSnapshot.length,
+      userData_panierCommande: !!userData.panierCommande,
+      userData_lastArticles: !!userData.lastArticles,
+      localStorage_panierBackup: !!localStorage.getItem('panierBackup')
+    });
+  } catch (saveError) {
+    console.error('❌ [Panier] ERREUR CRITIQUE sauvegarde:', saveError);
+    // Continuer quand même car les articles sont encore dans articlesSnapshot
+  }
+
+  // CORRIGÉ: Utiliser articlesSnapshot pour toute la logique
+  console.log('🔍 [Panier] Articles snapshot:', {
+    articles: articlesSnapshot,
+    length: articlesSnapshot?.length || 0,
+    sample: articlesSnapshot?.[0]
+  });
+
+  if (!articlesSnapshot || articlesSnapshot.length === 0) {
+    console.error('❌ [Panier] STOP: Snapshot panier vide!');
+    alert("Votre panier est vide.");
+    return;
+  }
+
+  // Validation des articles individuellement
+  console.log('🔍 [Panier] Validation détaillée de chaque article:');
+  for (let i = 0; i < articlesSnapshot.length; i++) {
+    const article = articlesSnapshot[i];
+    console.log(`🔍 [Panier] Article ${i}:`, {
+      id: article.id,
+      nom: article.nom,
+      prix: article.prix,
+      quantite: article.quantite,
+      taille: article.taille,
+      hasStocks: !!article.stocks,
+      stocksLength: article.stocks?.length || 0
+    });
+    
+    if (!article.id) {
+      console.error(`❌ [Panier] Article ${i}: ID manquant`);
+      alert(`Article ${i + 1}: ID manquant`);
+      return;
+    }
+    if (!article.taille) {
+      console.error(`❌ [Panier] Article ${i}: Taille manquante`);
+      alert(`Article ${i + 1}: Taille manquante`);
+      return;
+    }
+    if (!article.quantite || article.quantite <= 0) {
+      console.error(`❌ [Panier] Article ${i}: Quantité invalide (${article.quantite})`);
+      alert(`Article ${i + 1}: Quantité invalide`);
+      return;
+    }
+    if (!article.prix || article.prix <= 0) {
+      console.error(`❌ [Panier] Article ${i}: Prix invalide (${article.prix})`);
+      alert(`Article ${i + 1}: Prix invalide`);
+      return;
+    }
+  }
+
+  // Récupérer les données utilisateur
   const userData = localStorage.getItem('userData');
   if (!userData) {
+    console.error('❌ [Panier] Utilisateur non connecté');
     alert("Utilisateur non connecté.");
     return;
   }
 
   const user = JSON.parse(userData);
-  console.log('🛒 [Panier] User data from localStorage:', user);
-  
-  // Corriger l'accès à l'ID utilisateur selon la structure réelle
   const utilisateur_id = Number(user.id || user.data?.id || user.user?.id);
   
   if (!utilisateur_id || isNaN(utilisateur_id)) {
-    console.error('ID utilisateur non trouvé dans:', user);
+    console.error('❌ [Panier] ID utilisateur non trouvé dans:', user);
     alert("Erreur: ID utilisateur non trouvé.");
     return;
   }
 
-  // MODIFIÉ: Utiliser articles au lieu de localArticles
-  if (articles.length === 0) {
-    alert("Votre panier est vide.");
+  console.log('✅ [Panier] Utilisateur validé:', utilisateur_id);
+
+  // CRITIQUE: Fonction pour récupérer taille_id depuis l'API
+  const getTailleIdFromAPI = async (tailleName: string): Promise<number | null> => {
+    try {
+      console.log(`🔍 [Panier] Recherche taille_id pour "${tailleName}"`);
+      
+      const token = localStorage.getItem('token') || 
+                   localStorage.getItem('authToken') || 
+                   JSON.parse(localStorage.getItem('userData') || '{}').token;
+      
+      const response = await fetch(apiUrl('magasin/tailles'), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.warn(`⚠️ [Panier] API tailles failed (${response.status})`);
+        return null;
+      }
+
+      const tailles = await response.json();
+      console.log(`📋 [Panier] Tailles API:`, tailles);
+      
+      const tailleTrouvee = tailles.find((t: any) => 
+        t.nom && t.nom.toLowerCase() === tailleName.toLowerCase()
+      );
+      
+      if (tailleTrouvee?.id) {
+        console.log(`✅ [Panier] taille_id trouvé: "${tailleName}" -> ${tailleTrouvee.id}`);
+        return Number(tailleTrouvee.id);
+      }
+      
+      console.warn(`⚠️ [Panier] Taille "${tailleName}" non trouvée`);
+      return null;
+    } catch (error) {
+      console.error(`❌ [Panier] Erreur API tailles:`, error);
+      return null;
+    }
+  };
+
+  // CRITIQUE: Préparation des articles avec le snapshot
+  console.log('📝 [Panier] Préparation des articles pour la commande (depuis snapshot)...');
+  const articlesCommande = [];
+  
+  for (let index = 0; index < articlesSnapshot.length; index++) {
+    const article = articlesSnapshot[index];
+    console.log(`📝 [Panier] Traitement article ${index}:`, article);
+    
+    // ÉTAPE 1: Recherche du taille_id via différentes méthodes
+    let taille_id = null;
+    
+    // Méthode 1: Dans les stocks de l'article
+    if (article.stocks && Array.isArray(article.stocks)) {
+      const stockTrouve = article.stocks.find((stock: any) => 
+        stock.taille && stock.taille.toLowerCase() === article.taille.toLowerCase()
+      );
+      
+      if (stockTrouve && stockTrouve.id) {
+        taille_id = Number(stockTrouve.id);
+        console.log(`✅ [Panier] taille_id depuis stock article: ${taille_id}`);
+      }
+    }
+    
+    // Méthode 2: Via l'API si pas trouvé
+    if (!taille_id) {
+      taille_id = await getTailleIdFromAPI(article.taille);
+    }
+    
+    // Méthode 3: Mapping de fallback hardcodé
+    if (!taille_id) {
+      const tailleMapping: Record<string, number> = {
+        'XS': 1, 'S': 2, 'M': 3, 'L': 4, 'XL': 5, 'XXL': 6,
+        '34': 7, '36': 8, '38': 9, '40': 10, '42': 11, '44': 12
+      };
+      
+      taille_id = tailleMapping[article.taille.toUpperCase()];
+      
+      if (taille_id) {
+        console.log(`✅ [Panier] taille_id depuis mapping: ${taille_id}`);
+      }
+    }
+    
+    // ÉTAPE 2: Validation finale du taille_id
+    if (!taille_id || isNaN(taille_id) || taille_id <= 0) {
+      console.error(`❌ [Panier] IMPOSSIBLE de trouver taille_id pour "${article.taille}"`);
+      alert(`Erreur: Impossible de traiter la taille "${article.taille}" pour l'article "${article.nom}". Veuillez contacter le support.`);
+      return;
+    }
+
+    // ÉTAPE 3: Créer l'objet article avec TOUS les champs requis
+    const articleCommande = {
+      article_id: Number(article.id),
+      taille_id: Number(taille_id),
+      quantite: Number(article.quantite),
+      prix: Number(article.prix)
+    };
+
+    console.log(`✅ [Panier] Article ${index} préparé avec taille_id:`, articleCommande);
+    
+    // ÉTAPE 4: Validation finale
+    if (isNaN(articleCommande.article_id) || articleCommande.article_id <= 0) {
+      console.error(`❌ [Panier] article_id invalide pour article ${index}:`, articleCommande.article_id);
+      alert(`Erreur: ID article invalide pour "${article.nom}"`);
+      return;
+    }
+    
+    if (isNaN(articleCommande.taille_id) || articleCommande.taille_id <= 0) {
+      console.error(`❌ [Panier] taille_id invalide pour article ${index}:`, articleCommande.taille_id);
+      alert(`Erreur: ID taille invalide pour "${article.nom}" taille "${article.taille}"`);
+      return;
+    }
+    
+    if (isNaN(articleCommande.quantite) || articleCommande.quantite <= 0) {
+      console.error(`❌ [Panier] quantite invalide pour article ${index}:`, articleCommande.quantite);
+      alert(`Erreur: Quantité invalide pour "${article.nom}"`);
+      return;
+    }
+    
+    if (isNaN(articleCommande.prix) || articleCommande.prix <= 0) {
+      console.error(`❌ [Panier] prix invalide pour article ${index}:`, articleCommande.prix);
+      alert(`Erreur: Prix invalide pour "${article.nom}"`);
+      return;
+    }
+    
+    articlesCommande.push(articleCommande);
+  }
+
+  console.log('📋 [Panier] Articles finaux pour commande avec taille_id:', articlesCommande);
+
+  // ÉTAPE 5: Vérification finale
+  if (articlesCommande.length === 0) {
+    console.error('❌ [Panier] Aucun article valide après préparation!');
+    alert("Erreur: Aucun article valide dans le panier.");
     return;
   }
 
-  // Préparer les articles pour la commande
-  const articlesCommande = articles.map(article => ({
-    article_id: Number(article.id),
-    quantite: Number(article.quantite),
-    prix: Number(article.prix),
-    taille: article.taille ?? undefined,
-  }));
-
+  // ÉTAPE 6: Calculer le total
   const total = articlesCommande.reduce((acc, article) => acc + article.prix * article.quantite, 0);
 
-  // Créer la commande temporaire pour le panier
+  // ÉTAPE 7: Créer la commande avec la structure EXACTE attendue par le backend
   const nouvelleCommande = {
-    utilisateur_id,
+    utilisateur_id: utilisateur_id,
     articles: articlesCommande,
     total: Number(total.toFixed(2)),
     statut: 'en_attente',
     date: new Date().toISOString(),
   };
   
-  console.log('🛒 [Panier] Commande préparée:', nouvelleCommande);
+  // NOUVEAU: Sauvegarder la commande finale dans userData pour récupération
+  try {
+    const userDataObj = JSON.parse(localStorage.getItem('userData') || '{}');
+    userDataObj.commandeFinale = {
+      commande: nouvelleCommande,
+      articlesOriginaux: articlesSnapshot,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('userData', JSON.stringify(userDataObj));
+    console.log('💾 [Panier] Commande finale sauvegardée dans userData');
+  } catch (finalSaveError) {
+    console.warn('⚠️ [Panier] Erreur sauvegarde finale:', finalSaveError);
+  }
 
   try {
-    // MODIFIÉ: Utiliser articles au lieu de localArticles
-    const panierPourSauvegarde = {
-      articles: articles.map(article => ({
-        id: article.id,
-        nom: article.nom,
-        prix: article.prix,
-        quantite: article.quantite,
-        taille: article.taille,
-        image: article.images?.[0] || null
-      })),
-      total: total,
-      timestamp: Date.now(),
-      utilisateur_id: utilisateur_id
-    };
-    
-    localStorage.setItem('dernierPanier', JSON.stringify(panierPourSauvegarde));
-    console.log('💾 [Panier] Données sauvegardées dans localStorage:', panierPourSauvegarde);
-
-    console.log('🔄 [Panier] Création PaymentIntent pour commande...');
-    
     const token = localStorage.getItem('token') || 
                  localStorage.getItem('authToken') || 
                  JSON.parse(localStorage.getItem('userData') || '{}').token;
 
-    const response = await fetch(apiUrl('paiements'), {
+    const requestBody = {
+      amount: Math.round(total * 100),
+      currency: 'eur',
+      commande: nouvelleCommande,
+      description: `Commande magasin - ${articlesCommande.length} article(s)`
+    };
+
+    console.log('📡 [Panier] Requête finale avec articles sauvegardés:', requestBody);
+
+    const response = await fetch(apiUrl('paiements/stripe/create-payment-intent-commande'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
       credentials: 'include',
-      body: JSON.stringify({
-        amount: Math.round(total * 100), // Montant en centimes
-        currency: 'eur',
-        commande: nouvelleCommande,
-        utilisateur_id: utilisateur_id,
-        description: `Commande magasin - ${articlesCommande.length} article(s)`
-      })
-    });
-
-    console.log('📡 [Panier] Réponse API:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url
+      body: JSON.stringify(requestBody)
     });
 
     if (response.ok) {
       const data = await response.json();
-      console.log('✅ [Panier] Paiement créé avec succès:', data);
+      console.log('✅ [Panier] PaymentIntent créé:', data);
 
-      // CORRIGÉ: Gérer les différents formats de réponse
-      const commandeId = data.commandeId || data.commande_id;
-      const paymentIntentId = data.paymentIntentId || data.payment_intent_id;
+      // CORRIGÉ: Récupérer l'ID de commande depuis la réponse avec priorités
+      const commandeId = data.commande_id || data.commande?.id || data.commandeId;
       
       if (!commandeId) {
-        console.error('❌ [Panier] ID de commande manquant dans la réponse:', data);
-        throw new Error('ID de commande manquant dans la réponse du serveur');
+        console.error('❌ [Panier] ID de commande manquant dans la réponse:', {
+          response: data,
+          hasCommandeId: !!data.commande_id,
+          hasCommandeObj: !!data.commande,
+          hasCommandeObjId: !!data.commande?.id,
+          hasOldCommandeId: !!data.commandeId,
+          allKeys: Object.keys(data)
+        });
+        
+        // AJOUTÉ: Fallback - essayer de récupérer depuis userData si disponible
+        try {
+          const userDataObj = JSON.parse(localStorage.getItem('userData') || '{}');
+          const fallbackCommandeId = userDataObj.dernierCommandeId || userDataObj.derniereCommande?.commandeId;
+          
+          if (fallbackCommandeId) {
+            console.log('🔄 [Panier] Utilisation fallback commandeId depuis userData:', fallbackCommandeId);
+            const paiementUrl = `/pages/paiement?commande=${fallbackCommandeId}&userId=${utilisateur_id}`;
+            console.log('🔄 [Panier] Redirection avec fallback vers:', paiementUrl);
+            navigate(paiementUrl);
+            viderPanier();
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('❌ [Panier] Erreur fallback userData:', fallbackError);
+        }
+        
+        alert('Erreur: ID de commande non retourné par le serveur. Veuillez réessayer.');
+        return;
       }
 
-      // Sauvegarder les données dans localStorage pour le processus de paiement
-      localStorage.setItem('dernierPanier', JSON.stringify({
-        articles: articles,
-        total: total,
-        commandeId: commandeId,
-        paymentIntentId: paymentIntentId
-      }));
+      console.log('✅ [Panier] ID de commande récupéré:', commandeId);
 
-      // Rediriger vers la page de paiement
+      // CRITIQUE: Sauvegarder l'ID de commande dans userData
+      try {
+        const userDataObj = JSON.parse(localStorage.getItem('userData') || '{}');
+        userDataObj.dernierCommandeId = commandeId;
+        userDataObj.derniereCommande = {
+          commandeId,
+          paymentIntentId: data.payment_intent_id,
+          articles: articlesSnapshot,
+          total: total,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('userData', JSON.stringify(userDataObj));
+        console.log('💾 [Panier] ID de commande sauvegardé:', commandeId);
+      } catch (idSaveError) {
+        console.warn('⚠️ [Panier] Erreur sauvegarde ID commande:', idSaveError);
+      }
+
       const paiementUrl = `/pages/paiement?commande=${commandeId}&userId=${utilisateur_id}`;
       console.log('🔄 [Panier] Redirection vers:', paiementUrl);
       
       navigate(paiementUrl);
       
-      // CORRIGÉ: Utiliser la fonction locale viderPanier
+      // CRITIQUE: Vider le panier SEULEMENT après le succès
       viderPanier();
       
     } else {
-      let errorMessage = 'Erreur lors de la création de la commande';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
-        console.error('❌ [Panier] Détails erreur API:', errorData);
-      } catch (parseError) {
-        console.error('❌ [Panier] Impossible de parser l\'erreur:', parseError);
-      }
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ [Panier] Erreur API:', errorData);
       
-      setError(errorMessage);
+      if (errorData.error?.includes('Articles manquants')) {
+        console.error('❌ [Panier] DEBUG ARTICLES MANQUANTS AVEC SAUVEGARDES:');
+        console.error('❌ [Panier] Snapshot articles (sauvegardé):', articlesSnapshot);
+        console.error('❌ [Panier] Articles props (actuels):', articles);
+        console.error('❌ [Panier] Articles Redux (actuels):', panierRedux.articles);
+        console.error('❌ [Panier] Articles préparés:', articlesCommande);
+        console.error('❌ [Panier] Requête envoyée:', JSON.stringify(requestBody, null, 2));
+        
+        alert(`Erreur: Articles manquants côté serveur. 
+Vos articles ont été sauvegardés et vous pouvez réessayer.`);
+      } else {
+        alert(`Erreur: ${errorData.error || errorData.message || 'Erreur lors de la création de la commande'}`);
+      }
     }
 
   } catch (error: any) {
-    console.error('❌ [Panier] Erreur création commande:', error);
-    localStorage.removeItem('dernierPanier');
-    alert(`Erreur lors de la création de la commande: ${error.message}`);
+    console.error('❌ [Panier] Erreur réseau:', error);
+    alert(`Erreur réseau: ${error.message}
+Vos articles ont été sauvegardés et vous pouvez réessayer.`);
   }
 };
 
@@ -494,6 +748,31 @@ const RightSidePanel = ({
               position: 'relative'
             }}
           >
+            {/* AJOUTÉ: Bouton debug en développement */}
+            {process.env.NODE_ENV === 'development' && (
+              <div style={{
+                position: 'absolute',
+                top: '10px',
+                left: '10px',
+                zIndex: 1000
+              }}>
+                <button
+                  onClick={() => dispatch(debugPanier())}
+                  style={{
+                    background: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    padding: '5px 8px',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔍 Debug
+                </button>
+              </div>
+            )}
+
             {/* Header avec background différent */}
             <div style={{
               padding: '1.5rem 1.5rem 1rem',
@@ -515,6 +794,19 @@ const RightSidePanel = ({
                   }}
                 >
                   Panier
+                  {/* AJOUTÉ: Affichage debug du nombre d'articles */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <span style={{
+                      fontSize: '12px',
+                      color: '#007bff',
+                      marginLeft: '10px',
+                      background: '#e3f2fd',
+                      padding: '2px 6px',
+                      borderRadius: '4px'
+                    }}>
+                      {articles?.length || 0} articles
+                    </span>
+                  )}
                 </Title>
                 <DrawerCloseButton 
                   onClick={onClose}

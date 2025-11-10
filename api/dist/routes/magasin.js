@@ -386,16 +386,82 @@ router.put('/modifier/article/:id', async (req, res) => {
         return res.status(500).json({ message: error || "Erreur serveur lors de la modification de l'article." });
     }
 });
-// Endpoint pour obtenir les tailles existantes depuis la base de données
-router.get('/tailles', async (_req, res) => {
+// AJOUTÉ: Route pour récupérer toutes les tailles disponibles
+router.get('/tailles', verifyToken, async (req, res) => {
     try {
-        const client = new Magasin();
-        const tailles = await client.obtenirLesTailles(); // Cette méthode doit retourner [{ id, nom }, ...]
-        res.status(200).json({ tailles });
+        console.log('🔍 [Magasin] Récupération de toutes les tailles...');
+        const { default: MysqlConnector } = await import('../db/connector/mysqlconnector.js');
+        const mysqlConnector = MysqlConnector.getInstance();
+        // CORRIGÉ: Requête exacte selon votre structure DB
+        const taillesQuery = `
+      SELECT id, nom
+      FROM tailles 
+      ORDER BY nom ASC
+    `;
+        const tailles = await new Promise((resolve, reject) => {
+            mysqlConnector.query(taillesQuery, [], (error, results) => {
+                if (error) {
+                    console.error('❌ [Magasin] Erreur SELECT tailles:', error);
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
+        console.log(`✅ [Magasin] ${tailles.length} tailles récupérées:`, tailles.map(t => ({ id: t.id, nom: t.nom })));
+        res.status(200).json(tailles);
     }
     catch (error) {
-        console.error('Erreur lors de la récupération des tailles :', error);
-        res.status(500).json({ message: 'Erreur lors de la récupération des tailles.' });
+        console.error('❌ [Magasin] Erreur récupération tailles:', error);
+        res.status(500).json({
+            message: 'Erreur lors de la récupération des tailles',
+            error: error.message
+        });
+    }
+});
+// CORRIGÉ: Route de debug avec la vraie structure
+router.get('/debug/tailles-structure', verifyToken, async (req, res) => {
+    try {
+        const { default: MysqlConnector } = await import('../db/connector/mysqlconnector.js');
+        const mysqlConnector = MysqlConnector.getInstance();
+        const describeQuery = `DESCRIBE tailles`;
+        const structure = await new Promise((resolve, reject) => {
+            mysqlConnector.query(describeQuery, [], (error, results) => {
+                if (error) {
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
+        // Récupérer aussi toutes les tailles avec la vraie structure
+        const sampleQuery = `SELECT id, nom FROM tailles ORDER BY nom LIMIT 10`;
+        const sampleData = await new Promise((resolve, reject) => {
+            mysqlConnector.query(sampleQuery, [], (error, results) => {
+                if (error) {
+                    reject(error);
+                }
+                else {
+                    resolve(results);
+                }
+            });
+        });
+        res.status(200).json({
+            message: 'Structure de la table tailles',
+            structure: structure,
+            sampleData: sampleData,
+            expectedStructure: 'CREATE TABLE tailles (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(20) NOT NULL UNIQUE)',
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('❌ [Magasin] Erreur debug structure tailles:', error);
+        res.status(500).json({
+            message: 'Erreur lors de la récupération de la structure',
+            error: error.message
+        });
     }
 });
 // AJOUTÉ: Route pour récupérer le PaymentIntent d'une commande (pour la page de paiement)

@@ -382,13 +382,14 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
               )}
               
               <CardBody style={{ position: 'relative', zIndex: 2 }}>
-                {/* En-tête avec statut */}
+                {/* En-tête avec statut - MODIFIÉ: Sans ID d'échéance */}
                 <div style={headerStyle}>
                   <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
                     <FlexItem>
                       <Title headingLevel="h3" size="lg" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                         {icon}
-                        Échéance #{echeance.id}
+                        {/* SUPPRIMÉ: Échéance #{echeance.id} */}
+                        Échéance de paiement
                       </Title>
                     </FlexItem>
                     <FlexItem>

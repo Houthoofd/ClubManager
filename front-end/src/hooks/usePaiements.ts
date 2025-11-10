@@ -81,7 +81,52 @@ export const obtenirIdUtilisateur = (): number | null => {
   }
 };
 
-// Hook pour récupérer les échéances d'un utilisateur - SUPPRIMÉ les redirections automatiques
+// CORRIGÉ: Fonction utilitaire pour récupérer le token - priorité sur token direct et userData.token
+const obtenirToken = (): string | null => {
+  console.log('🔑 [Utils] Recherche token...');
+  
+  try {
+    // 1. PRIORITÉ: Token direct dans localStorage
+    let token = localStorage.getItem('token');
+    if (token) {
+      console.log('✅ [Utils] Token direct trouvé');
+      return token;
+    }
+
+    // 2. FALLBACK: userData.token
+    const userDataRaw = localStorage.getItem('userData');
+    if (userDataRaw) {
+      try {
+        const userData = JSON.parse(userDataRaw);
+        if (userData && userData.token) {
+          console.log('✅ [Utils] Token trouvé dans userData.token');
+          return userData.token;
+        }
+      } catch (parseError) {
+        console.warn('⚠️ [Utils] Erreur parsing userData pour token:', parseError);
+      }
+    }
+
+    // 3. Autres fallbacks
+    token = localStorage.getItem('authToken') || 
+           localStorage.getItem('jwt') || 
+           localStorage.getItem('accessToken');
+    
+    if (token) {
+      console.log('✅ [Utils] Token trouvé en fallback');
+      return token;
+    }
+
+    console.error('❌ [Utils] Aucun token trouvé');
+    return null;
+
+  } catch (error) {
+    console.error('❌ [Utils] Erreur récupération token:', error);
+    return null;
+  }
+};
+
+// Hook pour récupérer les échéances d'un utilisateur - CORRIGÉ l'utilisation du token
 export const useEcheancesUtilisateur = (userId: number | null) => {
   return useQuery({
     queryKey: ['echeances', userId],
@@ -90,92 +135,18 @@ export const useEcheancesUtilisateur = (userId: number | null) => {
       
       console.log(`🔍 [Hook] Récupération échéances pour utilisateur: ${userId}`);
 
-      // DEBUG: Vérifier TOUTES les clés possibles dans localStorage
-      console.log('🔍 [Hook] Contenu complet du localStorage:');
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        const value = localStorage.getItem(key!);
-        console.log(`  - ${key}: ${value?.substring(0, 50)}${value && value.length > 50 ? '...' : ''}`);
-      }
-
-      // Essayer plusieurs clés possibles pour le token
-      let token = localStorage.getItem('token') || 
-                 localStorage.getItem('authToken') || 
-                 localStorage.getItem('jwt') || 
-                 localStorage.getItem('accessToken');
-      
-      console.log(`🔑 [Hook] Token trouvé:`, !!token);
-      console.log(`🔑 [Hook] Source du token:`, 
-        localStorage.getItem('token') ? 'token' :
-        localStorage.getItem('authToken') ? 'authToken' :
-        localStorage.getItem('jwt') ? 'jwt' :
-        localStorage.getItem('accessToken') ? 'accessToken' : 'AUCUNE'
-      );
+      const token = obtenirToken();
 
       if (!token) {
-        console.error(`❌ [Hook] Aucun token trouvé dans localStorage`);
-        console.error(`❌ [Hook] Clés disponibles:`, Object.keys(localStorage));
-        
-        // Vérifier si l'utilisateur est connecté d'une autre manière
-        const userData = localStorage.getItem('userData');
-        console.log(`👤 [Hook] UserData disponible:`, !!userData);
-        if (userData) {
-          try {
-            const user = JSON.parse(userData);
-            console.log(`👤 [Hook] UserData parsé:`, { id: user.id, email: user.email, role: user.role });
-          } catch (e) {
-            console.error(`❌ [Hook] Erreur parsing userData:`, e);
-          }
-        }
-        
+        console.error(`❌ [Hook] Aucun token trouvé pour échéances`);
         throw new Error('Token manquant - veuillez vous reconnecter');
       }
 
-      // DEBUG: Afficher des infos sur le token
       console.log(`🔑 [Hook] Token présent - longueur: ${token.length} caractères`);
-      console.log(`🔑 [Hook] Token commence par: ${token.substring(0, 20)}...`);
-      console.log(`🔑 [Hook] Token finit par: ...${token.substring(token.length - 10)}`);
       
-      // Vérifier si le token n'est pas expiré (sans redirection)
-      try {
-        const tokenParts = token.split('.');
-        console.log(`🔑 [Hook] Parties du token: ${tokenParts.length}`);
-        
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          const now = Math.floor(Date.now() / 1000);
-          const timeUntilExpiry = payload.exp ? payload.exp - now : 0;
-          
-          console.log(`🔑 [Hook] Token payload:`, {
-            userId: payload.id,
-            email: payload.email,
-            role: payload.role,
-            exp: payload.exp,
-            iat: payload.iat,
-            timeUntilExpiry: `${Math.floor(timeUntilExpiry / 60)} minutes`,
-            isExpired: timeUntilExpiry <= 0
-          });
-          
-          if (payload.exp && payload.exp < now) {
-            console.error(`❌ [Hook] Token expiré depuis ${Math.floor((now - payload.exp) / 60)} minutes`);
-            // Nettoyer le token expiré
-            localStorage.removeItem('token');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('jwt');
-            localStorage.removeItem('accessToken');
-            throw new Error('Token expiré - veuillez vous reconnecter');
-          }
-        } else {
-          console.warn(`⚠️ [Hook] Token ne semble pas être un JWT valide (${tokenParts.length} parties au lieu de 3)`);
-        }
-      } catch (tokenError) {
-        console.warn(`⚠️ [Hook] Impossible de décoder le token:`, tokenError);
-        console.warn(`⚠️ [Hook] Le token pourrait ne pas être un JWT standard`);
-      }
-
       const response = await fetch(`${apiUrl(`paiements/echeances/${userId}`)}`, {
         method: 'GET',
-        credentials: 'include',
+        credentials: 'include', // IMPORTANT: Envoie les cookies automatiquement
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -186,28 +157,12 @@ export const useEcheancesUtilisateur = (userId: number | null) => {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
-        url: response.url,
-        headers: {
-          'content-type': response.headers.get('content-type'),
-          'authorization': response.headers.get('authorization') ? 'présent' : 'absent'
-        }
+        url: response.url
       });
 
       if (response.status === 401 || response.status === 403) {
-        console.error(`❌ [Hook] Erreur d'authentification (${response.status}) - Token probablement rejeté par le serveur`);
-        
-        // DEBUG: Lire la réponse d'erreur du serveur
-        try {
-          const errorResponse = await response.text();
-          console.error(`📄 [Hook] Réponse serveur:`, errorResponse);
-        } catch (e) {
-          console.error(`📄 [Hook] Impossible de lire la réponse d'erreur`);
-        }
-        
-        // NE PLUS REDIRIGER AUTOMATIQUEMENT - laisser l'utilisateur décider
-        console.warn(`⚠️ [Hook] Token rejeté par le serveur. L'utilisateur peut se reconnecter manuellement si nécessaire.`);
-        
-        throw new Error(`Authentification échouée (${response.status}): Token rejeté par le serveur - Cliquez sur "Se reconnecter" si nécessaire`);
+        console.error(`❌ [Hook] Erreur d'authentification (${response.status})`);
+        throw new Error(`Authentification échouée (${response.status}): Token rejeté par le serveur`);
       }
 
       if (!response.ok) {
@@ -223,86 +178,85 @@ export const useEcheancesUtilisateur = (userId: number | null) => {
     enabled: !!userId,
     staleTime: 30000,
     retry: (failureCount, error) => {
-      // Ne pas retry si erreur d'authentification
       if (error.message.includes('401') || error.message.includes('403') || error.message.includes('Token manquant')) {
         console.log(`🚫 [Hook] Pas de retry pour erreur d'authentification`);
         return false;
       }
-      // Retry jusqu'à 2 fois pour les autres erreurs
       return failureCount < 2;
     },
     retryDelay: 1000
   });
 };
 
-// Hook pour récupérer une échéance spécifique - SUPPRIMÉ les redirections automatiques
-export const useEcheanceDetails = (echeanceId: string | number | null, userId?: number | null) => {
+// Hook pour récupérer une échéance spécifique - OPTIMISÉ SANS CACHE EXCESSIF
+export const useEcheanceDetails = (echeanceId: string | null, userId: number | null) => {
   return useQuery({
     queryKey: ['echeance', echeanceId, userId],
     queryFn: async () => {
-      if (!echeanceId) return null;
-      
-      console.log(`🔍 [Hook] Récupération détails échéance: ${echeanceId}`);
-      
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        console.error(`❌ [Hook] Aucun token trouvé pour échéance`);
-        throw new Error('Token manquant - veuillez vous reconnecter');
+      if (!echeanceId || !userId) {
+        throw new Error('ID échéance ou utilisateur manquant');
       }
-      
-      const url = userId 
-        ? `${apiUrl(`paiements/echeance/${echeanceId}?userId=${userId}`)}`
-        : `${apiUrl(`paiements/echeance/${echeanceId}`)}`;
 
-      const response = await fetch(url, {
+      console.log('🔍 [useEcheanceDetails] Requête échéance:', { echeanceId, userId });
+
+      const token = obtenirToken();
+
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
+
+      const response = await fetch(apiUrl(`paiements/echeances/detail/${echeanceId}`), {
         method: 'GET',
-        credentials: 'include', // AJOUTÉ
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
 
-      if (response.status === 401 || response.status === 403) {
-        console.error(`❌ [Hook] Erreur d'authentification pour échéance (${response.status})`);
-        
-        // NE PLUS REDIRIGER AUTOMATIQUEMENT
-        throw new Error(`Authentification échouée pour échéance: Token rejeté - Reconnectez-vous si nécessaire`);
-      }
-
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Échéance non trouvée (${response.status}): ${errorText}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ [useEcheanceDetails] Erreur API:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        
+        if (response.status === 404) {
+          throw new Error('Échéance non trouvée');
+        } else if (response.status === 403) {
+          throw new Error('Accès non autorisé à cette échéance');
+        } else if (response.status === 401) {
+          throw new Error('Session expirée - veuillez vous reconnecter');
+        } else {
+          throw new Error(errorData.error || `Erreur ${response.status}: ${response.statusText}`);
+        }
       }
 
       const data = await response.json();
-      if (data.success && data.data) {
-        console.log(`✅ [Hook] Détails échéance récupérés:`, data.data);
-        return data.data;
-      } else {
-        throw new Error('Données d\'échéance invalides');
-      }
+      console.log('✅ [useEcheanceDetails] Données échéance reçues:', data);
+      
+      return data;
     },
-    enabled: !!echeanceId && (typeof echeanceId === 'string' || typeof echeanceId === 'number'),
-    staleTime: 60000,
-    retry: (failureCount, error) => {
-      if (error.message.includes('401') || error.message.includes('403')) {
-        return false;
-      }
-      return failureCount < 1;
-    }
+    enabled: !!(echeanceId && userId),
+    retry: 1, // Une seule tentative
+    retryDelay: 1000, // 1 seconde de délai
+    staleTime: 2 * 60 * 1000, // 2 minutes seulement
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always', // MODIFIÉ: Toujours refetch au mount pour avoir les données fraîches
+    refetchInterval: false, // Pas de polling automatique
   });
 };
 
-// Hook pour créer un PaymentIntent - CORRIGÉ avec auto-détection userId
+// Hook pour créer un PaymentIntent - CORRIGÉ l'URL selon la structure modulaire
 export const useCreatePaymentIntent = () => {
   return useMutation({
     mutationFn: async (data: {
       amount: number;
       currency?: string;
       echeanceId: string | number;
-      userId?: number | null; // Rendu optionnel
+      userId?: number | null;
       description?: string;
     }) => {
       console.log(`💳 [Hook] Création PaymentIntent - Données reçues:`, data);
@@ -360,9 +314,10 @@ export const useCreatePaymentIntent = () => {
       };
 
       console.log(`💳 [Hook] Corps de la requête envoyé (corrigé):`, requestBody);
-      console.log(`💳 [Hook] URL appelée:`, `${apiUrl('paiements/create-payment-intent')}`);
+      console.log(`💳 [Hook] URL appelée (CORRIGÉE):`, `${apiUrl('paiements/stripe/create-payment-intent')}`);
 
-      const response = await fetch(`${apiUrl('paiements/create-payment-intent')}`, {
+      // CORRIGÉ: Utiliser la vraie route modulaire
+      const response = await fetch(`${apiUrl('paiements/stripe/create-payment-intent')}`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -400,10 +355,8 @@ export const useCreatePaymentIntent = () => {
   });
 };
 
-// MODIFIÉ: Hook pour créer un PaymentIntent avec userId obligatoire en paramètre
+// SIMPLIFIÉ: Hook pour créer un PaymentIntent avec userId obligatoire - sans callbacks complexes
 export const useCreatePaymentIntentSecurise = (echeanceId: string | number, montant: number, userId: number) => {
-  const createPaymentIntent = useCreatePaymentIntent();
-  
   return useMutation({
     mutationFn: async (options?: {
       currency?: string;
@@ -424,40 +377,51 @@ export const useCreatePaymentIntentSecurise = (echeanceId: string | number, mont
         throw new Error(error);
       }
       
-      console.log(`🔒 [Hook Sécurisé] Création PaymentIntent pour échéance ${echeanceId}, utilisateur ${userId} (depuis URL), montant ${montant}`);
-      
-      const requestData = {
-        amount: montant,
+      const token = obtenirToken();
+
+      if (!token) {
+        throw new Error('Token d\'authentification manquant - reconnectez-vous');
+      }
+
+      const requestBody = {
+        amount: Math.round(montant * 100), // Convertir en centimes
         currency: options?.currency || 'eur',
         echeanceId: echeanceId,
-        userId: userId, // Utilisateur depuis l'URL - toujours défini
+        userId: userId,
         description: options?.description || `Paiement échéance #${echeanceId}`
       };
 
-      console.log(`📤 [Hook Sécurisé] Données envoyées (userId depuis URL):`, requestData);
+      console.log(`📤 [Hook Sécurisé] Données envoyées:`, requestBody);
 
-      const result = await createPaymentIntent.mutateAsync(requestData);
+      const response = await fetch(`${apiUrl('paiements/stripe/create-payment-intent')}`, {
+        method: 'POST',
+        credentials: 'include', // IMPORTANT: Envoie les cookies automatiquement
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-      console.log(`✅ [Hook Sécurisé] Succès - PaymentIntent créé avec userId depuis URL:`, result);
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: await response.text() };
+        }
+        console.error(`❌ [Hook Sécurisé] Erreur (${response.status}):`, errorData);
+        throw new Error(errorData.error || `Erreur serveur ${response.status}`);
+      }
 
+      const result = await response.json();
+      console.log(`✅ [Hook Sécurisé] PaymentIntent créé:`, result);
       return result;
-    },
-    onSuccess: (data) => {
-      console.log(`🎉 [Hook Sécurisé] onSuccess déclenché (userId depuis URL):`, data);
-      if (createPaymentIntent.onSuccess) {
-        createPaymentIntent.onSuccess(data);
-      }
-    },
-    onError: (error) => {
-      console.error(`❌ [Hook Sécurisé] onError déclenché (userId depuis URL):`, error);
-      if (createPaymentIntent.onError) {
-        createPaymentIntent.onError(error);
-      }
     }
   });
 };
 
-// Hook pour confirmer un paiement - CORRIGÉ l'URL
+// Hook pour confirmer un paiement - CORRIGÉ l'URL selon la structure modulaire
 export const useConfirmPayment = () => {
   const queryClient = useQueryClient();
   
@@ -468,11 +432,12 @@ export const useConfirmPayment = () => {
       userId: number;
       amount: number;
     }) => {
-      console.log(`✅ [Hook] Confirmation paiement:`, data);
+      console.log(`✅ [Hook] Confirmation paiement via route modulaire:`, data);
 
-      const response = await fetch(`${apiUrl('paiements/confirm-payment')}`, {
+      // CORRIGÉ: Utiliser la vraie route modulaire
+      const response = await fetch(`${apiUrl('paiements/confirmation/confirm-payment')}`, {
         method: 'POST',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -515,11 +480,12 @@ export const usePaiements = (filters?: {
       if (filters?.limit) params.append('limit', filters.limit.toString());
       if (filters?.offset) params.append('offset', filters.offset.toString());
 
-      const url = `${apiUrl(`paiements?${params.toString()}`)}`;
+      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
+      const url = `${apiUrl(`paiements/crud?${params.toString()}`)}`;
 
       const response = await fetch(url, {
         method: 'GET',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -536,7 +502,7 @@ export const usePaiements = (filters?: {
   });
 };
 
-// Hook pour créer une nouvelle échéance (admin)
+// Hook pour créer une nouvelle échéance (admin) - CORRIGÉ l'URL
 export const useCreateEcheance = () => {
   const queryClient = useQueryClient();
   
@@ -548,9 +514,10 @@ export const useCreateEcheance = () => {
       date_echeance: string;
       statut?: string;
     }) => {
+      // CORRIGÉ: Utiliser la vraie route modulaire des échéances
       const response = await fetch(`${apiUrl('paiements/echeances')}`, {
         method: 'POST',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -615,7 +582,8 @@ export const useDeleteEcheance = () => {
   
   return useMutation({
     mutationFn: async (echeanceId: number) => {
-      const response = await fetch(`${apiUrl(`paiements/echeance/${echeanceId}`)}`, {
+      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
+      const response = await fetch(`${apiUrl(`paiements/crud/${echeanceId}`)}`, {
         method: 'DELETE',
         credentials: 'include', // AJOUTÉ
         headers: {
@@ -636,7 +604,7 @@ export const useDeleteEcheance = () => {
   });
 };
 
-// Hook pour créer un paiement générique
+// Hook pour créer un paiement générique - CORRIGÉ l'URL
 export const useCreerPaiement = () => {
   const queryClient = useQueryClient();
   
@@ -654,11 +622,12 @@ export const useCreerPaiement = () => {
       abonnement_id?: number;
       echeance_id?: number;
     }) => {
-      console.log(`💳 [Hook] Création paiement:`, data);
+      console.log(`💳 [Hook] Création paiement via CRUD:`, data);
 
-      const response = await fetch(`${apiUrl('paiements')}`, {
+      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
+      const response = await fetch(`${apiUrl('paiements/crud')}`, {
         method: 'POST',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -807,7 +776,7 @@ export const useTraiterPaiementBitcoin = () => {
   });
 };
 
-// Hook pour modifier un paiement
+// Hook pour modifier un paiement - CORRIGÉ l'URL
 export const useModifierPaiement = () => {
   const queryClient = useQueryClient();
   
@@ -821,9 +790,10 @@ export const useModifierPaiement = () => {
         description?: string;
       };
     }) => {
-      const response = await fetch(`${apiUrl(`paiements/${data.paiementId}`)}`, {
+      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
+      const response = await fetch(`${apiUrl(`paiements/crud/${data.paiementId}`)}`, {
         method: 'PUT',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -844,15 +814,16 @@ export const useModifierPaiement = () => {
   });
 };
 
-// Hook pour supprimer un paiement
+// Hook pour supprimer un paiement - CORRIGÉ l'URL
 export const useSupprimerPaiement = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (paiementId: number) => {
-      const response = await fetch(`${apiUrl(`paiements/${paiementId}`)}`, {
+      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
+      const response = await fetch(`${apiUrl(`paiements/crud/${paiementId}`)}`, {
         method: 'DELETE',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

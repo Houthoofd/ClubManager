@@ -3,6 +3,16 @@ import { verifyToken } from '../middleware/auth.js';
 
 const router = Router();
 
+// CORRIGÉ: Utiliser les VRAIES routes du module paiements modulaire selon paiements.ts
+const PAYMENT_ENDPOINTS = {
+  createPaymentIntent: '/paiements/stripe/create-payment-intent-commande',
+  confirmPayment: '/paiements/confirmation/confirm-payment-commande', 
+  webhook: '/paiements/webhooks/stripe',
+  // AJOUTÉ: Nouvelles routes selon la structure réelle
+  health: '/paiements/health',
+  debug: '/paiements/debug/routes'
+};
+
 /**
  * GET /api/commandes
  * Récupérer toutes les commandes avec leurs détails
@@ -587,6 +597,161 @@ router.get('/debug/structure', verifyToken, async (req: Request, res: Response) 
     res.status(500).json({ 
       message: 'Erreur lors de la récupération de la structure', 
       error: error.message 
+    });
+  }
+});
+
+// CORRIGÉ: Exemple de route utilisant le bon endpoint de confirmation de paiement
+router.post('/paiement/confirmation', verifyToken, async (req: Request, res: Response) => {
+  try {
+    const { commandeId } = req.body;
+    
+    console.log('🔄 [API] Confirmation de paiement pour la commande:', commandeId);
+    
+    // Exemple d'utilisation du endpoint de confirmation de paiement
+    const paymentResult = await processPayment({ commandeId });
+    
+    res.json({
+      message: 'Paiement confirmé',
+      data: paymentResult
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [API] Erreur confirmation paiement:', error);
+    res.status(500).json({ 
+      message: 'Erreur lors de la confirmation du paiement', 
+      error: error.message 
+    });
+  }
+});
+
+// CORRIGÉ: Utiliser le bon endpoint dans la fonction de traitement de paiement
+async function processPayment(commandeData: any) {
+  try {
+    console.log(`🔄 [Commandes] Appel endpoint de confirmation:`, PAYMENT_ENDPOINTS.confirmPayment);
+    
+    // CRITIQUE: Vérifier que l'endpoint existe avant l'appel
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+    
+    // Test de santé du module paiements
+    try {
+      const healthResponse = await fetch(`${baseUrl}${PAYMENT_ENDPOINTS.health}`);
+      const healthData = await healthResponse.json();
+      console.log(`🏥 [Commandes] Santé module paiements:`, healthData.status);
+    } catch (healthError) {
+      console.warn(`⚠️ [Commandes] Module paiements possiblement indisponible:`, healthError);
+    }
+
+    // CORRIGÉ: Utiliser le bon endpoint avec structure modulaire
+    const response = await fetch(`${baseUrl}${PAYMENT_ENDPOINTS.confirmPayment}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.INTERNAL_API_TOKEN || ''}`
+      },
+      body: JSON.stringify(commandeData)
+    });
+
+    console.log(`📡 [Commandes] Réponse confirmation paiement:`, {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ [Commandes] Erreur confirmation paiement:`, {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        endpoint: PAYMENT_ENDPOINTS.confirmPayment
+      });
+      
+      throw new Error(`Erreur de confirmation: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ [Commandes] Paiement confirmé avec succès:`, result);
+    return result;
+    
+  } catch (error) {
+    console.error('❌ [Commandes] Erreur lors de la confirmation de paiement:', error);
+    throw error;
+  }
+}
+
+// AJOUTÉ: Fonction pour valider que les endpoints de paiement existent
+async function validatePaymentEndpoints() {
+  const endpoints = Object.values(PAYMENT_ENDPOINTS);
+  const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+  
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, { method: 'GET' });
+      if (response.status === 404) {
+        console.warn(`⚠️ [Commandes] Endpoint non disponible: ${endpoint}`);
+      } else {
+        console.log(`✅ [Commandes] Endpoint validé: ${endpoint}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ [Commandes] Impossible de valider: ${endpoint}`, error);
+    }
+  }
+}
+
+// Dans la route de test ou d'initialisation - MISE À JOUR:
+router.get('/debug/payment-endpoints', async (req, res) => {
+  try {
+    const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+    
+    // Tester tous les endpoints
+    const endpointTests = await Promise.all(
+      Object.entries(PAYMENT_ENDPOINTS).map(async ([name, endpoint]) => {
+        try {
+          const testResponse = await fetch(`${baseUrl}${endpoint}`, { method: 'GET' });
+          return {
+            name,
+            endpoint,
+            status: testResponse.status,
+            available: testResponse.status !== 404
+          };
+        } catch (error) {
+          return {
+            name,
+            endpoint,
+            status: 'ERROR',
+            available: false,
+            error: (error as Error).message
+          };
+        }
+      })
+    );
+
+    res.json({
+      message: 'Endpoints de paiement utilisés par le module commandes',
+      endpoints: PAYMENT_ENDPOINTS,
+      tests: endpointTests,
+      note: 'Structure modulaire selon paiements.ts: /paiements/{sous-module}/{action}',
+      availableSubmodules: {
+        crud: 'CRUD principal - /paiements/crud/',
+        stripe: 'Intégration Stripe - /paiements/stripe/',
+        confirmation: 'Confirmation paiements - /paiements/confirmation/',
+        webhooks: 'Webhooks - /paiements/webhooks/',
+        echeances: 'Échéances - /paiements/echeances/'
+      },
+      correctRoutes: {
+        confirmPaymentCommande: '/paiements/confirmation/confirm-payment-commande',
+        confirmPaymentEcheance: '/paiements/confirmation/confirm-payment',
+        createPaymentIntentCommande: '/paiements/stripe/create-payment-intent-commande',
+        createPaymentIntentEcheance: '/paiements/stripe/create-payment-intent',
+        webhookStripe: '/paiements/webhooks/stripe'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erreur lors du test des endpoints',
+      error: (error as Error).message
     });
   }
 });

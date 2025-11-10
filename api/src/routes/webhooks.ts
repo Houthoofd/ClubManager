@@ -73,6 +73,21 @@ router.post('/stripe', async (req: WebhookRequest, res: Response) => {
   }
 });
 
+// POST - Webhook de test pour développement
+router.post('/test', async (req, res) => {
+  const event = req.body;
+
+  try {
+    console.log('🔔 [Webhooks] Webhook de test reçu:', event);
+
+    // Répondre avec un succès immédiat
+    return res.status(200).json({ received: true });
+  } catch (error: any) {
+    console.error('❌ [Webhooks] Erreur traitement webhook de test:', error);
+    return res.status(400).json({ error: 'Erreur traitement webhook de test' });
+  }
+});
+
 async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promise<void> {
   console.log('✅ [Webhook] Paiement réussi:', paymentIntent.id);
   
@@ -193,12 +208,20 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
 
     // 4. Enregistrer l'historique du paiement pour traçabilité
     try {
-      const enregistrementResult = await paiements.enregistrerPaiementEcheance({
-        utilisateur_id: parseInt(utilisateurId || '0'),
-        montant: montantPaye,
+      // CORRIGÉ: Utiliser les variables correctes avec validation
+      if (!utilisateurId) {
+        console.warn('⚠️ [Webhook] utilisateurId manquant pour enregistrement historique');
+        return;
+      }
+
+      const enregistrementResult = await paiements.enregistrerPaiement({
+        utilisateur_id: parseInt(utilisateurId),
+        montant: paymentIntent.amount / 100, // CORRIGÉ: utiliser paymentIntent.amount
         methode_paiement: 'stripe',
         stripe_payment_intent_id: paymentIntent.id,
-        statut: 'confirme'
+        statut: 'reussi',
+        description: `Webhook Stripe - ${paymentIntent.description || 'Paiement'}`,
+        abonnement_id: paymentIntent.metadata?.abonnement_id ? parseInt(paymentIntent.metadata.abonnement_id) : null
       });
       
       console.log(`📝 [Webhook] Historique paiement enregistré:`, enregistrementResult);
@@ -281,7 +304,7 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise
 
     // 3. Enregistrer l'échec de paiement - CORRIGÉ: Retirer les propriétés non supportées
     try {
-      const enregistrementResult = await paiements.enregistrerPaiementEcheance({
+      const enregistrementResult = await paiements.enregistrerPaiement({
         utilisateur_id: parseInt(utilisateurId || '0'),
         montant: paymentIntent.amount / 100,
         methode_paiement: 'stripe',
@@ -412,4 +435,7 @@ async function handleSubscriptionChange(
   }
 }
 
+console.log('✅ [Webhooks] Routes webhooks chargées');
+
+// CORRIGÉ: Export par défaut au lieu de named export
 export default router;

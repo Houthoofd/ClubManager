@@ -369,64 +369,212 @@ export class Magasin {
     });
   }
 
-  async ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult> {
+  // CORRIGÉ: Une seule implémentation d'ajouterCommande avec gestion complète et types corrects
+  async ajouterCommande(data: NouvelleCommande): Promise<ConfirmationResult & { id?: number; insertId?: number }> {
+    console.log('📦 [Magasin] ajouterCommande appelée avec:', data);
+
+    // CRITIQUE: Valider les données reçues
+    const { utilisateur_id, articles, total, date, statut } = data;
+    
+    console.log('🔍 [Magasin] Données extraites pour ajouterCommande:', {
+      utilisateur_id,
+      articles_count: articles?.length || 0,
+      articles_sample: articles?.[0],
+      total,
+      date,
+      statut
+    });
+
+    // AJOUTÉ: Validation finale des articles avant insertion
+    if (!articles || !Array.isArray(articles) || articles.length === 0) {
+      console.error('❌ [Magasin] Articles invalides dans ajouterCommande:', articles);
+      return {
+        isConfirm: false,
+        message: 'Articles invalides ou manquants'
+      };
+    }
+
+    // CORRIGÉ: Vérifier que tous les taille_id sont présents et valides en gérant les types corrects
+    const articlesAvecTailleIdInvalide = articles.filter((article: any) => {
+      // L'article peut avoir soit taille_id (number) soit taille (string)
+      const hasTailleId = article.taille_id && !isNaN(parseInt(String(article.taille_id))) && parseInt(String(article.taille_id)) > 0;
+      const hasTaille = article.taille && String(article.taille).trim().length > 0;
+      
+      return !hasTailleId && !hasTaille;
+    });
+
+    if (articlesAvecTailleIdInvalide.length > 0) {
+      console.error('❌ [Magasin] STOP: Articles sans taille_id ni taille détectés:', articlesAvecTailleIdInvalide);
+      return {
+        isConfirm: false,
+        message: `${articlesAvecTailleIdInvalide.length} article(s) n'ont ni taille_id ni taille valides`
+      };
+    }
+
+    console.log('✅ [Magasin] Tous les articles ont des informations de taille valides, procédure de création...');
+
     try {
-      // Récupérer la map tailleNom -> tailleId
+      // Récupérer la map tailleNom -> tailleId si nécessaire
       const tailleMap = await this.getTailleMap();
 
       return new Promise((resolve, reject) => {
         this.mysqlConnector.beginTransaction((err, connection) => {
           if (err || !connection) {
-            return reject({ isConfirm: false, message: 'Erreur transaction: ' + (err?.message || 'Connection undefined') });
+            return resolve({ 
+              isConfirm: false, 
+              message: 'Erreur transaction: ' + (err?.message || 'Connection undefined') 
+            });
           }
 
-          // Insertion commande
-          const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, statut, date_commande) VALUES (?, ?, ?)`;
-          this.mysqlConnector.query(sqlInsertCommande, [data.utilisateur_id, data.statut, data.date], (errCommande, resCommande) => {
-            if (errCommande) {
-              this.mysqlConnector.rollback(connection);
-              return reject({ isConfirm: false, message: 'Erreur commande: ' + errCommande.message });
-            }
-
-            const commandeId = resCommande.insertId;
-            console.log("commandeId:", commandeId);
-
-            // Construire valeursArticlesFinales *après* avoir la commandeId
-            const valeursArticlesFinales = data.articles.map((article:any) => [
-              commandeId,
-              article.article_id,
-              article.taille ? tailleMap[article.taille] || null : null,
-              article.quantite || 1,
-              article.prix,
-            ]);
-
-            console.log("valeursArticlesFinales:", valeursArticlesFinales);
-
-            const sqlInsertArticles = `
-              INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
-              VALUES ?
-            `;
-            this.mysqlConnector.query(sqlInsertArticles, [valeursArticlesFinales], (errArticles) => {
-              if (errArticles) {
+          // 1. Insertion commande principale
+          const sqlInsertCommande = `INSERT INTO commandes (utilisateur_id, total, date_commande, statut, created_at) VALUES (?, ?, ?, ?, NOW())`;
+          
+          this.mysqlConnector.query(
+            sqlInsertCommande, 
+            [utilisateur_id, total || 0, date, statut || 'en_attente'], 
+            (errCommande, resCommande) => {
+              if (errCommande) {
                 this.mysqlConnector.rollback(connection);
-                return reject({ isConfirm: false, message: 'Erreur articles: ' + errArticles.message });
+                console.error('❌ [Magasin] Erreur insertion commande:', errCommande);
+                return resolve({ 
+                  isConfirm: false, 
+                  message: 'Erreur commande: ' + errCommande.message 
+                });
               }
 
-              this.mysqlConnector.commit(connection, (errCommit) => {
-                if (errCommit) {
-                  this.mysqlConnector.rollback(connection);
-                  return reject({ isConfirm: false, message: 'Erreur commit: ' + errCommit.message });
-                }
+              const commandeId = resCommande.insertId;
+              console.log('✅ [Magasin] Commande créée, ID:', commandeId);
 
-                resolve({ isConfirm: true, message: "Commande créée avec succès, en attente de paiement" });
-              });
-            });
-          });
+              // 2. CORRIGÉ: Préparer les articles avec gestion correcte des types
+              console.log('📝 [Magasin] Préparation des articles pour insertion...');
+              
+              try {
+                const valeursArticles = articles.map((article: any, index: number) => {
+                  // CORRIGÉ: Convertir et valider CHAQUE champ individuellement avec les bons types
+                  const article_id = parseInt(String(article.article_id));
+                  let taille_id: number;
+
+                  // Si l'article a déjà un taille_id, l'utiliser
+                  if (article.taille_id) {
+                    taille_id = parseInt(String(article.taille_id));
+                  } 
+                  // Sinon, essayer de le résoudre via le nom de taille
+                  else if (article.taille) {
+                    const tailleString = String(article.taille);
+                    taille_id = tailleMap[tailleString];
+                    if (!taille_id) {
+                      throw new Error(`Article ${index}: Taille "${tailleString}" inconnue dans la base de données`);
+                    }
+                  } else {
+                    throw new Error(`Article ${index}: Ni taille_id ni taille fournis`);
+                  }
+
+                  const quantite = parseInt(String(article.quantite)) || 1;
+                  const prix = parseFloat(String(article.prix));
+
+                  console.log(`📝 [Magasin] Article ${index} conversion:`, {
+                    original: {
+                      article_id: article.article_id,
+                      taille_id: article.taille_id,
+                      taille: article.taille,
+                      quantite: article.quantite,
+                      prix: article.prix
+                    },
+                    converted: { article_id, taille_id, quantite, prix },
+                    types: {
+                      article_id: typeof article_id,
+                      taille_id: typeof taille_id,
+                      quantite: typeof quantite,
+                      prix: typeof prix
+                    }
+                  });
+
+                  // CRITIQUE: Vérification finale avec validation stricte
+                  if (!article_id || isNaN(article_id) || article_id <= 0) {
+                    throw new Error(`Article ${index}: article_id invalide après conversion (${article_id})`);
+                  }
+                  if (!taille_id || isNaN(taille_id) || taille_id <= 0) {
+                    throw new Error(`Article ${index}: taille_id invalide après conversion (${taille_id})`);
+                  }
+                  if (!quantite || isNaN(quantite) || quantite <= 0) {
+                    throw new Error(`Article ${index}: quantite invalide après conversion (${quantite})`);
+                  }
+                  if (isNaN(prix) || prix < 0) {
+                    throw new Error(`Article ${index}: prix invalide après conversion (${prix})`);
+                  }
+
+                  return [commandeId, article_id, taille_id, quantite, prix];
+                });
+
+                console.log('📊 [Magasin] Articles préparés avec types validés:', {
+                  count: valeursArticles.length,
+                  sample: valeursArticles[0],
+                  all_taille_ids: valeursArticles.map(v => v[2]) // Index 2 = taille_id
+                });
+
+                // 3. Insertion des articles
+                const sqlInsertArticles = `
+                  INSERT INTO commande_articles (commande_id, article_id, taille_id, quantite, prix)
+                  VALUES ?
+                `;
+
+                this.mysqlConnector.query(
+                  sqlInsertArticles, 
+                  [valeursArticles], 
+                  (errArticles) => {
+                    if (errArticles) {
+                      this.mysqlConnector.rollback(connection);
+                      console.error('❌ [Magasin] Erreur insertion articles:', errArticles);
+                      console.error('❌ [Magasin] Valeurs problématiques:', valeursArticles);
+                      
+                      return resolve({ 
+                        isConfirm: false, 
+                        message: 'Erreur articles: ' + errArticles.message 
+                      });
+                    }
+
+                    // 4. Commit transaction
+                    this.mysqlConnector.commit(connection, (errCommit) => {
+                      if (errCommit) {
+                        this.mysqlConnector.rollback(connection);
+                        return resolve({ 
+                          isConfirm: false, 
+                          message: 'Erreur commit: ' + errCommit.message 
+                        });
+                      }
+
+                      console.log('✅ [Magasin] Transaction réussie - Commande et articles créés');
+
+                      // CORRIGÉ: Retourner le résultat avec l'ID
+                      resolve({ 
+                        isConfirm: true, 
+                        message: "Commande créée avec succès", 
+                        id: commandeId,
+                        insertId: commandeId
+                      });
+                    });
+                  }
+                );
+
+              } catch (preparationError: any) {
+                this.mysqlConnector.rollback(connection);
+                console.error('❌ [Magasin] Erreur préparation articles:', preparationError);
+                resolve({
+                  isConfirm: false,
+                  message: `Erreur préparation: ${preparationError.message}`
+                });
+              }
+            }
+          );
         });
       });
-    } catch (error) {
-      console.error("Erreur dans ajouterCommande:", error);
-      return { isConfirm: false, message: "Erreur lors de la création de la commande" };
+
+    } catch (error: any) {
+      console.error('❌ [Magasin] Erreur générale ajouterCommande:', error);
+      return {
+        isConfirm: false,
+        message: `Erreur ajouterCommande: ${error.message}`
+      };
     }
   }
 
@@ -565,21 +713,109 @@ export class Magasin {
     });
   }
 
-  // Ajouter cette méthode manquante
+  // CORRIGÉ: Méthode creerCommande avec validation des types
   creerCommande(
     utilisateur_id: number,
     articles: any[],
     total: number,
     date: string,
-    statut = 'en_attente'
-  ): Promise<ConfirmationResult> {
-    const commande = { 
-      utilisateur_id, 
-      articles, 
-      total, 
-      date, 
-      statut 
-    };
-    return this.ajouterCommande(commande);
+    statut: string
+  ): Promise<ConfirmationResult & { id?: number; insertId?: number }> {
+    return new Promise(async (resolve, reject) => {
+      console.log('📦 [Magasin] creerCommande appelée - délégation vers ajouterCommande');
+
+      // AJOUTÉ: Validation critique des articles et taille_id AVANT traitement
+      console.log('🔍 [Magasin] Validation CRITIQUE des articles avec taille_id...');
+      
+      if (!articles || !Array.isArray(articles) || articles.length === 0) {
+        console.error('❌ [Magasin] Articles manquants ou invalides:', articles);
+        return resolve({
+          isConfirm: false,
+          message: 'Articles manquants ou invalides pour la commande'
+        });
+      }
+
+      // CRITIQUE: Vérifier chaque article individuellement avec gestion des types
+      for (let i = 0; i < articles.length; i++) {
+        const article = articles[i];
+        console.log(`🔍 [Magasin] Validation article ${i}:`, article);
+        
+        // CORRIGÉ: Validation de article_id avec conversion de type
+        const articleIdNum = parseInt(String(article.article_id));
+        if (!article.article_id || isNaN(articleIdNum) || articleIdNum <= 0) {
+          console.error(`❌ [Magasin] Article ${i}: article_id invalide:`, article.article_id);
+          return resolve({
+            isConfirm: false,
+            message: `Article ${i}: ID article invalide (${article.article_id})`
+          });
+        }
+        
+        // CRITIQUE: Vérification stricte du taille_id OU taille avec conversion de type
+        let tailleIdValide = false;
+        if (article.taille_id) {
+          const tailleIdNum = parseInt(String(article.taille_id));
+          tailleIdValide = !isNaN(tailleIdNum) && tailleIdNum > 0;
+        } else if (article.taille) {
+          const tailleString = String(article.taille).trim();
+          tailleIdValide = tailleString.length > 0;
+        }
+        
+        if (!tailleIdValide) {
+          console.error(`❌ [Magasin] Article ${i}: taille_id INVALIDE ou MANQUANT:`, {
+            taille_id_original: article.taille_id,
+            taille_original: article.taille,
+            type_taille_id: typeof article.taille_id,
+            type_taille: typeof article.taille
+          });
+          return resolve({
+            isConfirm: false,
+            message: `Article ${i}: taille_id et taille manquants ou invalides. Vérifiez la sélection de taille.`
+          });
+        }
+        
+        // CORRIGÉ: Validation de quantite avec conversion de type
+        const quantiteNum = parseInt(String(article.quantite));
+        if (!article.quantite || isNaN(quantiteNum) || quantiteNum <= 0) {
+          console.error(`❌ [Magasin] Article ${i}: quantite invalide:`, article.quantite);
+          return resolve({
+            isConfirm: false,
+            message: `Article ${i}: Quantité invalide (${article.quantite})`
+          });
+        }
+        
+        // CORRIGÉ: Validation de prix avec conversion de type
+        const prixNum = parseFloat(String(article.prix));
+        if (!article.prix || isNaN(prixNum) || prixNum < 0) {
+          console.error(`❌ [Magasin] Article ${i}: prix invalide:`, article.prix);
+          return resolve({
+            isConfirm: false,
+            message: `Article ${i}: Prix invalide (${article.prix})`
+          });
+        }
+      }
+
+      console.log('✅ [Magasin] Tous les articles ont passé la validation critique');
+
+      try {
+        // Déléguer à ajouterCommande avec la structure correcte
+        const commandeResult = await this.ajouterCommande({
+          utilisateur_id,
+          articles,
+          total,
+          date,
+          statut
+        });
+
+        console.log('📦 [Magasin] Résultat ajouterCommande:', commandeResult);
+        resolve(commandeResult);
+
+      } catch (error: any) {
+        console.error('❌ [Magasin] Erreur dans creerCommande:', error);
+        resolve({
+          isConfirm: false,
+          message: `Erreur création commande: ${error.message}`
+        });
+      }
+    });
   }
 }
