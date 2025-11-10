@@ -156,7 +156,7 @@ async function startServer() {
         catch (error) {
             console.warn('⚠️ [Server] Module stocks non disponible:', error);
         }
-        // Routes principales (API)
+        // Routes principales (API) - CORRIGÉ: Vérifier l'ordre des routes
         app.use('/auth', authRouter);
         app.use('/email', messagesRouter);
         app.use('/', indexRouter);
@@ -231,12 +231,18 @@ async function startServer() {
             app.use(express.static(staticPath));
             // SPA fallback - rediriger toutes les routes vers index.html
             app.get('*', (req, res) => {
-                // Éviter de rediriger les routes API
+                // CORRIGÉ: Éviter de rediriger les routes API
                 if (req.path.startsWith('/api/') ||
+                    req.path.startsWith('/auth/') || // AJOUTÉ: Protéger les routes auth
                     req.path.startsWith('/health/') ||
                     req.path.startsWith('/public/') ||
-                    req.path.startsWith('/uploads/')) {
-                    return res.status(404).json({ error: 'Route API non trouvée' });
+                    req.path.startsWith('/uploads/') ||
+                    req.path.startsWith('/test-')) { // AJOUTÉ: Protéger les routes de test
+                    return res.status(404).json({
+                        error: 'Route API non trouvée',
+                        path: req.path,
+                        method: req.method
+                    });
                 }
                 res.sendFile(path.join(staticPath, 'index.html'));
             });
@@ -244,6 +250,37 @@ async function startServer() {
         }
         else {
             console.warn('⚠️ [Server] Aucun build frontend trouvé - API seulement');
+            // AJOUTÉ: En mode API seulement, afficher les routes disponibles
+            app.get('*', (req, res) => {
+                if (req.path.startsWith('/api/') ||
+                    req.path.startsWith('/auth/') ||
+                    req.path.startsWith('/health/') ||
+                    req.path.startsWith('/test-')) {
+                    return res.status(404).json({
+                        error: 'Route API non trouvée',
+                        path: req.path,
+                        method: req.method,
+                        availableRoutes: [
+                            '/auth/status',
+                            '/auth/login',
+                            '/auth/logout',
+                            '/api/test',
+                            '/test-auth-status',
+                            '/health/database',
+                            '/health/email'
+                        ]
+                    });
+                }
+                res.status(404).json({
+                    error: 'Frontend non disponible',
+                    message: 'Ce serveur fonctionne en mode API seulement',
+                    availableRoutes: [
+                        '/auth/status',
+                        '/api/test',
+                        '/health/database'
+                    ]
+                });
+            });
         }
         // 5. Routes de santé
         app.get('/health/database', (req, res) => {

@@ -525,6 +525,7 @@ router.get('/test', (req, res) => {
   res.json({ ok: true });
 });
 
+
 // CORRIGÉ: Route /auth/status pour vérifier l'authentification
 router.get('/status', async (req: Request, res: Response) => {
   try {

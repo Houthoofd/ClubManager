@@ -123,32 +123,53 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         }
       }
 
-      // ÉTAPE 2: Vérification serveur seulement si nécessaire
+      // ÉTAPE 2: Vérification serveur avec URL corrigée
       console.log('🔍 [AuthGuard] Tentative vérification serveur...');
       
-      // CORRIGÉ: Construire l'URL correctement selon l'environnement
-      const apiBaseUrl = process.env.NODE_ENV === 'production' 
-        ? window.location.origin 
-        : 'http://localhost:3000';
-      
-      // AJOUTÉ: Vérifier si on est sur le bon domaine
-      const currentDomain = window.location.hostname;
-      console.log('🌐 [AuthGuard] Domaine actuel:', currentDomain);
-      
+      // CORRIGÉ: URLs plus robustes selon l'environnement
       let verifyUrl: string;
+      const currentOrigin = window.location.origin;
+      
       if (process.env.NODE_ENV === 'production') {
-        // En production, utiliser le même domaine
-        verifyUrl = `${window.location.origin}/auth/status`;
+        // En production, tester d'abord avec /auth/status puis fallback sur /api/auth/status
+        verifyUrl = `${currentOrigin}/auth/status`;
       } else {
-        // En développement, utiliser l'API backend
+        // En développement, utiliser l'API backend directement
         verifyUrl = `http://localhost:3000/auth/status`;
       }
       
       console.log('🌐 [AuthGuard] URL de vérification:', verifyUrl);
+      console.log('🌐 [AuthGuard] Origin actuel:', currentOrigin);
+      console.log('🌐 [AuthGuard] Environnement:', process.env.NODE_ENV);
 
       const tokenToUse = cookieToken || authToken;
       
       try {
+        // AJOUTÉ: Test de connectivité d'abord
+        console.log('🔍 [AuthGuard] Test de connectivité API...');
+        let testUrl = process.env.NODE_ENV === 'production' 
+          ? `${currentOrigin}/api/test` 
+          : 'http://localhost:3000/api/test';
+          
+        try {
+          const testResponse = await fetch(testUrl, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(5000)
+          });
+          
+          if (testResponse.ok) {
+            const testData = await testResponse.json();
+            console.log('✅ [AuthGuard] API accessible:', testData.message);
+          } else {
+            console.warn('⚠️ [AuthGuard] API répond mais avec erreur:', testResponse.status);
+          }
+        } catch (testError) {
+          console.warn('⚠️ [AuthGuard] API non accessible pour test:', testError);
+        }
+
+        // Maintenant tester la route auth/status
         const response = await fetch(verifyUrl, {
           method: 'GET',
           credentials: 'include',
@@ -157,10 +178,10 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
             'Accept': 'application/json',
             ...(tokenToUse && { 'Authorization': `Bearer ${tokenToUse}` })
           },
-          signal: AbortSignal.timeout(8000) // Réduire le timeout
+          signal: AbortSignal.timeout(8000)
         });
 
-        console.log('🔐 [AuthGuard] Réponse serveur:', {
+        console.log('🔐 [AuthGuard] Réponse serveur auth/status:', {
           status: response.status,
           statusText: response.statusText,
           contentType: response.headers.get('content-type'),
@@ -168,18 +189,81 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           tokenUsed: tokenToUse ? 'Bearer token' : 'cookies only'
         });
 
-        // AJOUTÉ: Vérifier le content-type avant de parser
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
+        // CORRIGÉ: Vérification du content-type plus robuste
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
           console.error('❌ [AuthGuard] Réponse non-JSON reçue:', {
             contentType,
             status: response.status,
             url: response.url
           });
           
-          // En production, si l'API n'est pas accessible, utiliser les données locales
-          if (process.env.NODE_ENV === 'production' && localUserData && hasValidToken) {
-            console.log('🔄 [AuthGuard] Fallback production - utilisation des données locales');
+          // AJOUTÉ: Essayer une URL alternative en production
+          if (process.env.NODE_ENV === 'production') {
+            console.log('🔄 [AuthGuard] Tentative avec URL alternative...');
+            const altUrl = `${currentOrigin}/api/auth/status`;
+            
+            try {
+              const altResponse = await fetch(altUrl, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  ...(tokenToUse && { 'Authorization': `Bearer ${tokenToUse}` })
+                },
+                signal: AbortSignal.timeout(8000)
+              });
+              
+              const altContentType = altResponse.headers.get('content-type') || '';
+              if (altResponse.ok && altContentType.includes('application/json')) {
+                console.log('✅ [AuthGuard] URL alternative fonctionne');
+                const data = await altResponse.json();
+                
+                if (data.authentifie && data.user) {
+                  // Traiter la réponse comme d'habitude
+                  const userData = {
+                    id: data.user.id,
+                    email: data.user.email,
+                    firstName: data.user.first_name,
+                    lastName: data.user.last_name,
+                    userName: data.user.nom_utilisateur || '',
+                    status: data.user.status,
+                    role: data.user.status,
+                    genres: data.user.genres,
+                    grades: data.user.grades,
+                    abonnement: data.user.abonnement,
+                    dateOfBirth: data.user.date_of_birth
+                  };
+
+                  dispatch(setUser(userData));
+                  
+                  localStorage.setItem('userData', JSON.stringify({
+                    ...userData,
+                    first_name: userData.firstName,
+                    last_name: userData.lastName,
+                    nom_utilisateur: userData.userName,
+                    date_of_birth: userData.dateOfBirth
+                  }));
+
+                  if (data.token) {
+                    localStorage.setItem('authToken', data.token);
+                  }
+                  
+                  setAuthError(null);
+                  setRetryCount(0);
+                  console.log('✅ [AuthGuard] Authentification serveur réussie (URL alternative)');
+                  return true;
+                }
+              }
+            } catch (altError) {
+              console.warn('❌ [AuthGuard] URL alternative échouée aussi:', altError);
+            }
+          }
+          
+          // Fallback sur les données locales
+          if (localUserData && hasValidToken) {
+            console.log('🔄 [AuthGuard] Fallback - API retourne HTML, utilisation des données locales');
             const userData = JSON.parse(localUserData);
             
             dispatch(setUser({
@@ -196,11 +280,11 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               dateOfBirth: userData.date_of_birth || userData.dateOfBirth || null
             }));
             
-            setAuthError('Mode hors ligne - API non accessible');
+            setAuthError('API indisponible - données locales utilisées');
             return true;
           }
           
-          throw new Error(`Réponse non-JSON: ${contentType} (status: ${response.status})`);
+          throw new Error(`Réponse HTML au lieu de JSON: ${contentType} (status: ${response.status})`);
         }
 
         if (response.ok) {
@@ -281,13 +365,13 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       } catch (fetchError: any) {
         console.error('❌ [AuthGuard] Erreur fetch:', fetchError);
         
-        // AJOUTÉ: Gestion spécifique des erreurs de réseau
-        if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
+        // AJOUTÉ: Gestion spécifique des erreurs
+        if (fetchError.message.includes('HTML au lieu de JSON')) {
+          setAuthError('Configuration serveur incorrecte - Routes API non accessibles');
+        } else if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
           setAuthError('Impossible de contacter le serveur d\'authentification');
         } else if (fetchError.name === 'TimeoutError') {
           setAuthError('Délai de connexion au serveur dépassé');
-        } else if (fetchError.message.includes('Unexpected token')) {
-          setAuthError('Erreur de communication avec le serveur (réponse invalide)');
         } else {
           setAuthError(`Erreur de vérification: ${fetchError.message}`);
         }
