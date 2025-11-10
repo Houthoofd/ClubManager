@@ -23,7 +23,7 @@ import './styles/inscription.css';
 import './styles/dashboard.css';
 import './styles/users.css';
 import './styles/pages.css';
-import './styles/auth-guard.css'; // AJOUTÉ: Import du CSS AuthGuard
+import './styles/auth-guard.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -1,6 +1,25 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-const initialState = {
+interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  userName: string;
+  status: string;
+  role: string;
+  genres?: any;
+  grades?: any;
+  abonnement?: any;
+  dateOfBirth?: string;
+}
+
+interface AuthState {
+  authentifie: boolean;
+  user: User | null;
+}
+
+const initialState: AuthState = {
   authentifie: false,
   user: null,
 };
@@ -9,16 +28,22 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    loginSuccess(state, action) {
+    setUser: (state, action: PayloadAction<User>) => {
       state.authentifie = true;
-      state.user = action.payload; // Store user data here
+      state.user = action.payload;
     },
-    logout(state) {
+    logout: (state) => {
       state.authentifie = false;
       state.user = null;
+    },
+    // AJOUTÉ: Alias pour compatibilité si nécessaire
+    loginSuccess: (state, action: PayloadAction<User>) => {
+      state.authentifie = true;
+      state.user = action.payload;
     },
   },
 });
 
-export const { loginSuccess, logout } = authSlice.actions;
+// CORRIGÉ: Export des actions incluant loginSuccess pour compatibilité
+export const { setUser, logout, loginSuccess } = authSlice.actions;
 export default authSlice.reducer;

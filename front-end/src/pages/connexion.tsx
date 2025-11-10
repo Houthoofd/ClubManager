@@ -13,7 +13,7 @@ import {
 import ResultModal from '../components/common/modal/ResultModal';
 import { useConnexion } from '../hooks/useConnexion';
 import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../redux/slices/authSlice';
+import { setUser } from '../redux/slices/authSlice'; // CORRIGÉ: Import setUser au lieu de loginSuccess
 import { PageHeader } from '../components/common/PageHeader';
 import { apiUrl } from './apiUrl';
 import '../styles/connexion.css'; // Import du fichier CSS
@@ -66,7 +66,7 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
         token,
       }));
 
-      dispatch(loginSuccess(user));
+      dispatch(setUser(user)); // CORRIGÉ: Utiliser setUser à la place de loginSuccess
 
       if (onSuccess) {
         onSuccess(data);
@@ -88,7 +88,6 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
     const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
       ? '/pages/cours/inscription' 
       : '/pages/dashboard';
-    // CORRIGÉ: Utiliser window.location.href au lieu de navigate
     window.location.href = `${window.location.origin}${redirectPath}`;
   };
 
@@ -103,7 +102,6 @@ const LoginPage = ({ onSuccess }: { onSuccess?: (data: any) => void }) => {
             const redirectPath = (userData.status === 'utilisateur' || userData.status === 'visiteur') 
               ? '/pages/cours/inscription' 
               : '/pages/dashboard';
-            // CORRIGÉ: Utiliser window.location.href au lieu de navigate
             window.location.href = `${window.location.origin}${redirectPath}`;
             return 0;
           }
