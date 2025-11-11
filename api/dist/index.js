@@ -119,8 +119,55 @@ async function startServer() {
         const { default: informationsRouter } = await import('./routes/informations.js');
         const { default: coursRouter } = await import('./routes/cours.js');
         const { default: compteRouter } = await import('./routes/compte.js');
-        // OPTIMISÉ: Import et validation du router paiements modulaire
-        console.log('🔄 [Server] Chargement du module paiements modulaire...');
+        // MODIFIÉ: Charger les modules de paiement individuellement AVANT le module principal
+        console.log('🔄 [Server] Chargement des modules de paiement individuels...');
+        let stripeRouter = null;
+        let echeancesRouter = null;
+        let confirmationRouter = null;
+        let webhooksRouter = null;
+        let paiementsCrudRouter = null;
+        try {
+            const stripeModule = await import('./routes/stripe.js');
+            stripeRouter = stripeModule.default;
+            console.log('✅ [Server] Module stripe chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module stripe non disponible:', error);
+        }
+        try {
+            const echeancesModule = await import('./routes/echeances.js');
+            echeancesRouter = echeancesModule.default;
+            console.log('✅ [Server] Module echeances chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module echeances non disponible:', error);
+        }
+        try {
+            const confirmationModule = await import('./routes/confirmation.js');
+            confirmationRouter = confirmationModule.default;
+            console.log('✅ [Server] Module confirmation chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module confirmation non disponible:', error);
+        }
+        try {
+            const webhooksModule = await import('./routes/webhooks.js');
+            webhooksRouter = webhooksModule.default;
+            console.log('✅ [Server] Module webhooks chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module webhooks non disponible:', error);
+        }
+        try {
+            const paiementsCrudModule = await import('./routes/paiements-crud.js');
+            paiementsCrudRouter = paiementsCrudModule.default;
+            console.log('✅ [Server] Module paiements-crud chargé');
+        }
+        catch (error) {
+            console.warn('⚠️ [Server] Module paiements-crud non disponible:', error);
+        }
+        // OPTIMISÉ: Import et validation du router paiements modulaire SIMPLIFIÉ
+        console.log('🔄 [Server] Chargement du module paiements principal...');
         let paiementRouter = null;
         try {
             const paiementModule = await import('./routes/paiements.js');
@@ -128,11 +175,52 @@ async function startServer() {
             if (!paiementRouter) {
                 throw new Error('Aucun export par défaut dans le module paiements');
             }
-            console.log('✅ [Server] Module paiements modulaire chargé avec succès');
+            console.log('✅ [Server] Module paiements principal chargé avec succès');
         }
         catch (error) {
-            console.error('❌ [Server] Erreur critique lors du chargement du module paiements:', error);
-            throw new Error(`Module paiements requis mais non disponible: ${error.message}`);
+            console.warn('⚠️ [Server] Module paiements principal non disponible, utilisation des modules individuels');
+            // FALLBACK: Créer un router composite avec les modules individuels
+            if (stripeRouter || echeancesRouter || confirmationRouter || webhooksRouter || paiementsCrudRouter) {
+                console.log('🔧 [Server] Création d\'un router paiements composite...');
+                paiementRouter = express.Router();
+                if (paiementsCrudRouter) {
+                    paiementRouter.use('/', paiementsCrudRouter);
+                    console.log('  → /paiements/ (CRUD)');
+                }
+                if (stripeRouter) {
+                    paiementRouter.use('/stripe', stripeRouter);
+                    console.log('  → /paiements/stripe/');
+                }
+                if (echeancesRouter) {
+                    paiementRouter.use('/echeances', echeancesRouter);
+                    console.log('  → /paiements/echeances/');
+                }
+                if (confirmationRouter) {
+                    paiementRouter.use('/confirmation', confirmationRouter);
+                    console.log('  → /paiements/confirmation/');
+                }
+                if (webhooksRouter) {
+                    paiementRouter.use('/webhooks', webhooksRouter);
+                    console.log('  → /paiements/webhooks/');
+                }
+                // Route de santé composite
+                paiementRouter.get('/health', (req, res) => {
+                    res.json({
+                        status: 'healthy',
+                        module: 'paiements-composite',
+                        architecture: 'Modules individuels assemblés',
+                        modules_charges: {
+                            crud: !!paiementsCrudRouter,
+                            stripe: !!stripeRouter,
+                            echeances: !!echeancesRouter,
+                            confirmation: !!confirmationRouter,
+                            webhooks: !!webhooksRouter
+                        },
+                        timestamp: new Date().toISOString()
+                    });
+                });
+                console.log('✅ [Server] Router paiements composite créé avec succès');
+            }
         }
         const { default: statistiquesRouter } = await import('./routes/statistiques.js');
         const { default: magasinRouter } = await import('./routes/magasin.js');
@@ -142,22 +230,9 @@ async function startServer() {
         const { default: inscriptionRouter } = await import('./routes/inscription.js');
         const { default: verificationRouter } = await import('./routes/verification.js');
         const { default: authRouter } = await import('./routes/auth.js');
-        // SUPPRIMÉ: Imports en double qui causaient des conflits
-        // const { default: echeancesRouter } = await import('./routes/echeances.js');
-        // const { default: stripeRouter } = await import('./routes/stripe.js');
-        // CORRIGÉ: Import conditionnel pour tous les modules qui peuvent manquer
-        let webhooksRouter = null;
+        // CORRIGÉ: Import conditionnel pour les autres modules
         let commandesRouter = null;
         let stocksRouter = null;
-        let echeancesRouter = null; // AJOUTÉ: Garder pour compatibilité si existe
-        try {
-            const webhooksModule = await import('./routes/webhooks.js');
-            webhooksRouter = webhooksModule.default;
-            console.log('✅ [Server] Module webhooks chargé');
-        }
-        catch (error) {
-            console.warn('⚠️ [Server] Module webhooks non disponible - utilisation du module intégré dans paiements');
-        }
         try {
             const commandesModule = await import('./routes/commandes.js');
             commandesRouter = commandesModule.default;
@@ -174,15 +249,6 @@ async function startServer() {
         catch (error) {
             console.warn('⚠️ [Server] Module stocks non disponible:', error);
         }
-        // AJOUTÉ: Import conditionnel du module échéances standalone (si existe)
-        try {
-            const echeancesModule = await import('./routes/echeances.js');
-            echeancesRouter = echeancesModule.default;
-            console.log('✅ [Server] Module échéances standalone chargé');
-        }
-        catch (error) {
-            console.warn('⚠️ [Server] Module échéances standalone non disponible - utilisation du module intégré dans paiements');
-        }
         // Routes principales (API) - CRITIQUE: Module paiements en priorité
         app.use('/auth', authRouter);
         app.use('/email', messagesRouter);
@@ -193,9 +259,9 @@ async function startServer() {
         app.use('/compte', compteRouter);
         // CRITIQUE: Monter le module paiements AVEC validation correcte
         if (paiementRouter !== null) {
-            console.log('🔧 [Server] Montage du module paiements modulaire...');
+            console.log('🔧 [Server] Montage du module paiements...');
             app.use('/paiements', paiementRouter);
-            console.log('✅ [Server] Module paiements monté → /paiements/ (avec sous-modules intégrés)');
+            console.log('✅ [Server] Module paiements monté → /paiements/');
             console.log('  → /paiements/ (CRUD principal - racine)');
             console.log('  → /paiements/stripe/ (Intégration Stripe)');
             console.log('  → /paiements/echeances/ (Gestion échéances)');
@@ -203,12 +269,22 @@ async function startServer() {
             console.log('  → /paiements/webhooks/ (Webhooks Stripe)');
         }
         else {
-            console.error('❌ [Server] CRITIQUE: Module paiements non disponible - fonctionnalités de paiement désactivées');
+            console.error('❌ [Server] CRITIQUE: Aucun module paiements disponible');
             // Route de fallback pour les paiements
             app.use('/paiements', (req, res) => {
                 res.status(503).json({
                     error: 'Service paiements temporairement indisponible',
-                    message: 'Le module paiements modulaire n\'a pas pu être chargé',
+                    message: 'Aucun module paiements n\'a pu être chargé',
+                    modules_testes: {
+                        principal: 'routes/paiements.js',
+                        individuels: {
+                            crud: 'routes/paiements-crud.js',
+                            stripe: 'routes/stripe.js',
+                            echeances: 'routes/echeances.js',
+                            confirmation: 'routes/confirmation.js',
+                            webhooks: 'routes/webhooks.js'
+                        }
+                    },
                     timestamp: new Date().toISOString()
                 });
             });
@@ -220,21 +296,27 @@ async function startServer() {
         app.use('/inscription', inscriptionRouter);
         app.use('/verification', verificationRouter);
         app.use('/statistiques', statistiquesRouter);
-        // MODIFIÉ: Monter échéances seulement si module standalone existe
-        if (echeancesRouter) {
+        // MODIFIÉ: Monter échéances seulement si module standalone existe et n'est pas déjà monté dans paiements
+        if (echeancesRouter && !paiementRouter) {
             app.use('/echeances', echeancesRouter);
-            console.log('✅ [Server] Route échéances standalone montée');
+            console.log('✅ [Server] Route échéances standalone montée (module paiements non disponible)');
         }
-        else {
+        else if (paiementRouter) {
             console.log('ℹ️ [Server] Échéances gérées via /paiements/echeances/');
         }
+        else {
+            console.log('⚠️ [Server] Aucun module échéances disponible');
+        }
         // CORRIGÉ: Monter les autres routes conditionnellement
-        if (webhooksRouter) {
+        if (webhooksRouter && !paiementRouter) {
             app.use('/webhooks', webhooksRouter);
-            console.log('✅ [Server] Route webhooks standalone montée');
+            console.log('✅ [Server] Route webhooks standalone montée (module paiements non disponible)');
+        }
+        else if (paiementRouter) {
+            console.log('ℹ️ [Server] Webhooks gérés via /paiements/webhooks/');
         }
         else {
-            console.log('ℹ️ [Server] Webhooks gérés via /paiements/webhooks/');
+            console.log('⚠️ [Server] Aucun module webhooks disponible');
         }
         if (commandesRouter) {
             app.use('/commandes', commandesRouter);
@@ -449,7 +531,7 @@ async function startServer() {
             console.log(`🌐 [Server] API disponible sur http://localhost:${PORT}`);
             // AMÉLIORÉ: Logging conditionnel pour les paiements
             if (paiementRouter !== null) {
-                console.log(`💳 [Server] Module paiements modulaire: http://localhost:${PORT}/paiements/`);
+                console.log(`💳 [Server] Module paiements: http://localhost:${PORT}/paiements/`);
                 console.log('🏗️ [Server] Structure module paiements:');
                 console.log('  📂 /paiements/ → CRUD principal (racine)');
                 console.log('  📂 /paiements/stripe/ → Intégration Stripe');
@@ -457,6 +539,19 @@ async function startServer() {
                 console.log('  📂 /paiements/confirmation/ → Confirmation paiements');
                 console.log('  📂 /paiements/webhooks/ → Webhooks Stripe');
                 console.log('  🔍 /paiements/health → Statut du module');
+                // Détailler la composition du module
+                const moduleComposition = [];
+                if (paiementsCrudRouter)
+                    moduleComposition.push('CRUD');
+                if (stripeRouter)
+                    moduleComposition.push('Stripe');
+                if (echeancesRouter)
+                    moduleComposition.push('Échéances');
+                if (confirmationRouter)
+                    moduleComposition.push('Confirmation');
+                if (webhooksRouter)
+                    moduleComposition.push('Webhooks');
+                console.log(`  🧩 Modules chargés: ${moduleComposition.join(', ')}`);
             }
             else {
                 console.log('❌ [Server] Module paiements: INDISPONIBLE');

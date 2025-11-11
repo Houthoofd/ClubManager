@@ -116,172 +116,69 @@ const flexibleAuth = async (req, res, next) => {
         });
     }
 };
-// CORRIGÉ: Fonction pour charger les modules avec types appropriés
-async function loadSubModule(modulePath, routePath, fallbackMessage) {
-    try {
-        const module = await import(modulePath);
-        // CORRIGÉ: Vérification plus stricte du router
-        const moduleRouter = module.default;
-        if (moduleRouter && typeof moduleRouter === 'function') {
-            router.use(routePath, moduleRouter);
-            console.log(`✅ [Paiements] Module ${routePath} chargé depuis ${modulePath}`);
-            return true;
-        }
-        else {
-            console.warn(`⚠️ [Paiements] Export par défaut invalide dans ${modulePath}`);
-            console.warn(`⚠️ [Paiements] Type reçu:`, typeof moduleRouter);
-            console.warn(`⚠️ [Paiements] Exports disponibles:`, Object.keys(module));
-            return false;
-        }
-    }
-    catch (error) {
-        console.warn(`⚠️ [Paiements] Erreur chargement ${modulePath}:`, error.message);
-        // Route de fallback avec types corrects
-        router.use(routePath, (req, res) => {
-            res.status(503).json({
-                error: `Service ${routePath} temporairement indisponible`,
-                message: fallbackMessage,
-                timestamp: new Date().toISOString(),
-                debug: {
-                    modulePath,
-                    error: error.message
-                }
-            });
-        });
-        return false;
-    }
-}
-// MODIFIÉ: Charger les sous-modules avec le middleware d'auth
+// MODIFIÉ: Désactiver le chargement dynamique car les modules sont maintenant chargés dans index.ts
 async function initializeSubModules() {
-    console.log('🔄 [Paiements] Chargement des modules depuis routes/ (sans sous-dossiers)...');
-    // Ajouter le middleware d'auth flexible AVANT de charger les modules
-    router.use(flexibleAuth);
-    console.log('🔐 [Paiements] Middleware d\'authentification flexible ajouté');
-    // CORRIGÉ: Charger le module CRUD directement à la racine (sans préfixe /crud)
-    console.log('🔄 [Paiements] Chargement module CRUD principal à la racine...');
-    const crudLoaded = await loadSubModule('./paiements-crud.js', '/', // CHANGÉ: Pas de préfixe, directement à la racine
-    'Le service CRUD des paiements n\'est pas disponible');
-    if (!crudLoaded) {
-        console.error('❌ [Paiements] CRITIQUE: Module CRUD principal non chargé');
-        // Route de fallback complète pour le CRUD à la racine
-        router.use('/', (req, res, next) => {
-            // Laisser passer les routes spécialisées (stripe, echeances, etc.)
-            if (req.path.startsWith('/stripe') || req.path.startsWith('/echeances') ||
-                req.path.startsWith('/confirmation') || req.path.startsWith('/webhooks') ||
-                req.path === '/health' || req.path === '/debug/routes') {
-                return next();
-            }
-            console.error(`❌ [Paiements] Appel CRUD échoué: ${req.method} ${req.path}`);
-            res.status(503).json({
-                success: false,
-                error: 'Service CRUD des paiements temporairement indisponible',
-                message: 'Le module paiements-crud.ts n\'a pas pu être chargé',
-                details: {
-                    method: req.method,
-                    path: req.path,
-                    expectedFile: 'routes/paiements-crud.ts',
-                    suggestion: 'Vérifiez que le fichier paiements-crud.ts existe dans routes/'
-                },
-                timestamp: new Date().toISOString()
-            });
-        });
-    }
-    else {
-        console.log('✅ [Paiements] Module CRUD principal chargé à la racine avec succès');
-    }
-    // CORRIGÉ: Tous les autres modules avec leurs préfixes spécialisés
-    await loadSubModule('./stripe.js', '/stripe', 'Le service de paiement Stripe n\'est pas disponible');
-    await loadSubModule('./echeances.js', '/echeances', 'Le service de gestion des échéances n\'est pas disponible');
-    await loadSubModule('./confirmation.js', '/confirmation', 'Le service de confirmation de paiement n\'est pas disponible');
-    await loadSubModule('./webhooks.js', '/webhooks', 'Le service de webhooks de paiement n\'est pas disponible');
-    console.log('✅ [Paiements] Tous les modules ont été chargés depuis routes/');
+    console.log('🔄 [Paiements] Module paiements simplifié - modules chargés via index.ts');
+    console.log('ℹ️ [Paiements] Les sous-modules (stripe, echeances, etc.) sont maintenant gérés au niveau serveur');
+    console.log('ℹ️ [Paiements] Ce module ne charge plus de sous-modules dynamiquement');
+    // AJOUTÉ: Ajouter seulement le middleware d'auth pour les routes de ce module
+    router.use((req, res, next) => {
+        const isHealthRoute = req.path === '/health' || req.path === '/debug/routes';
+        if (isHealthRoute) {
+            return next();
+        }
+        console.log('🔐 [Paiements] Application middleware auth pour route:', req.path);
+        flexibleAuth(req, res, next);
+    });
+    console.log('✅ [Paiements] Module paiements principal initialisé (mode serveur-centralisé)');
 }
-// Routes de base pour le module paiements - CORRIGÉES avec types
+// Routes de base pour le module paiements - CORRIGÉES
 router.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
-        module: 'paiements',
-        architecture: 'modulaire (routes/ directement)',
-        submodules: {
-            root: 'CRUD principal des paiements (GET, POST, PUT, DELETE) - à la racine',
-            stripe: 'Intégration Stripe (PaymentIntents, méthodes alternatives)',
-            echeances: 'Gestion complète des échéances',
-            confirmation: 'Confirmation paiements avec promotion automatique',
-            webhooks: 'Webhooks Stripe pour événements'
+        module: 'paiements-principal',
+        architecture: 'serveur-centralisé (modules chargés dans index.ts)',
+        note: 'Ce module ne charge plus de sous-modules - ils sont gérés au niveau serveur',
+        expected_structure: {
+            '/paiements/': 'Ce module principal (routes de base)',
+            '/paiements/stripe/': 'Module Stripe (chargé via index.ts)',
+            '/paiements/echeances/': 'Module échéances (chargé via index.ts)',
+            '/paiements/confirmation/': 'Module confirmation (chargé via index.ts)',
+            '/paiements/webhooks/': 'Module webhooks (chargé via index.ts)'
         },
-        routes: [
-            'GET /paiements/health - Statut du module',
-            'GET /paiements/ - Tous les paiements avec filtres (CRUD)',
-            'POST /paiements/ - Créer un nouveau paiement (CRUD)',
-            'GET /paiements/:id - Paiement spécifique (CRUD)',
-            'PUT /paiements/:id - Modifier un paiement (CRUD)',
-            'DELETE /paiements/:id - Supprimer un paiement (CRUD)',
-            'GET /paiements/utilisateur/:userId - Paiements par utilisateur (CRUD)',
-            'POST /paiements/stripe/create-payment-intent - PaymentIntent échéance',
-            'POST /paiements/stripe/create-payment-intent-commande - PaymentIntent commande',
-            'POST /paiements/stripe/confirm-payment - Confirmation paiement',
-            'POST /paiements/stripe/bancontact - Paiement Bancontact',
-            'GET /paiements/echeances/:userId - Échéances utilisateur',
-            'GET /paiements/echeances/detail/:echeanceId - Détail échéance sécurisé',
-            'POST /paiements/confirmation/confirm-payment - Confirmation échéance',
-            'POST /paiements/confirmation/confirm-payment-commande - Confirmation commande',
-            'POST /paiements/webhooks/stripe - Webhook principal'
+        server_handles: [
+            'Chargement conditionnel des modules',
+            'Création de router composite si module principal indisponible',
+            'Montage des routes au niveau serveur'
         ],
-        source_files: [
-            'routes/paiements-crud.ts - CRUD principal (racine)',
-            'routes/stripe.ts - Intégration Stripe',
-            'routes/echeances.ts - Gestion échéances',
-            'routes/confirmation.ts - Confirmation paiements',
-            'routes/webhooks.ts - Webhooks Stripe'
+        routes_de_ce_module: [
+            'GET /paiements/health - Statut du module principal',
+            'GET /paiements/debug/routes - Debug des routes'
         ],
-        note: 'Architecture plate - CRUD à la racine, modules spécialisés avec préfixes',
         timestamp: new Date().toISOString()
     });
 });
-// Route de debug avec types corrects
+// Route de debug simplifiée
 router.get('/debug/routes', (req, res) => {
-    const routes = [];
-    function extractRoutes(stack, prefix = '') {
-        stack.forEach((layer) => {
-            if (layer.route) {
-                const path = prefix + layer.route.path;
-                const methods = Object.keys(layer.route.methods);
-                routes.push({ path, methods, type: 'direct' });
-            }
-            else if (layer.name === 'router' && layer.regexp) {
-                const match = layer.regexp.source.match(/\^\\(.*?)\\\//);
-                const subPrefix = match ? match[1].replace(/\\\//g, '/') : '';
-                if (layer.handle && layer.handle.stack) {
-                    extractRoutes(layer.handle.stack, prefix + subPrefix);
-                }
-            }
-        });
-    }
-    extractRoutes(router.stack, '/paiements');
     res.json({
-        totalRoutes: routes.length,
-        routes: routes.sort((a, b) => a.path.localeCompare(b.path)),
-        modules: {
-            crud: 'CRUD principal depuis routes/paiements-crud.ts',
-            stripe: 'Intégration Stripe depuis routes/stripe.ts',
-            echeances: 'Gestion échéances depuis routes/echeances.ts',
-            confirmation: 'Confirmation paiements depuis routes/confirmation.ts',
-            webhooks: 'Webhooks Stripe depuis routes/webhooks.ts'
+        module: 'paiements-principal',
+        architecture: 'serveur-centralisé',
+        message: 'Les sous-modules sont maintenant chargés dans index.ts',
+        modules_attendus: {
+            'routes/stripe.ts': 'Intégration Stripe',
+            'routes/echeances.ts': 'Gestion échéances',
+            'routes/confirmation.ts': 'Confirmation paiements',
+            'routes/webhooks.ts': 'Webhooks Stripe',
+            'routes/paiements-crud.ts': 'CRUD principal'
         },
-        architecture: 'modulaire sans sous-dossiers (routes/ directement)',
-        expected_files: [
-            'routes/paiements-crud.ts',
-            'routes/stripe.ts',
-            'routes/echeances.ts',
-            'routes/confirmation.ts',
-            'routes/webhooks.ts'
-        ],
+        server_responsibility: 'Le serveur charge les modules individuellement et les assemble',
+        fallback_strategy: 'Router composite si ce module principal échoue',
         timestamp: new Date().toISOString()
     });
 });
-// Initialiser les modules
+// Initialiser (mode simplifié)
 initializeSubModules().catch((error) => {
-    console.error('❌ [Paiements] Erreur lors de l\'initialisation des modules:', error);
+    console.error('❌ [Paiements] Erreur lors de l\'initialisation (mode simplifié):', error);
 });
-console.log('✅ [Paiements] Module paiements principal initialisé (architecture plate)');
+console.log('✅ [Paiements] Module paiements principal initialisé (serveur-centralisé)');
 export default router;
