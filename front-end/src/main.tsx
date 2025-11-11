@@ -27,59 +27,9 @@ import './styles/users.css';
 import './styles/pages.css';
 import './styles/auth-guard.css';
 
-// CORRIGÉ: Utiliser le compte Stripe auquel vous avez accès (RWzE9BQ) en mode TEST
-const expectedAccountPrefix = 'pk_test_51RWzE9BQ'; // Compte auquel vous avez accès
-const fallbackKey = 'pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ';
-
-console.log('🔧 [Main] Vérification configuration Stripe frontend:', {
-  NODE_ENV: import.meta.env.NODE_ENV,
-  MODE: import.meta.env.MODE,
-  PROD: import.meta.env.PROD,
-  DEV: import.meta.env.DEV,
-  expectedKeyType: 'TEST (compte RWzE9BQ - tests en production)',
-  VITE_STRIPE_PUBLIC_KEY_exists: !!import.meta.env.VITE_STRIPE_PUBLIC_KEY,
-  VITE_STRIPE_PUBLIC_KEY_prefix: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.substring(0, 15) + '...' || 'ABSENT',
-  VITE_STRIPE_PUBLIC_KEY_type: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_test_51RWzE9BQ') ? 'PUBLIC TEST RWzE9BQ (CORRECT)' : 
-                              import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_live_51RWzE9BQ') ? 'PUBLIC LIVE RWzE9BQ (IDEAL)' : 
-                              'FORMAT INCORRECT',
-  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
-  allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
-});
-
-// CORRIGÉ: Forcer l'utilisation du compte Stripe accessible (RWzE9BQ)
-let stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-
-if (!stripePublicKey || !stripePublicKey.startsWith('pk_test_51RWzE9BQ')) {
-  console.warn('⚠️ [Main] Correction: utilisation compte Stripe accessible (RWzE9BQ)');
-  console.warn('⚠️ [Main] Clé actuelle:', stripePublicKey?.substring(0, 20) + '...' || 'MANQUANTE');
-  stripePublicKey = fallbackKey;
-}
-
-console.log('✅ [Main] Clé Stripe finale (compte RWzE9BQ TEST):', stripePublicKey.substring(0, 25) + '...');
-console.log('✅ [Main] Mode: TEST en production - utilisation carte 4242424242424242');
-
-// CORRIGÉ: Initialisation Stripe avec logging détaillé
-console.log('🔧 [Main] Initialisation Stripe...');
-const stripePromise = loadStripe(stripePublicKey, {
-  locale: 'fr'
-});
-
-// AJOUTÉ: Vérification complète de l'initialisation
-stripePromise.then((stripe) => {
-  if (stripe) {
-    console.log('✅ [Main] Stripe initialisé avec succès');
-    console.log('✅ [Main] Compte Stripe:', stripePublicKey.substring(8, 25));
-    
-    // Test basique pour vérifier que Stripe fonctionne
-    console.log('🧪 [Main] Test basique Stripe Elements...');
-  } else {
-    console.error('❌ [Main] Échec de l\'initialisation Stripe');
-    console.error('❌ [Main] Clé utilisée:', stripePublicKey.substring(0, 20) + '...');
-  }
-}).catch((error) => {
-  console.error('❌ [Main] Erreur critique Stripe:', error);
-  console.error('❌ [Main] Clé problématique:', stripePublicKey.substring(0, 20) + '...');
-});
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+console.log('Using Stripe Public Key:', stripePublicKey);
+const stripePromise = loadStripe(stripePublicKey);
 
 const queryClient = new QueryClient({
   defaultOptions: {

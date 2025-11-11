@@ -78,19 +78,10 @@ try {
 
   // AJOUTÉ: Validation spécifique pour la production
   if (process.env.NODE_ENV === 'production' && stripeSecretKey.startsWith('sk_test_')) {
-    console.warn('⚠️ [Paiements] MODE TEST EN PRODUCTION détecté');
-    console.warn('⚠️ [Paiements] Clé utilisée:', stripeSecretKey.substring(0, 25) + '...');
-    console.warn('⚠️ [Paiements] Configuration acceptée pour les tests:');
-    console.warn('  - Seuls les paiements de test seront acceptés');
-    console.warn('  - Utilisez la carte 4242424242424242 pour tester');
-    console.warn('  - Aucun vrai argent ne sera prélevé');
-    
-    // ACCEPTER les clés TEST en production pour les tests
-    console.log('✅ [Paiements] Configuration TEST en production validée');
-    
-  } else if (process.env.NODE_ENV === 'production' && stripeSecretKey.startsWith('sk_live_')) {
-    console.log('✅ [Paiements] Configuration LIVE en production détectée');
-    console.log('✅ [Paiements] Vrais paiements activés');
+    console.error('❌ [Paiements] ERREUR: Clé TEST utilisée en PRODUCTION !');
+    console.error('❌ [Paiements] Clé actuelle:', stripeSecretKey.substring(0, 25) + '...');
+    console.error('❌ [Paiements] SOLUTION: Utilisez une clé LIVE (sk_live_...) en production');
+    throw new Error('Clé de test utilisée en production');
   }
   
   if (stripeSecretKey.startsWith('sk_') && !stripeSecretKey.includes('4e')) {
