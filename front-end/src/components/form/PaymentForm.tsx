@@ -489,64 +489,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             borderRadius: '6px',
             backgroundColor: '#ffffff'
           }}>
-            {usePaymentElement ? (
-              <PaymentElement
-                id="payment-element"
-                onChange={handleElementChange}
-                options={{
-                  layout: 'tabs',
-                  // CORRIGÉ: Configuration PaymentElement pour éviter les appels API directs
-                  fields: {
-                    billingDetails: {
-                      name: 'never',
-                      email: 'never', 
-                      phone: 'never',
-                      address: {
-                        line1: 'never',
-                        line2: 'never',
-                        city: 'never',
-                        country: 'never',
-                        postalCode: 'never'
-                      }
-                    }
-                  }
-                  // SUPPRIMÉ: appearance - pas supporté dans PaymentElement options
-                }}
-              />
-            ) : (
-              // CORRIGÉ: CardElement avec configuration stricte
-              <div>
-                <CardElement
-                  id="card-element"
-                  onChange={handleElementChange}
-                  options={{
-                    style: {
-                      base: {
-                        fontSize: '16px',
-                        color: '#424770',
-                        fontFamily: 'system-ui, sans-serif',
-                        '::placeholder': {
-                          color: '#aab7c4',
-                        },
-                      },
-                      invalid: {
-                        color: '#9e2146',
-                      },
-                    },
-                    hidePostalCode: true, // IMPORTANT: Masquer le code postal intégré
-                    disabled: false
-                  }}
-                />
-                <div style={{ 
-                  fontSize: '14px', 
-                  color: '#28a745', 
-                  marginTop: '0.5rem',
-                  fontWeight: 'bold'
-                }}>
-                  ✅ Mode CardElement : Pas de conflit d'adresse - L'adresse ci-dessus sera utilisée
-                </div>
-              </div>
-            )}
+            <PaymentElement
+              id="payment-element"
+              onChange={handleElementChange}
+              // SUPPRIMÉ: Toutes les options - configuration par défaut uniquement
+            />
           </div>
         </FormGroup>
 

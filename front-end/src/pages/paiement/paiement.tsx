@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Page,
@@ -1032,22 +1032,15 @@ const PaiementPage: React.FC = () => {
   }
 
   // CONFIGURATION STRIPE
-  const appearance = {
-    theme: 'stripe' as const,
-    variables: {
-      colorPrimary: '#0570de',
-      colorBackground: '#ffffff',
-      colorText: '#30313d',
-      colorDanger: '#df1b41',
-      fontFamily: 'Ideal Sans, system-ui, sans-serif',
-      spacingUnit: '2px',
-      borderRadius: '4px',
-    },
-  };
-  const options = {
-    clientSecret,
-    appearance,
-  };
+  // CORRIGÉ: Configuration Stripe absolute basique - sans aucune option avancée
+  const options = useMemo(() => {
+    if (!clientSecret) return {};
+    
+    return {
+      clientSecret
+      // SUPPRIMÉ: Toutes les autres options (appearance, etc.)
+    };
+  }, [clientSecret]);
 
   // RENDER PRINCIPAL
   return (

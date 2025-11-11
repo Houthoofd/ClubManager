@@ -109,13 +109,11 @@ if (!stripePublicKey) {
   throw new Error('Configuration Stripe fatalement défaillante');
 }
 
-// CORRIGÉ: Initialisation Stripe avec options spécifiques pour éviter les appels API automatiques
+// CORRIGÉ: Initialisation Stripe avec configuration ultra-basique
 console.log('🔧 [Main] Initialisation Stripe GARANTIE avec:', stripePublicKey.substring(0, 25) + '...');
 const stripePromise = loadStripe(stripePublicKey, {
-  locale: 'fr',
-  // CRITIQUE: Désactiver les fonctionnalités qui font des appels API automatiques
-  stripeAccount: undefined, // Ne pas utiliser de compte Stripe spécifique
-  apiVersion: '2025-02-24', // Forcer une version API stable
+  locale: 'fr'
+  // SUPPRIMÉ: Toutes les autres options qui peuvent causer des problèmes
 });
 
 // Test immédiat d'initialisation
