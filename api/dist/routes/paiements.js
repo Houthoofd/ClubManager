@@ -726,11 +726,11 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
                 stripeStatus: paymentIntent.status
             });
         }
-        // AJOUTÉ: Récupérer les informations complètes de l'utilisateur et de l'échéance
+        // CORRIGÉ: Supprimer ep.description qui n'existe pas dans la table echeances_paiements
         const userInfoQuery = `
       SELECT u.id, u.first_name, u.last_name, u.email, u.status_id, 
              s.nom_role as status_actuel,
-             ep.montant, ep.description, ep.date_echeance
+             ep.montant, ep.date_echeance, ep.statut as echeance_statut
       FROM utilisateurs u
       LEFT JOIN status s ON u.status_id = s.id
       LEFT JOIN echeances_paiements ep ON ep.utilisateur_id = u.id
@@ -747,8 +747,20 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
             id: userInfo.id,
             email: userInfo.email,
             status: userInfo.status_actuel,
-            echeance_montant: userInfo.montant
+            echeance_montant: userInfo.montant,
+            echeance_statut: userInfo.echeance_statut
         });
+        // Vérifier si l'échéance n'est pas déjà payée
+        if (userInfo.echeance_statut === 'payé') {
+            console.warn('⚠️ [Confirmation] Échéance déjà payée:', echeanceId);
+            return res.status(200).json({
+                success: true,
+                message: 'Échéance déjà payée',
+                echeance_id: parseInt(echeanceId),
+                statut_actuel: userInfo.echeance_statut,
+                already_processed: true
+            });
+        }
         // Marquer l'échéance comme payée
         const updateEcheanceQuery = `
       UPDATE echeances_paiements 
@@ -812,11 +824,14 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
         try {
             console.log('📧 [Confirmation] Envoi email confirmation échéance via EmailClient...');
             const emailClient = new EmailClient();
-            // Préparer les données pour le template de confirmation de paiement
+            // CORRIGÉ: Préparer les données pour le template de confirmation de paiement sans description
             const templateVariables = {
                 userName: `${userInfo.first_name} ${userInfo.last_name}`,
                 amount: parseFloat(userInfo.montant).toFixed(2),
                 paymentDate: new Date().toLocaleDateString('fr-FR'),
+                // CORRIGÉ: Utiliser une description par défaut puisque la colonne n'existe pas dans la table
+                description: 'Cotisation club',
+                dateEcheance: new Date(userInfo.date_echeance).toLocaleDateString('fr-FR'),
                 // Ajout d'informations sur la promotion si applicable
                 ...(promotionEffectuee && {
                     promotionMessage: 'Félicitations ! Votre statut a été mis à jour de visiteur à utilisateur.'
