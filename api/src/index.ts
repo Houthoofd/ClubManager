@@ -10,8 +10,57 @@ import { Server } from 'socket.io';
 import fs from 'fs';
 import { Router } from 'express';
 
-// Charger le .env en premier
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// CORRIGÉ: Chargement du .env avec priorité sur NODE_ENV
+const nodeEnv = process.env.NODE_ENV || 'development';
+console.log(`🔧 [Server] Environnement détecté: ${nodeEnv}`);
+
+// Charger le fichier .env approprié selon l'environnement
+let envPath;
+if (nodeEnv === 'production') {
+  envPath = path.resolve(process.cwd(), '.env.production');
+} else {
+  envPath = path.resolve(process.cwd(), '.env.development');
+}
+
+// Fallback vers .env générique si le fichier spécifique n'existe pas
+if (!fs.existsSync(envPath)) {
+  envPath = path.resolve(process.cwd(), '.env');
+  console.log(`⚠️ [Server] Fichier .env.${nodeEnv} non trouvé, utilisation de .env générique`);
+}
+
+console.log(`📁 [Server] Chargement fichier .env: ${envPath}`);
+dotenv.config({ path: envPath });
+
+// AJOUTÉ: Vérification immédiate des clés Stripe au démarrage
+console.log('🔍 [Server] Vérification configuration Stripe au démarrage:', {
+  NODE_ENV: process.env.NODE_ENV,
+  envFile: envPath,
+  STRIPE_SECRET_KEY_exists: !!process.env.STRIPE_SECRET_KEY,
+  STRIPE_SECRET_KEY_type: process.env.STRIPE_SECRET_KEY ? (
+    process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ? 'SECRET TEST' :
+    process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') ? 'SECRET LIVE' :
+    process.env.STRIPE_SECRET_KEY.startsWith('pk_test_') ? 'ERROR: PUBLIC TEST' :
+    process.env.STRIPE_SECRET_KEY.startsWith('pk_live_') ? 'ERROR: PUBLIC LIVE' :
+    'FORMAT INCONNU'
+  ) : 'ABSENT',
+  STRIPE_SECRET_KEY_prefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 12) + '...' : 'N/A',
+  STRIPE_PUBLIC_KEY_exists: !!process.env.STRIPE_PUBLIC_KEY,
+  STRIPE_PUBLIC_KEY_type: process.env.STRIPE_PUBLIC_KEY ? (
+    process.env.STRIPE_PUBLIC_KEY.startsWith('pk_test_') ? 'PUBLIC TEST' :
+    process.env.STRIPE_PUBLIC_KEY.startsWith('pk_live_') ? 'PUBLIC LIVE' :
+    'FORMAT INCONNU'
+  ) : 'ABSENT'
+});
+
+// AJOUTÉ: Arrêter le serveur si la configuration Stripe est incorrecte
+if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('pk_')) {
+  console.error('❌ [Server] ERREUR CRITIQUE DE CONFIGURATION STRIPE !');
+  console.error('❌ [Server] STRIPE_SECRET_KEY contient une clé PUBLIQUE au lieu d\'une clé SECRÈTE');
+  console.error('❌ [Server] Clé actuelle:', process.env.STRIPE_SECRET_KEY.substring(0, 15) + '...');
+  console.error('❌ [Server] SOLUTION: Changez STRIPE_SECRET_KEY pour une clé qui commence par "sk_test_" ou "sk_live_"');
+  console.error('❌ [Server] Fichier à modifier:', envPath);
+  process.exit(1);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
