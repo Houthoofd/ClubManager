@@ -22,16 +22,35 @@ console.log(process.env.STRIPE_SECRET_KEY + "depuis paiements.ts");
 dotenv.config({ path: envPath });
 const router = express.Router();
 console.log('🔧 [Paiements] Initialisation du module de paiements complet');
-// AJOUTÉ: Initialisation simple de Stripe
+// AJOUTÉ: Initialisation simple de Stripe avec diagnostic de compatibilité
 let stripe = null;
 try {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    console.log('🔍 [Paiements] Diagnostic clé Stripe backend:', {
+        keyExists: !!stripeSecretKey,
+        keyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 25) + '...' : 'ABSENT',
+        keyType: stripeSecretKey ? (stripeSecretKey.startsWith('sk_test_') ? 'SECRET TEST' :
+            stripeSecretKey.startsWith('sk_live_') ? 'SECRET LIVE' : 'FORMAT INCORRECT') : 'ABSENT',
+        accountId: stripeSecretKey ? stripeSecretKey.substring(8, 25) : 'N/A',
+        expectedAccount: 'RWzE9BQMqChSZKp (pour compatibilité frontend)'
+    });
     if (stripeSecretKey && stripeSecretKey.startsWith('sk_')) {
+        // AJOUTÉ: Vérification de compatibilité avec le frontend
+        if (!stripeSecretKey.includes('RWzE9BQ')) {
+            console.warn('⚠️ [Paiements] ATTENTION: Clé backend ne correspond pas au compte frontend !');
+            console.warn('⚠️ [Paiements] Backend utilise:', stripeSecretKey.substring(8, 25));
+            console.warn('⚠️ [Paiements] Frontend attend: RWzE9BQMqChSZKp');
+            console.warn('⚠️ [Paiements] Cela CAUSERA des erreurs "Invalid API Key" !');
+        }
+        else {
+            console.log('✅ [Paiements] Clés frontend/backend compatibles (compte RWzE9BQ)');
+        }
         stripe = new Stripe(stripeSecretKey, {
             apiVersion: '2025-02-24.acacia',
         });
         console.log('✅ [Paiements] Stripe initialisé avec succès');
         console.log('ℹ️ [Paiements] Type de clé:', stripeSecretKey.startsWith('sk_test_') ? 'TEST' : 'LIVE');
+        console.log('ℹ️ [Paiements] Compte:', stripeSecretKey.substring(8, 25));
     }
     else {
         console.warn('⚠️ [Paiements] STRIPE_SECRET_KEY manquant ou invalide');

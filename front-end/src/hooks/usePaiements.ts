@@ -1027,6 +1027,115 @@ export const useHistoriqueUtilisateur = (userId: number | null) => {
   };
 };
 
+// AJOUTÉ: Hook pour afficher les informations Stripe côté frontend
+export const useStripeInfo = () => {
+  return {
+    stripePublicKey: {
+      exists: !!import.meta.env.VITE_STRIPE_PUBLIC_KEY,
+      prefix: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.substring(0, 25) + '...' || 'ABSENT',
+      type: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_test_') ? 'TEST' :
+            import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_live_') ? 'LIVE' : 'INCONNU',
+      account: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.substring(8, 25) || 'AUCUN',
+      environment: import.meta.env.PROD ? 'PRODUCTION' : 'DEVELOPMENT',
+      fullKey: import.meta.env.VITE_STRIPE_PUBLIC_KEY,
+      // AJOUTÉ: Vérification de compatibilité attendue
+      expectedAccount: 'RWzE9BQMqChSZKp',
+      isCompatible: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.includes('RWzE9BQ') || false
+    },
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL,
+    allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
+  };
+};
+
+// AJOUTÉ: Hook pour tester la compatibilité Stripe frontend/backend
+export const useTestStripeCompatibility = () => {
+  return useMutation({
+    mutationFn: async () => {
+      console.log('🧪 [Stripe Compatibility] Test compatibilité frontend/backend...');
+      
+      const frontendKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+      const frontendAccount = frontendKey ? frontendKey.substring(8, 25) : 'UNKNOWN';
+      
+      const token = obtenirToken();
+      if (!token) {
+        throw new Error('Token manquant');
+      }
+
+      // Tester la connexion avec le backend et récupérer ses infos Stripe
+      const response = await fetch(`${apiUrl('paiements/health')}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend non disponible: ${response.status}`);
+      }
+
+      const backendInfo = await response.json();
+      
+      // AJOUTÉ: Test spécifique de création PaymentIntent pour vérifier la compatibilité
+      let compatibilityTest = null;
+      try {
+        const testPaymentResponse = await fetch(`${apiUrl('paiements/stripe/create-payment-intent')}`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            amount: 100, // 1€ de test
+            currency: 'eur',
+            echeanceId: 'test',
+            userId: 1,
+            description: 'Test compatibilité'
+          })
+        });
+
+        if (testPaymentResponse.status === 200) {
+          compatibilityTest = { success: true, message: 'Clés compatibles' };
+        } else {
+          const errorData = await testPaymentResponse.json();
+          compatibilityTest = { 
+            success: false, 
+            message: 'Incompatibilité détectée',
+            error: errorData.error
+          };
+        }
+      } catch (testError) {
+        compatibilityTest = { 
+          success: false, 
+          message: 'Erreur test compatibilité',
+          error: testError.message
+        };
+      }
+      
+      return {
+        frontend: {
+          key: frontendKey,
+          account: frontendAccount,
+          type: frontendKey?.startsWith('pk_test_') ? 'TEST' : 
+                frontendKey?.startsWith('pk_live_') ? 'LIVE' : 'INCONNU'
+        },
+        backend: {
+          stripe: backendInfo.features?.stripe || false,
+          module: backendInfo.module || 'INCONNU',
+          status: backendInfo.status || 'INCONNU'
+        },
+        compatibility: {
+          accountsMatch: frontendAccount === 'RWzE9BQMqChSZKp', // Compte attendu
+          bothConfigured: !!frontendKey && !!backendInfo.features?.stripe,
+          paymentTest: compatibilityTest
+        }
+      };
+    }
+  });
+};
+
 export default {
   useEcheancesUtilisateur,
   useEcheancesByUserId,
@@ -1047,6 +1156,8 @@ export default {
   useTraiterPaiementBitcoin,
   useModifierPaiement,
   useSupprimerPaiement,
-  useMettreAJourStatutPaiement
+  useMettreAJourStatutPaiement,
+  useStripeInfo,
+  useTestStripeCompatibility
 };
 
