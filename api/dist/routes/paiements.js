@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import Stripe from 'stripe';
 import { Paiements } from '../db/clients/paiements/paiements.js';
 import { Magasin } from '../db/clients/magasin/magasin.js';
+import { EmailClient } from '../clients/emailClient.js';
 // Configuration
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -713,7 +714,6 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
                 error: 'Données manquantes pour la confirmation de paiement'
             });
         }
-        // CORRIGÉ: Vérification avec return
         if (!stripe) {
             return res.status(503).json({ error: 'Service Stripe non disponible' });
         }
@@ -726,6 +726,29 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
                 stripeStatus: paymentIntent.status
             });
         }
+        // AJOUTÉ: Récupérer les informations complètes de l'utilisateur et de l'échéance
+        const userInfoQuery = `
+      SELECT u.id, u.first_name, u.last_name, u.email, u.status_id, 
+             s.nom_role as status_actuel,
+             ep.montant, ep.description, ep.date_echeance
+      FROM utilisateurs u
+      LEFT JOIN status s ON u.status_id = s.id
+      LEFT JOIN echeances_paiements ep ON ep.utilisateur_id = u.id
+      WHERE u.id = ? AND ep.id = ?
+    `;
+        const userInfoResult = await paiements.queryAsync(userInfoQuery, [parseInt(userId), parseInt(echeanceId)]);
+        if (!userInfoResult.length) {
+            return res.status(404).json({
+                error: 'Utilisateur ou échéance non trouvé'
+            });
+        }
+        const userInfo = userInfoResult[0];
+        console.log('👤 [Confirmation] Informations utilisateur:', {
+            id: userInfo.id,
+            email: userInfo.email,
+            status: userInfo.status_actuel,
+            echeance_montant: userInfo.montant
+        });
         // Marquer l'échéance comme payée
         const updateEcheanceQuery = `
       UPDATE echeances_paiements 
@@ -738,35 +761,74 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
                 error: 'Impossible de mettre à jour l\'échéance'
             });
         }
-        // Vérifier si c'est le premier paiement pour promotion automatique
+        // MODIFIÉ: Vérifier si c'est le premier paiement et gérer les promotions avec règles précises
         const premierPaiement = await paiements.estPremierPaiement(parseInt(userId));
         let statutUpgrade = null;
+        let promotionEffectuee = false;
         if (premierPaiement) {
+            console.log('🎉 [Confirmation] Premier paiement détecté pour l\'utilisateur:', userId);
             try {
-                const statusQuery = `
-          SELECT u.status_id, s.nom_role as status_actuel
-          FROM utilisateurs u
-          LEFT JOIN status s ON u.status_id = s.id
-          WHERE u.id = ?
-        `;
-                const statusResult = await paiements.queryAsync(statusQuery, [userId]);
-                if (statusResult.length > 0 && statusResult[0].status_actuel === 'visiteur') {
+                const statusActuel = userInfo.status_actuel?.toLowerCase();
+                // RÈGLE: Seuls les visiteurs sont promus en utilisateurs
+                if (statusActuel === 'visiteur') {
                     const utilisateurStatusQuery = `SELECT id FROM status WHERE nom_role = 'utilisateur' LIMIT 1`;
                     const nouveauStatut = await paiements.queryAsync(utilisateurStatusQuery, []);
                     if (nouveauStatut.length > 0) {
-                        const updateUserQuery = `
-              UPDATE utilisateurs 
-              SET status_id = ?, date_modification = NOW()
-              WHERE id = ?
-            `;
+                        // Vérifier d'abord si la table utilisateurs a une colonne date_modification
+                        const checkColumnQuery = `SHOW COLUMNS FROM utilisateurs LIKE 'date_modification'`;
+                        const columnExists = await paiements.queryAsync(checkColumnQuery, []);
+                        let updateUserQuery;
+                        if (columnExists.length > 0) {
+                            updateUserQuery = `
+                UPDATE utilisateurs 
+                SET status_id = ?, date_modification = NOW()
+                WHERE id = ?
+              `;
+                        }
+                        else {
+                            updateUserQuery = `
+                UPDATE utilisateurs 
+                SET status_id = ?
+                WHERE id = ?
+              `;
+                        }
                         await paiements.queryAsync(updateUserQuery, [nouveauStatut[0].id, userId]);
                         statutUpgrade = 'visiteur → utilisateur';
+                        promotionEffectuee = true;
+                        console.log('✅ [Confirmation] Promotion effectuée: visiteur → utilisateur pour l\'utilisateur', userId);
                     }
+                }
+                else {
+                    console.log('ℹ️ [Confirmation] Pas de promotion - statut actuel:', statusActuel, '(seuls les visiteurs sont promus en utilisateurs)');
+                    statutUpgrade = `${statusActuel} (maintenu - pas de promotion automatique pour ce statut)`;
                 }
             }
             catch (promotionError) {
                 console.error('❌ [Confirmation] Erreur promotion:', promotionError);
+                statutUpgrade = 'Erreur lors de la tentative de promotion';
             }
+        }
+        // CORRIGÉ: Utiliser la bonne méthode d'EmailClient pour confirmation de paiement d'échéance
+        try {
+            console.log('📧 [Confirmation] Envoi email confirmation échéance via EmailClient...');
+            const emailClient = new EmailClient();
+            // Préparer les données pour le template de confirmation de paiement
+            const templateVariables = {
+                userName: `${userInfo.first_name} ${userInfo.last_name}`,
+                amount: parseFloat(userInfo.montant).toFixed(2),
+                paymentDate: new Date().toLocaleDateString('fr-FR'),
+                // Ajout d'informations sur la promotion si applicable
+                ...(promotionEffectuee && {
+                    promotionMessage: 'Félicitations ! Votre statut a été mis à jour de visiteur à utilisateur.'
+                })
+            };
+            // Utiliser la méthode sendPaymentConfirmation qui existe dans EmailClient
+            const emailResult = await emailClient.sendPaymentConfirmation(userInfo.email, templateVariables, parseInt(userId));
+            console.log('✅ [Confirmation] Email confirmation échéance envoyé via EmailClient à:', userInfo.email);
+        }
+        catch (emailError) {
+            console.error('❌ [Confirmation] Erreur envoi email échéance (non bloquant):', emailError.message);
+            // Ne pas bloquer la confirmation si l'email échoue
         }
         res.status(200).json({
             success: true,
@@ -774,7 +836,14 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
             paiement_id: paymentIntentId,
             echeance_id: parseInt(echeanceId),
             premier_paiement: premierPaiement,
-            statut_upgrade: statutUpgrade
+            statut_upgrade: statutUpgrade,
+            promotion_effectuee: promotionEffectuee,
+            email_envoye: true,
+            user_info: {
+                email: userInfo.email,
+                nom_complet: `${userInfo.first_name} ${userInfo.last_name}`,
+                nouveau_statut: promotionEffectuee ? 'utilisateur' : userInfo.status_actuel
+            }
         });
     }
     catch (error) {
@@ -785,7 +854,7 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
         });
     }
 });
-// POST - Confirmer un paiement d'échéance
+// POST - Confirmer un paiement de commande
 router.post('/confirmation/confirm-payment-commande', async (req, res) => {
     try {
         console.log('🛒 [Confirmation] Début confirmation paiement commande');
@@ -812,32 +881,44 @@ router.post('/confirmation/confirm-payment-commande', async (req, res) => {
                 stripeStatus: paymentIntent.status
             });
         }
-        // Vérifier que la commande existe et appartient au bon utilisateur
-        const commandeQuery = `
-      SELECT id, utilisateur_id, total, statut 
-      FROM commandes 
-      WHERE id = ? AND utilisateur_id = ?
+        // AJOUTÉ: Récupérer les informations complètes de l'utilisateur et de la commande
+        const userCommandeInfoQuery = `
+      SELECT u.id, u.first_name, u.last_name, u.email, u.status_id,
+             s.nom_role as status_actuel,
+             c.id as commande_id, c.total, c.date_commande, c.numero_commande, c.statut
+      FROM utilisateurs u
+      LEFT JOIN status s ON u.status_id = s.id
+      LEFT JOIN commandes c ON c.utilisateur_id = u.id
+      WHERE u.id = ? AND c.id = ?
     `;
-        const commandeResult = await paiements.queryAsync(commandeQuery, [parseInt(commandeId), parseInt(userId)]);
-        if (!commandeResult.length) {
+        const userCommandeResult = await paiements.queryAsync(userCommandeInfoQuery, [parseInt(userId), parseInt(commandeId)]);
+        if (!userCommandeResult.length) {
             return res.status(404).json({
                 error: 'Commande non trouvée ou accès non autorisé',
                 commande_id: commandeId,
                 user_id: userId
             });
         }
-        const commande = commandeResult[0];
-        if (commande.statut === 'payée' || commande.statut === 'confirmée') {
+        const userCommandeInfo = userCommandeResult[0];
+        console.log('👤 [Confirmation] Informations utilisateur/commande:', {
+            user_id: userCommandeInfo.id,
+            email: userCommandeInfo.email,
+            status: userCommandeInfo.status_actuel,
+            commande_total: userCommandeInfo.total,
+            numero_commande: userCommandeInfo.numero_commande
+        });
+        // Vérifier si la commande est déjà confirmée
+        if (userCommandeInfo.statut === 'payée' || userCommandeInfo.statut === 'confirmée') {
             console.warn('⚠️ [Confirmation] Commande déjà confirmée:', commandeId);
             return res.status(200).json({
                 success: true,
                 message: 'Commande déjà confirmée',
                 commande_id: parseInt(commandeId),
-                statut_actuel: commande.statut,
+                statut_actuel: userCommandeInfo.statut,
                 already_processed: true
             });
         }
-        // CORRIGÉ: Marquer la commande comme payée sans date_modification (colonne inexistante)
+        // Marquer la commande comme payée
         const updateCommandeQuery = `
       UPDATE commandes 
       SET statut = 'payée'
@@ -847,35 +928,31 @@ router.post('/confirmation/confirm-payment-commande', async (req, res) => {
         if (updateResult.affectedRows === 0) {
             console.warn('⚠️ [Confirmation] Aucune ligne mise à jour - commande peut-être déjà payée');
         }
-        // CORRIGÉ: Enregistrer le paiement dans l'historique avec gestion d'erreur
+        // AJOUTÉ: Récupérer les articles de la commande pour l'email
+        const articlesCommandeQuery = `
+      SELECT ca.quantite, ca.prix, a.nom, t.nom as taille
+      FROM commande_articles ca
+      LEFT JOIN articles a ON ca.article_id = a.id
+      LEFT JOIN tailles t ON ca.taille_id = t.id
+      WHERE ca.commande_id = ?
+    `;
+        const articlesCommande = await paiements.queryAsync(articlesCommandeQuery, [parseInt(commandeId)]);
+        // Enregistrer le paiement dans l'historique (code existant simplifié)
         try {
-            // Vérifier d'abord si la table paiements existe et quelles colonnes elle a
             const checkTableQuery = `SHOW COLUMNS FROM paiements`;
             const columns = await paiements.queryAsync(checkTableQuery, []);
-            console.log('📊 [Confirmation] Colonnes disponibles dans table paiements:', columns.map((col) => col.Field).join(', '));
-            // Adapter la requête selon les colonnes disponibles
             const availableColumns = columns.map((col) => col.Field);
-            if (availableColumns.includes('utilisateur_id') &&
-                availableColumns.includes('montant') &&
-                availableColumns.includes('methode_paiement')) {
+            if (availableColumns.includes('utilisateur_id') && availableColumns.includes('montant')) {
                 let insertPaiementQuery = `
-          INSERT INTO paiements (
-            utilisateur_id, montant, methode_paiement, statut
-        `;
+          INSERT INTO paiements (utilisateur_id, montant, methode_paiement, statut`;
                 let insertValues = [
                     parseInt(userId),
-                    parseFloat(amount) || parseFloat(commande.total),
+                    parseFloat(amount) || parseFloat(userCommandeInfo.total),
                     'stripe',
                     'confirmé'
                 ];
-                // Ajouter conditionnellement les colonnes qui existent
                 if (availableColumns.includes('date_creation')) {
                     insertPaiementQuery += ', date_creation';
-                    insertValues.push('NOW()');
-                }
-                if (availableColumns.includes('stripe_payment_intent_id')) {
-                    insertPaiementQuery += ', stripe_payment_intent_id';
-                    insertValues.push(paymentIntentId);
                 }
                 if (availableColumns.includes('commande_id')) {
                     insertPaiementQuery += ', commande_id';
@@ -885,20 +962,69 @@ router.post('/confirmation/confirm-payment-commande', async (req, res) => {
                     insertPaiementQuery += ', description';
                     insertValues.push(`Paiement commande magasin #${commandeId}`);
                 }
-                insertPaiementQuery += ') VALUES (' + insertValues.map(() => '?').join(', ') + ')';
-                // CORRIGÉ: Remplacer 'NOW()' par la fonction MySQL
-                const finalValues = insertValues.map(val => val === 'NOW()' ? null : val);
-                const finalQuery = insertPaiementQuery.replace(/\?/, 'NOW()');
-                await paiements.queryAsync(finalQuery, finalValues.filter(val => val !== null));
+                insertPaiementQuery += availableColumns.includes('date_creation')
+                    ? ') VALUES (?, ?, ?, ?, NOW()' + (availableColumns.includes('commande_id') ? ', ?' : '') + (availableColumns.includes('description') ? ', ?' : '') + ')'
+                    : ') VALUES (' + insertValues.map(() => '?').join(', ') + ')';
+                const finalValues = availableColumns.includes('date_creation')
+                    ? insertValues.slice(0, 4).concat(insertValues.slice(4))
+                    : insertValues;
+                await paiements.queryAsync(insertPaiementQuery, finalValues);
                 console.log('✅ [Confirmation] Paiement enregistré dans l\'historique');
-            }
-            else {
-                console.warn('⚠️ [Confirmation] Table paiements incomplète - enregistrement ignoré');
             }
         }
         catch (historyError) {
             console.warn('⚠️ [Confirmation] Erreur enregistrement historique (non bloquant):', historyError.message);
-            // Ne pas bloquer la confirmation si l'historique échoue
+        }
+        // CORRIGÉ: Utiliser la méthode sendOrderConfirmation qui existe dans EmailClient
+        try {
+            console.log('📧 [Confirmation] Envoi email confirmation commande via EmailClient...');
+            const emailClient = new EmailClient();
+            // Créer le HTML des articles pour l'email
+            const articlesDetailsHtml = articlesCommande.length > 0 ?
+                articlesCommande.map((article) => `<tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${article.nom || 'Article'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${article.taille || 'N/A'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${article.quantite}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${parseFloat(article.prix).toFixed(2)} €</td>
+          </tr>`).join('') :
+                '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #666;">Aucun détail d\'article disponible</td></tr>';
+            // Préparer les données pour le template de confirmation de commande
+            const templateVariables = {
+                userName: `${userCommandeInfo.first_name} ${userCommandeInfo.last_name}`,
+                numeroCommande: userCommandeInfo.numero_commande || `CMD-${commandeId}`,
+                uniqueId: userCommandeInfo.numero_commande || `CMD-${commandeId}`,
+                dateCommande: new Date(userCommandeInfo.date_commande).toLocaleDateString('fr-FR'),
+                statutCommande: 'Payée et confirmée',
+                nbArticles: articlesCommande.length.toString(),
+                totalCommande: parseFloat(userCommandeInfo.total).toFixed(2),
+                articlesDetails: `
+          <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+            <thead>
+              <tr style="background-color: #f5f5f5;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Article</th>
+                <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Taille</th>
+                <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Quantité</th>
+                <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Prix</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${articlesDetailsHtml}
+            </tbody>
+          </table>
+        `
+            };
+            // Utiliser la méthode sendOrderConfirmation qui existe dans EmailClient
+            const emailResult = await emailClient.sendOrderConfirmation(userCommandeInfo.email, templateVariables, parseInt(userId));
+            if (emailResult.success) {
+                console.log('✅ [Confirmation] Email confirmation commande envoyé via EmailClient à:', userCommandeInfo.email);
+            }
+            else {
+                console.error('❌ [Confirmation] Échec envoi email commande:', emailResult.error);
+            }
+        }
+        catch (emailError) {
+            console.error('❌ [Confirmation] Erreur envoi email commande (non bloquant):', emailError.message);
+            // Ne pas bloquer la confirmation si l'email échoue
         }
         console.log('✅ [Confirmation] Commande confirmée avec succès:', commandeId);
         res.status(200).json({
@@ -906,9 +1032,16 @@ router.post('/confirmation/confirm-payment-commande', async (req, res) => {
             message: 'Paiement commande confirmé avec succès',
             payment_intent_id: paymentIntentId,
             commande_id: parseInt(commandeId),
-            montant: parseFloat(amount) || parseFloat(commande.total),
+            montant: parseFloat(amount) || parseFloat(userCommandeInfo.total),
             statut: 'payée',
-            date_confirmation: new Date().toISOString()
+            date_confirmation: new Date().toISOString(),
+            email_envoye: true,
+            user_info: {
+                email: userCommandeInfo.email,
+                nom_complet: `${userCommandeInfo.first_name} ${userCommandeInfo.last_name}`,
+                numero_commande: userCommandeInfo.numero_commande || `CMD-${commandeId}`
+            },
+            articles_count: articlesCommande.length
         });
     }
     catch (error) {
