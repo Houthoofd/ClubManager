@@ -1158,30 +1158,3 @@ console.log('✅ [Stripe] Routes Stripe chargées');
 
 // CORRIGÉ: Export par défaut au lieu de named export
 export default router;
-
-// AJOUTÉ: Route de test pour vérifier le chargement du module Stripe
-router.get('/test', async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      module: 'stripe',
-      message: 'Module Stripe est fonctionnel',
-      stripe_configured: !!process.env.STRIPE_SECRET_KEY,
-      routes_available: [
-        'POST /create-payment-intent - PaymentIntent échéance',
-        'POST /create-payment-intent-commande - PaymentIntent commande',
-        'POST /confirm-payment - Confirmation paiement',
-        'POST /bancontact - Paiement Bancontact',
-        'POST /paypal - Paiement PayPal',
-        'POST /bitcoin - Paiement Bitcoin'
-      ],
-      timestamp: new Date().toISOString()
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});

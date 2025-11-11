@@ -380,13 +380,48 @@ router.get('/health', (req, res) => {
   });
 });
 
-// AJOUTÉ: Route de test simple pour vérifier le chargement
+// AJOUTÉ: Route de test simple pour vérifier le chargement SANS AUTH
+router.get('/test-no-auth', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Module CRUD des paiements est accessible SANS authentification',
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    method: req.method,
+    note: 'Cette route de test ne nécessite pas d\'authentification'
+  });
+});
+
+// MODIFIÉ: Route de test avec auth pour diagnostiquer
 router.get('/test', (req, res) => {
+  console.log('🧪 [CRUD Test] Route de test appelée:', {
+    path: req.path,
+    method: req.method,
+    hasUser: !!(req as any).user,
+    userDetails: (req as any).user || null,
+    cookies: Object.keys(req.cookies || {}),
+    headers: {
+      authorization: !!req.headers.authorization,
+      'user-data': !!req.headers['user-data']
+    }
+  });
+
   res.json({
     success: true,
     message: 'Module CRUD des paiements est fonctionnel',
     timestamp: new Date().toISOString(),
-    user: (req as any).user || null
+    user: (req as any).user || null,
+    authentication: {
+      authenticated: !!(req as any).user,
+      userId: (req as any).user?.id || null,
+      email: (req as any).user?.email || null
+    },
+    debug: {
+      path: req.path,
+      method: req.method,
+      cookiesPresent: Object.keys(req.cookies || {}),
+      authHeaderPresent: !!req.headers.authorization
+    }
   });
 });
 
