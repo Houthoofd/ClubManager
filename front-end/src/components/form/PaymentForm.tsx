@@ -9,14 +9,12 @@ import {
   Button,
   Alert,
   Spinner,
-  Flex,
-  FlexItem,
   Form,
   FormGroup,
   TextInput,
   Checkbox
 } from '@patternfly/react-core';
-import { CreditCardIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@patternfly/react-icons';
+import { CreditCardIcon } from '@patternfly/react-icons';
 
 interface PaymentFormProps {
   clientSecret: string;
@@ -50,6 +48,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerAddress, setCustomerAddress] = useState({
+    line1: '',
+    line2: '',
+    city: '',
+    postal_code: '',
+    country: 'BE' // Défaut Belgique
+  });
   const [usePaymentElement, setUsePaymentElement] = useState(true);
 
   // AJOUTÉ: Debug du client secret et des éléments Stripe
@@ -58,12 +63,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       stripe: !!stripe,
       elements: !!elements,
       clientSecret: !!clientSecret,
-      clientSecretPrefix: clientSecret?.substring(0, 15) + '...',
       amount,
-      description,
-      echeanceId,
-      commandeId,
-      userId
+      echeanceId
     });
 
     // Récupérer les infos utilisateur depuis localStorage
@@ -81,11 +82,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   }, [stripe, elements, clientSecret]);
 
-  // AJOUTÉ: Vérifier si PaymentElement est disponible
+  // CORRIGÉ: Configuration PaymentElement avec adresse complète
   useEffect(() => {
     if (elements) {
       try {
-        // Tester si PaymentElement est supporté
         const testElement = elements.create('payment');
         if (testElement) {
           console.log('✅ [PaymentForm] PaymentElement supporté');
@@ -112,6 +112,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       return;
     }
 
+    // AJOUTÉ: Validation de l'adresse pour éviter l'erreur postcode
+    if (usePaymentElement && (!customerAddress.postal_code || customerAddress.postal_code.length < 4)) {
+      setMessage('⚠️ Veuillez remplir un code postal valide (minimum 4 caractères)');
+      return;
+    }
+
+    if (usePaymentElement && !customerAddress.city) {
+      setMessage('⚠️ Veuillez remplir la ville');
+      return;
+    }
+
     setIsLoading(true);
     setMessage('');
 
@@ -121,7 +132,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       let result;
 
       if (usePaymentElement) {
-        // MÉTHODE 1: Utiliser PaymentElement (recommandé)
+        // CORRIGÉ: PaymentElement avec adresse complète
         console.log('💳 [PaymentForm] Confirmation avec PaymentElement...');
         
         result = await stripe.confirmPayment({
@@ -131,17 +142,24 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             payment_method_data: {
               billing_details: {
                 name: customerName || 'Client',
-                email: customerEmail || undefined
+                email: customerEmail || undefined,
+                address: {
+                  line1: customerAddress.line1 || 'Non renseigné',
+                  line2: customerAddress.line2 || undefined,
+                  city: customerAddress.city || 'Non renseigné',
+                  postal_code: customerAddress.postal_code,
+                  country: customerAddress.country
+                }
               }
             }
           },
-          redirect: 'if_required' // IMPORTANT: Éviter la redirection automatique
+          redirect: 'if_required'
         });
 
         console.log('📊 [PaymentForm] Résultat PaymentElement:', result);
 
       } else {
-        // MÉTHODE 2: Utiliser CardElement (fallback)
+        // CORRIGÉ: CardElement avec adresse complète
         console.log('💳 [PaymentForm] Confirmation avec CardElement...');
         
         const cardElement = elements.getElement(CardElement);
@@ -154,7 +172,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             card: cardElement,
             billing_details: {
               name: customerName || 'Client',
-              email: customerEmail || undefined
+              email: customerEmail || undefined,
+              address: {
+                line1: customerAddress.line1 || 'Non renseigné',
+                line2: customerAddress.line2 || undefined,
+                city: customerAddress.city || 'Non renseigné',
+                postal_code: customerAddress.postal_code,
+                country: customerAddress.country
+              }
             }
           }
         });
@@ -167,8 +192,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         
         let errorMessage = result.error.message || 'Erreur de paiement inconnue';
         
-        // Messages d'erreur personnalisés
-        if (result.error.code === 'card_declined') {
+        // AJOUTÉ: Messages d'erreur spécifiques pour les codes postaux
+        if (result.error.code === 'incomplete_zip') {
+          errorMessage = '❌ Code postal incomplet. Veuillez saisir un code postal valide.';
+        } else if (result.error.code === 'invalid_zip') {
+          errorMessage = '❌ Code postal invalide. Vérifiez le format de votre code postal.';
+        } else if (result.error.message?.includes('postcode') || result.error.message?.includes('postal')) {
+          errorMessage = '❌ Problème avec le code postal. Veuillez vérifier et compléter votre adresse.';
+        } else if (result.error.code === 'card_declined') {
           errorMessage = '❌ Carte refusée. Vérifiez vos informations ou utilisez une autre carte.';
         } else if (result.error.code === 'insufficient_funds') {
           errorMessage = '❌ Fonds insuffisants sur votre carte.';
@@ -216,6 +247,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   };
 
+  // AJOUTÉ: Handler pour les changements d'adresse
+  const handleAddressChange = (field: string, value: string) => {
+    setCustomerAddress(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Vérifications préliminaires
   if (!clientSecret) {
     return (
@@ -232,60 +271,91 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         <div style={{ marginTop: '1rem' }}>
           🔄 Chargement du système de paiement sécurisé...
         </div>
-        <div style={{ marginTop: '0.5rem', fontSize: '14px', color: '#666' }}>
-          Initialisation de Stripe Elements...
-        </div>
       </div>
     );
   }
 
   return (
     <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-      {/* DEBUG VISIBLE */}
-      <div style={{
-        background: '#f8f9fa',
-        border: '1px solid #dee2e6',
-        borderRadius: '6px',
-        padding: '1rem',
-        marginBottom: '1rem',
-        fontSize: '14px'
-      }}>
-        <strong>🔧 Debug PaymentForm:</strong>
-        <br />
-        <strong>Stripe:</strong> {stripe ? '✅ Chargé' : '❌ Non chargé'}
-        <br />
-        <strong>Elements:</strong> {elements ? '✅ Chargé' : '❌ Non chargé'}
-        <br />
-        <strong>Client Secret:</strong> {clientSecret ? '✅ Présent' : '❌ Manquant'}
-        <br />
-        <strong>Type d'élément:</strong> {usePaymentElement ? 'PaymentElement' : 'CardElement'}
-        <br />
-        <strong>Montant:</strong> {amount ? `${amount} €` : 'Non spécifié'}
-      </div>
-
       <Form onSubmit={handleSubmit}>
         {/* Informations client */}
-        <FormGroup label="Nom complet" fieldId="customer-name">
+        <FormGroup label="Nom complet *" fieldId="customer-name" isRequired>
           <TextInput
             id="customer-name"
             value={customerName}
             onChange={(_event, value) => setCustomerName(value)}
             placeholder="Votre nom complet"
+            isRequired
           />
         </FormGroup>
 
-        <FormGroup label="Email" fieldId="customer-email">
+        <FormGroup label="Email *" fieldId="customer-email" isRequired>
           <TextInput
             id="customer-email"
             type="email"
             value={customerEmail}
             onChange={(_event, value) => setCustomerEmail(value)}
             placeholder="votre@email.com"
+            isRequired
           />
         </FormGroup>
 
+        {/* AJOUTÉ: Adresse de facturation */}
+        <FormGroup label="Adresse de facturation" fieldId="billing-address">
+          <TextInput
+            id="address-line1"
+            value={customerAddress.line1}
+            onChange={(_event, value) => handleAddressChange('line1', value)}
+            placeholder="Rue et numéro *"
+            style={{ marginBottom: '0.5rem' }}
+          />
+          <TextInput
+            id="address-line2"
+            value={customerAddress.line2}
+            onChange={(_event, value) => handleAddressChange('line2', value)}
+            placeholder="Complément d'adresse (optionnel)"
+            style={{ marginBottom: '0.5rem' }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <TextInput
+              id="postal-code"
+              value={customerAddress.postal_code}
+              onChange={(_event, value) => handleAddressChange('postal_code', value)}
+              placeholder="Code postal *"
+              style={{ flex: '0 0 120px' }}
+              isRequired
+            />
+            <TextInput
+              id="city"
+              value={customerAddress.city}
+              onChange={(_event, value) => handleAddressChange('city', value)}
+              placeholder="Ville *"
+              style={{ flex: '1' }}
+              isRequired
+            />
+          </div>
+          <select
+            id="country"
+            value={customerAddress.country}
+            onChange={(e) => handleAddressChange('country', e.target.value)}
+            style={{
+              marginTop: '0.5rem',
+              width: '100%',
+              padding: '0.5rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px'
+            }}
+          >
+            <option value="BE">Belgique</option>
+            <option value="FR">France</option>
+            <option value="NL">Pays-Bas</option>
+            <option value="DE">Allemagne</option>
+            <option value="LU">Luxembourg</option>
+          </select>
+        </FormGroup>
+
         {/* Élément de paiement Stripe */}
-        <FormGroup label="Informations de paiement" fieldId="payment-element">
+        <FormGroup label="Informations de paiement *" fieldId="payment-element" isRequired>
           <div style={{
             padding: '1rem',
             border: '1px solid #d1d5db',
@@ -301,7 +371,23 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   defaultValues: {
                     billingDetails: {
                       name: customerName,
-                      email: customerEmail
+                      email: customerEmail,
+                      address: {
+                        line1: customerAddress.line1,
+                        line2: customerAddress.line2,
+                        city: customerAddress.city,
+                        postal_code: customerAddress.postal_code,
+                        country: customerAddress.country
+                      }
+                    }
+                  },
+                  // AJOUTÉ: Configuration pour éviter les erreurs d'adresse
+                  fields: {
+                    billingDetails: {
+                      address: {
+                        country: 'auto',
+                        postalCode: 'auto'
+                      }
                     }
                   }
                 }}
@@ -368,7 +454,15 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             variant="primary"
             size="lg"
             isBlock
-            isDisabled={isLoading || !acceptTerms || (!isComplete && usePaymentElement)}
+            isDisabled={
+              isLoading || 
+              !acceptTerms || 
+              !customerName || 
+              !customerEmail ||
+              !customerAddress.postal_code ||
+              !customerAddress.city ||
+              (!isComplete && usePaymentElement)
+            }
             icon={isLoading ? <Spinner size="sm" /> : <CreditCardIcon />}
           >
             {isLoading ? (
