@@ -1,14 +1,11 @@
-name: Deploy ClubManager (no build, only deploy)
-
+name: Deploy ClubManager (build on server)
 on:
   push:
     branches:
       - back-up/hosting
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -22,23 +19,36 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             cd /home/***/ClubManager
-
             echo "🔄 Pull depuis la branche back-up/hosting..."
             git reset --hard HEAD
             git clean -fd
             git pull origin back-up/hosting
+
+            echo "🛠️ Vérification de Node.js et npm..."
+            node -v
+            npm -v
+
+            echo "🛠️ Installation des dépendances et build du front-end..."
+            cd front-end
+            npm install
+            npm run build
+
+            echo "🔒 Réinitialisation des permissions du dossier clubmanager (si existe)..."
+            sudo chmod -R 777 /usr/share/nginx/html/clubmanager 2>/dev/null || true
 
             echo "🧹 Nettoyage de l'ancien contenu du dossier clubmanager..."
             sudo rm -rf /usr/share/nginx/html/clubmanager
 
             echo "📁 Création du dossier clubmanager et copie des fichiers..."
             sudo mkdir -p /usr/share/nginx/html/clubmanager
-            sudo cp -r front-end/dist/* /usr/share/nginx/html/clubmanager/
+            sudo cp -r dist/* /usr/share/nginx/html/clubmanager/
+
+            echo "🔒 Application des permissions sécurisées..."
             sudo chown -R nginx:nginx /usr/share/nginx/html/clubmanager
-            sudo chmod -R 755 /usr/share/nginx/html/clubmanager
+            sudo find /usr/share/nginx/html/clubmanager -type d -exec chmod 755 {} \;
+            sudo find /usr/share/nginx/html/clubmanager -type f -exec chmod 644 {} \;
 
             echo "🔁 Rechargement de nginx et redémarrage du service clubmanager..."
             sudo systemctl reload nginx
             sudo systemctl restart clubmanager.service
-
             echo "✅ Déploiement terminé avec succès"
