@@ -20,3 +20,5 @@ Carte refusée : 4000000000000002
 Fonds insuffisants : 4000000000009995
 CVC incorrect : 4000000000000127
 Carte expirée : 4000000000000069
+
+--test--
