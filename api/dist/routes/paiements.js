@@ -2,7 +2,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs'; // CORRIGÉ: Import ES6 au lieu de require
 import Stripe from 'stripe';
 import { Paiements } from '../db/clients/paiements/paiements.js';
 import { Magasin } from '../db/clients/magasin/magasin.js';
@@ -18,84 +17,28 @@ if (nodeEnv === 'production') {
 else {
     envPath = path.resolve(__dirname, '../../.env.development');
 }
-// CORRIGÉ: Utiliser fs.existsSync au lieu de require('fs').existsSync
-if (!fs.existsSync(envPath)) {
-    envPath = path.resolve(__dirname, '../../.env');
-}
 console.log(`🔧 [Paiements] Chargement .env depuis: ${envPath}`);
+console.log(process.env.STRIPE_SECRET_KEY + "depuis paiements.ts");
 dotenv.config({ path: envPath });
 const router = express.Router();
 console.log('🔧 [Paiements] Initialisation du module de paiements complet');
-// CORRIGÉ: Configuration Stripe avec validation stricte et fallback pour les clés manquantes
+// AJOUTÉ: Initialisation simple de Stripe
 let stripe = null;
 try {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    console.log('🔍 [Paiements] Analyse configuration Stripe:', {
-        NODE_ENV: process.env.NODE_ENV,
-        envPath: envPath,
-        hasSecretKey: !!stripeSecretKey,
-        secretKeyPrefix: stripeSecretKey ? stripeSecretKey.substring(0, 12) + '...' : 'MANQUANT',
-        secretKeyType: stripeSecretKey ? (stripeSecretKey.startsWith('sk_test_') ? 'SECRET TEST (✓)' :
-            stripeSecretKey.startsWith('sk_live_') ? 'SECRET LIVE (✓)' :
-                stripeSecretKey.startsWith('pk_test_') ? 'ERROR: PUBLIC TEST (✗)' :
-                    stripeSecretKey.startsWith('pk_live_') ? 'ERROR: PUBLIC LIVE (✗)' :
-                        'FORMAT INCONNU (✗)') : 'ABSENT (✗)',
-        hasPublicKey: !!process.env.STRIPE_PUBLIC_KEY,
-        publicKeyPrefix: process.env.STRIPE_PUBLIC_KEY ? process.env.STRIPE_PUBLIC_KEY.substring(0, 12) + '...' : 'MANQUANT'
-    });
-    // AJOUTÉ: Messages d'erreur spécifiques avec solutions
-    if (!stripeSecretKey) {
-        console.error('❌ [Paiements] STRIPE_SECRET_KEY manquant dans', envPath);
-        console.error('❌ [Paiements] SOLUTION:');
-        console.error('  1. Allez sur https://dashboard.stripe.com/apikeys');
-        console.error('  2. Activez le mode LIVE (pas TEST)');
-        console.error('  3. Copiez la clé secrète qui commence par sk_live_51R6wB1AxYwLhmnM2...');
-        console.error('  4. Ajoutez STRIPE_SECRET_KEY=sk_live_... dans', envPath);
-        throw new Error('STRIPE_SECRET_KEY manquant');
-    }
-    if (stripeSecretKey.startsWith('pk_')) {
-        console.error('❌ [Paiements] ERREUR CRITIQUE: Clé PUBLIQUE dans STRIPE_SECRET_KEY !');
-        console.error('❌ [Paiements] Clé actuelle:', stripeSecretKey.substring(0, 25) + '...');
-        console.error('❌ [Paiements] Cette clé (pk_...) doit être utilisée côté FRONTEND seulement');
-        console.error('❌ [Paiements] SOLUTION:');
-        console.error('  1. Récupérez votre clé SECRÈTE (sk_live_...) depuis Stripe');
-        console.error('  2. Remplacez STRIPE_SECRET_KEY dans', envPath);
-        console.error('  3. La clé publique va dans le frontend, la clé secrète dans le backend');
-        throw new Error('Clé publique utilisée dans STRIPE_SECRET_KEY - utilisez la clé secrète');
-    }
-    // AJOUTÉ: Validation spécifique pour la production
-    if (process.env.NODE_ENV === 'production' && stripeSecretKey.startsWith('sk_test_')) {
-        console.error('❌ [Paiements] ERREUR: Clé TEST utilisée en PRODUCTION !');
-        console.error('❌ [Paiements] Clé actuelle:', stripeSecretKey.substring(0, 25) + '...');
-        console.error('❌ [Paiements] SOLUTION: Utilisez une clé LIVE (sk_live_...) en production');
-        throw new Error('Clé de test utilisée en production');
-    }
-    if (stripeSecretKey.startsWith('sk_') && !stripeSecretKey.includes('4e')) {
+    if (stripeSecretKey && stripeSecretKey.startsWith('sk_')) {
         stripe = new Stripe(stripeSecretKey, {
-            apiVersion: '2025-02-24.acacia', // CORRIGÉ: Version API Stripe à jour
+            apiVersion: '2025-02-24.acacia',
         });
-        console.log('✅ [Paiements] Stripe initialisé avec clé secrète valide');
-        console.log('✅ [Paiements] Type de clé:', stripeSecretKey.startsWith('sk_test_') ? 'TEST' : 'LIVE');
-        console.log('✅ [Paiements] Compte Stripe:', stripeSecretKey.substring(8, 25));
+        console.log('✅ [Paiements] Stripe initialisé avec succès');
+        console.log('ℹ️ [Paiements] Type de clé:', stripeSecretKey.startsWith('sk_test_') ? 'TEST' : 'LIVE');
     }
     else {
-        console.error('❌ [Paiements] Format de clé Stripe invalide ou pattern rejeté');
-        console.error('❌ [Paiements] Pattern rejeté détecté:', stripeSecretKey.includes('4e') ? 'OUI' : 'NON');
-        throw new Error('Format de clé Stripe invalide');
+        console.warn('⚠️ [Paiements] STRIPE_SECRET_KEY manquant ou invalide');
     }
 }
 catch (error) {
-    console.error('❌ [Paiements] Erreur critique initialisation Stripe:', error);
-    console.error('❌ [Paiements] Vérifiez votre fichier:', envPath);
-    console.error('❌ [Paiements] Variables attendues:');
-    if (process.env.NODE_ENV === 'production') {
-        console.error('  - STRIPE_SECRET_KEY=sk_live_51R6wB1AxYwLhmnM2... (LIVE pour production)');
-        console.error('  - STRIPE_PUBLIC_KEY=pk_live_51R6wB1AxYwLhmnM2... (LIVE pour production)');
-    }
-    else {
-        console.error('  - STRIPE_SECRET_KEY=sk_test_... (TEST pour développement)');
-        console.error('  - STRIPE_PUBLIC_KEY=pk_test_... (TEST pour développement)');
-    }
+    console.error('❌ [Paiements] Erreur initialisation Stripe:', error);
 }
 // CORRIGÉ: Middleware d'authentification flexible
 const flexibleAuth = async (req, res, next) => {
@@ -142,123 +85,6 @@ const flexibleAuth = async (req, res, next) => {
 };
 // Appliquer le middleware d'auth à toutes les routes (sauf publiques)
 router.use(flexibleAuth);
-// ===== ROUTES STRIPE =====
-// AJOUTÉ: Route de diagnostic Stripe AVANT les autres routes
-router.post('/stripe/debug-config', async (req, res) => {
-    try {
-        console.log('🔧 [Stripe Debug] Test configuration Stripe...');
-        const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-        const stripePublicKey = process.env.STRIPE_PUBLIC_KEY;
-        const diagnostics = {
-            environment: {
-                NODE_ENV: process.env.NODE_ENV,
-                envFile: envPath,
-                expected_mode: process.env.NODE_ENV === 'production' ? 'LIVE' : 'TEST'
-            },
-            stripe_config: {
-                secret_key: {
-                    exists: !!stripeSecretKey,
-                    type: stripeSecretKey ? (stripeSecretKey.startsWith('sk_test_') ? 'SECRET TEST' :
-                        stripeSecretKey.startsWith('sk_live_') ? 'SECRET LIVE' :
-                            stripeSecretKey.startsWith('pk_test_') ? 'ERROR: PUBLIC TEST (SHOULD BE SECRET)' :
-                                stripeSecretKey.startsWith('pk_live_') ? 'ERROR: PUBLIC LIVE (SHOULD BE SECRET)' :
-                                    'FORMAT INCONNU') : 'ABSENT',
-                    prefix: stripeSecretKey ? stripeSecretKey.substring(0, 25) + '...' : null,
-                    length: stripeSecretKey ? stripeSecretKey.length : 0,
-                    environment_match: stripeSecretKey ? (process.env.NODE_ENV === 'production' ? stripeSecretKey.startsWith('sk_live_') : stripeSecretKey.startsWith('sk_test_')) : false
-                },
-                public_key: {
-                    exists: !!stripePublicKey,
-                    type: stripePublicKey ? (stripePublicKey.startsWith('pk_test_') ? 'PUBLIC TEST' :
-                        stripePublicKey.startsWith('pk_live_') ? 'PUBLIC LIVE' :
-                            'FORMAT INCONNU') : 'ABSENT',
-                    prefix: stripePublicKey ? stripePublicKey.substring(0, 25) + '...' : null,
-                    environment_match: stripePublicKey ? (process.env.NODE_ENV === 'production' ? stripePublicKey.startsWith('pk_live_') : stripePublicKey.startsWith('pk_test_')) : false
-                },
-                stripe_object_initialized: !!stripe
-            },
-            errors: [],
-            solutions: []
-        };
-        console.log('📊 [Stripe Debug] Diagnostics complets:', diagnostics);
-        // AJOUTÉ: Retour d'erreur si problème critique
-        if (diagnostics.errors.length > 0) {
-            return res.status(500).json({
-                success: false,
-                error: 'Configuration Stripe incorrecte',
-                diagnostics,
-                immediate_action_required: true,
-                next_steps: diagnostics.solutions
-            });
-        }
-        if (!stripe) {
-            return res.status(503).json({
-                success: false,
-                error: 'Stripe non initialisé',
-                diagnostics
-            });
-        }
-        // Test de l'API Stripe seulement si la configuration est correcte
-        try {
-            console.log('🧪 [Stripe Debug] Test API Stripe...');
-            const testPaymentIntent = await stripe.paymentIntents.create({
-                amount: 100,
-                currency: 'eur',
-                description: 'Test diagnostic configuration',
-                metadata: {
-                    test: 'true',
-                    debug: 'configuration_check',
-                    environment: process.env.NODE_ENV || 'development'
-                }
-            });
-            console.log('✅ [Stripe Debug] Test API réussi:', testPaymentIntent.id);
-            res.json({
-                success: true,
-                message: 'Configuration Stripe entièrement fonctionnelle',
-                diagnostics,
-                test_payment_intent: {
-                    id: testPaymentIntent.id,
-                    status: testPaymentIntent.status,
-                    amount: testPaymentIntent.amount,
-                    currency: testPaymentIntent.currency
-                }
-            });
-        }
-        catch (stripeTestError) {
-            console.error('❌ [Stripe Debug] Erreur test API:', stripeTestError);
-            let errorAnalysis = 'Erreur API Stripe générale';
-            let solution = 'Vérifiez la configuration Stripe';
-            if (stripeTestError.message && stripeTestError.message.includes('Invalid API Key provided: pk_')) {
-                errorAnalysis = 'CLÉ PUBLIQUE ENVOYÉE À L\'API STRIPE BACKEND';
-                solution = 'Le frontend envoie une clé publique au lieu de laisser le backend utiliser sa clé secrète';
-            }
-            else if (stripeTestError.code === 'invalid_api_key') {
-                errorAnalysis = 'CLÉ API STRIPE INVALIDE';
-                solution = 'Récupérez une nouvelle clé depuis votre dashboard Stripe';
-            }
-            res.status(500).json({
-                success: false,
-                error: 'Erreur API Stripe',
-                error_analysis: errorAnalysis,
-                stripe_error: {
-                    type: stripeTestError.type,
-                    code: stripeTestError.code,
-                    message: stripeTestError.message
-                },
-                diagnostics,
-                solution: solution
-            });
-        }
-    }
-    catch (error) {
-        console.error('❌ [Stripe Debug] Erreur diagnostic générale:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erreur diagnostic',
-            details: error.message
-        });
-    }
-});
 // AJOUTÉ: Cache pour éviter les doublons de PaymentIntent
 const paymentIntentCache = new Map();
 const CACHE_DURATION = 30000; // 30 secondes
@@ -322,15 +148,6 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
             return res.status(400).json({
                 error: 'ID utilisateur requis',
                 received: { userId, type: typeof userId }
-            });
-        }
-        // CORRIGÉ: Vérification Stripe avec diagnostic détaillé
-        if (!stripe) {
-            console.error('❌ [Stripe] Service Stripe non initialisé');
-            return res.status(503).json({
-                error: 'Service Stripe non disponible',
-                details: 'Stripe non initialisé - vérifiez STRIPE_SECRET_KEY dans .env',
-                debug_url: '/paiements/stripe/debug-config'
             });
         }
         console.log('✅ [Stripe] Validation OK, connexion DB...');
@@ -424,6 +241,14 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
         console.log('🚀 [Stripe] Création PaymentIntent...');
         let paymentIntent;
         try {
+            // CORRIGÉ: Vérification simple de Stripe avec return
+            if (!stripe) {
+                console.error('❌ [Stripe] Service Stripe non initialisé');
+                return res.status(503).json({
+                    error: 'Service Stripe non disponible',
+                    details: 'Stripe non initialisé - vérifiez STRIPE_SECRET_KEY dans .env'
+                });
+            }
             const supportedCurrencies = ['eur', 'usd', 'gbp', 'chf', 'cad'];
             const normalizedCurrency = currency.toLowerCase();
             if (!supportedCurrencies.includes(normalizedCurrency)) {
@@ -549,6 +374,7 @@ router.post('/stripe/create-payment-intent-commande', async (req, res) => {
                 error: 'Utilisateur non authentifié'
             });
         }
+        // CORRIGÉ: Vérification avec return
         if (!stripe) {
             return res.status(503).json({ error: 'Service Stripe non disponible' });
         }
@@ -703,6 +529,7 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
                 error: 'Données manquantes pour la confirmation de paiement'
             });
         }
+        // CORRIGÉ: Vérification avec return
         if (!stripe) {
             return res.status(503).json({ error: 'Service Stripe non disponible' });
         }
@@ -779,6 +606,7 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
 router.post('/webhooks/stripe', async (req, res) => {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    // CORRIGÉ: Vérification avec return
     if (!stripe || !endpointSecret) {
         return res.status(503).json({ error: 'Service webhook non configuré' });
     }
