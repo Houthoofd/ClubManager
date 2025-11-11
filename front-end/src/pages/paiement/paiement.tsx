@@ -31,8 +31,8 @@ import {
   obtenirIdUtilisateur
 } from '../../hooks/usePaiements';
 
-// Charger Stripe avec votre clé publique
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_...');
+// CORRIGÉ: Charger Stripe avec la bonne variable d'environnement
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_...');
 
 const PaiementPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -233,20 +233,15 @@ const PaiementPage: React.FC = () => {
   // AJOUTÉ: useEffect pour créer le PaymentIntent automatiquement
   useEffect(() => {
     const creerPaymentIntent = async () => {
-      // Vérifications de sécurité
-      if (userIdMismatch || securityError || showSecurityModal) {
-        console.log('🛑 [PaiementPage] Création PaymentIntent bloquée pour sécurité');
-        return;
-      }
-
-      if (!connectedUserId || !userIdNumber) {
-        console.log('⏳ [PaiementPage] Attente des IDs utilisateur');
+      // CORRIGÉ: Vérifications de sécurité simplifiées
+      if (userIdMismatch || securityError || showSecurityModal || !connectedUserId || !userIdNumber) {
+        console.log('🛑 [PaiementPage] Création PaymentIntent bloquée');
         return;
       }
 
       try {
         if (paymentType === 'echeance' && echeanceData && !clientSecret) {
-          console.log('💳 [PaiementPage] Création PaymentIntent échéance avec hook...');
+          console.log('💳 [PaiementPage] Création PaymentIntent échéance...');
           
           const result = await createPaymentIntentEcheance.mutateAsync({
             currency: 'eur',
@@ -258,47 +253,17 @@ const PaiementPage: React.FC = () => {
           setPaymentIntentId(result.payment_intent_id);
 
         } else if (paymentType === 'commande' && commandeId && !clientSecret) {
-          console.log('🛒 [PaiementPage] Création PaymentIntent commande existante...');
+          console.log('🛒 [PaiementPage] Création PaymentIntent commande...');
           
-          // CORRIGÉ: Récupérer token correctement
-          let token = localStorage.getItem('token');
-          
-          if (!token) {
-            try {
-              const userData = localStorage.getItem('userData');
-              if (userData) {
-                const parsedUserData = JSON.parse(userData);
-                if (parsedUserData && parsedUserData.token) {
-                  token = parsedUserData.token;
-                  console.log('🔑 [PaiementPage] Token récupéré depuis userData.token');
-                }
-              }
-            } catch (parseError) {
-              console.warn('⚠️ [PaiementPage] Erreur parsing userData:', parseError);
-            }
-          }
+          // CORRIGÉ: Récupération token simplifiée
+          const token = localStorage.getItem('token') || 
+                       JSON.parse(localStorage.getItem('userData') || '{}').token;
 
           if (!token) {
-            token = localStorage.getItem('authToken') || 
-                   localStorage.getItem('jwt') || 
-                   localStorage.getItem('accessToken');
+            throw new Error('Token d\'authentification manquant');
           }
 
-          if (!token) {
-            throw new Error('Token d\'authentification manquant - reconnectez-vous');
-          }
-
-          console.log('🔑 [PaiementPage] Token trouvé pour commande:', {
-            source: localStorage.getItem('token') ? 'token direct' :
-                   'userData.token' in (JSON.parse(localStorage.getItem('userData') || '{}')) ? 'userData.token' :
-                   localStorage.getItem('authToken') ? 'authToken' :
-                   localStorage.getItem('jwt') ? 'jwt' : 'accessToken',
-            length: token.length,
-            usingDirectToken: !!localStorage.getItem('token')
-          });
-          
-          // IMPORTANT: Vérifier si on est en mode loading et forcer la sortie
-          setLoading(false);
+          setLoading(false); // Forcer la sortie du loading
           
           const response = await fetch(apiUrl('paiements/stripe/create-payment-intent-commande'), {
             method: 'POST',
@@ -314,73 +279,30 @@ const PaiementPage: React.FC = () => {
             })
           });
 
-          console.log('📡 [PaiementPage] Réponse status:', {
-            status: response.status,
-            ok: response.ok,
-            statusText: response.statusText
-          });
-
           if (!response.ok) {
             const errorData = await response.json();
-            console.error('❌ [PaiementPage] Erreur API commande:', {
-              status: response.status,
-              statusText: response.statusText,
-              error: errorData
-            });
-            
-            if (response.status === 401) {
-              throw new Error('Session expirée - veuillez vous reconnecter');
-            } else if (response.status === 400 && errorData.error?.includes('Commande manquante')) {
-              throw new Error('Commande invalide - veuillez recommencer votre commande');
-            } else {
-              throw new Error(`Erreur création PaymentIntent commande: ${response.status} - ${errorData.error || response.statusText}`);
-            }
+            throw new Error(`Erreur ${response.status}: ${errorData.error || response.statusText}`);
           }
 
           const paymentIntentData = await response.json();
-          console.log('✅ [PaiementPage] PaymentIntent commande créé:', paymentIntentData);
           
-          // CRITIQUE: Vérifier que client_secret existe
           if (!paymentIntentData.client_secret) {
-            console.error('❌ [PaiementPage] client_secret manquant dans la réponse:', paymentIntentData);
-            throw new Error('client_secret manquant dans la réponse du serveur');
+            throw new Error('client_secret manquant dans la réponse');
           }
           
           setClientSecret(paymentIntentData.client_secret);
           setPaymentIntentId(paymentIntentData.payment_intent_id);
           
-          // Récupérer l'ID de commande
-          const actualCommandeId = paymentIntentData.commande_id || paymentIntentData.commande?.id || commandeId;
+          // CORRIGÉ: Données commande simplifiées
+          const actualCommandeId = paymentIntentData.commande_id || commandeId;
+          setCommandeData({
+            id: actualCommandeId,
+            total: paymentIntentData.amount / 100,
+            nb_articles: 1,
+            statut: 'en_attente',
+            numero_commande: `CMD-${actualCommandeId}`
+          });
           
-          if (paymentIntentData.commande) {
-            setCommandeData({
-              id: actualCommandeId,
-              total: paymentIntentData.commande.total,
-              nb_articles: paymentIntentData.commande.nb_articles,
-              statut: paymentIntentData.commande.statut,
-              numero_commande: `CMD-${actualCommandeId}`
-            });
-            console.log('📦 [PaiementPage] Données commande mises à jour:', {
-              id: actualCommandeId,
-              total: paymentIntentData.commande.total,
-              nb_articles: paymentIntentData.commande.nb_articles
-            });
-          } else {
-            setCommandeData({
-              id: actualCommandeId,
-              total: paymentIntentData.amount / 100,
-              nb_articles: 1,
-              statut: 'en_attente',
-              numero_commande: `CMD-${actualCommandeId}`
-            });
-            console.log('📦 [PaiementPage] Données commande créées en fallback:', {
-              id: actualCommandeId,
-              total: paymentIntentData.amount / 100
-            });
-          }
-          
-          // CRITIQUE: Forcer la sortie du loading après succès
-          console.log('✅ [PaiementPage] PaymentIntent commande configuré, sortie du loading');
           setLoading(false);
         }
       } catch (paymentIntentError: any) {
@@ -390,7 +312,7 @@ const PaiementPage: React.FC = () => {
       }
     };
 
-    // MODIFIÉ: Conditions pour créer le PaymentIntent - simplifiées pour debug
+    // CORRIGÉ: Conditions simplifiées
     const shouldCreatePaymentIntent = (
       paymentType &&
       connectedUserId &&
@@ -404,24 +326,7 @@ const PaiementPage: React.FC = () => {
       )
     );
 
-    console.log('🎯 [PaiementPage] Conditions PaymentIntent:', {
-      paymentType,
-      connectedUserId,
-      userIdNumber,
-      userIdMismatch,
-      showSecurityModal,
-      clientSecret: !!clientSecret,
-      echeanceData: !!echeanceData,
-      commandeId,
-      shouldCreatePaymentIntent
-    });
-
     if (shouldCreatePaymentIntent) {
-      console.log('🎯 [PaiementPage] Conditions PaymentIntent remplies, création...');
-      creerPaymentIntent();
-    } else if (paymentType === 'commande' && commandeId && connectedUserId && userIdNumber && !clientSecret) {
-      // AJOUTÉ: Force la création pour les commandes même sans données
-      console.log('🔄 [PaiementPage] Force création PaymentIntent pour commande...');
       creerPaymentIntent();
     }
   }, [
@@ -436,45 +341,19 @@ const PaiementPage: React.FC = () => {
     createPaymentIntentEcheance
   ]);
 
-  // AJOUTÉ: useEffect pour débugger l'état du loading
-  useEffect(() => {
-    console.log('🔍 [PaiementPage] État loading debug:', {
-      loading,
-      paymentType,
-      echeanceLoading: paymentType === 'echeance' ? echeanceLoading : 'N/A',
-      createPaymentIntentPending: createPaymentIntentEcheance.isPending,
-      confirmPaymentPending: confirmPaymentMutation.isPending,
-      clientSecret: !!clientSecret,
-      commandeData: !!commandeData,
-      echeanceData: !!echeanceData
-    });
-
-    // AJOUTÉ: Forcer la sortie du loading si on a tout ce qu'il faut
-    if (paymentType === 'commande' && clientSecret && commandeData && loading) {
-      console.log('🔄 [PaiementPage] Force sortie loading pour commande prête');
-      setLoading(false);
-    }
-  }, [loading, paymentType, echeanceLoading, createPaymentIntentEcheance.isPending, confirmPaymentMutation.isPending, clientSecret, commandeData, echeanceData]);
-
-  // MODIFIÉ: Fonction handlePaymentSuccess avec gestion d'erreur améliorée
+  // CORRIGÉ: Fonction handlePaymentSuccess simplifiée
   const handlePaymentSuccess = async (paymentResult: any) => {
     console.log('🎉 [PaiementPage] Paiement réussi:', { paymentType, userId, paymentResult });
 
     try {
-      // CORRIGÉ: Récupérer le montant depuis les données disponibles
+      // CORRIGÉ: Récupération du montant simplifiée
       let amount = 0;
-
       if (paymentType === 'echeance' && echeanceData) {
         amount = echeanceData.montant;
       } else if (paymentType === 'commande' && commandeData) {
         amount = commandeData.total;
-      } else {
-        amount = paymentResult?.amount || paymentResult?.paymentIntent?.amount / 100 || 0;
       }
 
-      console.log('💰 [PaiementPage] Montant calculé:', { amount, paymentType });
-
-      // CORRIGÉ: Utiliser différentes routes selon le type de paiement
       if (paymentType === 'echeance') {
         // UTILISER LE HOOK DE CONFIRMATION POUR LES ÉCHÉANCES
         const confirmData = {
@@ -484,45 +363,23 @@ const PaiementPage: React.FC = () => {
           amount: amount
         };
 
-        console.log('🚀 [PaiementPage] Confirmation échéance avec hook:', confirmData);
-
         const result = await confirmPaymentMutation.mutateAsync(confirmData);
-        
-        console.log('✅ [PaiementPage] Confirmation échéance reçue:', result);
-
-        // CORRIGÉ: Stocker le résultat dans l'état pour l'utiliser dans le rendu
         setConfirmationResult(result);
         setPaymentSuccess(true);
 
-        // Message spécial pour premier paiement
-        if (result?.premier_paiement) {
-          console.log('🎉 [PaiementPage] Premier paiement détecté - promotion visiteur → utilisateur');
-        }
-
       } else if (paymentType === 'commande') {
-        // CORRIGÉ: Utiliser la route spécifique pour les commandes avec debug complet
-        console.log('🛒 [PaiementPage] Confirmation commande directe...');
-        
+        // CORRIGÉ: Confirmation commande simplifiée
         const token = localStorage.getItem('token') ||
           JSON.parse(localStorage.getItem('userData') || '{}').token;
 
-        if (!token) {
-          throw new Error('Token manquant pour la confirmation');
-        }
-
-        // Récupération de l'ID de commande réel
-        const realCommandeId = commandeData?.id || parseInt(commandeId!);
-        
         const confirmData = {
           paymentIntentId: paymentResult.paymentIntent.id,
-          commandeId: realCommandeId,
+          commandeId: commandeData?.id || parseInt(commandeId!),
           userId: userIdNumber!,
           amount: amount
         };
 
-        console.log('🚀 [PaiementPage] Confirmation commande - données complètes:', confirmData);
-
-        const response = await fetch(apiUrl('paiements/confirmation/confirm-payment-commande'), {
+        const response = await fetch(apiUrl('paiements/confirmation/confirm-payment'), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -534,76 +391,30 @@ const PaiementPage: React.FC = () => {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('❌ [PaiementPage] Erreur confirmation commande:', {
-            status: response.status,
-            errorData,
-            confirmData
-          });
-          
-          if (response.status === 404) {
-            throw new Error('Route de confirmation non trouvée - module confirmation non chargé');
-          } else if (response.status === 400) {
-            throw new Error(errorData.error || 'Données de confirmation invalides');
-          } else {
-            throw new Error(errorData.error || `Erreur ${response.status}: ${response.statusText}`);
-          }
+          throw new Error(errorData.error || `Erreur ${response.status}`);
         }
 
         const result = await response.json();
-        console.log('✅ [PaiementPage] Confirmation commande reçue:', result);
-
-        // CORRIGÉ: Stocker le résultat dans l'état
         setConfirmationResult(result);
         setPaymentSuccess(true);
       }
 
-      // Redirection selon le type de paiement
+      // Redirection après succès
       setTimeout(() => {
-        const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const isAdmin = currentUserData?.status === 'administrateur' || currentUserData?.status === 'super-administrateur';
-
         if (paymentType === 'commande') {
           navigate('/pages/magasin/magasin?payment_success=true');
         } else {
-          if (isAdmin && currentUserData?.id !== parseInt(userId!)) {
-            navigate(`/pages/utilisateurs/consulter/${userId}?tab=2&payment_success=true`);
-          } else {
-            const redirectUrl = '/pages/compte?tab=2&success=true';
-            navigate(redirectUrl);
-          }
+          navigate('/pages/compte?tab=2&success=true');
         }
       }, 3000);
 
     } catch (error: any) {
       console.error(`❌ [PaiementPage] Erreur confirmation:`, error);
+      setError(`⚠️ Paiement traité mais problème de confirmation: ${error.message}`);
       
-      // Calculer le montant pour l'affichage d'erreur
-      let displayAmount = 0;
-      if (paymentType === 'echeance' && echeanceData) {
-        displayAmount = echeanceData.montant;
-      } else if (paymentType === 'commande' && commandeData) {
-        displayAmount = commandeData.total;
-      } else {
-        displayAmount = paymentResult?.amount || paymentResult?.paymentIntent?.amount / 100 || 0;
-      }
-      
-      const errorMessage = `⚠️ Paiement traité mais problème de confirmation
-💳 Votre paiement Stripe a été effectué avec succès
-📝 Référence : ${paymentResult.paymentIntent.id}
-🔧 Erreur : ${error.message}
-💡 Type : ${paymentType}
-📊 Montant : ${displayAmount}€
-🔄 Redirection vers votre espace...`;
-
-      setError(errorMessage);
-
-      // Redirection de secours après 3 secondes
+      // Redirection de secours
       setTimeout(() => {
-        if (paymentType === 'commande') {
-          navigate('/pages/magasin/magasin?payment_success=partial&ref=' + paymentResult.paymentIntent.id);
-        } else {
-          navigate('/pages/compte?tab=2&payment_success=partial&ref=' + paymentResult.paymentIntent.id);
-        }
+        navigate(paymentType === 'commande' ? '/pages/magasin/magasin' : '/pages/compte?tab=2');
       }, 3000);
     }
   };
@@ -1031,22 +842,20 @@ const PaiementPage: React.FC = () => {
     );
   }
 
-  // CONFIGURATION STRIPE
+  // CORRIGÉ: Configuration Stripe simplifiée
   const appearance = {
     theme: 'stripe' as const,
     variables: {
       colorPrimary: '#0570de',
-      colorBackground: '#ffffff',
-      colorText: '#30313d',
-      colorDanger: '#df1b41',
-      fontFamily: 'Ideal Sans, system-ui, sans-serif',
-      spacingUnit: '2px',
-      borderRadius: '4px',
     },
   };
+  
   const options = {
     clientSecret,
     appearance,
+    // CRITIQUE: Configuration minimale pour éviter les appels API automatiques
+    paymentMethodCreation: 'manual' as const,
+    mode: 'payment' as const
   };
 
   // RENDER PRINCIPAL
@@ -1214,7 +1023,7 @@ const PaiementPage: React.FC = () => {
                 </Alert>
               </div>
 
-              {/* CORRIGÉ: Affichage du formulaire Stripe avec hooks */}
+              {/* CORRIGÉ: Formulaire Stripe simplifié */}
               {clientSecret && stripePromise ? (
                 <Elements options={options} stripe={stripePromise}>
                   <PaymentForm
@@ -1233,13 +1042,8 @@ const PaiementPage: React.FC = () => {
                 <div style={{ textAlign: 'center', padding: '2rem' }}>
                   <Spinner size="lg" />
                   <div style={{ marginTop: '1rem' }}>
-                    {createPaymentIntentEcheance.isPending ? 'Initialisation du paiement sécurisé...' : 'Chargement du système de paiement...'}
+                    Initialisation du paiement sécurisé...
                   </div>
-                  {createPaymentIntentEcheance.error && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '14px', color: '#dc3545' }}>
-                      Erreur: {createPaymentIntentEcheance.error.message}
-                    </div>
-                  )}
                 </div>
               )}
 
