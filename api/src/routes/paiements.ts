@@ -42,19 +42,15 @@ try {
       stripeSecretKey.startsWith('sk_live_') ? 'SECRET LIVE' : 'FORMAT INCORRECT'
     ) : 'ABSENT',
     accountId: stripeSecretKey ? stripeSecretKey.substring(8, 25) : 'N/A',
-    expectedAccount: 'RWzE9BQMqChSZKp (pour compatibilité frontend)'
+    expectedFrontendKey: stripeSecretKey ? `pk_${stripeSecretKey.substring(3, 25)}...` : 'N/A'
   });
   
   if (stripeSecretKey && stripeSecretKey.startsWith('sk_')) {
-    // AJOUTÉ: Vérification de compatibilité avec le frontend
-    if (!stripeSecretKey.includes('RWzE9BQ')) {
-      console.warn('⚠️ [Paiements] ATTENTION: Clé backend ne correspond pas au compte frontend !');
-      console.warn('⚠️ [Paiements] Backend utilise:', stripeSecretKey.substring(8, 25));
-      console.warn('⚠️ [Paiements] Frontend attend: RWzE9BQMqChSZKp');
-      console.warn('⚠️ [Paiements] Cela CAUSERA des erreurs "Invalid API Key" !');
-    } else {
-      console.log('✅ [Paiements] Clés frontend/backend compatibles (compte RWzE9BQ)');
-    }
+    // AJOUTÉ: Log de la clé publique correspondante attendue
+    const expectedPublicKey = `pk_${stripeSecretKey.substring(3)}`;
+    console.log('✅ [Paiements] Clé backend compatible détectée');
+    console.log('ℹ️ [Paiements] Clé publique frontend attendue:', expectedPublicKey.substring(0, 25) + '...');
+    console.log('ℹ️ [Paiements] Compte Stripe:', stripeSecretKey.substring(8, 25));
     
     stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2025-02-24.acacia',

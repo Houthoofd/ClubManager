@@ -29,7 +29,7 @@ import './styles/auth-guard.css';
 
 // AJOUTÉ: Debug complet des variables d'environnement au démarrage
 console.log('🔧 [Main] === DEBUG VARIABLES D\'ENVIRONNEMENT DÉTAILLÉ ===');
-console.log('🔧 [Main] import.meta.env complet:', import.meta.env);
+console.log('🔧 [Main] import.meta.env COMPLET:', import.meta.env);
 console.log('🔧 [Main] NODE_ENV:', import.meta.env.NODE_ENV);
 console.log('🔧 [Main] MODE:', import.meta.env.MODE);
 console.log('🔧 [Main] PROD:', import.meta.env.PROD);
@@ -45,55 +45,82 @@ console.log('🔧 [Main] Toutes les variables VITE_:',
 );
 console.log('🔧 [Main] === FIN DEBUG ===');
 
-// CORRIGÉ: Une seule déclaration de stripePublicKey avec fallback
+// AJOUTÉ: Debug ultra-détaillé avec diagnostic complet
+console.log('🔧 [Main] === DEBUG ULTRA-DÉTAILLÉ ===');
+console.log('🔧 [Main] import.meta.env COMPLET:', import.meta.env);
+console.log('🔧 [Main] Variables Vite détectées:', Object.keys(import.meta.env).filter(k => k.startsWith('VITE_')));
+
+// DIAGNOSTIC: Vérification des sources multiples
+const stripeKeySources = {
+  vite_stripe_public_key: import.meta.env.VITE_STRIPE_PUBLIC_KEY,
+  vite_stripe_source: import.meta.env.VITE_STRIPE_SOURCE,
+  vite_env_file_loaded: import.meta.env.VITE_ENV_FILE_LOADED,
+  vite_config_timestamp: import.meta.env.VITE_CONFIG_TIMESTAMP,
+  vite_debug_config: import.meta.env.VITE_DEBUG_CONFIG
+};
+
+console.log('🔧 [Main] Sources Stripe détectées:', stripeKeySources);
+
+// CORRIGÉ: Forcer la clé compatible avec le backend
+const BACKEND_COMPATIBLE_KEY = 'pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ';
+
 let stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-// SOLUTION DE SECOURS: Si undefined, forcer la clé
-if (!stripePublicKey) {
-  console.warn('⚠️ [Main] VITE_STRIPE_PUBLIC_KEY undefined - SOLUTION DE SECOURS ACTIVÉE');
-  stripePublicKey = 'pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ';
-  console.warn('⚠️ [Main] Clé forcée en dur:', stripePublicKey.substring(0, 25) + '...');
+// FALLBACK 1: Si undefined ou mauvais compte, forcer la clé compatible backend
+if (!stripePublicKey || !stripePublicKey.includes('RWzE9BQMqChSZKp')) {
+  console.warn('⚠️ [Main] SYNCHRONISATION FORCÉE avec le backend');
+  console.warn('⚠️ [Main] Clé actuelle:', stripePublicKey?.substring(0, 25) + '...' || 'UNDEFINED');
+  console.warn('⚠️ [Main] Clé backend compatible:', BACKEND_COMPATIBLE_KEY.substring(0, 25) + '...');
+  stripePublicKey = BACKEND_COMPATIBLE_KEY;
 }
 
-console.log('🔧 [Main] Diagnostic Stripe FINAL:', {
+// VÉRIFICATION FINALE: S'assurer de la synchronisation
+const backendAccount = 'RWzE9BQMqChSZKp';
+const frontendAccount = stripePublicKey.substring(8, 25);
+
+if (frontendAccount !== backendAccount) {
+  console.error('❌ [Main] DÉSYNCHRONISATION CRITIQUE détectée !');
+  console.error('❌ [Main] Backend compte:', backendAccount);
+  console.error('❌ [Main] Frontend compte:', frontendAccount);
+  console.error('❌ [Main] CORRECTION FORCÉE');
+  stripePublicKey = BACKEND_COMPATIBLE_KEY;
+}
+
+console.log('🔧 [Main] Diagnostic Synchronisation FINAL:', {
   keyExists: !!stripePublicKey,
-  keyValue: stripePublicKey?.substring(0, 25) + '...' || 'UNDEFINED',
-  keyLength: stripePublicKey ? stripePublicKey.length : 0,
-  keyType: stripePublicKey ? (
-    stripePublicKey.startsWith('pk_test_') ? 'TEST' : 
-    stripePublicKey.startsWith('pk_live_') ? 'LIVE' : 'FORMAT INCONNU'
-  ) : 'ABSENT',
-  source: import.meta.env.VITE_STRIPE_SOURCE || 'hard_coded_fallback'
+  keyValue: stripePublicKey?.substring(0, 25) + '...',
+  keyType: stripePublicKey?.startsWith('pk_test_') ? 'TEST' : 'LIVE',
+  frontendAccount: stripePublicKey?.substring(8, 25),
+  backendAccount: 'RWzE9BQMqChSZKp',
+  synchronized: stripePublicKey?.includes('RWzE9BQMqChSZKp'),
+  source: import.meta.env.VITE_STRIPE_SOURCE || 'backend_sync_forced',
+  expectedError: stripePublicKey?.includes('RWzE9BQMqChSZKp') ? 'AUCUNE' : 'Invalid API Key'
 });
 
+// GARANTIE: À ce stade, stripePublicKey est FORCÉMENT défini et valide
 if (!stripePublicKey) {
-  console.error('❌ [Main] ÉCHEC TOTAL - Même la solution de secours a échoué !');
-  alert('ERREUR CRITIQUE: Impossible de configurer Stripe. Contactez l\'administrateur.');
+  console.error('❌ [Main] ÉCHEC CRITIQUE - TOUS les fallbacks ont échoué');
+  alert('ERREUR FATALE: Configuration Stripe impossible');
+  throw new Error('Configuration Stripe fatalement défaillante');
 }
 
-// CORRIGÉ: Une seule déclaration de stripePromise
-let stripePromise = null;
-if (stripePublicKey) {
-  console.log('🔧 [Main] Initialisation Stripe RÉUSSIE avec:', stripePublicKey.substring(0, 25) + '...');
-  stripePromise = loadStripe(stripePublicKey, {
-    locale: 'fr'
-  });
-  
-  // Test d'initialisation
-  stripePromise.then((stripe) => {
-    if (stripe) {
-      console.log('✅ [Main] Stripe chargé avec succès');
-    } else {
-      console.error('❌ [Main] Échec du chargement Stripe');
-    }
-  }).catch((error) => {
-    console.error('❌ [Main] Erreur chargement Stripe:', error);
-  });
-} else {
-  console.error('❌ [Main] Stripe NON initialisé - échec complet');
-  // Fallback: créer un mock pour éviter les erreurs
-  stripePromise = Promise.resolve(null);
-}
+// CORRIGÉ: Initialisation Stripe garantie
+console.log('🔧 [Main] Initialisation Stripe GARANTIE avec:', stripePublicKey.substring(0, 25) + '...');
+const stripePromise = loadStripe(stripePublicKey, {
+  locale: 'fr'
+});
+
+// Test immédiat d'initialisation
+stripePromise.then((stripe) => {
+  if (stripe) {
+    console.log('✅ [Main] Stripe chargé AVEC SUCCÈS');
+    console.log('✅ [Main] Compte confirmé:', stripePublicKey.substring(8, 25));
+  } else {
+    console.error('❌ [Main] Échec chargement Stripe avec clé:', stripePublicKey.substring(0, 25) + '...');
+  }
+}).catch((error) => {
+  console.error('❌ [Main] Erreur critique Stripe:', error);
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {

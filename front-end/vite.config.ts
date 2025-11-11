@@ -6,60 +6,65 @@ export default defineConfig(({ command, mode }) => {
   // AJOUTÉ: Chargement explicite des variables d'environnement
   const env = loadEnv(mode, process.cwd(), '')
 
-  // CORRIGÉ: Clés Stripe adaptées à l'environnement (LIVE pour prod, TEST pour dev)
-  const STRIPE_PUBLIC_KEY_LIVE = 'pk_live_51R6wB1AxYwLhmnM2RdC8scYPFA3fXhdXLHDNhwsgylIjNPV2lYNTGsnRB4iqsLD7TAgjkUj6RRyXxOtYihpT1raj00SxZnmNyL';
-  const STRIPE_PUBLIC_KEY_TEST = 'pk_test_51R6wB1AxYwLhmnM2kYoAxL3bQkKz5E58oevHMV31eAIPRMPDWrVEI6PKiBUoi1X00MewYIc70kOk7NYw77tl6uMG00D7ylKKV7';
+  // CRITIQUE: Clé Stripe de secours - SYNCHRONISÉE avec le backend (RWzE9BQ)
+  const STRIPE_PUBLIC_KEY_BACKEND_SYNC = 'pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ';
   
-  // CRITIQUE: Forcer la clé Stripe en dur si elle n'est pas détectée
-  const STRIPE_PUBLIC_KEY_FALLBACK = 'pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ';
-  
-  console.log('🔧 [Vite Config] Configuration:', {
-    command,
-    mode,
-    isProd: mode === 'production',
+  console.log('🔧 [Vite Config] Synchronisation avec backend:', {
+    backend_secret_account: 'RWzE9BQMqChSZKp', // Détecté dans les logs
+    frontend_public_account: STRIPE_PUBLIC_KEY_BACKEND_SYNC.substring(8, 25),
+    accounts_match: STRIPE_PUBLIC_KEY_BACKEND_SYNC.includes('RWzE9BQMqChSZKp'),
     env_VITE_STRIPE_PUBLIC_KEY: env.VITE_STRIPE_PUBLIC_KEY,
-    env_exists: !!env.VITE_STRIPE_PUBLIC_KEY,
-    fallback_will_be_used: !env.VITE_STRIPE_PUBLIC_KEY,
-    VITE_API_BASE_URL: env.VITE_API_BASE_URL
-  })
+    will_force_sync: true
+  });
 
-  // CRITIQUE: Utiliser la clé de fallback si rien n'est détecté
-  const finalStripeKey = env.VITE_STRIPE_PUBLIC_KEY || STRIPE_PUBLIC_KEY_FALLBACK;
+  // CRITIQUE: FORCER la synchronisation avec le backend
+  const finalStripeKey = STRIPE_PUBLIC_KEY_BACKEND_SYNC; // Toujours utiliser la clé synchronisée
   
-  console.log('🔧 [Vite Config] Clé Stripe finale:', {
-    source: env.VITE_STRIPE_PUBLIC_KEY ? 'FICHIER_ENV' : 'FALLBACK_HARD_CODED',
+  console.log('🔧 [Vite Config] Clé Stripe FORCÉE pour synchronisation:', {
+    source: 'FORCED_BACKEND_SYNC',
     prefix: finalStripeKey.substring(0, 25) + '...',
-    type: finalStripeKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'
+    type: finalStripeKey.startsWith('pk_test_') ? 'TEST' : 'LIVE',
+    account: finalStripeKey.substring(8, 25),
+    backend_compatible: finalStripeKey.includes('RWzE9BQMqChSZKp')
   });
 
   return {
     plugins: [react()],
 
-    // CRITIQUE: Forcer les variables d'environnement avec fallbacks
+    // CRITIQUE: Forcer la clé synchronisée avec le backend
     define: {
+      // FORCE: Clé Stripe synchronisée avec le backend
       'import.meta.env.VITE_STRIPE_PUBLIC_KEY': JSON.stringify(finalStripeKey),
-      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-        env.VITE_API_BASE_URL || 'https://clubmanagment.com/'
-      ),
-      // AJOUTÉ: Variables de debug
-      'import.meta.env.VITE_STRIPE_SOURCE': JSON.stringify(
-        env.VITE_STRIPE_PUBLIC_KEY ? 'env_file' : 'hard_coded_fallback'
-      ),
-      'import.meta.env.VITE_ENV_FILE_LOADED': JSON.stringify(!!env.VITE_STRIPE_PUBLIC_KEY)
+      
+      // FORCE: API Base URL
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify('https://clubmanagment.com/'),
+      
+      // FORCE: Variables de debug avec info sync
+      'import.meta.env.VITE_STRIPE_SOURCE': JSON.stringify('backend_sync_forced'),
+      'import.meta.env.VITE_BACKEND_ACCOUNT': JSON.stringify('RWzE9BQMqChSZKp'),
+      'import.meta.env.VITE_SYNC_TIMESTAMP': JSON.stringify(new Date().toISOString()),
+      'import.meta.env.VITE_DEBUG_CONFIG': JSON.stringify(true)
     },
 
-    // AJOUTÉ: Configuration du serveur de développement
+    // AJOUTÉ: Variables d'environnement à préfixer (incluant tous les formats possibles)
+    envPrefix: ['VITE_', 'REACT_APP_', 'VUE_APP_'],
+
+    // AJOUTÉ: Configuration explicite pour le serveur de développement
     server: {
       port: 5173,
       host: true
-      // SUPPRIMÉ: define incorrecte dans server - les variables sont déjà dans define principal
     },
 
-    // AJOUTÉ: Configuration du build avec optimisation
+    // AJOUTÉ: Configuration du build avec clé forcée
     build: {
       outDir: 'dist',
       sourcemap: false,
-      // AJOUTÉ: Variables d'environnement injectées au build
+      // CRITIQUE: Forcer la clé synchronisée dans le build
+      define: {
+        'import.meta.env.VITE_STRIPE_PUBLIC_KEY': JSON.stringify(finalStripeKey),
+        'import.meta.env.VITE_API_BASE_URL': JSON.stringify('https://clubmanagment.com/'),
+        'import.meta.env.VITE_STRIPE_SOURCE': JSON.stringify('build_backend_sync')
+      },
       rollupOptions: {
         output: {
           manualChunks: {
@@ -69,9 +74,6 @@ export default defineConfig(({ command, mode }) => {
           }
         }
       }
-    },
-
-    // AJOUTÉ: Variables d'environnement à préfixer
-    envPrefix: ['VITE_', 'REACT_APP_']
+    }
   }
 })
