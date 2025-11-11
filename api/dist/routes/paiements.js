@@ -378,83 +378,253 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
 // POST - Créer un PaymentIntent pour commande
 router.post('/stripe/create-payment-intent-commande', async (req, res) => {
     try {
+        console.log('🛒 [Stripe] Début création PaymentIntent commande');
+        console.log('📝 [Stripe] Données reçues:', {
+            body: req.body,
+            user: req.user?.id,
+            headers: {
+                authorization: !!req.headers.authorization,
+                contentType: req.headers['content-type']
+            }
+        });
+        // CORRIGÉ: Gestion plus flexible des paramètres
         const { amount, currency = 'eur', commande, description } = req.body;
         let utilisateur_id = req.user?.id;
-        if (!utilisateur_id && commande?.utilisateur_id) {
-            utilisateur_id = commande.utilisateur_id;
+        let commandeId;
+        let montantCommande;
+        console.log('🔍 [Stripe] Analyse paramètre commande:', {
+            commande,
+            type: typeof commande,
+            isNumber: typeof commande === 'number',
+            isString: typeof commande === 'string',
+            isObject: typeof commande === 'object',
+            hasArticles: commande?.articles ? 'OUI' : 'NON'
+        });
+        // MODIFIÉ: Gestion flexible des formats de commande
+        if (typeof commande === 'number' || (typeof commande === 'string' && !isNaN(parseInt(commande)))) {
+            // Cas 1: ID de commande existante (nombre ou string numérique)
+            commandeId = typeof commande === 'number' ? commande : parseInt(commande);
+            console.log('🔍 [Stripe] ID commande existante détecté:', commandeId);
+            // Vérifier que l'ID est valide
+            if (isNaN(commandeId) || commandeId <= 0) {
+                console.error('❌ [Stripe] ID commande invalide:', commandeId);
+                return res.status(400).json({
+                    error: 'ID de commande invalide',
+                    received: { commande, parsed: commandeId }
+                });
+            }
+            // Récupérer les détails de la commande existante
+            const paiements = new Paiements();
+            const commandeQuery = `
+        SELECT id, utilisateur_id, total, statut, date_commande
+        FROM commandes 
+        WHERE id = ?
+      `;
+            try {
+                const commandeResult = await paiements.queryAsync(commandeQuery, [commandeId]);
+                if (!commandeResult.length) {
+                    console.error('❌ [Stripe] Commande non trouvée:', commandeId);
+                    return res.status(404).json({
+                        error: `Commande ${commandeId} non trouvée en base de données`
+                    });
+                }
+                const commandeDetails = commandeResult[0];
+                console.log('✅ [Stripe] Commande trouvée:', commandeDetails);
+                // Vérifications de sécurité
+                if (commandeDetails.utilisateur_id !== utilisateur_id) {
+                    console.error('❌ [Stripe] Commande appartient à un autre utilisateur:', {
+                        commandeUserId: commandeDetails.utilisateur_id,
+                        currentUserId: utilisateur_id
+                    });
+                    return res.status(403).json({
+                        error: 'Cette commande ne vous appartient pas'
+                    });
+                }
+                // CORRIGÉ: Vérifier plus de statuts possibles
+                const statutsPayes = ['payée', 'confirmée', 'expédiée', 'livrée'];
+                if (statutsPayes.includes(commandeDetails.statut)) {
+                    console.warn('⚠️ [Stripe] Commande déjà traitée:', {
+                        commandeId,
+                        statut: commandeDetails.statut
+                    });
+                    return res.status(400).json({
+                        error: 'Cette commande a déjà été traitée',
+                        commande: {
+                            id: commandeDetails.id,
+                            statut: commandeDetails.statut,
+                            total: commandeDetails.total
+                        }
+                    });
+                }
+                montantCommande = parseFloat(commandeDetails.total);
+                utilisateur_id = commandeDetails.utilisateur_id;
+            }
+            catch (dbError) {
+                console.error('❌ [Stripe] Erreur DB lors vérification commande:', dbError);
+                return res.status(500).json({
+                    error: 'Erreur base de données lors de la vérification de la commande',
+                    details: dbError.message
+                });
+            }
         }
-        if (!utilisateur_id) {
-            return res.status(401).json({
-                error: 'Utilisateur non authentifié'
+        else if (typeof commande === 'object' && commande !== null && commande.articles) {
+            // Cas 2: Nouvelle commande à créer avec articles
+            console.log('🛒 [Stripe] Création nouvelle commande avec articles:', commande);
+            if (!utilisateur_id && commande?.utilisateur_id) {
+                utilisateur_id = commande.utilisateur_id;
+            }
+            if (!utilisateur_id) {
+                return res.status(401).json({
+                    error: 'Utilisateur non authentifié pour créer une nouvelle commande'
+                });
+            }
+            // Validation des articles
+            if (!Array.isArray(commande.articles) || commande.articles.length === 0) {
+                return res.status(400).json({
+                    error: 'Articles manquants ou invalides dans la commande',
+                    received: { articles: commande.articles }
+                });
+            }
+            try {
+                const magasin = new Magasin();
+                const commandeResult = await magasin.creerCommande(utilisateur_id, commande.articles, commande.total, new Date().toISOString(), 'en_attente');
+                if (!commandeResult.isConfirm) {
+                    return res.status(400).json({
+                        error: 'Erreur lors de la création de la commande',
+                        details: 'La création de la commande a échoué'
+                    });
+                }
+                // Récupérer l'ID de la commande créée
+                const paiements = new Paiements();
+                const rechercheQuery = `
+          SELECT id, total FROM commandes 
+          WHERE utilisateur_id = ? 
+          ORDER BY date_commande DESC 
+          LIMIT 1
+        `;
+                const rechercheResult = await paiements.queryAsync(rechercheQuery, [utilisateur_id]);
+                if (!rechercheResult.length) {
+                    return res.status(500).json({
+                        error: 'Impossible de récupérer la commande créée'
+                    });
+                }
+                commandeId = rechercheResult[0].id;
+                montantCommande = parseFloat(rechercheResult[0].total);
+                console.log('✅ [Stripe] Nouvelle commande créée:', {
+                    commandeId,
+                    montantCommande,
+                    utilisateur_id
+                });
+            }
+            catch (creationError) {
+                console.error('❌ [Stripe] Erreur création nouvelle commande:', creationError);
+                return res.status(500).json({
+                    error: 'Erreur lors de la création de la nouvelle commande',
+                    details: creationError.message
+                });
+            }
+        }
+        else {
+            // Cas 3: Format non reconnu
+            console.error('❌ [Stripe] Format de commande non reconnu:', {
+                commande,
+                type: typeof commande,
+                isNull: commande === null,
+                isUndefined: commande === undefined,
+                hasArticles: commande?.articles ? 'OUI' : 'NON',
+                keys: commande && typeof commande === 'object' ? Object.keys(commande) : 'N/A'
+            });
+            return res.status(400).json({
+                error: 'Format de commande non reconnu',
+                received: {
+                    commande,
+                    type: typeof commande,
+                    expected: 'number (ID commande existante) ou object avec propriété articles'
+                },
+                help: {
+                    existingOrder: 'Utilisez un nombre: { "commande": 123 }',
+                    newOrder: 'Utilisez un objet: { "commande": { "articles": [...], "total": 50.00 } }'
+                }
             });
         }
         // CORRIGÉ: Vérification avec return
         if (!stripe) {
-            return res.status(503).json({ error: 'Service Stripe non disponible' });
+            return res.status(503).json({
+                error: 'Service Stripe non disponible',
+                details: 'Le service de paiement Stripe n\'est pas configuré'
+            });
         }
-        // Logique de création de commande (simplifiée)
-        let commandeId;
-        let montantCommande;
-        if (typeof commande === 'object' && commande.articles) {
-            // Créer nouvelle commande
-            const magasin = new Magasin();
-            const commandeResult = await magasin.creerCommande(utilisateur_id, commande.articles, commande.total, new Date().toISOString(), 'en_attente');
-            if (!commandeResult.isConfirm) {
-                return res.status(400).json({
-                    error: 'Erreur lors de la création de la commande'
-                });
-            }
-            // Récupérer l'ID de la commande créée
-            const paiements = new Paiements();
-            const rechercheQuery = `
-        SELECT id, total FROM commandes 
-        WHERE utilisateur_id = ? 
-        ORDER BY date_commande DESC 
-        LIMIT 1
-      `;
-            const rechercheResult = await paiements.queryAsync(rechercheQuery, [utilisateur_id]);
-            if (!rechercheResult.length) {
-                return res.status(500).json({
-                    error: 'Impossible de récupérer la commande créée'
-                });
-            }
-            commandeId = rechercheResult[0].id;
-            montantCommande = rechercheResult[0].total;
-        }
-        else {
+        // Validation du montant final
+        if (!montantCommande || montantCommande <= 0 || isNaN(montantCommande)) {
+            console.error('❌ [Stripe] Montant de commande invalide:', {
+                montantCommande,
+                type: typeof montantCommande,
+                isNaN: isNaN(montantCommande)
+            });
             return res.status(400).json({
-                error: 'Format de commande non reconnu'
+                error: 'Montant de commande invalide',
+                montant: montantCommande,
+                details: 'Le montant doit être un nombre positif'
             });
         }
         const amountInCents = Math.round(montantCommande * 100);
+        // AJOUTÉ: Vérification des limites Stripe
+        if (amountInCents < 50) {
+            return res.status(400).json({
+                error: 'Montant trop faible pour Stripe',
+                details: `${amountInCents} centimes (minimum 50 centimes = 0.50€)`,
+                montant_euros: montantCommande
+            });
+        }
+        console.log('💰 [Stripe] Montant commande validé:', {
+            montant_euros: montantCommande,
+            amount_cents: amountInCents,
+            commande_id: commandeId,
+            utilisateur_id: utilisateur_id
+        });
         // Créer le PaymentIntent
         const paymentIntent = await stripe.paymentIntents.create({
             amount: amountInCents,
-            currency: currency,
+            currency: currency.toLowerCase(),
             metadata: {
                 type: 'commande_magasin',
                 commande_id: commandeId.toString(),
-                utilisateur_id: utilisateur_id.toString()
+                utilisateur_id: utilisateur_id.toString(),
+                montant_euros: montantCommande.toString()
             },
-            description: description || `Paiement commande #${commandeId}`,
+            description: description || `Paiement commande magasin #${commandeId}`,
             automatic_payment_methods: {
                 enabled: true,
             }
         });
+        console.log('✅ [Stripe] PaymentIntent commande créé:', {
+            id: paymentIntent.id,
+            amount: paymentIntent.amount,
+            currency: paymentIntent.currency,
+            commande_id: commandeId
+        });
+        // CORRIGÉ: Réponse avec toutes les données nécessaires
         res.json({
             success: true,
             client_secret: paymentIntent.client_secret,
             payment_intent_id: paymentIntent.id,
             commande_id: commandeId,
             amount: amountInCents,
-            currency: currency
+            currency: currency,
+            commande: {
+                id: commandeId,
+                total: montantCommande,
+                utilisateur_id: utilisateur_id,
+                statut: 'en_attente'
+            }
         });
     }
     catch (error) {
         console.error('❌ [Stripe] Erreur création PaymentIntent commande:', error);
         res.status(500).json({
             error: 'Erreur lors de la création du PaymentIntent pour commande',
-            details: error.message
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -611,6 +781,108 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
         console.error('❌ [Confirmation] Erreur confirmation paiement:', error);
         res.status(500).json({
             error: 'Erreur lors de la confirmation du paiement',
+            details: error.message
+        });
+    }
+});
+// POST - Confirmer un paiement d'échéance
+router.post('/confirmation/confirm-payment-commande', async (req, res) => {
+    try {
+        console.log('🛒 [Confirmation] Début confirmation paiement commande');
+        console.log('📝 [Confirmation] Données reçues:', req.body);
+        const { paymentIntentId, commandeId, userId, amount } = req.body;
+        if (!paymentIntentId || !commandeId || !userId) {
+            return res.status(400).json({
+                error: 'Données manquantes pour la confirmation de paiement commande',
+                required: ['paymentIntentId', 'commandeId', 'userId'],
+                received: { paymentIntentId: !!paymentIntentId, commandeId: !!commandeId, userId: !!userId }
+            });
+        }
+        if (!stripe) {
+            return res.status(503).json({ error: 'Service Stripe non disponible' });
+        }
+        const paiements = new Paiements();
+        // Vérifier le paiement sur Stripe
+        console.log('🔍 [Confirmation] Vérification paiement Stripe:', paymentIntentId);
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        if (paymentIntent.status !== 'succeeded') {
+            console.error('❌ [Confirmation] Paiement pas confirmé sur Stripe:', paymentIntent.status);
+            return res.status(400).json({
+                error: 'Le paiement n\'a pas été confirmé sur Stripe',
+                stripeStatus: paymentIntent.status
+            });
+        }
+        // Vérifier que la commande existe et appartient au bon utilisateur
+        const commandeQuery = `
+      SELECT id, utilisateur_id, total, statut 
+      FROM commandes 
+      WHERE id = ? AND utilisateur_id = ?
+    `;
+        const commandeResult = await paiements.queryAsync(commandeQuery, [parseInt(commandeId), parseInt(userId)]);
+        if (!commandeResult.length) {
+            return res.status(404).json({
+                error: 'Commande non trouvée ou accès non autorisé',
+                commande_id: commandeId,
+                user_id: userId
+            });
+        }
+        const commande = commandeResult[0];
+        if (commande.statut === 'payée' || commande.statut === 'confirmée') {
+            console.warn('⚠️ [Confirmation] Commande déjà confirmée:', commandeId);
+            return res.status(200).json({
+                success: true,
+                message: 'Commande déjà confirmée',
+                commande_id: parseInt(commandeId),
+                statut_actuel: commande.statut,
+                already_processed: true
+            });
+        }
+        // Marquer la commande comme payée/confirmée
+        const updateCommandeQuery = `
+      UPDATE commandes 
+      SET statut = 'payée', date_modification = NOW()
+      WHERE id = ? AND statut != 'payée'
+    `;
+        const updateResult = await paiements.queryAsync(updateCommandeQuery, [parseInt(commandeId)]);
+        if (updateResult.affectedRows === 0) {
+            console.warn('⚠️ [Confirmation] Aucune ligne mise à jour - commande peut-être déjà payée');
+        }
+        // AJOUTÉ: Enregistrer le paiement dans l'historique
+        try {
+            const insertPaiementQuery = `
+        INSERT INTO paiements (
+          utilisateur_id, montant, methode_paiement, 
+          statut, date_creation, stripe_payment_intent_id,
+          commande_id, description
+        ) VALUES (?, ?, 'stripe', 'confirmé', NOW(), ?, ?, ?)
+      `;
+            await paiements.queryAsync(insertPaiementQuery, [
+                parseInt(userId),
+                parseFloat(amount) || parseFloat(commande.total),
+                paymentIntentId,
+                parseInt(commandeId),
+                `Paiement commande magasin #${commandeId}`
+            ]);
+            console.log('✅ [Confirmation] Paiement enregistré dans l\'historique');
+        }
+        catch (historyError) {
+            console.warn('⚠️ [Confirmation] Erreur enregistrement historique (non bloquant):', historyError);
+        }
+        console.log('✅ [Confirmation] Commande confirmée avec succès:', commandeId);
+        res.status(200).json({
+            success: true,
+            message: 'Paiement commande confirmé avec succès',
+            payment_intent_id: paymentIntentId,
+            commande_id: parseInt(commandeId),
+            montant: parseFloat(amount) || parseFloat(commande.total),
+            statut: 'payée',
+            date_confirmation: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('❌ [Confirmation] Erreur confirmation paiement commande:', error);
+        res.status(500).json({
+            error: 'Erreur lors de la confirmation du paiement commande',
             details: error.message
         });
     }

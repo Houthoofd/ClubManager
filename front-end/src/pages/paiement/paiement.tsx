@@ -210,14 +210,20 @@ const PaiementPage: React.FC = () => {
 
           setLoading(false);
 
-          // CORRIGÉ: Envoyer l'ID de commande comme nombre
+          // CORRIGÉ: Valider que commandeId est un nombre valide
+          const commandeIdNumber = parseInt(commandeId);
+          if (isNaN(commandeIdNumber) || commandeIdNumber <= 0) {
+            throw new Error(`ID de commande invalide: ${commandeId}`);
+          }
+
+          // CORRIGÉ: Envoyer l'ID de commande comme nombre avec validation
           const requestBody = {
-            commande: parseInt(commandeId), // ID de commande existante
+            commande: commandeIdNumber, // ID de commande existante
             currency: 'eur',
-            description: `Paiement commande #${commandeId}`
+            description: `Paiement commande #${commandeIdNumber}`
           };
 
-          console.log('📤 [PaiementPage] Données envoyées:', requestBody);
+          console.log('📤 [PaiementPage] Données envoyées (corrigées):', requestBody);
 
           const response = await fetch(apiUrl('paiements/stripe/create-payment-intent-commande'), {
             method: 'POST',
@@ -232,23 +238,44 @@ const PaiementPage: React.FC = () => {
           console.log('📡 [PaiementPage] Réponse status:', response.status);
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('❌ [PaiementPage] Erreur API commande:', {
+            let errorData;
+            try {
+              errorData = await response.json();
+            } catch (parseError) {
+              errorData = { 
+                error: 'Erreur de parsing de la réponse', 
+                status: response.status,
+                statusText: response.statusText 
+              };
+            }
+            
+            console.error('❌ [PaiementPage] Erreur API commande détaillée:', {
               status: response.status,
               statusText: response.statusText,
-              error: errorData
+              error: errorData,
+              requestBody,
+              commandeId,
+              commandeIdNumber,
+              url: apiUrl('paiements/stripe/create-payment-intent-commande')
             });
             
+            // CORRIGÉ: Messages d'erreur plus spécifiques
             if (response.status === 401) {
               throw new Error('Session expirée - veuillez vous reconnecter');
             } else if (response.status === 404) {
-              throw new Error(`Commande #${commandeId} non trouvée - elle a peut-être été supprimée`);
+              throw new Error(`Commande #${commandeIdNumber} non trouvée - elle a peut-être été supprimée`);
             } else if (response.status === 403) {
               throw new Error('Cette commande ne vous appartient pas');
             } else if (response.status === 400) {
-              throw new Error(errorData.error || 'Données de commande invalides');
+              const errorMsg = errorData?.error || 'Données de commande invalides';
+              if (errorMsg.includes('Format de commande non reconnu')) {
+                throw new Error(`Format de commande incorrect. ID envoyé: ${commandeIdNumber} (type: ${typeof commandeIdNumber})`);
+              } else if (errorMsg.includes('déjà traitée') || errorMsg.includes('déjà payée')) {
+                throw new Error(`Cette commande a déjà été payée ou traitée`);
+              }
+              throw new Error(errorMsg);
             } else {
-              throw new Error(`Erreur création PaymentIntent commande: ${response.status} - ${errorData.error || response.statusText}`);
+              throw new Error(`Erreur serveur (${response.status}): ${errorData?.error || response.statusText}`);
             }
           }
 
@@ -263,8 +290,8 @@ const PaiementPage: React.FC = () => {
           setClientSecret(paymentIntentData.client_secret);
           setPaymentIntentId(paymentIntentData.payment_intent_id);
           
-          // CORRIGÉ: Utiliser les données de commande de la réponse
-          if (paymentIntentData.commande) {
+          // CORRIGÉ: Utiliser les données de commande de la réponse avec validation
+          if (paymentIntentData.commande && paymentIntentData.commande.id) {
             setCommandeData({
               id: paymentIntentData.commande.id,
               total: paymentIntentData.commande.total,
@@ -272,16 +299,17 @@ const PaiementPage: React.FC = () => {
               statut: paymentIntentData.commande.statut,
               numero_commande: `CMD-${paymentIntentData.commande.id}`
             });
-            console.log('📦 [PaiementPage] Données commande configurées:', paymentIntentData.commande);
+            console.log('📦 [PaiementPage] Données commande configurées depuis réponse:', paymentIntentData.commande);
           } else {
             // Fallback avec les données de base
             setCommandeData({
-              id: paymentIntentData.commande_id || parseInt(commandeId),
+              id: paymentIntentData.commande_id || commandeIdNumber,
               total: paymentIntentData.amount / 100,
               utilisateur_id: userIdNumber,
               statut: 'en_attente',
-              numero_commande: `CMD-${commandeId}`
+              numero_commande: `CMD-${commandeIdNumber}`
             });
+            console.log('📦 [PaiementPage] Données commande configurées en fallback');
           }
           
           setLoading(false);
