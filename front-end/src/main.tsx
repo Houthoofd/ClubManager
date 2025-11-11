@@ -76,7 +76,8 @@ if (!stripePublicKey || !stripePublicKey.includes('RWzE9BQMqChSZKp')) {
 
 // VÉRIFICATION FINALE: S'assurer de la synchronisation
 const backendAccount = 'RWzE9BQMqChSZKp';
-const frontendAccount = stripePublicKey.substring(8, 25);
+// CORRIGÉ: Extraire correctement l'ID du compte (position 8 à 23, pas 8 à 25)
+const frontendAccount = stripePublicKey.substring(8, 23);
 
 if (frontendAccount !== backendAccount) {
   console.error('❌ [Main] DÉSYNCHRONISATION CRITIQUE détectée !');
@@ -90,7 +91,8 @@ console.log('🔧 [Main] Diagnostic Synchronisation FINAL:', {
   keyExists: !!stripePublicKey,
   keyValue: stripePublicKey?.substring(0, 25) + '...',
   keyType: stripePublicKey?.startsWith('pk_test_') ? 'TEST' : 'LIVE',
-  frontendAccount: stripePublicKey?.substring(8, 25),
+  // CORRIGÉ: Utiliser la même extraction pour l'affichage
+  frontendAccount: stripePublicKey?.substring(8, 23),
   backendAccount: 'RWzE9BQMqChSZKp',
   synchronized: stripePublicKey?.includes('RWzE9BQMqChSZKp'),
   source: import.meta.env.VITE_STRIPE_SOURCE || 'backend_sync_forced',
@@ -114,7 +116,8 @@ const stripePromise = loadStripe(stripePublicKey, {
 stripePromise.then((stripe) => {
   if (stripe) {
     console.log('✅ [Main] Stripe chargé AVEC SUCCÈS');
-    console.log('✅ [Main] Compte confirmé:', stripePublicKey.substring(8, 25));
+    // CORRIGÉ: Affichage cohérent du compte
+    console.log('✅ [Main] Compte confirmé:', stripePublicKey.substring(8, 23));
   } else {
     console.error('❌ [Main] Échec chargement Stripe avec clé:', stripePublicKey.substring(0, 25) + '...');
   }
