@@ -3,26 +3,27 @@ import {
   useStripe,
   useElements,
   PaymentElement,
-  AddressElement
+  CardElement
 } from '@stripe/react-stripe-js';
 import {
   Button,
   Alert,
   Spinner,
-  Card,
-  CardBody,
-  Title,
   Flex,
-  FlexItem
+  FlexItem,
+  Form,
+  FormGroup,
+  TextInput,
+  Checkbox
 } from '@patternfly/react-core';
-import { CreditCardIcon, ExclamationTriangleIcon, InfoCircleIcon } from '@patternfly/react-icons';
+import { CreditCardIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@patternfly/react-icons';
 
 interface PaymentFormProps {
   clientSecret: string;
   amount?: number;
   description?: string;
-  onSuccess: (result: any) => void;
-  onError: (error: any) => void;
+  onSuccess?: (result: any) => void;
+  onError?: (error: any) => void;
   echeanceId?: string;
   commandeId?: string;
   userId?: string;
@@ -42,265 +43,364 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
-  
-  const [isProcessing, setIsProcessing] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [usePaymentElement, setUsePaymentElement] = useState(true);
 
+  // AJOUTÉ: Debug du client secret et des éléments Stripe
   useEffect(() => {
-    if (!stripe) {
-      return;
-    }
-
-    if (!clientSecret) {
-      setMessage('Configuration de paiement manquante');
-      return;
-    }
-
-    // Vérifier le statut du PaymentIntent
-    stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
-      if (paymentIntent) {
-        switch (paymentIntent.status) {
-          case 'succeeded':
-            setMessage('Paiement réussi !');
-            onSuccess({ paymentIntent });
-            break;
-          case 'processing':
-            setMessage('Paiement en cours de traitement...');
-            break;
-          case 'requires_payment_method':
-            setMessage('Prêt pour le paiement');
-            setIsLoaded(true);
-            break;
-          default:
-            setMessage('Une erreur est survenue');
-            break;
-        }
-      } else {
-        setMessage('Configuration de paiement invalide');
-      }
+    console.log('🔧 [PaymentForm] Initialisation:', {
+      stripe: !!stripe,
+      elements: !!elements,
+      clientSecret: !!clientSecret,
+      clientSecretPrefix: clientSecret?.substring(0, 15) + '...',
+      amount,
+      description,
+      echeanceId,
+      commandeId,
+      userId
     });
-  }, [stripe, clientSecret, onSuccess]);
+
+    // Récupérer les infos utilisateur depuis localStorage
+    try {
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        const parsedData = JSON.parse(userData);
+        if (parsedData.email) setCustomerEmail(parsedData.email);
+        if (parsedData.first_name && parsedData.last_name) {
+          setCustomerName(`${parsedData.first_name} ${parsedData.last_name}`);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ [PaymentForm] Erreur récupération userData:', error);
+    }
+  }, [stripe, elements, clientSecret]);
+
+  // AJOUTÉ: Vérifier si PaymentElement est disponible
+  useEffect(() => {
+    if (elements) {
+      try {
+        // Tester si PaymentElement est supporté
+        const testElement = elements.create('payment');
+        if (testElement) {
+          console.log('✅ [PaymentForm] PaymentElement supporté');
+          setUsePaymentElement(true);
+        }
+      } catch (error) {
+        console.warn('⚠️ [PaymentForm] PaymentElement non supporté, utilisation de CardElement:', error);
+        setUsePaymentElement(false);
+      }
+    }
+  }, [elements]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !clientSecret) {
-      setMessage('Stripe n\'est pas encore chargé. Veuillez patienter.');
+    if (!stripe || !elements) {
+      console.error('❌ [PaymentForm] Stripe non initialisé');
+      setMessage('❌ Erreur: Système de paiement non initialisé');
       return;
     }
 
-    setIsProcessing(true);
+    if (!acceptTerms) {
+      setMessage('⚠️ Veuillez accepter les conditions générales');
+      return;
+    }
+
+    setIsLoading(true);
     setMessage('');
 
-    try {
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: returnUrl || `${window.location.origin}/pages/paiement/success`,
-          payment_method_data: {
-            billing_details: {
-              name: 'Client Club Manager',
-            },
-          },
-        },
-        redirect: 'if_required'
-      });
+    console.log('🚀 [PaymentForm] Début du processus de paiement...');
 
-      if (error) {
-        console.error('❌ [PaymentForm] Erreur Stripe:', error);
+    try {
+      let result;
+
+      if (usePaymentElement) {
+        // MÉTHODE 1: Utiliser PaymentElement (recommandé)
+        console.log('💳 [PaymentForm] Confirmation avec PaymentElement...');
         
-        if (error.type === 'card_error' || error.type === 'validation_error') {
-          setMessage(`Erreur: ${error.message}`);
-        } else {
-          setMessage('Erreur inattendue lors du paiement.');
+        result = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: returnUrl || `${window.location.origin}/pages/paiement?success=true`,
+            payment_method_data: {
+              billing_details: {
+                name: customerName || 'Client',
+                email: customerEmail || undefined
+              }
+            }
+          },
+          redirect: 'if_required' // IMPORTANT: Éviter la redirection automatique
+        });
+
+        console.log('📊 [PaymentForm] Résultat PaymentElement:', result);
+
+      } else {
+        // MÉTHODE 2: Utiliser CardElement (fallback)
+        console.log('💳 [PaymentForm] Confirmation avec CardElement...');
+        
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          throw new Error('Élément de carte non trouvé');
+        }
+
+        result = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: customerName || 'Client',
+              email: customerEmail || undefined
+            }
+          }
+        });
+
+        console.log('📊 [PaymentForm] Résultat CardElement:', result);
+      }
+
+      if (result.error) {
+        console.error('❌ [PaymentForm] Erreur Stripe:', result.error);
+        
+        let errorMessage = result.error.message || 'Erreur de paiement inconnue';
+        
+        // Messages d'erreur personnalisés
+        if (result.error.code === 'card_declined') {
+          errorMessage = '❌ Carte refusée. Vérifiez vos informations ou utilisez une autre carte.';
+        } else if (result.error.code === 'insufficient_funds') {
+          errorMessage = '❌ Fonds insuffisants sur votre carte.';
+        } else if (result.error.code === 'incorrect_cvc') {
+          errorMessage = '❌ Code de sécurité (CVC) incorrect.';
+        } else if (result.error.code === 'expired_card') {
+          errorMessage = '❌ Votre carte a expiré.';
         }
         
-        onError(error);
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('✅ [PaymentForm] Paiement réussi:', paymentIntent.id);
-        setMessage('Paiement réussi !');
-        onSuccess({ paymentIntent });
+        setMessage(errorMessage);
+        
+        if (onError) {
+          onError(result.error);
+        }
       } else {
-        console.log('⏳ [PaymentForm] Paiement en attente:', paymentIntent?.status);
-        setMessage('Paiement en cours de vérification...');
+        console.log('✅ [PaymentForm] Paiement réussi:', result.paymentIntent);
+        
+        setMessage('✅ Paiement réussi !');
+        
+        if (onSuccess) {
+          onSuccess(result);
+        }
       }
     } catch (error: any) {
-      console.error('❌ [PaymentForm] Erreur lors du traitement:', error);
-      setMessage('Erreur lors du traitement du paiement.');
-      onError(error);
-    } finally {
-      setIsProcessing(false);
+      console.error('❌ [PaymentForm] Erreur générale:', error);
+      const errorMessage = `❌ Erreur de paiement: ${error.message}`;
+      setMessage(errorMessage);
+      
+      if (onError) {
+        onError(error);
+      }
+    }
+
+    setIsLoading(false);
+  };
+
+  // AJOUTÉ: Handler pour les changements d'éléments
+  const handleElementChange = (event: any) => {
+    console.log('🔄 [PaymentForm] Changement élément:', event);
+    setIsComplete(event.complete);
+    if (event.error) {
+      setMessage(`⚠️ ${event.error.message}`);
+    } else {
+      setMessage('');
     }
   };
 
-  const formatAmount = (amount?: number) => {
-    if (!amount) return '0,00 €';
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
-  };
-
-  // Affichage pendant le chargement de Stripe
-  if (!stripe || !elements) {
+  // Vérifications préliminaires
+  if (!clientSecret) {
     return (
-      <Card>
-        <CardBody>
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <Spinner size="lg" />
-            <div style={{ marginTop: '1rem' }}>
-              Chargement du formulaire de paiement sécurisé...
-            </div>
-            <div style={{ marginTop: '0.5rem', fontSize: '14px', color: '#666' }}>
-              Initialisation de Stripe en cours
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+      <Alert variant="danger" title="Erreur de configuration">
+        <p>❌ Client secret manquant. Impossible d'initialiser le paiement.</p>
+      </Alert>
     );
   }
 
-  // Affichage si le clientSecret n'est pas disponible
-  if (!clientSecret) {
+  if (!stripe || !elements) {
     return (
-      <Card>
-        <CardBody>
-          <Alert variant="danger" title="Erreur de configuration">
-            <p>La configuration de paiement n'est pas disponible.</p>
-            <p>Veuillez rafraîchir la page ou contacter le support.</p>
-          </Alert>
-        </CardBody>
-      </Card>
+      <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <Spinner size="lg" />
+        <div style={{ marginTop: '1rem' }}>
+          🔄 Chargement du système de paiement sécurisé...
+        </div>
+        <div style={{ marginTop: '0.5rem', fontSize: '14px', color: '#666' }}>
+          Initialisation de Stripe Elements...
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardBody>
-        <div style={{ marginBottom: '1.5rem' }}>
-          <Title headingLevel="h3" size="lg" style={{ marginBottom: '0.5rem' }}>
-            <CreditCardIcon style={{ marginRight: '0.5rem' }} />
-            Informations de paiement
-          </Title>
-          
-          {amount && (
-            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
-              <FlexItem>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2c3e50' }}>
-                  Montant à payer : {formatAmount(amount)}
-                </div>
-              </FlexItem>
-            </Flex>
-          )}
-          
-          {description && (
-            <div style={{ color: '#666', marginTop: '0.5rem' }}>
-              {description}
-            </div>
-          )}
-        </div>
+    <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+      {/* DEBUG VISIBLE */}
+      <div style={{
+        background: '#f8f9fa',
+        border: '1px solid #dee2e6',
+        borderRadius: '6px',
+        padding: '1rem',
+        marginBottom: '1rem',
+        fontSize: '14px'
+      }}>
+        <strong>🔧 Debug PaymentForm:</strong>
+        <br />
+        <strong>Stripe:</strong> {stripe ? '✅ Chargé' : '❌ Non chargé'}
+        <br />
+        <strong>Elements:</strong> {elements ? '✅ Chargé' : '❌ Non chargé'}
+        <br />
+        <strong>Client Secret:</strong> {clientSecret ? '✅ Présent' : '❌ Manquant'}
+        <br />
+        <strong>Type d'élément:</strong> {usePaymentElement ? 'PaymentElement' : 'CardElement'}
+        <br />
+        <strong>Montant:</strong> {amount ? `${amount} €` : 'Non spécifié'}
+      </div>
 
-        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-          {/* Élément de paiement Stripe */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <PaymentElement 
-              options={{
-                layout: 'tabs',
-                paymentMethodOrder: ['card', 'bancontact', 'sepa_debit']
-              }}
-            />
-          </div>
+      <Form onSubmit={handleSubmit}>
+        {/* Informations client */}
+        <FormGroup label="Nom complet" fieldId="customer-name">
+          <TextInput
+            id="customer-name"
+            value={customerName}
+            onChange={(_event, value) => setCustomerName(value)}
+            placeholder="Votre nom complet"
+          />
+        </FormGroup>
 
-          {/* Adresse de facturation */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <Title headingLevel="h4" size="md" style={{ marginBottom: '0.5rem' }}>
-              Adresse de facturation
-            </Title>
-            <AddressElement 
-              options={{
-                mode: 'billing',
-                allowedCountries: ['FR', 'BE', 'CH', 'LU']
-              }}
-            />
-          </div>
+        <FormGroup label="Email" fieldId="customer-email">
+          <TextInput
+            id="customer-email"
+            type="email"
+            value={customerEmail}
+            onChange={(_event, value) => setCustomerEmail(value)}
+            placeholder="votre@email.com"
+          />
+        </FormGroup>
 
-          {/* Messages d'erreur ou d'information */}
-          {message && (
-            <div style={{ marginBottom: '1rem' }}>
-              <Alert 
-                variant={message.includes('Erreur') || message.includes('erreur') ? 'danger' : 'info'}
-                title={message.includes('Erreur') || message.includes('erreur') ? 'Erreur' : 'Information'}
-                isInline
-              >
-                {message}
-              </Alert>
-            </div>
-          )}
-
-          {/* Informations de sécurité */}
-          <div style={{ 
-            marginBottom: '1.5rem',
+        {/* Élément de paiement Stripe */}
+        <FormGroup label="Informations de paiement" fieldId="payment-element">
+          <div style={{
             padding: '1rem',
-            backgroundColor: '#f0f9ff',
-            border: '1px solid #0ea5e9',
-            borderRadius: '6px'
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            backgroundColor: '#ffffff'
           }}>
-            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsSm' }}>
-              <FlexItem>
-                <InfoCircleIcon style={{ color: '#0ea5e9' }} />
-              </FlexItem>
-              <FlexItem>
-                <div style={{ fontSize: '14px', color: '#0369a1' }}>
-                  <strong>Paiement 100% sécurisé</strong> - Vos données sont protégées par le chiffrement SSL et Stripe
-                </div>
-              </FlexItem>
-            </Flex>
+            {usePaymentElement ? (
+              <PaymentElement
+                id="payment-element"
+                onChange={handleElementChange}
+                options={{
+                  layout: 'tabs',
+                  defaultValues: {
+                    billingDetails: {
+                      name: customerName,
+                      email: customerEmail
+                    }
+                  }
+                }}
+              />
+            ) : (
+              <CardElement
+                id="card-element"
+                onChange={handleElementChange}
+                options={{
+                  style: {
+                    base: {
+                      fontSize: '16px',
+                      color: '#424770',
+                      '::placeholder': {
+                        color: '#aab7c4',
+                      },
+                    },
+                    invalid: {
+                      color: '#9e2146',
+                    },
+                  },
+                }}
+              />
+            )}
           </div>
+        </FormGroup>
 
-          {/* Bouton de paiement */}
+        {/* Message d'erreur/succès */}
+        {message && (
+          <div style={{ marginBottom: '1rem' }}>
+            <Alert
+              variant={message.includes('✅') ? 'success' : message.includes('⚠️') ? 'warning' : 'danger'}
+              title={message.includes('✅') ? 'Succès' : message.includes('⚠️') ? 'Attention' : 'Erreur'}
+              isInline
+            >
+              {message}
+            </Alert>
+          </div>
+        )}
+
+        {/* Conditions générales */}
+        <FormGroup fieldId="accept-terms">
+          <Checkbox
+            id="accept-terms"
+            isChecked={acceptTerms}
+            onChange={(_event, checked) => setAcceptTerms(checked)}
+            label={
+              <span>
+                J'accepte les{' '}
+                <a href="/conditions" target="_blank" rel="noopener noreferrer">
+                  conditions générales
+                </a>{' '}
+                et autorise le prélèvement de{' '}
+                <strong>{amount ? `${amount} €` : 'ce montant'}</strong>
+              </span>
+            }
+          />
+        </FormGroup>
+
+        {/* Bouton de paiement */}
+        <div style={{ marginTop: '2rem' }}>
           <Button
             type="submit"
             variant="primary"
             size="lg"
-            isDisabled={!stripe || !isLoaded || isProcessing}
-            isLoading={isProcessing}
-            style={{ 
-              width: '100%',
-              padding: '1rem',
-              fontSize: '16px',
-              fontWeight: 'bold'
-            }}
+            isBlock
+            isDisabled={isLoading || !acceptTerms || (!isComplete && usePaymentElement)}
+            icon={isLoading ? <Spinner size="sm" /> : <CreditCardIcon />}
           >
-            {isProcessing ? (
+            {isLoading ? (
               <>
-                <Spinner size="sm" style={{ marginRight: '0.5rem' }} />
+                <Spinner size="sm" style={{ marginRight: '8px' }} />
                 Traitement en cours...
               </>
             ) : (
               <>
-                <CreditCardIcon style={{ marginRight: '0.5rem' }} />
-                Payer {formatAmount(amount)}
+                <CreditCardIcon style={{ marginRight: '8px' }} />
+                Payer {amount ? `${amount} €` : 'maintenant'}
               </>
             )}
           </Button>
+        </div>
 
-          {/* Informations légales */}
-          <div style={{ 
-            marginTop: '1rem',
-            padding: '0.75rem',
-            fontSize: '12px',
-            color: '#666',
-            textAlign: 'center',
-            borderTop: '1px solid #e5e7eb'
-          }}>
-            En cliquant sur "Payer", vous acceptez nos conditions générales de vente.
-            <br />
-            Aucune donnée de carte bancaire n'est stockée sur nos serveurs.
-          </div>
-        </form>
-      </CardBody>
-    </Card>
+        {/* Informations de sécurité */}
+        <div style={{
+          marginTop: '1rem',
+          padding: '1rem',
+          backgroundColor: '#e7f3ff',
+          borderRadius: '6px',
+          textAlign: 'center'
+        }}>
+          <p style={{ margin: 0, fontSize: '14px', color: '#0c5460' }}>
+            🔒 <strong>Paiement 100% sécurisé</strong><br />
+            Vos données sont protégées par le cryptage SSL de Stripe.<br />
+            Aucune information bancaire n'est stockée sur nos serveurs.
+          </p>
+        </div>
+      </Form>
+    </div>
   );
 };
 
