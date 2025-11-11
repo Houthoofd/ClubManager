@@ -173,49 +173,10 @@ async function loadSubModule(modulePath: string, routePath: string, fallbackMess
 async function initializeSubModules() {
   console.log('🔄 [Paiements] Chargement des modules depuis routes/ (sans sous-dossiers)...');
   
-  // Ajouter le middleware d'auth flexible AVANT de charger les modules
-  router.use(flexibleAuth);
-  console.log('🔐 [Paiements] Middleware d\'authentification flexible ajouté');
+  // CORRIGÉ: Charger les modules spécialisés AVANT le middleware d'auth et le CRUD
+  console.log('🔄 [Paiements] Chargement modules spécialisés AVANT middleware auth...');
   
-  // CORRIGÉ: Charger le module CRUD directement à la racine (sans préfixe /crud)
-  console.log('🔄 [Paiements] Chargement module CRUD principal à la racine...');
-  const crudLoaded = await loadSubModule(
-    './paiements-crud.js',
-    '/', // CHANGÉ: Pas de préfixe, directement à la racine
-    'Le service CRUD des paiements n\'est pas disponible'
-  );
-  
-  if (!crudLoaded) {
-    console.error('❌ [Paiements] CRITIQUE: Module CRUD principal non chargé');
-    
-    // Route de fallback complète pour le CRUD à la racine
-    router.use('/', (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      // Laisser passer les routes spécialisées (stripe, echeances, etc.)
-      if (req.path.startsWith('/stripe') || req.path.startsWith('/echeances') || 
-          req.path.startsWith('/confirmation') || req.path.startsWith('/webhooks') ||
-          req.path === '/health' || req.path === '/debug/routes') {
-        return next();
-      }
-      
-      console.error(`❌ [Paiements] Appel CRUD échoué: ${req.method} ${req.path}`);
-      res.status(503).json({
-        success: false,
-        error: 'Service CRUD des paiements temporairement indisponible',
-        message: 'Le module paiements-crud.ts n\'a pas pu être chargé',
-        details: {
-          method: req.method,
-          path: req.path,
-          expectedFile: 'routes/paiements-crud.ts',
-          suggestion: 'Vérifiez que le fichier paiements-crud.ts existe dans routes/'
-        },
-        timestamp: new Date().toISOString()
-      });
-    });
-  } else {
-    console.log('✅ [Paiements] Module CRUD principal chargé à la racine avec succès');
-  }
-  
-  // CORRIGÉ: Tous les autres modules avec leurs préfixes spécialisés
+  // Charger tous les modules spécialisés SANS middleware d'auth d'abord
   await loadSubModule(
     './stripe.js',
     '/stripe', 
@@ -240,10 +201,68 @@ async function initializeSubModules() {
     'Le service de webhooks de paiement n\'est pas disponible'
   );
   
+  console.log('✅ [Paiements] Modules spécialisés chargés, ajout du middleware auth...');
+  
+  // CORRIGÉ: Ajouter le middleware d'auth SEULEMENT pour les routes restantes (CRUD)
+  router.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // Exclure les routes spécialisées du middleware d'auth
+    if (req.path.startsWith('/stripe') || 
+        req.path.startsWith('/echeances') || 
+        req.path.startsWith('/confirmation') || 
+        req.path.startsWith('/webhooks') ||
+        req.path === '/health' || 
+        req.path === '/debug/routes') {
+      return next();
+    }
+    
+    // Appliquer le middleware d'auth seulement pour les routes CRUD
+    flexibleAuth(req, res, next);
+  });
+  
+  console.log('🔐 [Paiements] Middleware d\'authentification flexible ajouté pour routes CRUD');
+  
+  // CORRIGÉ: Charger le module CRUD directement à la racine APRÈS le middleware
+  console.log('🔄 [Paiements] Chargement module CRUD principal à la racine...');
+  const crudLoaded = await loadSubModule(
+    './paiements-crud.js',
+    '/', // CHANGÉ: Pas de préfixe, directement à la racine
+    'Le service CRUD des paiements n\'est pas disponible'
+  );
+  
+  if (!crudLoaded) {
+    console.error('❌ [Paiements] CRITIQUE: Module CRUD principal non chargé');
+    
+    // Route de fallback complète pour le CRUD à la racine
+    router.use('/', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      // Laisser passer les routes spécialisées
+      if (req.path.startsWith('/stripe') || req.path.startsWith('/echeances') || 
+          req.path.startsWith('/confirmation') || req.path.startsWith('/webhooks') ||
+          req.path === '/health' || req.path === '/debug/routes') {
+        return next();
+      }
+      
+      console.error(`❌ [Paiements] Appel CRUD échoué: ${req.method} ${req.path}`);
+      res.status(503).json({
+        success: false,
+        error: 'Service CRUD des paiements temporairement indisponible',
+        message: 'Le module paiements-crud.ts n\'a pas pu être chargé',
+        details: {
+          method: req.method,
+          path: req.path,
+          expectedFile: 'routes/paiements-crud.ts',
+          suggestion: 'Vérifiez que le fichier paiements-crud.ts existe dans routes/'
+        },
+        timestamp: new Date().toISOString()
+      });
+    });
+  } else {
+    console.log('✅ [Paiements] Module CRUD principal chargé à la racine avec succès');
+  }
+  
   console.log('✅ [Paiements] Tous les modules ont été chargés depuis routes/');
 }
 
-// Routes de base pour le module paiements - CORRIGÉES avec types
+// CORRIGÉ: Routes de base SANS middleware d'auth (pour health et debug)
 router.get('/health', (req: express.Request, res: express.Response) => {
   res.json({
     status: 'healthy',
@@ -281,7 +300,12 @@ router.get('/health', (req: express.Request, res: express.Response) => {
       'routes/confirmation.ts - Confirmation paiements',
       'routes/webhooks.ts - Webhooks Stripe'
     ],
-    note: 'Architecture plate - CRUD à la racine, modules spécialisés avec préfixes',
+    note: 'Architecture plate - modules spécialisés chargés AVANT middleware auth, CRUD à la racine APRÈS',
+    middleware_order: [
+      '1. Routes spécialisées (stripe, echeances, confirmation, webhooks)',
+      '2. Middleware auth conditionnel (seulement pour CRUD)',
+      '3. Routes CRUD à la racine'
+    ],
     timestamp: new Date().toISOString()
   });
 });

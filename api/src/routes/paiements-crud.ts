@@ -359,7 +359,7 @@ router.get('/utilisateur/:userId', async (req, res) => {
   }
 });
 
-// Route de santé pour le module CRUD
+// Route de santé pour le module CRUD - AJOUTÉ: Route dédiée pour debugging
 router.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -372,9 +372,21 @@ router.get('/health', (req, res) => {
       'PUT /:id - Modifier paiement',
       'DELETE /:id - Supprimer paiement',
       'PUT /:id/statut - Mettre à jour statut',
-      'GET /utilisateur/:userId - Paiements par utilisateur'
+      'GET /utilisateur/:userId - Paiements par utilisateur',
+      'GET /health - Statut du module CRUD'
     ],
+    middleware: 'Authentification flexible requise pour toutes les routes',
     timestamp: new Date().toISOString()
+  });
+});
+
+// AJOUTÉ: Route de test simple pour vérifier le chargement
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Module CRUD des paiements est fonctionnel',
+    timestamp: new Date().toISOString(),
+    user: (req as any).user || null
   });
 });
 
