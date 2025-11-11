@@ -165,8 +165,7 @@ async function startServer() {
         // CORRIGÉ: Import conditionnel pour les autres modules
         let commandesRouter = null;
         let stocksRouter = null;
-        let echeancesRouter = null; // AJOUTÉ: Déclaration manquante
-        let webhooksRouter = null; // AJOUTÉ: Déclaration manquante
+        // SUPPRIMÉ: Variables echeancesRouter et webhooksRouter car intégrés dans le module paiements
         try {
             const commandesModule = await import('./routes/commandes.js');
             commandesRouter = commandesModule.default;
@@ -183,23 +182,8 @@ async function startServer() {
         catch (error) {
             console.warn('⚠️ [Server] Module stocks non disponible:', error);
         }
-        // AJOUTÉ: Import conditionnel pour echeances et webhooks standalone
-        try {
-            const echeancesModule = await import('./routes/echeances.js');
-            echeancesRouter = echeancesModule.default;
-            console.log('✅ [Server] Module echéances standalone chargé');
-        }
-        catch (error) {
-            console.warn('⚠️ [Server] Module echéances standalone non disponible:', error);
-        }
-        try {
-            const webhooksModule = await import('./routes/webhooks.js');
-            webhooksRouter = webhooksModule.default;
-            console.log('✅ [Server] Module webhooks standalone chargé');
-        }
-        catch (error) {
-            console.warn('⚠️ [Server] Module webhooks standalone non disponible:', error);
-        }
+        // SUPPRIMÉ: Import des modules echeances et webhooks standalone car intégrés dans paiements
+        console.log('ℹ️ [Server] Modules échéances et webhooks intégrés dans le module paiements unifié');
         // Routes principales (API) - CRITIQUE: Module paiements en priorité
         app.use('/auth', authRouter);
         app.use('/email', messagesRouter);
