@@ -98,6 +98,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   }, [elements]);
 
+  // CORRIGÉ: Forcer l'utilisation de CardElement pour éviter les conflits d'adresse
+  useEffect(() => {
+    if (elements) {
+      console.log('🔧 [PaymentForm] Utilisation forcée de CardElement pour éviter les conflits d\'adresse');
+      setUsePaymentElement(false); // Forcer CardElement
+    }
+  }, [elements]);
+
   // AJOUTÉ: Handler pour les changements d'adresse avec validation du code postal
   const handleAddressChange = (field: string, value: string) => {
     // CORRIGÉ: S'assurer que le code postal est toujours une chaîne de caractères
@@ -213,7 +221,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       console.log('📋 [PaymentForm] Adresse de facturation préparée:', billingAddress);
 
       if (usePaymentElement) {
-        // CORRIGÉ: PaymentElement avec adresse de facturation strictement formatée
+        // CORRIGÉ: PaymentElement avec adresse forcée dans confirmParams
         console.log('💳 [PaymentForm] Confirmation avec PaymentElement...');
         
         result = await stripe.confirmPayment({
@@ -234,7 +242,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         console.log('📊 [PaymentForm] Résultat PaymentElement:', result);
 
       } else {
-        // CORRIGÉ: CardElement avec adresse de facturation strictement formatée
+        // CORRIGÉ: CardElement avec adresse de facturation et hidePostalCode
         console.log('💳 [PaymentForm] Confirmation avec CardElement...');
         
         const cardElement = elements.getElement(CardElement);
@@ -462,41 +470,59 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         line1: customerAddress.line1,
                         line2: customerAddress.line2,
                         city: customerAddress.city,
-                        postal_code: customerAddress.postal_code.toString(), // IMPORTANT: Forcer en string
+                        postal_code: customerAddress.postal_code.toString(),
                         country: customerAddress.country
                       }
                     }
                   },
-                  // CORRIGÉ: Configuration pour forcer les types corrects
                   fields: {
                     billingDetails: {
+                      name: 'never',
+                      email: 'never', 
+                      phone: 'never',
                       address: {
-                        country: 'auto',
-                        postalCode: 'auto'
+                        line1: 'never',
+                        line2: 'never',
+                        city: 'never',
+                        country: 'never',
+                        postalCode: 'never'
                       }
                     }
                   }
                 }}
               />
             ) : (
-              <CardElement
-                id="card-element"
-                onChange={handleElementChange}
-                options={{
-                  style: {
-                    base: {
-                      fontSize: '16px',
-                      color: '#424770',
-                      '::placeholder': {
-                        color: '#aab7c4',
+              // CORRIGÉ: CardElement avec hidePostalCode pour éviter les conflits
+              <div>
+                <CardElement
+                  id="card-element"
+                  onChange={handleElementChange}
+                  options={{
+                    style: {
+                      base: {
+                        fontSize: '16px',
+                        color: '#424770',
+                        '::placeholder': {
+                          color: '#aab7c4',
+                        },
+                      },
+                      invalid: {
+                        color: '#9e2146',
                       },
                     },
-                    invalid: {
-                      color: '#9e2146',
-                    },
-                  },
-                }}
-              />
+                    hidePostalCode: true, // IMPORTANT: Masquer le code postal intégré
+                    disabled: false
+                  }}
+                />
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#28a745', 
+                  marginTop: '0.5rem',
+                  fontWeight: 'bold'
+                }}>
+                  ✅ Mode CardElement : Pas de conflit d'adresse - L'adresse ci-dessus sera utilisée
+                </div>
+              </div>
             )}
           </div>
         </FormGroup>
