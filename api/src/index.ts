@@ -136,55 +136,7 @@ async function startServer() {
     const { default: coursRouter } = await import('./routes/cours.js');
     const { default: compteRouter } = await import('./routes/compte.js');
     
-    // MODIFIÉ: Charger les modules de paiement individuellement AVANT le module principal
-    console.log('🔄 [Server] Chargement des modules de paiement individuels...');
-    let stripeRouter = null;
-    let echeancesRouter = null;
-    let confirmationRouter = null;
-    let webhooksRouter = null;
-    let paiementsCrudRouter = null;
-    
-    try {
-      const stripeModule = await import('./routes/stripe.js');
-      stripeRouter = stripeModule.default;
-      console.log('✅ [Server] Module stripe chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module stripe non disponible:', error);
-    }
-    
-    try {
-      const echeancesModule = await import('./routes/echeances.js');
-      echeancesRouter = echeancesModule.default;
-      console.log('✅ [Server] Module echeances chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module echeances non disponible:', error);
-    }
-    
-    try {
-      const confirmationModule = await import('./routes/confirmation.js');
-      confirmationRouter = confirmationModule.default;
-      console.log('✅ [Server] Module confirmation chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module confirmation non disponible:', error);
-    }
-    
-    try {
-      const webhooksModule = await import('./routes/webhooks.js');
-      webhooksRouter = webhooksModule.default;
-      console.log('✅ [Server] Module webhooks chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module webhooks non disponible:', error);
-    }
-    
-    try {
-      const paiementsCrudModule = await import('./routes/paiements-crud.js');
-      paiementsCrudRouter = paiementsCrudModule.default;
-      console.log('✅ [Server] Module paiements-crud chargé');
-    } catch (error) {
-      console.warn('⚠️ [Server] Module paiements-crud non disponible:', error);
-    }
-    
-    // OPTIMISÉ: Import et validation du router paiements modulaire SIMPLIFIÉ
+    // SIMPLIFIÉ: Charger seulement le module paiements principal sans modules individuels
     console.log('🔄 [Server] Chargement du module paiements principal...');
     let paiementRouter: Router | null = null;
     try {
@@ -195,53 +147,28 @@ async function startServer() {
       }
       console.log('✅ [Server] Module paiements principal chargé avec succès');
     } catch (error) {
-      console.warn('⚠️ [Server] Module paiements principal non disponible, utilisation des modules individuels');
+      console.error('❌ [Server] Erreur critique lors du chargement du module paiements:', error);
       
-      // FALLBACK: Créer un router composite avec les modules individuels
-      if (stripeRouter || echeancesRouter || confirmationRouter || webhooksRouter || paiementsCrudRouter) {
-        console.log('🔧 [Server] Création d\'un router paiements composite...');
-        paiementRouter = express.Router();
-        
-        if (paiementsCrudRouter) {
-          paiementRouter.use('/', paiementsCrudRouter);
-          console.log('  → /paiements/ (CRUD)');
-        }
-        if (stripeRouter) {
-          paiementRouter.use('/stripe', stripeRouter);
-          console.log('  → /paiements/stripe/');
-        }
-        if (echeancesRouter) {
-          paiementRouter.use('/echeances', echeancesRouter);
-          console.log('  → /paiements/echeances/');
-        }
-        if (confirmationRouter) {
-          paiementRouter.use('/confirmation', confirmationRouter);
-          console.log('  → /paiements/confirmation/');
-        }
-        if (webhooksRouter) {
-          paiementRouter.use('/webhooks', webhooksRouter);
-          console.log('  → /paiements/webhooks/');
-        }
-        
-        // Route de santé composite
-        paiementRouter.get('/health', (req, res) => {
-          res.json({
-            status: 'healthy',
-            module: 'paiements-composite',
-            architecture: 'Modules individuels assemblés',
-            modules_charges: {
-              crud: !!paiementsCrudRouter,
-              stripe: !!stripeRouter,
-              echeances: !!echeancesRouter,
-              confirmation: !!confirmationRouter,
-              webhooks: !!webhooksRouter
-            },
-            timestamp: new Date().toISOString()
-          });
+      // FALLBACK: Créer une route de fallback basique
+      paiementRouter = express.Router();
+      paiementRouter.get('/health', (req, res) => {
+        res.status(503).json({
+          status: 'unhealthy',
+          module: 'paiements-fallback',
+          error: 'Module paiements principal non disponible',
+          details: (error as Error).message,
+          timestamp: new Date().toISOString()
         });
-        
-        console.log('✅ [Server] Router paiements composite créé avec succès');
-      }
+      });
+      
+      paiementRouter.use('*', (req, res) => {
+        res.status(503).json({
+          error: 'Service paiements temporairement indisponible',
+          message: 'Le module paiements n\'a pas pu être chargé',
+          details: (error as Error).message,
+          timestamp: new Date().toISOString()
+        });
+      });
     }
     
     const { default: statistiquesRouter } = await import('./routes/statistiques.js');
@@ -256,6 +183,8 @@ async function startServer() {
     // CORRIGÉ: Import conditionnel pour les autres modules
     let commandesRouter = null;
     let stocksRouter = null;
+    let echeancesRouter = null; // AJOUTÉ: Déclaration manquante
+    let webhooksRouter = null; // AJOUTÉ: Déclaration manquante
     
     try {
       const commandesModule = await import('./routes/commandes.js');
@@ -271,6 +200,23 @@ async function startServer() {
       console.log('✅ [Server] Module stocks chargé');
     } catch (error) {
       console.warn('⚠️ [Server] Module stocks non disponible:', error);
+    }
+
+    // AJOUTÉ: Import conditionnel pour echeances et webhooks standalone
+    try {
+      const echeancesModule = await import('./routes/echeances.js');
+      echeancesRouter = echeancesModule.default;
+      console.log('✅ [Server] Module echéances standalone chargé');
+    } catch (error) {
+      console.warn('⚠️ [Server] Module echéances standalone non disponible:', error);
+    }
+
+    try {
+      const webhooksModule = await import('./routes/webhooks.js');
+      webhooksRouter = webhooksModule.default;
+      console.log('✅ [Server] Module webhooks standalone chargé');
+    } catch (error) {
+      console.warn('⚠️ [Server] Module webhooks standalone non disponible:', error);
     }
 
     // Routes principales (API) - CRITIQUE: Module paiements en priorité
@@ -293,22 +239,13 @@ async function startServer() {
       console.log('  → /paiements/confirmation/ (Confirmation paiements)');
       console.log('  → /paiements/webhooks/ (Webhooks Stripe)');
     } else {
-      console.error('❌ [Server] CRITIQUE: Aucun module paiements disponible');
+      console.error('❌ [Server] CRITIQUE: Module paiements non disponible - création fallback');
+      
       // Route de fallback pour les paiements
       app.use('/paiements', (req, res) => {
         res.status(503).json({
           error: 'Service paiements temporairement indisponible',
-          message: 'Aucun module paiements n\'a pu être chargé',
-          modules_testes: {
-            principal: 'routes/paiements.js',
-            individuels: {
-              crud: 'routes/paiements-crud.js',
-              stripe: 'routes/stripe.js',
-              echeances: 'routes/echeances.js',
-              confirmation: 'routes/confirmation.js',
-              webhooks: 'routes/webhooks.js'
-            }
-          },
+          message: 'Le module paiements n\'a pas pu être chargé',
           timestamp: new Date().toISOString()
         });
       });
@@ -322,25 +259,9 @@ async function startServer() {
     app.use('/verification', verificationRouter);
     app.use('/statistiques', statistiquesRouter);
     
-    // MODIFIÉ: Monter échéances seulement si module standalone existe et n'est pas déjà monté dans paiements
-    if (echeancesRouter && !paiementRouter) {
-      app.use('/echeances', echeancesRouter);
-      console.log('✅ [Server] Route échéances standalone montée (module paiements non disponible)');
-    } else if (paiementRouter) {
-      console.log('ℹ️ [Server] Échéances gérées via /paiements/echeances/');
-    } else {
-      console.log('⚠️ [Server] Aucun module échéances disponible');
-    }
-    
-    // CORRIGÉ: Monter les autres routes conditionnellement
-    if (webhooksRouter && !paiementRouter) {
-      app.use('/webhooks', webhooksRouter);
-      console.log('✅ [Server] Route webhooks standalone montée (module paiements non disponible)');
-    } else if (paiementRouter) {
-      console.log('ℹ️ [Server] Webhooks gérés via /paiements/webhooks/');
-    } else {
-      console.log('⚠️ [Server] Aucun module webhooks disponible');
-    }
+    // MODIFIÉ: Simplifier car échéances et webhooks sont maintenant intégrés dans le module paiements
+    console.log('ℹ️ [Server] Échéances gérées via /paiements/echeances/');
+    console.log('ℹ️ [Server] Webhooks gérés via /paiements/webhooks/');
     
     if (commandesRouter) {
       app.use('/commandes', commandesRouter);
@@ -576,16 +497,6 @@ async function startServer() {
         console.log('  📂 /paiements/confirmation/ → Confirmation paiements');
         console.log('  📂 /paiements/webhooks/ → Webhooks Stripe');
         console.log('  🔍 /paiements/health → Statut du module');
-        
-        // Détailler la composition du module
-        const moduleComposition = [];
-        if (paiementsCrudRouter) moduleComposition.push('CRUD');
-        if (stripeRouter) moduleComposition.push('Stripe');
-        if (echeancesRouter) moduleComposition.push('Échéances');
-        if (confirmationRouter) moduleComposition.push('Confirmation');
-        if (webhooksRouter) moduleComposition.push('Webhooks');
-        
-        console.log(`  🧩 Modules chargés: ${moduleComposition.join(', ')}`);
       } else {
         console.log('❌ [Server] Module paiements: INDISPONIBLE');
       }
@@ -623,9 +534,8 @@ async function startServer() {
         process.exit(0);
       });
     });
-    
   } catch (error) {
-    console.error('❌ [Server] Erreur critique lors du démarrage:', error);
+    console.error('❌ [Server] Erreur lors du démarrage du serveur:', error);
     process.exit(1);
   }
 }
