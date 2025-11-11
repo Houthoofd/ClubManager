@@ -269,8 +269,21 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         
         let errorMessage = result.error.message || 'Erreur de paiement inconnue';
         
-        // CORRIGÉ: Messages d'erreur spécifiques pour les codes postaux
-        if (result.error.code === 'incomplete_zip' || 
+        // AJOUTÉ: Diagnostic détaillé de l'erreur côté frontend
+        if (result.error.type === 'invalid_request_error' && result.error.message?.includes('Invalid API Key provided: pk_')) {
+          console.error('❌ [PaymentForm] ERREUR CRITIQUE DE CONFIGURATION DÉTECTÉE !');
+          console.error('❌ [PaymentForm] Le frontend essaie d\'utiliser une clé publique avec l\'API Stripe backend');
+          console.error('❌ [PaymentForm] Cela indique un problème de configuration dans PaymentElement');
+          
+          errorMessage = '❌ Erreur de configuration Stripe côté client. Le système essaie d\'utiliser une clé publique côté serveur. Contactez l\'administrateur.';
+          
+          // AJOUTÉ: Suggestion de solution
+          console.error('❌ [PaymentForm] SOLUTION SUGGÉRÉE:');
+          console.error('  1. Vérifiez que PaymentElement utilise uniquement la clé publique pour l\'affichage');
+          console.error('  2. Tous les appels à l\'API Stripe doivent passer par votre backend avec la clé secrète');
+          console.error('  3. Évitez les options PaymentElement qui déclenchent des appels API automatiques');
+          
+        } else if (result.error.code === 'incomplete_zip' || 
             result.error.message?.includes('postcode is onvolledig') ||
             result.error.message?.includes('postcode') ||
             result.error.message?.includes('postal')) {
@@ -314,12 +327,32 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     setIsLoading(false);
   };
 
-  // AJOUTÉ: Handler pour les changements d'éléments
+  // AJOUTÉ: Handler pour les changements d'éléments avec diagnostic d'erreur
   const handleElementChange = (event: any) => {
     console.log('🔄 [PaymentForm] Changement élément:', event);
     setIsComplete(event.complete);
+    
     if (event.error) {
-      setMessage(`⚠️ ${event.error.message}`);
+      console.error('❌ [PaymentForm] Erreur dans PaymentElement/CardElement:', event.error);
+      
+      // AJOUTÉ: Détection spécifique des erreurs de clé API
+      if (event.error.message && event.error.message.includes('Invalid API Key provided: pk_')) {
+        console.error('❌ [PaymentForm] ERREUR CRITIQUE: PaymentElement utilise une clé publique côté serveur !');
+        console.error('❌ [PaymentForm] Cela indique que Stripe Elements fait un appel direct à l\'API au lieu de passer par votre backend');
+        setMessage('❌ Erreur de configuration Stripe - contactez l\'administrateur');
+        
+        // AJOUTÉ: Diagnostic complet
+        console.error('❌ [PaymentForm] Diagnostic:', {
+          errorType: event.error.type,
+          errorCode: event.error.code,
+          errorMessage: event.error.message,
+          suggestion: 'Vérifiez que PaymentElement n\'essaie pas de faire des appels API directs'
+        });
+      } else if (event.error.type === 'validation_error') {
+        setMessage(`⚠️ ${event.error.message}`);
+      } else {
+        setMessage(`⚠️ ${event.error.message}`);
+      }
     } else {
       setMessage('');
     }
@@ -462,19 +495,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                 onChange={handleElementChange}
                 options={{
                   layout: 'tabs',
-                  defaultValues: {
-                    billingDetails: {
-                      name: customerName,
-                      email: customerEmail,
-                      address: {
-                        line1: customerAddress.line1,
-                        line2: customerAddress.line2,
-                        city: customerAddress.city,
-                        postal_code: customerAddress.postal_code.toString(),
-                        country: customerAddress.country
-                      }
-                    }
-                  },
+                  // CORRIGÉ: Configuration PaymentElement pour éviter les appels API directs
                   fields: {
                     billingDetails: {
                       name: 'never',
@@ -489,10 +510,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                       }
                     }
                   }
+                  // SUPPRIMÉ: appearance - pas supporté dans PaymentElement options
                 }}
               />
             ) : (
-              // CORRIGÉ: CardElement avec hidePostalCode pour éviter les conflits
+              // CORRIGÉ: CardElement avec configuration stricte
               <div>
                 <CardElement
                   id="card-element"
@@ -502,6 +524,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                       base: {
                         fontSize: '16px',
                         color: '#424770',
+                        fontFamily: 'system-ui, sans-serif',
                         '::placeholder': {
                           color: '#aab7c4',
                         },
