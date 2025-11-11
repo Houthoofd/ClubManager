@@ -33,7 +33,7 @@ const router: Router = express.Router();
 
 console.log('🔧 [Paiements] Initialisation du module de paiements complet');
 
-// CORRIGÉ: Configuration Stripe avec validation stricte
+// CORRIGÉ: Configuration Stripe avec validation stricte et fallback pour les clés manquantes
 let stripe: Stripe | null = null;
 try {  
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -54,28 +54,46 @@ try {
     publicKeyPrefix: process.env.STRIPE_PUBLIC_KEY ? process.env.STRIPE_PUBLIC_KEY.substring(0, 12) + '...' : 'MANQUANT'
   });
 
+  // AJOUTÉ: Messages d'erreur spécifiques avec solutions
   if (!stripeSecretKey) {
     console.error('❌ [Paiements] STRIPE_SECRET_KEY manquant dans', envPath);
+    console.error('❌ [Paiements] SOLUTION:');
+    console.error('  1. Allez sur https://dashboard.stripe.com/apikeys');
+    console.error('  2. Activez le mode LIVE (pas TEST)');
+    console.error('  3. Copiez la clé secrète qui commence par sk_live_51R6wB1AxYwLhmnM2...');
+    console.error('  4. Ajoutez STRIPE_SECRET_KEY=sk_live_... dans', envPath);
     throw new Error('STRIPE_SECRET_KEY manquant');
   } 
   
   if (stripeSecretKey.startsWith('pk_')) {
     console.error('❌ [Paiements] ERREUR CRITIQUE: Clé PUBLIQUE dans STRIPE_SECRET_KEY !');
-    console.error('❌ [Paiements] Clé actuelle:', stripeSecretKey.substring(0, 15) + '...');
-    console.error('❌ [Paiements] Cette clé doit être utilisée côté FRONTEND seulement');
-    console.error('❌ [Paiements] SOLUTION: Utilisez la clé qui commence par "sk_test_" dans STRIPE_SECRET_KEY');
-    console.error('❌ [Paiements] Fichier à modifier:', envPath);
+    console.error('❌ [Paiements] Clé actuelle:', stripeSecretKey.substring(0, 25) + '...');
+    console.error('❌ [Paiements] Cette clé (pk_...) doit être utilisée côté FRONTEND seulement');
+    console.error('❌ [Paiements] SOLUTION:');
+    console.error('  1. Récupérez votre clé SECRÈTE (sk_live_...) depuis Stripe');
+    console.error('  2. Remplacez STRIPE_SECRET_KEY dans', envPath);
+    console.error('  3. La clé publique va dans le frontend, la clé secrète dans le backend');
     throw new Error('Clé publique utilisée dans STRIPE_SECRET_KEY - utilisez la clé secrète');
+  }
+
+  // AJOUTÉ: Validation spécifique pour la production
+  if (process.env.NODE_ENV === 'production' && stripeSecretKey.startsWith('sk_test_')) {
+    console.error('❌ [Paiements] ERREUR: Clé TEST utilisée en PRODUCTION !');
+    console.error('❌ [Paiements] Clé actuelle:', stripeSecretKey.substring(0, 25) + '...');
+    console.error('❌ [Paiements] SOLUTION: Utilisez une clé LIVE (sk_live_...) en production');
+    throw new Error('Clé de test utilisée en production');
   }
   
   if (stripeSecretKey.startsWith('sk_') && !stripeSecretKey.includes('4e')) {
     stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2025-02-24.acacia',
+      apiVersion: '2025-02-24.acacia', // CORRIGÉ: Version API Stripe à jour
     });
     console.log('✅ [Paiements] Stripe initialisé avec clé secrète valide');
     console.log('✅ [Paiements] Type de clé:', stripeSecretKey.startsWith('sk_test_') ? 'TEST' : 'LIVE');
+    console.log('✅ [Paiements] Compte Stripe:', stripeSecretKey.substring(8, 25));
   } else {
     console.error('❌ [Paiements] Format de clé Stripe invalide ou pattern rejeté');
+    console.error('❌ [Paiements] Pattern rejeté détecté:', stripeSecretKey.includes('4e') ? 'OUI' : 'NON');
     throw new Error('Format de clé Stripe invalide');
   }
   
@@ -83,8 +101,13 @@ try {
   console.error('❌ [Paiements] Erreur critique initialisation Stripe:', error);
   console.error('❌ [Paiements] Vérifiez votre fichier:', envPath);
   console.error('❌ [Paiements] Variables attendues:');
-  console.error('  - STRIPE_SECRET_KEY=sk_test_... (pour test) ou sk_live_... (pour prod)');
-  console.error('  - STRIPE_PUBLIC_KEY=pk_test_... (pour test) ou pk_live_... (pour prod)');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('  - STRIPE_SECRET_KEY=sk_live_51R6wB1AxYwLhmnM2... (LIVE pour production)');
+    console.error('  - STRIPE_PUBLIC_KEY=pk_live_51R6wB1AxYwLhmnM2... (LIVE pour production)');
+  } else {
+    console.error('  - STRIPE_SECRET_KEY=sk_test_... (TEST pour développement)');
+    console.error('  - STRIPE_PUBLIC_KEY=pk_test_... (TEST pour développement)');
+  }
 }
 
 // CORRIGÉ: Middleware d'authentification flexible
@@ -154,39 +177,55 @@ router.post('/stripe/debug-config', async (req, res) => {
     const diagnostics = {
       environment: {
         NODE_ENV: process.env.NODE_ENV,
-        envFile: envPath
+        envFile: envPath,
+        expected_mode: process.env.NODE_ENV === 'production' ? 'LIVE' : 'TEST'
       },
       stripe_config: {
         secret_key: {
           exists: !!stripeSecretKey,
           type: stripeSecretKey ? (
-            stripeSecretKey.startsWith('sk_test_') ? 'SECRET TEST (CORRECT)' :
-            stripeSecretKey.startsWith('sk_live_') ? 'SECRET LIVE (CORRECT)' :
-            stripeSecretKey.startsWith('pk_test_') ? 'ERROR: PUBLIC TEST (INCORRECT)' :
-            stripeSecretKey.startsWith('pk_live_') ? 'ERROR: PUBLIC LIVE (INCORRECT)' :
+            stripeSecretKey.startsWith('sk_test_') ? 'SECRET TEST' :
+            stripeSecretKey.startsWith('sk_live_') ? 'SECRET LIVE' :
+            stripeSecretKey.startsWith('pk_test_') ? 'ERROR: PUBLIC TEST (SHOULD BE SECRET)' :
+            stripeSecretKey.startsWith('pk_live_') ? 'ERROR: PUBLIC LIVE (SHOULD BE SECRET)' :
             'FORMAT INCONNU'
           ) : 'ABSENT',
-          prefix: stripeSecretKey ? stripeSecretKey.substring(0, 15) + '...' : null,
-          length: stripeSecretKey ? stripeSecretKey.length : 0
+          prefix: stripeSecretKey ? stripeSecretKey.substring(0, 25) + '...' : null,
+          length: stripeSecretKey ? stripeSecretKey.length : 0,
+          environment_match: stripeSecretKey ? (
+            process.env.NODE_ENV === 'production' ? stripeSecretKey.startsWith('sk_live_') : stripeSecretKey.startsWith('sk_test_')
+          ) : false
         },
         public_key: {
           exists: !!stripePublicKey,
           type: stripePublicKey ? (
-            stripePublicKey.startsWith('pk_test_') ? 'PUBLIC TEST (CORRECT)' :
-            stripePublicKey.startsWith('pk_live_') ? 'PUBLIC LIVE (CORRECT)' :
+            stripePublicKey.startsWith('pk_test_') ? 'PUBLIC TEST' :
+            stripePublicKey.startsWith('pk_live_') ? 'PUBLIC LIVE' :
             'FORMAT INCONNU'
           ) : 'ABSENT',
-          prefix: stripePublicKey ? stripePublicKey.substring(0, 15) + '...' : null
+          prefix: stripePublicKey ? stripePublicKey.substring(0, 25) + '...' : null,
+          environment_match: stripePublicKey ? (
+            process.env.NODE_ENV === 'production' ? stripePublicKey.startsWith('pk_live_') : stripePublicKey.startsWith('pk_test_')
+          ) : false
         },
         stripe_object_initialized: !!stripe
       },
-      errors: []
+      errors: [],
+      solutions: []
     };
-
 
     console.log('📊 [Stripe Debug] Diagnostics complets:', diagnostics);
 
-
+    // AJOUTÉ: Retour d'erreur si problème critique
+    if (diagnostics.errors.length > 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'Configuration Stripe incorrecte',
+        diagnostics,
+        immediate_action_required: true,
+        next_steps: diagnostics.solutions
+      });
+    }
 
     if (!stripe) {
       return res.status(503).json({
@@ -206,7 +245,8 @@ router.post('/stripe/debug-config', async (req, res) => {
         description: 'Test diagnostic configuration',
         metadata: {
           test: 'true',
-          debug: 'configuration_check'
+          debug: 'configuration_check',
+          environment: process.env.NODE_ENV || 'development'
         }
       });
 
@@ -227,16 +267,28 @@ router.post('/stripe/debug-config', async (req, res) => {
     } catch (stripeTestError: any) {
       console.error('❌ [Stripe Debug] Erreur test API:', stripeTestError);
       
+      let errorAnalysis = 'Erreur API Stripe générale';
+      let solution = 'Vérifiez la configuration Stripe';
+      
+      if (stripeTestError.message && stripeTestError.message.includes('Invalid API Key provided: pk_')) {
+        errorAnalysis = 'CLÉ PUBLIQUE ENVOYÉE À L\'API STRIPE BACKEND';
+        solution = 'Le frontend envoie une clé publique au lieu de laisser le backend utiliser sa clé secrète';
+      } else if (stripeTestError.code === 'invalid_api_key') {
+        errorAnalysis = 'CLÉ API STRIPE INVALIDE';
+        solution = 'Récupérez une nouvelle clé depuis votre dashboard Stripe';
+      }
+      
       res.status(500).json({
         success: false,
         error: 'Erreur API Stripe',
+        error_analysis: errorAnalysis,
         stripe_error: {
           type: stripeTestError.type,
           code: stripeTestError.code,
           message: stripeTestError.message
         },
         diagnostics,
-        solution: 'Vérifiez que votre clé Stripe est valide et active'
+        solution: solution
       });
     }
 
