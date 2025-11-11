@@ -904,4 +904,294 @@ router.get('/health', (req: express.Request, res: express.Response) => {
 
 console.log('✅ [Paiements] Module paiements complet initialisé');
 
+// AJOUTÉ: Route de diagnostic Stripe complet
+router.get('/stripe/diagnostic', async (req, res) => {
+  try {
+    console.log('🔍 [Stripe Diagnostic] Début du diagnostic complet...');
+    
+    const diagnostic = {
+      timestamp: new Date().toISOString(),
+      backend: {
+        stripe_initialized: !!stripe,
+        secret_key: {
+          exists: !!process.env.STRIPE_SECRET_KEY,
+          format: process.env.STRIPE_SECRET_KEY ? 
+            (process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ? 'TEST' :
+             process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') ? 'LIVE' : 'INVALID') : 'MISSING',
+          account_id: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(8, 23) : 'N/A',
+          length: process.env.STRIPE_SECRET_KEY?.length || 0
+        },
+        public_key: {
+          exists: !!process.env.STRIPE_PUBLIC_KEY,
+          value: process.env.STRIPE_PUBLIC_KEY || 'MISSING',
+          format: process.env.STRIPE_PUBLIC_KEY ? 
+            (process.env.STRIPE_PUBLIC_KEY.startsWith('pk_test_') ? 'TEST' :
+             process.env.STRIPE_PUBLIC_KEY.startsWith('pk_live_') ? 'LIVE' : 'INVALID') : 'MISSING',
+          account_id: process.env.STRIPE_PUBLIC_KEY ? process.env.STRIPE_PUBLIC_KEY.substring(8, 23) : 'N/A'
+        }
+      },
+      frontend_expected: {
+        public_key: process.env.STRIPE_SECRET_KEY ? 
+          `pk_${process.env.STRIPE_SECRET_KEY.substring(3)}` : 'N/A'
+      },
+      compatibility: {
+        keys_from_same_account: false,
+        both_test_mode: false,
+        both_live_mode: false,
+        account_match: false
+      },
+      stripe_api_test: {
+        attempted: false,
+        success: false,
+        error: null as any, // CORRIGÉ: Permettre any type pour l'erreur
+        response: null as any // CORRIGÉ: Permettre any type pour la réponse
+      }
+    };
+
+    // Vérification de compatibilité des clés
+    if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLIC_KEY) {
+      const secretAccount = process.env.STRIPE_SECRET_KEY.substring(8, 23);
+      const publicAccount = process.env.STRIPE_PUBLIC_KEY.substring(8, 23);
+      
+      diagnostic.compatibility.account_match = secretAccount === publicAccount;
+      diagnostic.compatibility.keys_from_same_account = secretAccount === publicAccount;
+      diagnostic.compatibility.both_test_mode = 
+        process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') && 
+        process.env.STRIPE_PUBLIC_KEY.startsWith('pk_test_');
+      diagnostic.compatibility.both_live_mode = 
+        process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') && 
+        process.env.STRIPE_PUBLIC_KEY.startsWith('pk_live_');
+    }
+
+    // Test de l'API Stripe si possible
+    if (stripe) {
+      try {
+        diagnostic.stripe_api_test.attempted = true;
+        console.log('🧪 [Stripe Diagnostic] Test de l\'API Stripe...');
+        
+        // Test simple : récupérer le compte
+        const account = await stripe.accounts.retrieve();
+        
+        diagnostic.stripe_api_test.success = true;
+        diagnostic.stripe_api_test.response = {
+          account_id: account.id,
+          country: account.country,
+          default_currency: account.default_currency,
+          charges_enabled: account.charges_enabled,
+          payouts_enabled: account.payouts_enabled,
+          type: account.type
+        };
+        
+        console.log('✅ [Stripe Diagnostic] API Stripe fonctionnelle:', account.id);
+        
+      } catch (stripeError: any) {
+        console.error('❌ [Stripe Diagnostic] Erreur API Stripe:', stripeError);
+        diagnostic.stripe_api_test.success = false;
+        diagnostic.stripe_api_test.error = {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message
+        };
+      }
+    }
+
+    // Évaluation globale
+    const isFullyOperational = 
+      diagnostic.backend.stripe_initialized &&
+      diagnostic.backend.secret_key.exists &&
+      diagnostic.backend.public_key.exists &&
+      diagnostic.compatibility.account_match &&
+      (diagnostic.compatibility.both_test_mode || diagnostic.compatibility.both_live_mode) &&
+      diagnostic.stripe_api_test.success;
+
+    const warnings = [];
+    const errors = [];
+
+    // Analyse et recommandations
+    if (!diagnostic.backend.stripe_initialized) {
+      errors.push('Stripe non initialisé côté backend');
+    }
+    
+    if (!diagnostic.backend.secret_key.exists) {
+      errors.push('STRIPE_SECRET_KEY manquante');
+    }
+    
+    if (!diagnostic.backend.public_key.exists) {
+      warnings.push('STRIPE_PUBLIC_KEY manquante (optionnelle côté backend)');
+    }
+    
+    if (!diagnostic.compatibility.account_match) {
+      errors.push('Clés publique/secrète de comptes Stripe différents');
+    }
+    
+    if (diagnostic.backend.secret_key.format !== diagnostic.backend.public_key.format) {
+      errors.push('Clés de types différents (TEST/LIVE mismatch)');
+    }
+    
+    if (!diagnostic.stripe_api_test.success && diagnostic.stripe_api_test.attempted) {
+      errors.push(`API Stripe non accessible: ${diagnostic.stripe_api_test.error?.message || 'Erreur inconnue'}`);
+    }
+
+    res.json({
+      status: isFullyOperational ? 'operational' : (errors.length > 0 ? 'error' : 'warning'),
+      overall_health: isFullyOperational,
+      diagnostic,
+      analysis: {
+        errors: errors,
+        warnings: warnings,
+        recommendations: [
+          ...errors.map(error => `🔴 CRITIQUE: ${error}`),
+          ...warnings.map(warning => `🟡 ATTENTION: ${warning}`),
+          ...(isFullyOperational ? ['✅ Service Stripe pleinement opérationnel'] : [])
+        ]
+      },
+      debug_info: {
+        expected_frontend_key: diagnostic.frontend_expected.public_key,
+        backend_secret_preview: process.env.STRIPE_SECRET_KEY ? 
+          process.env.STRIPE_SECRET_KEY.substring(0, 25) + '...' : 'N/A',
+        backend_public_preview: process.env.STRIPE_PUBLIC_KEY ? 
+          process.env.STRIPE_PUBLIC_KEY.substring(0, 25) + '...' : 'N/A'
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ [Stripe Diagnostic] Erreur générale:', error);
+    res.status(500).json({
+      status: 'error',
+      overall_health: false,
+      error: 'Erreur lors du diagnostic Stripe',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// AJOUTÉ: Route de test de compatibilité frontend/backend
+router.post('/stripe/test-compatibility', async (req, res) => {
+  try {
+    console.log('🔗 [Stripe Compatibility] Test compatibilité frontend/backend...');
+    
+    const { frontend_public_key } = req.body;
+    
+    if (!frontend_public_key) {
+      return res.status(400).json({
+        error: 'Clé publique frontend requise',
+        usage: 'POST /paiements/stripe/test-compatibility avec { "frontend_public_key": "pk_test_..." }'
+      });
+    }
+    
+    const compatibilityTest = {
+      frontend: {
+        key: frontend_public_key,
+        type: frontend_public_key.startsWith('pk_test_') ? 'TEST' :
+              frontend_public_key.startsWith('pk_live_') ? 'LIVE' : 'INVALID',
+        account: frontend_public_key.substring(8, 23),
+        length: frontend_public_key.length
+      },
+      backend: {
+        secret_key: {
+          exists: !!process.env.STRIPE_SECRET_KEY,
+          type: process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_') ? 'TEST' :
+                process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_') ? 'LIVE' : 'INVALID',
+          account: process.env.STRIPE_SECRET_KEY?.substring(8, 23) || 'N/A'
+        },
+        public_key: {
+          exists: !!process.env.STRIPE_PUBLIC_KEY,
+          matches_frontend: process.env.STRIPE_PUBLIC_KEY === frontend_public_key
+        }
+      },
+      compatibility: {
+        same_account: false,
+        same_type: false,
+        fully_compatible: false
+      }
+    };
+    
+    // Tests de compatibilité
+    if (process.env.STRIPE_SECRET_KEY) {
+      compatibilityTest.compatibility.same_account = 
+        compatibilityTest.frontend.account === compatibilityTest.backend.secret_key.account;
+      
+      compatibilityTest.compatibility.same_type = 
+        compatibilityTest.frontend.type === compatibilityTest.backend.secret_key.type;
+      
+      compatibilityTest.compatibility.fully_compatible = 
+        compatibilityTest.compatibility.same_account && compatibilityTest.compatibility.same_type;
+    }
+    
+    // Test pratique avec un petit PaymentIntent
+    let practicalTest = {
+      attempted: false,
+      success: false,
+      error: null as any, // CORRIGÉ: Permettre any type pour l'erreur
+      payment_intent_id: null as string | null // CORRIGÉ: Permettre string ou null
+    };
+    
+    if (stripe && compatibilityTest.compatibility.fully_compatible) {
+      try {
+        practicalTest.attempted = true;
+        console.log('🧪 [Stripe Compatibility] Test création PaymentIntent...');
+        
+        const testPaymentIntent = await stripe.paymentIntents.create({
+          amount: 50, // 0.50€ minimum
+          currency: 'eur',
+          description: 'Test compatibilité frontend/backend',
+          metadata: {
+            test: 'compatibility_check',
+            frontend_key_account: compatibilityTest.frontend.account,
+            timestamp: new Date().toISOString()
+          }
+        });
+        
+        practicalTest.success = true;
+        practicalTest.payment_intent_id = testPaymentIntent.id;
+        
+        console.log('✅ [Stripe Compatibility] PaymentIntent test créé:', testPaymentIntent.id);
+        
+        // Annuler immédiatement le PaymentIntent de test
+        await stripe.paymentIntents.cancel(testPaymentIntent.id);
+        console.log('🗑️ [Stripe Compatibility] PaymentIntent test annulé');
+        
+      } catch (stripeError: any) {
+        console.error('❌ [Stripe Compatibility] Erreur test pratique:', stripeError);
+        practicalTest.success = false;
+        practicalTest.error = {
+          type: stripeError.type,
+          code: stripeError.code,
+          message: stripeError.message
+        };
+      }
+    }
+    
+    const overallResult = 
+      compatibilityTest.compatibility.fully_compatible && 
+      (!practicalTest.attempted || practicalTest.success);
+    
+    res.json({
+      status: overallResult ? 'compatible' : 'incompatible',
+      compatibility_test: compatibilityTest,
+      practical_test: practicalTest,
+      recommendation: overallResult ? 
+        '✅ Frontend et backend parfaitement compatibles' :
+        '❌ Problème de compatibilité détecté - vérifiez les clés Stripe',
+      next_steps: overallResult ? 
+        ['Vous pouvez procéder aux paiements en toute sécurité'] :
+        [
+          'Vérifiez que les clés proviennent du même compte Stripe',
+          'Assurez-vous que les clés sont du même type (TEST/LIVE)',
+          'Redémarrez les services après correction',
+          'Relancez ce test de compatibilité'
+        ]
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [Stripe Compatibility] Erreur générale:', error);
+    res.status(500).json({
+      status: 'error',
+      error: 'Erreur lors du test de compatibilité',
+      details: error.message
+    });
+  }
+});
+
 export default router;

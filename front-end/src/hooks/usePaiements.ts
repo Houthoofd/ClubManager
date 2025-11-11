@@ -1027,6 +1027,76 @@ export const useHistoriqueUtilisateur = (userId: number | null) => {
   };
 };
 
+// AJOUTÉ: Hook pour diagnostiquer Stripe
+export const useStripeDiagnostic = () => {
+  return useQuery({
+    queryKey: ['stripe-diagnostic'],
+    queryFn: async () => {
+      console.log('🔍 [Stripe Diagnostic] Récupération diagnostic backend...');
+      
+      const token = obtenirToken();
+      if (!token) {
+        throw new Error('Token manquant pour diagnostic');
+      }
+
+      const response = await fetch(`${apiUrl('paiements/stripe/diagnostic')}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur diagnostic: ${response.status}`);
+      }
+
+      return response.json();
+    },
+    staleTime: 30000, // 30 secondes
+    retry: 1
+  });
+};
+
+// AJOUTÉ: Hook pour tester la compatibilité frontend/backend
+export const useStripeCompatibilityTest = () => {
+  return useMutation({
+    mutationFn: async () => {
+      console.log('🔗 [Stripe Compatibility] Test compatibilité...');
+      
+      const frontendKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+      if (!frontendKey) {
+        throw new Error('Clé publique frontend manquante');
+      }
+      
+      const token = obtenirToken();
+      if (!token) {
+        throw new Error('Token manquant pour test de compatibilité');
+      }
+
+      const response = await fetch(`${apiUrl('paiements/stripe/test-compatibility')}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          frontend_public_key: frontendKey
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erreur ${response.status}`);
+      }
+
+      return response.json();
+    }
+  });
+};
+
 export default {
   useEcheancesUtilisateur,
   useEcheancesByUserId,
@@ -1047,6 +1117,8 @@ export default {
   useTraiterPaiementBitcoin,
   useModifierPaiement,
   useSupprimerPaiement,
-  useMettreAJourStatutPaiement
+  useMettreAJourStatutPaiement,
+  useStripeDiagnostic,
+  useStripeCompatibilityTest
 };
 

@@ -115,7 +115,153 @@ async function startServer() {
       console.warn('⚠️ [Server] Le serveur continuera sans les services email');
     }
     
-    // 3. Configuration de l'application Express
+    // AJOUTÉ: 4. Diagnostic Stripe après l'initialisation des services
+    console.log('🔄 [Server] Diagnostic Stripe au démarrage...');
+    try {
+      // Import dynamique du module paiements pour accéder au diagnostic
+      const paiementModule = await import('./routes/paiements.js');
+      
+      // Fonction de diagnostic Stripe interne
+      const diagnosticStripe = async () => {
+        const diagnostic = {
+          timestamp: new Date().toISOString(),
+          backend: {
+            stripe_initialized: false,
+            secret_key: {
+              exists: !!process.env.STRIPE_SECRET_KEY,
+              format: process.env.STRIPE_SECRET_KEY ? 
+                (process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ? 'TEST' :
+                 process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') ? 'LIVE' : 'INVALID') : 'MISSING',
+              account_id: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(8, 23) : 'N/A',
+              length: process.env.STRIPE_SECRET_KEY?.length || 0
+            },
+            public_key: {
+              exists: !!process.env.STRIPE_PUBLIC_KEY,
+              value: process.env.STRIPE_PUBLIC_KEY || 'MISSING',
+              format: process.env.STRIPE_PUBLIC_KEY ? 
+                (process.env.STRIPE_PUBLIC_KEY.startsWith('pk_test_') ? 'TEST' :
+                 process.env.STRIPE_PUBLIC_KEY.startsWith('pk_live_') ? 'LIVE' : 'INVALID') : 'MISSING',
+              account_id: process.env.STRIPE_PUBLIC_KEY ? process.env.STRIPE_PUBLIC_KEY.substring(8, 23) : 'N/A'
+            }
+          },
+          compatibility: {
+            keys_from_same_account: false,
+            both_test_mode: false,
+            both_live_mode: false,
+            account_match: false
+          },
+          stripe_api_test: {
+            attempted: false,
+            success: false,
+            error: null as any // CORRIGÉ: Permettre any type pour l'erreur
+          }
+        };
+
+        // Vérification de compatibilité des clés
+        if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLIC_KEY) {
+          const secretAccount = process.env.STRIPE_SECRET_KEY.substring(8, 23);
+          const publicAccount = process.env.STRIPE_PUBLIC_KEY.substring(8, 23);
+          
+          diagnostic.compatibility.account_match = secretAccount === publicAccount;
+          diagnostic.compatibility.keys_from_same_account = secretAccount === publicAccount;
+          diagnostic.compatibility.both_test_mode = 
+            process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') && 
+            process.env.STRIPE_PUBLIC_KEY.startsWith('pk_test_');
+          diagnostic.compatibility.both_live_mode = 
+            process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') && 
+            process.env.STRIPE_PUBLIC_KEY.startsWith('pk_live_');
+        }
+
+        // Test de l'API Stripe si possible
+        if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+          try {
+            const Stripe = (await import('stripe')).default;
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+              apiVersion: '2025-02-24.acacia',
+            });
+            
+            diagnostic.stripe_api_test.attempted = true;
+            diagnostic.backend.stripe_initialized = true;
+            
+            // Test simple : récupérer le compte
+            const account = await stripe.accounts.retrieve();
+            
+            diagnostic.stripe_api_test.success = true;
+            console.log('✅ [Server] API Stripe accessible:', account.id);
+            
+          } catch (stripeError: any) {
+            console.error('❌ [Server] Erreur API Stripe:', stripeError.message);
+            diagnostic.stripe_api_test.success = false;
+            diagnostic.stripe_api_test.error = {
+              type: stripeError.type,
+              code: stripeError.code,
+              message: stripeError.message
+            };
+          }
+        }
+
+        return diagnostic;
+      };
+
+      const stripeDiagnostic = await diagnosticStripe();
+      
+      // Analyse et affichage des résultats
+      const isFullyOperational = 
+        stripeDiagnostic.backend.stripe_initialized &&
+        stripeDiagnostic.backend.secret_key.exists &&
+        stripeDiagnostic.compatibility.account_match &&
+        (stripeDiagnostic.compatibility.both_test_mode || stripeDiagnostic.compatibility.both_live_mode) &&
+        stripeDiagnostic.stripe_api_test.success;
+
+      console.log('💳 [Server] === DIAGNOSTIC STRIPE DÉMARRAGE ===');
+      console.log(`💳 [Server] Status global: ${isFullyOperational ? '✅ OPÉRATIONNEL' : '❌ PROBLÈME DÉTECTÉ'}`);
+      console.log(`💳 [Server] Clé secrète: ${stripeDiagnostic.backend.secret_key.exists ? '✅' : '❌'} ${stripeDiagnostic.backend.secret_key.format} (${stripeDiagnostic.backend.secret_key.account_id})`);
+      console.log(`💳 [Server] Clé publique: ${stripeDiagnostic.backend.public_key.exists ? '✅' : '❌'} ${stripeDiagnostic.backend.public_key.format} (${stripeDiagnostic.backend.public_key.account_id})`);
+      console.log(`💳 [Server] Compatibilité: ${stripeDiagnostic.compatibility.account_match ? '✅ Comptes identiques' : '❌ Comptes différents'}`);
+      console.log(`💳 [Server] API Stripe: ${stripeDiagnostic.stripe_api_test.success ? '✅ Accessible' : '❌ Inaccessible'}`);
+      
+      if (stripeDiagnostic.backend.public_key.exists) {
+        const expectedFrontendKey = process.env.STRIPE_SECRET_KEY ? 
+          `pk_${process.env.STRIPE_SECRET_KEY.substring(3)}` : 'N/A';
+        console.log(`💳 [Server] Clé frontend attendue: ${expectedFrontendKey.substring(0, 25)}...`);
+        console.log(`💳 [Server] Clé backend publique: ${stripeDiagnostic.backend.public_key.value.substring(0, 25)}...`);
+        console.log(`💳 [Server] Correspondance: ${stripeDiagnostic.backend.public_key.value === expectedFrontendKey ? '✅ OUI' : '❌ NON'}`);
+      }
+
+      if (!isFullyOperational) {
+        console.log('💳 [Server] ⚠️ RECOMMANDATIONS:');
+        if (!stripeDiagnostic.backend.stripe_initialized) {
+          console.log('💳 [Server]   - Vérifiez la variable STRIPE_SECRET_KEY dans .env');
+        }
+        if (!stripeDiagnostic.backend.secret_key.exists) {
+          console.log('💳 [Server]   - Ajoutez STRIPE_SECRET_KEY dans votre fichier .env');
+        }
+        if (!stripeDiagnostic.compatibility.account_match) {
+          console.log('💳 [Server]   - Assurez-vous que les clés publique/secrète proviennent du même compte Stripe');
+        }
+        if (!stripeDiagnostic.stripe_api_test.success && stripeDiagnostic.stripe_api_test.attempted) {
+          console.log(`💳 [Server]   - Problème API Stripe: ${stripeDiagnostic.stripe_api_test.error}`);
+        }
+      }
+      
+      console.log('💳 [Server] === FIN DIAGNOSTIC STRIPE ===');
+
+      // CRITIQUE: Arrêter le serveur si Stripe n'est pas opérationnel en production
+      if (!isFullyOperational && process.env.NODE_ENV === 'production') {
+        console.error('❌ [Server] ERREUR CRITIQUE: Stripe non opérationnel en production !');
+        console.error('❌ [Server] Le serveur ne peut pas démarrer sans une configuration Stripe valide.');
+        console.error('❌ [Server] Veuillez corriger la configuration et redémarrer.');
+        process.exit(1);
+      } else if (!isFullyOperational) {
+        console.warn('⚠️ [Server] Stripe non opérationnel en développement - le serveur continue mais les paiements ne fonctionneront pas.');
+      }
+
+    } catch (diagnosticError) {
+      console.error('❌ [Server] Erreur lors du diagnostic Stripe:', diagnosticError);
+      console.warn('⚠️ [Server] Le serveur continue sans validation Stripe');
+    }
+    
+    // 5. Configuration de l'application Express
     app.use(express.json());
 
     // SUPPRIMÉ: Middleware spécial pour les webhooks Stripe - causait l'erreur express.raw is not a function
@@ -479,7 +625,7 @@ async function startServer() {
       }
     });
 
-    // 6. Démarrer le serveur
+    // 6. Démarrer le serveur avec résumé final
     const server = http.createServer(app);
     
     // Socket.io
@@ -494,6 +640,19 @@ async function startServer() {
     server.listen(PORT, () => {
       console.log(`✅ [Server] Serveur démarré sur le port ${PORT}`);
       console.log(`🌐 [Server] API disponible sur http://localhost:${PORT}`);
+      
+      // AJOUTÉ: Résumé final Stripe
+      console.log('💳 [Server] === RÉSUMÉ STRIPE ===');
+      if (process.env.STRIPE_SECRET_KEY) {
+        const stripeType = process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') ? 'TEST' : 'LIVE';
+        const stripeAccount = process.env.STRIPE_SECRET_KEY.substring(8, 23);
+        console.log(`💳 [Server] Mode Stripe: ${stripeType}`);
+        console.log(`💳 [Server] Compte: ${stripeAccount}`);
+        console.log(`💳 [Server] Diagnostic: http://localhost:${PORT}/paiements/stripe/diagnostic`);
+        console.log(`💳 [Server] Test compatibilité: POST http://localhost:${PORT}/paiements/stripe/test-compatibility`);
+      } else {
+        console.log(`💳 [Server] ❌ Stripe non configuré`);
+      }
       
       // AMÉLIORÉ: Logging conditionnel pour les paiements
       if (paiementRouter !== null) {
