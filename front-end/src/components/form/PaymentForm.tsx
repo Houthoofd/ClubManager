@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useStripe,
   useElements,
-  PaymentElement
+  PaymentElement,
+  CardElement
 } from '@stripe/react-stripe-js';
 import {
   Button,
@@ -47,9 +48,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-
-  // AJOUTÉ: Définir emailRegex comme constante
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const [customerAddress, setCustomerAddress] = useState({
+    line1: '',
+    line2: '',
+    city: '',
+    postal_code: '',
+    country: 'BE' // Défaut Belgique
+  });
+  const [usePaymentElement, setUsePaymentElement] = useState(true);
 
   // AJOUTÉ: Debug du client secret et des éléments Stripe
   useEffect(() => {
@@ -57,17 +63,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       stripe: !!stripe,
       elements: !!elements,
       clientSecret: !!clientSecret,
-      amount: amount,
-      amountType: typeof amount,
+      amount,
       echeanceId
     });
-
-    // CORRIGÉ: Validation de l'amount au niveau du composant
-    if (amount !== undefined && (typeof amount !== 'number' || amount <= 0)) {
-      console.error('❌ [PaymentForm] Amount invalide:', { amount, type: typeof amount });
-      setMessage('❌ Erreur: Montant du paiement invalide');
-      return;
-    }
 
     // Récupérer les infos utilisateur depuis localStorage
     try {
@@ -82,43 +80,73 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     } catch (error) {
       console.warn('⚠️ [PaymentForm] Erreur récupération userData:', error);
     }
-  }, [stripe, elements, clientSecret, amount]);
+  }, [stripe, elements, clientSecret]);
 
-  // AJOUTÉ: Debug et validation immédiate de l'amount
+  // CORRIGÉ: Configuration PaymentElement avec adresse complète
   useEffect(() => {
-    console.log('🔧 [PaymentForm] Initialisation avec amount:', {
-      amount: amount,
-      amountType: typeof amount,
-      amountValid: typeof amount === 'number' && !isNaN(amount) && amount > 0,
-      amountString: String(amount),
-      amountNumber: Number(amount)
-    });
-  }, [amount]);
-
-  // CORRIGÉ: Validation stricte de l'amount avec conversion
-  const validAmount = useMemo(() => {
-    if (amount === undefined || amount === null) {
-      console.warn('⚠️ [PaymentForm] Amount est undefined/null');
-      return undefined;
-    }
-
-    // Si c'est déjà un nombre valide
-    if (typeof amount === 'number' && !isNaN(amount) && amount > 0) {
-      return amount;
-    }
-
-    // Tentative de conversion depuis string
-    if (typeof amount === 'string') {
-      const parsed = parseFloat(amount);
-      if (!isNaN(parsed) && parsed > 0) {
-        console.log('✅ [PaymentForm] Amount converti depuis string:', parsed);
-        return parsed;
+    if (elements) {
+      try {
+        const testElement = elements.create('payment');
+        if (testElement) {
+          console.log('✅ [PaymentForm] PaymentElement supporté');
+          setUsePaymentElement(true);
+        }
+      } catch (error) {
+        console.warn('⚠️ [PaymentForm] PaymentElement non supporté, utilisation de CardElement:', error);
+        setUsePaymentElement(false);
       }
     }
+  }, [elements]);
 
-    console.error('❌ [PaymentForm] Amount invalide après validation:', amount);
-    return undefined;
-  }, [amount]);
+  // CORRIGÉ: Forcer l'utilisation de CardElement pour éviter les conflits d'adresse
+  useEffect(() => {
+    if (elements) {
+      console.log('🔧 [PaymentForm] Utilisation forcée de CardElement pour éviter les conflits d\'adresse');
+      setUsePaymentElement(false); // Forcer CardElement
+    }
+  }, [elements]);
+
+  // AJOUTÉ: Handler pour les changements d'adresse avec validation du code postal
+  const handleAddressChange = (field: string, value: string) => {
+    // CORRIGÉ: S'assurer que le code postal est toujours une chaîne de caractères
+    if (field === 'postal_code') {
+      // Nettoyer et formater le code postal
+      const cleanedPostalCode = value.toString().trim();
+      console.log('🏠 [PaymentForm] Code postal saisi:', { original: value, cleaned: cleanedPostalCode });
+      
+      setCustomerAddress(prev => ({
+        ...prev,
+        [field]: cleanedPostalCode
+      }));
+    } else {
+      setCustomerAddress(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  // AJOUTÉ: Validation spécifique du code postal belge
+  const validatePostalCode = (postalCode: string, country: string): boolean => {
+    if (!postalCode) return false;
+    
+    const cleanCode = postalCode.toString().trim();
+    
+    switch (country) {
+      case 'BE': // Belgique: 4 chiffres (1000-9999)
+        return /^\d{4}$/.test(cleanCode) && parseInt(cleanCode) >= 1000 && parseInt(cleanCode) <= 9999;
+      case 'FR': // France: 5 chiffres
+        return /^\d{5}$/.test(cleanCode);
+      case 'NL': // Pays-Bas: 4 chiffres + 2 lettres (1234 AB)
+        return /^\d{4}\s?[A-Z]{2}$/i.test(cleanCode);
+      case 'DE': // Allemagne: 5 chiffres
+        return /^\d{5}$/.test(cleanCode);
+      case 'LU': // Luxembourg: 4 chiffres
+        return /^\d{4}$/.test(cleanCode);
+      default:
+        return cleanCode.length >= 4; // Minimum 4 caractères pour les autres pays
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -134,20 +162,34 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       return;
     }
 
-    // CORRIGÉ: Validation simplifiée
-    if (!customerName.trim()) {
-      setMessage('⚠️ Le nom est obligatoire');
+    // CORRIGÉ: Validation renforcée de l'adresse avec code postal spécifique
+    if (!customerAddress.postal_code) {
+      setMessage('⚠️ Le code postal est obligatoire');
       return;
     }
 
-    if (!customerEmail.trim()) {
-      setMessage('⚠️ L\'email est obligatoire');
+    // AJOUTÉ: Validation spécifique du format du code postal
+    if (!validatePostalCode(customerAddress.postal_code, customerAddress.country)) {
+      const countryFormats = {
+        'BE': '4 chiffres (ex: 1400)',
+        'FR': '5 chiffres (ex: 75001)',
+        'NL': '4 chiffres + 2 lettres (ex: 1234 AB)',
+        'DE': '5 chiffres (ex: 10115)',
+        'LU': '4 chiffres (ex: 1234)'
+      };
+      
+      const expectedFormat = countryFormats[customerAddress.country as keyof typeof countryFormats] || 'au moins 4 caractères';
+      setMessage(`⚠️ Format de code postal incorrect pour ${customerAddress.country}. Format attendu: ${expectedFormat}`);
       return;
     }
 
-    // CORRIGÉ: Validation de l'email avec regex définie
-    if (!emailRegex.test(customerEmail.trim())) {
-      setMessage('⚠️ Format d\'email invalide');
+    if (!customerAddress.city) {
+      setMessage('⚠️ La ville est obligatoire');
+      return;
+    }
+
+    if (!customerAddress.line1) {
+      setMessage('⚠️ L\'adresse (rue et numéro) est obligatoire');
       return;
     }
 
@@ -155,72 +197,122 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     setMessage('');
 
     console.log('🚀 [PaymentForm] Début du processus de paiement...');
-    console.log('💰 [PaymentForm] Montant à payer:', amount ? `${amount}€` : 'Non spécifié');
+    console.log('🏠 [PaymentForm] Adresse validée:', {
+      line1: customerAddress.line1,
+      city: customerAddress.city,
+      postal_code: customerAddress.postal_code,
+      country: customerAddress.country,
+      postalCodeValid: validatePostalCode(customerAddress.postal_code, customerAddress.country)
+    });
 
     try {
-      // CORRIGÉ: Soumission des éléments avant confirmation
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        console.error('❌ [PaymentForm] Erreur soumission:', submitError);
-        setMessage(`⚠️ ${submitError.message}`);
-        setIsLoading(false);
-        return;
-      }
+      let result;
 
-      console.log('💳 [PaymentForm] Confirmation avec PaymentElement (mode sécurisé)...');
-      
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: returnUrl || `${window.location.origin}/pages/paiement?success=true`,
-          payment_method_data: {
+      // CORRIGÉ: Préparation de l'adresse avec code postal en string
+      const billingAddress = {
+        line1: customerAddress.line1.trim(),
+        line2: customerAddress.line2?.trim() || undefined,
+        city: customerAddress.city.trim(),
+        postal_code: customerAddress.postal_code.toString().trim(), // IMPORTANT: Forcer en string
+        country: customerAddress.country,
+        state: undefined // Pas de state pour l'Europe
+      };
+
+      console.log('📋 [PaymentForm] Adresse de facturation préparée:', billingAddress);
+
+      if (usePaymentElement) {
+        // CORRIGÉ: PaymentElement avec adresse forcée dans confirmParams
+        console.log('💳 [PaymentForm] Confirmation avec PaymentElement...');
+        
+        result = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: returnUrl || `${window.location.origin}/pages/paiement?success=true`,
+            payment_method_data: {
+              billing_details: {
+                name: customerName.trim() || 'Client',
+                email: customerEmail.trim() || undefined,
+                address: billingAddress
+              }
+            }
+          },
+          redirect: 'if_required'
+        });
+
+        console.log('📊 [PaymentForm] Résultat PaymentElement:', result);
+
+      } else {
+        // CORRIGÉ: CardElement avec adresse de facturation et hidePostalCode
+        console.log('💳 [PaymentForm] Confirmation avec CardElement...');
+        
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          throw new Error('Élément de carte non trouvé');
+        }
+
+        result = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
             billing_details: {
-              name: customerName.trim(),
-              email: customerEmail.trim()
+              name: customerName.trim() || 'Client',
+              email: customerEmail.trim() || undefined,
+              address: billingAddress
             }
           }
-        },
-        redirect: 'if_required' // CRITIQUE: Éviter les redirections automatiques
-      });
+        });
 
-      if (error) {
-        console.error('❌ [PaymentForm] Erreur Stripe:', error);
+        console.log('📊 [PaymentForm] Résultat CardElement:', result);
+      }
+
+      if (result.error) {
+        console.error('❌ [PaymentForm] Erreur Stripe:', result.error);
         
-        let errorMessage = error.message || 'Erreur de paiement inconnue';
+        let errorMessage = result.error.message || 'Erreur de paiement inconnue';
         
-        // CORRIGÉ: Diagnostics d'erreur simplifiés
-        if (error.type === 'invalid_request_error' && error.message?.includes('Invalid API Key provided: pk_')) {
-          console.error('❌ [PaymentForm] ERREUR CRITIQUE DE CONFIGURATION !');
-          errorMessage = '❌ Erreur de configuration Stripe. Contactez l\'administrateur.';
-        } else if (error.code === 'card_declined') {
+        // AJOUTÉ: Diagnostic détaillé de l'erreur côté frontend
+        if (result.error.type === 'invalid_request_error' && result.error.message?.includes('Invalid API Key provided: pk_')) {
+          console.error('❌ [PaymentForm] ERREUR CRITIQUE DE CONFIGURATION DÉTECTÉE !');
+          console.error('❌ [PaymentForm] Le frontend essaie d\'utiliser une clé publique avec l\'API Stripe backend');
+          console.error('❌ [PaymentForm] Cela indique un problème de configuration dans PaymentElement');
+          
+          errorMessage = '❌ Erreur de configuration Stripe côté client. Le système essaie d\'utiliser une clé publique côté serveur. Contactez l\'administrateur.';
+          
+          // AJOUTÉ: Suggestion de solution
+          console.error('❌ [PaymentForm] SOLUTION SUGGÉRÉE:');
+          console.error('  1. Vérifiez que PaymentElement utilise uniquement la clé publique pour l\'affichage');
+          console.error('  2. Tous les appels à l\'API Stripe doivent passer par votre backend avec la clé secrète');
+          console.error('  3. Évitez les options PaymentElement qui déclenchent des appels API automatiques');
+          
+        } else if (result.error.code === 'incomplete_zip' || 
+            result.error.message?.includes('postcode is onvolledig') ||
+            result.error.message?.includes('postcode') ||
+            result.error.message?.includes('postal')) {
+          errorMessage = `❌ Code postal incomplet ou invalide. Pour la Belgique, utilisez un code à 4 chiffres (comme 1400). Code actuel: "${customerAddress.postal_code}"`;
+        } else if (result.error.code === 'invalid_zip') {
+          errorMessage = `❌ Code postal invalide. Format attendu pour ${customerAddress.country}: ${validatePostalCode(customerAddress.postal_code, customerAddress.country) ? 'valide' : 'invalide'}`;
+        } else if (result.error.code === 'card_declined') {
           errorMessage = '❌ Carte refusée. Vérifiez vos informations ou utilisez une autre carte.';
-        } else if (error.code === 'insufficient_funds') {
+        } else if (result.error.code === 'insufficient_funds') {
           errorMessage = '❌ Fonds insuffisants sur votre carte.';
-        } else if (error.code === 'incorrect_cvc') {
+        } else if (result.error.code === 'incorrect_cvc') {
           errorMessage = '❌ Code de sécurité (CVC) incorrect.';
-        } else if (error.code === 'expired_card') {
+        } else if (result.error.code === 'expired_card') {
           errorMessage = '❌ Votre carte a expiré.';
         }
         
         setMessage(errorMessage);
         
         if (onError) {
-          onError(error);
+          onError(result.error);
         }
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        console.log('✅ [PaymentForm] Paiement réussi:', paymentIntent.id);
+      } else {
+        console.log('✅ [PaymentForm] Paiement réussi:', result.paymentIntent);
+        
         setMessage('✅ Paiement réussi !');
         
         if (onSuccess) {
-          // CORRIGÉ: Créer un objet result avec le vrai paymentIntent
-          const result = {
-            paymentIntent: paymentIntent
-          };
           onSuccess(result);
         }
-      } else {
-        console.log('⏳ [PaymentForm] Paiement en cours de traitement...', paymentIntent?.status);
-        setMessage('⏳ Paiement en cours de traitement...');
       }
     } catch (error: any) {
       console.error('❌ [PaymentForm] Erreur générale:', error);
@@ -235,14 +327,32 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     setIsLoading(false);
   };
 
-  // CORRIGÉ: Handler simplifié pour les changements d'éléments
+  // AJOUTÉ: Handler pour les changements d'éléments avec diagnostic d'erreur
   const handleElementChange = (event: any) => {
     console.log('🔄 [PaymentForm] Changement élément:', event);
     setIsComplete(event.complete);
     
     if (event.error) {
-      console.error('❌ [PaymentForm] Erreur dans PaymentElement:', event.error);
-      setMessage(`⚠️ ${event.error.message}`);
+      console.error('❌ [PaymentForm] Erreur dans PaymentElement/CardElement:', event.error);
+      
+      // AJOUTÉ: Détection spécifique des erreurs de clé API
+      if (event.error.message && event.error.message.includes('Invalid API Key provided: pk_')) {
+        console.error('❌ [PaymentForm] ERREUR CRITIQUE: PaymentElement utilise une clé publique côté serveur !');
+        console.error('❌ [PaymentForm] Cela indique que Stripe Elements fait un appel direct à l\'API au lieu de passer par votre backend');
+        setMessage('❌ Erreur de configuration Stripe - contactez l\'administrateur');
+        
+        // AJOUTÉ: Diagnostic complet
+        console.error('❌ [PaymentForm] Diagnostic:', {
+          errorType: event.error.type,
+          errorCode: event.error.code,
+          errorMessage: event.error.message,
+          suggestion: 'Vérifiez que PaymentElement n\'essaie pas de faire des appels API directs'
+        });
+      } else if (event.error.type === 'validation_error') {
+        setMessage(`⚠️ ${event.error.message}`);
+      } else {
+        setMessage(`⚠️ ${event.error.message}`);
+      }
     } else {
       setMessage('');
     }
@@ -253,19 +363,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     return (
       <Alert variant="danger" title="Erreur de configuration">
         <p>❌ Client secret manquant. Impossible d'initialiser le paiement.</p>
-      </Alert>
-    );
-  }
-
-  // AJOUTÉ: Vérification de l'amount
-  if (validAmount !== undefined && (typeof validAmount !== 'number' || validAmount <= 0)) {
-    return (
-      <Alert variant="danger" title="Erreur de montant">
-        <p>❌ Montant du paiement invalide: {String(amount)} (type: {typeof amount})</p>
-        <p>Le montant doit être un nombre positif.</p>
-        <div style={{ marginTop: '1rem', fontSize: '12px', fontFamily: 'monospace' }}>
-          Debug: amount={String(amount)}, validAmount={String(validAmount)}
-        </div>
       </Alert>
     );
   }
@@ -284,14 +381,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   return (
     <div style={{ maxWidth: '500px', margin: '0 auto' }}>
       <Form onSubmit={handleSubmit}>
-        {/* CORRIGÉ: Affichage du montant avec validAmount */}
-        {validAmount && validAmount > 0 && (
-          <Alert variant="info" title="Montant à payer" isInline style={{ marginBottom: '1rem' }}>
-            <strong>{validAmount.toFixed(2)} €</strong>
-            {description && <div style={{ marginTop: '0.5rem' }}>{description}</div>}
-          </Alert>
-        )}
-
         {/* Informations client */}
         <FormGroup label="Nom complet *" fieldId="customer-name" isRequired>
           <TextInput
@@ -314,7 +403,85 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           />
         </FormGroup>
 
-        {/* CORRIGÉ: PaymentElement avec configuration minimale */}
+        {/* CORRIGÉ: Adresse de facturation avec validation en temps réel */}
+        <FormGroup label="Adresse de facturation" fieldId="billing-address">
+          <TextInput
+            id="address-line1"
+            value={customerAddress.line1}
+            onChange={(_event, value) => handleAddressChange('line1', value)}
+            placeholder="Rue et numéro *"
+            style={{ marginBottom: '0.5rem' }}
+            isRequired
+          />
+          <TextInput
+            id="address-line2"
+            value={customerAddress.line2}
+            onChange={(_event, value) => handleAddressChange('line2', value)}
+            placeholder="Complément d'adresse (optionnel)"
+            style={{ marginBottom: '0.5rem' }}
+          />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ flex: '0 0 140px' }}>
+              <TextInput
+                id="postal-code"
+                value={customerAddress.postal_code}
+                onChange={(_event, value) => handleAddressChange('postal_code', value)}
+                placeholder={customerAddress.country === 'BE' ? '1400' : 'Code postal *'}
+                isRequired
+                // AJOUTÉ: Validation visuelle en temps réel
+                validated={
+                  customerAddress.postal_code ? 
+                    (validatePostalCode(customerAddress.postal_code, customerAddress.country) ? 'success' : 'error') : 
+                    'default'
+                }
+              />
+              {/* AJOUTÉ: Indicateur de validation */}
+              {customerAddress.postal_code && (
+                <div style={{ fontSize: '12px', marginTop: '2px' }}>
+                  {validatePostalCode(customerAddress.postal_code, customerAddress.country) ? (
+                    <span style={{ color: 'green' }}>✅ Code postal valide</span>
+                  ) : (
+                    <span style={{ color: 'red' }}>❌ Format incorrect</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <TextInput
+              id="city"
+              value={customerAddress.city}
+              onChange={(_event, value) => handleAddressChange('city', value)}
+              placeholder="Ville *"
+              style={{ flex: '1' }}
+              isRequired
+            />
+          </div>
+          <select
+            id="country"
+            value={customerAddress.country}
+            onChange={(e) => {
+              handleAddressChange('country', e.target.value);
+              // Réinitialiser le code postal si on change de pays
+              if (customerAddress.postal_code) {
+                console.log('🌍 [PaymentForm] Changement de pays, revalidation du code postal');
+              }
+            }}
+            style={{
+              marginTop: '0.5rem',
+              width: '100%',
+              padding: '0.5rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px'
+            }}
+          >
+            <option value="BE">🇧🇪 Belgique (4 chiffres)</option>
+            <option value="FR">🇫🇷 France (5 chiffres)</option>
+            <option value="NL">🇳🇱 Pays-Bas (4 chiffres + 2 lettres)</option>
+            <option value="DE">🇩🇪 Allemagne (5 chiffres)</option>
+            <option value="LU">🇱🇺 Luxembourg (4 chiffres)</option>
+          </select>
+        </FormGroup>
+
+        {/* Élément de paiement Stripe */}
         <FormGroup label="Informations de paiement *" fieldId="payment-element" isRequired>
           <div style={{
             padding: '1rem',
@@ -322,28 +489,64 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             borderRadius: '6px',
             backgroundColor: '#ffffff'
           }}>
-            <PaymentElement
-              id="payment-element"
-              onChange={handleElementChange}
-              options={{
-                layout: 'tabs',
-                // CRITIQUE: Configuration minimale pour éviter les appels API automatiques
-                fields: {
-                  billingDetails: 'never' // Désactiver complètement les détails de facturation automatiques
-                },
-                terms: {
-                  // Désactiver tous les termes automatiques qui peuvent faire des appels API
-                  auBecsDebit: 'never',
-                  bancontact: 'never',
-                  card: 'never',
-                  ideal: 'never',
-                  p24: 'never',
-                  sepaDebit: 'never',
-                  sofort: 'never',
-                  usBankAccount: 'never'
-                }
-              }}
-            />
+            {usePaymentElement ? (
+              <PaymentElement
+                id="payment-element"
+                onChange={handleElementChange}
+                options={{
+                  layout: 'tabs',
+                  // CORRIGÉ: Configuration PaymentElement pour éviter les appels API directs
+                  fields: {
+                    billingDetails: {
+                      name: 'never',
+                      email: 'never', 
+                      phone: 'never',
+                      address: {
+                        line1: 'never',
+                        line2: 'never',
+                        city: 'never',
+                        country: 'never',
+                        postalCode: 'never'
+                      }
+                    }
+                  }
+                  // SUPPRIMÉ: appearance - pas supporté dans PaymentElement options
+                }}
+              />
+            ) : (
+              // CORRIGÉ: CardElement avec configuration stricte
+              <div>
+                <CardElement
+                  id="card-element"
+                  onChange={handleElementChange}
+                  options={{
+                    style: {
+                      base: {
+                        fontSize: '16px',
+                        color: '#424770',
+                        fontFamily: 'system-ui, sans-serif',
+                        '::placeholder': {
+                          color: '#aab7c4',
+                        },
+                      },
+                      invalid: {
+                        color: '#9e2146',
+                      },
+                    },
+                    hidePostalCode: true, // IMPORTANT: Masquer le code postal intégré
+                    disabled: false
+                  }}
+                />
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#28a745', 
+                  marginTop: '0.5rem',
+                  fontWeight: 'bold'
+                }}>
+                  ✅ Mode CardElement : Pas de conflit d'adresse - L'adresse ci-dessus sera utilisée
+                </div>
+              </div>
+            )}
           </div>
         </FormGroup>
 
@@ -373,13 +576,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   conditions générales
                 </a>{' '}
                 et autorise le prélèvement de{' '}
-                <strong>{validAmount && validAmount > 0 ? `${validAmount.toFixed(2)} €` : 'ce montant'}</strong>
+                <strong>{amount ? `${amount} €` : 'ce montant'}</strong>
               </span>
             }
           />
         </FormGroup>
 
-        {/* CORRIGÉ: Bouton de paiement avec validAmount */}
+        {/* Bouton de paiement */}
         <div style={{ marginTop: '2rem' }}>
           <Button
             type="submit"
@@ -391,9 +594,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               !acceptTerms || 
               !customerName.trim() || 
               !customerEmail.trim() ||
-              !emailRegex.test(customerEmail.trim()) ||
-              !stripe ||
-              !elements
+              !customerAddress.line1.trim() ||
+              !customerAddress.city.trim() ||
+              !customerAddress.postal_code ||
+              !validatePostalCode(customerAddress.postal_code, customerAddress.country) ||
+              (!isComplete && usePaymentElement)
             }
             icon={isLoading ? <Spinner size="sm" /> : <CreditCardIcon />}
           >
@@ -405,28 +610,33 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             ) : (
               <>
                 <CreditCardIcon style={{ marginRight: '8px' }} />
-                Payer {validAmount && validAmount > 0 ? `${validAmount.toFixed(2)} €` : 'maintenant'}
+                Payer {amount ? `${amount} €` : 'maintenant'}
               </>
             )}
           </Button>
+          
+          {/* AJOUTÉ: Indicateur de validation globale */}
+          {!validatePostalCode(customerAddress.postal_code, customerAddress.country) && customerAddress.postal_code && (
+            <div style={{ 
+              marginTop: '0.5rem', 
+              padding: '0.5rem', 
+              backgroundColor: '#fff3cd', 
+              border: '1px solid #ffeaa7', 
+              borderRadius: '4px',
+              fontSize: '14px'
+            }}>
+              ⚠️ Code postal "{customerAddress.postal_code}" invalide pour {customerAddress.country}. 
+              Format attendu: {
+                customerAddress.country === 'BE' ? '4 chiffres (ex: 1400)' :
+                customerAddress.country === 'FR' ? '5 chiffres (ex: 75001)' :
+                customerAddress.country === 'NL' ? '4 chiffres + 2 lettres (ex: 1234 AB)' :
+                customerAddress.country === 'DE' ? '5 chiffres (ex: 10115)' :
+                customerAddress.country === 'LU' ? '4 chiffres (ex: 1234)' :
+                'au moins 4 caractères'
+              }
+            </div>
+          )}
         </div>
-
-        {/* AJOUTÉ: Debug de l'amount en mode développement */}
-        {import.meta.env.DEV && (
-          <div style={{
-            marginTop: '1rem',
-            padding: '0.5rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '4px',
-            fontSize: '12px',
-            fontFamily: 'monospace'
-          }}>
-            <strong>Debug PaymentForm:</strong><br />
-            amount (original): {String(amount)} ({typeof amount})<br />
-            validAmount: {String(validAmount)} ({typeof validAmount})<br />
-            Valid: {validAmount !== undefined && validAmount > 0 ? 'YES' : 'NO'}
-          </div>
-        )}
 
         {/* Informations de sécurité */}
         <div style={{
