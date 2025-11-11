@@ -85,6 +85,8 @@ async function startServer() {
         }
         // 3. Configuration de l'application Express
         app.use(express.json());
+        // AJOUTÉ: Middleware spécial pour les webhooks Stripe (avant le parser JSON)
+        app.use('/paiements/webhooks/stripe', express.raw({ type: 'application/json' }));
         // Configuration CORS
         const allowedOrigins = [
             process.env.FRONTEND_URL,

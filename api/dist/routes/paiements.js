@@ -369,7 +369,7 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
 });
 // ===== ROUTES WEBHOOKS =====
 // POST - Webhook Stripe
-router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhooks/stripe', async (req, res) => {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!stripe || !endpointSecret) {
@@ -377,7 +377,19 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
     }
     let event;
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+        // CORRIGÉ: Gérer les données brutes différemment
+        let body;
+        if (req.body && typeof req.body === 'string') {
+            body = req.body;
+        }
+        else if (req.body && Buffer.isBuffer(req.body)) {
+            body = req.body;
+        }
+        else {
+            // Fallback: convertir en string
+            body = JSON.stringify(req.body);
+        }
+        event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
     }
     catch (err) {
         console.error('❌ [Webhook] Signature invalide:', err.message);
