@@ -440,31 +440,95 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
 // POST - Créer un PaymentIntent pour commande
 router.post('/stripe/create-payment-intent-commande', async (req, res) => {
   try {
+    console.log('🛒 [Stripe] Début création PaymentIntent commande');
+    console.log('📝 [Stripe] Données reçues:', {
+      body: req.body,
+      user: (req as any).user?.id,
+      headers: {
+        authorization: !!req.headers.authorization,
+        contentType: req.headers['content-type']
+      }
+    });
+
+    // CORRIGÉ: Gérer les différents formats de données de commande
     const { amount, currency = 'eur', commande, description } = req.body;
     
     let utilisateur_id = (req as any).user?.id;
-    
-    if (!utilisateur_id && commande?.utilisateur_id) {
-      utilisateur_id = commande.utilisateur_id;
-    }
-    
-    if (!utilisateur_id) {
-      return res.status(401).json({
-        error: 'Utilisateur non authentifié'
-      });
-    }
-
-    // CORRIGÉ: Vérification avec return
-    if (!stripe) {
-      return res.status(503).json({ error: 'Service Stripe non disponible' });
-    }
-
-    // Logique de création de commande (simplifiée)
     let commandeId: number;
     let montantCommande: number;
+    
+    // AJOUTÉ: Gestion flexible des paramètres de commande
+    if (typeof commande === 'number') {
+      // ID de commande existante passé directement
+      commandeId = commande;
+      console.log('🔍 [Stripe] ID commande existante reçu:', commandeId);
+      
+      // Récupérer les détails de la commande existante
+      const paiements = new Paiements();
+      const commandeQuery = `
+        SELECT id, utilisateur_id, total, statut, date_commande
+        FROM commandes 
+        WHERE id = ?
+      `;
+      
+      try {
+        const commandeResult = await paiements.queryAsync(commandeQuery, [commandeId]);
+        
+        if (!commandeResult.length) {
+          console.error('❌ [Stripe] Commande non trouvée:', commandeId);
+          return res.status(404).json({
+            error: `Commande ${commandeId} non trouvée en base de données`
+          });
+        }
+        
+        const commandeDetails = commandeResult[0];
+        console.log('✅ [Stripe] Commande trouvée:', commandeDetails);
+        
+        // Vérifications de sécurité
+        if (commandeDetails.utilisateur_id !== utilisateur_id) {
+          console.error('❌ [Stripe] Commande appartient à un autre utilisateur');
+          return res.status(403).json({ 
+            error: 'Cette commande ne vous appartient pas'
+          });
+        }
+        
+        if (commandeDetails.statut === 'payée' || commandeDetails.statut === 'confirmée') {
+          console.warn('⚠️ [Stripe] Commande déjà payée:', commandeId);
+          return res.status(400).json({ 
+            error: 'Cette commande est déjà payée',
+            commande: {
+              id: commandeDetails.id,
+              statut: commandeDetails.statut,
+              total: commandeDetails.total
+            }
+          });
+        }
+        
+        montantCommande = parseFloat(commandeDetails.total);
+        utilisateur_id = commandeDetails.utilisateur_id;
+        
+      } catch (dbError: any) {
+        console.error('❌ [Stripe] Erreur DB lors vérification commande:', dbError);
+        return res.status(500).json({
+          error: 'Erreur base de données',
+          details: dbError.message
+        });
+      }
+      
+    } else if (typeof commande === 'object' && commande.articles) {
+      // Nouvelle commande à créer avec articles
+      console.log('🛒 [Stripe] Création nouvelle commande avec articles');
+      
+      if (!utilisateur_id && commande?.utilisateur_id) {
+        utilisateur_id = commande.utilisateur_id;
+      }
+      
+      if (!utilisateur_id) {
+        return res.status(401).json({
+          error: 'Utilisateur non authentifié'
+        });
+      }
 
-    if (typeof commande === 'object' && commande.articles) {
-      // Créer nouvelle commande
       const magasin = new Magasin();
       const commandeResult = await magasin.creerCommande(
         utilisateur_id,
@@ -497,14 +561,47 @@ router.post('/stripe/create-payment-intent-commande', async (req, res) => {
       }
 
       commandeId = rechercheResult[0].id;
-      montantCommande = rechercheResult[0].total;
+      montantCommande = parseFloat(rechercheResult[0].total);
+      
     } else {
+      console.error('❌ [Stripe] Format de commande non reconnu:', { commande, type: typeof commande });
       return res.status(400).json({
-        error: 'Format de commande non reconnu'
+        error: 'Format de commande non reconnu',
+        received: { commande, type: typeof commande },
+        expected: 'number (ID commande existante) ou object (nouvelle commande avec articles)'
+      });
+    }
+
+    // CORRIGÉ: Vérification avec return
+    if (!stripe) {
+      return res.status(503).json({ error: 'Service Stripe non disponible' });
+    }
+
+    // Validation du montant
+    if (!montantCommande || montantCommande <= 0) {
+      return res.status(400).json({
+        error: 'Montant de commande invalide',
+        montant: montantCommande
       });
     }
 
     const amountInCents = Math.round(montantCommande * 100);
+
+    // AJOUTÉ: Vérification des limites Stripe
+    if (amountInCents < 50) {
+      return res.status(400).json({
+        error: 'Montant trop faible pour Stripe',
+        details: `${amountInCents} centimes (minimum 50 centimes = 0.50€)`,
+        montant_euros: montantCommande
+      });
+    }
+
+    console.log('💰 [Stripe] Montant commande validé:', {
+      montant_euros: montantCommande,
+      amount_cents: amountInCents,
+      commande_id: commandeId,
+      utilisateur_id: utilisateur_id
+    });
 
     // Créer le PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
@@ -513,7 +610,8 @@ router.post('/stripe/create-payment-intent-commande', async (req, res) => {
       metadata: {
         type: 'commande_magasin',
         commande_id: commandeId.toString(),
-        utilisateur_id: utilisateur_id.toString()
+        utilisateur_id: utilisateur_id.toString(),
+        montant_euros: montantCommande.toString()
       },
       description: description || `Paiement commande #${commandeId}`,
       automatic_payment_methods: {
@@ -521,13 +619,27 @@ router.post('/stripe/create-payment-intent-commande', async (req, res) => {
       }
     });
 
+    console.log('✅ [Stripe] PaymentIntent commande créé:', {
+      id: paymentIntent.id,
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+      commande_id: commandeId
+    });
+
+    // CORRIGÉ: Réponse avec toutes les données nécessaires
     res.json({
       success: true,
       client_secret: paymentIntent.client_secret,
       payment_intent_id: paymentIntent.id,
       commande_id: commandeId,
       amount: amountInCents,
-      currency: currency
+      currency: currency,
+      commande: {
+        id: commandeId,
+        total: montantCommande,
+        utilisateur_id: utilisateur_id,
+        statut: 'en_attente'
+      }
     });
 
   } catch (error: any) {
@@ -720,6 +832,127 @@ router.post('/confirmation/confirm-payment', async (req, res) => {
     console.error('❌ [Confirmation] Erreur confirmation paiement:', error);
     res.status(500).json({
       error: 'Erreur lors de la confirmation du paiement',
+      details: error.message
+    });
+  }
+});
+
+// POST - Confirmer un paiement d'échéance
+router.post('/confirmation/confirm-payment-commande', async (req, res) => {
+  try {
+    console.log('🛒 [Confirmation] Début confirmation paiement commande');
+    console.log('📝 [Confirmation] Données reçues:', req.body);
+
+    const { paymentIntentId, commandeId, userId, amount } = req.body;
+    
+    if (!paymentIntentId || !commandeId || !userId) {
+      return res.status(400).json({
+        error: 'Données manquantes pour la confirmation de paiement commande',
+        required: ['paymentIntentId', 'commandeId', 'userId'],
+        received: { paymentIntentId: !!paymentIntentId, commandeId: !!commandeId, userId: !!userId }
+      });
+    }
+
+    if (!stripe) {
+      return res.status(503).json({ error: 'Service Stripe non disponible' });
+    }
+
+    const paiements = new Paiements();
+    
+    // Vérifier le paiement sur Stripe
+    console.log('🔍 [Confirmation] Vérification paiement Stripe:', paymentIntentId);
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    if (paymentIntent.status !== 'succeeded') {
+      console.error('❌ [Confirmation] Paiement pas confirmé sur Stripe:', paymentIntent.status);
+      return res.status(400).json({ 
+        error: 'Le paiement n\'a pas été confirmé sur Stripe',
+        stripeStatus: paymentIntent.status 
+      });
+    }
+
+    // Vérifier que la commande existe et appartient au bon utilisateur
+    const commandeQuery = `
+      SELECT id, utilisateur_id, total, statut 
+      FROM commandes 
+      WHERE id = ? AND utilisateur_id = ?
+    `;
+    
+    const commandeResult = await paiements.queryAsync(commandeQuery, [parseInt(commandeId), parseInt(userId)]);
+    
+    if (!commandeResult.length) {
+      return res.status(404).json({
+        error: 'Commande non trouvée ou accès non autorisé',
+        commande_id: commandeId,
+        user_id: userId
+      });
+    }
+
+    const commande = commandeResult[0];
+    
+    if (commande.statut === 'payée' || commande.statut === 'confirmée') {
+      console.warn('⚠️ [Confirmation] Commande déjà confirmée:', commandeId);
+      return res.status(200).json({
+        success: true,
+        message: 'Commande déjà confirmée',
+        commande_id: parseInt(commandeId),
+        statut_actuel: commande.statut,
+        already_processed: true
+      });
+    }
+
+    // Marquer la commande comme payée/confirmée
+    const updateCommandeQuery = `
+      UPDATE commandes 
+      SET statut = 'payée', date_modification = NOW()
+      WHERE id = ? AND statut != 'payée'
+    `;
+    
+    const updateResult = await paiements.queryAsync(updateCommandeQuery, [parseInt(commandeId)]);
+    
+    if (updateResult.affectedRows === 0) {
+      console.warn('⚠️ [Confirmation] Aucune ligne mise à jour - commande peut-être déjà payée');
+    }
+
+    // AJOUTÉ: Enregistrer le paiement dans l'historique
+    try {
+      const insertPaiementQuery = `
+        INSERT INTO paiements (
+          utilisateur_id, montant, methode_paiement, 
+          statut, date_creation, stripe_payment_intent_id,
+          commande_id, description
+        ) VALUES (?, ?, 'stripe', 'confirmé', NOW(), ?, ?, ?)
+      `;
+      
+      await paiements.queryAsync(insertPaiementQuery, [
+        parseInt(userId),
+        parseFloat(amount) || parseFloat(commande.total),
+        paymentIntentId,
+        parseInt(commandeId),
+        `Paiement commande magasin #${commandeId}`
+      ]);
+      
+      console.log('✅ [Confirmation] Paiement enregistré dans l\'historique');
+    } catch (historyError) {
+      console.warn('⚠️ [Confirmation] Erreur enregistrement historique (non bloquant):', historyError);
+    }
+
+    console.log('✅ [Confirmation] Commande confirmée avec succès:', commandeId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Paiement commande confirmé avec succès',
+      payment_intent_id: paymentIntentId,
+      commande_id: parseInt(commandeId),
+      montant: parseFloat(amount) || parseFloat(commande.total),
+      statut: 'payée',
+      date_confirmation: new Date().toISOString()
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [Confirmation] Erreur confirmation paiement commande:', error);
+    res.status(500).json({
+      error: 'Erreur lors de la confirmation du paiement commande',
       details: error.message
     });
   }

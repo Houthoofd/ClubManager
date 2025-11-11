@@ -198,6 +198,8 @@ const PaiementPage: React.FC = () => {
           setPaymentIntentId(result.payment_intent_id);
 
         } else if (paymentType === 'commande' && commandeId && !clientSecret) {
+          console.log('🛒 [PaiementPage] Création PaymentIntent pour commande ID:', commandeId);
+          
           let token = localStorage.getItem('token') || 
                      JSON.parse(localStorage.getItem('userData') || '{}').token ||
                      localStorage.getItem('authToken');
@@ -208,6 +210,15 @@ const PaiementPage: React.FC = () => {
 
           setLoading(false);
 
+          // CORRIGÉ: Envoyer l'ID de commande comme nombre
+          const requestBody = {
+            commande: parseInt(commandeId), // ID de commande existante
+            currency: 'eur',
+            description: `Paiement commande #${commandeId}`
+          };
+
+          console.log('📤 [PaiementPage] Données envoyées:', requestBody);
+
           const response = await fetch(apiUrl('paiements/stripe/create-payment-intent-commande'), {
             method: 'POST',
             headers: {
@@ -215,53 +226,68 @@ const PaiementPage: React.FC = () => {
               'Content-Type': 'application/json'
             },
             credentials: 'include',
-            body: JSON.stringify({
-              commande: parseInt(commandeId),
-              currency: 'eur',
-              description: `Paiement commande #${commandeId}`
-            })
+            body: JSON.stringify(requestBody)
           });
 
+          console.log('📡 [PaiementPage] Réponse status:', response.status);
+
           if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
+            console.error('❌ [PaiementPage] Erreur API commande:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData
+            });
+            
             if (response.status === 401) {
               throw new Error('Session expirée - veuillez vous reconnecter');
+            } else if (response.status === 404) {
+              throw new Error(`Commande #${commandeId} non trouvée - elle a peut-être été supprimée`);
+            } else if (response.status === 403) {
+              throw new Error('Cette commande ne vous appartient pas');
+            } else if (response.status === 400) {
+              throw new Error(errorData.error || 'Données de commande invalides');
+            } else {
+              throw new Error(`Erreur création PaymentIntent commande: ${response.status} - ${errorData.error || response.statusText}`);
             }
-            throw new Error(`Erreur création PaymentIntent commande: ${response.status} - ${errorData.error || response.statusText}`);
           }
 
           const paymentIntentData = await response.json();
-
+          console.log('✅ [PaiementPage] PaymentIntent commande créé:', paymentIntentData);
+          
           if (!paymentIntentData.client_secret) {
+            console.error('❌ [PaiementPage] client_secret manquant dans la réponse:', paymentIntentData);
             throw new Error('client_secret manquant dans la réponse du serveur');
           }
-
+          
           setClientSecret(paymentIntentData.client_secret);
           setPaymentIntentId(paymentIntentData.payment_intent_id);
-
-          const actualCommandeId = paymentIntentData.commande_id || commandeId;
-
+          
+          // CORRIGÉ: Utiliser les données de commande de la réponse
           if (paymentIntentData.commande) {
             setCommandeData({
-              id: actualCommandeId,
+              id: paymentIntentData.commande.id,
               total: paymentIntentData.commande.total,
-              nb_articles: paymentIntentData.commande.nb_articles,
+              utilisateur_id: paymentIntentData.commande.utilisateur_id,
               statut: paymentIntentData.commande.statut,
-              numero_commande: `CMD-${actualCommandeId}`
+              numero_commande: `CMD-${paymentIntentData.commande.id}`
             });
+            console.log('📦 [PaiementPage] Données commande configurées:', paymentIntentData.commande);
           } else {
+            // Fallback avec les données de base
             setCommandeData({
-              id: actualCommandeId,
+              id: paymentIntentData.commande_id || parseInt(commandeId),
               total: paymentIntentData.amount / 100,
-              nb_articles: 1,
+              utilisateur_id: userIdNumber,
               statut: 'en_attente',
-              numero_commande: `CMD-${actualCommandeId}`
+              numero_commande: `CMD-${commandeId}`
             });
           }
-
+          
           setLoading(false);
         }
       } catch (paymentIntentError: any) {
+        console.error('❌ [PaiementPage] Erreur création PaymentIntent:', paymentIntentError);
         setError(`Erreur d'initialisation du paiement: ${paymentIntentError.message}`);
         setLoading(false);
       }
