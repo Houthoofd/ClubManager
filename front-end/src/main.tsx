@@ -27,9 +27,55 @@ import './styles/users.css';
 import './styles/pages.css';
 import './styles/auth-guard.css';
 
+// AJOUTÉ: Debug complet des variables d'environnement au démarrage
+console.log('🔧 [Main] === DEBUG VARIABLES D\'ENVIRONNEMENT ===');
+console.log('🔧 [Main] NODE_ENV:', import.meta.env.NODE_ENV);
+console.log('🔧 [Main] MODE:', import.meta.env.MODE);
+console.log('🔧 [Main] PROD:', import.meta.env.PROD);
+console.log('🔧 [Main] DEV:', import.meta.env.DEV);
+console.log('🔧 [Main] VITE_STRIPE_PUBLIC_KEY:', import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+console.log('🔧 [Main] VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+console.log('🔧 [Main] Toutes les variables VITE_:', 
+  Object.keys(import.meta.env)
+    .filter(key => key.startsWith('VITE_'))
+    .reduce((obj, key) => ({ ...obj, [key]: import.meta.env[key] }), {})
+);
+console.log('🔧 [Main] === FIN DEBUG ===');
+
+// CORRIGÉ: Diagnostic complet avant initialisation Stripe
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-console.log('Using Stripe Public Key:', stripePublicKey);
-const stripePromise = loadStripe(stripePublicKey);
+
+console.log('🔧 [Main] Diagnostic Stripe:', {
+  keyExists: !!stripePublicKey,
+  keyValue: stripePublicKey || 'UNDEFINED',
+  keyLength: stripePublicKey ? stripePublicKey.length : 0,
+  keyType: stripePublicKey ? (
+    stripePublicKey.startsWith('pk_test_') ? 'TEST' : 
+    stripePublicKey.startsWith('pk_live_') ? 'LIVE' : 'FORMAT INCONNU'
+  ) : 'ABSENT'
+});
+
+if (!stripePublicKey) {
+  console.error('❌ [Main] CRITIQUE: VITE_STRIPE_PUBLIC_KEY est undefined !');
+  console.error('❌ [Main] Vérifications à effectuer:');
+  console.error('  1. Le fichier .env.production existe-t-il ?');
+  console.error('  2. Contient-il VITE_STRIPE_PUBLIC_KEY=... ?');
+  console.error('  3. Le serveur a-t-il été redémarré après modification ?');
+  console.error('  4. Le build a-t-il été refait ?');
+  
+  alert('ERREUR: Clé Stripe non configurée. Vérifiez la console pour plus de détails.');
+}
+
+// CORRIGÉ: Initialisation Stripe seulement si la clé existe
+let stripePromise = null;
+if (stripePublicKey) {
+  console.log('🔧 [Main] Initialisation Stripe avec clé:', stripePublicKey.substring(0, 25) + '...');
+  stripePromise = loadStripe(stripePublicKey, {
+    locale: 'fr'
+  });
+} else {
+  console.error('❌ [Main] Stripe NON initialisé - clé manquante');
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
