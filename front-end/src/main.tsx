@@ -27,46 +27,36 @@ import './styles/users.css';
 import './styles/pages.css';
 import './styles/auth-guard.css';
 
-// CORRIGÉ: Forcer la clé LIVE en production avec vérification stricte
-const expectedAccountPrefix = 'pk_live_51R6wB1AxYwLhmnM2'; // LIVE uniquement en production
-const fallbackKey = 'pk_live_51R6wB1AxYwLhmnM2RdC8scYPFA3fXhdXLHDNhwsgylIjNPV2lYNTGsnRB4iqsLD7TAgjkUj6RRyXxOtYihpT1raj00SxZnmNyL'; // LIVE
+// CORRIGÉ: Utiliser le compte Stripe auquel vous avez accès (RWzE9BQ) en mode TEST
+const expectedAccountPrefix = 'pk_test_51RWzE9BQ'; // Compte auquel vous avez accès
+const fallbackKey = 'pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ';
 
 console.log('🔧 [Main] Vérification configuration Stripe frontend:', {
   NODE_ENV: import.meta.env.NODE_ENV,
   MODE: import.meta.env.MODE,
   PROD: import.meta.env.PROD,
   DEV: import.meta.env.DEV,
-  expectedKeyType: 'LIVE (production forcée)',
+  expectedKeyType: 'TEST (compte RWzE9BQ - tests en production)',
   VITE_STRIPE_PUBLIC_KEY_exists: !!import.meta.env.VITE_STRIPE_PUBLIC_KEY,
   VITE_STRIPE_PUBLIC_KEY_prefix: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.substring(0, 15) + '...' || 'ABSENT',
-  VITE_STRIPE_PUBLIC_KEY_type: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_live_') ? 'PUBLIC LIVE (CORRECT)' : 
-                              import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_test_') ? 'PUBLIC TEST (INCORRECT EN PROD)' : 'FORMAT INCORRECT',
+  VITE_STRIPE_PUBLIC_KEY_type: import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_test_51RWzE9BQ') ? 'PUBLIC TEST RWzE9BQ (CORRECT)' : 
+                              import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_live_51RWzE9BQ') ? 'PUBLIC LIVE RWzE9BQ (IDEAL)' : 
+                              'FORMAT INCORRECT',
   VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
   allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
 });
 
-// CORRIGÉ: Forcer la clé LIVE en production
+// CORRIGÉ: Forcer l'utilisation du compte Stripe accessible (RWzE9BQ)
 let stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-// AJOUTÉ: Forcer la clé LIVE peu importe l'environnement détecté
-if (!stripePublicKey || !stripePublicKey.startsWith('pk_live_51R6wB1AxYwLhmnM2')) {
-  console.warn('⚠️ [Main] Clé Stripe incorrecte ou manquante, utilisation de la clé LIVE');
+if (!stripePublicKey || !stripePublicKey.startsWith('pk_test_51RWzE9BQ')) {
+  console.warn('⚠️ [Main] Correction: utilisation compte Stripe accessible (RWzE9BQ)');
   console.warn('⚠️ [Main] Clé actuelle:', stripePublicKey?.substring(0, 20) + '...' || 'MANQUANTE');
-  console.warn('⚠️ [Main] CORRECTION FORCÉE: Utilisation clé LIVE');
   stripePublicKey = fallbackKey;
 }
 
-// Validation finale stricte
-if (!stripePublicKey.startsWith(expectedAccountPrefix)) {
-  console.error('❌ [Main] ERREUR CRITIQUE: Clé ne correspond pas au compte attendu !');
-  console.error('❌ [Main] Clé frontend:', stripePublicKey.substring(0, 25) + '...');
-  console.error('❌ [Main] Attendu:', expectedAccountPrefix + '...');
-  console.error('❌ [Main] CORRECTION FORCÉE');
-  stripePublicKey = fallbackKey;
-}
-
-console.log('✅ [Main] Clé Stripe finale (LIVE forcée):', stripePublicKey.substring(0, 25) + '...');
-console.log('✅ [Main] Mode: PRODUCTION FORCÉE (LIVE)');
+console.log('✅ [Main] Clé Stripe finale (compte RWzE9BQ TEST):', stripePublicKey.substring(0, 25) + '...');
+console.log('✅ [Main] Mode: TEST en production - utilisation carte 4242424242424242');
 
 // CORRIGÉ: Initialisation Stripe avec logging détaillé
 console.log('🔧 [Main] Initialisation Stripe...');
