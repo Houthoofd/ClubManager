@@ -1032,17 +1032,29 @@ const PaiementPage: React.FC = () => {
   }
 
   // CONFIGURATION STRIPE
-  // CORRIGÉ: Configuration Stripe absolute basique - sans aucune option avancée
+  // CORRIGÉ: Configuration Stripe ultra-basique pour éviter les erreurs
   const options = useMemo(() => {
     if (!clientSecret) return {};
     
     return {
       clientSecret
-      // SUPPRIMÉ: Toutes les autres options (appearance, etc.)
+      // SUPPRIMÉ: Toutes les autres options
     };
   }, [clientSecret]);
 
-  // RENDER PRINCIPAL
+  // CORRIGÉ: Vérifications de sécurité avant rendu
+  if (!stripePromise) {
+    return (
+      <Page>
+        <PageSection>
+          <Alert variant="danger" title="Erreur Stripe">
+            <p>Impossible d'initialiser le système de paiement</p>
+          </Alert>
+        </PageSection>
+      </Page>
+    );
+  }
+
   return (
     <Page>
       <PageHeader
@@ -1053,228 +1065,29 @@ const PaiementPage: React.FC = () => {
 
       <PageSection>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-
-          {/* Debug avec hooks */}
-          <div style={{
-            background: '#e7f3ff',
-            border: '1px solid #bee5eb',
-            borderRadius: '8px',
-            padding: '1rem',
-            margin: '0 0 1rem 0',
-            fontSize: '14px'
-          }}>
-            <strong>🔧 Debug PaiementPage (avec hooks):</strong>
-            <br />
-            <strong>🎯 Type:</strong> {paymentType} {paymentType === 'echeance' ? '💰' : '🛒'}
-            <br />
-            <strong>🔑 userId:</strong> {userId || 'ERREUR'} {userId ? '✅' : '❌'}
-            <br />
-            <strong>📊 ID:</strong> {currentId || 'ERREUR'} {currentId ? '✅' : '❌'}
-            <br />
-            <strong>💰 Montant:</strong> {currentAmount ? formatMontant(currentAmount) : 'ERREUR'}
-            <br />
-            <strong>🔄 Hooks:</strong> Échéance={echeanceLoading ? 'Loading...' : echeanceData ? '✅' : '❌'} | PaymentIntent={createPaymentIntentEcheance.isPending ? 'Creating...' : clientSecret ? '✅' : '❌'}
-          </div>
-
-          {/* Bouton retour adapté */}
-          <div style={{ marginBottom: '1rem' }}>
-            <Button
-              variant="link"
-              icon={<ArrowLeftIcon />}
-              onClick={() => navigate(paymentType === 'echeance' ? '/pages/compte' : '/pages/magasin/magasin')}
-            >
-              Retour {paymentType === 'echeance' ? 'au compte' : 'au magasin'}
-            </Button>
-          </div>
-
-          {/* Alerte adaptée */}
-          <Alert
-            variant="warning"
-            title={paymentType === 'echeance' ? 'Paiement en attente' : 'Finalisation de commande'}
-            style={{ marginBottom: '2rem' }}
-          >
-            <p>
-              {paymentType === 'echeance' ?
-                'Vous avez été redirigé vers cette page pour régulariser une échéance de paiement.' :
-                'Finalisez votre commande en effectuant le paiement ci-dessous.'
-              }
-            </p>
-          </Alert>
-
-          {/* Détails adaptés */}
-          <Card style={{ marginBottom: '2rem' }}>
-            <CardBody>
-              <Title headingLevel="h2" size="xl" style={{ marginBottom: '1rem' }}>
-                {paymentType === 'echeance' ? (
-                  <>
-                    <ExclamationTriangleIcon style={{ marginRight: '8px', color: '#f0ad4e' }} />
-                    Détails de l'échéance
-                  </>
-                ) : (
-                  <>
-                    <CreditCardIcon style={{ marginRight: '8px', color: '#28a745' }} />
-                    Détails de la commande
-                  </>
-                )}
-              </Title>
-
-              <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
-                <FlexItem>
-                  <Flex>
-                    <FlexItem style={{ minWidth: '150px' }}>
-                      <strong>Référence :</strong>
-                    </FlexItem>
-                    <FlexItem>#{currentId || 'N/A'}</FlexItem>
-                  </Flex>
-                </FlexItem>
-
-                <FlexItem>
-                  <Flex>
-                    <FlexItem style={{ minWidth: '150px' }}>
-                      <strong>Description :</strong>
-                    </FlexItem>
-                    <FlexItem>{currentDescription}</FlexItem>
-                  </Flex>
-                </FlexItem>
-
-                {paymentType === 'echeance' && (
-                  <FlexItem>
-                    <Flex>
-                      <FlexItem style={{ minWidth: '150px' }}>
-                        <strong>Date d'échéance :</strong>
-                      </FlexItem>
-                      <FlexItem>
-                        {formatDate(currentData?.dateEcheance || currentData?.date_echeance || '')}
-                      </FlexItem>
-                    </Flex>
-                  </FlexItem>
-                )}
-
-                {paymentType === 'commande' && currentData?.nb_articles && (
-                  <FlexItem>
-                    <Flex>
-                      <FlexItem style={{ minWidth: '150px' }}>
-                        <strong>Articles :</strong>
-                      </FlexItem>
-                      <FlexItem>
-                        {currentData.nb_articles} article(s)
-                      </FlexItem>
-                    </Flex>
-                  </FlexItem>
-                )}
-
-                <FlexItem>
-                  <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem style={{ minWidth: '150px' }}>
-                      <strong>Montant à payer :</strong>
-                    </FlexItem>
-                    <FlexItem>
-                      <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#dc3545' }}>
-                        {formatMontant(currentAmount || 0)}
-                      </span>
-                    </FlexItem>
-                  </Flex>
-                </FlexItem>
-
-                <FlexItem>
-                  <Flex>
-                    <FlexItem style={{ minWidth: '150px' }}>
-                      <strong>Statut :</strong>
-                    </FlexItem>
-                    <FlexItem>
-                      <Badge variant="outline" color="orange">
-                        {currentData?.statut || 'En attente de paiement'}
-                      </Badge>
-                    </FlexItem>
-                  </Flex>
-                </FlexItem>
-              </Flex>
-            </CardBody>
-          </Card>
-
-          {/* Section de paiement */}
-          <Card>
-            <CardBody>
-              <Title headingLevel="h2" size="xl" style={{ marginBottom: '1rem' }}>
-                <CreditCardIcon style={{ marginRight: '8px', color: '#28a745' }} />
-                Effectuer le paiement
-              </Title>
-
-              <div style={{ marginBottom: '2rem' }}>
-                <Alert variant="info" title="Paiement sécurisé" isInline>
-                  Votre paiement est sécurisé et traité par Stripe.
-                  Aucune donnée de carte bancaire n'est stockée sur nos serveurs.
-                </Alert>
+          {/* CORRIGÉ: Vérification que clientSecret existe avant Elements */}
+          {clientSecret && stripePromise ? (
+            <Elements options={options} stripe={stripePromise}>
+              <PaymentForm
+                clientSecret={clientSecret}
+                amount={currentAmount}
+                description={currentDescription}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+                echeanceId={paymentType === 'echeance' ? echeanceId : undefined}
+                commandeId={paymentType === 'commande' ? commandeId : undefined}
+                userId={userId}
+                returnUrl={`${window.location.origin}/pages/paiement?${paymentType}=${currentId}&userId=${userId}&payment_return=true`}
+              />
+            </Elements>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <Spinner size="lg" />
+              <div style={{ marginTop: '1rem' }}>
+                Initialisation du paiement sécurisé...
               </div>
-
-              {/* CORRIGÉ: Affichage du formulaire Stripe avec hooks */}
-              {clientSecret && stripePromise ? (
-                <Elements options={options} stripe={stripePromise}>
-                  <PaymentForm
-                    clientSecret={clientSecret}
-                    amount={currentAmount}
-                    description={currentDescription}
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                    echeanceId={paymentType === 'echeance' ? echeanceId : undefined}
-                    commandeId={paymentType === 'commande' ? commandeId : undefined}
-                    userId={userId}
-                    returnUrl={`${window.location.origin}/pages/paiement?${paymentType}=${currentId}&userId=${userId}&payment_return=true`}
-                  />
-                </Elements>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                  <Spinner size="lg" />
-                  <div style={{ marginTop: '1rem' }}>
-                    {createPaymentIntentEcheance.isPending ? 'Initialisation du paiement sécurisé...' : 'Chargement du système de paiement...'}
-                  </div>
-                  {createPaymentIntentEcheance.error && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '14px', color: '#dc3545' }}>
-                      Erreur: {createPaymentIntentEcheance.error.message}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Informations supplémentaires */}
-              <div style={{
-                marginTop: '2rem',
-                padding: '1rem',
-                background: '#e7f3ff',
-                borderRadius: '8px'
-              }}>
-                <h5 style={{ marginBottom: '0.5rem' }}>ℹ️ Informations importantes :</h5>
-                <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem' }}>
-                  <li>Le paiement sera traité immédiatement</li>
-                  <li>Vous recevrez une confirmation par email</li>
-                  <li>Votre accès aux services sera maintenu</li>
-                  <li>En cas de problème, contactez notre support</li>
-                </ul>
-              </div>
-
-              {/* Autres moyens de paiement */}
-              <div style={{
-                marginTop: '1rem',
-                padding: '1rem',
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                border: '1px solid #dee2e6'
-              }}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#495057' }}>💳 Autres moyens de paiement :</h5>
-                <p style={{ marginBottom: '0.5rem', color: '#6c757d' }}>
-                  Si vous préférez, vous pouvez également régler par virement bancaire ou chèque.
-                </p>
-                <Button
-                  variant="link"
-                  onClick={() => {
-                    navigate('/pages/compte?tab=2&contact=payment');
-                  }}
-                >
-                  Demander des informations de paiement alternatif
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
+            </div>
+          )}
         </div>
       </PageSection>
     </Page>
