@@ -977,10 +977,10 @@ router.post('/confirmation/confirm-payment-commande', async (req, res) => {
       });
     }
 
-    // Marquer la commande comme payée/confirmée
+    // CORRIGÉ: Marquer la commande comme payée sans date_modification (colonne inexistante)
     const updateCommandeQuery = `
       UPDATE commandes 
-      SET statut = 'payée', date_modification = NOW()
+      SET statut = 'payée'
       WHERE id = ? AND statut != 'payée'
     `;
     
@@ -990,27 +990,70 @@ router.post('/confirmation/confirm-payment-commande', async (req, res) => {
       console.warn('⚠️ [Confirmation] Aucune ligne mise à jour - commande peut-être déjà payée');
     }
 
-    // AJOUTÉ: Enregistrer le paiement dans l'historique
+    // CORRIGÉ: Enregistrer le paiement dans l'historique avec gestion d'erreur
     try {
-      const insertPaiementQuery = `
-        INSERT INTO paiements (
-          utilisateur_id, montant, methode_paiement, 
-          statut, date_creation, stripe_payment_intent_id,
-          commande_id, description
-        ) VALUES (?, ?, 'stripe', 'confirmé', NOW(), ?, ?, ?)
-      `;
+      // Vérifier d'abord si la table paiements existe et quelles colonnes elle a
+      const checkTableQuery = `SHOW COLUMNS FROM paiements`;
+      const columns = await paiements.queryAsync(checkTableQuery, []);
       
-      await paiements.queryAsync(insertPaiementQuery, [
-        parseInt(userId),
-        parseFloat(amount) || parseFloat(commande.total),
-        paymentIntentId,
-        parseInt(commandeId),
-        `Paiement commande magasin #${commandeId}`
-      ]);
+      console.log('📊 [Confirmation] Colonnes disponibles dans table paiements:', 
+        columns.map((col: any) => col.Field).join(', '));
       
-      console.log('✅ [Confirmation] Paiement enregistré dans l\'historique');
-    } catch (historyError) {
-      console.warn('⚠️ [Confirmation] Erreur enregistrement historique (non bloquant):', historyError);
+      // Adapter la requête selon les colonnes disponibles
+      const availableColumns = columns.map((col: any) => col.Field);
+      
+      if (availableColumns.includes('utilisateur_id') && 
+          availableColumns.includes('montant') && 
+          availableColumns.includes('methode_paiement')) {
+        
+        let insertPaiementQuery = `
+          INSERT INTO paiements (
+            utilisateur_id, montant, methode_paiement, statut
+        `;
+        let insertValues = [
+          parseInt(userId),
+          parseFloat(amount) || parseFloat(commande.total),
+          'stripe',
+          'confirmé'
+        ];
+        
+        // Ajouter conditionnellement les colonnes qui existent
+        if (availableColumns.includes('date_creation')) {
+          insertPaiementQuery += ', date_creation';
+          insertValues.push('NOW()' as any);
+        }
+        
+        if (availableColumns.includes('stripe_payment_intent_id')) {
+          insertPaiementQuery += ', stripe_payment_intent_id';
+          insertValues.push(paymentIntentId);
+        }
+        
+        if (availableColumns.includes('commande_id')) {
+          insertPaiementQuery += ', commande_id';
+          insertValues.push(parseInt(commandeId));
+        }
+        
+        if (availableColumns.includes('description')) {
+          insertPaiementQuery += ', description';
+          insertValues.push(`Paiement commande magasin #${commandeId}`);
+        }
+        
+        insertPaiementQuery += ') VALUES (' + insertValues.map(() => '?').join(', ') + ')';
+        
+        // CORRIGÉ: Remplacer 'NOW()' par la fonction MySQL
+        const finalValues = insertValues.map(val => val === 'NOW()' ? null : val);
+        const finalQuery = insertPaiementQuery.replace(/\?/, 'NOW()');
+        
+        await paiements.queryAsync(finalQuery, finalValues.filter(val => val !== null));
+        
+        console.log('✅ [Confirmation] Paiement enregistré dans l\'historique');
+      } else {
+        console.warn('⚠️ [Confirmation] Table paiements incomplète - enregistrement ignoré');
+      }
+      
+    } catch (historyError: any) {
+      console.warn('⚠️ [Confirmation] Erreur enregistrement historique (non bloquant):', historyError.message);
+      // Ne pas bloquer la confirmation si l'historique échoue
     }
 
     console.log('✅ [Confirmation] Commande confirmée avec succès:', commandeId);
