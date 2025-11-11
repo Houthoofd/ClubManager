@@ -177,14 +177,45 @@ async function initializeSubModules() {
   router.use(flexibleAuth);
   console.log('🔐 [Paiements] Middleware d\'authentification flexible ajouté');
   
-  // AJOUTÉ: Module CRUD principal paiements (qui était oublié)
-  await loadSubModule(
+  // CORRIGÉ: Charger le module CRUD directement à la racine (sans préfixe /crud)
+  console.log('🔄 [Paiements] Chargement module CRUD principal à la racine...');
+  const crudLoaded = await loadSubModule(
     './paiements-crud.js',
-    '/crud',
+    '/', // CHANGÉ: Pas de préfixe, directement à la racine
     'Le service CRUD des paiements n\'est pas disponible'
   );
   
-  // CORRIGÉ: Tous les autres modules depuis routes/ directement
+  if (!crudLoaded) {
+    console.error('❌ [Paiements] CRITIQUE: Module CRUD principal non chargé');
+    
+    // Route de fallback complète pour le CRUD à la racine
+    router.use('/', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      // Laisser passer les routes spécialisées (stripe, echeances, etc.)
+      if (req.path.startsWith('/stripe') || req.path.startsWith('/echeances') || 
+          req.path.startsWith('/confirmation') || req.path.startsWith('/webhooks') ||
+          req.path === '/health' || req.path === '/debug/routes') {
+        return next();
+      }
+      
+      console.error(`❌ [Paiements] Appel CRUD échoué: ${req.method} ${req.path}`);
+      res.status(503).json({
+        success: false,
+        error: 'Service CRUD des paiements temporairement indisponible',
+        message: 'Le module paiements-crud.ts n\'a pas pu être chargé',
+        details: {
+          method: req.method,
+          path: req.path,
+          expectedFile: 'routes/paiements-crud.ts',
+          suggestion: 'Vérifiez que le fichier paiements-crud.ts existe dans routes/'
+        },
+        timestamp: new Date().toISOString()
+      });
+    });
+  } else {
+    console.log('✅ [Paiements] Module CRUD principal chargé à la racine avec succès');
+  }
+  
+  // CORRIGÉ: Tous les autres modules avec leurs préfixes spécialisés
   await loadSubModule(
     './stripe.js',
     '/stripe', 
@@ -219,7 +250,7 @@ router.get('/health', (req: express.Request, res: express.Response) => {
     module: 'paiements',
     architecture: 'modulaire (routes/ directement)',
     submodules: {
-      crud: 'CRUD principal des paiements (GET, POST, PUT, DELETE)',
+      root: 'CRUD principal des paiements (GET, POST, PUT, DELETE) - à la racine',
       stripe: 'Intégration Stripe (PaymentIntents, méthodes alternatives)', 
       echeances: 'Gestion complète des échéances',
       confirmation: 'Confirmation paiements avec promotion automatique',
@@ -227,10 +258,12 @@ router.get('/health', (req: express.Request, res: express.Response) => {
     },
     routes: [
       'GET /paiements/health - Statut du module',
-      'GET /paiements/crud/ - Tous les paiements (CRUD)',
-      'POST /paiements/crud/ - Créer paiement commande (CRUD)',
-      'PUT /paiements/crud/:id - Modifier paiement (CRUD)',
-      'DELETE /paiements/crud/:id - Supprimer paiement (CRUD)',
+      'GET /paiements/ - Tous les paiements avec filtres (CRUD)',
+      'POST /paiements/ - Créer un nouveau paiement (CRUD)',
+      'GET /paiements/:id - Paiement spécifique (CRUD)',
+      'PUT /paiements/:id - Modifier un paiement (CRUD)',
+      'DELETE /paiements/:id - Supprimer un paiement (CRUD)',
+      'GET /paiements/utilisateur/:userId - Paiements par utilisateur (CRUD)',
       'POST /paiements/stripe/create-payment-intent - PaymentIntent échéance',
       'POST /paiements/stripe/create-payment-intent-commande - PaymentIntent commande',
       'POST /paiements/stripe/confirm-payment - Confirmation paiement',
@@ -242,13 +275,13 @@ router.get('/health', (req: express.Request, res: express.Response) => {
       'POST /paiements/webhooks/stripe - Webhook principal'
     ],
     source_files: [
-      'routes/paiements-crud.ts - CRUD principal',
+      'routes/paiements-crud.ts - CRUD principal (racine)',
       'routes/stripe.ts - Intégration Stripe', 
       'routes/echeances.ts - Gestion échéances',
       'routes/confirmation.ts - Confirmation paiements',
       'routes/webhooks.ts - Webhooks Stripe'
     ],
-    note: 'Architecture plate - tous les modules sont dans routes/ directement',
+    note: 'Architecture plate - CRUD à la racine, modules spécialisés avec préfixes',
     timestamp: new Date().toISOString()
   });
 });

@@ -1,286 +1,383 @@
 import express from 'express';
-import { verifyToken } from '../middleware/auth.js';
 import { Paiements } from '../db/clients/paiements/paiements.js';
-import { Magasin } from '../db/clients/magasin/magasin.js';
-import Stripe from 'stripe';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const router = express.Router();
 
-// Configuration Stripe pour ce module
-let stripe: Stripe | null = null;
-try {
-  if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('4e')) {
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-02-24.acacia',
-    });
-  }
-} catch (error) {
-  console.error('❌ [Paiements CRUD] Erreur initialisation Stripe:', error);
-}
+console.log('💳 [CRUD Paiements] Initialisation du module CRUD des paiements');
 
-console.log('🔧 [Paiements CRUD] Module CRUD des paiements initialisé');
-
-// GET - Obtenir tous les paiements
+// GET - Récupérer tous les paiements avec filtres
 router.get('/', async (req, res) => {
   try {
+    console.log('📋 [CRUD] Récupération des paiements - Paramètres:', req.query);
+    
     const paiements = new Paiements();
-    const result = await paiements.obtenirLesTousLesPaiements();
-    res.status(200).json(result);
-  } catch (error) {
-    console.error('❌ [Paiements CRUD] Erreur GET /:', error);
-    res.status(500).json({ message: 'Erreur lors de la récupération des paiements', error });
-  }
-});
+    
+    // Extraire les filtres depuis les query params
+    const utilisateurId = req.query.utilisateur_id ? parseInt(req.query.utilisateur_id as string) : null;
+    const statut = req.query.statut as string;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
-// POST - Créer un paiement pour une commande (route principale)
-router.post('/', async (req, res) => {
-  try {
-    console.log('🛒 [Paiements CRUD] POST / - Création paiement commande:', req.body);
-    
-    const { amount, currency = 'eur', commande, utilisateur_id, description } = req.body;
-    
-    if (!stripe) {
-      return res.status(503).json({ error: 'Service Stripe non disponible' });
+    let resultats;
+
+    if (utilisateurId) {
+      console.log(`👤 [CRUD] Récupération paiements pour utilisateur: ${utilisateurId}`);
+      resultats = await paiements.obtenirPaiementsParUtilisateur(utilisateurId);
+    } else {
+      console.log('📊 [CRUD] Récupération de tous les paiements');
+      resultats = await paiements.obtenirLesTousLesPaiements();
     }
 
-    const finalUserId = commande?.utilisateur_id || utilisateur_id;
-    
-    if (!finalUserId || !amount) {
-      return res.status(400).json({ 
-        error: 'utilisateur_id et amount requis',
-        received: { utilisateur_id: finalUserId, amount }
-      });
+    // Filtrer par statut si spécifié
+    if (statut) {
+      resultats = (resultats as any[]).filter((p: any) => 
+        p.statut && p.statut.toLowerCase() === statut.toLowerCase()
+      );
     }
 
-    const montantEuros = parseFloat((amount / 100).toFixed(2));
-    if (isNaN(montantEuros) || montantEuros <= 0) {
-      return res.status(400).json({ 
-        error: 'Montant invalide',
-        debug: { amount, montantEuros }
-      });
-    }
+    // Appliquer pagination
+    const total = (resultats as any[]).length;
+    const paginatedResults = (resultats as any[]).slice(offset, offset + limit);
 
-    // Créer commande et PaymentIntent
-    const paiements = new Paiements();
-    const magasin = new Magasin();
-    
-    const total = commande?.total || montantEuros;
-    const date = new Date().toISOString();
-    
-    // 1. Créer la commande
-    const commandeResult = await magasin.creerCommande(
-      finalUserId, 
-      commande?.articles || [], 
-      total, 
-      date, 
-      'en_attente'
-    );
-    
-    if (!commandeResult.isConfirm) {
-      throw new Error(`Erreur création commande: ${commandeResult.message}`);
-    }
-    
-    // 2. Récupérer l'ID de commande
-    let commandeId = (commandeResult as any).id || (commandeResult as any).insertId;
-    if (!commandeId) {
-      const commandeQuery = `
-        SELECT id FROM commandes 
-        WHERE utilisateur_id = ? 
-          AND ABS(TIMESTAMPDIFF(SECOND, date_commande, ?)) <= 30
-        ORDER BY date_commande DESC LIMIT 1
-      `;
-      const commandeResults = await paiements.queryAsync(commandeQuery, [finalUserId, date]);
-      commandeId = commandeResults[0]?.id;
-    }
-    
-    if (!commandeId) {
-      throw new Error('Impossible de récupérer l\'ID de la commande créée');
-    }
+    console.log(`✅ [CRUD] ${paginatedResults.length}/${total} paiements récupérés`);
 
-    // 3. Créer PaymentIntent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount),
-      currency: currency,
-      description: description || `Commande magasin #${commandeId}`,
-      metadata: {
-        utilisateur_id: finalUserId.toString(),
-        commande_id: commandeId.toString(),
-        type: 'commande_magasin',
-        montant_euros: montantEuros.toString()
-      },
-      automatic_payment_methods: { enabled: true }
-    });
-
-    // 4. Enregistrer le paiement
-    const paiementResult = await paiements.creerPaiement({
-      commande_id: commandeId,
-      utilisateur_id: finalUserId,
-      montant: montantEuros,
-      methode_paiement: 'stripe',
-      stripe_payment_intent_id: paymentIntent.id,
-      statut: 'en_attente',
-      description: description || `Commande magasin #${commandeId}`
-    });
-
-    res.status(200).json({
+    res.json({
       success: true,
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-      commandeId: commandeId,
-      paiementId: paiementResult.id,
-      metadata: {
-        montant_euros: montantEuros,
-        utilisateur_id: finalUserId,
-        nb_articles: commande?.articles?.length || 0
+      data: paginatedResults,
+      pagination: {
+        total,
+        limit,
+        offset,
+        hasMore: offset + limit < total
+      },
+      filters: {
+        utilisateurId,
+        statut
       }
     });
 
   } catch (error: any) {
-    console.error('❌ [Paiements CRUD] Erreur POST /:', error);
-    res.status(500).json({ 
+    console.error('❌ [CRUD] Erreur récupération paiements:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des paiements',
+      details: error.message
+    });
+  }
+});
+
+// POST - Créer un nouveau paiement
+router.post('/', async (req, res) => {
+  try {
+    console.log('💳 [CRUD] Création nouveau paiement:', req.body);
+    
+    const {
+      utilisateur_id,
+      montant,
+      methode_paiement,
+      commande_id,
+      stripe_payment_intent_id,
+      paypal_order_id,
+      bitcoin_address,
+      statut = 'en_attente',
+      description,
+      abonnement_id,
+      echeance_id
+    } = req.body;
+
+    // Validation des données requises
+    if (!utilisateur_id || !montant || !methode_paiement) {
+      return res.status(400).json({
+        success: false,
+        error: 'Données manquantes',
+        required: ['utilisateur_id', 'montant', 'methode_paiement']
+      });
+    }
+
+    if (isNaN(parseFloat(montant)) || parseFloat(montant) <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Montant invalide',
+        montant
+      });
+    }
+
+    const paiements = new Paiements();
+    
+    const paiementData = {
+      commande_id: commande_id ? parseInt(commande_id) : undefined,
+      utilisateur_id: parseInt(utilisateur_id),
+      montant: parseFloat(montant),
+      methode_paiement,
+      stripe_payment_intent_id,
+      paypal_order_id,
+      bitcoin_address,
+      statut,
+      description,
+      abonnement_id: abonnement_id ? parseInt(abonnement_id) : undefined,
+      echeance_id: echeance_id ? parseInt(echeance_id) : undefined
+    };
+
+    console.log('📝 [CRUD] Données paiement préparées:', paiementData);
+
+    const result = await paiements.creerPaiement(paiementData);
+    
+    console.log('✅ [CRUD] Paiement créé avec succès:', result.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Paiement créé avec succès',
+      data: result
+    });
+
+  } catch (error: any) {
+    console.error('❌ [CRUD] Erreur création paiement:', error);
+    res.status(500).json({
+      success: false,
       error: 'Erreur lors de la création du paiement',
       details: error.message
     });
   }
 });
 
-// POST - Créer un paiement générique
-router.post('/create', async (req, res) => {
+// GET - Récupérer un paiement spécifique par ID
+router.get('/:id', async (req, res) => {
   try {
-    const paiements = new Paiements();
-    const result = await paiements.creerPaiement(req.body);
-    res.status(201).json(result);
-  } catch (error) {
-    console.error('❌ [Paiements CRUD] Erreur POST /create:', error);
-    res.status(500).json({ message: 'Erreur lors de la création du paiement', error });
-  }
-});
+    const paiementId = parseInt(req.params.id);
+    
+    console.log(`🔍 [CRUD] Récupération paiement ID: ${paiementId}`);
 
-// PUT - Modifier un paiement
-router.put('/:id', async (req, res) => {
-  const paiementId = Number(req.params.id);
-  
-  if (isNaN(paiementId)) {
-    return res.status(400).json({ error: 'ID paiement invalide' });
-  }
+    if (isNaN(paiementId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID paiement invalide'
+      });
+    }
 
-  try {
-    const paiements = new Paiements();
-    const result = await paiements.modifierPaiement(paiementId, req.body);
-    res.status(200).json(result);
-  } catch (error) {
-    console.error('❌ [Paiements CRUD] Erreur PUT /:id:', error);
-    res.status(500).json({ message: 'Erreur lors de la modification du paiement', error });
-  }
-});
-
-// PUT - Mettre à jour le statut d'un paiement avec retry anti-deadlock
-router.put('/update-status', async (req, res) => {
-  const { id, statut } = req.body;
-  
-  if (!id || !statut) {
-    return res.status(400).json({ error: 'ID et statut requis' });
-  }
-
-  const maxRetries = 3;
-  let retryCount = 0;
-
-  try {
     const paiements = new Paiements();
     
-    while (retryCount < maxRetries) {
-      try {
-        const result = await paiements.mettreAJourStatutPaiement(id, statut);
-        console.log('✅ [Paiements CRUD] Statut mis à jour:', { id, statut });
-        return res.status(200).json(result);
-      } catch (error: any) {
-        if (error.code === 'ER_LOCK_WAIT_TIMEOUT' && retryCount < maxRetries - 1) {
-          retryCount++;
-          const delay = Math.random() * 1000 + (retryCount * 500);
-          console.log(`⏳ [Paiements CRUD] Retry ${retryCount}/${maxRetries} dans ${delay.toFixed()}ms`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
-      }
+    // Récupérer tous les paiements et filtrer par ID (méthode simple)
+    const tousLesPaiements = await paiements.obtenirLesTousLesPaiements();
+    const paiement = (tousLesPaiements as any[]).find(p => p.id === paiementId);
+
+    if (!paiement) {
+      return res.status(404).json({
+        success: false,
+        error: 'Paiement non trouvé'
+      });
     }
+
+    console.log(`✅ [CRUD] Paiement ${paiementId} récupéré`);
+
+    res.json({
+      success: true,
+      data: paiement
+    });
+
   } catch (error: any) {
-    console.error('❌ [Paiements CRUD] Erreur update-status:', error);
-    res.status(500).json({ 
-      message: 'Erreur lors de la mise à jour du paiement', 
-      error: error.message,
-      code: error.code 
+    console.error('❌ [CRUD] Erreur récupération paiement:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération du paiement',
+      details: error.message
+    });
+  }
+});
+
+// PUT - Modifier un paiement existant
+router.put('/:id', async (req, res) => {
+  try {
+    const paiementId = parseInt(req.params.id);
+    
+    console.log(`📝 [CRUD] Modification paiement ID: ${paiementId}`, req.body);
+
+    if (isNaN(paiementId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID paiement invalide'
+      });
+    }
+
+    const paiements = new Paiements();
+    
+    const result = await paiements.modifierPaiement(paiementId, req.body);
+    
+    if (!result.isConfirm) {
+      return res.status(404).json({
+        success: false,
+        error: result.message || 'Paiement non trouvé'
+      });
+    }
+
+    console.log(`✅ [CRUD] Paiement ${paiementId} modifié avec succès`);
+
+    res.json({
+      success: true,
+      message: result.message,
+      paiement_id: paiementId
+    });
+
+  } catch (error: any) {
+    console.error('❌ [CRUD] Erreur modification paiement:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la modification du paiement',
+      details: error.message
     });
   }
 });
 
 // DELETE - Supprimer un paiement
 router.delete('/:id', async (req, res) => {
-  const paiementId = Number(req.params.id);
-  
-  if (isNaN(paiementId)) {
-    return res.status(400).json({ error: 'ID paiement invalide' });
-  }
-
   try {
+    const paiementId = parseInt(req.params.id);
+    
+    console.log(`🗑️ [CRUD] Suppression paiement ID: ${paiementId}`);
+
+    if (isNaN(paiementId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID paiement invalide'
+      });
+    }
+
     const paiements = new Paiements();
+    
     const result = await paiements.supprimerPaiement(paiementId);
-    res.status(200).json(result);
-  } catch (error) {
-    console.error('❌ [Paiements CRUD] Erreur DELETE /:id:', error);
-    res.status(500).json({ message: 'Erreur lors de la suppression du paiement', error });
-  }
-});
+    
+    if (!result.isConfirm) {
+      return res.status(404).json({
+        success: false,
+        error: result.message || 'Paiement non trouvé'
+      });
+    }
 
-// POST - Simulation de paiement pour tests
-router.post('/force-payment-success', async (req, res) => {
-  try {
-    const { paymentIntentId, echeanceId, commandeId, userId, amount, description } = req.body;
+    console.log(`✅ [CRUD] Paiement ${paiementId} supprimé avec succès`);
 
-    console.log('🧪 [Paiements CRUD] Simulation paiement:', {
-      paymentIntentId, echeanceId, commandeId, userId, amount,
-      type: echeanceId ? 'échéance' : 'commande'
+    res.json({
+      success: true,
+      message: result.message,
+      paiement_id: paiementId
     });
 
-    if (!paymentIntentId || !userId) {
-      return res.status(400).json({ error: 'paymentIntentId et userId requis' });
-    }
-
-    if (!echeanceId && !commandeId) {
-      return res.status(400).json({ error: 'echeanceId OU commandeId requis' });
-    }
-
-    const responseData = {
-      success: true,
-      message: `Paiement ${echeanceId ? 'échéance' : 'commande'} simulé avec succès`,
-      data: {
-        paymentIntentId,
-        [echeanceId ? 'echeanceId' : 'commandeId']: echeanceId || commandeId,
-        userId,
-        amount,
-        type: echeanceId ? 'echeance' : 'commande',
-        status: 'succeeded'
-      }
-    };
-
-    res.status(200).json(responseData);
-
   } catch (error: any) {
-    console.error('❌ [Paiements CRUD] Erreur simulation:', error);
+    console.error('❌ [CRUD] Erreur suppression paiement:', error);
     res.status(500).json({
-      error: 'Erreur lors de la simulation de paiement',
+      success: false,
+      error: 'Erreur lors de la suppression du paiement',
       details: error.message
     });
   }
 });
 
-console.log('✅ [Paiements CRUD] Routes CRUD chargées');
+// PUT - Mettre à jour le statut d'un paiement
+router.put('/:id/statut', async (req, res) => {
+  try {
+    const paiementId = parseInt(req.params.id);
+    const { statut } = req.body;
+    
+    console.log(`📊 [CRUD] Mise à jour statut paiement ID: ${paiementId} → ${statut}`);
+
+    if (isNaN(paiementId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID paiement invalide'
+      });
+    }
+
+    if (!statut) {
+      return res.status(400).json({
+        success: false,
+        error: 'Statut requis'
+      });
+    }
+
+    const paiements = new Paiements();
+    
+    const result = await paiements.mettreAJourStatutPaiement(paiementId, statut);
+    
+    if (!result.isConfirm) {
+      return res.status(404).json({
+        success: false,
+        error: result.message || 'Paiement non trouvé'
+      });
+    }
+
+    console.log(`✅ [CRUD] Statut paiement ${paiementId} mis à jour: ${statut}`);
+
+    res.json({
+      success: true,
+      message: result.message,
+      paiement_id: paiementId,
+      nouveau_statut: statut
+    });
+
+  } catch (error: any) {
+    console.error('❌ [CRUD] Erreur mise à jour statut:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la mise à jour du statut',
+      details: error.message
+    });
+  }
+});
+
+// GET - Récupérer les paiements d'un utilisateur spécifique
+router.get('/utilisateur/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    
+    console.log(`👤 [CRUD] Récupération paiements utilisateur: ${userId}`);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID utilisateur invalide'
+      });
+    }
+
+    const paiements = new Paiements();
+    
+    const result = await paiements.obtenirPaiementsParUtilisateur(userId);
+    
+    console.log(`✅ [CRUD] ${(result as any[]).length} paiements récupérés pour l'utilisateur ${userId}`);
+
+    res.json({
+      success: true,
+      data: result,
+      utilisateur_id: userId,
+      count: (result as any[]).length
+    });
+
+  } catch (error: any) {
+    console.error('❌ [CRUD] Erreur récupération paiements utilisateur:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des paiements utilisateur',
+      details: error.message
+    });
+  }
+});
+
+// Route de santé pour le module CRUD
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    module: 'paiements-crud',
+    description: 'Module CRUD principal pour les paiements',
+    routes: [
+      'GET / - Tous les paiements avec filtres',
+      'POST / - Créer nouveau paiement',
+      'GET /:id - Paiement spécifique',
+      'PUT /:id - Modifier paiement',
+      'DELETE /:id - Supprimer paiement',
+      'PUT /:id/statut - Mettre à jour statut',
+      'GET /utilisateur/:userId - Paiements par utilisateur'
+    ],
+    timestamp: new Date().toISOString()
+  });
+});
+
+console.log('✅ [CRUD Paiements] Module CRUD des paiements initialisé');
 
 export default router;

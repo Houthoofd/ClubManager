@@ -217,7 +217,7 @@ async function startServer() {
       console.log('🔧 [Server] Montage du module paiements modulaire...');
       app.use('/paiements', paiementRouter);
       console.log('✅ [Server] Module paiements monté → /paiements/ (avec sous-modules intégrés)');
-      console.log('  → /paiements/crud/ (CRUD principal)');
+      console.log('  → /paiements/ (CRUD principal - racine)');
       console.log('  → /paiements/stripe/ (Intégration Stripe)'); 
       console.log('  → /paiements/echeances/ (Gestion échéances)');
       console.log('  → /paiements/confirmation/ (Confirmation paiements)');
@@ -486,7 +486,7 @@ async function startServer() {
       if (paiementRouter !== null) {
         console.log(`💳 [Server] Module paiements modulaire: http://localhost:${PORT}/paiements/`);
         console.log('🏗️ [Server] Structure module paiements:');
-        console.log('  📂 /paiements/crud/ → CRUD principal');
+        console.log('  📂 /paiements/ → CRUD principal (racine)');
         console.log('  📂 /paiements/stripe/ → Intégration Stripe');
         console.log('  📂 /paiements/echeances/ → Gestion échéances');
         console.log('  📂 /paiements/confirmation/ → Confirmation paiements');
@@ -502,7 +502,7 @@ async function startServer() {
       
       // AJOUTÉ: Log de la structure des paiements
       console.log('🏗️ [Server] Structure module paiements:');
-      console.log('  📂 /paiements/ → CRUD principal');
+      console.log('  📂 /paiements/ → CRUD principal (racine)');
       console.log('  📂 /paiements/stripe/ → Intégration Stripe');
       console.log('  📂 /paiements/echeances/ → Gestion échéances');
       console.log('  📂 /paiements/confirmation/ → Confirmation paiements');

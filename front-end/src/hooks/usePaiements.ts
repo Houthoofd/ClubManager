@@ -464,7 +464,7 @@ export const useConfirmPayment = () => {
   });
 };
 
-// Hook pour récupérer tous les paiements (admin) - CORRIGÉ l'URL
+// Hook pour récupérer tous les paiements (admin) - CORRIGÉ l'URL sans /crud
 export const usePaiements = (filters?: {
   utilisateur_id?: number;
   statut?: string;
@@ -480,25 +480,71 @@ export const usePaiements = (filters?: {
       if (filters?.limit) params.append('limit', filters.limit.toString());
       if (filters?.offset) params.append('offset', filters.offset.toString());
 
-      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
-      const url = `${apiUrl(`paiements/crud?${params.toString()}`)}`;
+      // CORRIGÉ: Utiliser la route directe sans /crud
+      const url = `${apiUrl(`paiements?${params.toString()}`)}`;
+
+      console.log('📡 [Hook] Appel API paiements (racine):', {
+        url,
+        filters,
+        params: params.toString()
+      });
+
+      const token = obtenirToken();
+      
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
 
       const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
+      console.log('📡 [Hook] Réponse API paiements:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
+      });
+
       if (!response.ok) {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ [Hook] Erreur API paiements:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+        
+        if (response.status === 503) {
+          throw new Error('Service CRUD des paiements temporairement indisponible');
+        }
+        
+        throw new Error(`Erreur ${response.status}: ${response.statusText} - ${errorText}`);
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log('✅ [Hook] Paiements récupérés:', {
+        success: data.success,
+        count: data.data?.length || 0,
+        total: data.pagination?.total || 0
+      });
+      
+      return data.success ? data.data : [];
     },
-    staleTime: 30000
+    enabled: true,
+    staleTime: 30000,
+    retry: (failureCount, error) => {
+      // Ne pas retry si c'est une erreur 503 (service indisponible)
+      if (error.message.includes('503') || error.message.includes('Service') || error.message.includes('indisponible')) {
+        console.log('🚫 [Hook] Pas de retry pour service indisponible');
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 2000
   });
 };
 
@@ -576,16 +622,16 @@ export const useUpdateEcheance = () => {
   });
 };
 
-// Hook pour supprimer une échéance (admin) - CORRIGÉ l'URL
+// Hook pour supprimer une échéance (admin) - CORRIGÉ l'URL sans /crud
 export const useDeleteEcheance = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (echeanceId: number) => {
-      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
-      const response = await fetch(`${apiUrl(`paiements/crud/${echeanceId}`)}`, {
+      // CORRIGÉ: Utiliser la route directe sans /crud
+      const response = await fetch(`${apiUrl(`paiements/${echeanceId}`)}`, {
         method: 'DELETE',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -604,7 +650,7 @@ export const useDeleteEcheance = () => {
   });
 };
 
-// Hook pour créer un paiement générique - CORRIGÉ l'URL
+// Hook pour créer un paiement générique - CORRIGÉ l'URL sans /crud
 export const useCreerPaiement = () => {
   const queryClient = useQueryClient();
   
@@ -622,10 +668,10 @@ export const useCreerPaiement = () => {
       abonnement_id?: number;
       echeance_id?: number;
     }) => {
-      console.log(`💳 [Hook] Création paiement via CRUD:`, data);
+      console.log(`💳 [Hook] Création paiement via CRUD (racine):`, data);
 
-      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
-      const response = await fetch(`${apiUrl('paiements/crud')}`, {
+      // CORRIGÉ: Utiliser la route directe sans /crud
+      const response = await fetch(`${apiUrl('paiements')}`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -776,7 +822,7 @@ export const useTraiterPaiementBitcoin = () => {
   });
 };
 
-// Hook pour modifier un paiement - CORRIGÉ l'URL
+// Hook pour modifier un paiement - CORRIGÉ l'URL sans /crud
 export const useModifierPaiement = () => {
   const queryClient = useQueryClient();
   
@@ -790,8 +836,8 @@ export const useModifierPaiement = () => {
         description?: string;
       };
     }) => {
-      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
-      const response = await fetch(`${apiUrl(`paiements/crud/${data.paiementId}`)}`, {
+      // CORRIGÉ: Utiliser la route directe sans /crud
+      const response = await fetch(`${apiUrl(`paiements/${data.paiementId}`)}`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -814,14 +860,14 @@ export const useModifierPaiement = () => {
   });
 };
 
-// Hook pour supprimer un paiement - CORRIGÉ l'URL
+// Hook pour supprimer un paiement - CORRIGÉ l'URL sans /crud
 export const useSupprimerPaiement = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (paiementId: number) => {
-      // CORRIGÉ: Utiliser la vraie route modulaire CRUD
-      const response = await fetch(`${apiUrl(`paiements/crud/${paiementId}`)}`, {
+      // CORRIGÉ: Utiliser la route directe sans /crud
+      const response = await fetch(`${apiUrl(`paiements/${paiementId}`)}`, {
         method: 'DELETE',
         credentials: 'include',
         headers: {
@@ -928,7 +974,7 @@ export const useEcheancesUtilisateurAvecOptions = (
   });
 };
 
-// Hook pour récupérer les paiements d'un utilisateur spécifique - CORRIGÉ l'URL
+// Hook pour récupérer les paiements d'un utilisateur spécifique - CORRIGÉ l'URL sans /crud
 export const usePaiementsUtilisateur = (userId: number | null) => {
   return useQuery({
     queryKey: ['paiements-utilisateur', userId],
@@ -937,9 +983,10 @@ export const usePaiementsUtilisateur = (userId: number | null) => {
       
       console.log(`🔍 [Hook] Récupération paiements pour utilisateur: ${userId}`);
 
+      // CORRIGÉ: Utiliser la route directe sans /crud
       const response = await fetch(`${apiUrl(`paiements/utilisateur/${userId}`)}`, {
         method: 'GET',
-        credentials: 'include', // AJOUTÉ
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
