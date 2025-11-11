@@ -98,6 +98,48 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   }, [elements]);
 
+  // AJOUTÉ: Handler pour les changements d'adresse avec validation du code postal
+  const handleAddressChange = (field: string, value: string) => {
+    // CORRIGÉ: S'assurer que le code postal est toujours une chaîne de caractères
+    if (field === 'postal_code') {
+      // Nettoyer et formater le code postal
+      const cleanedPostalCode = value.toString().trim();
+      console.log('🏠 [PaymentForm] Code postal saisi:', { original: value, cleaned: cleanedPostalCode });
+      
+      setCustomerAddress(prev => ({
+        ...prev,
+        [field]: cleanedPostalCode
+      }));
+    } else {
+      setCustomerAddress(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  // AJOUTÉ: Validation spécifique du code postal belge
+  const validatePostalCode = (postalCode: string, country: string): boolean => {
+    if (!postalCode) return false;
+    
+    const cleanCode = postalCode.toString().trim();
+    
+    switch (country) {
+      case 'BE': // Belgique: 4 chiffres (1000-9999)
+        return /^\d{4}$/.test(cleanCode) && parseInt(cleanCode) >= 1000 && parseInt(cleanCode) <= 9999;
+      case 'FR': // France: 5 chiffres
+        return /^\d{5}$/.test(cleanCode);
+      case 'NL': // Pays-Bas: 4 chiffres + 2 lettres (1234 AB)
+        return /^\d{4}\s?[A-Z]{2}$/i.test(cleanCode);
+      case 'DE': // Allemagne: 5 chiffres
+        return /^\d{5}$/.test(cleanCode);
+      case 'LU': // Luxembourg: 4 chiffres
+        return /^\d{4}$/.test(cleanCode);
+      default:
+        return cleanCode.length >= 4; // Minimum 4 caractères pour les autres pays
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -112,14 +154,34 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       return;
     }
 
-    // AJOUTÉ: Validation de l'adresse pour éviter l'erreur postcode
-    if (usePaymentElement && (!customerAddress.postal_code || customerAddress.postal_code.length < 4)) {
-      setMessage('⚠️ Veuillez remplir un code postal valide (minimum 4 caractères)');
+    // CORRIGÉ: Validation renforcée de l'adresse avec code postal spécifique
+    if (!customerAddress.postal_code) {
+      setMessage('⚠️ Le code postal est obligatoire');
       return;
     }
 
-    if (usePaymentElement && !customerAddress.city) {
-      setMessage('⚠️ Veuillez remplir la ville');
+    // AJOUTÉ: Validation spécifique du format du code postal
+    if (!validatePostalCode(customerAddress.postal_code, customerAddress.country)) {
+      const countryFormats = {
+        'BE': '4 chiffres (ex: 1400)',
+        'FR': '5 chiffres (ex: 75001)',
+        'NL': '4 chiffres + 2 lettres (ex: 1234 AB)',
+        'DE': '5 chiffres (ex: 10115)',
+        'LU': '4 chiffres (ex: 1234)'
+      };
+      
+      const expectedFormat = countryFormats[customerAddress.country as keyof typeof countryFormats] || 'au moins 4 caractères';
+      setMessage(`⚠️ Format de code postal incorrect pour ${customerAddress.country}. Format attendu: ${expectedFormat}`);
+      return;
+    }
+
+    if (!customerAddress.city) {
+      setMessage('⚠️ La ville est obligatoire');
+      return;
+    }
+
+    if (!customerAddress.line1) {
+      setMessage('⚠️ L\'adresse (rue et numéro) est obligatoire');
       return;
     }
 
@@ -127,12 +189,31 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     setMessage('');
 
     console.log('🚀 [PaymentForm] Début du processus de paiement...');
+    console.log('🏠 [PaymentForm] Adresse validée:', {
+      line1: customerAddress.line1,
+      city: customerAddress.city,
+      postal_code: customerAddress.postal_code,
+      country: customerAddress.country,
+      postalCodeValid: validatePostalCode(customerAddress.postal_code, customerAddress.country)
+    });
 
     try {
       let result;
 
+      // CORRIGÉ: Préparation de l'adresse avec code postal en string
+      const billingAddress = {
+        line1: customerAddress.line1.trim(),
+        line2: customerAddress.line2?.trim() || undefined,
+        city: customerAddress.city.trim(),
+        postal_code: customerAddress.postal_code.toString().trim(), // IMPORTANT: Forcer en string
+        country: customerAddress.country,
+        state: undefined // Pas de state pour l'Europe
+      };
+
+      console.log('📋 [PaymentForm] Adresse de facturation préparée:', billingAddress);
+
       if (usePaymentElement) {
-        // CORRIGÉ: PaymentElement avec adresse complète
+        // CORRIGÉ: PaymentElement avec adresse de facturation strictement formatée
         console.log('💳 [PaymentForm] Confirmation avec PaymentElement...');
         
         result = await stripe.confirmPayment({
@@ -141,15 +222,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             return_url: returnUrl || `${window.location.origin}/pages/paiement?success=true`,
             payment_method_data: {
               billing_details: {
-                name: customerName || 'Client',
-                email: customerEmail || undefined,
-                address: {
-                  line1: customerAddress.line1 || 'Non renseigné',
-                  line2: customerAddress.line2 || undefined,
-                  city: customerAddress.city || 'Non renseigné',
-                  postal_code: customerAddress.postal_code,
-                  country: customerAddress.country
-                }
+                name: customerName.trim() || 'Client',
+                email: customerEmail.trim() || undefined,
+                address: billingAddress
               }
             }
           },
@@ -159,7 +234,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         console.log('📊 [PaymentForm] Résultat PaymentElement:', result);
 
       } else {
-        // CORRIGÉ: CardElement avec adresse complète
+        // CORRIGÉ: CardElement avec adresse de facturation strictement formatée
         console.log('💳 [PaymentForm] Confirmation avec CardElement...');
         
         const cardElement = elements.getElement(CardElement);
@@ -171,15 +246,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           payment_method: {
             card: cardElement,
             billing_details: {
-              name: customerName || 'Client',
-              email: customerEmail || undefined,
-              address: {
-                line1: customerAddress.line1 || 'Non renseigné',
-                line2: customerAddress.line2 || undefined,
-                city: customerAddress.city || 'Non renseigné',
-                postal_code: customerAddress.postal_code,
-                country: customerAddress.country
-              }
+              name: customerName.trim() || 'Client',
+              email: customerEmail.trim() || undefined,
+              address: billingAddress
             }
           }
         });
@@ -192,13 +261,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         
         let errorMessage = result.error.message || 'Erreur de paiement inconnue';
         
-        // AJOUTÉ: Messages d'erreur spécifiques pour les codes postaux
-        if (result.error.code === 'incomplete_zip') {
-          errorMessage = '❌ Code postal incomplet. Veuillez saisir un code postal valide.';
+        // CORRIGÉ: Messages d'erreur spécifiques pour les codes postaux
+        if (result.error.code === 'incomplete_zip' || 
+            result.error.message?.includes('postcode is onvolledig') ||
+            result.error.message?.includes('postcode') ||
+            result.error.message?.includes('postal')) {
+          errorMessage = `❌ Code postal incomplet ou invalide. Pour la Belgique, utilisez un code à 4 chiffres (comme 1400). Code actuel: "${customerAddress.postal_code}"`;
         } else if (result.error.code === 'invalid_zip') {
-          errorMessage = '❌ Code postal invalide. Vérifiez le format de votre code postal.';
-        } else if (result.error.message?.includes('postcode') || result.error.message?.includes('postal')) {
-          errorMessage = '❌ Problème avec le code postal. Veuillez vérifier et compléter votre adresse.';
+          errorMessage = `❌ Code postal invalide. Format attendu pour ${customerAddress.country}: ${validatePostalCode(customerAddress.postal_code, customerAddress.country) ? 'valide' : 'invalide'}`;
         } else if (result.error.code === 'card_declined') {
           errorMessage = '❌ Carte refusée. Vérifiez vos informations ou utilisez une autre carte.';
         } else if (result.error.code === 'insufficient_funds') {
@@ -247,14 +317,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }
   };
 
-  // AJOUTÉ: Handler pour les changements d'adresse
-  const handleAddressChange = (field: string, value: string) => {
-    setCustomerAddress(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
   // Vérifications préliminaires
   if (!clientSecret) {
     return (
@@ -300,7 +362,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           />
         </FormGroup>
 
-        {/* AJOUTÉ: Adresse de facturation */}
+        {/* CORRIGÉ: Adresse de facturation avec validation en temps réel */}
         <FormGroup label="Adresse de facturation" fieldId="billing-address">
           <TextInput
             id="address-line1"
@@ -308,6 +370,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             onChange={(_event, value) => handleAddressChange('line1', value)}
             placeholder="Rue et numéro *"
             style={{ marginBottom: '0.5rem' }}
+            isRequired
           />
           <TextInput
             id="address-line2"
@@ -317,14 +380,31 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             style={{ marginBottom: '0.5rem' }}
           />
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <TextInput
-              id="postal-code"
-              value={customerAddress.postal_code}
-              onChange={(_event, value) => handleAddressChange('postal_code', value)}
-              placeholder="Code postal *"
-              style={{ flex: '0 0 120px' }}
-              isRequired
-            />
+            <div style={{ flex: '0 0 140px' }}>
+              <TextInput
+                id="postal-code"
+                value={customerAddress.postal_code}
+                onChange={(_event, value) => handleAddressChange('postal_code', value)}
+                placeholder={customerAddress.country === 'BE' ? '1400' : 'Code postal *'}
+                isRequired
+                // AJOUTÉ: Validation visuelle en temps réel
+                validated={
+                  customerAddress.postal_code ? 
+                    (validatePostalCode(customerAddress.postal_code, customerAddress.country) ? 'success' : 'error') : 
+                    'default'
+                }
+              />
+              {/* AJOUTÉ: Indicateur de validation */}
+              {customerAddress.postal_code && (
+                <div style={{ fontSize: '12px', marginTop: '2px' }}>
+                  {validatePostalCode(customerAddress.postal_code, customerAddress.country) ? (
+                    <span style={{ color: 'green' }}>✅ Code postal valide</span>
+                  ) : (
+                    <span style={{ color: 'red' }}>❌ Format incorrect</span>
+                  )}
+                </div>
+              )}
+            </div>
             <TextInput
               id="city"
               value={customerAddress.city}
@@ -337,7 +417,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           <select
             id="country"
             value={customerAddress.country}
-            onChange={(e) => handleAddressChange('country', e.target.value)}
+            onChange={(e) => {
+              handleAddressChange('country', e.target.value);
+              // Réinitialiser le code postal si on change de pays
+              if (customerAddress.postal_code) {
+                console.log('🌍 [PaymentForm] Changement de pays, revalidation du code postal');
+              }
+            }}
             style={{
               marginTop: '0.5rem',
               width: '100%',
@@ -346,11 +432,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               borderRadius: '4px'
             }}
           >
-            <option value="BE">Belgique</option>
-            <option value="FR">France</option>
-            <option value="NL">Pays-Bas</option>
-            <option value="DE">Allemagne</option>
-            <option value="LU">Luxembourg</option>
+            <option value="BE">🇧🇪 Belgique (4 chiffres)</option>
+            <option value="FR">🇫🇷 France (5 chiffres)</option>
+            <option value="NL">🇳🇱 Pays-Bas (4 chiffres + 2 lettres)</option>
+            <option value="DE">🇩🇪 Allemagne (5 chiffres)</option>
+            <option value="LU">🇱🇺 Luxembourg (4 chiffres)</option>
           </select>
         </FormGroup>
 
@@ -376,12 +462,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                         line1: customerAddress.line1,
                         line2: customerAddress.line2,
                         city: customerAddress.city,
-                        postal_code: customerAddress.postal_code,
+                        postal_code: customerAddress.postal_code.toString(), // IMPORTANT: Forcer en string
                         country: customerAddress.country
                       }
                     }
                   },
-                  // AJOUTÉ: Configuration pour éviter les erreurs d'adresse
+                  // CORRIGÉ: Configuration pour forcer les types corrects
                   fields: {
                     billingDetails: {
                       address: {
@@ -457,10 +543,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             isDisabled={
               isLoading || 
               !acceptTerms || 
-              !customerName || 
-              !customerEmail ||
+              !customerName.trim() || 
+              !customerEmail.trim() ||
+              !customerAddress.line1.trim() ||
+              !customerAddress.city.trim() ||
               !customerAddress.postal_code ||
-              !customerAddress.city ||
+              !validatePostalCode(customerAddress.postal_code, customerAddress.country) ||
               (!isComplete && usePaymentElement)
             }
             icon={isLoading ? <Spinner size="sm" /> : <CreditCardIcon />}
@@ -477,6 +565,28 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               </>
             )}
           </Button>
+          
+          {/* AJOUTÉ: Indicateur de validation globale */}
+          {!validatePostalCode(customerAddress.postal_code, customerAddress.country) && customerAddress.postal_code && (
+            <div style={{ 
+              marginTop: '0.5rem', 
+              padding: '0.5rem', 
+              backgroundColor: '#fff3cd', 
+              border: '1px solid #ffeaa7', 
+              borderRadius: '4px',
+              fontSize: '14px'
+            }}>
+              ⚠️ Code postal "{customerAddress.postal_code}" invalide pour {customerAddress.country}. 
+              Format attendu: {
+                customerAddress.country === 'BE' ? '4 chiffres (ex: 1400)' :
+                customerAddress.country === 'FR' ? '5 chiffres (ex: 75001)' :
+                customerAddress.country === 'NL' ? '4 chiffres + 2 lettres (ex: 1234 AB)' :
+                customerAddress.country === 'DE' ? '5 chiffres (ex: 10115)' :
+                customerAddress.country === 'LU' ? '4 chiffres (ex: 1234)' :
+                'au moins 4 caractères'
+              }
+            </div>
+          )}
         </div>
 
         {/* Informations de sécurité */}
