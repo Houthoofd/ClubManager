@@ -73,59 +73,226 @@ router.use(flexibleAuth);
 // POST - Créer un PaymentIntent pour échéance
 router.post('/stripe/create-payment-intent', async (req, res) => {
     try {
+        console.log('🎯 [Stripe] Début création PaymentIntent échéance');
+        console.log('📝 [Stripe] Données reçues:', {
+            body: req.body,
+            user: req.user?.id,
+            headers: {
+                authorization: !!req.headers.authorization,
+                contentType: req.headers['content-type']
+            }
+        });
         const { amount, currency = 'eur', echeanceId, userId, description } = req.body;
-        if (!amount || !echeanceId || !userId) {
+        // CORRIGÉ: Validation plus détaillée avec logs
+        console.log('🔍 [Stripe] Validation des paramètres:', {
+            amount: { value: amount, type: typeof amount, valid: !!amount },
+            echeanceId: { value: echeanceId, type: typeof echeanceId, valid: !!echeanceId },
+            userId: { value: userId, type: typeof userId, valid: !!userId },
+            currency: currency,
+            description: description
+        });
+        if (!amount) {
+            console.error('❌ [Stripe] Montant manquant');
             return res.status(400).json({
-                error: 'Montant, échéance ID et utilisateur ID requis'
+                error: 'Montant requis',
+                received: { amount, type: typeof amount }
             });
         }
-        if (!stripe) {
-            return res.status(503).json({ error: 'Service Stripe non disponible' });
+        if (!echeanceId) {
+            console.error('❌ [Stripe] ID échéance manquant');
+            return res.status(400).json({
+                error: 'ID échéance requis',
+                received: { echeanceId, type: typeof echeanceId }
+            });
         }
+        if (!userId) {
+            console.error('❌ [Stripe] ID utilisateur manquant');
+            return res.status(400).json({
+                error: 'ID utilisateur requis',
+                received: { userId, type: typeof userId }
+            });
+        }
+        // CORRIGÉ: Vérification Stripe avec log détaillé
+        if (!stripe) {
+            console.error('❌ [Stripe] Service Stripe non initialisé');
+            console.error('❌ [Stripe] Configuration Stripe:', {
+                hasSecretKey: !!process.env.STRIPE_SECRET_KEY,
+                keyPrefix: process.env.STRIPE_SECRET_KEY?.substring(0, 12) + '...',
+                stripeObject: !!stripe
+            });
+            return res.status(503).json({
+                error: 'Service Stripe non disponible',
+                details: 'Vérifiez la configuration STRIPE_SECRET_KEY'
+            });
+        }
+        console.log('✅ [Stripe] Validation OK, connexion DB...');
         const paiements = new Paiements();
-        // Vérification de l'échéance
-        const echeanceExiste = await paiements.queryAsync('SELECT id, utilisateur_id, montant, statut FROM echeances_paiements WHERE id = ?', [parseInt(echeanceId)]);
+        // CORRIGÉ: Vérification de l'échéance avec logs détaillés
+        console.log('🔍 [Stripe] Vérification échéance ID:', echeanceId);
+        let echeanceExiste;
+        try {
+            echeanceExiste = await paiements.queryAsync('SELECT id, utilisateur_id, montant, statut FROM echeances_paiements WHERE id = ?', [parseInt(echeanceId)]);
+            console.log('📊 [Stripe] Résultat requête échéance:', {
+                found: echeanceExiste.length > 0,
+                echeance: echeanceExiste[0] || null,
+                query: 'SELECT id, utilisateur_id, montant, statut FROM echeances_paiements WHERE id = ?',
+                params: [parseInt(echeanceId)]
+            });
+        }
+        catch (dbError) {
+            console.error('❌ [Stripe] Erreur DB lors vérification échéance:', dbError);
+            return res.status(500).json({
+                error: 'Erreur base de données',
+                details: dbError.message,
+                query: 'Vérification échéance'
+            });
+        }
         if (echeanceExiste.length === 0) {
+            console.error('❌ [Stripe] Échéance non trouvée:', echeanceId);
             return res.status(404).json({
-                error: `Échéance ${echeanceId} non trouvée en base de données`
+                error: `Échéance ${echeanceId} non trouvée en base de données`,
+                debug: {
+                    echeanceId: parseInt(echeanceId),
+                    searchedInTable: 'echeances_paiements'
+                }
             });
         }
         const echeance = echeanceExiste[0];
+        console.log('✅ [Stripe] Échéance trouvée:', echeance);
+        // CORRIGÉ: Vérifications de sécurité avec logs
         if (echeance.utilisateur_id !== parseInt(userId)) {
+            console.error('❌ [Stripe] Échéance appartient à un autre utilisateur:', {
+                echeanceUserId: echeance.utilisateur_id,
+                requestUserId: parseInt(userId)
+            });
             return res.status(403).json({
-                error: 'Cette échéance ne vous appartient pas'
+                error: 'Cette échéance ne vous appartient pas',
+                debug: {
+                    echeanceUserId: echeance.utilisateur_id,
+                    requestUserId: parseInt(userId)
+                }
             });
         }
         if (echeance.statut === 'payé') {
+            console.warn('⚠️ [Stripe] Échéance déjà payée:', echeanceId);
             return res.status(400).json({
-                error: 'Cette échéance est déjà payée'
+                error: 'Cette échéance est déjà payée',
+                echeance: {
+                    id: echeance.id,
+                    statut: echeance.statut,
+                    montant: echeance.montant
+                }
             });
         }
-        // Créer le PaymentIntent
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(amount),
-            currency: currency,
-            description: description || `Paiement échéance #${echeanceId}`,
-            metadata: {
-                echeance_id: echeanceId.toString(),
-                utilisateur_id: userId.toString(),
-                type: 'echeance_payment'
-            },
-            automatic_payment_methods: {
-                enabled: true,
-            },
-        });
-        res.status(200).json({
+        // CORRIGÉ: Validation et conversion du montant
+        let amountInCents;
+        try {
+            // Si amount est déjà en centimes (nombre entier > 100), l'utiliser tel quel
+            // Sinon, convertir depuis euros vers centimes
+            if (typeof amount === 'number') {
+                if (amount > 100 && Number.isInteger(amount)) {
+                    // Probablement déjà en centimes
+                    amountInCents = Math.round(amount);
+                }
+                else {
+                    // Probablement en euros, convertir
+                    amountInCents = Math.round(amount * 100);
+                }
+            }
+            else {
+                // Tenter de parser
+                const parsedAmount = parseFloat(amount);
+                if (isNaN(parsedAmount)) {
+                    throw new Error(`Montant invalide: ${amount}`);
+                }
+                amountInCents = Math.round(parsedAmount * 100);
+            }
+            console.log('💰 [Stripe] Conversion montant:', {
+                original: amount,
+                converted: amountInCents,
+                euros: (amountInCents / 100).toFixed(2)
+            });
+            if (amountInCents <= 0) {
+                throw new Error(`Montant doit être positif: ${amountInCents} centimes`);
+            }
+        }
+        catch (amountError) {
+            console.error('❌ [Stripe] Erreur validation montant:', amountError);
+            return res.status(400).json({
+                error: 'Montant invalide',
+                details: amountError.message,
+                received: { amount, type: typeof amount }
+            });
+        }
+        // CORRIGÉ: Création PaymentIntent avec gestion d'erreur détaillée
+        console.log('🚀 [Stripe] Création PaymentIntent...');
+        let paymentIntent;
+        try {
+            const paymentIntentData = {
+                amount: amountInCents,
+                currency: currency.toLowerCase(),
+                description: description || `Paiement échéance #${echeanceId}`,
+                metadata: {
+                    echeance_id: echeanceId.toString(),
+                    utilisateur_id: userId.toString(),
+                    type: 'echeance_payment',
+                    montant_euros: (amountInCents / 100).toString()
+                },
+                automatic_payment_methods: {
+                    enabled: true,
+                },
+            };
+            console.log('📝 [Stripe] Données PaymentIntent:', paymentIntentData);
+            paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+            console.log('✅ [Stripe] PaymentIntent créé:', {
+                id: paymentIntent.id,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                status: paymentIntent.status
+            });
+        }
+        catch (stripeError) {
+            console.error('❌ [Stripe] Erreur Stripe API:', stripeError);
+            return res.status(500).json({
+                error: 'Erreur Stripe lors de la création du PaymentIntent',
+                details: stripeError.message,
+                stripeError: {
+                    type: stripeError.type,
+                    code: stripeError.code,
+                    message: stripeError.message
+                },
+                debug: {
+                    amount: amountInCents,
+                    currency: currency.toLowerCase(),
+                    stripeConfigured: !!stripe
+                }
+            });
+        }
+        // CORRIGÉ: Réponse de succès avec toutes les données nécessaires
+        const response = {
+            success: true,
             client_secret: paymentIntent.client_secret,
             payment_intent_id: paymentIntent.id,
-            metadata: paymentIntent.metadata
-        });
+            amount: paymentIntent.amount,
+            currency: paymentIntent.currency,
+            metadata: paymentIntent.metadata,
+            echeance: {
+                id: echeance.id,
+                montant: echeance.montant,
+                statut: echeance.statut
+            }
+        };
+        console.log('✅ [Stripe] Réponse envoyée:', response);
+        res.status(200).json(response);
     }
     catch (error) {
-        console.error('❌ [Stripe] Erreur création PaymentIntent:', error);
+        console.error('❌ [Stripe] Erreur générale création PaymentIntent:', error);
+        console.error('❌ [Stripe] Stack trace:', error.stack);
         res.status(500).json({
             error: 'Erreur lors de la création du PaymentIntent',
-            details: error.message
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+            timestamp: new Date().toISOString()
         });
     }
 });
