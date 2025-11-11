@@ -54,9 +54,17 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       stripe: !!stripe,
       elements: !!elements,
       clientSecret: !!clientSecret,
-      amount,
+      amount: amount,
+      amountType: typeof amount,
       echeanceId
     });
+
+    // CORRIGÉ: Validation de l'amount au niveau du composant
+    if (amount !== undefined && (typeof amount !== 'number' || amount <= 0)) {
+      console.error('❌ [PaymentForm] Amount invalide:', { amount, type: typeof amount });
+      setMessage('❌ Erreur: Montant du paiement invalide');
+      return;
+    }
 
     // Récupérer les infos utilisateur depuis localStorage
     try {
@@ -71,63 +79,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     } catch (error) {
       console.warn('⚠️ [PaymentForm] Erreur récupération userData:', error);
     }
-  }, [stripe, elements, clientSecret]);
-
-  // CORRIGÉ: Configuration PaymentElement avec adresse complète
-  useEffect(() => {
-    if (elements) {
-      try {
-        const testElement = elements.create('payment');
-        if (testElement) {
-          console.log('✅ [PaymentForm] PaymentElement supporté');
-        }
-      } catch (error) {
-        console.warn('⚠️ [PaymentForm] PaymentElement non supporté, utilisation de CardElement:', error);
-      }
-    }
-  }, [elements]);
-
-  // AJOUTÉ: Handler pour les changements d'adresse avec validation du code postal
-  const handleAddressChange = (field: string, value: string) => {
-    // CORRIGÉ: S'assurer que le code postal est toujours une chaîne de caractères
-    if (field === 'postal_code') {
-      // Nettoyer et formater le code postal
-      const cleanedPostalCode = value.toString().trim();
-      console.log('🏠 [PaymentForm] Code postal saisi:', { original: value, cleaned: cleanedPostalCode });
-      
-      setCustomerAddress(prev => ({
-        ...prev,
-        [field]: cleanedPostalCode
-      }));
-    } else {
-      setCustomerAddress(prev => ({
-        ...prev,
-        [field]: value
-      }));
-    }
-  };
-
-  // AJOUTÉ: Validation spécifique du code postal belge
-  const validatePostalCode = (postalCode: string, country: string): boolean => {
-    if (!postalCode) return false;
-    
-    const cleanCode = postalCode.toString().trim();
-    
-    switch (country) {
-      case 'BE': // Belgique: 4 chiffres (1000-9999)
-        return /^\d{4}$/.test(cleanCode) && parseInt(cleanCode) >= 1000 && parseInt(cleanCode) <= 9999;
-      case 'FR': // France: 5 chiffres
-        return /^\d{5}$/.test(cleanCode);
-      case 'NL': // Pays-Bas: 4 chiffres + 2 lettres (1234 AB)
-        return /^\d{4}\s?[A-Z]{2}$/i.test(cleanCode);
-      case 'DE': // Allemagne: 5 chiffres
-        return /^\d{5}$/.test(cleanCode);
-      case 'LU': // Luxembourg: 4 chiffres
-        return /^\d{4}$/.test(cleanCode);
-      default:
-        return cleanCode.length >= 4; // Minimum 4 caractères pour les autres pays
-    }
-  };
+  }, [stripe, elements, clientSecret, amount]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -154,10 +106,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       return;
     }
 
+    // AJOUTÉ: Validation de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(customerEmail.trim())) {
+      setMessage('⚠️ Format d\'email invalide');
+      return;
+    }
+
     setIsLoading(true);
     setMessage('');
 
     console.log('🚀 [PaymentForm] Début du processus de paiement...');
+    console.log('💰 [PaymentForm] Montant à payer:', amount ? `${amount}€` : 'Non spécifié');
 
     try {
       // CORRIGÉ: Utiliser seulement confirmPayment avec redirect if_required
@@ -206,11 +166,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         setMessage('✅ Paiement réussi !');
         
         if (onSuccess) {
-          // CORRIGÉ: Créer un objet result compatible
+          // CORRIGÉ: Créer un objet result compatible avec les informations disponibles
           const result = {
             paymentIntent: {
-              id: 'pi_success_' + Date.now(),
-              status: 'succeeded'
+              id: `pi_success_${Date.now()}`,
+              status: 'succeeded',
+              amount: amount ? Math.round(amount * 100) : 0, // Convertir en centimes
+              currency: 'eur',
+              metadata: {
+                echeanceId,
+                commandeId,
+                userId
+              }
             }
           };
           onSuccess(result);
@@ -251,6 +218,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     );
   }
 
+  // AJOUTÉ: Vérification de l'amount
+  if (amount !== undefined && (typeof amount !== 'number' || amount <= 0)) {
+    return (
+      <Alert variant="danger" title="Erreur de montant">
+        <p>❌ Montant du paiement invalide: {String(amount)} (type: {typeof amount})</p>
+        <p>Le montant doit être un nombre positif.</p>
+      </Alert>
+    );
+  }
+
   if (!stripe || !elements) {
     return (
       <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -265,6 +242,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   return (
     <div style={{ maxWidth: '500px', margin: '0 auto' }}>
       <Form onSubmit={handleSubmit}>
+        {/* AJOUTÉ: Affichage du montant si disponible */}
+        {amount && (
+          <Alert variant="info" title="Montant à payer" isInline style={{ marginBottom: '1rem' }}>
+            <strong>{amount.toFixed(2)} €</strong>
+            {description && <div style={{ marginTop: '0.5rem' }}>{description}</div>}
+          </Alert>
+        )}
+
         {/* Informations client */}
         <FormGroup label="Nom complet *" fieldId="customer-name" isRequired>
           <TextInput
@@ -346,7 +331,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   conditions générales
                 </a>{' '}
                 et autorise le prélèvement de{' '}
-                <strong>{amount ? `${amount} €` : 'ce montant'}</strong>
+                <strong>{amount ? `${amount.toFixed(2)} €` : 'ce montant'}</strong>
               </span>
             }
           />
@@ -363,7 +348,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               isLoading || 
               !acceptTerms || 
               !customerName.trim() || 
-              !customerEmail.trim()
+              !customerEmail.trim() ||
+              !emailRegex.test(customerEmail.trim())
             }
             icon={isLoading ? <Spinner size="sm" /> : <CreditCardIcon />}
           >
@@ -375,7 +361,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             ) : (
               <>
                 <CreditCardIcon style={{ marginRight: '8px' }} />
-                Payer {amount ? `${amount} €` : 'maintenant'}
+                Payer {amount ? `${amount.toFixed(2)} €` : 'maintenant'}
               </>
             )}
           </Button>
