@@ -70,6 +70,89 @@ const flexibleAuth = async (req, res, next) => {
 // Appliquer le middleware d'auth à toutes les routes (sauf publiques)
 router.use(flexibleAuth);
 // ===== ROUTES STRIPE =====
+// AJOUTÉ: Route de diagnostic Stripe AVANT les autres routes
+router.post('/stripe/debug-config', async (req, res) => {
+    try {
+        console.log('🔧 [Stripe Debug] Test configuration Stripe...');
+        const diagnostics = {
+            stripe_config: {
+                has_secret_key: !!process.env.STRIPE_SECRET_KEY,
+                key_format: process.env.STRIPE_SECRET_KEY ? {
+                    starts_with_sk: process.env.STRIPE_SECRET_KEY.startsWith('sk_'),
+                    is_test_key: process.env.STRIPE_SECRET_KEY.startsWith('sk_test_'),
+                    is_live_key: process.env.STRIPE_SECRET_KEY.startsWith('sk_live_'),
+                    length: process.env.STRIPE_SECRET_KEY.length,
+                    prefix: process.env.STRIPE_SECRET_KEY.substring(0, 15) + '...'
+                } : null,
+                stripe_object_initialized: !!stripe,
+                rejected_patterns: process.env.STRIPE_SECRET_KEY?.includes('4e') ? 'Clé contient pattern rejeté' : 'OK'
+            },
+            test_request: req.body
+        };
+        console.log('📊 [Stripe Debug] Diagnostics:', diagnostics);
+        if (!stripe) {
+            return res.status(503).json({
+                success: false,
+                error: 'Stripe non initialisé',
+                diagnostics
+            });
+        }
+        // Test simple de l'API Stripe
+        try {
+            console.log('🧪 [Stripe Debug] Test création PaymentIntent minimal...');
+            const testPaymentIntent = await stripe.paymentIntents.create({
+                amount: 100, // 1€
+                currency: 'eur',
+                description: 'Test diagnostic',
+                metadata: {
+                    test: 'true',
+                    debug: 'diagnostic'
+                }
+            });
+            console.log('✅ [Stripe Debug] PaymentIntent test créé:', testPaymentIntent.id);
+            res.json({
+                success: true,
+                message: 'Configuration Stripe OK',
+                diagnostics,
+                test_payment_intent: {
+                    id: testPaymentIntent.id,
+                    status: testPaymentIntent.status,
+                    amount: testPaymentIntent.amount,
+                    currency: testPaymentIntent.currency
+                }
+            });
+        }
+        catch (stripeTestError) {
+            console.error('❌ [Stripe Debug] Erreur test API Stripe:', stripeTestError);
+            res.status(500).json({
+                success: false,
+                error: 'Erreur API Stripe',
+                stripe_error: {
+                    type: stripeTestError.type,
+                    code: stripeTestError.code,
+                    message: stripeTestError.message,
+                    param: stripeTestError.param,
+                    request_id: stripeTestError.requestId
+                },
+                diagnostics,
+                solution: stripeTestError.code === 'api_key_expired' ? 'Clé API expirée - générez une nouvelle clé' :
+                    stripeTestError.code === 'invalid_api_key' ? 'Clé API invalide - vérifiez STRIPE_SECRET_KEY' :
+                        'Vérifiez la configuration Stripe'
+            });
+        }
+    }
+    catch (error) {
+        console.error('❌ [Stripe Debug] Erreur diagnostic:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur diagnostic',
+            details: error.message
+        });
+    }
+});
+// AJOUTÉ: Cache pour éviter les doublons de PaymentIntent
+const paymentIntentCache = new Map();
+const CACHE_DURATION = 30000; // 30 secondes
 // POST - Créer un PaymentIntent pour échéance
 router.post('/stripe/create-payment-intent', async (req, res) => {
     try {
@@ -83,6 +166,26 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
             }
         });
         const { amount, currency = 'eur', echeanceId, userId, description } = req.body;
+        // AJOUTÉ: Vérifier le cache pour éviter les doublons
+        const cacheKey = `${echeanceId}_${userId}_${amount}`;
+        const cachedPayment = paymentIntentCache.get(cacheKey);
+        if (cachedPayment && (Date.now() - cachedPayment.timestamp < CACHE_DURATION)) {
+            console.log('🔄 [Stripe] PaymentIntent trouvé en cache, réutilisation');
+            return res.status(200).json({
+                success: true,
+                client_secret: cachedPayment.paymentIntent.client_secret,
+                payment_intent_id: cachedPayment.paymentIntent.id,
+                amount: cachedPayment.paymentIntent.amount,
+                currency: cachedPayment.paymentIntent.currency,
+                metadata: cachedPayment.paymentIntent.metadata,
+                cached: true,
+                echeance: {
+                    id: parseInt(echeanceId),
+                    montant: amount / 100,
+                    statut: 'en attente'
+                }
+            });
+        }
         // CORRIGÉ: Validation plus détaillée avec logs
         console.log('🔍 [Stripe] Validation des paramètres:', {
             amount: { value: amount, type: typeof amount, valid: !!amount },
@@ -112,17 +215,13 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
                 received: { userId, type: typeof userId }
             });
         }
-        // CORRIGÉ: Vérification Stripe avec log détaillé
+        // CORRIGÉ: Vérification Stripe avec diagnostic détaillé
         if (!stripe) {
             console.error('❌ [Stripe] Service Stripe non initialisé');
-            console.error('❌ [Stripe] Configuration Stripe:', {
-                hasSecretKey: !!process.env.STRIPE_SECRET_KEY,
-                keyPrefix: process.env.STRIPE_SECRET_KEY?.substring(0, 12) + '...',
-                stripeObject: !!stripe
-            });
             return res.status(503).json({
                 error: 'Service Stripe non disponible',
-                details: 'Vérifiez la configuration STRIPE_SECRET_KEY'
+                details: 'Stripe non initialisé - vérifiez STRIPE_SECRET_KEY dans .env',
+                debug_url: '/paiements/stripe/debug-config'
             });
         }
         console.log('✅ [Stripe] Validation OK, connexion DB...');
@@ -134,43 +233,29 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
             echeanceExiste = await paiements.queryAsync('SELECT id, utilisateur_id, montant, statut FROM echeances_paiements WHERE id = ?', [parseInt(echeanceId)]);
             console.log('📊 [Stripe] Résultat requête échéance:', {
                 found: echeanceExiste.length > 0,
-                echeance: echeanceExiste[0] || null,
-                query: 'SELECT id, utilisateur_id, montant, statut FROM echeances_paiements WHERE id = ?',
-                params: [parseInt(echeanceId)]
+                echeance: echeanceExiste[0] || null
             });
         }
         catch (dbError) {
             console.error('❌ [Stripe] Erreur DB lors vérification échéance:', dbError);
             return res.status(500).json({
                 error: 'Erreur base de données',
-                details: dbError.message,
-                query: 'Vérification échéance'
+                details: dbError.message
             });
         }
         if (echeanceExiste.length === 0) {
             console.error('❌ [Stripe] Échéance non trouvée:', echeanceId);
             return res.status(404).json({
-                error: `Échéance ${echeanceId} non trouvée en base de données`,
-                debug: {
-                    echeanceId: parseInt(echeanceId),
-                    searchedInTable: 'echeances_paiements'
-                }
+                error: `Échéance ${echeanceId} non trouvée en base de données`
             });
         }
         const echeance = echeanceExiste[0];
-        console.log('✅ [Stripe] Échéance trouvée:', echeance);
+        console.log('✅ [Stripe] Échéance trouvée:', { id: echeance.id, statut: echeance.statut });
         // CORRIGÉ: Vérifications de sécurité avec logs
         if (echeance.utilisateur_id !== parseInt(userId)) {
-            console.error('❌ [Stripe] Échéance appartient à un autre utilisateur:', {
-                echeanceUserId: echeance.utilisateur_id,
-                requestUserId: parseInt(userId)
-            });
+            console.error('❌ [Stripe] Échéance appartient à un autre utilisateur');
             return res.status(403).json({
-                error: 'Cette échéance ne vous appartient pas',
-                debug: {
-                    echeanceUserId: echeance.utilisateur_id,
-                    requestUserId: parseInt(userId)
-                }
+                error: 'Cette échéance ne vous appartient pas'
             });
         }
         if (echeance.statut === 'payé') {
@@ -184,53 +269,60 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
                 }
             });
         }
-        // CORRIGÉ: Validation et conversion du montant
+        // CORRIGÉ: Validation et conversion du montant avec limites Stripe
         let amountInCents;
         try {
-            // Si amount est déjà en centimes (nombre entier > 100), l'utiliser tel quel
-            // Sinon, convertir depuis euros vers centimes
             if (typeof amount === 'number') {
                 if (amount > 100 && Number.isInteger(amount)) {
-                    // Probablement déjà en centimes
                     amountInCents = Math.round(amount);
                 }
                 else {
-                    // Probablement en euros, convertir
                     amountInCents = Math.round(amount * 100);
                 }
             }
             else {
-                // Tenter de parser
                 const parsedAmount = parseFloat(amount);
                 if (isNaN(parsedAmount)) {
                     throw new Error(`Montant invalide: ${amount}`);
                 }
                 amountInCents = Math.round(parsedAmount * 100);
             }
+            // AJOUTÉ: Vérification des limites Stripe
+            if (amountInCents < 50) {
+                throw new Error(`Montant trop faible: ${amountInCents} centimes (minimum 50 centimes = 0.50€)`);
+            }
+            if (amountInCents > 99999999) {
+                throw new Error(`Montant trop élevé: ${amountInCents} centimes (maximum ~999,999€)`);
+            }
             console.log('💰 [Stripe] Conversion montant:', {
                 original: amount,
                 converted: amountInCents,
                 euros: (amountInCents / 100).toFixed(2)
             });
-            if (amountInCents <= 0) {
-                throw new Error(`Montant doit être positif: ${amountInCents} centimes`);
-            }
         }
         catch (amountError) {
             console.error('❌ [Stripe] Erreur validation montant:', amountError);
             return res.status(400).json({
                 error: 'Montant invalide',
                 details: amountError.message,
-                received: { amount, type: typeof amount }
+                limits: {
+                    minimum: '0.50€ (50 centimes)',
+                    maximum: '999,999.99€'
+                }
             });
         }
-        // CORRIGÉ: Création PaymentIntent avec gestion d'erreur détaillée
+        // CORRIGÉ: Création PaymentIntent avec protection contre le rate limit
         console.log('🚀 [Stripe] Création PaymentIntent...');
         let paymentIntent;
         try {
+            const supportedCurrencies = ['eur', 'usd', 'gbp', 'chf', 'cad'];
+            const normalizedCurrency = currency.toLowerCase();
+            if (!supportedCurrencies.includes(normalizedCurrency)) {
+                throw new Error(`Devise non supportée: ${currency}`);
+            }
             const paymentIntentData = {
                 amount: amountInCents,
-                currency: currency.toLowerCase(),
+                currency: normalizedCurrency,
                 description: description || `Paiement échéance #${echeanceId}`,
                 metadata: {
                     echeance_id: echeanceId.toString(),
@@ -242,9 +334,14 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
                     enabled: true,
                 },
             };
-            console.log('📝 [Stripe] Données PaymentIntent:', paymentIntentData);
+            console.log('📝 [Stripe] Données PaymentIntent validées');
             paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
-            console.log('✅ [Stripe] PaymentIntent créé:', {
+            // AJOUTÉ: Mettre en cache le PaymentIntent
+            paymentIntentCache.set(cacheKey, {
+                paymentIntent: paymentIntent,
+                timestamp: Date.now()
+            });
+            console.log('✅ [Stripe] PaymentIntent créé avec succès:', {
                 id: paymentIntent.id,
                 amount: paymentIntent.amount,
                 currency: paymentIntent.currency,
@@ -252,19 +349,55 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
             });
         }
         catch (stripeError) {
-            console.error('❌ [Stripe] Erreur Stripe API:', stripeError);
+            console.error('❌ [Stripe] Erreur Stripe API détaillée:', {
+                type: stripeError.type,
+                code: stripeError.code,
+                message: stripeError.message
+            });
+            // AJOUTÉ: Gestion spécifique du rate limit
+            if (stripeError.code === 'rate_limit') {
+                console.warn('⚠️ [Stripe] Rate limit atteint - attendre avant nouvel essai');
+                return res.status(429).json({
+                    error: 'Trop de demandes simultanées',
+                    message: 'Veuillez patienter quelques secondes avant de réessayer',
+                    code: 'rate_limit',
+                    retry_after: 30, // secondes
+                    solution: 'Évitez les clics rapides répétés sur le bouton de paiement'
+                });
+            }
+            // Messages d'erreur spécifiques selon le code d'erreur Stripe
+            let errorMessage = 'Erreur Stripe lors de la création du PaymentIntent';
+            let solution = 'Vérifiez la configuration Stripe';
+            switch (stripeError.code) {
+                case 'api_key_expired':
+                    errorMessage = 'Clé API Stripe expirée';
+                    solution = 'Générez une nouvelle clé API dans votre dashboard Stripe';
+                    break;
+                case 'invalid_api_key':
+                    errorMessage = 'Clé API Stripe invalide';
+                    solution = 'Vérifiez la variable STRIPE_SECRET_KEY dans votre fichier .env';
+                    break;
+                case 'testmode_charges_only':
+                    errorMessage = 'Clé de test utilisée en mode live';
+                    solution = 'Utilisez une clé API live ou changez en mode test';
+                    break;
+                case 'amount_too_small':
+                    errorMessage = 'Montant trop faible pour Stripe';
+                    solution = 'Le montant minimum est de 0.50€ (50 centimes)';
+                    break;
+                case 'currency_not_supported':
+                    errorMessage = 'Devise non supportée';
+                    solution = 'Utilisez EUR, USD, GBP, CHF ou CAD';
+                    break;
+            }
             return res.status(500).json({
-                error: 'Erreur Stripe lors de la création du PaymentIntent',
+                error: errorMessage,
                 details: stripeError.message,
+                solution: solution,
                 stripeError: {
                     type: stripeError.type,
                     code: stripeError.code,
                     message: stripeError.message
-                },
-                debug: {
-                    amount: amountInCents,
-                    currency: currency.toLowerCase(),
-                    stripeConfigured: !!stripe
                 }
             });
         }
@@ -282,16 +415,14 @@ router.post('/stripe/create-payment-intent', async (req, res) => {
                 statut: echeance.statut
             }
         };
-        console.log('✅ [Stripe] Réponse envoyée:', response);
+        console.log('✅ [Stripe] Réponse envoyée avec succès');
         res.status(200).json(response);
     }
     catch (error) {
         console.error('❌ [Stripe] Erreur générale création PaymentIntent:', error);
-        console.error('❌ [Stripe] Stack trace:', error.stack);
         res.status(500).json({
             error: 'Erreur lors de la création du PaymentIntent',
             details: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
             timestamp: new Date().toISOString()
         });
     }
