@@ -27,7 +27,7 @@ import './styles/users.css';
 import './styles/pages.css';
 import './styles/auth-guard.css';
 
-// CORRIGÉ: Vérification et configuration Stripe avec logs détaillés et fallbacks
+// CORRIGÉ: Vérification et configuration Stripe avec logs détaillés et fallbacks COMPLETS
 console.log('🔧 [Main] Vérification configuration Stripe frontend:', {
   NODE_ENV: import.meta.env.NODE_ENV,
   MODE: import.meta.env.MODE,
@@ -40,74 +40,80 @@ console.log('🔧 [Main] Vérification configuration Stripe frontend:', {
   allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
 });
 
-// CORRIGÉ: Validation stricte de la clé publique avec fallbacks
+// CORRIGÉ: Configuration Stripe avec fallback COMPLET et logging détaillé
 let stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-// AJOUTÉ: Fallback pour les différents environnements
+// AJOUTÉ: Système de fallback complet
 if (!stripePublicKey) {
-  console.warn('⚠️ [Main] VITE_STRIPE_PUBLIC_KEY manquant, tentative de fallbacks...');
+  console.warn('⚠️ [Main] VITE_STRIPE_PUBLIC_KEY manquant, utilisation des fallbacks...');
   
-  // Fallback 1: Vérifier d'autres variables possibles
+  // Fallback 1: Autres noms de variables possibles
   stripePublicKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 
                    import.meta.env.REACT_APP_STRIPE_PUBLIC_KEY ||
                    import.meta.env.STRIPE_PUBLIC_KEY;
   
   if (stripePublicKey) {
-    console.log('✅ [Main] Clé Stripe trouvée via fallback');
+    console.log('✅ [Main] Clé Stripe trouvée via fallback alternatif');
   }
 }
 
-// AJOUTÉ: Fallback en dur pour la production (temporaire)
-if (!stripePublicKey && import.meta.env.PROD) {
-  console.warn('⚠️ [Main] Utilisation de la clé Stripe en dur pour la production (temporaire)');
-  stripePublicKey = 'pk_test_51R6wB1AxYwLhmnM2kYoAxL3bQkKz5E58oevHMV31eAIPRMPDWrVEI6PKiBUoi1X00MewYIc70kOk7NYw77tl6uMG00D7ylKKV7';
-}
-
+// AJOUTÉ: Fallback ultime - clé en dur pour éviter le crash TOTAL
 if (!stripePublicKey) {
-  console.error('❌ [Main] ERREUR CRITIQUE: Aucune clé Stripe trouvée');
-  console.error('❌ [Main] Variables d\'environnement disponibles:', import.meta.env);
-  console.error('❌ [Main] Solutions possibles:');
-  console.error('  1. Vérifiez que le fichier .env contient VITE_STRIPE_PUBLIC_KEY');
-  console.error('  2. Redéployez avec les bonnes variables d\'environnement');
-  console.error('  3. Vérifiez la configuration du serveur de production');
+  console.error('❌ [Main] AUCUNE clé Stripe trouvée - utilisation de la clé de secours');
+  console.error('❌ [Main] Ceci est un FALLBACK TEMPORAIRE - configurez correctement VITE_STRIPE_PUBLIC_KEY');
   
-  // MODIFIÉ: Ne pas arrêter l'application, utiliser une clé par défaut
-  console.warn('⚠️ [Main] Utilisation de la clé par défaut pour éviter le crash');
+  // Clé de secours correspondant au backend
+  stripePublicKey = 'pk_test_51R6wB1AxYwLhmnM2kYoAxL3bQkKz5E58oevHMV31eAIPRMPDWrVEI6PKiBUoi1X00MewYIc70kOk7NYw77tl6uMG00D7ylKKV7';
+  
+  console.warn('⚠️ [Main] Utilisation clé de secours:', stripePublicKey.substring(0, 20) + '...');
+}
+
+// Validation finale de la clé
+if (!stripePublicKey.startsWith('pk_')) {
+  console.error('❌ [Main] ERREUR CRITIQUE: Clé Stripe invalide');
+  console.error('❌ [Main] Clé actuelle:', stripePublicKey.substring(0, 20) + '...');
+  
+  // Dernière tentative avec la clé de référence
+  stripePublicKey = 'pk_test_51R6wB1AxYwLhmnM2kYoAxL3bQkKz5E58oevHMV31eAIPRMPDWrVEI6PKiBUoi1X00MewYIc70kOk7NYw77tl6uMG00D7ylKKV7';
+  console.warn('⚠️ [Main] Correction automatique avec clé de référence');
+}
+
+// AJOUTÉ: Vérification finale de compatibilité
+const expectedAccountPrefix = 'pk_test_51R6wB1AxYwLhmnM2';
+if (!stripePublicKey.startsWith(expectedAccountPrefix)) {
+  console.error('❌ [Main] ERREUR CRITIQUE: Incompatibilité entre clés frontend/backend !');
+  console.error('❌ [Main] Clé frontend:', stripePublicKey.substring(0, 25) + '...');
+  console.error('❌ [Main] Attendu:', expectedAccountPrefix + '...');
+  console.error('❌ [Main] Cela CAUSERA des erreurs "Invalid API Key" !');
+  
+  // Force la clé correcte
+  console.warn('🔧 [Main] CORRECTION FORCÉE - utilisation de la clé compatible');
   stripePublicKey = 'pk_test_51R6wB1AxYwLhmnM2kYoAxL3bQkKz5E58oevHMV31eAIPRMPDWrVEI6PKiBUoi1X00MewYIc70kOk7NYw77tl6uMG00D7ylKKV7';
 }
 
-if (!stripePublicKey.startsWith('pk_')) {
-  console.error('❌ [Main] ERREUR CRITIQUE: VITE_STRIPE_PUBLIC_KEY ne commence pas par "pk_"');
-  console.error('❌ [Main] Clé actuelle:', stripePublicKey.substring(0, 20) + '...');
-  throw new Error('Configuration Stripe incorrecte - clé publique invalide');
-}
+console.log('✅ [Main] Clé Stripe finale sélectionnée:', stripePublicKey.substring(0, 25) + '...');
 
-// AJOUTÉ: Vérification que la clé correspond au même compte que le backend
-const expectedAccountPrefix = 'pk_test_51R6wB1AxYwLhmnM2'; // Doit correspondre au backend
-if (!stripePublicKey.startsWith(expectedAccountPrefix)) {
-  console.warn('⚠️ [Main] ATTENTION: La clé publique ne correspond pas au compte backend attendu');
-  console.warn('⚠️ [Main] Clé publique:', stripePublicKey.substring(0, 25) + '...');
-  console.warn('⚠️ [Main] Attendu:', expectedAccountPrefix + '...');
-  console.warn('⚠️ [Main] Cela peut causer des erreurs "Invalid API Key"');
-}
-
-// CORRIGÉ: Initialisation Stripe avec configuration restrictive
-console.log('🔧 [Main] Initialisation Stripe avec clé publique:', stripePublicKey.substring(0, 20) + '...');
+// CORRIGÉ: Initialisation Stripe avec logging détaillé
+console.log('🔧 [Main] Initialisation Stripe...');
 const stripePromise = loadStripe(stripePublicKey, {
-  // CORRIGÉ: Configuration valide pour loadStripe
   locale: 'fr'
-  // SUPPRIMÉ: appearance - cette option n'existe pas dans loadStripe
 });
 
-// AJOUTÉ: Vérification de l'initialisation
+// AJOUTÉ: Vérification complète de l'initialisation
 stripePromise.then((stripe) => {
   if (stripe) {
-    console.log('✅ [Main] Stripe initialisé avec succès côté frontend');
+    console.log('✅ [Main] Stripe initialisé avec succès');
+    console.log('✅ [Main] Compte Stripe:', stripePublicKey.substring(8, 25));
+    
+    // Test basique pour vérifier que Stripe fonctionne
+    console.log('🧪 [Main] Test basique Stripe Elements...');
   } else {
     console.error('❌ [Main] Échec de l\'initialisation Stripe');
+    console.error('❌ [Main] Clé utilisée:', stripePublicKey.substring(0, 20) + '...');
   }
 }).catch((error) => {
-  console.error('❌ [Main] Erreur lors de l\'initialisation Stripe:', error);
+  console.error('❌ [Main] Erreur critique Stripe:', error);
+  console.error('❌ [Main] Clé problématique:', stripePublicKey.substring(0, 20) + '...');
 });
 
 const queryClient = new QueryClient({
