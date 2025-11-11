@@ -48,6 +48,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
 
+  // AJOUTÉ: Définir emailRegex comme constante
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   // AJOUTÉ: Debug du client secret et des éléments Stripe
   useEffect(() => {
     console.log('🔧 [PaymentForm] Initialisation:', {
@@ -106,8 +109,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       return;
     }
 
-    // AJOUTÉ: Validation de l'email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // CORRIGÉ: Validation de l'email avec regex définie
     if (!emailRegex.test(customerEmail.trim())) {
       setMessage('⚠️ Format d\'email invalide');
       return;
@@ -120,10 +122,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     console.log('💰 [PaymentForm] Montant à payer:', amount ? `${amount}€` : 'Non spécifié');
 
     try {
-      // CORRIGÉ: Utiliser seulement confirmPayment avec redirect if_required
+      // CORRIGÉ: Soumission des éléments avant confirmation
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        console.error('❌ [PaymentForm] Erreur soumission:', submitError);
+        setMessage(`⚠️ ${submitError.message}`);
+        setIsLoading(false);
+        return;
+      }
+
       console.log('💳 [PaymentForm] Confirmation avec PaymentElement (mode sécurisé)...');
       
-      const { error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: returnUrl || `${window.location.origin}/pages/paiement?success=true`,
@@ -161,27 +171,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         if (onError) {
           onError(error);
         }
-      } else {
-        console.log('✅ [PaymentForm] Paiement réussi');
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        console.log('✅ [PaymentForm] Paiement réussi:', paymentIntent.id);
         setMessage('✅ Paiement réussi !');
         
         if (onSuccess) {
-          // CORRIGÉ: Créer un objet result compatible avec les informations disponibles
+          // CORRIGÉ: Créer un objet result avec le vrai paymentIntent
           const result = {
-            paymentIntent: {
-              id: `pi_success_${Date.now()}`,
-              status: 'succeeded',
-              amount: amount ? Math.round(amount * 100) : 0, // Convertir en centimes
-              currency: 'eur',
-              metadata: {
-                echeanceId,
-                commandeId,
-                userId
-              }
-            }
+            paymentIntent: paymentIntent
           };
           onSuccess(result);
         }
+      } else {
+        console.log('⏳ [PaymentForm] Paiement en cours de traitement...', paymentIntent?.status);
+        setMessage('⏳ Paiement en cours de traitement...');
       }
     } catch (error: any) {
       console.error('❌ [PaymentForm] Erreur générale:', error);
@@ -243,7 +246,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     <div style={{ maxWidth: '500px', margin: '0 auto' }}>
       <Form onSubmit={handleSubmit}>
         {/* AJOUTÉ: Affichage du montant si disponible */}
-        {amount && (
+        {amount && amount > 0 && (
           <Alert variant="info" title="Montant à payer" isInline style={{ marginBottom: '1rem' }}>
             <strong>{amount.toFixed(2)} €</strong>
             {description && <div style={{ marginTop: '0.5rem' }}>{description}</div>}
@@ -331,7 +334,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   conditions générales
                 </a>{' '}
                 et autorise le prélèvement de{' '}
-                <strong>{amount ? `${amount.toFixed(2)} €` : 'ce montant'}</strong>
+                <strong>{amount && amount > 0 ? `${amount.toFixed(2)} €` : 'ce montant'}</strong>
               </span>
             }
           />
@@ -349,7 +352,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               !acceptTerms || 
               !customerName.trim() || 
               !customerEmail.trim() ||
-              !emailRegex.test(customerEmail.trim())
+              !emailRegex.test(customerEmail.trim()) ||
+              !stripe ||
+              !elements
             }
             icon={isLoading ? <Spinner size="sm" /> : <CreditCardIcon />}
           >
@@ -361,7 +366,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             ) : (
               <>
                 <CreditCardIcon style={{ marginRight: '8px' }} />
-                Payer {amount ? `${amount.toFixed(2)} €` : 'maintenant'}
+                Payer {amount && amount > 0 ? `${amount.toFixed(2)} €` : 'maintenant'}
               </>
             )}
           </Button>
