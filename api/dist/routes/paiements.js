@@ -2,13 +2,14 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs'; // CORRIGÉ: Import ES6 au lieu de require
 import Stripe from 'stripe';
 import { Paiements } from '../db/clients/paiements/paiements.js';
 import { Magasin } from '../db/clients/magasin/magasin.js';
 // Configuration
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// AJOUTÉ: Chargement explicite du .env avec vérification
+// CORRIGÉ: Chargement explicite du .env avec vérification ES6
 const nodeEnv = process.env.NODE_ENV || 'development';
 let envPath;
 if (nodeEnv === 'production') {
@@ -17,8 +18,8 @@ if (nodeEnv === 'production') {
 else {
     envPath = path.resolve(__dirname, '../../.env.development');
 }
-// Fallback
-if (!require('fs').existsSync(envPath)) {
+// CORRIGÉ: Utiliser fs.existsSync au lieu de require('fs').existsSync
+if (!fs.existsSync(envPath)) {
     envPath = path.resolve(__dirname, '../../.env');
 }
 console.log(`🔧 [Paiements] Chargement .env depuis: ${envPath}`);
