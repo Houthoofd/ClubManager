@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   useStripe,
   useElements,
@@ -83,6 +83,42 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       console.warn('⚠️ [PaymentForm] Erreur récupération userData:', error);
     }
   }, [stripe, elements, clientSecret, amount]);
+
+  // AJOUTÉ: Debug et validation immédiate de l'amount
+  useEffect(() => {
+    console.log('🔧 [PaymentForm] Initialisation avec amount:', {
+      amount: amount,
+      amountType: typeof amount,
+      amountValid: typeof amount === 'number' && !isNaN(amount) && amount > 0,
+      amountString: String(amount),
+      amountNumber: Number(amount)
+    });
+  }, [amount]);
+
+  // CORRIGÉ: Validation stricte de l'amount avec conversion
+  const validAmount = useMemo(() => {
+    if (amount === undefined || amount === null) {
+      console.warn('⚠️ [PaymentForm] Amount est undefined/null');
+      return undefined;
+    }
+
+    // Si c'est déjà un nombre valide
+    if (typeof amount === 'number' && !isNaN(amount) && amount > 0) {
+      return amount;
+    }
+
+    // Tentative de conversion depuis string
+    if (typeof amount === 'string') {
+      const parsed = parseFloat(amount);
+      if (!isNaN(parsed) && parsed > 0) {
+        console.log('✅ [PaymentForm] Amount converti depuis string:', parsed);
+        return parsed;
+      }
+    }
+
+    console.error('❌ [PaymentForm] Amount invalide après validation:', amount);
+    return undefined;
+  }, [amount]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -222,11 +258,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   }
 
   // AJOUTÉ: Vérification de l'amount
-  if (amount !== undefined && (typeof amount !== 'number' || amount <= 0)) {
+  if (validAmount !== undefined && (typeof validAmount !== 'number' || validAmount <= 0)) {
     return (
       <Alert variant="danger" title="Erreur de montant">
         <p>❌ Montant du paiement invalide: {String(amount)} (type: {typeof amount})</p>
         <p>Le montant doit être un nombre positif.</p>
+        <div style={{ marginTop: '1rem', fontSize: '12px', fontFamily: 'monospace' }}>
+          Debug: amount={String(amount)}, validAmount={String(validAmount)}
+        </div>
       </Alert>
     );
   }
@@ -245,10 +284,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   return (
     <div style={{ maxWidth: '500px', margin: '0 auto' }}>
       <Form onSubmit={handleSubmit}>
-        {/* AJOUTÉ: Affichage du montant si disponible */}
-        {amount && amount > 0 && (
+        {/* CORRIGÉ: Affichage du montant avec validAmount */}
+        {validAmount && validAmount > 0 && (
           <Alert variant="info" title="Montant à payer" isInline style={{ marginBottom: '1rem' }}>
-            <strong>{amount.toFixed(2)} €</strong>
+            <strong>{validAmount.toFixed(2)} €</strong>
             {description && <div style={{ marginTop: '0.5rem' }}>{description}</div>}
           </Alert>
         )}
@@ -334,13 +373,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
                   conditions générales
                 </a>{' '}
                 et autorise le prélèvement de{' '}
-                <strong>{amount && amount > 0 ? `${amount.toFixed(2)} €` : 'ce montant'}</strong>
+                <strong>{validAmount && validAmount > 0 ? `${validAmount.toFixed(2)} €` : 'ce montant'}</strong>
               </span>
             }
           />
         </FormGroup>
 
-        {/* Bouton de paiement */}
+        {/* CORRIGÉ: Bouton de paiement avec validAmount */}
         <div style={{ marginTop: '2rem' }}>
           <Button
             type="submit"
@@ -366,11 +405,28 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             ) : (
               <>
                 <CreditCardIcon style={{ marginRight: '8px' }} />
-                Payer {amount && amount > 0 ? `${amount.toFixed(2)} €` : 'maintenant'}
+                Payer {validAmount && validAmount > 0 ? `${validAmount.toFixed(2)} €` : 'maintenant'}
               </>
             )}
           </Button>
         </div>
+
+        {/* AJOUTÉ: Debug de l'amount en mode développement */}
+        {import.meta.env.DEV && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '0.5rem',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '4px',
+            fontSize: '12px',
+            fontFamily: 'monospace'
+          }}>
+            <strong>Debug PaymentForm:</strong><br />
+            amount (original): {String(amount)} ({typeof amount})<br />
+            validAmount: {String(validAmount)} ({typeof validAmount})<br />
+            Valid: {validAmount !== undefined && validAmount > 0 ? 'YES' : 'NO'}
+          </div>
+        )}
 
         {/* Informations de sécurité */}
         <div style={{

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Page,
@@ -462,10 +462,50 @@ const PaiementPage: React.FC = () => {
     }
   };
 
-  // VARIABLES CALCULÉES APRÈS LES HOOKS
+  // VARIABLES CALCULÉES APRÈS LES HOOKS - CORRIGÉES
   const currentData = paymentType === 'echeance' ? echeanceData : commandeData;
   const currentId = paymentType === 'echeance' ? echeanceId : (commandeData?.unique_id || commandeData?.numero_commande || commandeId);
-  const currentAmount = paymentType === 'echeance' ? currentData?.montant : currentData?.total;
+  
+  // CORRIGÉ: Validation stricte du montant avec conversion
+  const currentAmount = useMemo(() => {
+    let rawAmount;
+    
+    if (paymentType === 'echeance') {
+      rawAmount = currentData?.montant;
+    } else {
+      rawAmount = currentData?.total;
+    }
+
+    console.log('💰 [PaiementPage] Calcul currentAmount:', {
+      paymentType,
+      rawAmount,
+      rawAmountType: typeof rawAmount,
+      currentData: !!currentData
+    });
+
+    // Si undefined ou null, retourner undefined
+    if (rawAmount === undefined || rawAmount === null) {
+      return undefined;
+    }
+
+    // Si c'est déjà un nombre valide
+    if (typeof rawAmount === 'number' && !isNaN(rawAmount) && rawAmount > 0) {
+      return rawAmount;
+    }
+
+    // Tentative de conversion depuis string
+    if (typeof rawAmount === 'string') {
+      const parsed = parseFloat(rawAmount);
+      if (!isNaN(parsed) && parsed > 0) {
+        console.log('✅ [PaiementPage] Amount converti:', parsed);
+        return parsed;
+      }
+    }
+
+    console.error('❌ [PaiementPage] Amount invalide:', rawAmount);
+    return undefined;
+  }, [paymentType, currentData]);
+
   const currentDescription = paymentType === 'echeance' ?
     (currentData?.description || 'Description non disponible') :
     (`${currentData?.numero_commande || 'Commande magasin'} #${commandeId}`);
@@ -484,6 +524,9 @@ const PaiementPage: React.FC = () => {
     clientSecret: !!clientSecret,
     commandeData: !!commandeData,
     echeanceData: !!echeanceData,
+    currentAmount: currentAmount,
+    currentAmountType: typeof currentAmount,
+    currentAmountValid: typeof currentAmount === 'number' && currentAmount > 0,
     commandeId,
     userId,
     connectedUserId,
@@ -1023,12 +1066,12 @@ const PaiementPage: React.FC = () => {
                 </Alert>
               </div>
 
-              {/* CORRIGÉ: Formulaire Stripe simplifié */}
+              {/* CORRIGÉ: Formulaire Stripe avec validation du montant */}
               {clientSecret && stripePromise ? (
                 <Elements options={options} stripe={stripePromise}>
                   <PaymentForm
                     clientSecret={clientSecret}
-                    amount={currentAmount}
+                    amount={currentAmount} // Maintenant validé avec useMemo
                     description={currentDescription}
                     onSuccess={handlePaymentSuccess}
                     onError={handlePaymentError}
@@ -1044,6 +1087,25 @@ const PaiementPage: React.FC = () => {
                   <div style={{ marginTop: '1rem' }}>
                     Initialisation du paiement sécurisé...
                   </div>
+                </div>
+              )}
+
+              {/* AJOUTÉ: Debug du montant en mode développement */}
+              {import.meta.env.DEV && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontFamily: 'monospace'
+                }}>
+                  <strong>Debug PaiementPage - Montant:</strong><br />
+                  paymentType: {paymentType}<br />
+                  echeanceData?.montant: {String(echeanceData?.montant)} ({typeof echeanceData?.montant})<br />
+                  commandeData?.total: {String(commandeData?.total)} ({typeof commandeData?.total})<br />
+                  currentAmount: {String(currentAmount)} ({typeof currentAmount})<br />
+                  Valid for PaymentForm: {typeof currentAmount === 'number' && currentAmount > 0 ? 'YES' : 'NO'}
                 </div>
               )}
 

@@ -355,20 +355,29 @@ export const useCreatePaymentIntent = () => {
   });
 };
 
-// SIMPLIFIÉ: Hook pour créer un PaymentIntent avec userId obligatoire - sans callbacks complexes
+// SIMPLIFIÉ: Hook pour créer un PaymentIntent avec userId obligatoire - CORRIGÉ la validation du montant
 export const useCreatePaymentIntentSecurise = (echeanceId: string | number, montant: number, userId: number) => {
   return useMutation({
     mutationFn: async (options?: {
       currency?: string;
       description?: string;
     }) => {
-      console.log(`🔒 [Hook Sécurisé] Création PaymentIntent avec userId depuis URL:`, {
+      console.log(`🔒 [Hook Sécurisé] Création PaymentIntent:`, {
         echeanceId,
         montant,
+        montantType: typeof montant,
+        montantValid: typeof montant === 'number' && !isNaN(montant) && montant > 0,
         userId,
         userIdType: typeof userId,
         options
       });
+
+      // CORRIGÉ: Validation stricte du montant
+      if (typeof montant !== 'number' || isNaN(montant) || montant <= 0) {
+        const error = `Montant invalide: ${montant} (type: ${typeof montant})`;
+        console.error(`❌ [Hook Sécurisé] ${error}`);
+        throw new Error(error);
+      }
 
       // Validation stricte du userId depuis l'URL
       if (!userId || isNaN(userId) || userId <= 0) {
@@ -383,19 +392,26 @@ export const useCreatePaymentIntentSecurise = (echeanceId: string | number, mont
         throw new Error('Token d\'authentification manquant - reconnectez-vous');
       }
 
+      // CORRIGÉ: Conversion en centimes avec validation
+      const montantEnCentimes = Math.round(montant * 100);
+      
+      if (montantEnCentimes < 50) {
+        throw new Error(`Montant trop faible: ${montant}€ (minimum 0.50€)`);
+      }
+
       const requestBody = {
-        amount: Math.round(montant * 100), // Convertir en centimes
+        amount: montantEnCentimes,
         currency: options?.currency || 'eur',
         echeanceId: echeanceId,
         userId: userId,
         description: options?.description || `Paiement échéance #${echeanceId}`
       };
 
-      console.log(`📤 [Hook Sécurisé] Données envoyées:`, requestBody);
+      console.log(`📤 [Hook Sécurisé] Données envoyées (montant validé):`, requestBody);
 
       const response = await fetch(`${apiUrl('paiements/stripe/create-payment-intent')}`, {
         method: 'POST',
-        credentials: 'include', // IMPORTANT: Envoie les cookies automatiquement
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -415,7 +431,7 @@ export const useCreatePaymentIntentSecurise = (echeanceId: string | number, mont
       }
 
       const result = await response.json();
-      console.log(`✅ [Hook Sécurisé] PaymentIntent créé:`, result);
+      console.log(`✅ [Hook Sécurisé] PaymentIntent créé avec montant validé:`, result);
       return result;
     }
   });
