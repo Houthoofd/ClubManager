@@ -54,36 +54,38 @@ console.log('🔧 [Main] Variables Vite détectées:', Object.keys(import.meta.e
 const stripeKeySources = {
   vite_stripe_public_key: import.meta.env.VITE_STRIPE_PUBLIC_KEY,
   vite_stripe_source: import.meta.env.VITE_STRIPE_SOURCE,
-  vite_env_file_loaded: import.meta.env.VITE_ENV_FILE_LOADED,
+  vite_config_forced: import.meta.env.VITE_CONFIG_FORCED,
   vite_config_timestamp: import.meta.env.VITE_CONFIG_TIMESTAMP,
-  vite_debug_config: import.meta.env.VITE_DEBUG_CONFIG
+  vite_backend_account: import.meta.env.VITE_BACKEND_ACCOUNT
 };
 
 console.log('🔧 [Main] Sources Stripe détectées:', stripeKeySources);
 
-// CORRIGÉ: Forcer la clé compatible avec le backend
+// CORRIGÉ: Utiliser la clé injectée par Vite ou fallback absolu
 const BACKEND_COMPATIBLE_KEY = 'pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ';
 
 let stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-// FALLBACK 1: Si undefined ou mauvais compte, forcer la clé compatible backend
-if (!stripePublicKey || !stripePublicKey.includes('RWzE9BQMqChSZKp')) {
-  console.warn('⚠️ [Main] SYNCHRONISATION FORCÉE avec le backend');
-  console.warn('⚠️ [Main] Clé actuelle:', stripePublicKey?.substring(0, 25) + '...' || 'UNDEFINED');
-  console.warn('⚠️ [Main] Clé backend compatible:', BACKEND_COMPATIBLE_KEY.substring(0, 25) + '...');
+// DIAGNOSTIC: Vérifier si Vite a injecté la variable
+if (stripePublicKey) {
+  console.log('✅ [Main] Variable VITE injectée avec succès:', stripePublicKey.substring(0, 25) + '...');
+} else {
+  console.warn('⚠️ [Main] Variable VITE non injectée - utilisation fallback absolu');
   stripePublicKey = BACKEND_COMPATIBLE_KEY;
 }
 
-// VÉRIFICATION FINALE: S'assurer de la synchronisation
+// VÉRIFICATION FINALE: Assurer la synchronisation avec le backend
 const backendAccount = 'RWzE9BQMqChSZKp';
-// CORRIGÉ: Extraire correctement l'ID du compte (position 8 à 23, pas 8 à 25)
 const frontendAccount = stripePublicKey.substring(8, 23);
 
-if (frontendAccount !== backendAccount) {
-  console.error('❌ [Main] DÉSYNCHRONISATION CRITIQUE détectée !');
-  console.error('❌ [Main] Backend compte:', backendAccount);
-  console.error('❌ [Main] Frontend compte:', frontendAccount);
-  console.error('❌ [Main] CORRECTION FORCÉE');
+// CORRIGÉ: Ajuster la logique de comparaison
+const accountsMatch = stripePublicKey.includes('RWzE9BQMqChSZKp');
+
+if (!accountsMatch) {
+  console.error('❌ [Main] DÉSYNCHRONISATION: Compte frontend/backend différent');
+  console.error('❌ [Main] Backend attend:', backendAccount);
+  console.error('❌ [Main] Frontend a:', frontendAccount);
+  console.error('❌ [Main] CORRECTION AUTOMATIQUE');
   stripePublicKey = BACKEND_COMPATIBLE_KEY;
 }
 
@@ -91,11 +93,12 @@ console.log('🔧 [Main] Diagnostic Synchronisation FINAL:', {
   keyExists: !!stripePublicKey,
   keyValue: stripePublicKey?.substring(0, 25) + '...',
   keyType: stripePublicKey?.startsWith('pk_test_') ? 'TEST' : 'LIVE',
-  // CORRIGÉ: Utiliser la même extraction pour l'affichage
   frontendAccount: stripePublicKey?.substring(8, 23),
   backendAccount: 'RWzE9BQMqChSZKp',
   synchronized: stripePublicKey?.includes('RWzE9BQMqChSZKp'),
-  source: import.meta.env.VITE_STRIPE_SOURCE || 'backend_sync_forced',
+  viteInjected: !!import.meta.env.VITE_STRIPE_PUBLIC_KEY,
+  source: import.meta.env.VITE_STRIPE_SOURCE || 'fallback_absolu',
+  configForced: import.meta.env.VITE_CONFIG_FORCED || false,
   expectedError: stripePublicKey?.includes('RWzE9BQMqChSZKp') ? 'AUCUNE' : 'Invalid API Key'
 });
 
