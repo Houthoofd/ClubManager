@@ -26,6 +26,12 @@ if (!fs.existsSync(envPath)) {
 }
 console.log(`📁 [Server] Chargement fichier .env: ${envPath}`);
 dotenv.config({ path: envPath });
+// AJOUTÉ: Debug des variables d'environnement CORS
+console.log('🌐 [Server] Configuration CORS - Variables d\'environnement:');
+console.log('  FRONTEND_URL:', process.env.FRONTEND_URL || 'NON DÉFINIE');
+console.log('  FRONTEND_URL_ALT:', process.env.FRONTEND_URL_ALT || 'NON DÉFINIE');
+console.log('  FRONTEND_URL_LOCAL:', process.env.FRONTEND_URL_LOCAL || 'NON DÉFINIE');
+console.log('  NODE_ENV:', process.env.NODE_ENV || 'NON DÉFINIE');
 console.log(process.env.STRIPE_SECRET_KEY);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -242,19 +248,70 @@ async function startServer() {
             'http://localhost:5173',
             'http://127.0.0.1:5173',
             'http://localhost:3000',
+            // AJOUTÉ: Domaines de production supplémentaires
+            'https://clubmanagment.com',
+            'https://www.clubmanagment.com',
+            'http://clubmanagment.com',
+            'http://www.clubmanagment.com',
+            // AJOUTÉ: Domaines avec différentes variantes
+            'https://clubmanagement.com',
+            'https://www.clubmanagement.com',
+            'http://clubmanagement.com',
+            'http://www.clubmanagement.com'
         ].filter(Boolean);
+        console.log('🌐 [Server] Origins autorisées CORS:', allowedOrigins);
         const corsOptions = {
             origin: (origin, callback) => {
-                if (!origin || allowedOrigins.includes(origin)) {
+                // MODIFIÉ: Permettre les requêtes sans origin (Postman, apps mobiles, etc.)
+                if (!origin) {
+                    console.log('🔓 [CORS] Requête sans origin autorisée (Postman, mobile, etc.)');
+                    return callback(null, true);
+                }
+                // Vérifier si l'origin est dans la liste autorisée
+                if (allowedOrigins.includes(origin)) {
+                    console.log('✅ [CORS] Origin autorisée:', origin);
                     callback(null, true);
                 }
                 else {
-                    callback(new Error('Not allowed by CORS'));
+                    console.error('❌ [CORS] Origin non autorisée:', origin);
+                    console.error('❌ [CORS] Origins autorisées:', allowedOrigins);
+                    // TEMPORAIRE: En développement, autoriser tous les origins pour debug
+                    if (process.env.NODE_ENV === 'development') {
+                        console.warn('⚠️ [CORS] Mode développement - autorisation temporaire de:', origin);
+                        callback(null, true);
+                    }
+                    else {
+                        // En production, appliquer strictement les règles CORS
+                        callback(new Error('Not allowed by CORS'), false);
+                    }
                 }
             },
-            methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+            methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+            allowedHeaders: [
+                'Origin',
+                'X-Requested-With',
+                'Content-Type',
+                'Accept',
+                'Authorization',
+                'X-Auth-Token',
+                'AuthToken'
+            ],
             credentials: true,
+            optionsSuccessStatus: 200, // Pour les navigateurs legacy
+            preflightContinue: false
         };
+        // AJOUTÉ: Middleware de debug CORS
+        app.use((req, res, next) => {
+            if (req.method === 'OPTIONS') {
+                console.log('🔍 [CORS DEBUG] Preflight request:', {
+                    origin: req.headers.origin,
+                    method: req.headers['access-control-request-method'],
+                    headers: req.headers['access-control-request-headers'],
+                    path: req.path
+                });
+            }
+            next();
+        });
         app.use(cors(corsOptions));
         app.use(logger('dev'));
         app.use(express.urlencoded({ extended: false }));
