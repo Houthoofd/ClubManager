@@ -1,6 +1,5 @@
 import { EmailService } from '../services/emailService.js';
 import { emailTemplateService } from '../services/emailTemplateService.js';
-import { emailValidationService } from '../services/emailValidationService.js';
 
 export interface EmailSendRequest {
   to: string;

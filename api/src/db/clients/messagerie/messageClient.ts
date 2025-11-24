@@ -1,9 +1,9 @@
 import { EmailService } from '../../../services/emailService.js';
 import { emailTemplateService } from '../../../services/emailTemplateService.js';
-import { emailValidationService } from '../../../services/emailValidationService.js';
 import { EmailResult, EmailTemplate } from '../../../types/emailTypes.js';
 import { EmailUtils } from '../../../utils/emailUtils.js';
 import MysqlConnector from '../../connector/mysqlconnector.js';
+import { emailClient } from '../../../clients/emailClient.js';
 
 export interface MessageClientOptions {
   to: string | string[];
@@ -421,17 +421,36 @@ export class MessageClient {
 
   // ========== MÉTHODES DE VALIDATION ET TEMPLATES ==========
 
-  // Méthodes déléguées pour la validation d'email
-  async confirmUserEmail(token: string) {
-    return emailValidationService.confirmUserEmail(token);
+  /**
+   * CORRIGÉ: Utiliser EmailClient au lieu de emailValidationService
+   */
+  async confirmUserEmail(token: string, userId: string) {
+    return emailClient.validateEmailToken(token, userId);
   }
 
+  /**
+   * CORRIGÉ: Utiliser EmailClient au lieu de emailValidationService
+   */
   async sendValidationEmailWithTokens(utilisateurId: number) {
-    return emailValidationService.sendValidationEmail(utilisateurId);
+    console.error('❌ [MessageClient] Cette méthode est dépréciée - utilisez directement emailClient.sendValidationEmail()');
+    throw new Error('Méthode dépréciée - utilisez emailClient.sendValidationEmail()');
   }
 
+  /**
+   * CORRIGÉ: Méthode dépréciée
+   */
   async sendUserIdRecovery(email: string) {
-    return emailValidationService.sendUserIdRecovery(email);
+    console.error('❌ [MessageClient] Cette méthode est dépréciée');
+    throw new Error('Méthode dépréciée');
+  }
+
+  async initialize() {
+    try {
+      console.log('🔧 [MessageClient] Initialisation...');
+      console.log('✅ [MessageClient] Initialisé sans emailValidationService');
+    } catch (error) {
+      console.error('❌ [MessageClient] Erreur initialisation:', error);
+    }
   }
 
   // Méthodes déléguées pour les templates
@@ -626,7 +645,7 @@ export class MessageClient {
       await this.waitForDatabase();
       
       // Initialiser les tables de validation
-      await emailValidationService.initializeTables();
+      // await emailValidationService.initializeTables();
       
       // Synchroniser les templates par défaut
       await emailTemplateService.syncDefaultTemplates();

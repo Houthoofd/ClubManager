@@ -100,10 +100,7 @@ async function startServer() {
     console.log('🔄 [Server] Initialisation des services email...');
     try {
       // AJOUTÉ: Importer et initialiser EmailValidationService
-      const { EmailValidationService } = await import('./services/emailValidationService.js');
-      const emailValidationService = new EmailValidationService();
-      await emailValidationService.initializeTables();
-      console.log('✅ [Server] EmailValidationService initialisé');
+      console.log('📧 [Server] EmailValidationService remplacé par EmailClient - pas d\'initialisation requise');
       
       // AJOUTÉ: Importer EmailClient comme service secondaire
       const { emailClient } = await import('./clients/emailClient.js');
