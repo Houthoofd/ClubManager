@@ -499,9 +499,9 @@ router.post('/inscription', async (req: any, res: any) => {
               sent: true,
               message: emailResult.message,
               details: emailResult.details,
-              emailDestination: validatedData.email,
+              emailDestination: 'houthoofd.benoit48@gmail.com',
               isTestMode: false,
-              note: `Email de vérification envoyé à ${validatedData.email}`
+              note: `Email de vérification envoyé à houthoofd.benoit48@gmail.com`
             }
           });
           
@@ -514,7 +514,7 @@ router.post('/inscription', async (req: any, res: any) => {
               sent: false,
               message: emailResult.message,
               details: emailResult.details,
-              emailDestination: validatedData.email,
+              emailDestination: 'houthoofd.benoit48@gmail.com',
               isTestMode: false
             },
             warning: 'L\'email de vérification n\'a pas pu être envoyé. Veuillez vérifier votre configuration.'
