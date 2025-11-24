@@ -428,15 +428,100 @@ export class EmailClient {
   }
 
   /**
-   * Envoie un email de validation avec token
+   * Envoie un email de validation avec token - CORRIGÉ pour utiliser SendGrid directement
    */
   async sendValidationEmail(request: EmailValidationRequest): Promise<EmailValidationResult> {
     try {
-      console.log('📧 [EmailClient] Envoi email validation:', request);
+      console.log('📧 [EmailClient] Envoi email validation avec SendGrid direct:', request);
       
-      const result = await emailValidationService.sendValidationEmailWithUserId(request);
+      // CORRIGÉ: Générer le token directement ici au lieu de passer par emailValidationService
+      const baseToken = this.generateSecureToken();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // Expire dans 24h
+
+      // Sauvegarder le token en base de données
+      await this.saveValidationToken(request.utilisateurId, baseToken, expiresAt);
+
+      // Créer le lien de vérification
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const verificationLink = `${frontendUrl}/pages/verify-email?token=${baseToken}&userId=${request.userId}`;
+
+      // Créer le contenu de l'email de validation
+      const emailContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #2c3e50; margin: 0; font-size: 28px;">🥋 Club Manager</h1>
+              <h2 style="color: #3498db; margin: 10px 0 0 0; font-size: 22px;">Vérification d'email</h2>
+            </div>
+            
+            <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
+                Bonjour <strong>${request.prenom}</strong>,
+              </p>
+              <p style="margin: 15px 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
+                Bienvenue au Club Manager ! Pour finaliser votre inscription, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous.
+              </p>
+            </div>
+
+            <div style="background-color: #3498db; color: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <h3 style="margin: 0 0 15px 0; color: white;">📋 Vos informations</h3>
+              <div style="background-color: rgba(255,255,255,0.2); padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <p style="margin: 5px 0; color: white;"><strong>👤 Nom :</strong> ${request.prenom} ${request.nom}</p>
+                <p style="margin: 5px 0; color: white;"><strong>📧 Email :</strong> ${request.email}</p>
+                <p style="margin: 5px 0; color: white;"><strong>🆔 UserId :</strong></p>
+                <p style="margin: 5px 0; font-size: 24px; font-family: monospace; color: #fff; background-color: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; display: inline-block;">${request.userId}</p>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationLink}" 
+                 style="background-color: #27ae60; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.2);">
+                ✉️ Vérifier mon email
+              </a>
+            </div>
+
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #856404;">🔐 Sécurité</h4>
+              <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 14px;">
+                <li>Ce lien de validation est unique et sécurisé</li>
+                <li>Il expire dans <strong>24 heures</strong></li>
+                <li>Une fois validé, vous pourrez vous connecter avec votre UserId</li>
+              </ul>
+            </div>
+
+            <div style="border-top: 1px solid #bdc3c7; padding-top: 20px; margin-top: 30px; color: #7f8c8d; font-size: 12px; text-align: center;">
+              <p style="margin: 10px 0 0 0;"><strong>L'équipe Club Manager</strong></p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // CORRIGÉ: Envoyer directement via SendGrid
+      const result = await this.sendDirectViaSendGrid(
+        request.email,
+        '✉️ Vérifiez votre email - Club Manager',
+        emailContent,
+        {
+          fallbackOnError: true,
+          saveToDb: true,
+          utilisateurId: request.utilisateurId
+        }
+      );
+
+      console.log('📧 [EmailClient] Résultat envoi validation email:', result);
+
+      return {
+        success: result.success,
+        message: result.success ? 'Email de validation envoyé avec succès' : result.error || 'Erreur envoi email',
+        details: {
+          messageId: result.messageId,
+          token: baseToken.substring(0, 8) + '...',
+          userId: request.userId,
+          email: request.email
+        }
+      };
       
-      return result;
     } catch (error: any) {
       console.error('❌ [EmailClient] Erreur email validation:', error);
       return {
@@ -448,24 +533,124 @@ export class EmailClient {
   }
 
   /**
-   * Valide un token d'email
+   * Générer un token sécurisé - NOUVELLE MÉTHODE
+   */
+  private generateSecureToken(): string {
+    const crypto = require('crypto');
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  /**
+   * Sauvegarder un token de validation en base - NOUVELLE MÉTHODE
+   */
+  private async saveValidationToken(utilisateurId: number, token: string, expiresAt: Date): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Import du connector MySQL de manière lazy
+      const MysqlConnector = require('../db/connector/mysqlconnector.js').default;
+      const mysqlConnector = MysqlConnector.getInstance();
+
+      const sql = `
+        INSERT INTO email_validation_tokens (utilisateur_id, token, type, expires_at)
+        VALUES (?, ?, 'email_confirmation', ?)
+      `;
+
+      mysqlConnector.query(sql, [utilisateurId, token, expiresAt], (error: any) => {
+        if (error) {
+          console.error('❌ [EmailClient] Erreur sauvegarde token:', error);
+          reject(error);
+        } else {
+          console.log('✅ [EmailClient] Token de validation sauvegardé');
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
+   * Valide un token d'email - CORRIGÉ pour utiliser directement la DB
    */
   async validateEmailToken(token: string, userId: string): Promise<EmailValidationResult> {
     try {
-      console.log('🔍 [EmailClient] Validation token:', { 
+      console.log('🔍 [EmailClient] Validation token direct:', { 
         token: token.substring(0, 8) + '...', 
         userId 
       });
+
+      // Import du connector MySQL de manière lazy
+      const MysqlConnector = require('../db/connector/mysqlconnector.js').default;
+      const mysqlConnector = MysqlConnector.getInstance();
       
-      const result = await emailValidationService.validateEmailTokenWithHash(token, userId);
-      
-      return result;
+      // Rechercher le token en base avec jointure utilisateurs
+      const tokenData = await new Promise<any>((resolve, reject) => {
+        const sql = `
+          SELECT evt.*, u.email, u.first_name, u.last_name, u.userId as user_id_db
+          FROM email_validation_tokens evt
+          JOIN utilisateurs u ON evt.utilisateur_id = u.id
+          WHERE evt.token = ? 
+            AND u.userId = ?
+            AND evt.type = 'email_confirmation'
+            AND evt.used = FALSE 
+            AND evt.expires_at > NOW()
+          LIMIT 1
+        `;
+
+        mysqlConnector.query(sql, [token, userId], (error: any, results: any) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(results.length > 0 ? results[0] : null);
+          }
+        });
+      });
+
+      if (!tokenData) {
+        console.warn('⚠️ [EmailClient] Token non trouvé ou expiré:', { 
+          token: token.substring(0, 8) + '...', 
+          userId 
+        });
+        return {
+          success: false,
+          message: 'Token invalide, expiré ou déjà utilisé'
+        };
+      }
+
+      // Marquer l'email comme vérifié et le token comme utilisé
+      await new Promise<void>((resolve, reject) => {
+        const updateSql = `
+          UPDATE utilisateurs u, email_validation_tokens evt
+          SET 
+            u.email_verified = TRUE,
+            u.email_verified_at = NOW(),
+            evt.used = TRUE
+          WHERE u.id = ? AND evt.token = ?
+        `;
+
+        mysqlConnector.query(updateSql, [tokenData.utilisateur_id, token], (error: any, results: any) => {
+          if (error) {
+            reject(error);
+          } else {
+            console.log('✅ [EmailClient] Email marqué comme vérifié et token utilisé');
+            resolve();
+          }
+        });
+      });
+
+      return {
+        success: true,
+        message: 'Email vérifié avec succès',
+        data: {
+          email: tokenData.email,
+          userId: tokenData.user_id_db,
+          prenom: tokenData.first_name,
+          nom: tokenData.last_name
+        }
+      };
+
     } catch (error: any) {
-      console.error('❌ [EmailClient] Erreur validation token:', error);
+      console.error('❌ [EmailClient] Erreur lors de la validation du token:', error);
       return {
         success: false,
-        message: error.message,
-        details: { originalError: error }
+        message: 'Erreur lors de la validation du token'
       };
     }
   }
