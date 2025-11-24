@@ -500,7 +500,7 @@ export class EmailClient {
   }
 
   /**
-   * Sauvegarder un token de validation en base - CORRIGÉ pour ESM
+   * Sauvegarder un token de validation en base - CORRIGÉ pour correspondre au schéma
    */
   private async saveValidationToken(utilisateurId: number, token: string, expiresAt: Date): Promise<void> {
     return new Promise(async (resolve, reject) => {
@@ -509,9 +509,10 @@ export class EmailClient {
       const MysqlConnector = MysqlConnectorModule.default;
       const mysqlConnector = MysqlConnector.getInstance();
 
+      // 🔧 CORRIGÉ: Correspondre exactement au schéma de la table
       const sql = `
-        INSERT INTO email_validation_tokens (utilisateur_id, token, type, expires_at)
-        VALUES (?, ?, 'email_confirmation', ?)
+        INSERT INTO email_validation_tokens (utilisateur_id, token, type, expires_at, used, created_at)
+        VALUES (?, ?, 'email_confirmation', ?, FALSE, NOW())
       `;
 
       mysqlConnector.query(sql, [utilisateurId, token, expiresAt], (error: any) => {
@@ -519,7 +520,7 @@ export class EmailClient {
           console.error('❌ [EmailClient] Erreur sauvegarde token:', error);
           reject(error);
         } else {
-          console.log('✅ [EmailClient] Token de validation sauvegardé');
+          console.log('✅ [EmailClient] Token de validation sauvegardé avec toutes les colonnes');
           resolve();
         }
       });

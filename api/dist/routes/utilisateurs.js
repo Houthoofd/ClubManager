@@ -124,6 +124,50 @@ router.post('/test-email', async (req, res) => {
         });
     }
 });
+// ✅ NOUVELLES ROUTES PUBLIQUES pour la validation d'email (AVANT le middleware verifyToken)
+// Route PUBLIQUE GET pour valider le token d'email via URL
+router.get('/verify-email-token', async (req, res) => {
+    try {
+        const { token, userId } = req.query;
+        if (!token || !userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token et userId requis dans les paramètres de requête'
+            });
+        }
+        console.log('🔍 [Route PUBLIC] Validation token email:', {
+            token: token.substring(0, 8) + '...',
+            userId
+        });
+        // Valider le token avec EmailClient
+        const result = await emailClient.validateEmailToken(token, userId);
+        if (result.success) {
+            console.log('✅ [Route PUBLIC] Token validé avec succès');
+            res.json({
+                success: true,
+                message: result.message,
+                data: result.data,
+                redirect_to: '/pages/connexion?verified=true'
+            });
+        }
+        else {
+            console.warn('⚠️ [Route PUBLIC] Échec validation token:', result.message);
+            res.status(400).json({
+                success: false,
+                error: result.message,
+                redirect_to: '/pages/connexion?error=invalid_token'
+            });
+        }
+    }
+    catch (error) {
+        console.error('❌ [Route PUBLIC] Erreur validation token:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            redirect_to: '/pages/connexion?error=server_error'
+        });
+    }
+});
 // Route d'inscription d'un utilisateur (PUBLIQUE - pas de verifyToken)
 router.post('/inscription', async (req, res) => {
     try {
@@ -175,7 +219,7 @@ router.post('/inscription', async (req, res) => {
                 console.log(`📧 [Route] UserId généré: ${result.userId}`);
                 // ✅ CORRECTION: Utiliser les bonnes propriétés de EmailValidationResult
                 const emailResult = await emailClient.sendValidationEmail({
-                    email: 'houthoofd.benoit48@gmail.com',
+                    email: validatedData.email, // CORRIGÉ: utiliser l'email réel au lieu de hardcoded
                     prenom: validatedData.prenom,
                     nom: validatedData.nom,
                     userId: result.generatedUserId,
@@ -289,6 +333,256 @@ router.post('/connexion', async (req, res) => {
     catch (error) {
         console.error('Erreur lors de la connexion :', error);
         res.status(500).json({ message: 'Erreur serveur lors de la connexion.' });
+    }
+});
+// ✅ NOUVELLES ROUTES PUBLIQUES pour la validation d'email (AVANT le middleware verifyToken)
+// Route PUBLIQUE GET pour valider le token d'email via URL
+router.get('/verify-email-token', async (req, res) => {
+    try {
+        const { token, userId } = req.query;
+        if (!token || !userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token et userId requis dans les paramètres de requête'
+            });
+        }
+        console.log('🔍 [Route PUBLIC] Validation token email:', {
+            token: token.substring(0, 8) + '...',
+            userId
+        });
+        // Valider le token avec EmailClient
+        const result = await emailClient.validateEmailToken(token, userId);
+        if (result.success) {
+            console.log('✅ [Route PUBLIC] Token validé avec succès');
+            res.json({
+                success: true,
+                message: result.message,
+                data: result.data,
+                redirect_to: '/pages/connexion?verified=true'
+            });
+        }
+        else {
+            console.warn('⚠️ [Route PUBLIC] Échec validation token:', result.message);
+            res.status(400).json({
+                success: false,
+                error: result.message,
+                redirect_to: '/pages/connexion?error=invalid_token'
+            });
+        }
+    }
+    catch (error) {
+        console.error('❌ [Route PUBLIC] Erreur validation token:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            redirect_to: '/pages/connexion?error=server_error'
+        });
+    }
+});
+// Route d'inscription d'un utilisateur (PUBLIQUE - pas de verifyToken)
+router.post('/inscription', async (req, res) => {
+    try {
+        console.log('[Route] Inscription utilisateur - Body reçu:', req.body);
+        // Générer automatiquement le nom_utilisateur s'il n'est pas fourni
+        if (!req.body.nom_utilisateur || req.body.nom_utilisateur.trim() === '') {
+            const prenom = req.body.prenom ? req.body.prenom.toLowerCase().replace(/\s+/g, '') : '';
+            const nom = req.body.nom ? req.body.nom.toLowerCase().replace(/\s+/g, '') : '';
+            const timestamp = Date.now().toString().slice(-4); // 4 derniers chiffres du timestamp
+            req.body.nom_utilisateur = `${prenom}_${nom}_${timestamp}`;
+            console.log('[Route] Nom d\'utilisateur généré automatiquement:', req.body.nom_utilisateur);
+        }
+        // Validation avec le schéma utilisateurInscriptionSchema
+        const validationResult = utilisateurInscriptionSchema.safeParse(req.body);
+        if (!validationResult.success) {
+            console.log('[Route] Erreur de validation Zod:', validationResult.error.issues);
+            return res.status(400).json({
+                message: validationResult.error.issues[0]?.message || "Données invalides",
+                errors: validationResult.error.issues
+            });
+        }
+        const validatedData = validationResult.data;
+        console.log('[Route] Données validées:', validatedData);
+        // Mapper vers le format attendu par la base de données
+        const mappedData = {
+            prenom: validatedData.prenom,
+            nom: validatedData.nom,
+            nom_utilisateur: validatedData.nom_utilisateur,
+            email: validatedData.email,
+            password: validatedData.password,
+            genre_id: validatedData.genre_id,
+            abonnement_id: validatedData.abonnement_id,
+            date_naissance: validatedData.date_naissance,
+            date_inscription: validatedData.date_inscription,
+            status_id: validatedData.status_id,
+            grade_id: validatedData.grade_id
+        };
+        console.log('[Route] Données mappées pour DB:', mappedData);
+        // Appel de la méthode d'inscription
+        const client = new Utilisateurs();
+        const result = await client.inscrireUtilisateur(mappedData);
+        console.log('[Route] Résultat inscription:', result);
+        // ✅ CORRECTION: Envoi email de vérification avec EmailClient
+        if (result.userId) {
+            try {
+                console.log('📧 [Route] Démarrage envoi email de vérification...');
+                console.log(`📧 [Route] Email destinataire: ${validatedData.email}`);
+                console.log(`📧 [Route] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`);
+                console.log(`📧 [Route] UserId généré: ${result.userId}`);
+                // ✅ CORRECTION: Utiliser les bonnes propriétés de EmailValidationResult
+                const emailResult = await emailClient.sendValidationEmail({
+                    email: validatedData.email, // CORRIGÉ: utiliser l'email réel au lieu de hardcoded
+                    prenom: validatedData.prenom,
+                    nom: validatedData.nom,
+                    userId: result.generatedUserId,
+                    utilisateurId: result.userId
+                });
+                if (emailResult.success) {
+                    console.log('✅ [Route] Email de vérification envoyé avec succès !');
+                    console.log('✅ [Route] Message:', emailResult.message);
+                    res.status(201).json({
+                        message: 'Inscription réussie et email de vérification envoyé',
+                        generatedUserId: result.userId,
+                        inscriptionDetails: result,
+                        emailStatus: {
+                            sent: true,
+                            message: emailResult.message,
+                            details: emailResult.details,
+                            emailDestination: validatedData.email,
+                            isTestMode: false,
+                            note: `Email de vérification envoyé à ${validatedData.email}`
+                        }
+                    });
+                }
+                else {
+                    res.status(201).json({
+                        message: 'Inscription réussie mais échec envoi email de vérification',
+                        generatedUserId: result.userId,
+                        inscriptionDetails: result,
+                        emailStatus: {
+                            sent: false,
+                            message: emailResult.message,
+                            details: emailResult.details,
+                            emailDestination: validatedData.email,
+                            isTestMode: false
+                        },
+                        warning: 'L\'email de vérification n\'a pas pu être envoyé. Veuillez vérifier votre configuration.'
+                    });
+                }
+            }
+            catch (emailError) {
+                console.error('❌ [Route] Erreur critique lors de l\'envoi de l\'email:', emailError);
+                res.status(201).json({
+                    message: 'Inscription réussie mais erreur lors de l\'envoi de l\'email',
+                    generatedUserId: result.userId,
+                    inscriptionDetails: result,
+                    emailStatus: {
+                        sent: false,
+                        error: 'Erreur technique lors de l\'envoi',
+                        details: { originalError: emailError.message },
+                        emailDestination: validatedData.email,
+                        isTestMode: false
+                    },
+                    warning: 'Une erreur technique s\'est produite lors de l\'envoi de l\'email de vérification.'
+                });
+            }
+        }
+        else {
+            // Pas d'userId généré (cas anormal)
+            console.warn('⚠️ [Route] Inscription sans UserId généré - pas d\'email envoyé');
+            res.status(201).json({
+                message: 'Inscription réussie',
+                inscriptionDetails: result,
+                emailStatus: {
+                    sent: false,
+                    reason: 'Aucun UserId généré'
+                }
+            });
+        }
+    }
+    catch (error) {
+        console.error('Erreur lors de l\'inscription de l\'utilisateur :', error);
+        res.status(500).json({
+            message: error.message || 'Erreur interne du serveur',
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+// Route de connexion principale par userId (remplace toute la complexité email)
+router.post('/connexion-userid', async (req, res) => {
+    try {
+        console.log('[DEBUG] Route /connexion-userid appelée avec:', req.body);
+        const validatedData = userDataLoginByUserIdSchema.parse(req.body);
+        console.log("Connexion par userId :", validatedData.userId);
+        const client = new Utilisateurs();
+        const result = await client.validerConnexionParUserId(validatedData.userId, validatedData.password);
+        if (result.isFind) {
+            res.status(200).json({ message: result.message, data: result.dataToStore });
+        }
+        else {
+            res.status(404).json({ message: result.message });
+        }
+    }
+    catch (error) {
+        console.error('Erreur lors de la connexion par userId :', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la connexion.' });
+    }
+});
+// Garder l'ancienne route email pour compatibilité (mais plus simple)
+router.post('/connexion', async (req, res) => {
+    try {
+        const validatedData = userDataLoginSchema.parse(req.body);
+        console.log("Connexion par email (legacy) :", validatedData.email);
+        const client = new Utilisateurs();
+        const result = await client.validerConnexion(validatedData);
+        if (result.isFind) {
+            res.status(200).json({ message: result.message, data: result.dataToStore });
+        }
+        else {
+            res.status(404).json({ message: result.message });
+        }
+    }
+    catch (error) {
+        console.error('Erreur lors de la connexion :', error);
+        res.status(500).json({ message: 'Erreur serveur lors de la connexion.' });
+    }
+});
+// CORRIGÉ: Route pour valider le token d'email avec EmailClient (POST)
+router.post('/verify-email-token', async (req, res) => {
+    try {
+        const { token, userId } = req.body;
+        if (!token || !userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token et userId requis'
+            });
+        }
+        console.log('🔍 [Route PUBLIC POST] Validation token email:', {
+            token: token.substring(0, 8) + '...',
+            userId
+        });
+        const result = await emailClient.validateEmailToken(token, userId);
+        if (result.success) {
+            console.log('✅ [Route PUBLIC POST] Token validé avec succès');
+            res.json({
+                success: true,
+                message: result.message,
+                data: result.data
+            });
+        }
+        else {
+            console.warn('⚠️ [Route PUBLIC POST] Échec validation token:', result.message);
+            res.status(400).json({
+                success: false,
+                error: result.message
+            });
+        }
+    }
+    catch (error) {
+        console.error('❌ [Route PUBLIC POST] Erreur validation token:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 // ✅ MAINTENANT le middleware d'authentification pour les autres routes
@@ -594,14 +888,13 @@ router.post('/verify-email-token', async (req, res) => {
                 error: 'Token et userId requis'
             });
         }
-        console.log('🔍 [Route] Validation token email:', {
+        console.log('🔍 [Route PUBLIC POST] Validation token email:', {
             token: token.substring(0, 8) + '...',
             userId
         });
-        // CORRIGÉ: Valider le token avec EmailClient
         const result = await emailClient.validateEmailToken(token, userId);
         if (result.success) {
-            console.log('✅ [Route] Token validé avec succès');
+            console.log('✅ [Route PUBLIC POST] Token validé avec succès');
             res.json({
                 success: true,
                 message: result.message,
@@ -609,7 +902,7 @@ router.post('/verify-email-token', async (req, res) => {
             });
         }
         else {
-            console.warn('⚠️ [Route] Échec validation token:', result.message);
+            console.warn('⚠️ [Route PUBLIC POST] Échec validation token:', result.message);
             res.status(400).json({
                 success: false,
                 error: result.message
@@ -617,89 +910,7 @@ router.post('/verify-email-token', async (req, res) => {
         }
     }
     catch (error) {
-        console.error('❌ [Route] Erreur validation token:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-// CORRIGÉ: Test d'envoi d'email de vérification avec EmailClient
-router.post('/test-send-verification', async (req, res) => {
-    try {
-        const { email, prenom, nom, userId } = req.body;
-        console.log('🧪 [Test] Test envoi email de vérification:', { email, prenom, nom, userId });
-        // Utiliser un utilisateur de test si pas fourni
-        const testData = {
-            email: email || 'houthoofd.benoit48@gmail.com',
-            prenom: prenom || 'Benoit',
-            nom: nom || 'Test',
-            userId: userId || 'USR2025TEST',
-            utilisateurId: 999, // ID de test
-            saveToDb: true
-        };
-        // CORRIGÉ: Envoyer l'email de vérification avec EmailClient
-        const result = await emailClient.sendValidationEmail({
-            email: testData.email,
-            prenom: testData.prenom,
-            nom: testData.nom,
-            userId: testData.userId,
-            utilisateurId: testData.utilisateurId
-        });
-        console.log('📧 [Test] Résultat envoi email:', result);
-        res.json({
-            success: result.success,
-            message: result.message,
-            details: result.details,
-            debug: {
-                testData
-            }
-        });
-    }
-    catch (error) {
-        console.error('❌ [Test] Erreur test email vérification:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-// CORRIGÉ: Test rapide d'envoi d'email de vérification avec EmailClient
-router.post('/test-verification-quick', async (req, res) => {
-    try {
-        console.log('🧪 [Test] Test rapide envoi email de vérification');
-        // Données de test minimales
-        const testData = {
-            email: 'houthoofd.benoit48@gmail.com',
-            prenom: 'Benoit',
-            nom: 'Test',
-            userId: 'USR2025TEST' + Date.now(),
-            utilisateurId: 999, // ID de test
-            saveToDb: true
-        };
-        console.log('📧 [Test] Envoi vers:', testData.email);
-        // CORRIGÉ: Envoyer l'email de vérification avec EmailClient
-        const result = await emailClient.sendValidationEmail({
-            email: testData.email,
-            prenom: testData.prenom,
-            nom: testData.nom,
-            userId: testData.userId,
-            utilisateurId: testData.utilisateurId
-        });
-        console.log('📧 [Test] Résultat:', result);
-        res.json({
-            success: true,
-            message: 'Test d\'email de vérification envoyé',
-            result: {
-                success: result.success,
-                message: result.message,
-                details: result.details
-            },
-            testData
-        });
-    }
-    catch (error) {
-        console.error('❌ [Test] Erreur test email vérification:', error);
+        console.error('❌ [Route PUBLIC POST] Erreur validation token:', error);
         res.status(500).json({
             success: false,
             error: error.message
