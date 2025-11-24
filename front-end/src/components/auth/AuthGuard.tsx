@@ -34,6 +34,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const publicRoutes = [
     '/pages/connexion', 
     '/pages/inscription', 
+    '/pages/verify-email',           // 🔧 AJOUTEZ cette ligne
+    '/pages/validation-email',       // 🔧 AJOUTEZ cette ligne (au cas où)
+    '/pages/email-verification',     // 🔧 AJOUTEZ cette ligne (au cas où)
     '/pages/auth/forgot-password', 
     '/pages/auth/reset-password',
     '/login', 
