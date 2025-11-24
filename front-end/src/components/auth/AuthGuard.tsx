@@ -39,6 +39,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     '/pages/email-verification',     // 🔧 AJOUTEZ cette ligne (au cas où)
     '/pages/auth/forgot-password', 
     '/pages/auth/reset-password',
+    '/pages/verify-email-token',
     '/login', 
     '/register',
     '/auth',
