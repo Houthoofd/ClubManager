@@ -528,7 +528,7 @@ export class EmailClient {
   }
 
   /**
-   * Valide un token d'email - CORRIGÉ pour ESM
+   * Valide un token d'email - CORRIGÉ pour utiliser le bon schéma de base
    */
   async validateEmailToken(token: string, userId: string): Promise<EmailValidationResult> {
     try {
@@ -542,10 +542,11 @@ export class EmailClient {
       const MysqlConnector = MysqlConnectorModule.default;
       const mysqlConnector = MysqlConnector.getInstance();
       
-      // Rechercher le token en base avec jointure utilisateurs
+      // CORRIGÉ: Rechercher le token avec les vraies colonnes de votre schéma
       const tokenData = await new Promise<any>((resolve, reject) => {
         const sql = `
-          SELECT evt.*, u.email, u.first_name, u.last_name, u.userId as user_id_db
+          SELECT evt.id, evt.expires_at, evt.used, evt.utilisateur_id,
+                 u.email, u.first_name, u.last_name, u.userId as user_id_db
           FROM email_validation_tokens evt
           JOIN utilisateurs u ON evt.utilisateur_id = u.id
           WHERE evt.token = ? 
@@ -558,8 +559,10 @@ export class EmailClient {
 
         mysqlConnector.query(sql, [token, userId], (error: any, results: any) => {
           if (error) {
+            console.error('❌ [EmailClient] Erreur SQL validation token:', error);
             reject(error);
           } else {
+            console.log('✅ [EmailClient] Résultat recherche token:', results.length ? 'Token trouvé' : 'Token non trouvé');
             resolve(results.length > 0 ? results[0] : null);
           }
         });
@@ -576,24 +579,44 @@ export class EmailClient {
         };
       }
 
-      // Marquer l'email comme vérifié et le token comme utilisé
-      await new Promise<void>((resolve, reject) => {
-        const updateSql = `
-          UPDATE utilisateurs u, email_validation_tokens evt
-          SET 
-            u.email_verified = TRUE,
-            u.email_verified_at = NOW(),
-            evt.used = TRUE
-          WHERE u.id = ? AND evt.token = ?
-        `;
+      console.log('✅ [EmailClient] Token valide trouvé, mise à jour utilisateur...');
 
-        mysqlConnector.query(updateSql, [tokenData.utilisateur_id, token], (error: any, results: any) => {
-          if (error) {
-            reject(error);
-          } else {
-            console.log('✅ [EmailClient] Email marqué comme vérifié et token utilisé');
-            resolve();
+      // CORRIGÉ: Marquer l'email comme vérifié et le token comme utilisé - DEUX REQUÊTES SÉPARÉES
+      await new Promise<void>((resolve, reject) => {
+        // Première requête : mettre à jour l'utilisateur
+        const updateUtilisateurSql = `
+          UPDATE utilisateurs 
+          SET email_verified = TRUE, email_verified_at = NOW()
+          WHERE id = ?
+        `;
+        
+        mysqlConnector.query(updateUtilisateurSql, [tokenData.utilisateur_id], (errorUser: any, resultsUser: any) => {
+          if (errorUser) {
+            console.error('❌ [EmailClient] Erreur update utilisateur:', errorUser);
+            reject(errorUser);
+            return;
           }
+
+          console.log('✅ [EmailClient] Utilisateur marqué comme email_verified = TRUE');
+
+          // Deuxième requête : marquer le token comme utilisé
+          const updateTokenSql = `
+            UPDATE email_validation_tokens 
+            SET used = TRUE 
+            WHERE id = ?
+          `;
+
+          mysqlConnector.query(updateTokenSql, [tokenData.id], (errorToken: any, resultsToken: any) => {
+            if (errorToken) {
+              console.error('❌ [EmailClient] Erreur update token:', errorToken);
+              reject(errorToken);
+              return;
+            }
+
+            console.log('✅ [EmailClient] Token marqué comme used = TRUE');
+            console.log('🎉 [EmailClient] Email vérifié avec succès !');
+            resolve();
+          });
         });
       });
 
@@ -612,7 +635,7 @@ export class EmailClient {
       console.error('❌ [EmailClient] Erreur lors de la validation du token:', error);
       return {
         success: false,
-        message: 'Erreur lors de la validation du token'
+        message: 'Erreur lors de la validation du token: ' + error.message
       };
     }
   }
