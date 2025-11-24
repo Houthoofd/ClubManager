@@ -65,10 +65,35 @@ export class Utilisateurs {
                         reject(error);
                     }
                     else {
-                        resolve({
+                        // SUPPRIMEZ COMPLÈTEMENT CES LIGNES (367-371) :
+                        // try {
+                        //   await this.creerTokenValidationEmail(results.insertId, userData.email, userId);
+                        //   console.log('[DB] Token de validation email créé avec succès');
+                        // } catch (tokenError: any) {
+                        //   console.warn('[DB] Erreur création token validation (non bloquant):', tokenError.message);
+                        // }
+                        // AJOUTEZ JUSTE UN LOG :
+                        console.log('[DB] ✅ Inscription utilisateur terminée - Email sera géré par EmailClient');
+                        const resultData = {
                             isConfirm: true,
-                            message: `Utilisateur inscrit avec succès. UserId: ${userId}, nom d'utilisateur: ${nom_utilisateur}${passwordToUse === 'password123' ? ' (mot de passe temporaire: password123)' : ''}`
-                        });
+                            message: `Utilisateur inscrit avec succès.`,
+                            userId: results.insertId,
+                            generatedUserId: userId,
+                            data: {
+                                id: results.insertId,
+                                userId: userId,
+                                prenom: data.prenom,
+                                nom: data.nom,
+                                nom_utilisateur: nom_utilisateur,
+                                email: data.email,
+                                date_naissance: data.date,
+                                abonnement_id: data.abonnement,
+                                genre_id: data.genre,
+                                status_id: 1,
+                                active: true
+                            }
+                        };
+                        resolve(resultData);
                     }
                 });
             }
@@ -176,7 +201,7 @@ export class Utilisateurs {
             console.log('[UserIdGenerator] Données reçues pour génération userId:', {
                 first_name: userData.first_name,
                 last_name: userData.last_name,
-                date_of_birth: userData.date_of_birth,
+                date_naissance: userData.date_of_birth,
                 email: userData.email
             });
             // 🔧 CORRIGÉ: Passer les données dans le bon format pour UserIdGenerator
@@ -311,27 +336,28 @@ export class Utilisateurs {
                 }
                 else {
                     console.log('[DB] Inscription réussie, ID:', results.insertId, 'UserId:', userId);
-                    // 🔧 CORRIGÉ: Créer le token de validation email avec les bonnes colonnes
-                    try {
-                        await this.creerTokenValidationEmail(results.insertId, userData.email, userId);
-                        console.log('[DB] Token de validation email créé avec succès');
-                    }
-                    catch (tokenError) {
-                        console.warn('[DB] Erreur création token validation (non bloquant):', tokenError.message);
-                        // Ne pas bloquer l'inscription si le token échoue
-                    }
-                    resolve({
-                        message: 'Inscription réussie',
+                    // ✅ SUPPRESSION COMPLÈTE - Plus d'appel à creerTokenValidationEmail()
+                    console.log('[DB] ✅ Inscription utilisateur terminée - Email sera géré par EmailClient');
+                    const resultData = {
+                        isConfirm: true,
+                        message: `Utilisateur inscrit avec succès.`,
                         userId: results.insertId,
                         generatedUserId: userId,
-                        userData: {
+                        data: {
+                            id: results.insertId,
+                            userId: userId,
                             prenom: userData.first_name,
                             nom: userData.last_name,
-                            email: userData.email,
                             nom_utilisateur: userData.nom_utilisateur,
-                            userId: userId
+                            email: userData.email,
+                            date_naissance: userData.date_of_birth,
+                            abonnement_id: userData.abonnement_id,
+                            genre_id: userData.genre_id,
+                            status_id: userData.status_id,
+                            active: true
                         }
-                    });
+                    };
+                    resolve(resultData);
                 }
             });
         }
@@ -340,206 +366,12 @@ export class Utilisateurs {
             reject(error);
         }
     }
-    // 🔧 NOUVELLE MÉTHODE: Créer token de validation email avec les bonnes colonnes
-    async creerTokenValidationEmail(utilisateurId, email, userIdString) {
-        const crypto = await import('crypto');
-        // Générer un token unique
-        const token = crypto.randomBytes(32).toString('hex');
-        // Token expire dans 24 heures
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 24);
-        console.log('[ValidationToken] Génération token pour utilisateur:', {
-            utilisateurId,
-            email,
-            userIdString,
-            expiresAt: expiresAt.toISOString()
-        });
-        // 🔧 CORRIGÉ: Utiliser la bonne table email_validation_tokens
-        const sql = `
-      INSERT INTO email_validation_tokens (
-        utilisateur_id, 
-        token, 
-        type, 
-        expires_at,
-        used,
-        created_at
-      )
-      VALUES (?, ?, 'email_confirmation', ?, FALSE, NOW())
-    `;
-        const values = [utilisateurId, token, expiresAt];
-        console.log('[ValidationToken] Requête SQL:', sql);
-        console.log('[ValidationToken] Valeurs:', values);
-        return new Promise((resolve, reject) => {
-            this.mysqlConnector.query(sql, values, (insertError, results) => {
-                if (insertError) {
-                    console.error('[ValidationToken] Erreur insertion token:', insertError);
-                    reject(insertError);
-                }
-                else {
-                    console.log('[ValidationToken] Token créé avec succès, ID:', results.insertId);
-                    console.log('[ValidationToken] Token généré:', token);
-                    // 🆕 OPTIONNEL: Envoyer l'email de validation (à implémenter)
-                    this.envoyerEmailValidation(email, token, userIdString)
-                        .then(() => {
-                        console.log('[ValidationToken] Email de validation envoyé avec succès');
-                    })
-                        .catch((emailError) => {
-                        console.warn('[ValidationToken] Erreur envoi email (non bloquant):', emailError.message);
-                    });
-                    resolve();
-                }
-            });
-        });
-    }
-    // 🆕 NOUVELLE MÉTHODE: Envoyer email de validation avec EmailClient
-    async envoyerEmailValidation(email, token, userId) {
-        try {
-            // 🔧 Utiliser FRONTEND_URL du .env.production
-            const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-            const validationLink = `${baseUrl}/validate-email?token=${token}&userId=${userId}`;
-            console.log(`📧 [Email] Préparation envoi email validation:`, {
-                destinataire: email,
-                userId: userId,
-                baseUrl: baseUrl,
-                lien: validationLink
-            });
-            // 🔧 Utiliser votre EmailClient existant
-            const { EmailClient } = await import('../../../clients/emailClient.js');
-            const emailClient = new EmailClient();
-            // Préparer les variables pour le template
-            const templateVariables = {
-                userName: userId, // Utiliser l'userId comme nom d'utilisateur temporaire
-                userId: userId,
-                validationLink: validationLink,
-                baseUrl: baseUrl,
-                expirationTime: '24 heures',
-                supportEmail: process.env.ADMIN_EMAIL || 'clubmanagement043@gmail.com',
-                companyName: 'ClubManager',
-                clubName: 'ClubManager',
-                currentYear: new Date().getFullYear().toString(),
-                currentDate: new Date().toLocaleDateString('fr-FR')
-            };
-            // 🔧 Envoyer l'email via EmailClient
-            const result = await emailClient.sendEmail({
-                to: email,
-                subject: 'Confirmez votre adresse email - ClubManager',
-                templateTitle: 'email-validation', // Si vous avez ce template en DB
-                variables: templateVariables,
-                isHtml: true,
-                saveToDb: false
-            });
-            if (result.success) {
-                console.log(`✅ [Email] Email de validation envoyé avec succès à ${email}`);
-                console.log(`📨 [Email] Message ID: ${result.messageId}`);
-            }
-            else {
-                console.warn(`⚠️ [Email] Échec envoi email validation:`, result.error);
-                // Fallback: utiliser directement SendGrid si EmailClient échoue
-                await this.envoyerEmailValidationDirectSendGrid(email, templateVariables);
-            }
-        }
-        catch (error) {
-            console.error('❌ [Email] Erreur envoi email validation:', error);
-            // Fallback: essayer l'envoi direct avec SendGrid
-            try {
-                await this.envoyerEmailValidationDirectSendGrid(email, {
-                    userName: userId,
-                    userId: userId,
-                    validationLink: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/validate-email?token=${token}&userId=${userId}`,
-                    supportEmail: process.env.ADMIN_EMAIL || 'clubmanagement043@gmail.com'
-                });
-            }
-            catch (fallbackError) {
-                console.error('❌ [Email] Fallback SendGrid échoué aussi:', fallbackError);
-                // Ne pas bloquer l'inscription pour un problème d'email
-            }
-        }
-    }
-    // 🆕 MÉTHODE FALLBACK: Envoi direct avec SendGrid
-    async envoyerEmailValidationDirectSendGrid(email, variables) {
-        try {
-            console.log('📧 [Email] Fallback: envoi direct via SendGrid...');
-            const sgMail = await import('@sendgrid/mail');
-            sgMail.default.setApiKey(process.env.SENDGRID_API_KEY);
-            const htmlContent = this.genererTemplateEmailValidation(variables);
-            const msg = {
-                to: email,
-                from: process.env.SENDGRID_FROM_EMAIL,
-                subject: 'Confirmez votre adresse email - ClubManager',
-                html: htmlContent,
-            };
-            const response = await sgMail.default.send(msg);
-            console.log(`✅ [Email] Fallback SendGrid réussi pour ${email}`);
-        }
-        catch (error) {
-            console.error('❌ [Email] Erreur fallback SendGrid:', error);
-            throw error;
-        }
-    }
-    // 🆕 MÉTHODE: Générer template HTML simple pour email validation
-    genererTemplateEmailValidation(variables) {
-        return `
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Confirmez votre inscription - ClubManager</title>
-        <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>🥋 Bienvenue chez ${variables.companyName || 'ClubManager'} !</h1>
-            <p>Confirmez votre adresse email pour finaliser votre inscription</p>
-        </div>
-        
-        <div class="content">
-            <h2>Bonjour !</h2>
-            
-            <p>Merci de vous être inscrit(e) sur notre plateforme. Votre identifiant utilisateur est : <strong>${variables.userId}</strong></p>
-            
-            <p>Pour finaliser votre inscription et activer votre compte, veuillez cliquer sur le bouton ci-dessous :</p>
-            
-            <div style="text-align: center;">
-                <a href="${variables.validationLink}" class="button">✅ Confirmer mon inscription</a>
-            </div>
-            
-            <div class="warning">
-                <strong>⚠️ Important :</strong>
-                <ul>
-                    <li>Ce lien expire dans <strong>${variables.expirationTime || '24 heures'}</strong></li>
-                    <li>Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
-                    <small style="word-break: break-all;">${variables.validationLink}</small></li>
-                </ul>
-            </div>
-            
-            <p>Une fois votre email confirmé, vous pourrez :</p>
-            <ul>
-                <li>🔐 Vous connecter avec votre identifiant : <strong>${variables.userId}</strong></li>
-                <li>📚 Accéder à tous nos cours et services</li>
-                <li>👤 Gérer votre profil personnel</li>
-                <li>📊 Suivre vos progrès</li>
-            </ul>
-            
-            <p>Si vous n'avez pas créé de compte sur notre plateforme, vous pouvez ignorer cet email.</p>
-        </div>
-        
-        <div class="footer">
-            <p>📞 Besoin d'aide ? Contactez-nous : <a href="mailto:${variables.supportEmail}">${variables.supportEmail}</a></p>
-            <p>© ${variables.currentYear || new Date().getFullYear()} ${variables.companyName || 'ClubManager'} - Tous droits réservés</p>
-            <small>Cet email a été envoyé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</small>
-        </div>
-    </body>
-    </html>
-    `;
-    }
+    // ✅ SUPPRESSION COMPLÈTE des 4 méthodes problématiques :
+    // - creerTokenValidationEmail()
+    // - envoyerEmailValidation()
+    // - envoyerEmailValidationDirectSendGrid()
+    // - genererTemplateEmailValidation()
+    // Ces méthodes généraient le premier token qui causait le conflit !
     verifierUtilisateurExiste(userData) {
         return new Promise((resolve, reject) => {
             console.log('[DB] Vérification utilisateur avec:', userData);
