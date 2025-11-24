@@ -189,7 +189,7 @@ export class EmailValidationService {
 
     return new Promise((resolve, reject) => {
       const sql = `
-        INSERT INTO validation_tokens (utilisateur_id, token, type, expires_at)
+        INSERT INTO email_validation_tokens (utilisateur_id, token, type, expires_at)
         VALUES (?, ?, 'email_confirmation', ?)
       `;
 
@@ -213,7 +213,7 @@ export class EmailValidationService {
 
     return new Promise((resolve, reject) => {
       const sql = `
-        INSERT INTO validation_tokens (utilisateur_id, token, type, expires_at)
+        INSERT INTO email_validation_tokens (utilisateur_id, token, type, expires_at)
         VALUES (?, ?, 'password_setup', ?)
       `;
 
@@ -233,7 +233,7 @@ export class EmailValidationService {
   async validateToken(token: string, type: 'email_confirmation' | 'password_setup'): Promise<ValidationToken | null> {
     return new Promise((resolve, reject) => {
       const sql = `
-        SELECT * FROM validation_tokens
+        SELECT * FROM email_validation_tokens
         WHERE token = ? AND type = ? AND used = FALSE AND expires_at > NOW()
         LIMIT 1
       `;
@@ -253,7 +253,7 @@ export class EmailValidationService {
   async markTokenAsUsed(token: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       const sql = `
-        UPDATE validation_tokens
+        UPDATE email_validation_tokens
         SET used = TRUE
         WHERE token = ?
       `;
@@ -376,25 +376,18 @@ export class EmailValidationService {
     const hashedToken = crypto.createHash('sha256').update(combinedData).digest('hex');
 
     return new Promise((resolve, reject) => {
+      // CORRIGÉ: Utiliser email_validation_tokens avec seulement les colonnes disponibles
       const sql = `
-        INSERT INTO validation_tokens (
-          utilisateur_id, 
-          token, 
-          type, 
-          expires_at, 
-          user_id_string, 
-          token_hash,
-          created_at
-        )
-        VALUES (?, ?, 'email_confirmation', ?, ?, ?, NOW())
+        INSERT INTO email_validation_tokens (utilisateur_id, token, type, expires_at)
+        VALUES (?, ?, 'email_confirmation', ?)
       `;
 
-      this.mysqlConnector.query(sql, [utilisateurId, baseToken, expiresAt, userId, hashedToken], (error) => {
+      this.mysqlConnector.query(sql, [utilisateurId, baseToken, expiresAt], (error) => {
         if (error) {
-          console.error('❌ Erreur création token validation email avec hash:', error);
+          console.error('❌ Erreur création token validation email:', error);
           reject(error);
         } else {
-          console.log('✅ Token validation email créé avec hash:', { 
+          console.log('✅ Token validation email créé:', { 
             baseToken: baseToken.substring(0, 8) + '...', 
             hashedToken: hashedToken.substring(0, 8) + '...',
             userId 
@@ -418,22 +411,22 @@ export class EmailValidationService {
     await this.ensureInitialized();
 
     try {
-      console.log('🔍 Validation token avec hash renforcé:', { 
+      console.log('🔍 Validation token avec userId:', { 
         token: token.substring(0, 8) + '...', 
         userId 
       });
 
-      // Rechercher le token en base
+      // CORRIGÉ: Rechercher le token en utilisant email_validation_tokens et jointure avec utilisateurs
       const tokenData = await new Promise<any>((resolve, reject) => {
         const sql = `
-          SELECT vt.*, u.email, u.first_name, u.last_name, u.userId as user_id_db
-          FROM validation_tokens vt
-          JOIN utilisateurs u ON vt.utilisateur_id = u.id
-          WHERE vt.token = ? 
-            AND vt.user_id_string = ? 
-            AND vt.type = 'email_confirmation'
-            AND vt.used = FALSE 
-            AND vt.expires_at > NOW()
+          SELECT evt.*, u.email, u.first_name, u.last_name, u.userId as user_id_db
+          FROM email_validation_tokens evt
+          JOIN utilisateurs u ON evt.utilisateur_id = u.id
+          WHERE evt.token = ? 
+            AND u.userId = ?
+            AND evt.type = 'email_confirmation'
+            AND evt.used = FALSE 
+            AND evt.expires_at > NOW()
           LIMIT 1
         `;
 
@@ -457,66 +450,21 @@ export class EmailValidationService {
         };
       }
 
-      // VÉRIFICATION HASH : Reconstruire le hash et comparer
-      if (tokenData.token_hash) {
-        // Extraire le timestamp du hash original (approximatif)
-        const storedHash = tokenData.token_hash;
-        
-        // Vérifier avec plusieurs combinaisons possibles de timestamp
-        let hashValid = false;
-        const currentTime = Date.now();
-        const createdTime = new Date(tokenData.created_at).getTime();
-        
-        // Tester avec le timestamp de création et quelques variations
-        const timestampsToTest = [
-          createdTime,
-          Math.floor(createdTime / 1000) * 1000, // Arrondi à la seconde
-          Math.floor(createdTime / 60000) * 60000 // Arrondi à la minute
-        ];
-        
-        for (const testTimestamp of timestampsToTest) {
-          const testCombinedData = `${userId}:${token}:${testTimestamp}`;
-          const testHash = crypto.createHash('sha256').update(testCombinedData).digest('hex');
-          
-          if (testHash === storedHash) {
-            hashValid = true;
-            console.log('✅ Hash validé avec timestamp:', testTimestamp);
-            break;
-          }
-        }
-        
-        if (!hashValid) {
-          console.error('❌ Hash invalide - tentative de manipulation détectée');
-          console.error('Hash stocké:', storedHash.substring(0, 16) + '...');
-          console.error('UserId fourni:', userId);
-          console.error('Token fourni:', token.substring(0, 8) + '...');
-          
-          return {
-            success: false,
-            message: 'Token compromis ou manipulé'
-          };
-        }
-      } else {
-        console.warn('⚠️ Token sans hash - ancienne version');
-        // Permettre la validation pour compatibilité avec anciens tokens
-      }
-
-      console.log('✅ Token et hash valides:', {
+      console.log('✅ Token valide trouvé:', {
         utilisateurId: tokenData.utilisateur_id,
         email: tokenData.email,
-        userId: tokenData.user_id_string
+        userId: tokenData.user_id_db
       });
 
-      // Marquer l'email comme vérifié et le token comme utilisé
+      // CORRIGÉ: Marquer l'email comme vérifié et le token comme utilisé
       await new Promise<void>((resolve, reject) => {
         const updateSql = `
-          UPDATE utilisateurs u, validation_tokens vt
+          UPDATE utilisateurs u, email_validation_tokens evt
           SET 
             u.email_verified = TRUE,
             u.email_verified_at = NOW(),
-            vt.used = TRUE,
-            vt.used_at = NOW()
-          WHERE u.id = ? AND vt.token = ?
+            evt.used = TRUE
+          WHERE u.id = ? AND evt.token = ?
         `;
 
         this.mysqlConnector.query(updateSql, [tokenData.utilisateur_id, token], (error, results) => {
@@ -535,7 +483,7 @@ export class EmailValidationService {
         utilisateurId: tokenData.utilisateur_id,
         data: {
           email: tokenData.email,
-          userId: tokenData.user_id_string,
+          userId: tokenData.user_id_db,
           prenom: tokenData.first_name,
           nom: tokenData.last_name
         }
@@ -842,7 +790,7 @@ export class EmailValidationService {
   async cleanupExpiredTokens(): Promise<number> {
     return new Promise((resolve, reject) => {
       const sql = `
-        DELETE FROM validation_tokens
+        DELETE FROM email_validation_tokens
         WHERE expires_at < NOW()
       `;
       this.mysqlConnector.query(sql, [], (error, result: any) => {
@@ -850,6 +798,7 @@ export class EmailValidationService {
           console.error('❌ Erreur lors du nettoyage des tokens expirés:', error);
           reject(error);
         } else {
+          console.log('✅ Tokens expirés nettoyés:', result.affectedRows);
           resolve(result.affectedRows);
         }
       });

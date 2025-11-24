@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { utilisateurInscriptionSchema, userDataLoginSchema, userDataLoginByUserIdSchema, userDataAjoutSchema } from '../../../packages/types/dist/index.js';
 import bcrypt from 'bcrypt';
 import { EmailService } from '../services/emailService.js';
-import { emailValidationService } from '../services/emailValidationService.js';
+// CORRIGÉ: Utiliser le bon chemin pour EmailClient
+import { emailClient } from '../clients/emailClient.js';
 const router = express.Router();
 // Créer une instance du service email et du connecteur MySQL
 const emailService = new EmailService();
@@ -165,16 +166,16 @@ router.post('/inscription', async (req, res) => {
         const client = new Utilisateurs();
         const result = await client.inscrireUtilisateur(mappedData);
         console.log('[Route] Résultat inscription:', result);
-        // ✅ CORRECTION: Envoi email de vérification à l'adresse de l'utilisateur qui s'inscrit
+        // ✅ CORRECTION: Envoi email de vérification avec EmailClient
         if (result.userId) {
             try {
                 console.log('📧 [Route] Démarrage envoi email de vérification...');
                 console.log(`📧 [Route] Email destinataire: ${validatedData.email}`);
                 console.log(`📧 [Route] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`);
                 console.log(`📧 [Route] UserId généré: ${result.userId}`);
-                // ✅ CORRECTION: Envoyer l'email de vérification à l'email de l'utilisateur
-                const emailResult = await emailValidationService.sendValidationEmailWithUserId({
-                    email: validatedData.email, // ✅ CORRECTION: Utiliser l'email de l'utilisateur
+                // ✅ CORRECTION: Utiliser les bonnes propriétés de EmailValidationResult
+                const emailResult = await emailClient.sendValidationEmail({
+                    email: validatedData.email,
                     prenom: validatedData.prenom,
                     nom: validatedData.nom,
                     userId: result.generatedUserId,
@@ -182,18 +183,17 @@ router.post('/inscription', async (req, res) => {
                 });
                 if (emailResult.success) {
                     console.log('✅ [Route] Email de vérification envoyé avec succès !');
-                    console.log('✅ [Route] Message ID:', emailResult.details?.messageId);
-                    console.log('✅ [Route] Détails:', emailResult.details);
-                    // Inclure les infos email dans la réponse
+                    console.log('✅ [Route] Message:', emailResult.message);
                     res.status(201).json({
                         message: 'Inscription réussie et email de vérification envoyé',
                         generatedUserId: result.userId,
                         inscriptionDetails: result,
                         emailStatus: {
                             sent: true,
-                            messageId: emailResult.details?.messageId,
-                            emailDestination: validatedData.email, // L'email réel de l'utilisateur
-                            isTestMode: false, // ✅ CORRECTION: Plus en mode test
+                            message: emailResult.message,
+                            details: emailResult.details,
+                            emailDestination: validatedData.email,
+                            isTestMode: false,
                             note: `Email de vérification envoyé à ${validatedData.email}`
                         }
                     });
@@ -205,7 +205,7 @@ router.post('/inscription', async (req, res) => {
                         inscriptionDetails: result,
                         emailStatus: {
                             sent: false,
-                            error: emailResult,
+                            message: emailResult.message,
                             details: emailResult.details,
                             emailDestination: validatedData.email,
                             isTestMode: false
@@ -216,7 +216,6 @@ router.post('/inscription', async (req, res) => {
             }
             catch (emailError) {
                 console.error('❌ [Route] Erreur critique lors de l\'envoi de l\'email:', emailError);
-                // Inscription réussie mais erreur critique email
                 res.status(201).json({
                     message: 'Inscription réussie mais erreur lors de l\'envoi de l\'email',
                     generatedUserId: result.userId,
@@ -522,7 +521,7 @@ router.post('/ajouter', async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur lors de la récupération du cours et des utilisateurs.' });
     }
 });
-// MISE À JOUR: Route pour envoyer l'email de vérification avec token sécurisé
+// MISE À JOUR: Route pour envoyer l'email de vérification avec EmailClient
 router.post('/send-verification-email', async (req, res) => {
     try {
         const { email, prenom, nom, userId } = req.body;
@@ -532,7 +531,7 @@ router.post('/send-verification-email', async (req, res) => {
                 error: 'Email, prénom, nom et userId requis'
             });
         }
-        console.log('📧 [Route] Demande d\'envoi email de vérification avec token:', { email, prenom, nom, userId });
+        console.log('📧 [Route] Demande d\'envoi email de vérification:', { email, prenom, nom, userId });
         // Récupérer l'ID numérique de l'utilisateur basé sur l'userId
         const utilisateur = await new Promise((resolve, reject) => {
             mysqlConnector.query('SELECT id, first_name, last_name, email, email_verified FROM utilisateurs WHERE userId = ? LIMIT 1', [userId], (error, results) => {
@@ -562,8 +561,8 @@ router.post('/send-verification-email', async (req, res) => {
             });
         }
         console.log('✅ Utilisateur trouvé, email non vérifié:', utilisateur);
-        // Envoyer l'email de vérification avec token
-        const result = await emailValidationService.sendValidationEmailWithUserId({
+        // CORRIGÉ: Envoyer l'email de vérification avec EmailClient
+        const result = await emailClient.sendValidationEmail({
             email,
             prenom,
             nom,
@@ -571,7 +570,11 @@ router.post('/send-verification-email', async (req, res) => {
             utilisateurId: utilisateur.id
         });
         console.log('📧 Résultat envoi email:', result);
-        res.json(result);
+        res.json({
+            success: result.success,
+            message: result.message,
+            details: result.details
+        });
     }
     catch (error) {
         console.error('❌ Erreur envoi email vérification:', error);
@@ -581,7 +584,7 @@ router.post('/send-verification-email', async (req, res) => {
         });
     }
 });
-// NOUVELLE ROUTE: Valider le token d'email avec hash sécurisé
+// CORRIGÉ: Route pour valider le token d'email avec EmailClient
 router.post('/verify-email-token', async (req, res) => {
     try {
         const { token, userId } = req.body;
@@ -591,19 +594,18 @@ router.post('/verify-email-token', async (req, res) => {
                 error: 'Token et userId requis'
             });
         }
-        console.log('🔍 [Route] Validation token email avec hash:', {
+        console.log('🔍 [Route] Validation token email:', {
             token: token.substring(0, 8) + '...',
             userId
         });
-        // Valider le token avec vérification hash
-        const result = await emailValidationService.validateEmailTokenWithHash(token, userId);
+        // CORRIGÉ: Valider le token avec EmailClient
+        const result = await emailClient.validateEmailToken(token, userId);
         if (result.success) {
-            console.log('✅ [Route] Token validé avec succès (hash vérifié)');
+            console.log('✅ [Route] Token validé avec succès');
             res.json({
                 success: true,
                 message: result.message,
-                data: result.data,
-                security: 'Hash verified'
+                data: result.data
             });
         }
         else {
@@ -622,7 +624,7 @@ router.post('/verify-email-token', async (req, res) => {
         });
     }
 });
-// NOUVELLE ROUTE: Test d'envoi d'email de vérification pour débugger
+// CORRIGÉ: Test d'envoi d'email de vérification avec EmailClient
 router.post('/test-send-verification', async (req, res) => {
     try {
         const { email, prenom, nom, userId } = req.body;
@@ -633,24 +635,25 @@ router.post('/test-send-verification', async (req, res) => {
             prenom: prenom || 'Benoit',
             nom: nom || 'Test',
             userId: userId || 'USR2025TEST',
-            utilisateurId: 999 // ID de test
+            utilisateurId: 999, // ID de test
+            saveToDb: true
         };
-        // Envoyer l'email de vérification
-        const result = await emailValidationService.sendValidationEmailWithUserId(testData);
+        // CORRIGÉ: Envoyer l'email de vérification avec EmailClient
+        const result = await emailClient.sendValidationEmail({
+            email: testData.email,
+            prenom: testData.prenom,
+            nom: testData.nom,
+            userId: testData.userId,
+            utilisateurId: testData.utilisateurId
+        });
         console.log('📧 [Test] Résultat envoi email:', result);
-        // Vérifier ce qui a été inséré en base
-        const checkTokenSql = 'SELECT * FROM validation_tokens ORDER BY created_at DESC LIMIT 5';
-        mysqlConnector.query(checkTokenSql, [], (checkError, tokenResults) => {
-            if (!checkError) {
-                console.log('🔍 [Test] Derniers tokens en base validation_tokens:', tokenResults);
+        res.json({
+            success: result.success,
+            message: result.message,
+            details: result.details,
+            debug: {
+                testData
             }
-            res.json({
-                ...result,
-                debug: {
-                    testData,
-                    tokensInDb: tokenResults || 'Erreur lecture'
-                }
-            });
         });
     }
     catch (error) {
@@ -661,26 +664,37 @@ router.post('/test-send-verification', async (req, res) => {
         });
     }
 });
-// NOUVELLE ROUTE: Test rapide d'envoi d'email de vérification
+// CORRIGÉ: Test rapide d'envoi d'email de vérification avec EmailClient
 router.post('/test-verification-quick', async (req, res) => {
     try {
         console.log('🧪 [Test] Test rapide envoi email de vérification');
         // Données de test minimales
         const testData = {
-            email: 'houthoofd.benoit48@gmail.com', // Directement votre email
+            email: 'houthoofd.benoit48@gmail.com',
             prenom: 'Benoit',
             nom: 'Test',
             userId: 'USR2025TEST' + Date.now(),
-            utilisateurId: 999 // ID de test
+            utilisateurId: 999, // ID de test
+            saveToDb: true
         };
         console.log('📧 [Test] Envoi vers:', testData.email);
-        // Envoyer l'email de vérification
-        const result = await emailValidationService.sendValidationEmailWithUserId(testData);
+        // CORRIGÉ: Envoyer l'email de vérification avec EmailClient
+        const result = await emailClient.sendValidationEmail({
+            email: testData.email,
+            prenom: testData.prenom,
+            nom: testData.nom,
+            userId: testData.userId,
+            utilisateurId: testData.utilisateurId
+        });
         console.log('📧 [Test] Résultat:', result);
         res.json({
             success: true,
             message: 'Test d\'email de vérification envoyé',
-            result,
+            result: {
+                success: result.success,
+                message: result.message,
+                details: result.details
+            },
             testData
         });
     }
