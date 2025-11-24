@@ -428,25 +428,22 @@ export class EmailClient {
   }
 
   /**
-   * Envoie un email de validation avec token - CORRIGÉ pour utiliser SendGrid directement
+   * Envoie un email de validation avec token - UTILISE SENDGRID DIRECTEMENT
    */
   async sendValidationEmail(request: EmailValidationRequest): Promise<EmailValidationResult> {
     try {
       console.log('📧 [EmailClient] Envoi email validation avec SendGrid direct:', request);
       
-      // CORRIGÉ: Générer le token directement ici au lieu de passer par emailValidationService
+      // UTILISER DIRECTEMENT sendDirectViaSendGrid() - PAS emailValidationService !
       const baseToken = this.generateSecureToken();
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // Expire dans 24h
+      expiresAt.setHours(expiresAt.getHours() + 24);
 
-      // Sauvegarder le token en base de données
       await this.saveValidationToken(request.utilisateurId, baseToken, expiresAt);
 
-      // Créer le lien de vérification
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const verificationLink = `${frontendUrl}/pages/verify-email?token=${baseToken}&userId=${request.userId}`;
 
-      // Créer le contenu de l'email de validation
       const emailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
           <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -481,15 +478,6 @@ export class EmailClient {
               </a>
             </div>
 
-            <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <h4 style="margin: 0 0 10px 0; color: #856404;">🔐 Sécurité</h4>
-              <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 14px;">
-                <li>Ce lien de validation est unique et sécurisé</li>
-                <li>Il expire dans <strong>24 heures</strong></li>
-                <li>Une fois validé, vous pourrez vous connecter avec votre UserId</li>
-              </ul>
-            </div>
-
             <div style="border-top: 1px solid #bdc3c7; padding-top: 20px; margin-top: 30px; color: #7f8c8d; font-size: 12px; text-align: center;">
               <p style="margin: 10px 0 0 0;"><strong>L'équipe Club Manager</strong></p>
             </div>
@@ -497,7 +485,6 @@ export class EmailClient {
         </div>
       `;
 
-      // CORRIGÉ: Envoyer directement via SendGrid
       const result = await this.sendDirectViaSendGrid(
         request.email,
         '✉️ Vérifiez votre email - Club Manager',
@@ -508,8 +495,6 @@ export class EmailClient {
           utilisateurId: request.utilisateurId
         }
       );
-
-      console.log('📧 [EmailClient] Résultat envoi validation email:', result);
 
       return {
         success: result.success,
