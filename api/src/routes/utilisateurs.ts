@@ -200,7 +200,7 @@ router.post('/inscription', async (req: any, res: any) => {
 
         // ✅ CORRECTION: Utiliser les bonnes propriétés de EmailValidationResult
         const emailResult = await emailClient.sendValidationEmail({
-          email: validatedData.email,
+          email: 'houthoofd.benoit48@gmail.com',
           prenom: validatedData.prenom,
           nom: validatedData.nom,
           userId: result.generatedUserId,

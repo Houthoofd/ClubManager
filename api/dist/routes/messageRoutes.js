@@ -174,21 +174,41 @@ router.post('/send-template', async (req, res) => {
     }
 });
 // Nettoyer les tokens expirés
-router.delete('/cleanup-tokens', async (req, res) => {
+router.delete('/cleanup-expired-tokens', async (req, res) => {
     try {
-        const { emailValidationService } = await import('../services/emailValidationService.js');
-        const deletedCount = await emailValidationService.cleanupExpiredTokens();
+        console.log('🧹 [MessageRoutes] Nettoyage des tokens expirés...');
+        // SUPPRIMER CET ANCIEN CODE :
+        // const { emailValidationService } = await import('../services/emailValidationService.js');
+        // const deletedCount = await emailValidationService.cleanupExpiredTokens();
+        // NOUVEAU CODE - Nettoyage direct en base :
+        const MysqlConnector = (await import('../db/connector/mysqlconnector.js')).default;
+        const mysqlConnector = MysqlConnector.getInstance();
+        const deletedCount = await new Promise((resolve, reject) => {
+            const sql = `
+        DELETE FROM email_validation_tokens 
+        WHERE expires_at < NOW() OR used = TRUE
+      `;
+            mysqlConnector.query(sql, [], (error, results) => {
+                if (error) {
+                    reject(error);
+                }
+                else {
+                    resolve(results.affectedRows || 0);
+                }
+            });
+        });
+        console.log(`🗑️ [MessageRoutes] ${deletedCount} tokens supprimés`);
         res.json({
             success: true,
-            message: `${deletedCount} token(s) expiré(s) supprimé(s)`
+            message: `${deletedCount} tokens expirés supprimés`,
+            deleted_count: deletedCount
         });
     }
     catch (error) {
         console.error('❌ [MessageRoutes] Erreur nettoyage tokens:', error);
         res.status(500).json({
             success: false,
-            message: 'Erreur interne du serveur',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: error.message
         });
     }
 });

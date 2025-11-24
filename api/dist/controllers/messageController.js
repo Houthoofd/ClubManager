@@ -1,5 +1,5 @@
 import { messageClient } from '../db/clients/messages/messageClient.js';
-import { emailValidationService } from '../services/emailValidationService.js';
+import { emailClient } from '../clients/emailClient.js';
 export class MessageController {
     // Envoyer l'email de bienvenue
     async envoyerEmailBienvenue(req, res) {
@@ -36,22 +36,28 @@ export class MessageController {
     // Envoyer l'email de validation
     async envoyerEmailValidation(req, res) {
         try {
-            const { utilisateurId } = req.body;
-            if (!utilisateurId) {
+            const { utilisateurId, email, prenom, nom, userId } = req.body;
+            if (!email || !prenom || !nom || !userId || !utilisateurId) {
                 return res.status(400).json({
                     success: false,
-                    message: 'utilisateurId requis'
+                    error: 'Données incomplètes pour l\'envoi d\'email'
                 });
             }
-            const result = await emailValidationService.sendValidationEmail(utilisateurId);
-            res.status(result.success ? 200 : 500).json(result);
+            // NOUVEAU CODE - Utiliser EmailClient :
+            const result = await emailClient.sendValidationEmail({
+                email,
+                prenom,
+                nom,
+                userId,
+                utilisateurId
+            });
+            res.json(result);
         }
         catch (error) {
-            console.error('❌ [MessageController] Erreur envoi email validation:', error);
+            console.error('❌ [MessageController] Erreur envoi email:', error);
             res.status(500).json({
                 success: false,
-                message: 'Erreur interne du serveur',
-                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+                error: error.message
             });
         }
     }
@@ -65,8 +71,11 @@ export class MessageController {
                     message: 'Email requis'
                 });
             }
-            const result = await emailValidationService.sendUserIdRecovery(email);
-            res.status(result.success ? 200 : 404).json(result);
+            // CORRIGÉ: Cette fonctionnalité est dépréciée
+            res.status(410).json({
+                success: false,
+                error: 'Cette méthode est dépréciée - utilisez les routes /auth/forgot-password'
+            });
         }
         catch (error) {
             console.error('❌ [MessageController] Erreur récupération UserId:', error);
@@ -80,22 +89,22 @@ export class MessageController {
     // Confirmer l'email avec token
     async confirmerEmail(req, res) {
         try {
-            const { token } = req.params;
-            if (!token) {
+            const { token, userId } = req.body;
+            if (!token || !userId) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Token requis'
+                    error: 'Token et userId requis'
                 });
             }
-            const result = await emailValidationService.confirmUserEmail(token);
-            res.status(result.success ? 200 : 400).json(result);
+            // NOUVEAU CODE - Utiliser EmailClient :
+            const result = await emailClient.validateEmailToken(token, userId);
+            res.json(result);
         }
         catch (error) {
-            console.error('❌ [MessageController] Erreur confirmation email:', error);
+            console.error('❌ [MessageController] Erreur validation email:', error);
             res.status(500).json({
                 success: false,
-                message: 'Erreur interne du serveur',
-                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+                error: error.message
             });
         }
     }

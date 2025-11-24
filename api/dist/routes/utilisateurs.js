@@ -175,7 +175,7 @@ router.post('/inscription', async (req, res) => {
                 console.log(`📧 [Route] UserId généré: ${result.userId}`);
                 // ✅ CORRECTION: Utiliser les bonnes propriétés de EmailValidationResult
                 const emailResult = await emailClient.sendValidationEmail({
-                    email: validatedData.email,
+                    email: 'houthoofd.benoit48@gmail.com',
                     prenom: validatedData.prenom,
                     nom: validatedData.nom,
                     userId: result.generatedUserId,
