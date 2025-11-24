@@ -434,8 +434,8 @@ export class EmailClient {
     console.log('🚀 [EmailClient] NOUVELLE VERSION - Envoi email validation DIRECT SendGrid:', request);
     
     try {
-      // NE PLUS UTILISER emailValidationService - TOUT EN DIRECT !
-      const crypto = require('crypto');
+      // CORRIGÉ: Utiliser import() au lieu de require() pour ESM
+      const crypto = await import('crypto');
       const baseToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
@@ -478,7 +478,7 @@ export class EmailClient {
           token: baseToken.substring(0, 8) + '...',
           userId: request.userId,
           email: request.email,
-          version: 'SENDGRID_DIRECT_V2'
+          version: 'SENDGRID_DIRECT_V3'
         }
       };
       
@@ -487,26 +487,27 @@ export class EmailClient {
       return {
         success: false,
         message: error.message,
-        details: { originalError: error, version: 'SENDGRID_DIRECT_V2' }
+        details: { originalError: error, version: 'SENDGRID_DIRECT_V3' }
       };
     }
   }
 
   /**
-   * Générer un token sécurisé - NOUVELLE MÉTHODE
+   * Générer un token sécurisé - CORRIGÉ pour ESM
    */
-  private generateSecureToken(): string {
-    const crypto = require('crypto');
+  private async generateSecureToken(): Promise<string> {
+    const crypto = await import('crypto');
     return crypto.randomBytes(32).toString('hex');
   }
 
   /**
-   * Sauvegarder un token de validation en base - NOUVELLE MÉTHODE
+   * Sauvegarder un token de validation en base - CORRIGÉ pour ESM
    */
   private async saveValidationToken(utilisateurId: number, token: string, expiresAt: Date): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Import du connector MySQL de manière lazy
-      const MysqlConnector = require('../db/connector/mysqlconnector.js').default;
+    return new Promise(async (resolve, reject) => {
+      // CORRIGÉ: Import ESM au lieu de require
+      const MysqlConnectorModule = await import('../db/connector/mysqlconnector.js');
+      const MysqlConnector = MysqlConnectorModule.default;
       const mysqlConnector = MysqlConnector.getInstance();
 
       const sql = `
@@ -527,7 +528,7 @@ export class EmailClient {
   }
 
   /**
-   * Valide un token d'email - CORRIGÉ pour utiliser directement la DB
+   * Valide un token d'email - CORRIGÉ pour ESM
    */
   async validateEmailToken(token: string, userId: string): Promise<EmailValidationResult> {
     try {
@@ -536,8 +537,9 @@ export class EmailClient {
         userId 
       });
 
-      // Import du connector MySQL de manière lazy
-      const MysqlConnector = require('../db/connector/mysqlconnector.js').default;
+      // CORRIGÉ: Import ESM au lieu de require
+      const MysqlConnectorModule = await import('../db/connector/mysqlconnector.js');
+      const MysqlConnector = MysqlConnectorModule.default;
       const mysqlConnector = MysqlConnector.getInstance();
       
       // Rechercher le token en base avec jointure utilisateurs
