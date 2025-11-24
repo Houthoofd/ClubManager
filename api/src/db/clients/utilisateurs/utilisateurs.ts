@@ -129,8 +129,25 @@ export class Utilisateurs {
     return new Promise((resolve, reject) => {
       console.log('[DB] Données reçues pour inscription:', userData);
       
+      // 🔧 CORRIGÉ: Mapper les champs du frontend vers les champs attendus
+      const mappedUserData = {
+        first_name: userData.prenom,           // prenom → first_name
+        last_name: userData.nom,               // nom → last_name
+        nom_utilisateur: userData.nom_utilisateur,
+        email: userData.email,
+        password: userData.password,
+        genre_id: userData.genre_id,
+        abonnement_id: userData.abonnement_id,
+        date_of_birth: userData.date_naissance, // date_naissance → date_of_birth
+        date_inscription: userData.date_inscription,
+        status_id: userData.status_id,
+        grade_id: userData.grade_id
+      };
+
+      console.log('[DB] Données mappées pour traitement:', mappedUserData);
+      
       // VALIDATION SERVEUR RENFORCÉE
-      const birthDate = new Date(userData.date_naissance);
+      const birthDate = new Date(mappedUserData.date_of_birth);
       const today = new Date();
       
       // Réinitialiser les heures
@@ -171,14 +188,14 @@ export class Utilisateurs {
         return;
       }
 
-      // NOUVELLE VÉRIFICATION: Pas de doublon nom + prénom + date de naissance
+      // 🔧 CORRIGÉ: Utiliser les champs mappés pour la vérification
       this.verifierUtilisateurExiste({
-        nom: userData.last_name,      // Utiliser last_name au lieu de nom
-        prenom: userData.first_name,  // Utiliser first_name au lieu de prenom
-        date_naissance: userData.date_of_birth  // Utiliser date_of_birth au lieu de date_naissance
+        nom: mappedUserData.last_name,
+        prenom: mappedUserData.first_name,
+        date_naissance: mappedUserData.date_of_birth
       }).then(() => {
         // Aucun doublon trouvé, procéder à l'inscription
-        this.procederInscription(userData, resolve, reject);
+        this.procederInscription(mappedUserData, resolve, reject);
       }).catch((conflictError) => {
         // Doublon trouvé
         reject(new Error(conflictError.message || 'Une personne avec ces informations existe déjà.'));
@@ -186,8 +203,75 @@ export class Utilisateurs {
     });
   }
 
-  // Méthode pour générer un userId unique avec vérification DB
+  // 🔧 CORRIGÉ: Méthode pour générer un userId unique avec mapping correct
   private async genererUserIdUnique(userData: any): Promise<string> {
+    try {
+      console.log('[UserIdGenerator] Données reçues pour génération userId:', {
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        date_of_birth: userData.date_of_birth,
+        email: userData.email
+      });
+      
+      // 🔧 CORRIGÉ: Passer les données dans le bon format pour UserIdGenerator
+      const userDataForGenerator = {
+        prenom: userData.first_name,      // first_name → prenom
+        nom: userData.last_name,          // last_name → nom  
+        date_naissance: userData.date_of_birth, // date_of_birth → date_naissance
+        email: userData.email
+      };
+      
+      console.log('[UserIdGenerator] Données formatées pour générateur:', userDataForGenerator);
+      
+      let attempt = 0;
+      let userId: string = ''; // 🔧 CORRIGÉ: Initialiser la variable
+      let exists = true;
+      
+      while (exists && attempt < 10) { // Limite pour éviter les boucles infinies
+        userId = UserIdGenerator.generateUserId(userDataForGenerator, attempt);
+        
+        console.log(`[UserIdGenerator] Tentative ${attempt + 1}: userId généré = ${userId}`);
+        
+        // Vérifier si l'userId existe déjà
+        const checkSql = 'SELECT COUNT(*) as count FROM utilisateurs WHERE userId = ?';
+        const checkResult = await new Promise<number>((resolve, reject) => {
+          this.mysqlConnector.query(checkSql, [userId], (error: any, results: any[]) => {
+            if (error) {
+              console.error('[UserIdGenerator] Erreur vérification existence userId:', error);
+              reject(error);
+            } else {
+              console.log(`[UserIdGenerator] Vérification existence pour ${userId}: ${results[0].count} résultat(s)`);
+              resolve(results[0].count);
+            }
+          });
+        });
+        
+        exists = checkResult > 0;
+        if (exists) {
+          console.log(`[UserIdGenerator] UserId ${userId} déjà existant, nouvelle tentative...`);
+          attempt++;
+        }
+      }
+      
+      if (attempt >= 10) {
+        throw new Error('Impossible de générer un userId unique après 10 tentatives');
+      }
+      
+      // 🔧 CORRIGÉ: Vérifier que userId a bien été assigné
+      if (!userId) {
+        throw new Error('Erreur inattendue: userId non généré');
+      }
+      
+      console.log(`[UserIdGenerator] UserId unique généré avec succès: ${userId}`);
+      return userId;
+    } catch (error: any) {
+      console.error('[UserIdGenerator] Erreur lors de la génération userId:', error);
+      throw error;
+    }
+  }
+
+  // 🔧 CORRIGÉ: Méthode pour générer un userId unique avec vérification DB (version alternative plus claire)
+  private async genererUserIdUniqueOLD(userData: any): Promise<string> {
     let attempt = 0;
     let userId: string;
     let exists = true;
@@ -217,31 +301,32 @@ export class Utilisateurs {
       throw new Error('Impossible de générer un userId unique après 10 tentatives');
     }
     
-    return userId!;
+    // 🔧 CORRIGÉ: À ce point, userId est forcément assigné ou on a déjà levé une exception
+    return userId!; // Le "!" indique à TypeScript qu'on sait que userId est défini
   }
 
-  // Méthode pour procéder à l'inscription avec userId généré
+  // 🔧 CORRIGÉ: Méthode pour procéder à l'inscription avec mapping correct
   private async procederInscription(userData: any, resolve: Function, reject: Function): Promise<void> {
     try {
       // Utiliser le mot de passe par défaut si aucun mot de passe n'est fourni
       const passwordToUse = userData.password || 'password123';
       const hashedPassword = bcrypt.hashSync(passwordToUse, 10);
       
-      // Générer l'userId unique
+      // Générer l'userId unique avec les données correctement mappées
       const userId = await this.genererUserIdUnique(userData);
       
       console.log('[DB] UserId généré:', userId);
       console.log('[DB] Mot de passe utilisé:', passwordToUse === 'password123' ? 'password123 (défaut)' : 'mot de passe fourni');
       
-      console.log('[DB] Données pour insertion:', {
+      console.log('[DB] Données finales pour insertion:', {
         userId,
-        prenom: userData.prenom,
-        nom: userData.nom,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
         nom_utilisateur: userData.nom_utilisateur,
         email: userData.email,
         genre_id: userData.genre_id,
         abonnement_id: userData.abonnement_id,
-        date_naissance: userData.date_naissance,
+        date_of_birth: userData.date_of_birth,
         date_inscription: userData.date_inscription,
         status_id: userData.status_id,
         grade_id: userData.grade_id
@@ -256,18 +341,18 @@ export class Utilisateurs {
       `;
       
       const values = [
-        userId, // userId généré côté API
-        userData.first_name,    // Utiliser first_name
-        userData.last_name,     // Utiliser last_name
+        userId,
+        userData.first_name,
+        userData.last_name,
         userData.nom_utilisateur,
         userData.email,
-        hashedPassword, // Mot de passe hashé (par défaut ou fourni)
-        userData.genres,
-        userData.abonnement,
-        userData.date_of_birth, // Utiliser date_of_birth
+        hashedPassword,
+        userData.genre_id,
+        userData.abonnement_id,
+        userData.date_of_birth,
         userData.date_inscription,
-        userData.status,
-        userData.grades
+        userData.status_id,
+        userData.grade_id
       ];
 
       this.mysqlConnector.query(sql, values, (error: any, results: any) => {
@@ -281,8 +366,8 @@ export class Utilisateurs {
             userId: results.insertId,
             generatedUserId: userId,
             userData: {
-              prenom: userData.prenom,
-              nom: userData.nom,
+              prenom: userData.first_name,
+              nom: userData.last_name,
               email: userData.email,
               nom_utilisateur: userData.nom_utilisateur,
               userId: userId
@@ -291,7 +376,7 @@ export class Utilisateurs {
         }
       });
     } catch (error) {
-      console.error('[DB] Erreur lors de la génération userId:', error);
+      console.error('[DB] Erreur lors de la génération userId ou insertion:', error);
       reject(error);
     }
   }
