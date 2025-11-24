@@ -428,63 +428,35 @@ export class EmailClient {
   }
 
   /**
-   * Envoie un email de validation avec token - UTILISE SENDGRID DIRECTEMENT
+   * Envoie un email de validation avec token - VERSION FINALE SENDGRID
    */
   async sendValidationEmail(request: EmailValidationRequest): Promise<EmailValidationResult> {
+    console.log('🚀 [EmailClient] NOUVELLE VERSION - Envoi email validation DIRECT SendGrid:', request);
+    
     try {
-      console.log('📧 [EmailClient] Envoi email validation avec SendGrid direct:', request);
-      
-      // UTILISER DIRECTEMENT sendDirectViaSendGrid() - PAS emailValidationService !
-      const baseToken = this.generateSecureToken();
+      // NE PLUS UTILISER emailValidationService - TOUT EN DIRECT !
+      const crypto = require('crypto');
+      const baseToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
 
+      // Sauvegarder le token directement en base
       await this.saveValidationToken(request.utilisateurId, baseToken, expiresAt);
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const verificationLink = `${frontendUrl}/pages/verify-email?token=${baseToken}&userId=${request.userId}`;
 
       const emailContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #2c3e50; margin: 0; font-size: 28px;">🥋 Club Manager</h1>
-              <h2 style="color: #3498db; margin: 10px 0 0 0; font-size: 22px;">Vérification d'email</h2>
-            </div>
-            
-            <div style="background-color: #ecf0f1; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
-                Bonjour <strong>${request.prenom}</strong>,
-              </p>
-              <p style="margin: 15px 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">
-                Bienvenue au Club Manager ! Pour finaliser votre inscription, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous.
-              </p>
-            </div>
-
-            <div style="background-color: #3498db; color: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-              <h3 style="margin: 0 0 15px 0; color: white;">📋 Vos informations</h3>
-              <div style="background-color: rgba(255,255,255,0.2); padding: 15px; border-radius: 5px; margin: 15px 0;">
-                <p style="margin: 5px 0; color: white;"><strong>👤 Nom :</strong> ${request.prenom} ${request.nom}</p>
-                <p style="margin: 5px 0; color: white;"><strong>📧 Email :</strong> ${request.email}</p>
-                <p style="margin: 5px 0; color: white;"><strong>🆔 UserId :</strong></p>
-                <p style="margin: 5px 0; font-size: 24px; font-family: monospace; color: #fff; background-color: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; display: inline-block;">${request.userId}</p>
-              </div>
-            </div>
-
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${verificationLink}" 
-                 style="background-color: #27ae60; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 3px 6px rgba(0,0,0,0.2);">
-                ✉️ Vérifier mon email
-              </a>
-            </div>
-
-            <div style="border-top: 1px solid #bdc3c7; padding-top: 20px; margin-top: 30px; color: #7f8c8d; font-size: 12px; text-align: center;">
-              <p style="margin: 10px 0 0 0;"><strong>L'équipe Club Manager</strong></p>
-            </div>
-          </div>
-        </div>
+        <h1>🥋 Vérification Email - Club Manager</h1>
+        <p>Bonjour <strong>${request.prenom}</strong>,</p>
+        <p>Cliquez pour vérifier votre email :</p>
+        <a href="${verificationLink}" style="background:#27ae60;color:white;padding:15px 30px;text-decoration:none;border-radius:5px;">
+          ✉️ Vérifier mon email
+        </a>
+        <p>UserId: <strong>${request.userId}</strong></p>
       `;
 
+      // DIRECT SendGrid - PAS DE emailValidationService !
       const result = await this.sendDirectViaSendGrid(
         request.email,
         '✉️ Vérifiez votre email - Club Manager',
@@ -496,6 +468,8 @@ export class EmailClient {
         }
       );
 
+      console.log('✅ [EmailClient] NOUVELLE VERSION - Résultat:', result);
+
       return {
         success: result.success,
         message: result.success ? 'Email de validation envoyé avec succès' : result.error || 'Erreur envoi email',
@@ -503,16 +477,17 @@ export class EmailClient {
           messageId: result.messageId,
           token: baseToken.substring(0, 8) + '...',
           userId: request.userId,
-          email: request.email
+          email: request.email,
+          version: 'SENDGRID_DIRECT_V2'
         }
       };
       
     } catch (error: any) {
-      console.error('❌ [EmailClient] Erreur email validation:', error);
+      console.error('❌ [EmailClient] NOUVELLE VERSION - Erreur:', error);
       return {
         success: false,
         message: error.message,
-        details: { originalError: error }
+        details: { originalError: error, version: 'SENDGRID_DIRECT_V2' }
       };
     }
   }
