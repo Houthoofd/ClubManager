@@ -661,7 +661,57 @@ export class EmailValidationService {
             };
         }
     }
-    // NOUVELLE MÉTHODE: Mettre à jour la structure de la table pour inclure le hash
+    // ✅ CORRIGÉ: Utiliser seulement email_validation_tokens (pas validation_tokens)
+    async ensureTableExists() {
+        const createTableSql = `
+      CREATE TABLE IF NOT EXISTS email_validation_tokens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        utilisateur_id INT NOT NULL,
+        token VARCHAR(255) NOT NULL UNIQUE,
+        type ENUM('email_confirmation', 'password_setup') NOT NULL DEFAULT 'email_confirmation',
+        expires_at TIMESTAMP NOT NULL,
+        used TINYINT(1) DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_utilisateur_id (utilisateur_id),
+        INDEX idx_token (token),
+        INDEX idx_expires_at (expires_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+        return new Promise((resolve, reject) => {
+            // 🔧 CORRIGÉ: Ajouter le callback manquant (3ème paramètre)
+            this.mysqlConnector.query(createTableSql, [], (error) => {
+                if (error) {
+                    console.error('❌ Erreur création table email_validation_tokens:', error);
+                    reject(error);
+                }
+                else {
+                    console.log('✅ Table email_validation_tokens vérifiée/créée');
+                    resolve();
+                }
+            });
+        });
+    }
+    // 🔧 CORRIGÉ: Méthode pour nettoyer les tokens expirés
+    async cleanupExpiredTokens() {
+        return new Promise((resolve, reject) => {
+            const sql = `
+        DELETE FROM email_validation_tokens
+        WHERE expires_at < NOW()
+      `;
+            // 🔧 CORRIGÉ: Ajouter le tableau vide pour les valeurs (2ème paramètre)
+            this.mysqlConnector.query(sql, [], (error, result) => {
+                if (error) {
+                    console.error('❌ Erreur lors du nettoyage des tokens expirés:', error);
+                    reject(error);
+                }
+                else {
+                    console.log('✅ Tokens expirés nettoyés:', result.affectedRows);
+                    resolve(result.affectedRows);
+                }
+            });
+        });
+    }
+    // 🔧 CORRIGÉ: Méthode pour mettre à jour la structure des tables
     async ensureValidationTokensTableStructure() {
         return new Promise((resolve, reject) => {
             // Ajouter les colonnes nécessaires si elles n'existent pas
@@ -674,6 +724,7 @@ export class EmailValidationService {
         ADD INDEX IF NOT EXISTS idx_token_userid (token, user_id_string),
         ADD INDEX IF NOT EXISTS idx_token_hash (token_hash)
       `;
+            // 🔧 CORRIGÉ: Ajouter le tableau vide pour les valeurs (2ème paramètre)
             this.mysqlConnector.query(alterTableSql, [], (error, results) => {
                 if (error) {
                     console.warn('⚠️ Impossible de modifier la table validation_tokens:', error.message);
@@ -702,25 +753,6 @@ export class EmailValidationService {
                 }
                 else {
                     resolve(results.length > 0 ? results[0] : null);
-                }
-            });
-        });
-    }
-    // Nettoyer les tokens expirés
-    async cleanupExpiredTokens() {
-        return new Promise((resolve, reject) => {
-            const sql = `
-        DELETE FROM email_validation_tokens
-        WHERE expires_at < NOW()
-      `;
-            this.mysqlConnector.query(sql, [], (error, result) => {
-                if (error) {
-                    console.error('❌ Erreur lors du nettoyage des tokens expirés:', error);
-                    reject(error);
-                }
-                else {
-                    console.log('✅ Tokens expirés nettoyés:', result.affectedRows);
-                    resolve(result.affectedRows);
                 }
             });
         });

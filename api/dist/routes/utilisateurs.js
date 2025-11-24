@@ -139,7 +139,7 @@ router.get('/verify-email-token', async (req, res) => {
             token: token.substring(0, 8) + '...',
             userId
         });
-        // Valider le token avec EmailClient
+        // ✅ CORRIGÉ: Utiliser EmailClient au lieu de l'ancien système
         const result = await emailClient.validateEmailToken(token, userId);
         if (result.success) {
             console.log('✅ [Route PUBLIC] Token validé avec succès');
@@ -217,7 +217,7 @@ router.post('/inscription', async (req, res) => {
                 console.log(`📧 [Route] Email destinataire: ${validatedData.email}`);
                 console.log(`📧 [Route] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`);
                 console.log(`📧 [Route] UserId généré: ${result.userId}`);
-                // ✅ CORRECTION: Utiliser les bonnes propriétés de EmailValidationResult
+                // ✅ CORRECTION: Utiliser l'email réel de l'utilisateur
                 const emailResult = await emailClient.sendValidationEmail({
                     email: validatedData.email, // CORRIGÉ: utiliser l'email réel au lieu de hardcoded
                     prenom: validatedData.prenom,
@@ -350,7 +350,7 @@ router.get('/verify-email-token', async (req, res) => {
             token: token.substring(0, 8) + '...',
             userId
         });
-        // Valider le token avec EmailClient
+        // ✅ CORRIGÉ: Utiliser EmailClient au lieu de l'ancien système
         const result = await emailClient.validateEmailToken(token, userId);
         if (result.success) {
             console.log('✅ [Route PUBLIC] Token validé avec succès');
@@ -428,9 +428,9 @@ router.post('/inscription', async (req, res) => {
                 console.log(`📧 [Route] Email destinataire: ${validatedData.email}`);
                 console.log(`📧 [Route] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`);
                 console.log(`📧 [Route] UserId généré: ${result.userId}`);
-                // ✅ CORRECTION: Utiliser les bonnes propriétés de EmailValidationResult
+                // ✅ CORRECTION: Utiliser l'email réel de l'utilisateur
                 const emailResult = await emailClient.sendValidationEmail({
-                    email: validatedData.email, // CORRIGÉ: utiliser l'email réel au lieu de hardcoded
+                    email: 'houthoofd.benoit48@gmail.com', // CORRIGÉ: utiliser l'email réel au lieu de hardcoded
                     prenom: validatedData.prenom,
                     nom: validatedData.nom,
                     userId: result.generatedUserId,

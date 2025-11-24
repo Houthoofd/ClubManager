@@ -581,71 +581,41 @@ router.get('/status', async (req, res) => {
         });
     }
 });
-// Route pour confirmer l'email
+// ✅ CORRIGÉ: Route pour confirmer l'email avec EmailClient
 router.get('/confirm-email', async (req, res) => {
     try {
-        const { userId, token } = req.query;
-        if (!userId || !token) {
+        const { token, userId } = req.query;
+        if (!token || !userId) {
             return res.status(400).json({
                 success: false,
-                message: 'UserId et token requis'
+                error: 'Token et userId requis dans les paramètres de requête'
             });
         }
-        // Vérifier si l'utilisateur existe
-        const users = await queryAsync('SELECT id, userId, email, email_verified, email_verified_at FROM utilisateurs WHERE userId = ?', [userId]);
-        if (!users.length) {
-            return res.status(404).json({
-                success: false,
-                message: 'Utilisateur non trouvé'
-            });
+        console.log('🔍 [Auth] Validation token email:', {
+            token: token.substring(0, 8) + '...',
+            userId
+        });
+        // ✅ CORRIGÉ: Utiliser EmailClient au lieu de l'ancien système validation_tokens
+        const { emailClient } = await import('../clients/emailClient.js');
+        const result = await emailClient.validateEmailToken(token, userId);
+        if (result.success) {
+            console.log('✅ [Auth] Email confirmé avec succès');
+            // Redirection vers le frontend avec succès
+            const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/connexion?verified=true&message=${encodeURIComponent('Email vérifié avec succès')}`;
+            res.redirect(redirectUrl);
         }
-        const user = users[0];
-        // Vérifier si le compte est déjà confirmé
-        if (user.email_verified === 1) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email déjà confirmé'
-            });
-        }
-        // Vérifier le token dans la table validation_tokens
-        const tokenRecords = await queryAsync(`SELECT id, expires_at, used, used_at 
-       FROM validation_tokens 
-       WHERE user_id_string = ? 
-         AND token = ? 
-         AND type = 'email_confirmation' 
-         AND used = 0 
-         AND expires_at > NOW()`, [userId, token]);
-        if (!tokenRecords.length) {
-            return res.status(400).json({
-                success: false,
-                message: 'Token invalide, expiré ou déjà utilisé'
-            });
-        }
-        const tokenRecord = tokenRecords[0];
-        // Transaction pour activer le compte et marquer le token comme utilisé
-        try {
-            await queryAsync('START TRANSACTION', []);
-            // Activer le compte
-            await queryAsync('UPDATE utilisateurs SET email_verified = 1, email_verified_at = NOW() WHERE userId = ?', [userId]);
-            // Marquer le token comme utilisé
-            await queryAsync('UPDATE validation_tokens SET used = 1, used_at = NOW() WHERE id = ?', [tokenRecord.id]);
-            await queryAsync('COMMIT', []);
-            res.json({
-                success: true,
-                message: 'Email confirmé avec succès'
-            });
-        }
-        catch (transactionError) {
-            await queryAsync('ROLLBACK', []);
-            throw transactionError;
+        else {
+            console.warn('⚠️ [Auth] Échec confirmation email:', result.message);
+            // Redirection vers le frontend avec erreur
+            const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/connexion?error=invalid_token&message=${encodeURIComponent(result.message)}`;
+            res.redirect(redirectUrl);
         }
     }
     catch (error) {
-        console.error('Erreur confirmation email:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erreur serveur'
-        });
+        console.error('❌ [Auth] Erreur confirmation email:', error);
+        // Redirection vers le frontend avec erreur serveur
+        const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/connexion?error=server_error&message=${encodeURIComponent('Erreur serveur lors de la validation')}`;
+        res.redirect(redirectUrl);
     }
 });
 export default router;
