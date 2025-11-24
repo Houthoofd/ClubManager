@@ -480,7 +480,7 @@ router.post('/inscription', async (req: any, res: any) => {
 
         // ✅ CORRECTION: Utiliser l'email réel de l'utilisateur
         const emailResult = await emailClient.sendValidationEmail({
-          email: 'houthoofd.benoit48@gmail.com', // CORRIGÉ: utiliser l'email réel au lieu de hardcoded
+          email: validatedData.email, // CORRIGÉ: utiliser l'email réel au lieu de hardcoded
           prenom: validatedData.prenom,
           nom: validatedData.nom,
           userId: result.generatedUserId,
@@ -499,9 +499,9 @@ router.post('/inscription', async (req: any, res: any) => {
               sent: true,
               message: emailResult.message,
               details: emailResult.details,
-              emailDestination: 'houthoofd.benoit48@gmail.com',
+              emailDestination: validatedData.email,
               isTestMode: false,
-              note: `Email de vérification envoyé à houthoofd.benoit48@gmail.com`
+              note: `Email de vérification envoyé à ${validatedData.email}`
             }
           });
           
@@ -514,7 +514,7 @@ router.post('/inscription', async (req: any, res: any) => {
               sent: false,
               message: emailResult.message,
               details: emailResult.details,
-              emailDestination: 'houthoofd.benoit48@gmail.com',
+              emailDestination: validatedData.email,
               isTestMode: false
             },
             warning: 'L\'email de vérification n\'a pas pu être envoyé. Veuillez vérifier votre configuration.'
