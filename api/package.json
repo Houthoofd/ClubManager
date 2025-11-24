@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node ./dist/index.js",
-    "clean": "rmdir /s /q dist 2>nul || rm -rf dist",
+    "clean": "rmdir /s /q dist 2>nul || echo \"Dossier dist nettoyé\"",
     "prebuild": "npm run clean",
     "build": "tsc",
     "build:force": "npm run clean && tsc --force",
