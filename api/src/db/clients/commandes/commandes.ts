@@ -1,438 +1,371 @@
-import MysqlConnector from '../../connector/mysqlconnector.js';
-import { CommandeStore as Commande, CreateCommandeData, UpdateCommandeData } from '@clubmanager/types';
+/**
+ * Façade pour le module Commandes
+ * Fournit une API simple et unifiée pour la gestion des commandes
+ * Compatible avec l'ancien code (backward compatibility)
+ */
 
-export class CommandesClient {
-  private static mysqlConnector = MysqlConnector.getInstance();
+import { getCommandesRepository } from "./commandes.repository.js";
+import { getCommandesService } from "../../../services/commandes/commandesService.js";
+import { getStockService } from "../../../services/commandes/stockService.js";
+import type { CommandesRepository } from "./commandes.repository.js";
+import type { CommandesService } from "../../../services/commandes/commandesService.js";
+import type { StockService } from "../../../services/commandes/stockService.js";
+import type {
+  Commande,
+  CreateCommandeData,
+  UpdateCommandeData,
+  CommandeSearchFilters,
+  CommandeStatistiques,
+  CommandeStatsPeriode,
+  TopProduit,
+} from "./types.js";
+
+/**
+ * Façade pour la gestion des commandes
+ *
+ * Cette classe compose le repository, les services métier et fournit une API unifiée.
+ * Elle maintient la compatibilité avec l'ancienne API CommandesClient.
+ *
+ * @example
+ * ```typescript
+ * // Récupérer toutes les commandes
+ * const commandes = await Commandes.findAll();
+ *
+ * // Créer une commande
+ * const commande = await Commandes.create({
+ *   commande_id: 'CMD-123',
+ *   utilisateur_id: 1,
+ *   total: 99.99,
+ *   articles: [...]
+ * });
+ *
+ * // Mettre à jour le statut
+ * await Commandes.updateStatut('CMD-123', 'confirmee');
+ * ```
+ */
+export class Commandes {
+  private static repository: CommandesRepository;
+  private static service: CommandesService;
+  private static stockService: StockService;
+
+  /**
+   * Initialisation lazy des dépendances
+   */
+  private static initialize(): void {
+    if (!this.repository) {
+      this.repository = getCommandesRepository();
+      this.service = getCommandesService();
+      this.stockService = getStockService();
+    }
+  }
+
+  // ==========================================================================
+  // MÉTHODES DE LECTURE (BACKWARD COMPATIBLE)
+  // ==========================================================================
 
   /**
    * Récupérer toutes les commandes avec informations utilisateur
+   * @returns Promise<Commande[]>
    */
   static async findAll(): Promise<Commande[]> {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT 
-          c.commande_id,
-          c.utilisateur_id,
-          c.statut,
-          c.total,
-          c.articles,
-          c.date_commande,
-          c.updated_at,
-          c.payment_intent_id,
-          u.nom_utilisateur,
-          u.email
-        FROM commandes c
-        LEFT JOIN utilisateurs u ON c.utilisateur_id = u.id
-        ORDER BY c.date_commande DESC
-      `;
-
-      this.mysqlConnector.query(sql, [], (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          const commandes = results.map((row: any) => ({
-            ...row,
-            articles: typeof row.articles === 'string' ? JSON.parse(row.articles) : row.articles
-          }));
-          resolve(commandes);
-        }
-      });
-    });
+    this.initialize();
+    return this.service.getAllCommandes();
   }
 
   /**
    * Récupérer une commande par son ID
+   * @param commandeId - ID de la commande
+   * @returns Promise<Commande | null>
    */
   static async findById(commandeId: string): Promise<Commande | null> {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT 
-          c.commande_id,
-          c.utilisateur_id,
-          c.statut,
-          c.total,
-          c.articles,
-          c.date_commande,
-          c.updated_at,
-          c.payment_intent_id,
-          u.nom_utilisateur,
-          u.email
-        FROM commandes c
-        LEFT JOIN utilisateurs u ON c.utilisateur_id = u.id
-        WHERE c.commande_id = ?
-      `;
-
-      this.mysqlConnector.query(sql, [commandeId], (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          if (results.length === 0) {
-            resolve(null);
-          } else {
-            const commande = results[0];
-            resolve({
-              ...commande,
-              articles: typeof commande.articles === 'string' ? JSON.parse(commande.articles) : commande.articles
-            });
-          }
-        }
-      });
-    });
+    this.initialize();
+    try {
+      return await this.service.getCommandeById(commandeId);
+    } catch (error: any) {
+      if (error.code === "NOT_FOUND") {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**
    * Récupérer les commandes d'un utilisateur
+   * @param utilisateurId - ID de l'utilisateur
+   * @returns Promise<Commande[]>
    */
   static async findByUserId(utilisateurId: number): Promise<Commande[]> {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT 
-          c.commande_id,
-          c.utilisateur_id,
-          c.statut,
-          c.total,
-          c.articles,
-          c.date_commande,
-          c.updated_at,
-          c.payment_intent_id,
-          u.nom_utilisateur,
-          u.email
-        FROM commandes c
-        LEFT JOIN utilisateurs u ON c.utilisateur_id = u.id
-        WHERE c.utilisateur_id = ?
-        ORDER BY c.date_commande DESC
-      `;
-
-      this.mysqlConnector.query(sql, [utilisateurId], (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          const commandes = results.map((row: any) => ({
-            ...row,
-            articles: typeof row.articles === 'string' ? JSON.parse(row.articles) : row.articles
-          }));
-          resolve(commandes);
-        }
-      });
-    });
+    this.initialize();
+    return this.service.getCommandesByUserId(utilisateurId);
   }
 
   /**
    * Récupérer les commandes par statut
+   * @param statut - Statut des commandes
+   * @returns Promise<Commande[]>
    */
   static async findByStatut(statut: string): Promise<Commande[]> {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT 
-          c.commande_id,
-          c.utilisateur_id,
-          c.statut,
-          c.total,
-          c.articles,
-          c.date_commande,
-          c.updated_at,
-          c.payment_intent_id,
-          u.nom_utilisateur,
-          u.email
-        FROM commandes c
-        LEFT JOIN utilisateurs u ON c.utilisateur_id = u.id
-        WHERE c.statut = ?
-        ORDER BY c.date_commande DESC
-      `;
-
-      this.mysqlConnector.query(sql, [statut], (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          const commandes = results.map((row: any) => ({
-            ...row,
-            articles: typeof row.articles === 'string' ? JSON.parse(row.articles) : row.articles
-          }));
-          resolve(commandes);
-        }
-      });
-    });
+    this.initialize();
+    return this.service.getCommandesByStatut(statut);
   }
 
   /**
+   * Récupérer une commande par payment_intent_id
+   * @param paymentIntentId - ID du payment intent Stripe
+   * @returns Promise<Commande | null>
+   */
+  static async findByPaymentIntent(
+    paymentIntentId: string,
+  ): Promise<Commande | null> {
+    this.initialize();
+    try {
+      return await this.service.getCommandeByPaymentIntent(paymentIntentId);
+    } catch (error: any) {
+      if (error.code === "NOT_FOUND") {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // MÉTHODES D'ÉCRITURE (BACKWARD COMPATIBLE)
+  // ==========================================================================
+
+  /**
    * Créer une nouvelle commande
+   * @param data - Données de la commande
+   * @returns Promise<string> - ID de la commande créée
    */
   static async create(data: CreateCommandeData): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const articlesJson = JSON.stringify(data.articles);
-      
-      const sql = `
-        INSERT INTO commandes (
-          commande_id, 
-          utilisateur_id, 
-          statut, 
-          total, 
-          articles, 
-          payment_intent_id,
-          date_commande
-        ) VALUES (?, ?, ?, ?, ?, ?, NOW())
-      `;
-
-      const values = [
-        data.commande_id,
-        data.utilisateur_id,
-        data.statut || 'en_attente',
-        data.total,
-        articlesJson,
-        data.payment_intent_id || null
-      ];
-
-      this.mysqlConnector.query(sql, values, (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(data.commande_id);
-        }
-      });
-    });
+    this.initialize();
+    const commande = await this.service.createCommande(data);
+    return commande.commande_id;
   }
 
   /**
    * Mettre à jour le statut d'une commande
+   * @param commandeId - ID de la commande
+   * @param nouveauStatut - Nouveau statut
+   * @returns Promise<boolean> - true si mise à jour réussie
    */
-  static async updateStatut(commandeId: string, nouveauStatut: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        UPDATE commandes 
-        SET statut = ?, updated_at = NOW() 
-        WHERE commande_id = ?
-      `;
-
-      this.mysqlConnector.query(sql, [nouveauStatut, commandeId], (error, results: any) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(results.affectedRows > 0);
-        }
-      });
-    });
+  static async updateStatut(
+    commandeId: string,
+    nouveauStatut: string,
+  ): Promise<boolean> {
+    this.initialize();
+    try {
+      await this.service.updateCommandeStatut(commandeId, nouveauStatut);
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du statut:", error);
+      return false;
+    }
   }
 
   /**
    * Mettre à jour une commande
+   * @param commandeId - ID de la commande
+   * @param data - Données à mettre à jour
+   * @returns Promise<boolean> - true si mise à jour réussie
    */
-  static async update(commandeId: string, data: UpdateCommandeData): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const updates: string[] = [];
-      const values: any[] = [];
-
-      if (data.statut !== undefined) {
-        updates.push('statut = ?');
-        values.push(data.statut);
-      }
-
-      if (data.total !== undefined) {
-        updates.push('total = ?');
-        values.push(data.total);
-      }
-
-      if (data.articles !== undefined) {
-        updates.push('articles = ?');
-        values.push(JSON.stringify(data.articles));
-      }
-
-      if (data.payment_intent_id !== undefined) {
-        updates.push('payment_intent_id = ?');
-        values.push(data.payment_intent_id);
-      }
-
-      if (updates.length === 0) {
-        resolve(false);
-        return;
-      }
-
-      updates.push('updated_at = NOW()');
-      values.push(commandeId);
-
-      const sql = `UPDATE commandes SET ${updates.join(', ')} WHERE commande_id = ?`;
-
-      this.mysqlConnector.query(sql, values, (error, results: any) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(results.affectedRows > 0);
-        }
-      });
-    });
+  static async update(
+    commandeId: string,
+    data: UpdateCommandeData,
+  ): Promise<boolean> {
+    this.initialize();
+    try {
+      await this.service.updateCommande(commandeId, data);
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour:", error);
+      return false;
+    }
   }
 
   /**
    * Supprimer une commande
+   * @param commandeId - ID de la commande
+   * @returns Promise<boolean> - true si suppression réussie
    */
   static async delete(commandeId: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const sql = `DELETE FROM commandes WHERE commande_id = ?`;
-
-      this.mysqlConnector.query(sql, [commandeId], (error, results: any) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(results.affectedRows > 0);
-        }
-      });
-    });
+    this.initialize();
+    try {
+      await this.service.deleteCommande(commandeId);
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      return false;
+    }
   }
+
+  // ==========================================================================
+  // MÉTHODES DE STATISTIQUES (BACKWARD COMPATIBLE)
+  // ==========================================================================
 
   /**
    * Récupérer les statistiques des commandes
+   * @returns Promise<CommandeStatistiques>
    */
-  static async getStatistiques(): Promise<{
-    total_commandes: number;
-    commandes_en_attente: number;
-    commandes_confirmees: number;
-    commandes_livrees: number;
-    commandes_annulees: number;
-    chiffre_affaires_total: number;
-    chiffre_affaires_mois: number;
-  }> {
-    return new Promise((resolve, reject) => {
-      const sql1 = `
-        SELECT 
-          COUNT(*) as total_commandes,
-          SUM(CASE WHEN statut = 'en_attente' THEN 1 ELSE 0 END) as commandes_en_attente,
-          SUM(CASE WHEN statut = 'confirmee' THEN 1 ELSE 0 END) as commandes_confirmees,
-          SUM(CASE WHEN statut = 'livree' THEN 1 ELSE 0 END) as commandes_livrees,
-          SUM(CASE WHEN statut = 'annulee' THEN 1 ELSE 0 END) as commandes_annulees,
-          SUM(CASE WHEN statut != 'annulee' THEN total ELSE 0 END) as chiffre_affaires_total
-        FROM commandes
-      `;
-
-      this.mysqlConnector.query(sql1, [], (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          const stats = results[0];
-
-          const sql2 = `
-            SELECT 
-              SUM(CASE WHEN statut != 'annulee' THEN total ELSE 0 END) as chiffre_affaires_mois
-            FROM commandes 
-            WHERE YEAR(date_commande) = YEAR(CURDATE()) 
-              AND MONTH(date_commande) = MONTH(CURDATE())
-          `;
-
-          this.mysqlConnector.query(sql2, [], (error2, results2) => {
-            if (error2) {
-              reject(error2);
-            } else {
-              const chiffreMois = results2[0];
-
-              resolve({
-                total_commandes: Number(stats.total_commandes || 0),
-                commandes_en_attente: Number(stats.commandes_en_attente || 0),
-                commandes_confirmees: Number(stats.commandes_confirmees || 0),
-                commandes_livrees: Number(stats.commandes_livrees || 0),
-                commandes_annulees: Number(stats.commandes_annulees || 0),
-                chiffre_affaires_total: Number(stats.chiffre_affaires_total || 0),
-                chiffre_affaires_mois: Number(chiffreMois.chiffre_affaires_mois || 0)
-              });
-            }
-          });
-        }
-      });
-    });
+  static async getStatistiques(): Promise<CommandeStatistiques> {
+    this.initialize();
+    return this.service.getStatistiques();
   }
 
   /**
    * Rechercher des commandes avec filtres
+   * @param filters - Filtres de recherche
+   * @returns Promise<Commande[]>
    */
-  static async search(filters: {
-    statut?: string;
-    utilisateur_id?: number;
-    date_debut?: string;
-    date_fin?: string;
-    search?: string;
-  }): Promise<Commande[]> {
-    return new Promise((resolve, reject) => {
-      let sql = `
-        SELECT 
-          c.commande_id,
-          c.utilisateur_id,
-          c.statut,
-          c.total,
-          c.articles,
-          c.date_commande,
-          c.updated_at,
-          c.payment_intent_id,
-          u.nom_utilisateur,
-          u.email
-        FROM commandes c
-        LEFT JOIN utilisateurs u ON c.utilisateur_id = u.id
-        WHERE 1=1
-      `;
-      
-      const params: any[] = [];
-
-      if (filters.statut) {
-        sql += ' AND c.statut = ?';
-        params.push(filters.statut);
-      }
-
-      if (filters.utilisateur_id) {
-        sql += ' AND c.utilisateur_id = ?';
-        params.push(filters.utilisateur_id);
-      }
-
-      if (filters.date_debut) {
-        sql += ' AND DATE(c.date_commande) >= ?';
-        params.push(filters.date_debut);
-      }
-
-      if (filters.date_fin) {
-        sql += ' AND DATE(c.date_commande) <= ?';
-        params.push(filters.date_fin);
-      }
-
-      if (filters.search) {
-        sql += ' AND (c.commande_id LIKE ? OR u.nom_utilisateur LIKE ? OR u.email LIKE ?)';
-
-        const searchPattern = `%${filters.search}%`;
-        params.push(searchPattern, searchPattern, searchPattern);
-      }
-
-      sql += ' ORDER BY c.date_commande DESC';
-
-      this.mysqlConnector.query(sql, params, (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          const commandes = results.map((row: any) => ({
-            ...row,
-            articles: typeof row.articles === 'string' ? JSON.parse(row.articles) : row.articles
-          }));
-          resolve(commandes);
-        }
-      });
-    });
+  static async search(filters: CommandeSearchFilters): Promise<Commande[]> {
+    this.initialize();
+    const result = await this.service.searchCommandes(filters);
+    return result.commandes;
   }
 
   /**
    * Compter les commandes par statut
+   * @returns Promise<Record<string, number>>
    */
   static async countByStatut(): Promise<Record<string, number>> {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT statut, COUNT(*) as count 
-        FROM commandes 
-        GROUP BY statut
-      `;
+    this.initialize();
+    return this.service.countByStatut();
+  }
 
-      this.mysqlConnector.query(sql, [], (error, results) => {
-        if (error) {
-          reject(error);
-        } else {
-          const counts: Record<string, number> = {};
-          results.forEach((row: any) => {
-            counts[row.statut] = Number(row.count);
-          });
-          resolve(counts);
-        }
-      });
-    });
+  // ==========================================================================
+  // NOUVELLES MÉTHODES (API ÉTENDUE)
+  // ==========================================================================
+
+  /**
+   * Rechercher des commandes avec pagination
+   * @param filters - Filtres de recherche
+   * @returns Promise avec résultats paginés
+   */
+  static async searchWithPagination(filters: CommandeSearchFilters): Promise<{
+    commandes: Commande[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    this.initialize();
+    return this.service.searchCommandes(filters);
+  }
+
+  /**
+   * Annuler une commande
+   * @param commandeId - ID de la commande
+   * @returns Promise<Commande>
+   */
+  static async cancel(commandeId: string): Promise<Commande> {
+    this.initialize();
+    return this.service.cancelCommande(commandeId);
+  }
+
+  /**
+   * Obtenir les statistiques par période
+   * @param period - Période (day, week, month)
+   * @param duration - Durée
+   * @returns Promise<CommandeStatsPeriode[]>
+   */
+  static async getStatsByPeriod(
+    period: "day" | "week" | "month",
+    duration: number = 30,
+  ): Promise<CommandeStatsPeriode[]> {
+    this.initialize();
+    return this.service.getStatsByPeriod(period, duration);
+  }
+
+  /**
+   * Obtenir les top produits vendus
+   * @param limit - Nombre de produits
+   * @returns Promise<TopProduit[]>
+   */
+  static async getTopProduits(limit: number = 10): Promise<TopProduit[]> {
+    this.initialize();
+    return this.service.getTopProduits(limit);
+  }
+
+  // ==========================================================================
+  // MÉTHODES DE GESTION DU STOCK
+  // ==========================================================================
+
+  /**
+   * Vérifier la disponibilité du stock pour une commande
+   * @param articles - Articles de la commande
+   * @returns Promise<boolean>
+   */
+  static async checkStockAvailability(articles: any[]): Promise<boolean> {
+    this.initialize();
+    return this.stockService.areArticlesInStock(articles);
+  }
+
+  /**
+   * Réserver du stock pour une commande
+   * @param commandeId - ID de la commande
+   * @param articles - Articles à réserver
+   * @returns Promise<void>
+   */
+  static async reserveStock(
+    commandeId: string,
+    articles: any[],
+  ): Promise<void> {
+    this.initialize();
+    return this.stockService.reserveStock(commandeId, articles);
+  }
+
+  /**
+   * Libérer le stock d'une commande annulée
+   * @param commandeId - ID de la commande
+   * @param articles - Articles à libérer
+   * @returns Promise<void>
+   */
+  static async releaseStock(
+    commandeId: string,
+    articles: any[],
+  ): Promise<void> {
+    this.initialize();
+    return this.stockService.releaseStock(commandeId, articles);
+  }
+
+  // ==========================================================================
+  // MÉTHODES D'ACCÈS AUX SERVICES (pour usage avancé)
+  // ==========================================================================
+
+  /**
+   * Obtenir l'instance du repository
+   * @returns CommandesRepository
+   */
+  static getRepository(): CommandesRepository {
+    this.initialize();
+    return this.repository;
+  }
+
+  /**
+   * Obtenir l'instance du service
+   * @returns CommandesService
+   */
+  static getService(): CommandesService {
+    this.initialize();
+    return this.service;
+  }
+
+  /**
+   * Obtenir l'instance du service de stock
+   * @returns StockService
+   */
+  static getStockService(): StockService {
+    this.initialize();
+    return this.stockService;
   }
 }
+
+/**
+ * Export de la classe pour compatibilité avec l'ancien code
+ * @deprecated Utilisez la classe Commandes à la place
+ */
+export class CommandesClient extends Commandes {}
+
+/**
+ * Export par défaut
+ */
+export default Commandes;

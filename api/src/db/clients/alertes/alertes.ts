@@ -1,177 +1,122 @@
-import { ConfirmationResult, VerifyResultWithData } from '@clubmanager/types';
-import MysqlConnector from '../../connector/mysqlconnector.js';
+/**
+ * Classe principale Alerte - Point d'entrée unifié pour les opérations sur les alertes
+ * Composition du repository (lecture) et du service (écriture/actions)
+ */
+
+import { ConfirmationResult, VerifyResultWithData } from "@clubmanager/types";
+import { AlertesRepository } from "./alertes.repository.js";
+import { AlertesService } from "../../../services/alertesService.js";
+import type {
+  AlerteActive,
+  DashboardAlerte,
+  StatistiquesAlertes,
+  ResoudreAlerteParams,
+  IgnorerAlerteParams,
+} from "./types.js";
 
 export class Alerte {
-  private mysqlConnector: MysqlConnector;
+  private repository: AlertesRepository;
+  private service: AlertesService;
 
   constructor() {
-    this.mysqlConnector = MysqlConnector.getInstance();
+    this.repository = new AlertesRepository();
+    this.service = new AlertesService();
   }
 
-  async obtenirDashboardAlertes(): Promise<VerifyResultWithData> {
-    return new Promise((resolve, reject) => {
-      this.mysqlConnector.query('CALL obtenir_dashboard_alertes()', [], (error: any, results: any) => {
-        if (error) {
-          console.error('Erreur lors de la récupération du dashboard:', error.message);
-          reject(error);
-        } else {
-          const confirmation: VerifyResultWithData = {
-            isFind: true,
-            message: "Dashboard des alertes récupéré avec succès",
-            data: results[0] || []
-          };
-          resolve(confirmation);
-        }
-      });
-    });
+  // ==================== Méthodes de lecture (Repository) ====================
+
+  /**
+   * Récupère le dashboard des alertes avec vue d'ensemble
+   * @returns Dashboard avec statistiques par type d'alerte
+   */
+  async obtenirDashboardAlertes(): Promise<
+    VerifyResultWithData<DashboardAlerte[]>
+  > {
+    return this.repository.obtenirDashboard();
   }
 
-  async obtenirAlertesActives(): Promise<VerifyResultWithData> {
-    return new Promise((resolve, reject) => {
-      const query = `
-        SELECT 
-          au.id,
-          au.utilisateur_id,
-          at.nom as type_alerte,
-          at.code,
-          at.description,
-          at.priorite,
-          au.donnees_contexte,
-          au.date_detection,
-          CONCAT(u.first_name, ' ', u.last_name) as nom_utilisateur,
-          u.email,
-          u.status_id
-        FROM alertes_utilisateurs au
-        JOIN alertes_types at ON au.alerte_type_id = at.id
-        JOIN utilisateurs u ON au.utilisateur_id = u.id
-        WHERE au.statut = 'active'
-        ORDER BY 
-          CASE at.priorite 
-            WHEN 'critique' THEN 1 
-            WHEN 'haute' THEN 2 
-            WHEN 'normale' THEN 3 
-            WHEN 'basse' THEN 4 
-          END,
-          au.date_detection DESC
-      `;
-
-      this.mysqlConnector.query(query, [], (error: any, results: any) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des alertes actives:', error.message);
-          reject(error);
-        } else {
-          const confirmation: VerifyResultWithData = {
-            isFind: true,
-            message: "Alertes actives récupérées avec succès",
-            data: results || []
-          };
-          resolve(confirmation);
-        }
-      });
-    });
+  /**
+   * Récupère toutes les alertes actives dans le système
+   * @returns Liste des alertes actives avec détails utilisateur
+   */
+  async obtenirAlertesActives(): Promise<VerifyResultWithData<AlerteActive[]>> {
+    return this.repository.obtenirAlertesActives();
   }
 
-  async obtenirAlertesUtilisateur(userId: number): Promise<VerifyResultWithData> {
-    return new Promise((resolve, reject) => {
-      this.mysqlConnector.query('CALL obtenir_alertes_utilisateur(?)', [userId], (error: any, results: any) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des alertes utilisateur:', error.message);
-          reject(error);
-        } else {
-          const confirmation: VerifyResultWithData = {
-            isFind: true,
-            message: "Alertes utilisateur récupérées avec succès",
-            data: results[0] || []
-          };
-          resolve(confirmation);
-        }
-      });
-    });
+  /**
+   * Récupère les alertes d'un utilisateur spécifique
+   * @param userId - ID de l'utilisateur
+   * @returns Liste des alertes de l'utilisateur
+   */
+  async obtenirAlertesUtilisateur(
+    userId: number,
+  ): Promise<VerifyResultWithData<any[]>> {
+    return this.repository.obtenirAlertesUtilisateur(userId);
   }
 
+  /**
+   * Récupère les statistiques globales des alertes (30 derniers jours)
+   * @returns Statistiques (total, actives, résolues, critiques)
+   */
+  async obtenirStatistiquesAlertes(): Promise<
+    VerifyResultWithData<StatistiquesAlertes>
+  > {
+    return this.repository.obtenirStatistiques();
+  }
+
+  // ==================== Méthodes d'action (Service) ====================
+
+  /**
+   * Déclenche la détection automatique des alertes pour tous les utilisateurs
+   * @returns Confirmation de l'exécution
+   */
   async detecterAlertes(): Promise<ConfirmationResult> {
-    return new Promise((resolve, reject) => {
-      this.mysqlConnector.query('CALL detecter_alertes_utilisateurs()', [], (error: any, results: any) => {
-        if (error) {
-          console.error('Erreur lors de la détection des alertes:', error.message);
-          reject(error);
-        } else {
-          const confirmation: ConfirmationResult = {
-            isConfirm: true,
-            message: "Détection des alertes effectuée avec succès"
-          };
-          resolve(confirmation);
-        }
-      });
-    });
+    return this.service.detecterAlertes();
   }
 
-  async resoudreAlerte(alerteId: number, notes: string, effectuePar: number): Promise<ConfirmationResult> {
-    return new Promise((resolve, reject) => {
-      this.mysqlConnector.query('CALL resoudre_alerte(?, ?, ?)', [alerteId, notes, effectuePar], (error: any, results: any) => {
-        if (error) {
-          console.error('Erreur lors de la résolution de l\'alerte:', error.message);
-          reject(error);
-        } else {
-          const confirmation: ConfirmationResult = {
-            isConfirm: true,
-            message: "Alerte résolue avec succès"
-          };
-          resolve(confirmation);
-        }
-      });
-    });
+  /**
+   * Résout une alerte avec notes et tracking de l'utilisateur
+   * @param alerteId - ID de l'alerte
+   * @param notes - Notes de résolution
+   * @param effectuePar - ID de l'utilisateur qui résout l'alerte
+   * @returns Confirmation de la résolution
+   */
+  async resoudreAlerte(
+    alerteId: number,
+    notes: string,
+    effectuePar: number,
+  ): Promise<ConfirmationResult> {
+    return this.service.resoudreAlerte({ alerteId, notes, effectuePar });
   }
 
-  async ignorerAlerte(alerteId: number, notes: string): Promise<ConfirmationResult> {
-    return new Promise((resolve, reject) => {
-      const query = `
-        UPDATE alertes_utilisateurs 
-        SET statut = 'ignoree', notes = ?, date_resolution = NOW()
-        WHERE id = ?
-      `;
-
-      this.mysqlConnector.query(query, [notes, alerteId], (error: any, results: any) => {
-        if (error) {
-          console.error('Erreur lors de l\'ignorement de l\'alerte:', error.message);
-          reject(error);
-        } else {
-          const confirmation: ConfirmationResult = {
-            isConfirm: true,
-            message: "Alerte ignorée avec succès"
-          };
-          resolve(confirmation);
-        }
-      });
-    });
+  /**
+   * Ignore une alerte (la marque comme non pertinente)
+   * @param alerteId - ID de l'alerte
+   * @param notes - Raison de l'ignorement
+   * @returns Confirmation de l'ignorement
+   */
+  async ignorerAlerte(
+    alerteId: number,
+    notes: string,
+  ): Promise<ConfirmationResult> {
+    return this.service.ignorerAlerte({ alerteId, notes });
   }
 
-  async obtenirStatistiquesAlertes(): Promise<VerifyResultWithData> {
-    return new Promise((resolve, reject) => {
-      const query = `
-        SELECT 
-          COUNT(*) as total_alertes,
-          COUNT(CASE WHEN statut = 'active' THEN 1 END) as alertes_actives,
-          COUNT(CASE WHEN statut = 'resolue' THEN 1 END) as alertes_resolues,
-          COUNT(CASE WHEN at.priorite = 'critique' AND au.statut = 'active' THEN 1 END) as alertes_critiques
-        FROM alertes_utilisateurs au
-        JOIN alertes_types at ON au.alerte_type_id = at.id
-        WHERE au.date_detection >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-      `;
+  /**
+   * Résout une alerte de manière simplifiée (sans stored procedure)
+   * @param alerteId - ID de l'alerte
+   * @returns Confirmation de la résolution
+   */
+  async resoudreAlerteSimple(alerteId: number): Promise<ConfirmationResult> {
+    return this.service.resoudreAlerteSimple(alerteId);
+  }
 
-      this.mysqlConnector.query(query, [], (error: any, results: any) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des statistiques:', error.message);
-          reject(error);
-        } else {
-          const confirmation: VerifyResultWithData = {
-            isFind: true,
-            message: "Statistiques des alertes récupérées avec succès",
-            data: results[0] || {}
-          };
-          resolve(confirmation);
-        }
-      });
-    });
+  /**
+   * Réactive une alerte précédemment ignorée ou résolue
+   * @param alerteId - ID de l'alerte
+   * @returns Confirmation de la réactivation
+   */
+  async reactiverAlerte(alerteId: number): Promise<ConfirmationResult> {
+    return this.service.reactiverAlerte(alerteId);
   }
 }
