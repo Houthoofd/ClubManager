@@ -21,3 +21,5 @@ build/
 
 # Tests
 coverage/
+
+/src/generated/prisma
