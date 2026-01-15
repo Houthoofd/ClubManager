@@ -4,19 +4,19 @@
  */
 
 // Repository
-export { MagasinRepository, getMagasinRepository } from './magasin.repository.js';
+export {
+  MagasinRepository,
+  getMagasinRepository,
+} from "./magasin.repository.js";
 
 // Types
-export * from './types.js';
+export * from "./types.js";
 
 // Queries (pour usage avancé)
-export * as MagasinQueries from './queries/index.js';
+export * as MagasinQueries from "./queries/index.js";
 
 // Utils (pour usage avancé)
-export * as MagasinUtils from './utils/index.js';
-
-// GraphQL
-export { typeDefs, resolvers } from './graphql/magasin.graphql.js';
+export * as MagasinUtils from "./utils/index.js";
 
 /**
  * USAGE RECOMMANDÉ:
@@ -27,9 +27,6 @@ export { typeDefs, resolvers } from './graphql/magasin.graphql.js';
  *
  * 2. Import des types:
  *    import type { Article, Commande, CreateArticleData } from './db/clients/magasin/index.js';
- *
- * 3. Import du schema GraphQL:
- *    import { typeDefs, resolvers } from './db/clients/magasin/index.js';
  *
  * EXEMPLES D'UTILISATION:
  *
