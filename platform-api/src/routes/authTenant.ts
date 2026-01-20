@@ -1,10 +1,10 @@
-import express, { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-import { body, validationResult } from 'express-validator';
-import { tenantResolver, validateUserTenant } from '../middleware/tenant.js';
-import { AuthenticatedUser } from '../types/auth.js';
+import express, { Request, Response } from "express";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+import { body, validationResult } from "express-validator";
+import { tenantResolver, validateUserTenant } from "../middleware/tenant.js";
+import { AuthenticatedUser } from "../types/auth.js";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -31,12 +31,12 @@ const generateAuthToken = (user: AuthenticatedUser): string => {
     first_name: user.first_name,
     last_name: user.last_name,
     status: user.status,
-    grade: user.grade,
   };
 
+  const expiresIn = process.env.JWT_EXPIRES_IN || "7d";
   return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+    expiresIn,
+  } as jwt.SignOptions);
 };
 
 /**
@@ -45,11 +45,16 @@ const generateAuthToken = (user: AuthenticatedUser): string => {
  * @access  Public (requires tenant resolution)
  */
 router.post(
-  '/login',
+  "/login",
   tenantResolver, // Resolve tenant first
   [
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body("email")
+      .isEmail()
+      .normalizeEmail()
+      .withMessage("Valid email required"),
+    body("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters"),
     handleValidationErrors,
   ],
   async (req: Request, res: Response) => {
@@ -80,7 +85,7 @@ router.post(
       if (!user || !user.password) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials',
+          message: "Invalid credentials",
         });
       }
 
@@ -89,15 +94,15 @@ router.post(
       if (!isPasswordValid) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials',
+          message: "Invalid credentials",
         });
       }
 
       // Check tenant status
-      if (user.tenant.status !== 'ACTIVE') {
+      if (user.tenant.status !== "ACTIVE") {
         return res.status(403).json({
           success: false,
-          message: 'Tenant access suspended',
+          message: "Tenant access suspended",
           tenantStatus: user.tenant.status,
         });
       }
@@ -125,7 +130,7 @@ router.post(
 
       res.json({
         success: true,
-        message: 'Login successful',
+        message: "Login successful",
         data: {
           user: authenticatedUser,
           token,
@@ -136,13 +141,13 @@ router.post(
         },
       });
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
@@ -151,20 +156,35 @@ router.post(
  * @access  Public (requires tenant resolution + user limits check)
  */
 router.post(
-  '/register',
+  "/register",
   tenantResolver,
   [
-    body('firstName').trim().isLength({ min: 1, max: 50 }).withMessage('First name required (1-50 chars)'),
-    body('lastName').trim().isLength({ min: 1, max: 50 }).withMessage('Last name required (1-50 chars)'),
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('dateOfBirth').isISO8601().withMessage('Valid date of birth required'),
-    body('genderId').optional().isInt().withMessage('Gender ID must be integer'),
+    body("firstName")
+      .trim()
+      .isLength({ min: 1, max: 50 })
+      .withMessage("First name required (1-50 chars)"),
+    body("lastName")
+      .trim()
+      .isLength({ min: 1, max: 50 })
+      .withMessage("Last name required (1-50 chars)"),
+    body("email")
+      .isEmail()
+      .normalizeEmail()
+      .withMessage("Valid email required"),
+    body("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters"),
+    body("dateOfBirth").isISO8601().withMessage("Valid date of birth required"),
+    body("genderId")
+      .optional()
+      .isInt()
+      .withMessage("Gender ID must be integer"),
     handleValidationErrors,
   ],
   async (req: Request, res: Response) => {
     try {
-      const { firstName, lastName, email, password, dateOfBirth, genderId } = req.body;
+      const { firstName, lastName, email, password, dateOfBirth, genderId } =
+        req.body;
       const { tenantId, tenant } = req.tenant!;
 
       // Check if user already exists in tenant
@@ -178,7 +198,7 @@ router.post(
       if (existingUser) {
         return res.status(409).json({
           success: false,
-          message: 'User already exists with this email',
+          message: "User already exists with this email",
         });
       }
 
@@ -190,7 +210,7 @@ router.post(
       if (userCount >= tenant.maxUsers) {
         return res.status(403).json({
           success: false,
-          message: 'User limit reached for this tenant',
+          message: "User limit reached for this tenant",
           current: userCount,
           limit: tenant.maxUsers,
         });
@@ -233,20 +253,20 @@ router.post(
 
       res.status(201).json({
         success: true,
-        message: 'User registered successfully',
+        message: "User registered successfully",
         data: {
           user: authenticatedUser,
           token,
         },
       });
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
@@ -255,7 +275,7 @@ router.post(
  * @access  Private
  */
 router.get(
-  '/me',
+  "/me",
   tenantResolver,
   validateUserTenant,
   async (req: Request, res: Response) => {
@@ -281,7 +301,7 @@ router.get(
       if (!userData) {
         return res.status(404).json({
           success: false,
-          message: 'User not found',
+          message: "User not found",
         });
       }
 
@@ -302,13 +322,13 @@ router.get(
         },
       });
     } catch (error: any) {
-      console.error('Get user error:', error);
+      console.error("Get user error:", error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
+        message: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
@@ -317,7 +337,7 @@ router.get(
  * @access  Private
  */
 router.post(
-  '/logout',
+  "/logout",
   tenantResolver,
   validateUserTenant,
   (req: Request, res: Response) => {
@@ -325,9 +345,9 @@ router.post(
     // Could implement token blacklisting here if needed
     res.json({
       success: true,
-      message: 'Logout successful',
+      message: "Logout successful",
     });
-  }
+  },
 );
 
 export default router;

@@ -3,8 +3,12 @@
  * Data access layer for messages and notifications
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
-import { MessageFilters, MessageStatus, MessageType } from '../types/message.types.js';
+import { PrismaClient, Prisma } from "@prisma/client";
+import {
+  MessageFilters,
+  MessageStatus,
+  MessageType,
+} from "../types/message.types.js";
 
 export class MessageRepository {
   constructor(private prisma: PrismaClient) {}
@@ -12,7 +16,7 @@ export class MessageRepository {
   /**
    * Find message by ID
    */
-  async findById(id: number, tenantId?: number) {
+  async findById(id: number, tenantId?: string) {
     const where: Prisma.MessageWhereInput = { id };
     if (tenantId) {
       where.tenantId = tenantId;
@@ -26,18 +30,18 @@ export class MessageRepository {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
+            lastName: true,
+          },
         },
         recipient: {
           select: {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
-        }
-      }
+            lastName: true,
+          },
+        },
+      },
     });
   }
 
@@ -54,7 +58,7 @@ export class MessageRepository {
     if (filters.userId) {
       where.OR = [
         { senderId: filters.userId },
-        { recipientId: filters.userId }
+        { recipientId: filters.userId },
       ];
     }
 
@@ -83,14 +87,14 @@ export class MessageRepository {
     if (filters.search) {
       where.OR = [
         { subject: { contains: filters.search } },
-        { body: { contains: filters.search } }
+        { body: { contains: filters.search } },
       ];
     }
 
     if (filters.unreadOnly) {
       where.readAt = null;
       where.status = {
-        in: [MessageStatus.SENT, MessageStatus.DELIVERED]
+        in: [MessageStatus.SENT, MessageStatus.DELIVERED],
       };
     }
 
@@ -107,21 +111,21 @@ export class MessageRepository {
               id: true,
               email: true,
               firstName: true,
-              lastName: true
-            }
+              lastName: true,
+            },
           },
           recipient: {
             select: {
               id: true,
               email: true,
               firstName: true,
-              lastName: true
-            }
-          }
+              lastName: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       }),
-      this.prisma.message.count({ where })
+      this.prisma.message.count({ where }),
     ]);
 
     return {
@@ -130,15 +134,20 @@ export class MessageRepository {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
   /**
    * Find messages by recipient
    */
-  async findByRecipient(recipientId: number, tenantId?: number, page = 1, limit = 20) {
+  async findByRecipient(
+    recipientId: number,
+    tenantId?: string,
+    page = 1,
+    limit = 20,
+  ) {
     const where: Prisma.MessageWhereInput = { recipientId };
     if (tenantId) {
       where.tenantId = tenantId;
@@ -157,13 +166,13 @@ export class MessageRepository {
               id: true,
               email: true,
               firstName: true,
-              lastName: true
-            }
-          }
+              lastName: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       }),
-      this.prisma.message.count({ where })
+      this.prisma.message.count({ where }),
     ]);
 
     return {
@@ -172,15 +181,20 @@ export class MessageRepository {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
   /**
    * Find messages by sender
    */
-  async findBySender(senderId: number, tenantId?: number, page = 1, limit = 20) {
+  async findBySender(
+    senderId: number,
+    tenantId?: string,
+    page = 1,
+    limit = 20,
+  ) {
     const where: Prisma.MessageWhereInput = { senderId };
     if (tenantId) {
       where.tenantId = tenantId;
@@ -199,13 +213,13 @@ export class MessageRepository {
               id: true,
               email: true,
               firstName: true,
-              lastName: true
-            }
-          }
+              lastName: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       }),
-      this.prisma.message.count({ where })
+      this.prisma.message.count({ where }),
     ]);
 
     return {
@@ -214,21 +228,21 @@ export class MessageRepository {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
   /**
    * Find unread messages
    */
-  async findUnread(recipientId: number, tenantId?: number) {
+  async findUnread(recipientId: number, tenantId?: string) {
     const where: Prisma.MessageWhereInput = {
       recipientId,
       readAt: null,
       status: {
-        in: [MessageStatus.SENT, MessageStatus.DELIVERED]
-      }
+        in: [MessageStatus.SENT, MessageStatus.DELIVERED],
+      },
     };
 
     if (tenantId) {
@@ -243,24 +257,24 @@ export class MessageRepository {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
-        }
+            lastName: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
   }
 
   /**
    * Count unread messages
    */
-  async countUnread(recipientId: number, tenantId?: number): Promise<number> {
+  async countUnread(recipientId: number, tenantId?: string): Promise<number> {
     const where: Prisma.MessageWhereInput = {
       recipientId,
       readAt: null,
       status: {
-        in: [MessageStatus.SENT, MessageStatus.DELIVERED]
-      }
+        in: [MessageStatus.SENT, MessageStatus.DELIVERED],
+      },
     };
 
     if (tenantId) {
@@ -282,18 +296,18 @@ export class MessageRepository {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
+            lastName: true,
+          },
         },
         recipient: {
           select: {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
-        }
-      }
+            lastName: true,
+          },
+        },
+      },
     });
   }
 
@@ -303,21 +317,21 @@ export class MessageRepository {
   async bulkCreate(data: Prisma.MessageCreateManyInput[]) {
     return this.prisma.message.createMany({
       data,
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   }
 
   /**
    * Update message
    */
-  async update(id: number, data: Prisma.MessageUpdateInput, tenantId?: number) {
+  async update(id: number, data: Prisma.MessageUpdateInput, tenantId?: string) {
     const where: Prisma.MessageWhereUniqueInput = { id };
 
     // Verify tenant ownership if provided
     if (tenantId) {
       const message = await this.findById(id, tenantId);
       if (!message) {
-        throw new Error('Message not found or access denied');
+        throw new Error("Message not found or access denied");
       }
     }
 
@@ -330,42 +344,42 @@ export class MessageRepository {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
+            lastName: true,
+          },
         },
         recipient: {
           select: {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
-        }
-      }
+            lastName: true,
+          },
+        },
+      },
     });
   }
 
   /**
    * Mark message as read
    */
-  async markAsRead(id: number, tenantId?: number) {
+  async markAsRead(id: number, tenantId?: string) {
     return this.update(
       id,
       {
         status: MessageStatus.READ,
-        readAt: new Date()
+        readAt: new Date(),
       },
-      tenantId
+      tenantId,
     );
   }
 
   /**
    * Mark multiple messages as read
    */
-  async markManyAsRead(ids: number[], recipientId: number, tenantId?: number) {
+  async markManyAsRead(ids: number[], recipientId: number, tenantId?: string) {
     const where: Prisma.MessageWhereInput = {
       id: { in: ids },
-      recipientId
+      recipientId,
     };
 
     if (tenantId) {
@@ -376,18 +390,18 @@ export class MessageRepository {
       where,
       data: {
         status: MessageStatus.READ,
-        readAt: new Date()
-      }
+        readAt: new Date(),
+      },
     });
   }
 
   /**
    * Mark all messages as read for a recipient
    */
-  async markAllAsRead(recipientId: number, tenantId?: number) {
+  async markAllAsRead(recipientId: number, tenantId?: string) {
     const where: Prisma.MessageWhereInput = {
       recipientId,
-      readAt: null
+      readAt: null,
     };
 
     if (tenantId) {
@@ -398,15 +412,15 @@ export class MessageRepository {
       where,
       data: {
         status: MessageStatus.READ,
-        readAt: new Date()
-      }
+        readAt: new Date(),
+      },
     });
   }
 
   /**
    * Update message status
    */
-  async updateStatus(id: number, status: MessageStatus, tenantId?: number) {
+  async updateStatus(id: number, status: MessageStatus, tenantId?: string) {
     const updateData: Prisma.MessageUpdateInput = { status };
 
     if (status === MessageStatus.DELIVERED) {
@@ -421,13 +435,13 @@ export class MessageRepository {
   /**
    * Delete message
    */
-  async delete(id: number, tenantId?: number) {
+  async delete(id: number, tenantId?: string) {
     const where: Prisma.MessageWhereUniqueInput = { id };
 
     if (tenantId) {
       const message = await this.findById(id, tenantId);
       if (!message) {
-        throw new Error('Message not found or access denied');
+        throw new Error("Message not found or access denied");
       }
     }
 
@@ -437,56 +451,62 @@ export class MessageRepository {
   /**
    * Archive message
    */
-  async archive(id: number, tenantId?: number) {
+  async markAsDelivered(id: number, tenantId?: string) {
     return this.update(id, { status: MessageStatus.ARCHIVED }, tenantId);
   }
 
   /**
    * Count messages by status
    */
-  async countByStatus(tenantId?: number) {
+  async countByStatus(tenantId?: string) {
     const where: Prisma.MessageWhereInput = {};
     if (tenantId) {
       where.tenantId = tenantId;
     }
 
     const counts = await this.prisma.message.groupBy({
-      by: ['status'],
+      by: ["status"],
       where,
-      _count: true
+      _count: true,
     });
 
-    return counts.reduce((acc, item) => {
-      acc[item.status] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
+    return counts.reduce(
+      (acc, item) => {
+        acc[item.status] = item._count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   /**
    * Count messages by type
    */
-  async countByType(tenantId?: number) {
+  async countByType(tenantId?: string) {
     const where: Prisma.MessageWhereInput = {};
     if (tenantId) {
       where.tenantId = tenantId;
     }
 
     const counts = await this.prisma.message.groupBy({
-      by: ['type'],
+      by: ["type"],
       where,
-      _count: true
+      _count: true,
     });
 
-    return counts.reduce((acc, item) => {
-      acc[item.type] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
+    return counts.reduce(
+      (acc, item) => {
+        acc[item.type] = item._count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   /**
    * Get message statistics
    */
-  async getStatistics(tenantId?: number, startDate?: Date, endDate?: Date) {
+  async getStatistics(tenantId?: string, startDate?: Date, endDate?: Date) {
     const where: Prisma.MessageWhereInput = {};
     if (tenantId) {
       where.tenantId = tenantId;
@@ -502,29 +522,30 @@ export class MessageRepository {
       }
     }
 
-    const [total, statusCounts, typeCounts, delivered, read, failed] = await Promise.all([
-      this.prisma.message.count({ where }),
-      this.countByStatus(tenantId),
-      this.countByType(tenantId),
-      this.prisma.message.count({
-        where: {
-          ...where,
-          status: MessageStatus.DELIVERED
-        }
-      }),
-      this.prisma.message.count({
-        where: {
-          ...where,
-          status: MessageStatus.READ
-        }
-      }),
-      this.prisma.message.count({
-        where: {
-          ...where,
-          status: MessageStatus.FAILED
-        }
-      })
-    ]);
+    const [total, statusCounts, typeCounts, delivered, read, failed] =
+      await Promise.all([
+        this.prisma.message.count({ where }),
+        this.countByStatus(tenantId),
+        this.countByType(tenantId),
+        this.prisma.message.count({
+          where: {
+            ...where,
+            status: MessageStatus.DELIVERED,
+          },
+        }),
+        this.prisma.message.count({
+          where: {
+            ...where,
+            status: MessageStatus.READ,
+          },
+        }),
+        this.prisma.message.count({
+          where: {
+            ...where,
+            status: MessageStatus.FAILED,
+          },
+        }),
+      ]);
 
     const deliveryRate = total > 0 ? (delivered / total) * 100 : 0;
     const readRate = delivered > 0 ? (read / delivered) * 100 : 0;
@@ -537,19 +558,19 @@ export class MessageRepository {
       deliveryRate: Math.round(deliveryRate * 100) / 100,
       readRate: Math.round(readRate * 100) / 100,
       messagesByType: typeCounts,
-      messagesByStatus: statusCounts
+      messagesByStatus: statusCounts,
     };
   }
 
   /**
    * Find scheduled messages
    */
-  async findScheduled(tenantId?: number) {
+  async findScheduled(tenantId?: string) {
     const where: Prisma.MessageWhereInput = {
       status: MessageStatus.DRAFT,
-      scheduledAt: {
-        lte: new Date()
-      }
+      scheduledFor: {
+        lte: new Date(),
+      },
     };
 
     if (tenantId) {
@@ -564,26 +585,26 @@ export class MessageRepository {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
+            lastName: true,
+          },
         },
         recipient: {
           select: {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
-        }
+            lastName: true,
+          },
+        },
       },
-      orderBy: { scheduledAt: 'asc' }
+      orderBy: { scheduledFor: "asc" },
     });
   }
 
   /**
    * Check if message exists
    */
-  async exists(id: number, tenantId?: number): Promise<boolean> {
+  async exists(id: number, tenantId?: string): Promise<boolean> {
     const message = await this.findById(id, tenantId);
     return message !== null;
   }
@@ -591,12 +612,18 @@ export class MessageRepository {
   /**
    * Get conversation between two users
    */
-  async getConversation(user1Id: number, user2Id: number, tenantId?: number, page = 1, limit = 50) {
+  async getConversation(
+    user1Id: number,
+    user2Id: number,
+    tenantId?: string,
+    page = 1,
+    limit = 50,
+  ) {
     const where: Prisma.MessageWhereInput = {
       OR: [
         { senderId: user1Id, recipientId: user2Id },
-        { senderId: user2Id, recipientId: user1Id }
-      ]
+        { senderId: user2Id, recipientId: user1Id },
+      ],
     };
 
     if (tenantId) {
@@ -610,9 +637,9 @@ export class MessageRepository {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'asc' }
+        orderBy: { createdAt: "asc" },
       }),
-      this.prisma.message.count({ where })
+      this.prisma.message.count({ where }),
     ]);
 
     return {
@@ -621,8 +648,8 @@ export class MessageRepository {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

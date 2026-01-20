@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from "express";
 
 /**
  * Options de configuration CORS
@@ -22,37 +22,37 @@ export const corsMiddleware = (options?: CorsOptions) => {
     allowCredentials = true,
     maxAge = 86400, // 24 heures
     exposedHeaders = [
-      'X-RateLimit-Limit',
-      'X-RateLimit-Remaining',
-      'X-RateLimit-Reset',
-      'X-Total-Count',
-      'X-Page',
-      'X-Per-Page',
+      "X-RateLimit-Limit",
+      "X-RateLimit-Remaining",
+      "X-RateLimit-Reset",
+      "X-Total-Count",
+      "X-Page",
+      "X-Per-Page",
     ],
     allowedHeaders = [
-      'Content-Type',
-      'Authorization',
-      'X-Tenant-ID',
-      'X-API-Key',
-      'X-Requested-With',
-      'Accept',
-      'Origin',
+      "Content-Type",
+      "Authorization",
+      "X-Tenant-ID",
+      "X-API-Key",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
     ],
-    allowedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   } = options || {};
 
   return (req: Request, res: Response, next: NextFunction) => {
-    const origin = req.get('origin');
-    const host = req.get('host') || '';
+    const origin = req.get("origin");
+    const host = req.get("host") || "";
 
     // Déterminer si l'origine est autorisée
     let isAllowedOrigin = false;
 
     // 1. Vérifier les origines explicitement autorisées
     if (origin && allowedOrigins.length > 0) {
-      isAllowedOrigin = allowedOrigins.some(allowed => {
-        if (allowed === '*') return true;
-        if (allowed.startsWith('*.')) {
+      isAllowedOrigin = allowedOrigins.some((allowed) => {
+        if (allowed === "*") return true;
+        if (allowed.startsWith("*.")) {
           // Support wildcard subdomain: *.example.com
           const domain = allowed.substring(2);
           return origin.endsWith(domain);
@@ -68,17 +68,18 @@ export const corsMiddleware = (options?: CorsOptions) => {
     }
 
     // 3. En développement, autoriser localhost
-    if (!isAllowedOrigin && process.env.NODE_ENV === 'development' && origin) {
-      isAllowedOrigin = origin.includes('localhost') || origin.includes('127.0.0.1');
+    if (!isAllowedOrigin && process.env.NODE_ENV === "development" && origin) {
+      isAllowedOrigin =
+        origin.includes("localhost") || origin.includes("127.0.0.1");
     }
 
     // 4. Autoriser les origines des variables d'environnement
-    const envOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+    const envOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [];
     if (!isAllowedOrigin && origin && envOrigins.length > 0) {
-      isAllowedOrigin = envOrigins.some(allowed => {
-        if (allowed === '*') return true;
-        if (allowed.includes('*')) {
-          const regex = new RegExp(allowed.replace(/\*/g, '.*'));
+      isAllowedOrigin = envOrigins.some((allowed) => {
+        if (allowed === "*") return true;
+        if (allowed.includes("*")) {
+          const regex = new RegExp(allowed.replace(/\*/g, ".*"));
           return regex.test(origin);
         }
         return origin === allowed.trim();
@@ -88,39 +89,36 @@ export const corsMiddleware = (options?: CorsOptions) => {
     // 5. Support pour tenant-specific origins
     if (!isAllowedOrigin && req.tenant && origin) {
       const tenant = req.tenant.tenant;
-      // Vérifier le domaine personnalisé du tenant
-      if (tenant.domain && origin.includes(tenant.domain)) {
-        isAllowedOrigin = true;
-      }
       // Vérifier le sous-domaine du tenant
-      const tenantSubdomain = `${tenant.slug}.${process.env.BASE_DOMAIN || 'example.com'}`;
+      const tenantSubdomain = `${tenant.slug}.${process.env.BASE_DOMAIN || "example.com"}`;
       if (origin.includes(tenantSubdomain)) {
         isAllowedOrigin = true;
       }
+      // TODO: Add custom domain support when domain field is added to tenant model
     }
 
     // Définir les headers CORS
     if (isAllowedOrigin && origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    } else if (allowedOrigins.includes('*')) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    } else if (allowedOrigins.includes("*")) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
     }
 
     // Credentials (cookies, authorization headers)
     if (allowCredentials) {
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader("Access-Control-Allow-Credentials", "true");
     }
 
     // Headers exposés au client
     if (exposedHeaders.length > 0) {
-      res.setHeader('Access-Control-Expose-Headers', exposedHeaders.join(', '));
+      res.setHeader("Access-Control-Expose-Headers", exposedHeaders.join(", "));
     }
 
     // Gérer les requêtes preflight (OPTIONS)
-    if (req.method === 'OPTIONS') {
-      res.setHeader('Access-Control-Allow-Methods', allowedMethods.join(', '));
-      res.setHeader('Access-Control-Allow-Headers', allowedHeaders.join(', '));
-      res.setHeader('Access-Control-Max-Age', maxAge.toString());
+    if (req.method === "OPTIONS") {
+      res.setHeader("Access-Control-Allow-Methods", allowedMethods.join(", "));
+      res.setHeader("Access-Control-Allow-Headers", allowedHeaders.join(", "));
+      res.setHeader("Access-Control-Max-Age", maxAge.toString());
       return res.status(204).send();
     }
 
@@ -132,7 +130,7 @@ export const corsMiddleware = (options?: CorsOptions) => {
  * Configuration CORS par défaut pour développement
  */
 export const devCors = corsMiddleware({
-  allowedOrigins: ['*'],
+  allowedOrigins: ["*"],
   allowCredentials: true,
 });
 
@@ -140,7 +138,7 @@ export const devCors = corsMiddleware({
  * Configuration CORS stricte pour production
  */
 export const prodCors = corsMiddleware({
-  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || [],
+  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(",") || [],
   allowCredentials: true,
   maxAge: 86400,
 });
@@ -148,16 +146,17 @@ export const prodCors = corsMiddleware({
 /**
  * Middleware CORS adaptatif (dev vs prod)
  */
-export const adaptiveCors = process.env.NODE_ENV === 'production' ? prodCors : devCors;
+export const adaptiveCors =
+  process.env.NODE_ENV === "production" ? prodCors : devCors;
 
 /**
  * CORS pour API publique (plus restrictif)
  */
 export const apiCors = corsMiddleware({
-  allowedOrigins: process.env.API_ALLOWED_ORIGINS?.split(',') || ['*'],
+  allowedOrigins: process.env.API_ALLOWED_ORIGINS?.split(",") || ["*"],
   allowCredentials: false,
   maxAge: 3600, // 1 heure
-  allowedMethods: ['GET', 'POST'],
+  allowedMethods: ["GET", "POST"],
 });
 
 /**
@@ -166,7 +165,7 @@ export const apiCors = corsMiddleware({
 export const webhookCors = corsMiddleware({
   allowedOrigins: [], // Pas d'origine browser autorisée
   allowCredentials: false,
-  allowedMethods: ['POST'],
+  allowedMethods: ["POST"],
 });
 
 export default {

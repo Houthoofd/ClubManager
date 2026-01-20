@@ -1,4 +1,4 @@
-import { TenantContext } from './tenant.js';
+import { TenantContext } from "./tenant.js";
 
 export interface AuthenticatedUser {
   id: number;
@@ -9,7 +9,7 @@ export interface AuthenticatedUser {
   role?: string;
   status?: string;
   grade?: string;
-  actif: boolean;
+  actif?: boolean;
 }
 
 // Étendre les types Express pour inclure notre utilisateur personnalisé

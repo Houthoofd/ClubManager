@@ -61,7 +61,6 @@ export const authenticateToken = async (
       email: user.email,
       first_name: user.firstName,
       last_name: user.lastName,
-      actif: user.actif,
     };
 
     next();
@@ -171,9 +170,10 @@ export const createAuthToken = (user: AuthenticatedUser): string => {
     last_name: user.last_name,
   };
 
+  const expiresIn = process.env.JWT_EXPIRES_IN || "7d";
   return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: (process.env.JWT_EXPIRES_IN || "7d") as string | number,
-  });
+    expiresIn,
+  } as jwt.SignOptions);
 };
 
 export default {

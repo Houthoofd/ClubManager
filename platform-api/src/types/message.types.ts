@@ -4,34 +4,34 @@
  */
 
 export enum MessageStatus {
-  DRAFT = 'DRAFT',
-  SENT = 'SENT',
-  DELIVERED = 'DELIVERED',
-  READ = 'READ',
-  FAILED = 'FAILED',
-  ARCHIVED = 'ARCHIVED'
+  DRAFT = "DRAFT",
+  SENT = "SENT",
+  DELIVERED = "DELIVERED",
+  READ = "READ",
+  FAILED = "FAILED",
+  ARCHIVED = "ARCHIVED",
 }
 
 export enum MessageType {
-  EMAIL = 'EMAIL',
-  SMS = 'SMS',
-  PUSH = 'PUSH',
-  IN_APP = 'IN_APP',
-  SYSTEM = 'SYSTEM'
+  EMAIL = "EMAIL",
+  SMS = "SMS",
+  PUSH = "PUSH",
+  IN_APP = "IN_APP",
+  SYSTEM = "SYSTEM",
 }
 
 export enum MessagePriority {
-  LOW = 'LOW',
-  NORMAL = 'NORMAL',
-  HIGH = 'HIGH',
-  URGENT = 'URGENT'
+  LOW = "LOW",
+  NORMAL = "NORMAL",
+  HIGH = "HIGH",
+  URGENT = "URGENT",
 }
 
 export enum NotificationType {
-  INFO = 'INFO',
-  SUCCESS = 'SUCCESS',
-  WARNING = 'WARNING',
-  ERROR = 'ERROR'
+  INFO = "INFO",
+  SUCCESS = "SUCCESS",
+  WARNING = "WARNING",
+  ERROR = "ERROR",
 }
 
 export interface MessageFilters {
@@ -43,7 +43,7 @@ export interface MessageFilters {
   endDate?: Date;
   search?: string;
   unreadOnly?: boolean;
-  tenantId?: number;
+  tenantId?: string;
 }
 
 export interface CreateMessageDTO {

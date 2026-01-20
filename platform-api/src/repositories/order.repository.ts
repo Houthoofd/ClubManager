@@ -1,10 +1,11 @@
 /**
  * Order Repository
- * Data access layer for orders and order items
+ * Data access layer for orders (Commandes) and order items
+ * Uses French model names from Prisma schema: Commande, CommandeArticle, Article
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
-import { OrderFilters, OrderStatus } from '../types/shop.types.js';
+import { PrismaClient, Prisma } from "@prisma/client";
+import { OrderFilters, OrderStatus } from "../types/shop.types.js";
 
 export class OrderRepository {
   constructor(private prisma: PrismaClient) {}
@@ -12,29 +13,32 @@ export class OrderRepository {
   /**
    * Find order by ID with items
    */
-  async findById(id: number, tenantId?: number) {
-    const where: Prisma.OrderWhereInput = { id };
+  async findById(id: number, tenantId?: string) {
+    const where: Prisma.CommandeWhereInput = { id };
     if (tenantId) {
-      where.tenantId = tenantId;
+      // Commande model doesn't have tenantId, filtering by user's tenantId instead
+      where.utilisateur = {
+        tenantId: tenantId,
+      };
     }
 
-    return this.prisma.order.findFirst({
+    return this.prisma.commande.findFirst({
       where,
       include: {
-        items: {
+        articles: {
           include: {
-            product: true
-          }
+            article: true,
+          },
         },
-        user: {
+        utilisateur: {
           select: {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
-        }
-      }
+            lastName: true,
+          },
+        },
+      },
     });
   }
 
@@ -42,65 +46,67 @@ export class OrderRepository {
    * Find all orders with filters
    */
   async findAll(filters: OrderFilters, page = 1, limit = 20) {
-    const where: Prisma.OrderWhereInput = {};
+    const where: Prisma.CommandeWhereInput = {};
 
     if (filters.tenantId) {
-      where.tenantId = filters.tenantId;
+      where.utilisateur = {
+        tenantId: filters.tenantId,
+      };
     }
 
     if (filters.userId) {
-      where.userId = filters.userId;
+      where.utilisateurId = filters.userId;
     }
 
     if (filters.status) {
-      where.status = filters.status;
+      where.statut = filters.status;
     }
 
     if (filters.startDate || filters.endDate) {
-      where.createdAt = {};
+      where.dateCommande = {};
       if (filters.startDate) {
-        where.createdAt.gte = filters.startDate;
+        where.dateCommande.gte = filters.startDate;
       }
       if (filters.endDate) {
-        where.createdAt.lte = filters.endDate;
+        where.dateCommande.lte = filters.endDate;
       }
     }
 
     if (filters.minAmount !== undefined || filters.maxAmount !== undefined) {
-      where.totalAmount = {};
+      where.montantTotal = {};
       if (filters.minAmount !== undefined) {
-        where.totalAmount.gte = filters.minAmount;
+        where.montantTotal.gte = filters.minAmount;
       }
       if (filters.maxAmount !== undefined) {
-        where.totalAmount.lte = filters.maxAmount;
+        where.montantTotal.lte = filters.maxAmount;
       }
     }
 
     const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([
-      this.prisma.order.findMany({
+      this.prisma.commande.findMany({
         where,
         skip,
         take: limit,
         include: {
-          items: {
+          articles: {
             include: {
-              product: true
-            }
+              article: true,
+            },
           },
-          user: {
+          utilisateur: {
             select: {
               id: true,
               email: true,
               firstName: true,
-              lastName: true
-            }
-          }
+              lastName: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { dateCommande: "desc" },
       }),
-      this.prisma.order.count({ where })
+      this.prisma.commande.count({ where }),
     ]);
 
     return {
@@ -109,217 +115,236 @@ export class OrderRepository {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
   /**
    * Find orders by user
    */
-  async findByUser(userId: number, tenantId?: number, page = 1, limit = 20) {
+  async findByUser(userId: number, tenantId?: string, page = 1, limit = 20) {
     return this.findAll({ userId, tenantId }, page, limit);
   }
 
   /**
    * Create new order with items
    */
-  async create(data: Prisma.OrderCreateInput) {
-    return this.prisma.order.create({
+  async create(data: Prisma.CommandeCreateInput) {
+    return this.prisma.commande.create({
       data,
       include: {
-        items: {
+        articles: {
           include: {
-            product: true
-          }
-        }
-      }
+            article: true,
+          },
+        },
+      },
     });
   }
 
   /**
    * Update order
    */
-  async update(id: number, data: Prisma.OrderUpdateInput, tenantId?: number) {
-    const where: Prisma.OrderWhereUniqueInput = { id };
+  async update(
+    id: number,
+    data: Prisma.CommandeUpdateInput,
+    tenantId?: string,
+  ) {
+    const where: Prisma.CommandeWhereUniqueInput = { id };
 
     // Verify tenant ownership if provided
     if (tenantId) {
       const order = await this.findById(id, tenantId);
       if (!order) {
-        throw new Error('Order not found or access denied');
+        throw new Error("Order not found or access denied");
       }
     }
 
-    return this.prisma.order.update({
+    return this.prisma.commande.update({
       where,
       data,
       include: {
-        items: {
+        articles: {
           include: {
-            product: true
-          }
-        }
-      }
+            article: true,
+          },
+        },
+      },
     });
   }
 
   /**
    * Update order status
    */
-  async updateStatus(id: number, status: OrderStatus, tenantId?: number) {
-    return this.update(id, { status }, tenantId);
+  async updateStatus(id: number, status: OrderStatus, tenantId?: string) {
+    return this.update(id, { statut: status }, tenantId);
   }
 
   /**
    * Delete order
    */
-  async delete(id: number, tenantId?: number) {
-    const where: Prisma.OrderWhereUniqueInput = { id };
+  async delete(id: number, tenantId?: string) {
+    const where: Prisma.CommandeWhereUniqueInput = { id };
 
     if (tenantId) {
       const order = await this.findById(id, tenantId);
       if (!order) {
-        throw new Error('Order not found or access denied');
+        throw new Error("Order not found or access denied");
       }
     }
 
-    // Delete order items first (cascade might handle this)
-    await this.prisma.orderItem.deleteMany({
-      where: { orderId: id }
+    // Delete order items first (cascade should handle this but being explicit)
+    await this.prisma.commandeArticle.deleteMany({
+      where: { commandeId: id },
     });
 
-    return this.prisma.order.delete({ where });
+    return this.prisma.commande.delete({ where });
   }
 
   /**
    * Count orders by status
    */
-  async countByStatus(tenantId?: number) {
-    const where: Prisma.OrderWhereInput = {};
+  async countByStatus(tenantId?: string) {
+    const where: Prisma.CommandeWhereInput = {};
     if (tenantId) {
-      where.tenantId = tenantId;
+      where.utilisateur = {
+        tenantId: tenantId,
+      };
     }
 
-    const counts = await this.prisma.order.groupBy({
-      by: ['status'],
+    const counts = await this.prisma.commande.groupBy({
+      by: ["statut"],
       where,
-      _count: true
+      _count: true,
     });
 
-    return counts.reduce((acc, item) => {
-      acc[item.status] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
+    return counts.reduce(
+      (acc: Record<string, number>, item: any) => {
+        acc[item.statut] = item._count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   /**
    * Get total revenue
    */
-  async getTotalRevenue(tenantId?: number, startDate?: Date, endDate?: Date) {
-    const where: Prisma.OrderWhereInput = {
-      status: {
-        in: [OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.DELIVERED]
-      }
+  async getTotalRevenue(tenantId?: string, startDate?: Date, endDate?: Date) {
+    const where: Prisma.CommandeWhereInput = {
+      statut: {
+        in: ["confirmée", "en préparation", "prête", "livrée"],
+      },
     };
 
     if (tenantId) {
-      where.tenantId = tenantId;
+      where.utilisateur = {
+        tenantId: tenantId,
+      };
     }
 
     if (startDate || endDate) {
-      where.createdAt = {};
+      where.dateCommande = {};
       if (startDate) {
-        where.createdAt.gte = startDate;
+        where.dateCommande.gte = startDate;
       }
       if (endDate) {
-        where.createdAt.lte = endDate;
+        where.dateCommande.lte = endDate;
       }
     }
 
-    const result = await this.prisma.order.aggregate({
+    const result = await this.prisma.commande.aggregate({
       where,
       _sum: {
-        totalAmount: true
+        montantTotal: true,
       },
-      _count: true
+      _count: true,
     });
 
     return {
-      totalRevenue: result._sum.totalAmount || 0,
-      totalOrders: result._count
+      totalRevenue: result._sum.montantTotal || 0,
+      totalOrders: result._count,
     };
   }
 
   /**
    * Get average order value
    */
-  async getAverageOrderValue(tenantId?: number, startDate?: Date, endDate?: Date) {
-    const where: Prisma.OrderWhereInput = {
-      status: {
-        in: [OrderStatus.CONFIRMED, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.DELIVERED]
-      }
+  async getAverageOrderValue(
+    tenantId?: string,
+    startDate?: Date,
+    endDate?: Date,
+  ) {
+    const where: Prisma.CommandeWhereInput = {
+      statut: {
+        in: ["confirmée", "en préparation", "prête", "livrée"],
+      },
     };
 
     if (tenantId) {
-      where.tenantId = tenantId;
+      where.utilisateur = {
+        tenantId: tenantId,
+      };
     }
 
     if (startDate || endDate) {
-      where.createdAt = {};
+      where.dateCommande = {};
       if (startDate) {
-        where.createdAt.gte = startDate;
+        where.dateCommande.gte = startDate;
       }
       if (endDate) {
-        where.createdAt.lte = endDate;
+        where.dateCommande.lte = endDate;
       }
     }
 
-    const result = await this.prisma.order.aggregate({
+    const result = await this.prisma.commande.aggregate({
       where,
       _avg: {
-        totalAmount: true
-      }
+        montantTotal: true,
+      },
     });
 
-    return result._avg.totalAmount || 0;
+    return result._avg.montantTotal || 0;
   }
 
   /**
    * Get recent orders
    */
-  async getRecent(limit = 10, tenantId?: number) {
-    const where: Prisma.OrderWhereInput = {};
+  async getRecent(limit = 10, tenantId?: string) {
+    const where: Prisma.CommandeWhereInput = {};
     if (tenantId) {
-      where.tenantId = tenantId;
+      where.utilisateur = {
+        tenantId: tenantId,
+      };
     }
 
-    return this.prisma.order.findMany({
+    return this.prisma.commande.findMany({
       where,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { dateCommande: "desc" },
       include: {
-        items: {
+        articles: {
           include: {
-            product: true
-          }
+            article: true,
+          },
         },
-        user: {
+        utilisateur: {
           select: {
             id: true,
             email: true,
             firstName: true,
-            lastName: true
-          }
-        }
-      }
+            lastName: true,
+          },
+        },
+      },
     });
   }
 
   /**
    * Check if order exists
    */
-  async exists(id: number, tenantId?: number): Promise<boolean> {
+  async exists(id: number, tenantId?: string): Promise<boolean> {
     const order = await this.findById(id, tenantId);
     return order !== null;
   }
@@ -327,80 +352,89 @@ export class OrderRepository {
   /**
    * Get order statistics
    */
-  async getStatistics(tenantId?: number, startDate?: Date, endDate?: Date) {
-    const where: Prisma.OrderWhereInput = {};
+  async getStatistics(tenantId?: string, startDate?: Date, endDate?: Date) {
+    const where: Prisma.CommandeWhereInput = {};
     if (tenantId) {
-      where.tenantId = tenantId;
+      where.utilisateur = {
+        tenantId: tenantId,
+      };
     }
 
     if (startDate || endDate) {
-      where.createdAt = {};
+      where.dateCommande = {};
       if (startDate) {
-        where.createdAt.gte = startDate;
+        where.dateCommande.gte = startDate;
       }
       if (endDate) {
-        where.createdAt.lte = endDate;
+        where.dateCommande.lte = endDate;
       }
     }
 
     const [total, revenue, statusCounts] = await Promise.all([
-      this.prisma.order.count({ where }),
+      this.prisma.commande.count({ where }),
       this.getTotalRevenue(tenantId, startDate, endDate),
-      this.countByStatus(tenantId)
+      this.countByStatus(tenantId),
     ]);
 
-    const avgOrderValue = revenue.totalOrders > 0
-      ? revenue.totalRevenue / revenue.totalOrders
-      : 0;
+    const avgOrderValue =
+      revenue.totalOrders > 0
+        ? Number(revenue.totalRevenue) / revenue.totalOrders
+        : 0;
 
     return {
       totalOrders: total,
       totalRevenue: revenue.totalRevenue,
       averageOrderValue: avgOrderValue,
-      ordersByStatus: statusCounts
+      ordersByStatus: statusCounts,
     };
   }
 
   /**
-   * Find orders by product
+   * Find orders by product (article)
    */
-  async findByProduct(productId: number, tenantId?: number, page = 1, limit = 20) {
+  async findByProduct(
+    productId: number,
+    tenantId?: string,
+    page = 1,
+    limit = 20,
+  ) {
     const skip = (page - 1) * limit;
-    const where: Prisma.OrderWhereInput = {
-      items: {
+    const where: Prisma.CommandeWhereInput = {
+      articles: {
         some: {
-          productId
-        }
-      }
+          articleId: productId,
+        },
+      },
     };
-
     if (tenantId) {
-      where.tenantId = tenantId;
+      where.utilisateur = {
+        tenantId: tenantId,
+      };
     }
 
     const [orders, total] = await Promise.all([
-      this.prisma.order.findMany({
+      this.prisma.commande.findMany({
         where,
         skip,
         take: limit,
         include: {
-          items: {
+          articles: {
             include: {
-              product: true
-            }
+              article: true,
+            },
           },
-          user: {
+          utilisateur: {
             select: {
               id: true,
               email: true,
               firstName: true,
-              lastName: true
-            }
-          }
+              lastName: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { dateCommande: "desc" },
       }),
-      this.prisma.order.count({ where })
+      this.prisma.commande.count({ where }),
     ]);
 
     return {
@@ -409,8 +443,8 @@ export class OrderRepository {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

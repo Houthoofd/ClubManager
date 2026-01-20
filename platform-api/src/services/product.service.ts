@@ -1,25 +1,32 @@
 /**
  * Product Service
- * Core business logic for product management
+ * Business logic for product (Article) management
+ * Uses French model names: Article, Taille, Stock
  */
 
-import { PrismaClient } from '@prisma/client';
-import { ProductRepository } from '../repositories/product.repository.js';
-import {
-  CreateProductDTO,
-  UpdateProductDTO,
-  ProductFilters,
-  ProductStats,
-  ProductStatus
-} from '../types/shop.types.js';
-import {
-  validateCreateProduct,
-  validateUpdateProduct,
-  validateProductId,
-  ShopValidationError
-} from '../validators/shop.validator.js';
-import { NotFoundError, ConflictError } from '../utils/errors.util.js';
-import { auditService } from './auditService.js';
+import { PrismaClient, Prisma } from "@prisma/client";
+import { ProductRepository } from "../repositories/product.repository.js";
+import { NotFoundError, ShopValidationError } from "../utils/shopHelpers.js";
+import { auditService, AuditAction } from "./auditService.js";
+
+export interface CreateProductDTO {
+  nom: string;
+  description?: string;
+  prix: number;
+  tailleId?: number;
+  imageUrl?: string;
+  actif?: boolean;
+  initialStock?: number;
+}
+
+export interface UpdateProductDTO {
+  nom?: string;
+  description?: string;
+  prix?: number;
+  tailleId?: number;
+  imageUrl?: string;
+  actif?: boolean;
+}
 
 export class ProductService {
   private repository: ProductRepository;
@@ -31,72 +38,90 @@ export class ProductService {
   /**
    * Get product by ID
    */
-  async getById(id: number, tenantId: number) {
-    validateProductId(id);
+  async getById(id: number) {
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new ShopValidationError("Invalid product ID", "id");
+    }
 
-    const product = await this.repository.findById(id, tenantId);
+    const product = await this.repository.findById(id);
     if (!product) {
-      throw new NotFoundError('Product');
+      throw new NotFoundError("Product");
     }
 
     return product;
   }
 
   /**
-   * List products with filters and pagination
+   * List products with filters
    */
-  async list(filters: ProductFilters, page = 1, limit = 20) {
+  async list(filters: any = {}, page = 1, limit = 20) {
     return this.repository.findAll(filters, page, limit);
+  }
+
+  /**
+   * Search products
+   */
+  async search(query: string, page = 1, limit = 20) {
+    return this.repository.search(query, page, limit);
+  }
+
+  /**
+   * Get active products
+   */
+  async getActive(page = 1, limit = 20) {
+    return this.repository.findActive(page, limit);
   }
 
   /**
    * Create new product
    */
-  async create(data: CreateProductDTO, userId?: number) {
-    // Validate input
-    validateCreateProduct(data);
-
-    // Check for duplicate product name in tenant
-    const existing = await this.repository.findAll(
-      { tenantId: data.tenantId, search: data.name },
-      1,
-      1
-    );
-
-    if (existing.products.length > 0 &&
-        existing.products[0].name.toLowerCase() === data.name.toLowerCase()) {
-      throw new ConflictError('A product with this name already exists');
+  async create(data: CreateProductDTO, tenantId: string, userId?: number) {
+    // Validation
+    if (!data.nom || data.nom.trim().length === 0) {
+      throw new ShopValidationError("Product name is required", "nom");
     }
 
-    // Set default status if not provided
-    const productData = {
-      ...data,
-      status: data.status || ProductStatus.ACTIVE
-    };
+    if (!data.prix || data.prix <= 0) {
+      throw new ShopValidationError("Price must be positive", "prix");
+    }
 
     // Create product
-    const product = await this.repository.create({
-      name: productData.name,
-      description: productData.description,
-      price: productData.price,
-      stock: productData.stock,
-      status: productData.status,
-      imageUrl: productData.imageUrl,
-      tenant: { connect: { id: productData.tenantId } },
-      ...(productData.categoryId && {
-        category: { connect: { id: productData.categoryId } }
-      })
-    });
+    const productData: Prisma.ArticleCreateInput = {
+      nom: data.nom.trim(),
+      description: data.description?.trim() || null,
+      prix: data.prix,
+      actif: data.actif !== undefined ? data.actif : true,
+      imageUrl: data.imageUrl || null,
+    };
+
+    // Add taille relation if provided
+    if (data.tailleId) {
+      productData.taille = {
+        connect: { id: data.tailleId },
+      };
+    }
+
+    const product = await this.repository.create(productData);
+
+    // Initialize stock if provided
+    if (data.initialStock !== undefined && data.initialStock >= 0) {
+      await this.repository.updateStock(product.id, data.initialStock);
+    }
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'PRODUCT_CREATE',
+        action: AuditAction.PRODUCT_CREATE,
         userId,
-        tenantId: data.tenantId,
-        resourceType: 'Product',
-        resourceId: product.id,
-        details: { name: product.name, price: product.price }
+        tenantId,
+        resource: "Product",
+        resourceType: "Product",
+        resourceId: product.id.toString(),
+        details: {
+          productName: product.nom,
+          price: Number(product.prix),
+          initialStock: data.initialStock,
+        },
       });
     }
 
@@ -106,231 +131,325 @@ export class ProductService {
   /**
    * Update product
    */
-  async update(id: number, data: UpdateProductDTO, tenantId: number, userId?: number) {
-    validateProductId(id);
-    validateUpdateProduct(data);
+  async update(
+    id: number,
+    data: UpdateProductDTO,
+    tenantId: string,
+    userId?: number,
+  ) {
+    const product = await this.getById(id);
 
-    // Check if product exists
-    const existing = await this.getById(id, tenantId);
-
-    // Check for name conflict if name is being updated
-    if (data.name && data.name !== existing.name) {
-      const duplicate = await this.repository.findAll(
-        { tenantId, search: data.name },
-        1,
-        1
-      );
-
-      if (duplicate.products.length > 0 &&
-          duplicate.products[0].id !== id &&
-          duplicate.products[0].name.toLowerCase() === data.name.toLowerCase()) {
-        throw new ConflictError('A product with this name already exists');
-      }
+    // Validation
+    if (data.nom !== undefined && data.nom.trim().length === 0) {
+      throw new ShopValidationError("Product name cannot be empty", "nom");
     }
 
-    // Auto-update status based on stock
-    if (data.stock !== undefined) {
-      if (data.stock === 0 && !data.status) {
-        data.status = ProductStatus.OUT_OF_STOCK;
-      } else if (data.stock > 0 && existing.status === ProductStatus.OUT_OF_STOCK) {
-        data.status = ProductStatus.ACTIVE;
-      }
+    if (data.prix !== undefined && data.prix <= 0) {
+      throw new ShopValidationError("Price must be positive", "prix");
     }
 
-    // Update product
-    const product = await this.repository.update(id, data, tenantId);
+    // Build update data
+    const updateData: Prisma.ArticleUpdateInput = {};
+
+    if (data.nom !== undefined) {
+      updateData.nom = data.nom.trim();
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description?.trim() || null;
+    }
+    if (data.prix !== undefined) {
+      updateData.prix = data.prix;
+    }
+    if (data.actif !== undefined) {
+      updateData.actif = data.actif;
+    }
+    if (data.imageUrl !== undefined) {
+      updateData.imageUrl = data.imageUrl || null;
+    }
+    if (data.tailleId !== undefined) {
+      updateData.taille = data.tailleId
+        ? { connect: { id: data.tailleId } }
+        : { disconnect: true };
+    }
+
+    const updated = await this.repository.update(id, updateData);
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'PRODUCT_UPDATE',
+        action: AuditAction.PRODUCT_UPDATE,
         userId,
         tenantId,
-        resourceType: 'Product',
-        resourceId: id,
-        details: { changes: data }
+        resource: "Product",
+        resourceType: "Product",
+        resourceId: id.toString(),
+        details: {
+          productName: product.nom,
+          changes: data,
+        },
       });
     }
 
-    return product;
+    return updated;
   }
 
   /**
-   * Delete product (soft delete)
+   * Delete product
    */
-  async delete(id: number, tenantId: number, userId?: number) {
-    validateProductId(id);
+  async delete(id: number, tenantId: string, userId?: number) {
+    const product = await this.getById(id);
 
-    // Check if product exists
-    await this.getById(id, tenantId);
-
-    // Soft delete
-    const product = await this.repository.delete(id, tenantId);
+    await this.repository.delete(id);
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'PRODUCT_DELETE',
+        action: AuditAction.PRODUCT_DELETE,
         userId,
         tenantId,
-        resourceType: 'Product',
-        resourceId: id,
-        details: { name: product.name }
+        resource: "Product",
+        resourceType: "Product",
+        resourceId: id.toString(),
+        details: {
+          productName: product.nom,
+        },
       });
     }
 
-    return product;
+    return { success: true };
+  }
+
+  /**
+   * Soft delete (deactivate)
+   */
+  async deactivate(id: number, tenantId: string, userId?: number) {
+    return this.update(id, { actif: false }, tenantId, userId);
+  }
+
+  /**
+   * Activate product
+   */
+  async activate(id: number, tenantId: string, userId?: number) {
+    return this.update(id, { actif: true }, tenantId, userId);
   }
 
   /**
    * Update product stock
    */
-  async updateStock(id: number, quantity: number, tenantId: number, userId?: number) {
-    validateProductId(id);
-
+  async updateStock(
+    id: number,
+    quantity: number,
+    tenantId: string,
+    userId?: number,
+  ) {
     if (!Number.isInteger(quantity) || quantity < 0) {
-      throw new ShopValidationError('Stock quantity must be a positive integer', 'quantity');
+      throw new ShopValidationError(
+        "Quantity must be a non-negative integer",
+        "quantity",
+      );
     }
 
-    // Check if product exists
-    const existing = await this.getById(id, tenantId);
-    const oldStock = existing.stock;
+    const product = await this.getById(id);
+    const oldStock = product.stock[0]?.quantite || 0;
 
-    // Update stock
-    const product = await this.repository.updateStock(id, quantity, tenantId);
-
-    // Auto-update status
-    if (quantity === 0) {
-      await this.repository.update(id, { status: ProductStatus.OUT_OF_STOCK }, tenantId);
-    } else if (existing.status === ProductStatus.OUT_OF_STOCK) {
-      await this.repository.update(id, { status: ProductStatus.ACTIVE }, tenantId);
-    }
+    await this.repository.updateStock(id, quantity);
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'PRODUCT_STOCK_UPDATE',
+        action: AuditAction.STOCK_UPDATE,
         userId,
         tenantId,
-        resourceType: 'Product',
-        resourceId: id,
-        details: { oldStock, newStock: quantity, difference: quantity - oldStock }
+        resource: "Product",
+        resourceType: "Product",
+        resourceId: id.toString(),
+        details: {
+          productName: product.nom,
+          oldStock,
+          newStock: quantity,
+          difference: quantity - oldStock,
+        },
       });
     }
 
+    return { success: true, oldStock, newStock: quantity };
+  }
+
+  /**
+   * Get product with stock info
+   */
+  async getWithStock(id: number) {
+    const product = await this.repository.getWithStock(id);
+    if (!product) {
+      throw new NotFoundError("Product");
+    }
     return product;
   }
 
   /**
    * Get low stock products
    */
-  async getLowStock(threshold = 10, tenantId?: number) {
-    return this.repository.findLowStock(threshold, tenantId);
+  async getLowStock(threshold = 5) {
+    return this.repository.findLowStock(threshold);
   }
 
   /**
-   * Get out of stock products
+   * Get products by taille
    */
-  async getOutOfStock(tenantId?: number) {
-    return this.repository.findOutOfStock(tenantId);
+  async getByTaille(tailleId: number, page = 1, limit = 20) {
+    return this.repository.findByTaille(tailleId, page, limit);
   }
 
   /**
-   * Get product statistics
+   * Get best selling products
    */
-  async getStatistics(tenantId?: number): Promise<ProductStats> {
-    const [statusCounts, totalValue, lowStock] = await Promise.all([
-      this.repository.countByStatus(tenantId),
-      this.repository.getTotalValue(tenantId),
-      this.repository.findLowStock(10, tenantId)
-    ]);
+  async getBestSelling(limit = 10) {
+    return this.repository.getBestSelling(limit);
+  }
 
-    const totalProducts = Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
-    const activeProducts = statusCounts[ProductStatus.ACTIVE] || 0;
-    const outOfStock = statusCounts[ProductStatus.OUT_OF_STOCK] || 0;
+  /**
+   * Count products by status
+   */
+  async countByStatus() {
+    return this.repository.countByStatus();
+  }
 
-    return {
-      totalProducts,
-      activeProducts,
-      outOfStock,
-      totalValue,
-      lowStockProducts: lowStock.map(p => ({
-        id: p.id,
-        name: p.name,
-        stock: p.stock
-      }))
-    };
+  /**
+   * Get total inventory value
+   */
+  async getTotalInventoryValue() {
+    return this.repository.getTotalInventoryValue();
   }
 
   /**
    * Check if product exists
    */
-  async exists(id: number, tenantId?: number): Promise<boolean> {
-    return this.repository.exists(id, tenantId);
+  async exists(id: number): Promise<boolean> {
+    return this.repository.exists(id);
   }
 
   /**
-   * Activate product
+   * Get product statistics
    */
-  async activate(id: number, tenantId: number, userId?: number) {
-    validateProductId(id);
-
-    const product = await this.getById(id, tenantId);
-
-    if (product.stock === 0) {
-      throw new ShopValidationError('Cannot activate product with zero stock', 'stock');
-    }
-
-    const updated = await this.repository.update(
-      id,
-      { status: ProductStatus.ACTIVE },
-      tenantId
+  async getStatistics() {
+    const [statusCounts, totalValue, lowStock, bestSelling] = await Promise.all(
+      [
+        this.repository.countByStatus(),
+        this.repository.getTotalInventoryValue(),
+        this.repository.findLowStock(5),
+        this.repository.getBestSelling(10),
+      ],
     );
 
-    if (userId) {
-      await auditService.log({
-        action: 'PRODUCT_ACTIVATE',
-        userId,
-        tenantId,
-        resourceType: 'Product',
-        resourceId: id,
-        details: { name: product.name }
-      });
-    }
-
-    return updated;
+    return {
+      totalProducts: statusCounts.total,
+      activeProducts: statusCounts.active,
+      inactiveProducts: statusCounts.inactive,
+      totalInventoryValue: totalValue,
+      lowStockCount: lowStock.length,
+      lowStockProducts: lowStock.map((p) => ({
+        id: p.id,
+        nom: p.nom,
+        stock: p.stock[0]?.quantite || 0,
+      })),
+      bestSelling: bestSelling.map((p) => ({
+        id: p.id,
+        nom: p.nom,
+        totalSold: p.totalSold,
+      })),
+    };
   }
 
   /**
-   * Deactivate product
+   * Get all tailles (sizes)
    */
-  async deactivate(id: number, tenantId: number, userId?: number) {
-    validateProductId(id);
+  async getAllTailles() {
+    return this.repository.getAllTailles();
+  }
 
-    const product = await this.getById(id, tenantId);
+  /**
+   * Create taille
+   */
+  async createTaille(nom: string, tenantId: string, userId?: number) {
+    if (!nom || nom.trim().length === 0) {
+      throw new ShopValidationError("Taille name is required", "nom");
+    }
 
-    const updated = await this.repository.update(
-      id,
-      { status: ProductStatus.INACTIVE },
-      tenantId
-    );
+    const taille = await this.repository.createTaille(nom.trim());
 
+    // Audit log
     if (userId) {
       await auditService.log({
-        action: 'PRODUCT_DEACTIVATE',
+        action: AuditAction.TAILLE_CREATE,
         userId,
         tenantId,
-        resourceType: 'Product',
-        resourceId: id,
-        details: { name: product.name }
+        resource: "Taille",
+        resourceType: "Taille",
+        resourceId: taille.id.toString(),
+        details: {
+          nom: taille.nom,
+        },
       });
     }
 
-    return updated;
+    return taille;
+  }
+
+  /**
+   * Check stock availability
+   */
+  async checkStockAvailability(
+    productId: number,
+    quantity: number,
+  ): Promise<{ available: boolean; currentStock: number }> {
+    const product = await this.getWithStock(productId);
+    const currentStock = product.stock[0]?.quantite || 0;
+
+    return {
+      available: currentStock >= quantity,
+      currentStock,
+    };
+  }
+
+  /**
+   * Bulk check stock availability
+   */
+  async bulkCheckStockAvailability(
+    items: Array<{ productId: number; quantity: number }>,
+  ) {
+    const results = [];
+
+    for (const item of items) {
+      try {
+        const check = await this.checkStockAvailability(
+          item.productId,
+          item.quantity,
+        );
+        results.push({
+          productId: item.productId,
+          requestedQuantity: item.quantity,
+          ...check,
+        });
+      } catch (error) {
+        results.push({
+          productId: item.productId,
+          requestedQuantity: item.quantity,
+          available: false,
+          currentStock: 0,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    const allAvailable = results.every((r) => r.available);
+
+    return {
+      allAvailable,
+      items: results,
+    };
   }
 }
 
-// Export singleton instance
-export const productService = new ProductService(
-  (await import('./prismaService.js')).prisma
-);
+// Create singleton instance
+const prisma = new PrismaClient();
+export const productService = new ProductService(prisma);

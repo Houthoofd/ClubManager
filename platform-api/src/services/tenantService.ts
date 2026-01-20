@@ -1,10 +1,10 @@
-import { PrismaClient, TenantStatus, SubscriptionStatus } from '@prisma/client';
+import { PrismaClient, TenantStatus, SubscriptionStatus } from "@prisma/client";
 import {
   TenantCreateInput,
   TenantUpdateInput,
   TenantWithSubscription,
   CreateSubscriptionInput,
-} from '../types/tenant.js';
+} from "../types/tenant.js";
 
 const prisma = new PrismaClient();
 
@@ -13,7 +13,15 @@ export class TenantService {
    * Créer un nouveau tenant
    */
   async createTenant(data: TenantCreateInput): Promise<TenantWithSubscription> {
-    const { name, slug, domain, plan, maxUsers = 10, maxStorage = 1000, settings } = data;
+    const {
+      name,
+      slug,
+      domain,
+      plan,
+      maxUsers = 10,
+      maxStorage = 1000,
+      settings,
+    } = data;
 
     // Vérifier que le slug est unique
     const existingTenant = await prisma.tenant.findUnique({
@@ -21,7 +29,7 @@ export class TenantService {
     });
 
     if (existingTenant) {
-      throw new Error('Tenant slug already exists');
+      throw new Error("Tenant slug already exists");
     }
 
     // Vérifier que le domaine est unique (si fourni)
@@ -31,7 +39,7 @@ export class TenantService {
       });
 
       if (existingDomain) {
-        throw new Error('Domain already exists');
+        throw new Error("Domain already exists");
       }
     }
 
@@ -62,7 +70,10 @@ export class TenantService {
   /**
    * Mettre à jour un tenant
    */
-  async updateTenant(tenantId: string, data: TenantUpdateInput): Promise<TenantWithSubscription> {
+  async updateTenant(
+    tenantId: string,
+    data: TenantUpdateInput,
+  ): Promise<TenantWithSubscription> {
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
       data,
@@ -81,7 +92,9 @@ export class TenantService {
   /**
    * Récupérer un tenant par ID
    */
-  async getTenantById(tenantId: string): Promise<TenantWithSubscription | null> {
+  async getTenantById(
+    tenantId: string,
+  ): Promise<TenantWithSubscription | null> {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
@@ -90,7 +103,7 @@ export class TenantService {
             plan: true,
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
         },
       },
@@ -111,7 +124,7 @@ export class TenantService {
             plan: true,
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
         },
       },
@@ -136,7 +149,7 @@ export class TenantService {
               plan: true,
             },
             orderBy: {
-              createdAt: 'desc',
+              createdAt: "desc",
             },
             take: 1, // Most recent subscription
           },
@@ -147,7 +160,7 @@ export class TenantService {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       }),
       prisma.tenant.count(),
@@ -168,7 +181,14 @@ export class TenantService {
    * Créer une souscription pour un tenant
    */
   async createSubscription(data: CreateSubscriptionInput) {
-    const { tenantId, planId, startDate, endDate, price, currency = 'EUR' } = data;
+    const {
+      tenantId,
+      planId,
+      startDate,
+      endDate,
+      price,
+      currency = "EUR",
+    } = data;
 
     // Vérifier que le plan existe
     const plan = await prisma.planTarifaire.findUnique({
@@ -176,7 +196,7 @@ export class TenantService {
     });
 
     if (!plan || !plan.actif) {
-      throw new Error('Invalid or inactive plan');
+      throw new Error("Invalid or inactive plan");
     }
 
     // Créer la souscription
@@ -212,7 +232,10 @@ export class TenantService {
   /**
    * Suspendre un tenant
    */
-  async suspendTenant(tenantId: string, reason?: string): Promise<TenantWithSubscription> {
+  async suspendTenant(
+    tenantId: string,
+    reason?: string,
+  ): Promise<TenantWithSubscription> {
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
@@ -284,7 +307,7 @@ export class TenantService {
           plan: true,
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
       }),
     ]);
@@ -306,4 +329,6 @@ export class TenantService {
   }
 }
 
-export default new TenantService();
+const tenantServiceInstance = new TenantService();
+export const tenantService = tenantServiceInstance;
+export default tenantServiceInstance;

@@ -3,19 +3,23 @@
  * Utility functions for message operations
  */
 
-import { MessageStatus, MessageType, MessagePriority } from '../types/message.types.js';
+import {
+  MessageStatus,
+  MessageType,
+  MessagePriority,
+} from "../types/message.types.js";
 
 /**
  * Get message status label in French
  */
 export function getMessageStatusLabel(status: MessageStatus): string {
   const labels: Record<MessageStatus, string> = {
-    [MessageStatus.DRAFT]: 'Brouillon',
-    [MessageStatus.SENT]: 'Envoyé',
-    [MessageStatus.DELIVERED]: 'Délivré',
-    [MessageStatus.READ]: 'Lu',
-    [MessageStatus.FAILED]: 'Échec',
-    [MessageStatus.ARCHIVED]: 'Archivé'
+    [MessageStatus.DRAFT]: "Brouillon",
+    [MessageStatus.SENT]: "Envoyé",
+    [MessageStatus.DELIVERED]: "Délivré",
+    [MessageStatus.READ]: "Lu",
+    [MessageStatus.FAILED]: "Échec",
+    [MessageStatus.ARCHIVED]: "Archivé",
   };
   return labels[status];
 }
@@ -25,11 +29,11 @@ export function getMessageStatusLabel(status: MessageStatus): string {
  */
 export function getMessageTypeLabel(type: MessageType): string {
   const labels: Record<MessageType, string> = {
-    [MessageType.EMAIL]: 'Email',
-    [MessageType.SMS]: 'SMS',
-    [MessageType.PUSH]: 'Notification Push',
-    [MessageType.IN_APP]: 'In-App',
-    [MessageType.SYSTEM]: 'Système'
+    [MessageType.EMAIL]: "Email",
+    [MessageType.SMS]: "SMS",
+    [MessageType.PUSH]: "Notification Push",
+    [MessageType.IN_APP]: "In-App",
+    [MessageType.SYSTEM]: "Système",
   };
   return labels[type];
 }
@@ -39,10 +43,10 @@ export function getMessageTypeLabel(type: MessageType): string {
  */
 export function getMessagePriorityLabel(priority: MessagePriority): string {
   const labels: Record<MessagePriority, string> = {
-    [MessagePriority.LOW]: 'Basse',
-    [MessagePriority.NORMAL]: 'Normale',
-    [MessagePriority.HIGH]: 'Haute',
-    [MessagePriority.URGENT]: 'Urgente'
+    [MessagePriority.LOW]: "Basse",
+    [MessagePriority.NORMAL]: "Normale",
+    [MessagePriority.HIGH]: "Haute",
+    [MessagePriority.URGENT]: "Urgente",
   };
   return labels[priority];
 }
@@ -52,12 +56,12 @@ export function getMessagePriorityLabel(priority: MessagePriority): string {
  */
 export function getMessageStatusColor(status: MessageStatus): string {
   const colors: Record<MessageStatus, string> = {
-    [MessageStatus.DRAFT]: 'gray',
-    [MessageStatus.SENT]: 'blue',
-    [MessageStatus.DELIVERED]: 'cyan',
-    [MessageStatus.READ]: 'green',
-    [MessageStatus.FAILED]: 'red',
-    [MessageStatus.ARCHIVED]: 'orange'
+    [MessageStatus.DRAFT]: "gray",
+    [MessageStatus.SENT]: "blue",
+    [MessageStatus.DELIVERED]: "cyan",
+    [MessageStatus.READ]: "green",
+    [MessageStatus.FAILED]: "red",
+    [MessageStatus.ARCHIVED]: "orange",
   };
   return colors[status];
 }
@@ -67,10 +71,10 @@ export function getMessageStatusColor(status: MessageStatus): string {
  */
 export function getMessagePriorityColor(priority: MessagePriority): string {
   const colors: Record<MessagePriority, string> = {
-    [MessagePriority.LOW]: 'gray',
-    [MessagePriority.NORMAL]: 'blue',
-    [MessagePriority.HIGH]: 'orange',
-    [MessagePriority.URGENT]: 'red'
+    [MessagePriority.LOW]: "gray",
+    [MessagePriority.NORMAL]: "blue",
+    [MessagePriority.HIGH]: "orange",
+    [MessagePriority.URGENT]: "red",
   };
   return colors[priority];
 }
@@ -80,7 +84,7 @@ export function getMessagePriorityColor(priority: MessagePriority): string {
  */
 export function truncateBody(body: string, maxLength = 100): string {
   if (body.length <= maxLength) return body;
-  return body.substring(0, maxLength) + '...';
+  return body.substring(0, maxLength) + "...";
 }
 
 /**
@@ -88,9 +92,9 @@ export function truncateBody(body: string, maxLength = 100): string {
  */
 export function generatePreview(html: string, maxLength = 150): string {
   // Remove HTML tags
-  const text = html.replace(/<[^>]*>/g, '');
+  const text = html.replace(/<[^>]*>/g, "");
   // Remove extra whitespace
-  const cleaned = text.replace(/\s+/g, ' ').trim();
+  const cleaned = text.replace(/\s+/g, " ").trim();
   return truncateBody(cleaned, maxLength);
 }
 
@@ -98,7 +102,10 @@ export function generatePreview(html: string, maxLength = 150): string {
  * Check if message is unread
  */
 export function isUnread(status: MessageStatus, readAt: Date | null): boolean {
-  return readAt === null && [MessageStatus.SENT, MessageStatus.DELIVERED].includes(status);
+  return (
+    readAt === null &&
+    [MessageStatus.SENT, MessageStatus.DELIVERED].includes(status)
+  );
 }
 
 /**
@@ -132,10 +139,12 @@ export function canResendMessage(status: MessageStatus): boolean {
 /**
  * Format message subject with prefix
  */
-export function formatSubjectWithPrefix(subject: string, type: MessageType): string {
+export function formatSubjectWithPrefix(
+  subject: string,
+  type: MessageType,
+): string {
   const prefixes: Partial<Record<MessageType, string>> = {
-    [MessageType.SYSTEM]: '[Système]',
-    [MessageType.URGENT]: '[Urgent]'
+    [MessageType.SYSTEM]: "[Système]",
   };
 
   const prefix = prefixes[type];
@@ -164,12 +173,12 @@ export function parseTemplateVariables(template: string): string[] {
  */
 export function replaceTemplateVariables(
   template: string,
-  variables: Record<string, any>
+  variables: Record<string, any>,
 ): string {
   let result = template;
 
   Object.entries(variables).forEach(([key, value]) => {
-    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
     result = result.replace(regex, String(value));
   });
 
@@ -189,17 +198,23 @@ export function isValidEmail(email: string): boolean {
  */
 export function sanitizeHtml(html: string): string {
   // Remove script tags
-  let cleaned = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  let cleaned = html.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    "",
+  );
   // Remove onclick and other event handlers
-  cleaned = cleaned.replace(/\s*on\w+="[^"]*"/gi, '');
-  cleaned = cleaned.replace(/\s*on\w+='[^']*'/gi, '');
+  cleaned = cleaned.replace(/\s*on\w+="[^"]*"/gi, "");
+  cleaned = cleaned.replace(/\s*on\w+='[^']*'/gi, "");
   return cleaned;
 }
 
 /**
  * Calculate message read rate
  */
-export function calculateReadRate(totalSent: number, totalRead: number): number {
+export function calculateReadRate(
+  totalSent: number,
+  totalRead: number,
+): number {
   if (totalSent === 0) return 0;
   return Math.round((totalRead / totalSent) * 100 * 100) / 100;
 }
@@ -207,7 +222,10 @@ export function calculateReadRate(totalSent: number, totalRead: number): number 
 /**
  * Calculate message delivery rate
  */
-export function calculateDeliveryRate(totalSent: number, totalDelivered: number): number {
+export function calculateDeliveryRate(
+  totalSent: number,
+  totalDelivered: number,
+): number {
   if (totalSent === 0) return 0;
   return Math.round((totalDelivered / totalSent) * 100 * 100) / 100;
 }
@@ -246,14 +264,14 @@ export function formatMessageTime(date: Date): string {
   }
 
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return 'Hier';
+  if (diffDays === 1) return "Hier";
   if (diffDays < 7) return `Il y a ${diffDays} jours`;
 
   // Format as date
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
+  return date.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 }
 
@@ -261,12 +279,12 @@ export function formatMessageTime(date: Date): string {
  * Group messages by date
  */
 export function groupMessagesByDate<T extends { createdAt: Date }>(
-  messages: T[]
+  messages: T[],
 ): Map<string, T[]> {
   const grouped = new Map<string, T[]>();
 
-  messages.forEach(message => {
-    const dateKey = message.createdAt.toISOString().split('T')[0];
+  messages.forEach((message) => {
+    const dateKey = message.createdAt.toISOString().split("T")[0];
     const existing = grouped.get(dateKey) || [];
     grouped.set(dateKey, [...existing, message]);
   });
@@ -277,14 +295,20 @@ export function groupMessagesByDate<T extends { createdAt: Date }>(
 /**
  * Get next valid statuses for current status
  */
-export function getNextValidStatuses(currentStatus: MessageStatus): MessageStatus[] {
+export function getNextValidStatuses(
+  currentStatus: MessageStatus,
+): MessageStatus[] {
   const transitions: Record<MessageStatus, MessageStatus[]> = {
     [MessageStatus.DRAFT]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
-    [MessageStatus.SENT]: [MessageStatus.DELIVERED, MessageStatus.FAILED, MessageStatus.ARCHIVED],
+    [MessageStatus.SENT]: [
+      MessageStatus.DELIVERED,
+      MessageStatus.FAILED,
+      MessageStatus.ARCHIVED,
+    ],
     [MessageStatus.DELIVERED]: [MessageStatus.READ, MessageStatus.ARCHIVED],
     [MessageStatus.READ]: [MessageStatus.ARCHIVED],
     [MessageStatus.FAILED]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
-    [MessageStatus.ARCHIVED]: []
+    [MessageStatus.ARCHIVED]: [],
   };
   return transitions[currentStatus] || [];
 }
@@ -292,7 +316,10 @@ export function getNextValidStatuses(currentStatus: MessageStatus): MessageStatu
 /**
  * Validate status transition
  */
-export function isValidStatusTransition(from: MessageStatus, to: MessageStatus): boolean {
+export function isValidStatusTransition(
+  from: MessageStatus,
+  to: MessageStatus,
+): boolean {
   const validNext = getNextValidStatuses(from);
   return validNext.includes(to);
 }
@@ -300,7 +327,10 @@ export function isValidStatusTransition(from: MessageStatus, to: MessageStatus):
 /**
  * Calculate estimated reading time (words per minute)
  */
-export function calculateReadingTime(text: string, wordsPerMinute = 200): number {
+export function calculateReadingTime(
+  text: string,
+  wordsPerMinute = 200,
+): number {
   const words = text.split(/\s+/).length;
   return Math.ceil(words / wordsPerMinute);
 }
@@ -308,23 +338,30 @@ export function calculateReadingTime(text: string, wordsPerMinute = 200): number
 /**
  * Detect message language (basic)
  */
-export function detectLanguage(text: string): 'fr' | 'en' | 'unknown' {
-  const frenchWords = ['le', 'la', 'de', 'et', 'un', 'une', 'pour', 'dans'];
-  const englishWords = ['the', 'and', 'of', 'to', 'in', 'for', 'with'];
+export function detectLanguage(text: string): "fr" | "en" | "unknown" {
+  const frenchWords = ["le", "la", "de", "et", "un", "une", "pour", "dans"];
+  const englishWords = ["the", "and", "of", "to", "in", "for", "with"];
 
   const lowerText = text.toLowerCase();
-  const frenchCount = frenchWords.filter(word => lowerText.includes(word)).length;
-  const englishCount = englishWords.filter(word => lowerText.includes(word)).length;
+  const frenchCount = frenchWords.filter((word) =>
+    lowerText.includes(word),
+  ).length;
+  const englishCount = englishWords.filter((word) =>
+    lowerText.includes(word),
+  ).length;
 
-  if (frenchCount > englishCount) return 'fr';
-  if (englishCount > frenchCount) return 'en';
-  return 'unknown';
+  if (frenchCount > englishCount) return "fr";
+  if (englishCount > frenchCount) return "en";
+  return "unknown";
 }
 
 /**
  * Generate message signature
  */
-export function generateSignature(senderName: string, senderEmail: string): string {
+export function generateSignature(
+  senderName: string,
+  senderEmail: string,
+): string {
   return `\n\n---\n${senderName}\n${senderEmail}`;
 }
 
@@ -374,10 +411,10 @@ export function needsUrgentNotification(priority: MessagePriority): boolean {
  */
 export function getNotificationSound(priority: MessagePriority): string {
   const sounds: Record<MessagePriority, string> = {
-    [MessagePriority.LOW]: 'soft-beep',
-    [MessagePriority.NORMAL]: 'notification',
-    [MessagePriority.HIGH]: 'alert',
-    [MessagePriority.URGENT]: 'urgent-alarm'
+    [MessagePriority.LOW]: "soft-beep",
+    [MessagePriority.NORMAL]: "notification",
+    [MessagePriority.HIGH]: "alert",
+    [MessagePriority.URGENT]: "urgent-alarm",
   };
   return sounds[priority];
 }
@@ -387,9 +424,9 @@ export function getNotificationSound(priority: MessagePriority): string {
  */
 export function formatBulkMessageSummary(
   recipientCount: number,
-  type: MessageType
+  type: MessageType,
 ): string {
-  return `${recipientCount} destinataire${recipientCount > 1 ? 's' : ''} - ${getMessageTypeLabel(type)}`;
+  return `${recipientCount} destinataire${recipientCount > 1 ? "s" : ""} - ${getMessageTypeLabel(type)}`;
 }
 
 /**

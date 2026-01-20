@@ -1,10 +1,19 @@
 /**
  * Product Repository
- * Data access layer for products
+ * Data access layer for products (Articles)
+ * Uses French model names from Prisma schema: Article, Taille, Stock
  */
 
-import { PrismaClient, Prisma } from '@prisma/client';
-import { ProductFilters, ProductStatus } from '../types/shop.types.js';
+import { PrismaClient, Prisma } from "@prisma/client";
+
+export interface ProductFilters {
+  tenantId?: string;
+  active?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  tailleId?: number;
+  search?: string;
+}
 
 export class ProductRepository {
   constructor(private prisma: PrismaClient) {}
@@ -12,64 +21,74 @@ export class ProductRepository {
   /**
    * Find product by ID
    */
-  async findById(id: number, tenantId?: number) {
-    const where: Prisma.ProductWhereInput = { id };
-    if (tenantId) {
-      where.tenantId = tenantId;
-    }
-
-    return this.prisma.product.findFirst({ where });
+  async findById(id: number) {
+    return this.prisma.article.findUnique({
+      where: { id },
+      include: {
+        taille: true,
+        stock: true,
+        commandesArticles: {
+          include: {
+            commande: true,
+          },
+        },
+      },
+    });
   }
 
   /**
    * Find all products with filters
    */
-  async findAll(filters: ProductFilters, page = 1, limit = 20) {
-    const where: Prisma.ProductWhereInput = {};
+  async findAll(filters: ProductFilters = {}, page = 1, limit = 20) {
+    const where: Prisma.ArticleWhereInput = {};
 
-    if (filters.tenantId) {
-      where.tenantId = filters.tenantId;
+    if (filters.active !== undefined) {
+      where.actif = filters.active;
     }
 
-    if (filters.categoryId) {
-      where.categoryId = filters.categoryId;
+    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+      where.prix = {};
+      if (filters.minPrice !== undefined) {
+        where.prix.gte = filters.minPrice;
+      }
+      if (filters.maxPrice !== undefined) {
+        where.prix.lte = filters.maxPrice;
+      }
     }
 
-    if (filters.status) {
-      where.status = filters.status;
+    if (filters.tailleId) {
+      where.tailleId = filters.tailleId;
     }
 
     if (filters.search) {
       where.OR = [
-        { name: { contains: filters.search } },
-        { description: { contains: filters.search } }
+        {
+          nom: {
+            contains: filters.search,
+          },
+        },
+        {
+          description: {
+            contains: filters.search,
+          },
+        },
       ];
-    }
-
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      where.price = {};
-      if (filters.minPrice !== undefined) {
-        where.price.gte = filters.minPrice;
-      }
-      if (filters.maxPrice !== undefined) {
-        where.price.lte = filters.maxPrice;
-      }
-    }
-
-    if (filters.inStock) {
-      where.stock = { gt: 0 };
     }
 
     const skip = (page - 1) * limit;
 
     const [products, total] = await Promise.all([
-      this.prisma.product.findMany({
+      this.prisma.article.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        include: {
+          taille: true,
+          stock: true,
+        },
+        orderBy: { nom: "asc" },
       }),
-      this.prisma.product.count({ where })
+      this.prisma.article.count({ where }),
     ]);
 
     return {
@@ -78,197 +97,272 @@ export class ProductRepository {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
   /**
    * Create new product
    */
-  async create(data: Prisma.ProductCreateInput) {
-    return this.prisma.product.create({ data });
+  async create(data: Prisma.ArticleCreateInput) {
+    return this.prisma.article.create({
+      data,
+      include: {
+        taille: true,
+        stock: true,
+      },
+    });
   }
 
   /**
    * Update product
    */
-  async update(id: number, data: Prisma.ProductUpdateInput, tenantId?: number) {
-    const where: Prisma.ProductWhereUniqueInput = { id };
-
-    // Verify tenant ownership if provided
-    if (tenantId) {
-      const product = await this.findById(id, tenantId);
-      if (!product) {
-        throw new Error('Product not found or access denied');
-      }
-    }
-
-    return this.prisma.product.update({
-      where,
-      data
+  async update(id: number, data: Prisma.ArticleUpdateInput) {
+    return this.prisma.article.update({
+      where: { id },
+      data,
+      include: {
+        taille: true,
+        stock: true,
+      },
     });
   }
 
   /**
-   * Delete product (soft delete by setting status)
+   * Delete product
    */
-  async delete(id: number, tenantId?: number) {
-    return this.update(id, { status: ProductStatus.DISCONTINUED }, tenantId);
-  }
+  async delete(id: number) {
+    // Delete related stock first
+    await this.prisma.stock.deleteMany({
+      where: { articleId: id },
+    });
 
-  /**
-   * Hard delete product
-   */
-  async hardDelete(id: number, tenantId?: number) {
-    const where: Prisma.ProductWhereUniqueInput = { id };
-
-    if (tenantId) {
-      const product = await this.findById(id, tenantId);
-      if (!product) {
-        throw new Error('Product not found or access denied');
-      }
-    }
-
-    return this.prisma.product.delete({ where });
-  }
-
-  /**
-   * Update stock
-   */
-  async updateStock(id: number, quantity: number, tenantId?: number) {
-    return this.update(id, { stock: quantity }, tenantId);
-  }
-
-  /**
-   * Increment stock
-   */
-  async incrementStock(id: number, amount: number, tenantId?: number) {
-    const product = await this.findById(id, tenantId);
-    if (!product) {
-      throw new Error('Product not found');
-    }
-
-    return this.update(id, { stock: product.stock + amount }, tenantId);
-  }
-
-  /**
-   * Decrement stock
-   */
-  async decrementStock(id: number, amount: number, tenantId?: number) {
-    const product = await this.findById(id, tenantId);
-    if (!product) {
-      throw new Error('Product not found');
-    }
-
-    if (product.stock < amount) {
-      throw new Error('Insufficient stock');
-    }
-
-    return this.update(id, { stock: product.stock - amount }, tenantId);
-  }
-
-  /**
-   * Get products with low stock
-   */
-  async findLowStock(threshold = 10, tenantId?: number) {
-    const where: Prisma.ProductWhereInput = {
-      stock: { lte: threshold },
-      status: ProductStatus.ACTIVE
-    };
-
-    if (tenantId) {
-      where.tenantId = tenantId;
-    }
-
-    return this.prisma.product.findMany({
-      where,
-      orderBy: { stock: 'asc' }
+    return this.prisma.article.delete({
+      where: { id },
     });
   }
 
   /**
-   * Get out of stock products
+   * Get products by taille
    */
-  async findOutOfStock(tenantId?: number) {
-    const where: Prisma.ProductWhereInput = {
-      stock: 0,
-      status: ProductStatus.ACTIVE
-    };
+  async findByTaille(tailleId: number, page = 1, limit = 20) {
+    return this.findAll({ tailleId }, page, limit);
+  }
 
-    if (tenantId) {
-      where.tenantId = tenantId;
-    }
+  /**
+   * Get active products
+   */
+  async findActive(page = 1, limit = 20) {
+    return this.findAll({ active: true }, page, limit);
+  }
 
-    return this.prisma.product.findMany({
-      where,
-      orderBy: { name: 'asc' }
+  /**
+   * Get low stock products
+   */
+  async findLowStock(threshold = 5) {
+    return this.prisma.article.findMany({
+      where: {
+        actif: true,
+        stock: {
+          some: {
+            quantite: {
+              lte: threshold,
+            },
+          },
+        },
+      },
+      include: {
+        taille: true,
+        stock: true,
+      },
+      orderBy: {
+        nom: "asc",
+      },
     });
   }
 
   /**
    * Count products by status
    */
-  async countByStatus(tenantId?: number) {
-    const where: Prisma.ProductWhereInput = {};
-    if (tenantId) {
-      where.tenantId = tenantId;
-    }
+  async countByStatus() {
+    const [active, inactive, total] = await Promise.all([
+      this.prisma.article.count({ where: { actif: true } }),
+      this.prisma.article.count({ where: { actif: false } }),
+      this.prisma.article.count(),
+    ]);
 
-    const counts = await this.prisma.product.groupBy({
-      by: ['status'],
-      where,
-      _count: true
-    });
-
-    return counts.reduce((acc, item) => {
-      acc[item.status] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
+    return {
+      active,
+      inactive,
+      total,
+    };
   }
 
   /**
    * Get total inventory value
    */
-  async getTotalValue(tenantId?: number) {
-    const where: Prisma.ProductWhereInput = {
-      status: ProductStatus.ACTIVE
-    };
-
-    if (tenantId) {
-      where.tenantId = tenantId;
-    }
-
-    const products = await this.prisma.product.findMany({
-      where,
-      select: { price: true, stock: true }
+  async getTotalInventoryValue() {
+    const products = await this.prisma.article.findMany({
+      where: { actif: true },
+      include: {
+        stock: true,
+      },
     });
 
-    return products.reduce((total, product) => {
-      return total + (product.price * product.stock);
+    return products.reduce((total: number, product: any) => {
+      const stockQuantity = product.stock[0]?.quantite || 0;
+      return total + Number(product.prix) * stockQuantity;
     }, 0);
+  }
+
+  /**
+   * Search products
+   */
+  async search(query: string, page = 1, limit = 20) {
+    return this.findAll({ search: query }, page, limit);
   }
 
   /**
    * Check if product exists
    */
-  async exists(id: number, tenantId?: number): Promise<boolean> {
-    const product = await this.findById(id, tenantId);
+  async exists(id: number): Promise<boolean> {
+    const product = await this.prisma.article.findUnique({
+      where: { id },
+      select: { id: true },
+    });
     return product !== null;
   }
 
   /**
-   * Bulk update stock
+   * Update product stock
    */
-  async bulkUpdateStock(updates: Array<{ id: number; stock: number }>, tenantId?: number) {
-    const operations = updates.map(({ id, stock }) => {
-      const where: Prisma.ProductWhereUniqueInput = { id };
-      return this.prisma.product.update({
-        where,
-        data: { stock }
-      });
+  async updateStock(articleId: number, quantite: number) {
+    // Check if stock entry exists
+    const existingStock = await this.prisma.stock.findUnique({
+      where: { articleId },
     });
 
-    return Promise.all(operations);
+    if (existingStock) {
+      return this.prisma.stock.update({
+        where: { articleId },
+        data: { quantite },
+      });
+    } else {
+      return this.prisma.stock.create({
+        data: {
+          articleId,
+          quantite,
+          seuil_min: 5,
+        },
+      });
+    }
+  }
+
+  /**
+   * Increment product stock
+   */
+  async incrementStock(articleId: number, amount: number) {
+    const currentStock = await this.prisma.stock.findUnique({
+      where: { articleId },
+    });
+
+    if (!currentStock) {
+      return this.updateStock(articleId, amount);
+    }
+
+    return this.prisma.stock.update({
+      where: { articleId },
+      data: {
+        quantite: currentStock.quantite + amount,
+      },
+    });
+  }
+
+  /**
+   * Decrement product stock
+   */
+  async decrementStock(articleId: number, amount: number) {
+    const currentStock = await this.prisma.stock.findUnique({
+      where: { articleId },
+    });
+
+    if (!currentStock) {
+      throw new Error("Stock not found for this product");
+    }
+
+    if (currentStock.quantite < amount) {
+      throw new Error("Insufficient stock");
+    }
+
+    return this.prisma.stock.update({
+      where: { articleId },
+      data: {
+        quantite: currentStock.quantite - amount,
+      },
+    });
+  }
+
+  /**
+   * Get product with stock info
+   */
+  async getWithStock(id: number) {
+    return this.prisma.article.findUnique({
+      where: { id },
+      include: {
+        taille: true,
+        stock: true,
+      },
+    });
+  }
+
+  /**
+   * Get best selling products
+   */
+  async getBestSelling(limit = 10) {
+    const products = await this.prisma.article.findMany({
+      where: { actif: true },
+      include: {
+        taille: true,
+        stock: true,
+        commandesArticles: {
+          select: {
+            quantite: true,
+          },
+        },
+      },
+    });
+
+    // Calculate total quantity sold for each product
+    const productsWithSales = products.map((product) => ({
+      ...product,
+      totalSold: product.commandesArticles.reduce(
+        (sum, item) => sum + item.quantite,
+        0,
+      ),
+    }));
+
+    // Sort by total sold and return top N
+    return productsWithSales
+      .sort((a, b) => b.totalSold - a.totalSold)
+      .slice(0, limit);
+  }
+
+  /**
+   * Get all tailles (sizes)
+   */
+  async getAllTailles() {
+    return this.prisma.taille.findMany({
+      orderBy: { nom: "asc" },
+    });
+  }
+
+  /**
+   * Create taille
+   */
+  async createTaille(nom: string) {
+    return this.prisma.taille.create({
+      data: { nom },
+    });
   }
 }

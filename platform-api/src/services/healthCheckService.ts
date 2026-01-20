@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const startTime = Date.now();
 
 export interface HealthCheckResult {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   timestamp: string;
   uptime: number;
   checks: {
@@ -16,7 +16,7 @@ export interface HealthCheckResult {
 }
 
 export interface CheckStatus {
-  status: 'ok' | 'warning' | 'error';
+  status: "ok" | "warning" | "error";
   message?: string;
   responseTime?: number;
   details?: any;
@@ -32,21 +32,27 @@ class HealthCheckService {
       this.checkMemory(),
     ]);
 
-    const dbCheck = checks[0].status === 'fulfilled' ? checks[0].value : this.errorCheck('Database check failed');
-    const memCheck = checks[1].status === 'fulfilled' ? checks[1].value : this.errorCheck('Memory check failed');
+    const dbCheck =
+      checks[0].status === "fulfilled"
+        ? checks[0].value
+        : this.errorCheck("Database check failed");
+    const memCheck =
+      checks[1].status === "fulfilled"
+        ? checks[1].value
+        : this.errorCheck("Memory check failed");
 
-    const allHealthy = dbCheck.status === 'ok' && memCheck.status === 'ok';
-    const anyError = dbCheck.status === 'error' || memCheck.status === 'error';
+    const allHealthy = dbCheck.status === "ok" && memCheck.status === "ok";
+    const anyError = dbCheck.status === "error" || memCheck.status === "error";
 
     return {
-      status: anyError ? 'unhealthy' : (allHealthy ? 'healthy' : 'degraded'),
+      status: anyError ? "unhealthy" : allHealthy ? "healthy" : "degraded",
       timestamp: new Date().toISOString(),
       uptime: Math.floor((Date.now() - startTime) / 1000),
       checks: {
         database: dbCheck,
         memory: memCheck,
       },
-      version: process.env.APP_VERSION || '1.0.0',
+      version: process.env.APP_VERSION || "1.0.0",
     };
   }
 
@@ -55,20 +61,20 @@ class HealthCheckService {
    */
   async checkDatabase(): Promise<CheckStatus> {
     const startTime = Date.now();
-    
+
     try {
       await prisma.$queryRaw`SELECT 1`;
       const responseTime = Date.now() - startTime;
 
       return {
-        status: responseTime < 100 ? 'ok' : 'warning',
+        status: responseTime < 100 ? "ok" : "warning",
         message: `Database responsive in ${responseTime}ms`,
         responseTime,
       };
     } catch (error: any) {
       return {
-        status: 'error',
-        message: 'Database connection failed',
+        status: "error",
+        message: "Database connection failed",
         details: error.message,
       };
     }
@@ -83,9 +89,9 @@ class HealthCheckService {
     const heapTotalMB = Math.round(usage.heapTotal / 1024 / 1024);
     const percentUsed = (heapUsedMB / heapTotalMB) * 100;
 
-    let status: 'ok' | 'warning' | 'error' = 'ok';
-    if (percentUsed > 90) status = 'error';
-    else if (percentUsed > 75) status = 'warning';
+    let status: "ok" | "warning" | "error" = "ok";
+    if (percentUsed > 90) status = "error";
+    else if (percentUsed > 75) status = "warning";
 
     return {
       status,
@@ -122,7 +128,7 @@ class HealthCheckService {
    */
   private errorCheck(message: string): CheckStatus {
     return {
-      status: 'error',
+      status: "error",
       message,
     };
   }
@@ -135,4 +141,6 @@ class HealthCheckService {
   }
 }
 
-export default new HealthCheckService();
+const healthCheckServiceInstance = new HealthCheckService();
+export const healthCheckService = healthCheckServiceInstance;
+export default healthCheckServiceInstance;

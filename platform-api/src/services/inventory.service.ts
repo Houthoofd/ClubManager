@@ -1,71 +1,70 @@
 /**
  * Inventory Service
- * Stock management and inventory operations
+ * Business logic for inventory management
  */
 
-import { PrismaClient } from '@prisma/client';
-import { ProductRepository } from '../repositories/product.repository.js';
-import { InventoryUpdate } from '../types/shop.types.js';
-import { validateProductId, ShopValidationError } from '../validators/shop.validator.js';
-import { NotFoundError } from '../utils/errors.util.js';
-import { auditService } from './auditService.js';
+import { ProductRepository } from "../repositories/product.repository.js";
+import { auditService, AuditAction } from "./auditService.js";
 import {
+  validateProductId,
   validateStockOperation,
   calculateNewStock,
-  needsReorder
-} from './product.helpers.js';
+  NotFoundError,
+  ShopValidationError,
+} from "../utils/shopHelpers.js";
 
 export class InventoryService {
-  private repository: ProductRepository;
-
-  constructor(private prisma: PrismaClient) {
-    this.repository = new ProductRepository(prisma);
-  }
+  constructor(private repository: ProductRepository) {}
 
   /**
-   * Add stock to product
+   * Add stock to a product
    */
   async addStock(
     productId: number,
     quantity: number,
-    tenantId: number,
+    tenantId: string,
     userId?: number,
-    reason?: string
+    reason?: string,
   ) {
     validateProductId(productId);
 
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      throw new ShopValidationError('Quantity must be a positive integer', 'quantity');
+      throw new ShopValidationError(
+        "Quantity must be a positive integer",
+        "quantity",
+      );
     }
 
-    const product = await this.repository.findById(productId, tenantId);
+    const product = await this.repository.getWithStock(productId);
     if (!product) {
-      throw new NotFoundError('Product');
+      throw new NotFoundError("Product");
     }
 
-    const validation = validateStockOperation(product.stock, 'add', quantity);
+    const currentStock = product.stock[0]?.quantite || 0;
+    const validation = validateStockOperation(currentStock, "add", quantity);
     if (!validation.valid) {
-      throw new ShopValidationError(validation.error!, 'quantity');
+      throw new ShopValidationError(validation.error!, "quantity");
     }
 
-    const newStock = calculateNewStock(product.stock, 'add', quantity);
-    const updated = await this.repository.incrementStock(productId, quantity, tenantId);
+    const newStock = calculateNewStock(currentStock, "add", quantity);
+    const updated = await this.repository.incrementStock(productId, quantity);
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'INVENTORY_ADD',
+        action: AuditAction.INVENTORY_ADD,
         userId,
         tenantId,
-        resourceType: 'Product',
-        resourceId: productId,
+        resource: "Product",
+        resourceType: "Product",
+        resourceId: productId.toString(),
         details: {
-          productName: product.name,
-          oldStock: product.stock,
+          productName: product.nom,
+          oldStock: currentStock,
           addedQuantity: quantity,
           newStock,
-          reason
-        }
+          reason,
+        },
       });
     }
 
@@ -73,49 +72,54 @@ export class InventoryService {
   }
 
   /**
-   * Remove stock from product
+   * Remove stock from a product
    */
   async removeStock(
     productId: number,
     quantity: number,
-    tenantId: number,
+    tenantId: string,
     userId?: number,
-    reason?: string
+    reason?: string,
   ) {
     validateProductId(productId);
 
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      throw new ShopValidationError('Quantity must be a positive integer', 'quantity');
+      throw new ShopValidationError(
+        "Quantity must be a positive integer",
+        "quantity",
+      );
     }
 
-    const product = await this.repository.findById(productId, tenantId);
+    const product = await this.repository.getWithStock(productId);
     if (!product) {
-      throw new NotFoundError('Product');
+      throw new NotFoundError("Product");
     }
 
-    const validation = validateStockOperation(product.stock, 'remove', quantity);
+    const currentStock = product.stock[0]?.quantite || 0;
+    const validation = validateStockOperation(currentStock, "remove", quantity);
     if (!validation.valid) {
-      throw new ShopValidationError(validation.error!, 'quantity');
+      throw new ShopValidationError(validation.error!, "quantity");
     }
 
-    const newStock = calculateNewStock(product.stock, 'remove', quantity);
-    const updated = await this.repository.decrementStock(productId, quantity, tenantId);
+    const newStock = calculateNewStock(currentStock, "remove", quantity);
+    const updated = await this.repository.decrementStock(productId, quantity);
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'INVENTORY_REMOVE',
+        action: AuditAction.INVENTORY_REMOVE,
         userId,
         tenantId,
-        resourceType: 'Product',
-        resourceId: productId,
+        resource: "Product",
+        resourceType: "Product",
+        resourceId: productId.toString(),
         details: {
-          productName: product.name,
-          oldStock: product.stock,
+          productName: product.nom,
+          oldStock: currentStock,
           removedQuantity: quantity,
           newStock,
-          reason
-        }
+          reason,
+        },
       });
     }
 
@@ -123,44 +127,47 @@ export class InventoryService {
   }
 
   /**
-   * Set stock to specific value
+   * Set stock to a specific value
    */
   async setStock(
     productId: number,
     quantity: number,
-    tenantId: number,
+    tenantId: string,
     userId?: number,
-    reason?: string
+    reason?: string,
   ) {
     validateProductId(productId);
 
     if (!Number.isInteger(quantity) || quantity < 0) {
-      throw new ShopValidationError('Quantity must be a non-negative integer', 'quantity');
+      throw new ShopValidationError(
+        "Quantity must be a non-negative integer",
+        "quantity",
+      );
     }
 
-    const product = await this.repository.findById(productId, tenantId);
+    const product = await this.repository.getWithStock(productId);
     if (!product) {
-      throw new NotFoundError('Product');
+      throw new NotFoundError("Product");
     }
 
-    const oldStock = product.stock;
-    const updated = await this.repository.updateStock(productId, quantity, tenantId);
+    const currentStock = product.stock[0]?.quantite || 0;
+    const updated = await this.repository.updateStock(productId, quantity);
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'INVENTORY_SET',
+        action: AuditAction.INVENTORY_SET,
         userId,
         tenantId,
-        resourceType: 'Product',
-        resourceId: productId,
+        resource: "Product",
+        resourceType: "Product",
+        resourceId: productId.toString(),
         details: {
-          productName: product.name,
-          oldStock,
+          productName: product.nom,
+          oldStock: currentStock,
           newStock: quantity,
-          difference: quantity - oldStock,
-          reason
-        }
+          reason,
+        },
       });
     }
 
@@ -168,256 +175,127 @@ export class InventoryService {
   }
 
   /**
-   * Bulk update inventory
+   * Get current stock for a product
    */
-  async bulkUpdate(
-    updates: InventoryUpdate[],
-    tenantId: number,
-    userId?: number
+  async getStock(productId: number): Promise<number> {
+    validateProductId(productId);
+
+    const product = await this.repository.getWithStock(productId);
+    if (!product) {
+      throw new NotFoundError("Product");
+    }
+
+    return product.stock[0]?.quantite || 0;
+  }
+
+  /**
+   * Check if product is in stock
+   */
+  async isInStock(productId: number, quantity = 1): Promise<boolean> {
+    const stock = await this.getStock(productId);
+    return stock >= quantity;
+  }
+
+  /**
+   * Get low stock products
+   */
+  async getLowStockProducts(threshold?: number) {
+    return this.repository.findLowStock(threshold);
+  }
+
+  /**
+   * Bulk update stock for multiple products
+   */
+  async bulkUpdateStock(
+    updates: Array<{
+      productId: number;
+      quantity: number;
+      operation: "add" | "remove" | "set";
+    }>,
+    tenantId: string,
+    userId?: number,
   ) {
-    if (!Array.isArray(updates) || updates.length === 0) {
-      throw new ShopValidationError('Updates array cannot be empty', 'updates');
-    }
-
-    if (updates.length > 100) {
-      throw new ShopValidationError('Cannot update more than 100 products at once', 'updates');
-    }
-
     const results = [];
-    const errors = [];
 
     for (const update of updates) {
       try {
-        validateProductId(update.productId);
-
-        const product = await this.repository.findById(update.productId, tenantId);
-        if (!product) {
-          errors.push({
-            productId: update.productId,
-            error: 'Product not found'
-          });
-          continue;
-        }
-
-        let newStock: number;
-        switch (update.type) {
-          case 'ADD':
-            newStock = calculateNewStock(product.stock, 'add', update.quantity);
+        let result;
+        switch (update.operation) {
+          case "add":
+            result = await this.addStock(
+              update.productId,
+              update.quantity,
+              tenantId,
+              userId,
+            );
             break;
-          case 'REMOVE':
-            const validation = validateStockOperation(product.stock, 'remove', update.quantity);
-            if (!validation.valid) {
-              errors.push({
-                productId: update.productId,
-                error: validation.error
-              });
-              continue;
-            }
-            newStock = calculateNewStock(product.stock, 'remove', update.quantity);
+          case "remove":
+            result = await this.removeStock(
+              update.productId,
+              update.quantity,
+              tenantId,
+              userId,
+            );
             break;
-          case 'SET':
-            newStock = update.quantity;
+          case "set":
+            result = await this.setStock(
+              update.productId,
+              update.quantity,
+              tenantId,
+              userId,
+            );
             break;
           default:
-            errors.push({
-              productId: update.productId,
-              error: 'Invalid update type'
-            });
-            continue;
+            throw new Error(`Invalid operation: ${update.operation}`);
         }
-
-        const updated = await this.repository.updateStock(
-          update.productId,
-          newStock,
-          tenantId
-        );
-
+        results.push({ success: true, productId: update.productId, result });
+      } catch (error: any) {
         results.push({
+          success: false,
           productId: update.productId,
-          oldStock: product.stock,
-          newStock,
-          success: true
-        });
-
-        // Audit log
-        if (userId) {
-          await auditService.log({
-            action: 'INVENTORY_BULK_UPDATE',
-            userId,
-            tenantId,
-            resourceType: 'Product',
-            resourceId: update.productId,
-            details: {
-              type: update.type,
-              oldStock: product.stock,
-              newStock,
-              reason: update.reason
-            }
-          });
-        }
-      } catch (error) {
-        errors.push({
-          productId: update.productId,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error.message,
         });
       }
     }
 
-    return {
-      successful: results,
-      failed: errors,
-      total: updates.length,
-      successCount: results.length,
-      failureCount: errors.length
-    };
+    return results;
   }
 
   /**
-   * Get low stock alerts
-   */
-  async getLowStockAlerts(threshold = 10, tenantId?: number) {
-    const products = await this.repository.findLowStock(threshold, tenantId);
-
-    return products.map(product => ({
-      id: product.id,
-      name: product.name,
-      currentStock: product.stock,
-      threshold,
-      severity: product.stock <= threshold / 2 ? 'critical' : 'warning',
-      needsReorder: needsReorder(product.stock, threshold)
-    }));
-  }
-
-  /**
-   * Get out of stock products
-   */
-  async getOutOfStockProducts(tenantId?: number) {
-    return this.repository.findOutOfStock(tenantId);
-  }
-
-  /**
-   * Get inventory summary
-   */
-  async getInventorySummary(tenantId?: number) {
-    const [totalValue, lowStock, outOfStock, statusCounts] = await Promise.all([
-      this.repository.getTotalValue(tenantId),
-      this.repository.findLowStock(10, tenantId),
-      this.repository.findOutOfStock(tenantId),
-      this.repository.countByStatus(tenantId)
-    ]);
-
-    const totalProducts = Object.values(statusCounts).reduce(
-      (sum, count) => sum + count,
-      0
-    );
-
-    return {
-      totalProducts,
-      totalValue,
-      lowStockCount: lowStock.length,
-      outOfStockCount: outOfStock.length,
-      statusBreakdown: statusCounts,
-      alerts: {
-        critical: lowStock.filter(p => p.stock <= 5).length,
-        warning: lowStock.filter(p => p.stock > 5 && p.stock <= 10).length
-      }
-    };
-  }
-
-  /**
-   * Check stock availability for multiple products
-   */
-  async checkAvailability(
-    items: Array<{ productId: number; quantity: number }>,
-    tenantId: number
-  ) {
-    const results = [];
-
-    for (const item of items) {
-      const product = await this.repository.findById(item.productId, tenantId);
-
-      if (!product) {
-        results.push({
-          productId: item.productId,
-          available: false,
-          reason: 'Product not found'
-        });
-        continue;
-      }
-
-      const available = product.stock >= item.quantity;
-      results.push({
-        productId: item.productId,
-        productName: product.name,
-        requestedQuantity: item.quantity,
-        availableStock: product.stock,
-        available,
-        reason: available ? null : 'Insufficient stock'
-      });
-    }
-
-    const allAvailable = results.every(r => r.available);
-
-    return {
-      allAvailable,
-      items: results
-    };
-  }
-
-  /**
-   * Reserve stock for order
+   * Reserve stock for an order
    */
   async reserveStock(
     items: Array<{ productId: number; quantity: number }>,
-    tenantId: number,
+    tenantId: string,
     userId?: number,
-    orderId?: number
   ) {
-    // Check availability first
-    const availability = await this.checkAvailability(items, tenantId);
-    if (!availability.allAvailable) {
-      throw new ShopValidationError(
-        'Cannot reserve stock: some items are not available',
-        'items'
-      );
-    }
-
-    // Reserve stock (decrement)
     const reservations = [];
+
     for (const item of items) {
-      const updated = await this.repository.decrementStock(
+      const stock = await this.getStock(item.productId);
+      if (stock < item.quantity) {
+        throw new ShopValidationError(
+          `Insufficient stock for product ${item.productId}. Available: ${stock}, Required: ${item.quantity}`,
+          "stock",
+        );
+      }
+
+      const updated = await this.removeStock(
         item.productId,
         item.quantity,
-        tenantId
+        tenantId,
+        userId,
+        "Stock reserved for order",
       );
 
       reservations.push({
         productId: item.productId,
         quantity: item.quantity,
-        reservedAt: new Date()
+        updated,
       });
-
-      // Audit log
-      if (userId) {
-        await auditService.log({
-          action: 'INVENTORY_RESERVE',
-          userId,
-          tenantId,
-          resourceType: 'Product',
-          resourceId: item.productId,
-          details: {
-            quantity: item.quantity,
-            orderId,
-            newStock: updated.stock
-          }
-        });
-      }
     }
 
-    return {
-      reservations,
-      success: true
-    };
+    return reservations;
   }
 
   /**
@@ -425,34 +303,173 @@ export class InventoryService {
    */
   async releaseStock(
     items: Array<{ productId: number; quantity: number }>,
-    tenantId: number,
+    tenantId: string,
     userId?: number,
-    orderId?: number
   ) {
-    for (const item of items) {
-      await this.repository.incrementStock(item.productId, item.quantity, tenantId);
+    const releases = [];
 
-      // Audit log
-      if (userId) {
-        await auditService.log({
-          action: 'INVENTORY_RELEASE',
-          userId,
-          tenantId,
-          resourceType: 'Product',
-          resourceId: item.productId,
-          details: {
-            quantity: item.quantity,
-            orderId
-          }
-        });
-      }
+    for (const item of items) {
+      const updated = await this.addStock(
+        item.productId,
+        item.quantity,
+        tenantId,
+        userId,
+        "Stock released from cancelled order",
+      );
+
+      releases.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        updated,
+      });
     }
 
-    return { success: true };
+    return releases;
+  }
+
+  /**
+   * Get inventory statistics
+   */
+  async getInventoryStats() {
+    const [totalValue, lowStock] = await Promise.all([
+      this.repository.getTotalInventoryValue(),
+      this.repository.findLowStock(),
+    ]);
+
+    return {
+      totalValue,
+      lowStockCount: lowStock.length,
+      lowStockItems: lowStock.map((p) => ({
+        id: p.id,
+        nom: p.nom,
+        stock: p.stock[0]?.quantite || 0,
+        seuil: p.stock[0]?.seuil_min || 5,
+      })),
+    };
+  }
+
+  /**
+   * Get inventory summary
+   */
+  async getInventorySummary(tenantId: string) {
+    const result = await this.repository.findAll({ tenantId });
+    const products = result.products;
+
+    let totalProducts = 0;
+    let totalStock = 0;
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+    let totalValue = 0;
+
+    for (const product of products) {
+      totalProducts++;
+      const stock = product.stock[0]?.quantite || 0;
+      const threshold = product.stock[0]?.seuil_min || 5;
+
+      totalStock += stock;
+
+      if (stock === 0) {
+        outOfStockCount++;
+      } else if (stock <= threshold) {
+        lowStockCount++;
+      }
+
+      totalValue += stock * Number(product.prix);
+    }
+
+    return {
+      totalProducts,
+      totalStock,
+      lowStockCount,
+      outOfStockCount,
+      totalValue,
+    };
+  }
+
+  /**
+   * Get low stock alerts
+   */
+  async getLowStockAlerts(tenantId: string, threshold?: number) {
+    const lowStock = await this.repository.findLowStock(threshold);
+
+    return lowStock.map((product) => ({
+      id: product.id,
+      nom: product.nom,
+      currentStock: product.stock[0]?.quantite || 0,
+      threshold: product.stock[0]?.seuil_min || 5,
+      status:
+        (product.stock[0]?.quantite || 0) === 0 ? "OUT_OF_STOCK" : "LOW_STOCK",
+    }));
+  }
+
+  /**
+   * Check availability for multiple products
+   */
+  async checkAvailability(
+    items: Array<{ productId: number; quantity: number }>,
+    tenantId: string,
+  ) {
+    const results = [];
+
+    for (const item of items) {
+      const product = await this.repository.getWithStock(item.productId);
+
+      if (!product) {
+        results.push({
+          productId: item.productId,
+          available: false,
+          reason: "Product not found",
+        });
+        continue;
+      }
+
+      const stock = product.stock[0]?.quantite || 0;
+      const available = stock >= item.quantity;
+
+      results.push({
+        productId: item.productId,
+        productName: product.nom,
+        requestedQuantity: item.quantity,
+        availableStock: stock,
+        available,
+        reason: available
+          ? null
+          : `Insufficient stock. Available: ${stock}, Required: ${item.quantity}`,
+      });
+    }
+
+    return {
+      allAvailable: results.every((r) => r.available),
+      items: results,
+    };
+  }
+
+  /**
+   * Bulk update stock
+   */
+  async bulkUpdate(
+    updates: Array<{
+      productId: number;
+      quantity: number;
+      operation?: "add" | "remove" | "set";
+    }>,
+    tenantId: string,
+    userId?: number,
+  ) {
+    return this.bulkUpdateStock(
+      updates.map((u) => ({
+        productId: u.productId,
+        quantity: u.quantity,
+        operation: u.operation || "set",
+      })),
+      tenantId,
+      userId,
+    );
   }
 }
 
-// Export singleton instance
-export const inventoryService = new InventoryService(
-  (await import('./prismaService.js')).prisma
-);
+// Create singleton instance
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+const productRepository = new ProductRepository(prisma);
+export const inventoryService = new InventoryService(productRepository);

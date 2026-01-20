@@ -1,27 +1,33 @@
 /**
  * Order Service
  * Core business logic for order management
+ * Uses French model names: Commande, CommandeArticle, Article
  */
 
-import { PrismaClient } from '@prisma/client';
-import { OrderRepository } from '../repositories/order.repository.js';
-import { ProductRepository } from '../repositories/product.repository.js';
-import {
-  CreateOrderDTO,
-  OrderFilters,
-  OrderStatus,
-  OrderSummary
-} from '../types/shop.types.js';
-import {
-  validateCreateOrder,
-  validateOrderId,
-  validateOrderStatusTransition,
-  ShopValidationError
-} from '../validators/shop.validator.js';
-import { NotFoundError, BadRequestError } from '../utils/errors.util.js';
-import { auditService } from './auditService.js';
-import { inventoryService } from './inventory.service.js';
-import { emailService } from './emailService.js';
+import { PrismaClient, Prisma } from "@prisma/client";
+import { OrderRepository } from "../repositories/order.repository.js";
+import { ProductRepository } from "../repositories/product.repository.js";
+import { OrderFilters, OrderStatus } from "../types/shop.types.js";
+import { NotFoundError } from "../utils/shopHelpers.js";
+import { auditService, AuditAction } from "./auditService.js";
+import { inventoryService } from "./inventory.service.js";
+
+export interface CreateOrderDTO {
+  userId: number;
+  tenantId: string;
+  items: Array<{
+    productId: number;
+    quantity: number;
+  }>;
+  shippingAddress?: string;
+  notes?: string;
+}
+
+export interface UpdateOrderDTO {
+  statut?: string;
+  adresseLivraison?: string;
+  notes?: string;
+}
 
 export class OrderService {
   private repository: OrderRepository;
@@ -35,12 +41,14 @@ export class OrderService {
   /**
    * Get order by ID
    */
-  async getById(id: number, tenantId: number) {
-    validateOrderId(id);
+  async getById(id: number, tenantId: string) {
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new Error("Invalid order ID");
+    }
 
     const order = await this.repository.findById(id, tenantId);
     if (!order) {
-      throw new NotFoundError('Order');
+      throw new NotFoundError("Order");
     }
 
     return order;
@@ -56,105 +64,142 @@ export class OrderService {
   /**
    * Get orders by user
    */
-  async getByUser(userId: number, tenantId: number, page = 1, limit = 20) {
+  async getByUser(userId: number, tenantId: string, page = 1, limit = 20) {
     return this.repository.findByUser(userId, tenantId, page, limit);
   }
 
   /**
    * Create new order
    */
-  async create(data: CreateOrderDTO, userId?: number) {
+  async create(data: CreateOrderDTO, auditUserId?: number) {
     // Validate input
-    validateCreateOrder(data);
-
-    // Check stock availability for all items
-    const availability = await inventoryService.checkAvailability(
-      data.items,
-      data.tenantId
-    );
-
-    if (!availability.allAvailable) {
-      const unavailable = availability.items
-        .filter(item => !item.available)
-        .map(item => `${item.productName}: requested ${item.requestedQuantity}, available ${item.availableStock}`)
-        .join('; ');
-
-      throw new ShopValidationError(
-        `Insufficient stock: ${unavailable}`,
-        'items'
-      );
+    if (!data.userId || !data.tenantId) {
+      throw new Error("userId and tenantId are required");
     }
 
-    // Calculate order total
-    let totalAmount = 0;
-    const orderItems = [];
-
-    for (const item of data.items) {
-      const product = await this.productRepository.findById(item.productId, data.tenantId);
-      if (!product) {
-        throw new NotFoundError(`Product with ID ${item.productId}`);
-      }
-
-      const itemPrice = item.price !== undefined ? item.price : product.price;
-      const itemTotal = itemPrice * item.quantity;
-      totalAmount += itemTotal;
-
-      orderItems.push({
-        product: { connect: { id: item.productId } },
-        quantity: item.quantity,
-        price: itemPrice,
-        subtotal: itemTotal
-      });
+    if (!data.items || data.items.length === 0) {
+      throw new Error("Order must contain at least one item");
     }
 
-    // Create order with items
-    const order = await this.repository.create({
-      user: { connect: { id: data.userId } },
-      tenant: { connect: { id: data.tenantId } },
-      status: OrderStatus.PENDING,
-      totalAmount,
-      notes: data.notes,
-      items: {
-        create: orderItems
-      }
-    });
-
-    // Reserve stock
+    // Check stock availability and reserve
     try {
       await inventoryService.reserveStock(
         data.items,
         data.tenantId,
-        userId || data.userId,
-        order.id
+        auditUserId,
       );
-    } catch (error) {
-      // Rollback order if stock reservation fails
-      await this.repository.delete(order.id, data.tenantId);
-      throw error;
+    } catch (error: any) {
+      throw new Error(`Stock reservation failed: ${error.message}`);
     }
+
+    // Get products and calculate total
+    let totalAmount = 0;
+    const orderItems: Array<{
+      articleId: number;
+      quantite: number;
+      prixUnitaire: number;
+    }> = [];
+
+    for (const item of data.items) {
+      const product = await this.productRepository.getWithStock(item.productId);
+      if (!product) {
+        // Release reserved stock before throwing error
+        await inventoryService.releaseStock(
+          data.items.slice(0, orderItems.length),
+          data.tenantId,
+          auditUserId,
+        );
+        throw new NotFoundError(`Product ${item.productId}`);
+      }
+
+      const itemTotal = Number(product.prix) * item.quantity;
+      totalAmount += itemTotal;
+
+      orderItems.push({
+        articleId: product.id,
+        quantite: item.quantity,
+        prixUnitaire: Number(product.prix),
+      });
+    }
+
+    // Create order
+    const orderData: Prisma.CommandeCreateInput = {
+      utilisateur: {
+        connect: { id: data.userId },
+      },
+      statut: "en attente",
+      montantTotal: totalAmount,
+      adresseLivraison: data.shippingAddress || null,
+      notes: data.notes || null,
+      articles: {
+        create: orderItems,
+      },
+    };
+
+    const order = await this.repository.create(orderData);
+
+    // Audit log
+    if (auditUserId) {
+      await auditService.log({
+        action: AuditAction.ORDER_CREATE,
+        userId: auditUserId,
+        tenantId: data.tenantId,
+        resource: "Order",
+        resourceType: "Order",
+        resourceId: order.id.toString(),
+        details: {
+          userId: data.userId,
+          itemCount: data.items.length,
+          totalAmount,
+        },
+      });
+    }
+
+    return order;
+  }
+
+  /**
+   * Update order
+   */
+  async update(
+    id: number,
+    data: UpdateOrderDTO,
+    tenantId: string,
+    userId?: number,
+  ) {
+    const order = await this.getById(id, tenantId);
+
+    const updateData: Prisma.CommandeUpdateInput = {};
+
+    if (data.statut !== undefined) {
+      updateData.statut = data.statut;
+    }
+    if (data.adresseLivraison !== undefined) {
+      updateData.adresseLivraison = data.adresseLivraison;
+    }
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
+    }
+
+    const updated = await this.repository.update(id, updateData, tenantId);
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'ORDER_CREATE',
+        action: AuditAction.ORDER_UPDATE,
         userId,
-        tenantId: data.tenantId,
-        resourceType: 'Order',
-        resourceId: order.id,
+        tenantId,
+        resource: "Order",
+        resourceType: "Order",
+        resourceId: id.toString(),
         details: {
-          totalAmount,
-          itemCount: data.items.length,
-          status: OrderStatus.PENDING
-        }
+          orderId: id,
+          changes: data,
+        },
       });
     }
 
-    // Send confirmation email (async, don't wait)
-    this.sendOrderConfirmationEmail(order.id, data.tenantId).catch(err => {
-      console.error('Failed to send order confirmation email:', err);
-    });
-
-    return order;
+    return updated;
   }
 
   /**
@@ -162,59 +207,62 @@ export class OrderService {
    */
   async updateStatus(
     id: number,
-    newStatus: OrderStatus,
-    tenantId: number,
-    userId?: number
+    status: OrderStatus,
+    tenantId: string,
+    userId?: number,
   ) {
-    validateOrderId(id);
-
     const order = await this.getById(id, tenantId);
 
-    // Validate status transition
-    try {
-      validateOrderStatusTransition(order.status as OrderStatus, newStatus);
-    } catch (error) {
-      throw new BadRequestError(
-        error instanceof Error ? error.message : 'Invalid status transition'
-      );
+    // Map English status to French
+    const statusMap: Record<string, string> = {
+      PENDING: "en attente",
+      CONFIRMED: "confirmée",
+      PREPARING: "en préparation",
+      READY: "prête",
+      DELIVERED: "livrée",
+      CANCELLED: "annulée",
+      REFUNDED: "remboursée",
+    };
+
+    const frenchStatus = statusMap[status] || status;
+
+    // If cancelling, release reserved stock
+    if (
+      status === OrderStatus.CANCELLED &&
+      order.statut !== "annulée" &&
+      order.statut !== "livrée"
+    ) {
+      const items = order.articles.map((item) => ({
+        productId: item.articleId,
+        quantity: item.quantite,
+      }));
+
+      await inventoryService.releaseStock(items, tenantId, userId);
     }
 
-    // Handle stock release if order is cancelled
-    if (newStatus === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED) {
-      await inventoryService.releaseStock(
-        order.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity
-        })),
-        tenantId,
-        userId,
-        order.id
-      );
-    }
-
-    // Update status
-    const updated = await this.repository.updateStatus(id, newStatus, tenantId);
+    const updated = await this.repository.updateStatus(
+      id,
+      frenchStatus,
+      tenantId,
+    );
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'ORDER_STATUS_UPDATE',
+        action: AuditAction.ORDER_STATUS_UPDATE,
         userId,
         tenantId,
-        resourceType: 'Order',
-        resourceId: id,
+        resource: "Order",
+        resourceType: "Order",
+        resourceId: id.toString(),
         details: {
-          oldStatus: order.status,
+          orderId: id,
+          reason,
+          oldStatus: order.statut,
           newStatus,
-          orderId: order.id
-        }
+        },
       });
     }
-
-    // Send status update email
-    this.sendOrderStatusEmail(id, newStatus, tenantId).catch(err => {
-      console.error('Failed to send order status email:', err);
-    });
 
     return updated;
   }
@@ -222,48 +270,64 @@ export class OrderService {
   /**
    * Cancel order
    */
-  async cancel(id: number, tenantId: number, userId?: number, reason?: string) {
-    return this.updateStatus(id, OrderStatus.CANCELLED, tenantId, userId);
-  }
+  async cancel(id: number, tenantId: string, userId?: number, reason?: string) {
+    const order = await this.getById(id, tenantId);
 
-  /**
-   * Confirm order
-   */
-  async confirm(id: number, tenantId: number, userId?: number) {
-    return this.updateStatus(id, OrderStatus.CONFIRMED, tenantId, userId);
-  }
+    if (order.statut === "annulée") {
+      throw new Error("Order is already cancelled");
+    }
 
-  /**
-   * Mark order as delivered
-   */
-  async deliver(id: number, tenantId: number, userId?: number) {
-    return this.updateStatus(id, OrderStatus.DELIVERED, tenantId, userId);
+    if (order.statut === "livrée") {
+      throw new Error("Cannot cancel delivered order");
+    }
+
+    // Release stock
+    const items = order.articles.map((item) => ({
+      productId: item.articleId,
+      quantity: item.quantite,
+    }));
+    await inventoryService.releaseStock(items, tenantId, userId);
+
+    const updated = await this.repository.updateStatus(
+      id,
+      "annulée" as OrderStatus,
+      tenantId,
+    );
+
+    // Audit log
+    if (userId) {
+      await auditService.log({
+        action: AuditAction.ORDER_CANCEL,
+        userId,
+        tenantId,
+        resource: "Order",
+        resourceType: "Order",
+        resourceId: id.toString(),
+        details: {
+          orderId: id,
+          reason,
+          oldStatus: order.statut,
+        },
+      });
+    }
+
+    return updated;
   }
 
   /**
    * Delete order
    */
-  async delete(id: number, tenantId: number, userId?: number) {
-    validateOrderId(id);
-
+  async delete(id: number, tenantId: string, userId?: number) {
     const order = await this.getById(id, tenantId);
 
-    // Only allow deletion of pending or cancelled orders
-    if (![OrderStatus.PENDING, OrderStatus.CANCELLED].includes(order.status as OrderStatus)) {
-      throw new BadRequestError('Only pending or cancelled orders can be deleted');
-    }
+    // Release stock if not delivered or cancelled
+    if (order.statut !== "annulée" && order.statut !== "livrée") {
+      const items = order.articles.map((item) => ({
+        productId: item.articleId,
+        quantity: item.quantite,
+      }));
 
-    // Release stock if order was not cancelled
-    if (order.status === OrderStatus.PENDING) {
-      await inventoryService.releaseStock(
-        order.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity
-        })),
-        tenantId,
-        userId,
-        order.id
-      );
+      await inventoryService.releaseStock(items, tenantId, userId);
     }
 
     await this.repository.delete(id, tenantId);
@@ -271,15 +335,16 @@ export class OrderService {
     // Audit log
     if (userId) {
       await auditService.log({
-        action: 'ORDER_DELETE',
+        action: AuditAction.ORDER_DELETE,
         userId,
         tenantId,
-        resourceType: 'Order',
-        resourceId: id,
+        resource: "Order",
+        resourceType: "Order",
+        resourceId: id.toString(),
         details: {
-          orderId: order.id,
-          status: order.status
-        }
+          orderId: id,
+          status: order.statut,
+        },
       });
     }
 
@@ -289,128 +354,183 @@ export class OrderService {
   /**
    * Get order statistics
    */
-  async getStatistics(
-    tenantId?: number,
-    startDate?: Date,
-    endDate?: Date
-  ): Promise<OrderSummary> {
+  async getStatistics(tenantId: string, startDate?: Date, endDate?: Date) {
     return this.repository.getStatistics(tenantId, startDate, endDate);
+  }
+
+  /**
+   * Calculate total for order items
+   */
+  async calculateTotal(
+    items: Array<{ productId: number; quantity: number }>,
+    tenantId: string,
+  ) {
+    let subtotal = 0;
+    const itemDetails = [];
+
+    for (const item of items) {
+      const product = await this.productRepository.findById(item.productId);
+      if (!product) {
+        throw new NotFoundError(`Product with ID ${item.productId}`);
+      }
+
+      const itemTotal = Number(product.prix) * item.quantity;
+      subtotal += itemTotal;
+
+      itemDetails.push({
+        productId: product.id,
+        productName: product.nom,
+        quantity: item.quantity,
+        unitPrice: Number(product.prix),
+        total: itemTotal,
+      });
+    }
+
+    // Calculate tax (example: 20% VAT)
+    const taxRate = 0.2;
+    const tax = subtotal * taxRate;
+    const total = subtotal + tax;
+
+    return {
+      items: itemDetails,
+      subtotal,
+      tax,
+      taxRate,
+      total,
+    };
+  }
+
+  /**
+   * Confirm an order
+   */
+  async confirm(id: number, tenantId: string, userId?: number) {
+    const order = await this.getById(id, tenantId);
+
+    if (order.statut === "confirmée") {
+      throw new Error("Order is already confirmed");
+    }
+
+    if (order.statut === "annulée") {
+      throw new Error("Cannot confirm a cancelled order");
+    }
+
+    const updated = await this.updateStatus(
+      id,
+      "confirmée" as OrderStatus,
+      tenantId,
+      userId,
+      "Order confirmed",
+    );
+
+    return updated;
+  }
+
+  /**
+   * Mark order as delivered
+   */
+  async deliver(id: number, tenantId: string, userId?: number) {
+    const order = await this.getById(id, tenantId);
+
+    if (order.statut === "livrée") {
+      throw new Error("Order is already delivered");
+    }
+
+    if (order.statut === "annulée") {
+      throw new Error("Cannot deliver a cancelled order");
+    }
+
+    const updated = await this.updateStatus(
+      id,
+      "livrée" as OrderStatus,
+      tenantId,
+      userId,
+      "Order delivered",
+    );
+
+    return updated;
+  }
+
+  /**
+   * Get total revenue
+   */
+  async getTotalRevenue(tenantId: string, startDate?: Date, endDate?: Date) {
+    return this.repository.getTotalRevenue(tenantId, startDate, endDate);
   }
 
   /**
    * Get recent orders
    */
-  async getRecent(limit = 10, tenantId?: number) {
+  async getRecent(limit = 10, tenantId?: string) {
     return this.repository.getRecent(limit, tenantId);
-  }
-
-  /**
-   * Get orders by product
-   */
-  async getByProduct(productId: number, tenantId: number, page = 1, limit = 20) {
-    return this.repository.findByProduct(productId, tenantId, page, limit);
-  }
-
-  /**
-   * Calculate order total
-   */
-  async calculateTotal(items: Array<{ productId: number; quantity: number }>, tenantId: number) {
-    let total = 0;
-
-    for (const item of items) {
-      const product = await this.productRepository.findById(item.productId, tenantId);
-      if (!product) {
-        throw new NotFoundError(`Product with ID ${item.productId}`);
-      }
-
-      total += product.price * item.quantity;
-    }
-
-    return {
-      subtotal: total,
-      tax: 0, // TODO: Implement tax calculation
-      total
-    };
-  }
-
-  /**
-   * Send order confirmation email
-   */
-  private async sendOrderConfirmationEmail(orderId: number, tenantId: number) {
-    try {
-      const order = await this.repository.findById(orderId, tenantId);
-      if (!order || !order.user) return;
-
-      await emailService.sendEmail({
-        to: order.user.email,
-        subject: `Confirmation de commande #${orderId}`,
-        html: `
-          <h2>Votre commande a été créée</h2>
-          <p>Bonjour ${order.user.firstName || ''},</p>
-          <p>Votre commande #${orderId} a été créée avec succès.</p>
-          <p><strong>Montant total:</strong> ${order.totalAmount.toFixed(2)} €</p>
-          <p><strong>Statut:</strong> ${order.status}</p>
-          <h3>Articles commandés:</h3>
-          <ul>
-            ${order.items.map(item => `
-              <li>${item.product.name} x ${item.quantity} - ${item.subtotal.toFixed(2)} €</li>
-            `).join('')}
-          </ul>
-          <p>Merci pour votre commande!</p>
-        `
-      });
-    } catch (error) {
-      console.error('Error sending order confirmation email:', error);
-    }
-  }
-
-  /**
-   * Send order status update email
-   */
-  private async sendOrderStatusEmail(
-    orderId: number,
-    status: OrderStatus,
-    tenantId: number
-  ) {
-    try {
-      const order = await this.repository.findById(orderId, tenantId);
-      if (!order || !order.user) return;
-
-      const statusLabels: Record<OrderStatus, string> = {
-        [OrderStatus.PENDING]: 'En attente',
-        [OrderStatus.CONFIRMED]: 'Confirmée',
-        [OrderStatus.PREPARING]: 'En préparation',
-        [OrderStatus.READY]: 'Prête',
-        [OrderStatus.DELIVERED]: 'Livrée',
-        [OrderStatus.CANCELLED]: 'Annulée',
-        [OrderStatus.REFUNDED]: 'Remboursée'
-      };
-
-      await emailService.sendEmail({
-        to: order.user.email,
-        subject: `Mise à jour de votre commande #${orderId}`,
-        html: `
-          <h2>Mise à jour de commande</h2>
-          <p>Bonjour ${order.user.firstName || ''},</p>
-          <p>Le statut de votre commande #${orderId} a été mis à jour.</p>
-          <p><strong>Nouveau statut:</strong> ${statusLabels[status]}</p>
-          <p><strong>Montant:</strong> ${order.totalAmount.toFixed(2)} €</p>
-        `
-      });
-    } catch (error) {
-      console.error('Error sending order status email:', error);
-    }
   }
 
   /**
    * Check if order exists
    */
-  async exists(id: number, tenantId?: number): Promise<boolean> {
+  async exists(id: number, tenantId: string): Promise<boolean> {
     return this.repository.exists(id, tenantId);
+  }
+
+  /**
+   * Get orders by product
+   */
+  async getByProduct(
+    productId: number,
+    tenantId: string,
+    page = 1,
+    limit = 20,
+  ) {
+    return this.repository.findByProduct(productId, tenantId, page, limit);
+  }
+
+  /**
+   * Count orders by status
+   */
+  async countByStatus(tenantId: string, status: string) {
+    return this.repository.countByStatus(tenantId, status);
+  }
+
+  /**
+   * Get order summary for user
+   */
+  async getUserOrderSummary(userId: number, tenantId: string) {
+    const orders = await this.repository.findByUser(userId, tenantId, 1, 1000);
+
+    const summary = {
+      totalOrders: orders.orders.length,
+      pending: 0,
+      confirmed: 0,
+      delivered: 0,
+      cancelled: 0,
+      totalSpent: 0,
+    };
+
+    orders.orders.forEach((order) => {
+      summary.totalSpent += Number(order.montantTotal);
+
+      switch (order.statut) {
+        case "en attente":
+          summary.pending++;
+          break;
+        case "confirmée":
+        case "en préparation":
+        case "prête":
+          summary.confirmed++;
+          break;
+        case "livrée":
+          summary.delivered++;
+          break;
+        case "annulée":
+        case "remboursée":
+          summary.cancelled++;
+          break;
+      }
+    });
+
+    return summary;
   }
 }
 
-// Export singleton instance
-export const orderService = new OrderService(
-  (await import('./prismaService.js')).prisma
-);
+// Create singleton instance
+const prisma = new PrismaClient();
+export const orderService = new OrderService(prisma);

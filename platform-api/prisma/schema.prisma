@@ -31,6 +31,7 @@ model Tenant {
   users       User[]
   subscriptions TenantSubscription[]
   auditLogs   AuditLog[]
+  messages    Message[]
 
   @@map("tenants")
 }
@@ -402,22 +403,38 @@ model CommandeArticle {
 // ==========================================
 
 model Message {
-  id            Int       @id @default(autoincrement())
-  expediteurId  Int       @map("expediteur_id")
-  destinataireId Int?     @map("destinataire_id")
-  sujet         String    @db.VarChar(200)
-  contenu       String    @db.Text
-  lu            Boolean   @default(false)
-  type          String    @default("prive") @db.VarChar(50)
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id             Int       @id @default(autoincrement())
+  tenantId       String    @map("tenant_id") @db.VarChar(255)
+  senderId       Int       @map("expediteur_id")
+  recipientId    Int?      @map("destinataire_id")
+  subject        String    @map("sujet") @db.VarChar(200)
+  body           String    @map("contenu") @db.Text
+  status         String    @default("DRAFT") @db.VarChar(50)
+  priority       String    @default("NORMAL") @db.VarChar(50)
+  type           String    @default("prive") @db.VarChar(50)
+  scheduledFor   DateTime? @map("scheduled_for")
+  sentAt         DateTime? @map("sent_at")
+  deliveredAt    DateTime? @map("delivered_at")
+  readAt         DateTime? @map("read_at")
+  read           Boolean   @default(false) @map("lu")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  expediteur   User  @relation("MessageSender", fields: [expediteurId], references: [id], onDelete: Cascade)
-  destinataire User? @relation("MessageReceiver", fields: [destinataireId], references: [id], onDelete: Cascade)
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sender       User   @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient    User?  @relation("MessageReceiver", fields: [recipientId], references: [id], onDelete: Cascade)
 
-  @@index([expediteurId])
-  @@index([destinataireId])
-  @@index([lu])
+  @@index([tenantId])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([priority])
+  @@index([scheduledFor])
+  @@index([sentAt])
+  @@index([deliveredAt])
+  @@index([readAt])
+  @@index([read])
   @@index([createdAt])
   @@map("messages")
 }

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -9,8 +9,10 @@ export interface AuditLogData {
   resource: string;
   resourceId?: string;
   changes?: any;
-  ipAddress: string;
+  ipAddress?: string;
   userAgent?: string;
+  details?: any;
+  resourceType?: string;
 }
 
 export enum AuditAction {
@@ -37,6 +39,35 @@ export enum AuditAction {
   // Permissions
   PERMISSION_GRANT = "PERMISSION_GRANT",
   PERMISSION_REVOKE = "PERMISSION_REVOKE",
+
+  // Inventory
+  INVENTORY_ADD = "INVENTORY_ADD",
+  INVENTORY_REMOVE = "INVENTORY_REMOVE",
+  INVENTORY_SET = "INVENTORY_SET",
+  STOCK_UPDATE = "STOCK_UPDATE",
+
+  // Messages
+  MESSAGE_CREATE = "MESSAGE_CREATE",
+  MESSAGE_BULK_SEND = "MESSAGE_BULK_SEND",
+  MESSAGE_UPDATE = "MESSAGE_UPDATE",
+  MESSAGE_READ = "MESSAGE_READ",
+  MESSAGE_BULK_READ = "MESSAGE_BULK_READ",
+  MESSAGE_ALL_READ = "MESSAGE_ALL_READ",
+  MESSAGE_DELETE = "MESSAGE_DELETE",
+  MESSAGE_STATUS_UPDATE = "MESSAGE_STATUS_UPDATE",
+
+  // Orders
+  ORDER_CREATE = "ORDER_CREATE",
+  ORDER_UPDATE = "ORDER_UPDATE",
+  ORDER_STATUS_UPDATE = "ORDER_STATUS_UPDATE",
+  ORDER_CANCEL = "ORDER_CANCEL",
+  ORDER_DELETE = "ORDER_DELETE",
+
+  // Products
+  PRODUCT_CREATE = "PRODUCT_CREATE",
+  PRODUCT_UPDATE = "PRODUCT_UPDATE",
+  PRODUCT_DELETE = "PRODUCT_DELETE",
+  TAILLE_CREATE = "TAILLE_CREATE",
 }
 
 class AuditService {
@@ -50,10 +81,14 @@ class AuditService {
           tenantId: data.tenantId,
           userId: data.userId,
           action: data.action,
-          resource: data.resource,
+          resource: data.resource || data.resourceType || "Unknown",
           resourceId: data.resourceId,
-          changes: data.changes ? JSON.stringify(data.changes) : null,
-          ipAddress: data.ipAddress,
+          changes: data.changes
+            ? JSON.stringify(data.changes)
+            : data.details
+              ? JSON.stringify(data.details)
+              : Prisma.JsonNull,
+          ipAddress: data.ipAddress || "unknown",
           userAgent: data.userAgent,
           timestamp: new Date(),
         },

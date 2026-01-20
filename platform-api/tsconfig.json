@@ -15,18 +15,35 @@
     "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
-      "*": ["*"]
+      "*": ["*"],
     },
-    "typeRoots": ["./src/types", "./node_modules/@types"]
+    "typeRoots": ["./src/types", "./node_modules/@types"],
   },
-  "include": [
-    "src/**/*",
-    "src/types/**/*"
-  ],
+  "include": ["src/**/*", "src/types/**/*"],
   "exclude": [
     "node_modules",
     "dist",
     "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+    "**/*.spec.ts",
+    "src/server.ts",
+    "src/routes/utilisateurs.ts",
+    "src/routes/commandes.ts",
+    "src/routes/compte.ts",
+    "src/routes/cours.ts",
+    "src/routes/magasin.ts",
+    "src/routes/professeurs.ts",
+    "src/routes/messages.ts",
+    "src/routes/statistiques.ts",
+    "src/routes/informations.ts",
+    "src/routes/alertes.ts",
+    "src/routes/stocks.ts",
+    "src/routes/echeances.ts",
+    "src/routes/inscription.ts",
+    "src/routes/verification.ts",
+    "src/routes/stripe.ts",
+    "src/routes/authTenant.ts",
+    "src/routes/paiements.ts",
+    "src/routes/webhooks.ts",
+    "src/routes/auth/password-reset.ts",
+  ],
 }

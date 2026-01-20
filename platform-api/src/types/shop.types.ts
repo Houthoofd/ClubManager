@@ -4,26 +4,26 @@
  */
 
 export enum ProductStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  OUT_OF_STOCK = 'OUT_OF_STOCK',
-  DISCONTINUED = 'DISCONTINUED'
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  OUT_OF_STOCK = "OUT_OF_STOCK",
+  DISCONTINUED = "DISCONTINUED",
 }
 
 export enum OrderStatus {
-  PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  PREPARING = 'PREPARING',
-  READY = 'READY',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-  REFUNDED = 'REFUNDED'
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  PREPARING = "PREPARING",
+  READY = "READY",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+  REFUNDED = "REFUNDED",
 }
 
 export enum OrderItemStatus {
-  PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  CANCELLED = 'CANCELLED'
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  CANCELLED = "CANCELLED",
 }
 
 export interface ProductFilters {
@@ -33,7 +33,7 @@ export interface ProductFilters {
   minPrice?: number;
   maxPrice?: number;
   inStock?: boolean;
-  tenantId?: number;
+  tenantId?: string;
 }
 
 export interface OrderFilters {
@@ -43,7 +43,7 @@ export interface OrderFilters {
   endDate?: Date;
   minAmount?: number;
   maxAmount?: number;
-  tenantId?: number;
+  tenantId?: string;
 }
 
 export interface CreateProductDTO {
@@ -102,6 +102,6 @@ export interface ProductStats {
 export interface InventoryUpdate {
   productId: number;
   quantity: number;
-  type: 'ADD' | 'REMOVE' | 'SET';
+  type: "ADD" | "REMOVE" | "SET";
   reason?: string;
 }

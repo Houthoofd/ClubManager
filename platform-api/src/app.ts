@@ -1,13 +1,24 @@
 import express from "express";
-import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
-import MysqlConnector from "./db/connector/mysqlconnector.js";
+import { PrismaClient } from "@prisma/client";
 import webhooksRouter from "./routes/webhooks.js";
 import healthRouter from "./routes/health.js";
-import { tenantRateLimiter } from "./middleware/rateLimiter.js";
+import {
+  fullAppChain,
+  errorHandler,
+  notFoundHandler,
+  setupGlobalErrorHandlers,
+} from "./middleware/index.js";
 
 // Charger les variables d'environnement
 dotenv.config();
+
+// Setup global error handlers
+setupGlobalErrorHandlers();
+
+// Initialize Prisma Client
+const prisma = new PrismaClient();
 
 const app = express();
 
@@ -15,116 +26,56 @@ const app = express();
 // car Stripe a besoin du body brut pour vérifier la signature
 app.use("/webhooks", express.raw({ type: "application/json" }), webhooksRouter);
 
-// Puis le reste du middleware
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true,
-  }),
-);
-
+// Body parsing
 app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
 
-// Middleware de logging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
+// Global middlewares (Logger + CORS + Security + Sanitization)
+app.use(fullAppChain);
 
 // ========== ROUTES ==========
-// Les routes seront chargées dynamiquement dans index.ts
+// Import API routes
+import apiRouter from "./routes/api.js";
 
-// Health checks (sans rate limiting ni authentification)
-app.use("/health", healthRouter);
-
-// Rate limiting global (appliqué après health checks)
-if (process.env.NODE_ENV === "production") {
-  app.use(tenantRateLimiter);
-}
+// Mount API routes
+app.use("/api", apiRouter);
 
 // Route par défaut
 app.get("/", (req, res) => {
   res.json({
     message: "API Club Manager",
-    version: "1.0.0",
+    version: "2.0.0",
     documentation: "/api/docs",
     health: "/health",
+    status: "ok",
   });
 });
 
-// Gestion des erreurs 404
-app.use("*", (req, res) => {
-  res.status(404).json({
-    error: "Route non trouvée",
-    method: req.method,
-    path: req.originalUrl,
-  });
-});
+// 404 handler (doit être avant l'error handler)
+app.use(notFoundHandler);
 
-// Gestion globale des erreurs
-app.use(
-  (
-    error: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) => {
-    console.error("❌ [App] Erreur globale:", error);
+// Error handler global (DOIT ÊTRE LE DERNIER MIDDLEWARE)
+app.use(errorHandler);
 
-    res.status(error.status || 500).json({
-      error:
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : "Erreur interne du serveur",
-      ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
-    });
-  },
-);
+// Graceful shutdown
+async function gracefulShutdown(signal: string) {
+  console.log(`\n${signal} signal received: closing HTTP server gracefully`);
 
-async function startServer() {
   try {
-    console.log("🚀 [Server] Démarrage du serveur...");
+    // Fermer les connexions Prisma
+    await prisma.$disconnect();
+    console.log("✅ Prisma client disconnected");
 
-    // 1. Initialiser la base de données en premier
-    console.log("🔄 [Server] Initialisation de la base de données...");
-    const mysqlConnector = MysqlConnector.getInstance();
-
-    // Attendre que la DB soit prête
-    await new Promise((resolve, reject) => {
-      mysqlConnector.query(
-        "SELECT 1 as db_ready",
-        [],
-        (error: any, results: any) => {
-          if (error) {
-            reject(error);
-          } else {
-            console.log("✅ [Server] Base de données prête");
-            resolve(results);
-          }
-        },
-      );
-    });
-
-    // 2. Initialiser les services email après la DB
-    console.log("🔄 [Server] Initialisation des services email...");
-    const { messageClient } =
-      await import("./db/clients/messagerie/messageClient.js");
-    await messageClient.initialiser();
-
-    // 3. Démarrer le serveur Express
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-      console.log(`✅ [Server] Serveur démarré sur le port ${PORT}`);
-      console.log(`🌐 [Server] API disponible sur http://localhost:${PORT}`);
-    });
+    process.exit(0);
   } catch (error) {
-    console.error("❌ [Server] Erreur lors du démarrage:", error);
+    console.error("❌ Error during shutdown:", error);
     process.exit(1);
   }
 }
 
-// Démarrer le serveur
-startServer();
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 export default app;
+export { prisma };
