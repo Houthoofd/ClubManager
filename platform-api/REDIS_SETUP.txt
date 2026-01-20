@@ -1,0 +1,259 @@
+╔════════════════════════════════════════════════════════════════╗
+║            CONFIGURATION REDIS - RATE LIMITING                 ║
+╚════════════════════════════════════════════════════════════════╝
+
+⚠️  IMPORTANT : Le rate limiting actuel utilise la MÉMOIRE
+    Pour la PRODUCTION, vous DEVEZ utiliser REDIS
+
+─────────────────────────────────────────────────────────────────
+📦 INSTALLATION
+─────────────────────────────────────────────────────────────────
+
+1. Installer Redis localement (pour développement)
+   
+   Windows :
+   • Télécharger : https://github.com/microsoftarchive/redis/releases
+   • Ou via WSL2 : sudo apt install redis-server
+   
+   macOS :
+   brew install redis
+   brew services start redis
+   
+   Linux :
+   sudo apt install redis-server
+   sudo systemctl start redis
+   sudo systemctl enable redis
+
+2. Installer les dépendances NPM
+   cd platform-api
+   npm install ioredis
+   npm install --save-dev @types/ioredis
+
+─────────────────────────────────────────────────────────────────
+🔧 CONFIGURATION
+─────────────────────────────────────────────────────────────────
+
+1. Ajouter à votre .env
+   REDIS_URL=redis://localhost:6379
+   REDIS_PASSWORD=
+   REDIS_DB=0
+
+2. Production (AWS ElastiCache ou Redis Cloud)
+   REDIS_URL=redis://your-redis.amazonaws.com:6379
+   REDIS_PASSWORD=your-secure-password
+   REDIS_TLS=true
+
+─────────────────────────────────────────────────────────────────
+💻 CODE À IMPLÉMENTER
+─────────────────────────────────────────────────────────────────
+
+Créer : src/config/redis.ts
+════════════════════════════════════════════════════════════════
+
+import Redis from 'ioredis';
+
+let redis: Redis | null = null;
+
+export function getRedisClient(): Redis {
+  if (!redis) {
+    redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+      password: process.env.REDIS_PASSWORD,
+      db: parseInt(process.env.REDIS_DB || '0'),
+      retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+      maxRetriesPerRequest: 3,
+    });
+
+    redis.on('connect', () => {
+      console.log('✅ [Redis] Connecté');
+    });
+
+    redis.on('error', (err) => {
+      console.error('❌ [Redis] Erreur:', err);
+    });
+  }
+
+  return redis;
+}
+
+export async function closeRedisConnection() {
+  if (redis) {
+    await redis.quit();
+    redis = null;
+  }
+}
+
+════════════════════════════════════════════════════════════════
+
+Modifier : src/services/rateLimitService.ts
+════════════════════════════════════════════════════════════════
+
+import { getRedisClient } from '../config/redis.js';
+
+interface RateLimitConfig {
+  requests: number;
+  windowMs: number;
+}
+
+interface RateLimitResult {
+  allowed: boolean;
+  limit: number;
+  remaining: number;
+  resetAt: number;
+  retryAfter?: number;
+}
+
+const RATE_LIMITS: Record<string, RateLimitConfig> = {
+  ANONYMOUS: { requests: 10, windowMs: 15 * 60 * 1000 },
+  FREE: { requests: 100, windowMs: 15 * 60 * 1000 },
+  BASIC: { requests: 500, windowMs: 15 * 60 * 1000 },
+  PREMIUM: { requests: 2000, windowMs: 15 * 60 * 1000 },
+  ENTERPRISE: { requests: 10000, windowMs: 15 * 60 * 1000 },
+  API: { requests: 100, windowMs: 15 * 60 * 1000 },
+};
+
+class RateLimitService {
+  private redis = getRedisClient();
+
+  async checkLimit(
+    tenantId: string,
+    identifier: string,
+    plan: string
+  ): Promise<RateLimitResult> {
+    const config = RATE_LIMITS[plan] || RATE_LIMITS.BASIC;
+    const key = `ratelimit:${tenantId}:${identifier}`;
+    const now = Date.now();
+    const windowStart = now - config.windowMs;
+
+    // Utiliser Redis Sorted Set avec timestamp comme score
+    const multi = this.redis.multi();
+    
+    // Supprimer les entrées hors fenêtre
+    multi.zremrangebyscore(key, 0, windowStart);
+    
+    // Compter les requêtes dans la fenêtre
+    multi.zcard(key);
+    
+    // Ajouter cette requête
+    multi.zadd(key, now, `${now}-${Math.random()}`);
+    
+    // Définir expiration
+    multi.expire(key, Math.ceil(config.windowMs / 1000));
+
+    const results = await multi.exec();
+    const count = (results?.[1]?.[1] as number) || 0;
+    
+    const allowed = count < config.requests;
+    const remaining = Math.max(0, config.requests - count - 1);
+    const resetAt = now + config.windowMs;
+    const retryAfter = allowed ? undefined : Math.ceil(config.windowMs / 1000);
+
+    return {
+      allowed,
+      limit: config.requests,
+      remaining,
+      resetAt,
+      retryAfter,
+    };
+  }
+
+  async resetLimit(tenantId: string, identifier: string): Promise<void> {
+    const key = `ratelimit:${tenantId}:${identifier}`;
+    await this.redis.del(key);
+  }
+
+  async getStats(tenantId: string): Promise<any> {
+    const pattern = `ratelimit:${tenantId}:*`;
+    const keys = await this.redis.keys(pattern);
+    
+    let totalRequests = 0;
+    for (const key of keys) {
+      const count = await this.redis.zcard(key);
+      totalRequests += count;
+    }
+
+    return {
+      totalRequests,
+      activeUsers: keys.length,
+    };
+  }
+}
+
+export default new RateLimitService();
+
+════════════════════════════════════════════════════════════════
+
+─────────────────────────────────────────────────────────────────
+☁️  PRODUCTION - AWS ELASTICACHE
+─────────────────────────────────────────────────────────────────
+
+1. Créer un cluster Redis via AWS Console
+   • Type : cache.t3.micro (pour démarrer)
+   • Engine : Redis 7.x
+   • Node type : 1 node
+   • Coût : ~$12/mois
+
+2. Configurer le Security Group
+   • Autoriser port 6379 depuis votre backend EC2/Lambda
+
+3. Obtenir l'endpoint
+   your-redis-cluster.abc123.cache.amazonaws.com:6379
+
+4. Configurer l'application
+   REDIS_URL=redis://your-redis-cluster.abc123.cache.amazonaws.com:6379
+   REDIS_TLS=true
+
+─────────────────────────────────────────────────────────────────
+🧪 TESTER REDIS
+─────────────────────────────────────────────────────────────────
+
+1. Vérifier la connexion
+   redis-cli ping
+   # Devrait retourner : PONG
+
+2. Test depuis Node.js
+   node
+   > const Redis = require('ioredis');
+   > const redis = new Redis();
+   > redis.set('test', 'hello');
+   > redis.get('test').then(console.log);
+   # Devrait afficher : hello
+
+3. Tester le rate limiting
+   curl -i http://localhost:5000/api/users
+   # Vérifier les headers :
+   # X-RateLimit-Limit: 500
+   # X-RateLimit-Remaining: 499
+   # X-RateLimit-Reset: 1705334400000
+
+─────────────────────────────────────────────────────────────────
+📊 MONITORING REDIS
+─────────────────────────────────────────────────────────────────
+
+Commandes utiles :
+  redis-cli info                    # Stats générales
+  redis-cli info stats              # Stats requêtes
+  redis-cli --bigkeys              # Clés volumineuses
+  redis-cli keys "ratelimit:*"     # Voir toutes les clés de rate limit
+  redis-cli dbsize                  # Nombre de clés
+
+Métriques à surveiller :
+  • used_memory
+  • connected_clients
+  • instantaneous_ops_per_sec
+  • evicted_keys
+  • keyspace_hits / keyspace_misses (hit ratio)
+
+─────────────────────────────────────────────────────────────────
+💰 COÛTS ESTIMÉS
+─────────────────────────────────────────────────────────────────
+
+Local (dev) : $0
+AWS ElastiCache t3.micro : ~$12/mois
+AWS ElastiCache t3.small : ~$24/mois
+Redis Cloud 30MB : Gratuit
+Redis Cloud 1GB : ~$10/mois
+
+═══════════════════════════════════════════════════════════════════

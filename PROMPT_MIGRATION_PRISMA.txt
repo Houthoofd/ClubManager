@@ -1,0 +1,47 @@
+MIGRATION COMPLETE VERS PRISMA - OPTION A
+
+OBJECTIF: Remplacer tous les mysqlconnector par Prisma
+DUREE: 2-3 jours
+
+== JOUR 1: SERVICES DE BASE ==
+
+1. Créer services/prismaService.ts (singleton Prisma)
+2. Créer services/emailService.ts (nodemailer)
+3. Créer services/userService.ts (CRUD users avec Prisma)
+4. Migrer routes/auth.ts pour utiliser userService
+5. Tester authentification
+
+== JOUR 2: SERVICES METIER ==
+
+1. Créer courseService.ts (CRUD cours)
+2. Créer paymentService.ts (CRUD paiements)
+3. Migrer routes/cours.ts
+4. Migrer routes/paiements.ts
+5. Tester CRUD
+
+== JOUR 3: FINALISATION ==
+
+1. Créer orderService, shopService, messageService
+2. Migrer toutes routes restantes
+3. Migrer app.ts et index.ts (remplacer MysqlConnector par prisma)
+4. Tests complets
+5. npm run build sans erreurs
+
+== FICHIERS A CREER ==
+
+services/prismaService.ts
+services/userService.ts
+services/courseService.ts
+services/paymentService.ts
+services/emailService.ts
+services/orderService.ts
+services/shopService.ts
+
+== COMMANDES ==
+
+npx prisma generate
+npx prisma studio
+npm run build
+npm run dev
+
+RESULTAT: Code 100% Prisma, serveur démarre, Phase 1 testable

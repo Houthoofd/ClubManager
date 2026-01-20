@@ -1,31 +1,35 @@
-import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { TenantContext } from '../types/tenant.js';
+import { Request, Response, NextFunction } from "express";
+import { PrismaClient } from "@prisma/client";
+import { TenantContext } from "../types/tenant.js";
 
 const prisma = new PrismaClient();
 
 /**
  * Middleware pour identifier et valider le tenant basé sur le sous-domaine ou domaine personnalisé
  */
-export const tenantResolver = async (req: Request, res: Response, next: NextFunction) => {
+export const tenantResolver = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const host = req.get('host');
+    const host = req.get("host");
     if (!host) {
-      return res.status(400).json({ error: 'Host header required' });
+      return res.status(400).json({ error: "Host header required" });
     }
 
     let tenantSlug: string | null = null;
     let domain: string | null = null;
 
     // Vérifier si c'est un domaine personnalisé
-    if (!host.includes('localhost') && !host.includes('127.0.0.1')) {
+    if (!host.includes("localhost") && !host.includes("127.0.0.1")) {
       // Chercher d'abord par domaine personnalisé
-      domain = host.split(':')[0]; // Remove port
+      domain = host.split(":")[0]; // Remove port
     }
 
     // Extraire le sous-domaine si pas de domaine personnalisé
     if (!domain) {
-      const hostParts = host.split('.');
+      const hostParts = host.split(".");
       if (hostParts.length > 2) {
         tenantSlug = hostParts[0];
       }
@@ -62,13 +66,13 @@ export const tenantResolver = async (req: Request, res: Response, next: NextFunc
     }
 
     if (!tenant) {
-      return res.status(404).json({ error: 'Tenant not found' });
+      return res.status(404).json({ error: "Tenant not found" });
     }
 
-    if (tenant.status !== 'ACTIVE') {
-      return res.status(403).json({ 
-        error: 'Tenant access suspended', 
-        status: tenant.status 
+    if (tenant.status !== "ACTIVE") {
+      return res.status(403).json({
+        error: "Tenant access suspended",
+        status: tenant.status,
       });
     }
 
@@ -80,21 +84,29 @@ export const tenantResolver = async (req: Request, res: Response, next: NextFunc
 
     next();
   } catch (error) {
-    console.error('Tenant resolution error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Tenant resolution error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 /**
  * Middleware pour valider que l'utilisateur authentifié appartient au tenant
  */
-export const validateUserTenant = (req: Request, res: Response, next: NextFunction) => {
+export const validateUserTenant = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   if (!req.user || !req.tenant) {
-    return res.status(401).json({ error: 'Authentication and tenant required' });
+    return res
+      .status(401)
+      .json({ error: "Authentication and tenant required" });
   }
 
-  if (req.user.tenantId !== req.tenant.tenantId) {
-    return res.status(403).json({ error: 'User does not belong to this tenant' });
+  if ((req.user as any).tenantId !== req.tenant.tenantId) {
+    return res
+      .status(403)
+      .json({ error: "User does not belong to this tenant" });
   }
 
   next();
@@ -103,39 +115,39 @@ export const validateUserTenant = (req: Request, res: Response, next: NextFuncti
 /**
  * Middleware pour vérifier les limites du tenant (utilisateurs, stockage, etc.)
  */
-export const checkTenantLimits = (limitType: 'users' | 'storage') => {
+export const checkTenantLimits = (limitType: "users" | "storage") => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.tenant) {
-        return res.status(401).json({ error: 'Tenant context required' });
+        return res.status(401).json({ error: "Tenant context required" });
       }
 
       const { tenantId, tenant } = req.tenant;
 
-      if (limitType === 'users') {
+      if (limitType === "users") {
         const userCount = await prisma.user.count({
           where: { tenantId, actif: true },
         });
 
         if (userCount >= tenant.maxUsers) {
-          return res.status(403).json({ 
-            error: 'User limit reached',
+          return res.status(403).json({
+            error: "User limit reached",
             current: userCount,
-            limit: tenant.maxUsers 
+            limit: tenant.maxUsers,
           });
         }
       }
 
       // TODO: Implement storage limit check
-      if (limitType === 'storage') {
+      if (limitType === "storage") {
         // Calculate storage usage for tenant
         // For now, just pass through
       }
 
       next();
     } catch (error) {
-      console.error('Tenant limits check error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error("Tenant limits check error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   };
 };

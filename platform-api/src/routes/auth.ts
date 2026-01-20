@@ -1,711 +1,504 @@
-import express, { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { generateToken, verifyToken } from '../middleware/auth.js';
-import MysqlConnector from '../db/connector/mysqlconnector.js';
-import { User } from '../types/user.js';
+import express, { Request, Response } from "express";
+import { userService } from "../services/userService.js";
+import { auditService, AuditAction } from "../services/auditService.js";
 
 const router = express.Router();
-const mysqlConnector = MysqlConnector.getInstance();
 
-// Utilitaire pour utiliser le client avec Promise
-function queryAsync(sql: string, values: any[]): Promise<any[]> {
-  return new Promise((resolve, reject) => {
-    mysqlConnector.query(sql, values, (err, results) => {
-      if (err) reject(err);
-      else resolve(results || []);
-    });
-  });
+/**
+ * Extract tenantId from request
+ * In production, this would come from:
+ * - Subdomain: tenant1.clubmanager.com
+ * - Custom domain mapping
+ * - JWT token after login
+ * For now, we'll use a header or default
+ */
+function getTenantId(req: Request): string {
+  // Priority: JWT token > Header > Default
+  const user = (req as any).user;
+  if (user?.tenantId) {
+    return user.tenantId;
+  }
+
+  // From header (for testing)
+  const headerTenant = req.headers["x-tenant-id"] as string;
+  if (headerTenant) {
+    return headerTenant;
+  }
+
+  // From subdomain (e.g., tenant1.clubmanager.com)
+  const host = req.headers.host || "";
+  const subdomain = host.split(".")[0];
+
+  // For development, use a default tenant
+  // In production, this should be required
+  return process.env.DEFAULT_TENANT_ID || subdomain || "default-tenant";
 }
 
-// Login
-router.post('/login', async (req: any, res: any) => {
+/**
+ * POST /api/auth/login
+ * User login with email and password
+ */
+router.post("/login", async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
+    const tenantId = getTenantId(req);
 
+    // Validate input
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'UserId et mot de passe requis'
+        message: "Email et mot de passe requis",
       });
     }
 
-    // Rechercher uniquement par userId
-    const user = await queryAsync(
-      `SELECT 
-          u.id,
-          u.userId,
-          u.first_name,
-          u.last_name,
-          u.nom_utilisateur,
-          u.email,
-          u.password,
-          u.status_id,
-          u.email_verified,
-          g.genre_name AS genres,
-          s.nom_role AS status,
-          gr.grade_id AS grades,
-          a.nom_plan AS abonnement,
-          u.date_of_birth
-        FROM 
-          utilisateurs u
-        LEFT JOIN 
-          genres g ON u.genre_id = g.id
-        LEFT JOIN 
-          status s ON u.status_id = s.id
-        LEFT JOIN 
-          grades gr ON u.grade_id = gr.id
-        LEFT JOIN 
-          plans_tarifaires a ON u.abonnement_id = a.id
-        WHERE 
-          u.userId = ?`,
-      [email]
-    );
+    // Attempt login
+    const result = await userService.login({ email, password, tenantId });
 
-    if (!user.length) {
+    if (!result.success) {
       return res.status(401).json({
         success: false,
-        message: 'UserId ou mot de passe incorrect'
+        message: result.message,
       });
     }
 
-    // Vérifier si l'email est confirmé
-    if (user[0].email_verified !== 1) {
-      return res.status(401).json({
-        success: false,
-        message: 'Veuillez confirmer votre email avant de vous connecter'
-      });
-    }
-
-    // Si le mot de passe en base est "password123" (mot de passe par défaut non hashé)
-    if (user[0].password === 'password123') {
-      if (password === 'password123') {
-        // Connexion acceptée pour le mot de passe par défaut
-        const token = generateToken({
-          id: user[0].id,
-          email: user[0].email,
-          first_name: user[0].first_name, // AJOUTÉ
-          last_name: user[0].last_name,   // AJOUTÉ
-          status_id: user[0].status_id,
-          role: user[0].status,           // AJOUTÉ
-          status: user[0].status          // AJOUTÉ
-        });
-
-        res.cookie('token', token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-          domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost',
-          maxAge: 24 * 60 * 60 * 1000
-        });
-
-        return res.json({
-          success: true,
-          message: 'Connexion réussie (mot de passe par défaut)',
-          data: {
-            user: {
-              id: user[0].id,
-              first_name: user[0].first_name,
-              last_name: user[0].last_name,
-              nom_utilisateur: user[0].nom_utilisateur || '',
-              email: user[0].email,
-              status: user[0].status,
-              genres: user[0].genres,
-              grades: user[0].grades,
-              abonnement: user[0].abonnement,
-              date_of_birth: user[0].date_of_birth
-            },
-            token
-          }
-        });
-      } else {
-        return res.status(401).json({
-          success: false,
-          message: 'Email ou mot de passe incorrect'
-        });
-      }
-    }
-
-    // Sinon, vérifie le hash bcrypt
-    if (!user[0].password || typeof user[0].password !== 'string' || user[0].password.trim() === '') {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou mot de passe incorrect'
-      });
-    }
-
-    const isValidPassword = await bcrypt.compare(password, user[0].password);
-
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou mot de passe incorrect'
-      });
-    }
-
-    const token = generateToken({
-      id: user[0].id,
-      email: user[0].email,
-      status_id: user[0].status_id
-    });
-
-    res.cookie('token', token, {
+    // Set HTTP-only cookie with JWT token
+    res.cookie("token", result.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost',
-      maxAge: 24 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      domain:
+        process.env.NODE_ENV === "production"
+          ? process.env.COOKIE_DOMAIN
+          : "localhost",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: "/",
     });
 
-    res.json({
+    // Log successful login (audit)
+    await auditService.log({
+      tenantId,
+      userId: result.user?.id || 0,
+      action: AuditAction.LOGIN,
+      resource: "auth",
+      resourceId: result.user?.id.toString(),
+      ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+      userAgent: req.headers["user-agent"] || undefined,
+    });
+
+    return res.json({
       success: true,
-      message: 'Connexion réussie',
+      message: result.message,
       data: {
-        user: {
-          id: user[0].id,
-          first_name: user[0].first_name,
-          last_name: user[0].last_name,
-          nom_utilisateur: user[0].nom_utilisateur || '',
-          email: user[0].email,
-          status: user[0].status,
-          genres: user[0].genres,
-          grades: user[0].grades,
-          abonnement: user[0].abonnement,
-          date_of_birth: user[0].date_of_birth
-        },
-        token
-      }
+        user: result.user,
+        token: result.token,
+      },
     });
-
   } catch (error) {
-    console.error('Erreur lors de la connexion:', error);
-    res.status(500).json({
+    console.error("❌ Login error:", error);
+    return res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: "Erreur serveur lors de la connexion",
     });
   }
 });
 
-// Logout
-router.post('/logout', verifyToken, async (req, res) => {
+/**
+ * POST /api/auth/register
+ * Register a new user
+ */
+router.post("/register", async (req: Request, res: Response) => {
   try {
-    console.log('🚪 Déconnexion demandée pour utilisateur:', req.user?.id);
-    
-    // CORRECTION: Typage correct des attributs de cookies
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      dateOfBirth,
+      genderId,
+      userId,
+    } = req.body;
+    const tenantId = getTenantId(req);
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password || !dateOfBirth) {
+      return res.status(400).json({
+        success: false,
+        message: "Tous les champs requis doivent être remplis",
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Format d'email invalide",
+      });
+    }
+
+    // Validate password strength (min 8 characters)
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Le mot de passe doit contenir au moins 8 caractères",
+      });
+    }
+
+    // Register user
+    const result = await userService.register({
+      tenantId,
+      firstName,
+      lastName,
+      email,
+      password,
+      dateOfBirth: new Date(dateOfBirth),
+      genderId,
+      userId,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    // Set HTTP-only cookie with JWT token
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      domain:
+        process.env.NODE_ENV === "production"
+          ? process.env.COOKIE_DOMAIN
+          : "localhost",
+      maxAge: 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    // Log registration (audit)
+    await auditService.log({
+      tenantId,
+      userId: result.user?.id || 0,
+      action: AuditAction.CREATE,
+      resource: "auth",
+      resourceId: result.user?.id.toString(),
+      ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+      userAgent: req.headers["user-agent"] || undefined,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: result.message,
+      data: {
+        user: result.user,
+        token: result.token,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Register error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de l'inscription",
+    });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Clear authentication cookie
+ */
+router.post("/logout", async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const tenantId = getTenantId(req);
+
+    // Clear all possible cookie variations
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-      domain: process.env.NODE_ENV === 'production' ? 'clubmanagment.com' : 'localhost',
-      path: '/'
+      secure: process.env.NODE_ENV === "production",
+      sameSite:
+        process.env.NODE_ENV === "production"
+          ? ("strict" as const)
+          : ("lax" as const),
+      domain:
+        process.env.NODE_ENV === "production"
+          ? process.env.COOKIE_DOMAIN
+          : "localhost",
+      path: "/",
     };
 
-    // NOUVEAU: Supprimer le cookie 'token' avec TOUS les attributs possibles
-    const cookieVariants = [
-      // Variante exacte de production
-      { httpOnly: true, secure: true, sameSite: 'strict' as const, domain: 'clubmanagment.com', path: '/' },
-      
-      // Variantes de développement
-      { httpOnly: true, secure: false, sameSite: 'lax' as const, domain: 'localhost', path: '/' },
-      { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/' },
-      
-      // Variantes sans domaine
-      { httpOnly: true, secure: false, path: '/' },
-      { httpOnly: true, path: '/' },
-      { path: '/' },
-      
-      // Variantes avec différents sameSite
-      { httpOnly: true, secure: false, sameSite: 'strict' as const, path: '/' },
-      { httpOnly: true, secure: false, sameSite: 'none' as const, path: '/' },
-      
-      // Variante minimale
-      {}
-    ];
+    // Clear main token cookie
+    res.clearCookie("token", cookieOptions);
 
-    // Appliquer toutes les variantes de suppression pour le cookie 'token'
-    cookieVariants.forEach((variant, index) => {
-      try {
-        res.clearCookie('token', variant);
-        console.log(`🗑️ [Logout] Suppression cookie 'token' variant ${index + 1}:`, variant);
-      } catch (error: any) {
-        console.log(`⚠️ [Logout] Échec variant ${index + 1}:`, error.message);
-      }
-    });
+    // Clear alternative cookie names (for backwards compatibility)
+    res.clearCookie("authToken", cookieOptions);
+    res.clearCookie("jwt", cookieOptions);
 
-    // NOUVEAU: Forcer la suppression avec headers Set-Cookie directs pour 'token'
-    const expiredDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
-    const tokenCookieHeaders = [
-      `token=; expires=${expiredDate}; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
-      `token=; expires=${expiredDate}; path=/; HttpOnly; SameSite=Lax`,
-      `token=; expires=${expiredDate}; path=/; domain=localhost`,
-      `token=; expires=${expiredDate}; path=/`,
-      `token=; max-age=0; path=/; domain=localhost; HttpOnly; SameSite=Lax`,
-      `token=; max-age=0; path=/; HttpOnly`,
-      `token=; max-age=0; path=/`,
-      `token=deleted; expires=${expiredDate}; path=/; domain=localhost; HttpOnly`,
-      `token=deleted; expires=${expiredDate}; path=/`,
-      // AJOUTÉ: Headers pour production
-      `token=; expires=${expiredDate}; path=/; domain=clubmanagment.com; HttpOnly; SameSite=Strict; Secure`,
-      `token=; max-age=0; path=/; domain=clubmanagment.com; HttpOnly; SameSite=Strict; Secure`
-    ];
+    // Also clear without domain for local environments
+    res.clearCookie("token", { path: "/", httpOnly: true });
 
-    // Appliquer tous les headers de suppression pour 'token'
-    const allHeaders: string[] = [];
-    tokenCookieHeaders.forEach((header, index) => {
-      try {
-        allHeaders.push(header);
-        console.log(`🔨 [Logout] Header suppression token ${index + 1}: ${header}`);
-      } catch (error) {
-        console.log(`⚠️ [Logout] Échec header token ${index + 1}:`, error);
-      }
-    });
-
-    // CORRIGÉ: Définir tous les headers Set-Cookie d'un coup
-    if (allHeaders.length > 0) {
-      res.setHeader('Set-Cookie', allHeaders);
-      console.log(`🔨 [Logout] ${allHeaders.length} headers Set-Cookie définis pour suppression token`);
+    // Log logout (audit)
+    if (user?.id) {
+      await auditService.log({
+        tenantId,
+        userId: user.id,
+        action: AuditAction.LOGOUT,
+        resource: "auth",
+        resourceId: user.id.toString(),
+        ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+        userAgent: req.headers["user-agent"] || undefined,
+      });
     }
 
-    // Supprimer les autres cookies potentiels (comme avant)
-    const authCookieNames = [
-      'authToken', 'userData', 'user', 'auth_token',
-      'access_token', 'refresh_token', 'sessionId', 'session', 'jwt', 'JWT'
-    ];
-
-    authCookieNames.forEach(cookieName => {
-      // Appliquer les mêmes variantes pour chaque cookie
-      cookieVariants.forEach(variant => {
-        try {
-          res.clearCookie(cookieName, variant);
-        } catch (error: any) {
-          // Ignorer les erreurs pour les cookies secondaires
-        }
-      });
-      console.log(`🗑️ [Logout] Cookie "${cookieName}" supprimé avec toutes les variantes`);
-    });
-
-    // Headers additionnels pour forcer la suppression
-    res.setHeader('Clear-Site-Data', '"cookies", "storage"');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    console.log('✅ [Logout] Déconnexion côté serveur terminée avec suppression exhaustive des cookies');
-
-    res.status(200).json({
+    return res.json({
       success: true,
-      message: 'Déconnexion réussie - Tous les cookies ont été supprimés',
-      cookiesCleared: ['token', ...authCookieNames],
-      headersSet: allHeaders.length
+      message: "Déconnexion réussie",
     });
-
   } catch (error) {
-    console.error('❌ [Logout] Erreur lors de la déconnexion:', error);
-    res.status(500).json({
+    console.error("❌ Logout error:", error);
+    return res.status(500).json({
       success: false,
-      message: 'Erreur lors de la déconnexion'
+      message: "Erreur lors de la déconnexion",
     });
   }
 });
 
-// POST - Demande de réinitialisation de mot de passe
-router.post('/forgot-password', async (req, res) => {
+/**
+ * POST /api/auth/forgot-password
+ * Request password reset email
+ */
+router.post("/forgot-password", async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-    
+    const tenantId = getTenantId(req);
+
     if (!email) {
-      return res.status(400).json({ error: 'Email requis' });
-    }
-    
-    console.log('🔄 [Auth] Demande réinitialisation mot de passe pour:', email);
-    
-    // Vérifier si l'utilisateur existe
-    const userQuery = `SELECT id, email, first_name, last_name FROM utilisateurs WHERE email = ?`;
-    const userResults = await queryAsync(userQuery, [email]);
-    
-    if (userResults.length === 0) {
-      // Ne pas révéler que l'email n'existe pas pour des raisons de sécurité
-      return res.json({ 
-        message: 'Si cette adresse email est associée à un compte, vous recevrez un lien de récupération.'
+      return res.status(400).json({
+        success: false,
+        message: "Email requis",
       });
     }
-    
-    const user = userResults[0];
-    
-    // Générer un token de réinitialisation
-    const crypto = await import('crypto');
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 heure
-    
-    // CORRIGÉ: Utiliser la table password_reset_tokens au lieu de modifier utilisateurs
-    try {
-      // Supprimer les anciens tokens de cet utilisateur
-      const deleteOldTokensQuery = `
-        DELETE FROM password_reset_tokens 
-        WHERE utilisateur_id = ? OR expires_at < NOW()
-      `;
-      await queryAsync(deleteOldTokensQuery, [user.id]);
-      
-      // Insérer le nouveau token dans password_reset_tokens
-      const insertTokenQuery = `
-        INSERT INTO password_reset_tokens (utilisateur_id, token, expires_at)
-        VALUES (?, ?, ?)
-      `;
-      await queryAsync(insertTokenQuery, [user.id, resetToken, resetTokenExpiry]);
-      
-      console.log('✅ [Auth] Token de réinitialisation créé dans password_reset_tokens');
-    } catch (tokenError: any) {
-      console.error('❌ [Auth] Erreur création token:', tokenError);
-      throw new Error('Erreur lors de la création du token de réinitialisation');
-    }
-    
-    // Envoyer l'email de réinitialisation
-    try {
-      const { EmailClient } = await import('../clients/emailClient.js');
-      const emailClient = new EmailClient();
-      
-      const resetUrl = `${process.env.FRONTEND_URL}/pages/auth/reset-password?token=${resetToken}`;
-      
-      await emailClient.sendPasswordResetEmail(user.email, {
-        userName: `${user.first_name} ${user.last_name}`,
-        resetUrl: resetUrl,
-        expiresIn: '1 heure'
-      }, user.id);
-      
-      console.log('✅ [Auth] Email de réinitialisation envoyé à:', email);
-      
-    } catch (emailError) {
-      console.error('❌ [Auth] Erreur envoi email:', emailError);
-      // Continuer même si l'email échoue
-    }
-    
-    res.json({ 
-      message: 'Si cette adresse email est associée à un compte, vous recevrez un lien de récupération.'
+
+    const result = await userService.requestPasswordReset(email, tenantId);
+
+    // Always return success to prevent email enumeration
+    return res.json({
+      success: true,
+      message: result.message,
     });
-    
-  } catch (error: any) {
-    console.error('❌ [Auth] Erreur forgot-password:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+  } catch (error) {
+    console.error("❌ Forgot password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur lors de la demande de réinitialisation",
+    });
   }
 });
 
-// GET - Vérifier un token de réinitialisation
-router.get('/verify-token/:token', async (req, res) => {
+/**
+ * POST /api/auth/reset-password
+ * Reset password with token
+ */
+router.post("/reset-password", async (req: Request, res: Response) => {
   try {
-    const { token } = req.params;
-    
-    console.log('🔍 [Auth] Vérification token:', token.substring(0, 10) + '...');
-    
-    // CORRIGÉ: Utiliser password_reset_tokens au lieu de utilisateurs
-    const query = `
-      SELECT 
-        prt.utilisateur_id,
-        prt.expires_at,
-        u.email, 
-        u.first_name, 
-        u.last_name
-      FROM password_reset_tokens prt
-      JOIN utilisateurs u ON prt.utilisateur_id = u.id
-      WHERE prt.token = ? AND prt.expires_at > NOW() AND prt.used_at IS NULL
-    `;
-    
-    const results = await queryAsync(query, [token]);
-    
-    if (results.length === 0) {
-      return res.status(400).json({ 
-        valid: false,
-        error: 'Token invalide ou expiré'
+    const { token, email, newPassword } = req.body;
+    const tenantId = getTenantId(req);
+
+    if (!token || !email || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Token, email et nouveau mot de passe requis",
       });
     }
-    
-    const tokenData = results[0];
-    
-    res.json({
-      valid: true,
-      email: tokenData.email,
-      userName: `${tokenData.first_name} ${tokenData.last_name}`
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Le mot de passe doit contenir au moins 8 caractères",
+      });
+    }
+
+    const result = await userService.resetPassword(
+      token,
+      email,
+      newPassword,
+      tenantId,
+    );
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    // Log password reset (audit)
+    const user = await userService.getUserByEmail(email, tenantId);
+    if (user) {
+      await auditService.log({
+        tenantId,
+        userId: user.id,
+        action: AuditAction.PASSWORD_RESET,
+        resource: "auth",
+        resourceId: user.id.toString(),
+        ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+        userAgent: req.headers["user-agent"] || undefined,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: result.message,
     });
-    
-  } catch (error: any) {
-    console.error('❌ [Auth] Erreur verify-token:', error);
-    res.status(500).json({ 
-      valid: false,
-      error: 'Erreur serveur'
+  } catch (error) {
+    console.error("❌ Reset password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur lors de la réinitialisation du mot de passe",
     });
   }
 });
 
-// POST - Réinitialiser le mot de passe
-router.post('/reset-password', async (req, res) => {
+/**
+ * GET /api/auth/verify
+ * Verify JWT token and get current user
+ */
+router.get("/verify", async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body;
-    
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token et nouveau mot de passe requis' });
-    }
-    
-    console.log('🔄 [Auth] Réinitialisation mot de passe avec token:', token.substring(0, 10) + '...');
-    
-    // CORRIGÉ: Vérifier le token dans password_reset_tokens
-    const verifyQuery = `
-      SELECT 
-        prt.utilisateur_id,
-        u.email, 
-        u.first_name, 
-        u.last_name
-      FROM password_reset_tokens prt
-      JOIN utilisateurs u ON prt.utilisateur_id = u.id
-      WHERE prt.token = ? AND prt.expires_at > NOW() AND prt.used_at IS NULL
-    `;
-    
-    const tokenResults = await queryAsync(verifyQuery, [token]);
-    
-    if (tokenResults.length === 0) {
-      return res.status(400).json({ error: 'Token invalide ou expiré' });
-    }
-    
-    const tokenData = tokenResults[0];
-    
-    // Hasher le nouveau mot de passe
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-    // Transaction pour mettre à jour le mot de passe et marquer le token comme utilisé
-    try {
-      // Mettre à jour le mot de passe
-      const updatePasswordQuery = `
-        UPDATE utilisateurs 
-        SET password = ? 
-        WHERE id = ?
-      `;
-      await queryAsync(updatePasswordQuery, [hashedPassword, tokenData.utilisateur_id]);
-      
-      // Marquer le token comme utilisé
-      const markTokenUsedQuery = `
-        UPDATE password_reset_tokens 
-        SET used_at = NOW() 
-        WHERE token = ?
-      `;
-      await queryAsync(markTokenUsedQuery, [token]);
-      
-      console.log('✅ [Auth] Mot de passe réinitialisé pour:', tokenData.email);
-      
-      res.json({ message: 'Mot de passe réinitialisé avec succès' });
-      
-    } catch (updateError: any) {
-      console.error('❌ [Auth] Erreur mise à jour mot de passe:', updateError);
-      throw new Error('Erreur lors de la mise à jour du mot de passe');
-    }
-    
-  } catch (error: any) {
-    console.error('❌ [Auth] Erreur reset-password:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+    // Get token from cookie or Authorization header
+    let token = req.cookies?.token;
 
-// Vérifier le token
-router.get('/verify', verifyToken, (req: Request, res: Response) => {
-  res.json({
-    success: true,
-    data: { user: req.user }
-  });
-});
-
-// Refresh token
-router.post('/refresh', verifyToken, (req: Request, res: Response) => {
-  const newToken = generateToken({
-    id: req.user!.id,
-    email: req.user!.email,
-    status_id: req.user!.role
-  });
-
-  res.cookie('token', newToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000
-  });
-
-  res.json({
-    success: true,
-    data: { token: newToken }
-  });
-});
-
-// Route de test publique
-router.get('/test', (req, res) => {
-  res.json({ ok: true });
-});
-
-
-// CORRIGÉ: Route /auth/status pour vérifier l'authentification
-router.get('/status', async (req: Request, res: Response) => {
-  try {
-    console.log('🔍 [Auth] Vérification du statut d\'authentification...');
-    console.log('🔍 [Auth] Headers reçus:', {
-      authorization: req.headers.authorization ? 'Present' : 'Missing',
-      cookie: req.headers.cookie ? 'Present' : 'Missing',
-      userAgent: req.headers['user-agent']
-    });
-
-    // MÉTHODE 1: Vérifier le token Bearer
-    const authHeader = req.headers.authorization;
-    let token = null;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7);
-      console.log('🔑 [Auth] Token Bearer détecté');
-    }
-    
-    // MÉTHODE 2: Vérifier les cookies de session
-    const sessionToken = req.cookies?.authToken || req.cookies?.sessionId || req.cookies?.token;
-    if (!token && sessionToken) {
-      token = sessionToken;
-      console.log('🍪 [Auth] Token de session détecté');
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      }
     }
 
     if (!token) {
-      console.log('❌ [Auth] Aucun token trouvé');
       return res.status(401).json({
-        authentifie: false,
-        error: 'Token d\'authentification manquant'
+        authenticated: false,
+        error: "Token manquant",
       });
     }
 
-    // Vérifier et décoder le token
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'votre-secret-jwt');
-      console.log('✅ [Auth] Token valide, utilisateur:', decoded.id);
-    } catch (tokenError: any) {
-      console.log('❌ [Auth] Token invalide:', tokenError.message);
+    // Verify token and get user
+    const result = await userService.verifyAuth(token);
+
+    if (!result.authenticated) {
       return res.status(401).json({
-        authentifie: false,
-        error: 'Token invalide ou expiré'
+        authenticated: false,
+        error: result.error || "Token invalide",
       });
     }
 
-    // CORRIGÉ: Récupérer les informations utilisateur directement depuis la base
-    try {
-      const userQuery = `
-        SELECT 
-          u.id,
-          u.userId,
-          u.first_name,
-          u.last_name,
-          u.nom_utilisateur,
-          u.email,
-          u.status_id,
-          g.genre_name AS genres,
-          s.nom_role AS status,
-          gr.grade_id AS grades,
-          a.nom_plan AS abonnement,
-          u.date_of_birth
-        FROM utilisateurs u
-        LEFT JOIN genres g ON u.genre_id = g.id
-        LEFT JOIN status s ON u.status_id = s.id
-        LEFT JOIN grades gr ON u.grade_id = gr.id
-        LEFT JOIN plans_tarifaires a ON u.abonnement_id = a.id
-        WHERE u.id = ?
-      `;
-      
-      const userResults = await queryAsync(userQuery, [decoded.id]);
-      
-      if (userResults.length === 0) {
-        console.log('❌ [Auth] Utilisateur non trouvé:', decoded.id);
-        return res.status(401).json({
-          authentifie: false,
-          error: 'Utilisateur non trouvé'
-        });
-      }
-
-      const utilisateur = userResults[0];
-      
-      console.log('✅ [Auth] Utilisateur authentifié:', {
-        id: utilisateur.id,
-        email: utilisateur.email,
-        status: utilisateur.status
-      });
-
-      // Retourner les données dans le format attendu par AuthGuard
-      res.status(200).json({
-        authentifie: true,
-        user: {
-          id: utilisateur.id,
-          email: utilisateur.email,
-          first_name: utilisateur.first_name,
-          last_name: utilisateur.last_name,
-          nom_utilisateur: utilisateur.nom_utilisateur,
-          status: utilisateur.status,
-          genres: utilisateur.genres,
-          grades: utilisateur.grades,
-          abonnement: utilisateur.abonnement,
-          date_of_birth: utilisateur.date_of_birth
-        },
-        token: token,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (dbError: any) {
-      console.error('❌ [Auth] Erreur base de données:', dbError);
-      return res.status(500).json({
-        authentifie: false,
-        error: 'Erreur lors de la vérification de l\'utilisateur'
-      });
-    }
-
-  } catch (error: any) {
-    console.error('❌ [Auth] Erreur vérification statut:', error);
-    res.status(500).json({
-      authentifie: false,
-      error: 'Erreur interne du serveur'
+    return res.json({
+      authenticated: true,
+      user: result.user,
+    });
+  } catch (error) {
+    console.error("❌ Verify token error:", error);
+    return res.status(401).json({
+      authenticated: false,
+      error: "Erreur de vérification du token",
     });
   }
 });
 
-// ✅ CORRIGÉ: Route pour confirmer l'email avec EmailClient
-router.get('/confirm-email', async (req: Request, res: Response) => {
+/**
+ * GET /api/auth/me
+ * Get current user profile (requires authentication)
+ */
+router.get("/me", async (req: Request, res: Response) => {
   try {
-    const { token, userId } = req.query;
-    
-    if (!token || !userId) {
-      return res.status(400).json({
+    const user = (req as any).user;
+    const tenantId = getTenantId(req);
+
+    if (!user?.id) {
+      return res.status(401).json({
         success: false,
-        error: 'Token et userId requis dans les paramètres de requête'
+        message: "Non authentifié",
       });
     }
 
-    console.log('🔍 [Auth] Validation token email:', { 
-      token: (token as string).substring(0, 8) + '...', 
-      userId 
+    const profile = await userService.getUserById(user.id, tenantId);
+
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: "Utilisateur non trouvé",
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: { user: profile },
+    });
+  } catch (error) {
+    console.error("❌ Get current user error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur lors de la récupération du profil",
+    });
+  }
+});
+
+/**
+ * PUT /api/auth/profile
+ * Update current user profile (requires authentication)
+ */
+router.put("/profile", async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const tenantId = getTenantId(req);
+    const { firstName, lastName, dateOfBirth, genderId } = req.body;
+
+    if (!user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Non authentifié",
+      });
+    }
+
+    const result = await userService.updateUser(user.id, tenantId, {
+      firstName,
+      lastName,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      genderId,
     });
 
-    // ✅ CORRIGÉ: Utiliser EmailClient au lieu de l'ancien système validation_tokens
-    const { emailClient } = await import('../clients/emailClient.js');
-    const result = await emailClient.validateEmailToken(token as string, userId as string);
-
-    if (result.success) {
-      console.log('✅ [Auth] Email confirmé avec succès');
-      
-      // Redirection vers le frontend avec succès
-      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/connexion?verified=true&message=${encodeURIComponent('Email vérifié avec succès')}`;
-      
-      res.redirect(redirectUrl);
-    } else {
-      console.warn('⚠️ [Auth] Échec confirmation email:', result.message);
-      
-      // Redirection vers le frontend avec erreur
-      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/connexion?error=invalid_token&message=${encodeURIComponent(result.message)}`;
-      
-      res.redirect(redirectUrl);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
     }
-    
-  } catch (error: any) {
-    console.error('❌ [Auth] Erreur confirmation email:', error);
-    
-    // Redirection vers le frontend avec erreur serveur
-    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/pages/connexion?error=server_error&message=${encodeURIComponent('Erreur serveur lors de la validation')}`;
-    
-    res.redirect(redirectUrl);
+
+    // Log profile update (audit)
+    await auditService.log({
+      tenantId,
+      userId: user.id,
+      action: AuditAction.UPDATE,
+      resource: "user_profile",
+      resourceId: user.id.toString(),
+      changes: { firstName, lastName, dateOfBirth, genderId },
+      ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+      userAgent: req.headers["user-agent"] || undefined,
+    });
+
+    return res.json({
+      success: true,
+      message: result.message,
+      data: { user: result.user },
+    });
+  } catch (error) {
+    console.error("❌ Update profile error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur lors de la mise à jour du profil",
+    });
   }
 });
 

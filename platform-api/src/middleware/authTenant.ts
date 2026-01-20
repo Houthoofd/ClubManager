@@ -1,27 +1,31 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-import { AuthenticatedUser } from '../types/auth.js';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+import { AuthenticatedUser } from "../types/auth.js";
 
 const prisma = new PrismaClient();
 
 /**
  * Middleware d'authentification tenant-aware
  */
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
+      return res.status(401).json({ error: "Access token required" });
     }
 
     // Vérifier le token JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
     if (!decoded.id || !decoded.tenantId) {
-      return res.status(401).json({ error: 'Invalid token format' });
+      return res.status(401).json({ error: "Invalid token format" });
     }
 
     // Récupérer l'utilisateur avec validation tenant
@@ -42,12 +46,12 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'User not found or inactive' });
+      return res.status(401).json({ error: "User not found or inactive" });
     }
 
     // Vérifier que le tenant est actif
-    if (user.tenant.status !== 'ACTIVE') {
-      return res.status(403).json({ error: 'Tenant access suspended' });
+    if (user.tenant.status !== "ACTIVE") {
+      return res.status(403).json({ error: "Tenant access suspended" });
     }
 
     // Attacher les informations utilisateur à la requête
@@ -63,14 +67,14 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: "Invalid token" });
     }
     if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ error: 'Token expired' });
+      return res.status(401).json({ error: "Token expired" });
     }
-    
-    console.error('Authentication error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+
+    console.error("Authentication error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -80,7 +84,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 export const requireRole = (roles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     try {
@@ -92,12 +96,12 @@ export const requireRole = (roles: string[]) => {
       });
 
       if (!user || !user.status) {
-        return res.status(403).json({ error: 'User role not found' });
+        return res.status(403).json({ error: "User role not found" });
       }
 
       if (!roles.includes(user.status.nomRole)) {
-        return res.status(403).json({ 
-          error: 'Insufficient permissions',
+        return res.status(403).json({
+          error: "Insufficient permissions",
           required: roles,
           current: user.status.nomRole,
         });
@@ -105,8 +109,8 @@ export const requireRole = (roles: string[]) => {
 
       next();
     } catch (error) {
-      console.error('Role check error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error("Role check error:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   };
 };
@@ -117,12 +121,16 @@ export const requireRole = (roles: string[]) => {
 export const authorizeResource = (checkOwnership: boolean = true) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user || !req.tenant) {
-      return res.status(401).json({ error: 'Authentication and tenant context required' });
+      return res
+        .status(401)
+        .json({ error: "Authentication and tenant context required" });
     }
 
     // Vérifier que l'utilisateur appartient au bon tenant
     if (req.user.tenantId !== req.tenant.tenantId) {
-      return res.status(403).json({ error: 'Access denied to this tenant resource' });
+      return res
+        .status(403)
+        .json({ error: "Access denied to this tenant resource" });
     }
 
     // Si checkOwnership est true, des vérifications supplémentaires peuvent être ajoutées
@@ -136,8 +144,13 @@ export const authorizeResource = (checkOwnership: boolean = true) => {
           include: { status: true },
         });
 
-        if (!user?.status || !['admin', 'manager'].includes(user.status.nomRole.toLowerCase())) {
-          return res.status(403).json({ error: 'Access denied to this resource' });
+        if (
+          !user?.status ||
+          !["admin", "manager"].includes(user.status.nomRole.toLowerCase())
+        ) {
+          return res
+            .status(403)
+            .json({ error: "Access denied to this resource" });
         }
       }
     }
@@ -159,7 +172,7 @@ export const createAuthToken = (user: AuthenticatedUser): string => {
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: (process.env.JWT_EXPIRES_IN || "7d") as string | number,
   });
 };
 
