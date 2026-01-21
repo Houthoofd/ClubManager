@@ -1,27 +1,25 @@
 import express from "express";
 import { verifyToken } from "../middleware/auth.js";
-import { Utilisateurs } from "../db/clients/utilisateurs/utilisateurs.js";
-import MysqlConnector from "../db/connector/mysqlconnector.js";
-import { z } from "zod";
-import {
-  UserData,
+// Import modern services
+import { userService } from "../services/userService.js";
+import { emailService } from "../services/emailService.js";
+import { verificationService } from "../services/verificationService.js";
+// Import Prisma client for direct queries when needed
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+// Import local schemas
+import { 
   utilisateurInscriptionSchema,
   userDataLoginSchema,
   userDataLoginByUserIdSchema,
   userSearchByEmailSchema,
-  VerifyResultWithData,
-  userDataAjoutSchema,
-} from "../../../packages/types/dist/index.js";
-import bcrypt from "bcrypt";
-import { emailService } from "../services/emailService.js";
-// CORRIGÉ: Utiliser le bon chemin pour EmailClient
-// import { emailClient } from '../clients/emailClient.js';
+  userDataAjoutSchema
+} from "../validators/localSchemas.js";
+import { z } from "zod";
+import * as bcrypt from "bcrypt";
+import type { User } from "@prisma/client";
 
 const router = express.Router();
-
-// Utiliser le service email importé
-// const emailService = new EmailService();
-const mysqlConnector = MysqlConnector.getInstance();
 
 // Route pour vérifier l'existence d'un utilisateur
 router.post("/verifier", async (req, res) => {
@@ -43,36 +41,38 @@ router.post("/verifier", async (req, res) => {
       });
     }
 
-    const utilisateursDB = new Utilisateurs();
-
     try {
-      // Utiliser la méthode existante verifierUtilisateurExiste
-      await utilisateursDB.verifierUtilisateurExiste({
-        nom,
-        prenom,
-        date_naissance,
+      // Check if user exists using modern userService
+      const existingUser = await userService.findUserByDetails({
+        lastName: nom,
+        firstName: prenom,
+        dateOfBirth: new Date(date_naissance),
+        tenantId: "default" // TODO: Get from context
       });
 
-      // Si aucune erreur n'est levée, l'utilisateur n'existe pas
-      return res.status(200).json({
-        message: "Aucun utilisateur trouvé avec ces informations",
-        type: "USER_AVAILABLE",
-        userExists: false,
-        canRegister: true,
-      });
-    } catch (conflictError: any) {
-      // Si une erreur est levée, cela signifie qu'un utilisateur existe déjà
-      if (conflictError.status === 409) {
+      if (existingUser) {
         return res.status(409).json({
-          message: conflictError.message,
+          message: "Un utilisateur avec ces informations existe déjà",
           type: "USER_EXISTS",
           userExists: true,
-          userData: conflictError.data,
+          userData: {
+            firstName: existingUser.firstName,
+            lastName: existingUser.lastName,
+            email: existingUser.email
+          },
         });
       } else {
-        // Autre type d'erreur (erreur de base de données, etc.)
-        throw conflictError;
+        // No user found - available for registration
+        return res.status(200).json({
+          message: "Aucun utilisateur trouvé avec ces informations",
+          type: "USER_AVAILABLE",
+          userExists: false,
+          canRegister: true,
+        });
       }
+    } catch (error: any) {
+      console.error("Erreur lors de la recherche utilisateur:", error);
+      throw error;
     }
   } catch (error: any) {
     console.error("Erreur lors de la vérification utilisateur:", error);
@@ -89,14 +89,14 @@ router.get("/test-email-config", async (req, res) => {
   try {
     console.log("🔧 [Route] Test de configuration email demandé");
 
-    const configTest = await emailService.testerConfiguration();
+    const configTest = await emailService.testConnection();
 
     res.json({
-      success: configTest.success,
-      message: configTest.success
+      success: configTest,
+      message: configTest
         ? "Configuration email OK"
         : "Problèmes de configuration détectés",
-      details: configTest.details,
+      details: configTest ? "Email service is working" : "Email service configuration error",
     });
   } catch (error: any) {
     console.error("❌ [Route] Erreur lors du test de config email:", error);
@@ -122,21 +122,26 @@ router.post("/test-email", async (req, res) => {
 
     console.log("🧪 [Route] Test d'envoi email vers:", email);
 
-    const result = await emailService.envoyerEmailTest(email);
+    const result = await emailService.sendEmail({
+      to: email,
+      subject: "Test Email - ClubManager",
+      html: "<h1>Test Email</h1><p>Si vous recevez cet email, la configuration fonctionne correctement.</p>",
+      text: "Test Email - Si vous recevez cet email, la configuration fonctionne correctement."
+    });
 
-    if (result.success) {
+    if (result) {
       res.json({
         success: true,
         message: "Email de test envoyé avec succès",
-        messageId: result.messageId,
-        details: result.details,
+        messageId: "test-email",
+        details: "Email sent successfully",
       });
     } else {
       res.status(500).json({
         success: false,
         message: "Échec de l'envoi de l'email de test",
-        error: result.error,
-        details: result.details,
+        error: "Failed to send test email",
+        details: "Check email service configuration",
       });
     }
   } catch (error: any) {
@@ -735,8 +740,6 @@ router.put("/modifier", async (req: any, res: any) => {
         .json({ message: "L'identifiant de l'utilisateur est requis." });
     }
 
-    const client = new Utilisateurs();
-
     // Prépare les données à modifier
     const dataToUpdate: any = { id };
     if (typeof email !== "undefined") dataToUpdate.email = email;
@@ -760,8 +763,8 @@ router.put("/modifier", async (req: any, res: any) => {
       password: dataToUpdate.password ? "[HASHED]" : undefined,
     });
 
-    // Appel à la méthode du client qui gère la modification
-    const result = await client.modifierInfosUtilisateur(dataToUpdate);
+    // Appel à la méthode userService qui gère la modification
+    const result = await userService.updateUser(dataToUpdate);
 
     if (result.isConfirm) {
       res.status(200).json({ message: "Utilisateur modifié avec succès." });
@@ -791,10 +794,8 @@ router.delete("/supprimer/:id", async (req: any, res: any) => {
         .json({ isConfirm: false, message: "ID utilisateur invalide." });
     }
 
-    const client = new Utilisateurs();
-
     // Vérifier que l'utilisateur existe (actif ou inactif)
-    const utilisateurSimple = await client.obtenirUnUtilisateur(
+    const utilisateurSimple = await userService.getUserById(
       utilisateurId,
       true,
     ); // includeInactive = true
@@ -815,7 +816,7 @@ router.delete("/supprimer/:id", async (req: any, res: any) => {
     }
 
     // Désactiver l'utilisateur au lieu de le supprimer
-    const result = await client.desactiverUtilisateur(utilisateurId);
+    const result = await userService.deactivateUser(utilisateurId);
     console.log(`[DELETE] Résultat de desactiverUtilisateur :`, result);
 
     if (result.isConfirm) {
@@ -856,10 +857,8 @@ router.put("/reactiver/:id", async (req: any, res: any) => {
         .json({ isConfirm: false, message: "ID utilisateur invalide." });
     }
 
-    const client = new Utilisateurs();
-
     // Réactiver l'utilisateur
-    const result = await client.reactiverUtilisateur(utilisateurId);
+    const result = await userService.reactivateUser(utilisateurId);
     console.log(`[PUT] Résultat de reactiverUtilisateur :`, result);
 
     if (result.isConfirm) {
@@ -887,8 +886,7 @@ router.put("/reactiver/:id", async (req: any, res: any) => {
 // NOUVELLE route pour obtenir les statistiques d'utilisateurs
 router.get("/statistiques", async (req: any, res: any) => {
   try {
-    const client = new Utilisateurs();
-    const stats = await client.obtenirStatistiquesUtilisateurs();
+    const stats = await userService.getUserStatistics();
 
     res.status(200).json({
       success: true,
@@ -908,11 +906,9 @@ router.get("/statistiques", async (req: any, res: any) => {
 router.get("/", async (req: any, res: any) => {
   try {
     const includeInactive = req.query.includeInactive === "true";
-    const client = new Utilisateurs();
 
-    // Attendre la résolution de la méthode obtenirTousLesUtilisateurs
-    const utilisateurs =
-      await client.obtenirTousLesUtilisateurs(includeInactive);
+    // Attendre la résolution de la méthode avec userService
+    const utilisateurs = await userService.getAllUsers({ includeInactive });
 
     // Vérifier si des utilisateurs ont été trouvés et renvoyer une réponse appropriée
     if (utilisateurs.isFind) {
@@ -936,28 +932,8 @@ router.get("/:id", async (req: any, res: any) => {
   }
 
   try {
-    const client = new Utilisateurs();
-
-    // Récupère le prénom et le nom de l'utilisateur à partir de l'id
-    const utilisateurSimple = await client.obtenirUnUtilisateur(
-      Number(utilisateurId),
-    );
-    if (
-      !utilisateurSimple.isFind ||
-      !utilisateurSimple.data ||
-      utilisateurSimple.data.length === 0
-    ) {
-      return res
-        .status(404)
-        .json({ message: "Aucun utilisateur trouvé.", data: [] });
-    }
-    const utilisateurData = utilisateurSimple.data[0];
-    const prenom = utilisateurData.first_name;
-    const nom = utilisateurData.last_name;
-
-    // Utilise la méthode obtenirInformationsUtilisateur pour enrichir les données
-    const utilisateur: VerifyResultWithData =
-      await client.obtenirInformationsUtilisateur(prenom, nom);
+    // Récupère l'utilisateur à partir de l'id avec userService
+    const utilisateur = await userService.getUserById(Number(utilisateurId));
 
     if (utilisateur.isFind) {
       res.status(200).json({ utilisateur: utilisateur.data }); // Renvoie les données enrichies de l'utilisateur
@@ -972,7 +948,6 @@ router.get("/:id", async (req: any, res: any) => {
 
 router.post("/ajouter", async (req: any, res: any) => {
   try {
-    const client = new Utilisateurs();
     const data = req.body;
     console.log("[POST /ajouter] Données reçues du front :", data);
 
@@ -998,29 +973,28 @@ router.post("/ajouter", async (req: any, res: any) => {
       }
     }
 
-    // Vérifie si l'utilisateur existe déjà (par email ou nom_utilisateur)
-    const verifUtilisateur = await client.verifierUtilisateur({
-      email: validatedData.email,
-      nom_utilisateur: validatedData.nom_utilisateur,
-      prenom: validatedData.first_name,
-      nom: validatedData.last_name,
-      genre_id: validatedData.genres,
-      date_naissance: validatedData.date_of_birth,
-      password: "password123",
-      status_id: validatedData.status,
-      grade_id: validatedData.grades,
-      abonnement_id: validatedData.abonnement,
-      date_inscription: new Date().toISOString().split("T")[0],
-    });
+    // Vérifie si l'utilisateur existe déjà par email
+    const verifUtilisateur = await userService.findUserByEmail(validatedData.email);
 
-    if (verifUtilisateur.isFind) {
+    if (verifUtilisateur) {
       return res.status(400).json({ message: "Utilisateur déjà inscrit." });
     }
 
     console.log("validatedData avant ajout :", validatedData);
 
-    // Appel à la méthode d'insertion qui attend UserDataAjout
-    const result = await client.inscrireUtilisateur(validatedData);
+    // Appel à la méthode d'insertion avec userService
+    const result = await userService.createUser({
+      firstName: validatedData.firstName,
+      lastName: validatedData.lastName,
+      email: validatedData.email,
+      password: validatedData.password,
+      dateOfBirth: validatedData.dateOfBirth,
+      genderId: validatedData.genderId,
+      statusId: validatedData.statusId,
+      gradeId: validatedData.gradeId,
+      abonnementId: validatedData.abonnementId,
+      tenantId: "default" // TODO: Get from context
+    });
 
     console.log("utilisateur ajouté avec succès:", result);
     res.status(200).json(result);
@@ -1054,25 +1028,8 @@ router.post("/send-verification-email", async (req, res) => {
       userId,
     });
 
-    // Récupérer l'ID numérique de l'utilisateur basé sur l'userId
-    const utilisateur = await new Promise((resolve, reject) => {
-      mysqlConnector.query(
-        "SELECT id, first_name, last_name, email, email_verified FROM utilisateurs WHERE userId = ? LIMIT 1",
-        [userId],
-        (error: any, results: any) => {
-          if (error) {
-            console.error(
-              "❌ Erreur DB lors de la recherche utilisateur:",
-              error,
-            );
-            reject(error);
-          } else {
-            console.log("🔍 Résultat recherche utilisateur:", results);
-            resolve(results.length > 0 ? results[0] : null);
-          }
-        },
-      );
-    });
+    // Récupérer l'utilisateur avec userService
+    const utilisateur = await userService.findUserByUserId(userId);
 
     if (!utilisateur) {
       console.warn("⚠️ Utilisateur non trouvé avec userId:", userId);
@@ -1083,7 +1040,7 @@ router.post("/send-verification-email", async (req, res) => {
     }
 
     // Vérifier si l'email n'est pas déjà vérifié
-    if ((utilisateur as any).email_verified) {
+    if (utilisateur?.emailVerified) {
       console.log("⚠️ Email déjà vérifié pour userId:", userId);
       return res.status(400).json({
         success: false,
@@ -1093,13 +1050,12 @@ router.post("/send-verification-email", async (req, res) => {
 
     console.log("✅ Utilisateur trouvé, email non vérifié:", utilisateur);
 
-    // CORRIGÉ: Envoyer l'email de vérification avec EmailClient
-    const result = await emailClient.sendValidationEmail({
-      email,
-      prenom,
-      nom,
-      userId,
-      utilisateurId: (utilisateur as any).id,
+    // CORRIGÉ: Envoyer l'email de vérification avec emailService
+    const result = await emailService.sendVerificationEmail({
+      to: email,
+      firstName: prenom,
+      lastName: nom,
+      userId: utilisateur?.id.toString() || userId,
     });
 
     console.log("📧 Résultat envoi email:", result);

@@ -12,6 +12,12 @@ export { rateLimitService } from './rateLimitService.js';
 export { tenantService } from './tenantService.js';
 export { userService } from './userService.js';
 
+// New services replacing old clients
+export { articleService } from './articleService.js';
+export { informationService } from './informationService.js';
+export { statisticsService } from './statisticsService.js';
+export { verificationService } from './verificationService.js';
+
 // Course and payment services
 export { courseService } from './courseService.js';
 export { paymentService } from './paymentService.js';

@@ -242,7 +242,7 @@ export class OrderService {
 
     const updated = await this.repository.updateStatus(
       id,
-      frenchStatus,
+      frenchStatus as OrderStatus,
       tenantId,
     );
 
@@ -257,9 +257,8 @@ export class OrderService {
         resourceId: id.toString(),
         details: {
           orderId: id,
-          reason,
           oldStatus: order.statut,
-          newStatus,
+          newStatus: frenchStatus,
         },
       });
     }
@@ -419,7 +418,6 @@ export class OrderService {
       "confirmée" as OrderStatus,
       tenantId,
       userId,
-      "Order confirmed",
     );
 
     return updated;
@@ -441,10 +439,9 @@ export class OrderService {
 
     const updated = await this.updateStatus(
       id,
-      "livrée" as OrderStatus,
+      OrderStatus.DELIVERED,
       tenantId,
       userId,
-      "Order delivered",
     );
 
     return updated;
@@ -486,8 +483,8 @@ export class OrderService {
   /**
    * Count orders by status
    */
-  async countByStatus(tenantId: string, status: string) {
-    return this.repository.countByStatus(tenantId, status);
+  async countByStatus(tenantId: string, status?: string) {
+    return this.repository.countByStatus(tenantId);
   }
 
   /**

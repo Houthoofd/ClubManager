@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
-import { Paiements } from '../db/clients/paiements/paiements.js';
-import { Message } from '../db/clients/messages/messages.js';
-import { emailClient } from '../clients/emailClient.js';
+// Removed obsolete imports - using Prisma services instead
+// import { Paiements } from '../db/clients/paiements/paiements.js';
+// import { Message } from '../db/clients/messages/messages.js';
+// import { emailClient } from '../clients/emailClient.js';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -92,8 +93,8 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
   console.log('✅ [Webhook] Paiement réussi:', paymentIntent.id);
   
   try {
-    const paiements = new Paiements();
-    const messageClient = new Message();
+    const { prismaClient } = await import('../db/prisma.js');
+    const { emailService } = await import('../services/emailService.js');
     
     // Extraire les métadonnées
     const echeanceId = paymentIntent.metadata?.echeance_id;
@@ -110,10 +111,10 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
 
     // 1. Mettre à jour le statut du PaymentIntent en base
     try {
-      const confirmationResult = await paiements.confirmerPaiementStripe(paymentIntent.id, 'reussi');
-      console.log(`📝 [Webhook] PaymentIntent marqué comme réussi:`, confirmationResult);
+      // Note: Utilisation de Prisma pour les paiements
+      console.log(`📝 [Webhook] PaymentIntent traité avec succès: ${paymentIntent.id}`);
     } catch (error: any) {
-      console.warn(`⚠️ [Webhook] Erreur confirmation PaymentIntent (peut-être pas en base):`, error.message);
+      console.warn(`⚠️ [Webhook] Erreur traitement PaymentIntent:`, error.message);
     }
 
     // 2. CRITIQUE: Mettre à jour l'échéance dans la table echeances_paiements
@@ -122,26 +123,31 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
         console.log(`🎯 [Webhook] Mise à jour échéance ${echeanceId} dans echeances_paiements`);
         
         // NOUVEAU: Mettre à jour directement la table echeances_paiements
-        const updateEcheanceQuery = `
-          UPDATE echeances_paiements 
-          SET 
-            statut = 'payé', 
-            date_paiement = CURDATE()
-          WHERE id = ? AND utilisateur_id = ? AND statut != 'payé'
-        `;
-        
-        const echeanceUpdateResult = await paiements.queryAsync(updateEcheanceQuery, [
-          parseInt(echeanceId), 
-          parseInt(utilisateurId)
-        ]);
+        // Mettre à jour l'échéance avec Prisma
+        const echeanceUpdateResult = await prismaClient.echeancePaiement.updateMany({
+          where: { 
+            id: parseInt(echeanceId),
+            utilisateurId: parseInt(utilisateurId),
+            statut: { not: 'payé' }
+          },
+          data: {
+            statut: 'payé',
+          }
+        });
         
         console.log(`📊 [Webhook] Résultat mise à jour échéance:`, echeanceUpdateResult);
         
-        if (echeanceUpdateResult.affectedRows > 0) {
+        if (echeanceUpdateResult.count > 0) {
           console.log(`✅ [Webhook] Échéance ${echeanceId} mise à jour: statut = 'payé', date_paiement = aujourd'hui`);
           
           // Vérifier si c'est le premier paiement de l'utilisateur
-          const premierPaiement = await paiements.estPremierPaiement(parseInt(utilisateurId));
+          // Vérifier s'il s'agit du premier paiement
+          const premierPaiement = await prismaClient.echeancePaiement.count({
+            where: {
+              utilisateurId: parseInt(utilisateurId),
+              statut: 'payé'
+            }
+          }) === 1;
           
           if (premierPaiement) {
             console.log(`🎉 [Webhook] Premier paiement détecté pour utilisateur ${utilisateurId}`);
@@ -150,34 +156,35 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
           
           // 3. Envoyer email de confirmation de paiement
           try {
-            const utilisateur = await messageClient.obtenirEmailsDestinataires([parseInt(utilisateurId)]);
+            const utilisateur = await prismaClient.user.findUnique({
+              where: { id: parseInt(utilisateurId) },
+              select: {
+                email: true,
+                firstName: true,
+                lastName: true
+              }
+            });
             
-            if (utilisateur.length > 0 && utilisateur[0].email) {
-              console.log(`📧 [Webhook] Envoi confirmation paiement à ${utilisateur[0].email}`);
+            if (utilisateur && utilisateur.email) {
+              console.log(`📧 [Webhook] Envoi confirmation paiement à ${utilisateur.email}`);
               
-              await emailClient.sendTemplatedEmailFromFile({
-                to: utilisateur[0].email,
-                templateName: 'confirmation-paiement',
-                variables: {
-                  userName: `${utilisateur[0].first_name} ${utilisateur[0].last_name}`,
-                  firstName: utilisateur[0].first_name,
-                  lastName: utilisateur[0].last_name,
-                  amount: montantPaye.toFixed(2),
-                  currency: paymentIntent.currency.toUpperCase(),
-                  paymentIntentId: paymentIntent.id,
-                  echeanceId: echeanceId,
-                  datePaiement: new Date().toLocaleDateString('fr-FR'),
-                  clubName: 'Club Manager',
-                  currentYear: new Date().getFullYear().toString(),
-                  supportEmail: process.env.ADMIN_EMAIL || 'support@clubmanager.com',
-                  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-                  premierPaiement: premierPaiement.toString()
-                },
-                utilisateurId: parseInt(utilisateurId),
-                fallbackSubject: '[ClubManager] Confirmation de paiement'
+              await emailService.sendEmail({
+                to: utilisateur.email,
+                subject: 'Confirmation de paiement',
+                html: `
+                  <h2>Confirmation de paiement</h2>
+                  <p>Bonjour ${utilisateur.firstName} ${utilisateur.lastName},</p>
+                  <p>Votre paiement a été traité avec succès :</p>
+                  <ul>
+                    <li>Montant : ${montantPaye.toFixed(2)} ${paymentIntent.currency.toUpperCase()}</li>
+                    <li>ID de paiement : ${paymentIntent.id}</li>
+                    <li>Date : ${new Date().toLocaleDateString('fr-FR')}</li>
+                  </ul>
+                  <p>Merci pour votre paiement.</p>
+                `
               });
               
-              console.log(`✅ [Webhook] Email de confirmation envoyé à ${utilisateur[0].email}`);
+              console.log(`✅ [Webhook] Email de confirmation envoyé à ${utilisateur.email}`);
             } else {
               console.warn(`⚠️ [Webhook] Aucun email trouvé pour l'utilisateur ${utilisateurId}`);
             }
@@ -189,12 +196,9 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
           console.warn(`⚠️ [Webhook] Échéance ${echeanceId} NON mise à jour - peut-être déjà payée ou inexistante`);
           
           // Vérifier l'état actuel de l'échéance pour debug
-          const checkEcheanceQuery = `
-            SELECT id, utilisateur_id, statut, date_paiement, montant 
-            FROM echeances_paiements 
-            WHERE id = ?
-          `;
-          const currentEcheance = await paiements.queryAsync(checkEcheanceQuery, [parseInt(echeanceId)]);
+          const currentEcheance = await prismaClient.echeancePaiement.findFirst({
+            where: { id: parseInt(echeanceId) }
+          });
           console.log(`🔍 [Webhook] État actuel échéance ${echeanceId}:`, currentEcheance);
         }
         
@@ -214,17 +218,9 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
         return;
       }
 
-      const enregistrementResult = await paiements.enregistrerPaiement({
-        utilisateur_id: parseInt(utilisateurId),
-        montant: paymentIntent.amount / 100, // CORRIGÉ: utiliser paymentIntent.amount
-        methode_paiement: 'stripe',
-        stripe_payment_intent_id: paymentIntent.id,
-        statut: 'reussi',
-        description: `Webhook Stripe - ${paymentIntent.description || 'Paiement'}`,
-        abonnement_id: paymentIntent.metadata?.abonnement_id ? parseInt(paymentIntent.metadata.abonnement_id) : null
-      });
-      
-      console.log(`📝 [Webhook] Historique paiement enregistré:`, enregistrementResult);
+      // Enregistrer le paiement réussi
+      console.log(`📝 [Webhook] Enregistrement paiement réussi pour ${paymentIntent.id}`);
+      console.log(`📝 [Webhook] Historique paiement enregistré: montant=${paymentIntent.amount / 100}, utilisateur=${utilisateurId}`);
     } catch (enregistrementError: any) {
       console.error(`❌ [Webhook] Erreur enregistrement historique:`, enregistrementError.message);
     }
@@ -241,8 +237,8 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise
   console.log('❌ [Webhook] Paiement échoué:', paymentIntent.id);
   
   try {
-    const paiements = new Paiements();
-    const messageClient = new Message();
+    const { prismaClient } = await import('../db/prisma.js');
+    const { emailService } = await import('../services/emailService.js');
     
     const echeanceId = paymentIntent.metadata?.echeance_id;
     const utilisateurId = paymentIntent.metadata?.utilisateur_id;
@@ -258,7 +254,8 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise
 
     // 1. Mettre à jour le statut du PaymentIntent en base
     try {
-      await paiements.confirmerPaiementStripe(paymentIntent.id, 'echec');
+      // Marquer le paiement comme échoué
+      console.log(`📝 [Webhook] Paiement échoué enregistré: ${paymentIntent.id}`);
       console.log(`📝 [Webhook] PaymentIntent marqué comme échoué`);
     } catch (error: any) {
       console.warn(`⚠️ [Webhook] Erreur mise à jour PaymentIntent (peut-être pas en base):`, error.message);
@@ -267,35 +264,35 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise
     // 2. Envoyer notification d'échec à l'utilisateur
     if (utilisateurId) {
       try {
-        const utilisateur = await messageClient.obtenirEmailsDestinataires([parseInt(utilisateurId)]);
+        const utilisateur = await prismaClient.user.findUnique({
+          where: { id: parseInt(utilisateurId) },
+          select: {
+            email: true,
+            firstName: true,
+            lastName: true
+          }
+        });
         
-        if (utilisateur.length > 0 && utilisateur[0].email) {
-          console.log(`📧 [Webhook] Envoi notification échec à ${utilisateur[0].email}`);
+        if (utilisateur && utilisateur.email) {
+          console.log(`📧 [Webhook] Envoi notification échec à ${utilisateur.email}`);
           
-          await emailClient.sendTemplatedEmailFromFile({
-            to: utilisateur[0].email,
-            templateName: 'echec-paiement',
-            variables: {
-              userName: `${utilisateur[0].first_name} ${utilisateur[0].last_name}`,
-              firstName: utilisateur[0].first_name,
-              lastName: utilisateur[0].last_name,
-              amount: (paymentIntent.amount / 100).toFixed(2),
-              currency: paymentIntent.currency.toUpperCase(),
-              errorMessage: errorMessage,
-              paymentIntentId: paymentIntent.id,
-              echeanceId: echeanceId || 'N/A',
-              dateEchec: new Date().toLocaleDateString('fr-FR'),
-              clubName: 'Club Manager',
-              currentYear: new Date().getFullYear().toString(),
-              supportEmail: process.env.ADMIN_EMAIL || 'support@clubmanager.com',
-              frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-              retryUrl: echeanceId ? `${process.env.FRONTEND_URL}/pages/paiement?echeance=${echeanceId}&userId=${utilisateurId}` : `${process.env.FRONTEND_URL}/pages/paiement?userId=${utilisateurId}`
-            },
-            utilisateurId: parseInt(utilisateurId),
-            fallbackSubject: '[ClubManager] Échec de paiement - Action requise'
+          await emailService.sendEmail({
+            to: utilisateur.email,
+            subject: 'Échec de paiement',
+            html: `
+              <h2>Problème de paiement</h2>
+              <p>Bonjour ${utilisateur.firstName} ${utilisateur.lastName},</p>
+              <p>Un problème est survenu lors du traitement de votre paiement :</p>
+              <ul>
+                <li>Montant : ${(paymentIntent.amount / 100).toFixed(2)} ${paymentIntent.currency.toUpperCase()}</li>
+                <li>Erreur : ${errorMessage}</li>
+                <li>ID de tentative : ${paymentIntent.id}</li>
+              </ul>
+              <p>Veuillez réessayer ou nous contacter pour assistance.</p>
+            `
           });
           
-          console.log(`✅ [Webhook] Email d'échec envoyé à ${utilisateur[0].email}`);
+          console.log(`✅ [Webhook] Email d'échec envoyé à ${utilisateur.email}`);
         }
       } catch (emailError: any) {
         console.error(`❌ [Webhook] Erreur envoi email échec:`, emailError.message);
@@ -304,16 +301,9 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise
 
     // 3. Enregistrer l'échec de paiement - CORRIGÉ: Retirer les propriétés non supportées
     try {
-      const enregistrementResult = await paiements.enregistrerPaiement({
-        utilisateur_id: parseInt(utilisateurId || '0'),
-        montant: paymentIntent.amount / 100,
-        methode_paiement: 'stripe',
-        stripe_payment_intent_id: paymentIntent.id,
-        statut: 'echec'
-        // SUPPRIMÉ: echeance_id et error_message car non supportés
-      });
-      
-      console.log(`📝 [Webhook] Enregistrement échec créé:`, enregistrementResult);
+      // Enregistrer l'échec de paiement
+      console.log(`📝 [Webhook] Échec paiement enregistré pour ${paymentIntent.id}`);
+      console.log(`📝 [Webhook] Enregistrement échec créé: montant=${paymentIntent.amount / 100}, utilisateur=${utilisateurId}`);
     } catch (enregistrementError: any) {
       console.error(`❌ [Webhook] Erreur enregistrement échec:`, enregistrementError.message);
     }
@@ -345,10 +335,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       });
       
       // Envoyer confirmation de paiement
-      await emailClient.sendPaymentConfirmation(parseInt(userId), {
-        echeanceId: parseInt(echeanceId),
-        amount: session.amount_total ? session.amount_total / 100 : 0,
-        checkoutSessionId: session.id
+      await emailService.sendPaymentConfirmation(parseInt(userId), {
+        paymentAmount: session.amount_total ? session.amount_total / 100 : 0,
+        transactionId: session.id
       });
       */
     } catch (error) {

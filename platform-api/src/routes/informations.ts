@@ -1,16 +1,14 @@
 import express from 'express';
 import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
-import { Informations } from '../db/clients/informations/informations.js';
+import { informationService } from '../services/index.js';
 
 const router = express.Router();
 
 
 router.get('/grades', async (req:any, res:any) => {
   try {
-    const client = new Informations();
-    
-    // Appel de la méthode pour obtenir les grades
-    const grades = await client.obtenirLesGrades();
+    // Use new informationService instead of legacy client
+    const grades = await informationService.getGrades();
 
     if (grades && grades.length > 0) {
       console.log('Grades récupérés:', grades);
@@ -27,10 +25,8 @@ router.get('/grades', async (req:any, res:any) => {
 
 router.get('/genres', async (req:any, res:any) => {
   try {
-    const client = new Informations();
-    
-    // Appel de la méthode pour obtenir les genres
-    const genres = await client.obtenirLesGenres();
+    // Use new informationService instead of legacy client
+    const genres = await informationService.getGenres();
 
     if (genres && genres.length > 0) {
       console.log('Genres récupérés:', genres);
@@ -47,10 +43,8 @@ router.get('/genres', async (req:any, res:any) => {
 
 router.get('/status', async (req:any, res:any) => {
   try {
-    const client = new Informations();
-    
-    // Appel de la méthode pour obtenir les status
-    const status = await client.obtenirLeStatus();
+    // Use new informationService instead of legacy client
+    const status = await informationService.getStatus();
 
     if (status && status.length > 0) {
       console.log('Status récupérés:', status);
@@ -67,10 +61,8 @@ router.get('/status', async (req:any, res:any) => {
 
 router.get('/abonnements', async (req:any, res:any) => {
   try {
-    const client = new Informations();
-    
-    // Appel de la méthode pour obtenir les plans tarifaires
-    const plansTarifaires = await client.obtenirLesPlansTarifaires();
+    // Use new informationService instead of legacy client
+    const plansTarifaires = await informationService.getPlansTarifaires();
 
     if (plansTarifaires && plansTarifaires.length > 0) {
       console.log('plans tarifaires récupérés:', plansTarifaires);

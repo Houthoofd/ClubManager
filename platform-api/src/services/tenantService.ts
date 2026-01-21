@@ -8,6 +8,19 @@ import {
 
 const prisma = new PrismaClient();
 
+/**
+ * Helper function to transform Prisma Decimal prices to numbers
+ */
+function transformTenantData(tenant: any): TenantWithSubscription {
+  return {
+    ...tenant,
+    subscriptions: tenant.subscriptions.map((sub: any) => ({
+      ...sub,
+      price: Number(sub.price)
+    }))
+  };
+}
+
 export class TenantService {
   /**
    * Créer un nouveau tenant
@@ -64,7 +77,7 @@ export class TenantService {
       },
     });
 
-    return tenant as TenantWithSubscription;
+    return transformTenantData(tenant);
   }
 
   /**
@@ -86,7 +99,7 @@ export class TenantService {
       },
     });
 
-    return tenant as TenantWithSubscription;
+    return transformTenantData(tenant);
   }
 
   /**
@@ -109,7 +122,7 @@ export class TenantService {
       },
     });
 
-    return tenant as TenantWithSubscription | null;
+    return tenant ? transformTenantData(tenant) : null;
   }
 
   /**
@@ -254,7 +267,7 @@ export class TenantService {
       },
     });
 
-    return tenant as TenantWithSubscription;
+    return transformTenantData(tenant);
   }
 
   /**
@@ -275,7 +288,7 @@ export class TenantService {
       },
     });
 
-    return tenant as TenantWithSubscription;
+    return transformTenantData(tenant);
   }
 
   /**

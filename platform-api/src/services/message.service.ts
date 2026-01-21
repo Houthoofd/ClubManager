@@ -343,7 +343,7 @@ export class MessageService {
         resourceType: "Message",
         resourceId: "bulk",
         details: {
-          count: updated.count,
+          count: result.count,
           recipientId,
         },
       });

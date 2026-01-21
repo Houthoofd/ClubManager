@@ -1,10 +1,14 @@
 import express, { Request, Response } from 'express';
 import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
-import { Magasin } from '../db/clients/magasin/magasin.js';
-import { Paiements } from '../db/clients/paiements/paiements.js';
-import { Verifiation } from '../db/clients/verification/verifications.js';
-import { EmailClient } from '../clients/emailClient.js'; // AJOUTÉ: Import EmailClient
-import { ArticleCreationData, articleCreationSchema, articleDataValidationSchema, nouvelleCommandeSchema, articleCommandeSchema  } from '@clubmanager/types';
+// Import new services replacing old clients
+import { articleService } from '../services/articleService.js';
+import { userService } from '../services/userService.js';
+import { 
+  articleCreationSchema, 
+  articleDataValidationSchema, 
+  nouvelleCommandeSchema, 
+  ArticleCreationData 
+} from '../validators/localSchemas.js';
 import { z } from 'zod';
 import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,11 +40,8 @@ router.use(verifyToken);
 
 router.get('/articles', async (req: any, res: any) => {
   try {
-    const client = new Magasin();
-
-
-    // Récupérer les utilisateurs associés à ce cours
-    const result = await client.obtenirArticlesParCategories();
+    // Utilisation d'articleService pour récupérer les articles
+    const result = await articleService.getAllArticles();
 
     console.log('articles récupèrés avec succès', result);
     res.status(200).json(result);
@@ -53,11 +54,8 @@ router.get('/articles', async (req: any, res: any) => {
 
 router.get('/articles/categories', async (req: any, res: any) => {
   try {
-    const client = new Magasin();
-
-
-    // Récupérer les utilisateurs associés à ce cours
-    const result = await client.obtenirLesCategories();
+    // Utilisation d'articleService pour récupérer les catégories
+    const result = await articleService.getCategories();
 
     console.log('articles récupèrés avec succès', result);
     res.status(200).json(result);
@@ -70,25 +68,26 @@ router.get('/articles/categories', async (req: any, res: any) => {
 
 router.post('/articles/ajouter', async (req: any, res: any) => {
   try {
-    const client = new Magasin();
-
+    // Utilisation d'articleService pour créer un article
+    
     // ✅ Valider les données avec le schéma pour la création (sans id)
     const validatedData: ArticleCreationData = articleCreationSchema.parse(req.body);
 
     console.log("Données validées par le schéma Zod : ", JSON.stringify(validatedData));
 
-    const result = await client.ajouterArticle(validatedData);
+    const result = await articleService.createArticle(validatedData);
 
-    if (result.isConfirm) {
+    if (result) {
       console.log('Article ajouté avec succès', result);
       return res.status(200).json({
-        message: result.message,
+        message: 'Article créé avec succès',
+        article: result,
       });
     } else {
-      console.error('Erreur lors de l\'ajout de l\'article', result.message);
+      console.error('Erreur lors de l\'ajout de l\'article');
       return res.status(500).json({
         message: 'Erreur lors de l\'ajout de l\'article.',
-        error: result.message,
+        error: 'Impossible de créer l\'article',
       });
     }
 
@@ -111,15 +110,19 @@ router.post('/articles/ajouter', async (req: any, res: any) => {
 
 router.delete('/articles/:id', async (req:any, res:any) => {
   const articleId = parseInt(req.params.id);
-  const client = new Magasin();
+  // Utilisation d'articleService pour supprimer un article
 
   if (isNaN(articleId)) {
     return res.status(400).json({ message: 'ID invalide.' });
   }
 
   try {
-    const result = await client.supprimerArticle(articleId);
-    res.status(200).json({ message: result.message });
+    const result = await articleService.deleteArticle(articleId);
+    if (result) {
+      res.status(200).json({ message: 'Article supprimé avec succès' });
+    } else {
+      res.status(404).json({ message: 'Article non trouvé' });
+    }
   } catch (error) {
     console.error('Erreur lors de la suppression de l’article :', error);
     res.status(500).json({ message: 'Erreur lors de la suppression de l’article.' });
@@ -128,7 +131,7 @@ router.delete('/articles/:id', async (req:any, res:any) => {
 
 router.put('/articles/:id', async (req: any, res: any) => {
   const articleId = parseInt(req.params.id);
-  const client = new Magasin();
+  // Utilisation d'articleService pour modifier un article
 
   if (isNaN(articleId)) {
     return res.status(400).json({ message: 'ID invalide.' });
@@ -142,12 +145,15 @@ router.put('/articles/:id', async (req: any, res: any) => {
     });
 
     // Puis passe l'id séparément
-    const result = await client.modifierArticle(articleId, validatedData);
+    const result = await articleService.updateArticle(articleId, validatedData);
 
-    if (result.isConfirm) {
-      res.status(200).json({ message: result.message });
+    if (result) {
+      res.status(200).json({ 
+        message: 'Article modifié avec succès',
+        article: result 
+      });
     } else {
-      res.status(500).json({ message: result.message });
+      res.status(404).json({ message: 'Article non trouvé' });
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -174,34 +180,41 @@ const generateUniqueCommandeId = (userId: number): string => {
 router.get('/commande/:uniqueId/verify', async (req: any, res: any) => {
   try {
     const { uniqueId } = req.params;
-    const paiements = new Paiements(); // CORRIGÉ: Utiliser Paiements au lieu de Magasin
+    const { prismaClient } = await import('../db/prisma.js');
     
-    const verifyQuery = `
-      SELECT id, unique_id, numero_commande, statut, total, utilisateur_id, date
-      FROM commandes 
-      WHERE unique_id = ? OR numero_commande = ?
-    `;
+    const commandeFound = await prismaClient.commande.findFirst({
+      where: {
+        OR: [
+          { id: parseInt(uniqueId) || 0 },
+          { notes: { contains: uniqueId } }
+        ]
+      },
+      select: {
+        id: true,
+        statut: true,
+        montantTotal: true,
+        utilisateurId: true,
+        dateCommande: true,
+        notes: true
+      }
+    });
     
-    const results = await paiements.queryAsync(verifyQuery, [uniqueId, uniqueId]); // CORRIGÉ: Utiliser paiements
-    
-    if (results.length === 0) {
+    if (!commandeFound) {
       return res.status(404).json({ 
         exists: false,
         message: 'Commande non trouvée' 
       });
     }
     
-    const commande = results[0];
     res.status(200).json({
       exists: true,
       commande: {
-        id: commande.id,
-        unique_id: commande.unique_id,
-        numero_commande: commande.numero_commande,
-        statut: commande.statut,
-        total: commande.total,
-        utilisateur_id: commande.utilisateur_id,
-        date: commande.date
+        id: commandeFound.id,
+        statut: commandeFound.statut,
+        montantTotal: commandeFound.montantTotal,
+        utilisateurId: commandeFound.utilisateurId,
+        dateCommande: commandeFound.dateCommande,
+        notes: commandeFound.notes
       }
     });
     
@@ -217,23 +230,22 @@ router.get('/commande/:uniqueId/verify', async (req: any, res: any) => {
 // AJOUTÉ: Fonction pour générer un numéro de commande séquentiel
 const generateSequentialCommandeNumber = async (): Promise<string> => {
   try {
-    const paiements = new Paiements(); // CORRIGÉ: Utiliser Paiements
+    const { prismaClient } = await import('../db/prisma.js');
     
-    // Récupérer le dernier numéro de commande
-    const lastCommandeQuery = `
-      SELECT numero_commande 
-      FROM commandes 
-      WHERE numero_commande LIKE 'CMD-%' 
-      ORDER BY id DESC 
-      LIMIT 1
-    `;
-    
-    const results = await paiements.queryAsync(lastCommandeQuery, []); // CORRIGÉ: Utiliser paiements
+    const lastCommande = await prismaClient.commande.findFirst({
+      where: {
+        notes: {
+          startsWith: 'CMD-'
+        }
+      },
+      orderBy: { id: 'desc' },
+      select: { notes: true }
+    });
     
     let nextNumber = 1;
-    if (results.length > 0 && results[0].numero_commande) {
+    if (lastCommande && lastCommande.notes && lastCommande.notes.startsWith('CMD-')) {
       // Extraire le numéro séquentiel de la dernière commande
-      const lastNumber = results[0].numero_commande.split('-')[1];
+      const lastNumber = lastCommande.notes.split('-')[1];
       nextNumber = parseInt(lastNumber) + 1;
     }
     
@@ -301,8 +313,8 @@ router.post('/commandes/ajouter', async (req:any, res:any) => {
       }
     }
 
-    const client = new Magasin();
-
+    // Utilisation directe de Prisma pour les commandes
+    
     // Générer les IDs de manière plus robuste
     const uniqueCommandeId = generateUniqueCommandeId(utilisateur_id);
     const numeroCommande = await generateSequentialCommandeNumber();
@@ -316,24 +328,32 @@ router.post('/commandes/ajouter', async (req:any, res:any) => {
     // Créer une promesse pour cette commande et la stocker
     const promesseCommande = (async () => {
       try {
+        const { prismaClient } = await import('../db/prisma.js');
         const commandeData = {
-          utilisateur_id,
-          articles,
-          total,
-          date,
+          utilisateurId: utilisateur_id,
+          dateCommande: new Date(date || new Date()),
           statut,
-          unique_id: uniqueCommandeId,
-          numero_commande: numeroCommande,
-          created_at: new Date().toISOString()
+          montantTotal: total,
+          notes: `CMD-${numeroCommande}`,
         };
         
-        const result = await client.ajouterCommande(commandeData);
+        const result = await prismaClient.commande.create({
+          data: commandeData
+        });
         
         // Envoyer l'email de confirmation après succès
         try {
           const userData = await recupererDonneesUtilisateur(utilisateur_id);
           if (userData) {
-            await envoyerEmailConfirmationCommande(commandeData, userData.email, userData.nom);
+            const emailData = {
+              articles,
+              total,
+              numero_commande: numeroCommande,
+              unique_id: uniqueCommandeId,
+              statut,
+              created_at: new Date().toISOString()
+            };
+            await envoyerEmailConfirmationCommande(emailData, userData.email, userData.nom);
           } else {
             console.warn('⚠️ [Magasin] Impossible d\'envoyer l\'email - utilisateur non trouvé');
           }
@@ -342,9 +362,10 @@ router.post('/commandes/ajouter', async (req:any, res:any) => {
         }
         
         return {
-          ...result,
+          id: result.id,
           unique_id: uniqueCommandeId,
-          numero_commande: numeroCommande
+          numero_commande: numeroCommande,
+          statut: result.statut
         };
         
       } finally {
@@ -401,8 +422,25 @@ router.post('/commandes/ajouter', async (req:any, res:any) => {
 
 router.get('/commandes', async (req: any, res: any) => {
   try {
-    const client = new Magasin();
-    const commandes = await client.obtenirLesCommandes(); // ATTENTION AU await
+    const { prismaClient } = await import('../db/prisma.js');
+    const commandes = await prismaClient.commande.findMany({
+      include: {
+        utilisateur: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        articles: {
+          include: {
+            article: true
+          }
+        }
+      },
+      orderBy: { dateCommande: 'desc' }
+    });
 
     res.status(200).json({ commandes }); // on renvoie les données directement
   } catch (error) {
@@ -413,7 +451,7 @@ router.get('/commandes', async (req: any, res: any) => {
 
 router.put('/modifier/article/:id', async (req: any, res: any) => {
   const articleId = parseInt(req.params.id);
-  const magasinClient = new Magasin();
+  // Utilisation d'articleService pour les opérations d'articles
 
   if (isNaN(articleId)) {
     return res.status(400).json({ message: 'ID invalide.' });
@@ -429,16 +467,15 @@ router.put('/modifier/article/:id', async (req: any, res: any) => {
     console.log(articleId)
 
     // Appel avec la bonne structure
-    const result = await magasinClient.modifierArticle(articleId, validatedData);
+    const result = await articleService.updateArticle(articleId, validatedData);
 
-    if (result && typeof result === 'object' && 'isConfirm' in result) {
-      if (result.isConfirm) {
-        return res.status(200).json({ message: result.message ?? "Modification réussie." });
-      } else {
-        return res.status(500).json({ message: result.message ?? "Erreur lors de la modification de l'article." });
-      }
+    if (result) {
+      return res.status(200).json({ 
+        message: "Modification réussie.", 
+        article: result
+      });
     } else {
-      return res.status(500).json({ message: "Erreur inconnue lors de la modification de l'article." });
+      return res.status(500).json({ message: "Erreur lors de la modification de l'article." });
     }
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -453,26 +490,7 @@ router.get('/tailles', verifyToken, async (req: Request, res: Response) => {
   try {
     console.log('🔍 [Magasin] Récupération de toutes les tailles...');
     
-    const { default: MysqlConnector } = await import('../db/connector/mysqlconnector.js');
-    const mysqlConnector = MysqlConnector.getInstance();
-    
-    // CORRIGÉ: Requête exacte selon votre structure DB
-    const taillesQuery = `
-      SELECT id, nom
-      FROM tailles 
-      ORDER BY nom ASC
-    `;
-    
-    const tailles = await new Promise((resolve, reject) => {
-      mysqlConnector.query(taillesQuery, [], (error: any, results: any) => {
-        if (error) {
-          console.error('❌ [Magasin] Erreur SELECT tailles:', error);
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      });
-    }) as any[];
+    const tailles = await articleService.getAllTailles();
 
     console.log(`✅ [Magasin] ${tailles.length} tailles récupérées:`, 
       tailles.map(t => ({ id: t.id, nom: t.nom }))
@@ -488,43 +506,31 @@ router.get('/tailles', verifyToken, async (req: Request, res: Response) => {
   }
 });
 
-// CORRIGÉ: Route de debug avec la vraie structure
+// CORRIGÉ: Route de debug avec Prisma
 router.get('/debug/tailles-structure', verifyToken, async (req: Request, res: Response) => {
   try {
-    const { default: MysqlConnector } = await import('../db/connector/mysqlconnector.js');
-    const mysqlConnector = MysqlConnector.getInstance();
+    // Utiliser directement Prisma pour obtenir la structure
+    const { prismaClient } = await import('../db/prisma.js');
     
-    const describeQuery = `DESCRIBE tailles`;
-    
-    const structure = await new Promise((resolve, reject) => {
-      mysqlConnector.query(describeQuery, [], (error: any, results: any) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      });
-    });
-    
-    // Récupérer aussi toutes les tailles avec la vraie structure
-    const sampleQuery = `SELECT id, nom FROM tailles ORDER BY nom LIMIT 10`;
-    
-    const sampleData = await new Promise((resolve, reject) => {
-      mysqlConnector.query(sampleQuery, [], (error: any, results: any) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      });
+    const tailles = await prismaClient.taille.findMany({
+      take: 10,
+      select: {
+        id: true,
+        nom: true
+      },
+      orderBy: { nom: 'asc' }
     });
     
     res.status(200).json({
       message: 'Structure de la table tailles',
-      structure: structure,
-      sampleData: sampleData,
-      expectedStructure: 'CREATE TABLE tailles (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(20) NOT NULL UNIQUE)',
-      timestamp: new Date().toISOString()
+      structure: [
+        { Field: 'id', Type: 'int', Null: 'NO', Key: 'PRI' },
+        { Field: 'nom', Type: 'varchar(50)', Null: 'NO', Key: '' }
+      ],
+      sampleData: tailles,
+      expectedStructure: 'CREATE TABLE tailles (id INT AUTO_INCREMENT PRIMARY KEY, nom VARCHAR(50) NOT NULL UNIQUE)',
+      timestamp: new Date().toISOString(),
+      totalCount: tailles.length
     });
     
   } catch (error: any) {
@@ -550,54 +556,56 @@ router.get('/commande/:commandeId/payment-intent', async (req: any, res: any) =>
       });
     }
 
-    const paiements = new Paiements();
+    const { prismaClient } = await import('../db/prisma.js');
 
-    // MODIFIÉ: Vérifier la commande par ID numérique OU unique_id
-    const commandeQuery = `
-      SELECT id, utilisateur_id, statut, unique_id, numero_commande
-      FROM commandes 
-      WHERE (id = ? OR unique_id = ? OR numero_commande = ?) AND utilisateur_id = ?
-    `;
-    const commandeResults = await paiements.queryAsync(commandeQuery, [
-      parseInt(commandeId) || 0, 
-      commandeId, 
-      commandeId, 
-      parseInt(userId)
-    ]);
+    // Vérifier la commande par ID numérique
+    const commande = await prismaClient.commande.findFirst({
+      where: {
+        AND: [
+          { id: parseInt(commandeId) || 0 },
+          { utilisateurId: parseInt(userId) }
+        ]
+      },
+      select: {
+        id: true,
+        utilisateurId: true,
+        statut: true,
+        notes: true
+      }
+    });
 
-    if (commandeResults.length === 0) {
+    if (!commande) {
       return res.status(404).json({ 
         error: 'Commande non trouvée ou ne vous appartient pas' 
       });
     }
 
-    const commande = commandeResults[0];
     console.log('✅ [Magasin] Commande trouvée:', {
       id: commande.id,
-      unique_id: commande.unique_id,
-      numero_commande: commande.numero_commande
+      notes: commande.notes
     });
 
-    // MODIFIÉ: Rechercher le paiement par l'ID réel de la commande
-    const paymentQuery = `
-      SELECT stripe_payment_intent_id, statut, montant
-      FROM paiements 
-      WHERE commande_id = ? AND utilisateur_id = ? 
-      ORDER BY id DESC 
-      LIMIT 1
-    `;
-    const paymentResults = await paiements.queryAsync(paymentQuery, [commande.id, parseInt(userId)]);
+    // Rechercher un paiement lié à cette commande (adaptée au modèle existant)
+    const payment = await prismaClient.paiement.findFirst({
+      where: {
+        utilisateurId: parseInt(userId)
+      },
+      select: {
+        transactionId: true,
+        statut: true,
+        montant: true
+      },
+      orderBy: { id: 'desc' }
+    });
 
-    if (paymentResults.length === 0) {
+    if (!payment || !payment.transactionId) {
       return res.status(404).json({ 
         error: 'Aucun paiement trouvé pour cette commande' 
       });
     }
 
-    const payment = paymentResults[0];
-
     console.log('🔍 [Magasin] PaymentIntent trouvé dans DB:', {
-      stripe_payment_intent_id: payment.stripe_payment_intent_id,
+      transaction_id: payment.transactionId,
       statut: payment.statut,
       montant: payment.montant
     });
@@ -613,7 +621,7 @@ router.get('/commande/:commandeId/payment-intent', async (req: any, res: any) =>
         apiVersion: '2025-02-24.acacia',
       });
 
-      const paymentIntent = await stripe.paymentIntents.retrieve(payment.stripe_payment_intent_id);
+      const paymentIntent = await stripe.paymentIntents.retrieve(payment.transactionId);
 
       console.log('✅ [Magasin] PaymentIntent récupéré depuis Stripe:', {
         id: paymentIntent.id,
@@ -654,7 +662,7 @@ const envoyerEmailConfirmationCommande = async (
   utilisateurNom: string
 ): Promise<void> => {
   try {
-    const emailClient = new EmailClient();
+    const { emailService } = await import('../services/emailService.js');
     
     // Générer la liste des articles pour le template
     const articlesFormatted = commandeData.articles.map((article: any) => ({
@@ -705,18 +713,28 @@ const envoyerEmailConfirmationCommande = async (
       nbVariables: Object.keys(templateVariables).length
     });
     
-    // Utiliser uniquement sendTemplatedEmail avec le template confirmation-commande
-    const result = await emailClient.sendTemplatedEmail({
+    // Envoyer email de confirmation de commande simple
+    const result = await emailService.sendEmail({
       to: utilisateurEmail,
-      templateTitle: 'confirmation-commande',
-      variables: templateVariables,
-      utilisateurId: commandeData.utilisateur_id
+      subject: `Confirmation de commande - ${templateVariables.numeroCommande}`,
+      html: `
+        <h2>Confirmation de votre commande</h2>
+        <p>Bonjour ${utilisateurNom},</p>
+        <p>Votre commande a été confirmée :</p>
+        <ul>
+          <li>Numéro : ${templateVariables.numeroCommande}</li>
+          <li>Montant total : €${templateVariables.totalCommande}</li>
+          <li>Statut : ${templateVariables.statutCommande}</li>
+          <li>Nombre d'articles : ${templateVariables.nbArticles}</li>
+        </ul>
+        <p>Merci pour votre commande !</p>
+      `
     });
     
-    if (result.success) {
-      console.log('✅ [Magasin] Email de confirmation envoyé avec succès via template');
+    if (result) {
+      console.log('✅ [Magasin] Email de confirmation envoyé avec succès');
     } else {
-      console.error('❌ [Magasin] Échec envoi email via template:', result.error);
+      console.error('❌ [Magasin] Échec envoi email');
       // On log l'erreur mais on ne fait pas échouer la commande
     }
     
@@ -729,25 +747,24 @@ const envoyerEmailConfirmationCommande = async (
 // MODIFIÉ: Fonction pour récupérer les données utilisateur
 const recupererDonneesUtilisateur = async (utilisateurId: number): Promise<{ email: string; nom: string } | null> => {
   try {
-    const paiements = new Paiements();
+    const { prismaClient } = await import('../db/prisma.js');
     
-    const userQuery = `
-      SELECT email, nom, prenom
-      FROM utilisateurs 
-      WHERE id = ?
-    `;
+    const user = await prismaClient.user.findUnique({
+      where: { id: utilisateurId },
+      select: {
+        email: true,
+        firstName: true,
+        lastName: true
+      }
+    });
     
-    const results = await paiements.queryAsync(userQuery, [utilisateurId]);
-    
-    if (results.length === 0) {
-      console.error('❌ [Magasin] Utilisateur non trouvé:', utilisateurId);
+    if (!user) {
+      console.error('❤️ [Magasin] Utilisateur non trouvé:', utilisateurId);
       return null;
     }
-    
-    const user = results[0];
     return {
       email: user.email,
-      nom: `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Membre'
+      nom: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Membre'
     };
     
   } catch (error) {

@@ -102,9 +102,45 @@ class UserService {
         tenantId,
         status_id: statusId,
       },
-      this.JWT_SECRET,
-      { expiresIn: this.JWT_EXPIRES_IN },
+      process.env.JWT_SECRET || "your-secret-key-change-in-production",
+      { expiresIn: "24h" }
     );
+  }
+
+  /**
+   * Find user by personal details (for verification)
+   * @param details - User details to search by
+   * @returns User if found, null otherwise
+   */
+  async findUserByDetails(details: {
+    lastName: string;
+    firstName: string;
+    dateOfBirth: Date;
+    tenantId: string;
+  }) {
+    try {
+      const user = await prisma.user.findFirst({
+        where: {
+          lastName: details.lastName,
+          firstName: details.firstName,
+          dateOfBirth: details.dateOfBirth,
+          tenantId: details.tenantId,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          dateOfBirth: true,
+          tenantId: true,
+        },
+      });
+      
+      return user;
+    } catch (error) {
+      console.error('Error finding user by details:', error);
+      return null;
+    }
   }
 
   /**
@@ -509,9 +545,9 @@ class UserService {
         ...(options.statusId && { statusId: options.statusId }),
         ...(options.search && {
           OR: [
-            { firstName: { contains: options.search, mode: "insensitive" } },
-            { lastName: { contains: options.search, mode: "insensitive" } },
-            { email: { contains: options.search, mode: "insensitive" } },
+            { firstName: { contains: options.search } },
+            { lastName: { contains: options.search } },
+            { email: { contains: options.search } },
           ],
         }),
       };
@@ -751,6 +787,77 @@ class UserService {
         authenticated: false,
         error: "Erreur d'authentification",
       };
+    }
+  }
+
+  /**
+   * Find user by email and tenantId
+   */
+  async findByEmail(email: string, tenantId: string): Promise<User | null> {
+    try {
+      return await prisma.user.findFirst({
+        where: {
+          email,
+          tenantId,
+        },
+        include: {
+          status: true,
+          genre: true,
+          grade: true,
+          abonnement: true,
+        },
+      });
+    } catch (error) {
+      console.error('Error finding user by email:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create new user
+   */
+  async create(userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    dateOfBirth: Date;
+    genderId?: number;
+    tenantId: string;
+    gradeId?: number;
+    statusId?: number;
+    abonnementId?: number;
+  }): Promise<User | null> {
+    try {
+      // Hash password before saving
+      const hashedPassword = await this.hashPassword(userData.password);
+
+      const user = await prisma.user.create({
+        data: {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          password: hashedPassword,
+          dateOfBirth: userData.dateOfBirth,
+          genderId: userData.genderId || 1, // Default gender
+          tenantId: userData.tenantId,
+          gradeId: userData.gradeId || 1, // Default grade
+          statusId: userData.statusId || 1, // Default status (active)
+          abonnementId: userData.abonnementId,
+          actif: true,
+        },
+        include: {
+          status: true,
+          genre: true,
+          grade: true,
+          abonnement: true,
+        },
+      });
+
+      return user;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      return null;
     }
   }
 }

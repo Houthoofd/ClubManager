@@ -1,9 +1,10 @@
 import express from 'express';
 import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
-import { Utilisateurs } from '../db/clients/utilisateurs/utilisateurs.js';
+import { userService } from '../services/index.js';
+import { userInscriptionSchema } from '../validators/localSchemas.js';
 import { z } from 'zod';
-import { UserData, userSchema, userInscriptionSchema } from '../../../packages/types/dist/index.js';
 import bcrypt from 'bcrypt';
+import { getTenantId } from '../utils/tenant.util.js';
 
 const router = express.Router();
 
@@ -14,9 +15,9 @@ router.post('/verification', async (req: any, res: any) => {
     return res.status(400).json({ message: "Email requis" });
   }
   try {
-    const client = new Utilisateurs();
-    const result = await client.checkUtilisateurByEmail(email);
-    if (result.isFind) {
+    const tenantId = getTenantId(req);
+    const user = await userService.findByEmail(email, tenantId);
+    if (user) {
       return res.status(409).json({ message: "Utilisateur déjà existant" });
     }
     return res.status(200).json({ exists: false });
@@ -33,30 +34,30 @@ router.post('/validation', async (req: any, res: any) => {
     console.log("Erreur de validation :", parseResult.error.issues);
     return res.status(400).json({ message: parseResult.error.issues[0]?.message || "Données invalides" });
   }
-  const { nom, prenom, email, password, date, abonnement, genre } = parseResult.data;
+  const { firstName, lastName, email, password, dateOfBirth, genderId } = parseResult.data;
   try {
-    const client = new Utilisateurs();
+    const tenantId = getTenantId(req);
     // Vérifie si l'utilisateur existe déjà
-    const check = await client.checkUtilisateurByEmail(email);
-    if (check.isFind) {
+    const existingUser = await userService.findByEmail(email, tenantId);
+    if (existingUser) {
       return res.status(409).json({ message: "Utilisateur déjà existant" });
     }
-    // Chiffre le mot de passe avant insertion
-    const hashedPassword = await bcrypt.hash(password, 10);
-    // Inscription - Utiliser directement inscriptionUtilisateurSimple au lieu de inscrireUtilisateur
-    const userData = {
-      nom,
-      prenom,
-      email,
-      password: hashedPassword,
-      date,
-      abonnement,
-      genre,
-    };
-    const result = await client.inscriptionUtilisateurSimple(userData);
     
-    if (result.isConfirm) {
-      return res.status(201).json({ message: result.message });
+    // Inscription - Utiliser userService pour créer l'utilisateur
+    const userData = {
+      firstName,
+      lastName,
+      email,
+      password,
+      dateOfBirth,
+      genderId,
+      tenantId,
+    };
+    
+    const result = await userService.create(userData);
+    
+    if (result) {
+      return res.status(201).json({ message: "Inscription réussie" });
     } else {
       return res.status(400).json({ message: "Erreur lors de l'inscription" });
     }

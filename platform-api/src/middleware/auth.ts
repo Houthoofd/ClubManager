@@ -1,9 +1,11 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
+import { AuthenticatedUser } from "../types/auth.js";
 
 export interface JWTPayload {
   id: number;
   email: string;
+  tenantId: string;
   first_name?: string;
   last_name?: string;
   status_id?: string | number;
@@ -71,6 +73,7 @@ export const verifyToken = (
       last_name: decoded.last_name || "",
       role: decoded.role || decoded.status_id?.toString(),
       status: decoded.status || decoded.status_id?.toString(),
+      tenantId: decoded.tenantId,
     };
 
     next();
@@ -111,6 +114,7 @@ export const optionalAuth = (
       req.user = {
         id: decoded.id,
         email: decoded.email,
+        tenantId: decoded.tenantId,
         first_name: decoded.first_name || "",
         last_name: decoded.last_name || "",
         role: decoded.role || decoded.status_id?.toString(),
@@ -145,19 +149,4 @@ export const requireRole = (roles: string[]) => {
   };
 };
 
-// Étendre les types Express
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        email: string;
-        first_name: string;
-        last_name: string;
-        role?: string;
-        status?: string;
-        tenantId?: string;
-      };
-    }
-  }
-}
+// User types are defined in ../types/auth.ts to avoid conflicts

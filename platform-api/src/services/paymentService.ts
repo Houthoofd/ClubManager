@@ -112,7 +112,7 @@ class PaymentService {
           utilisateurId: data.utilisateurId,
           montant: data.montant,
           statut: data.statut || PaymentStatus.PENDING,
-          datePaiement: data.datePaiement || null,
+          datePaiement: data.datePaiement || new Date(),
           abonnementId: data.abonnementId,
           periodeDebut: data.periodeDebut,
           periodeFin: data.periodeFin,
