@@ -5,12 +5,12 @@
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import { OrderRepository } from "../repositories/order.repository.js";
-import { ProductRepository } from "../repositories/product.repository.js";
-import { OrderFilters, OrderStatus } from "../types/shop.types.js";
-import { NotFoundError } from "../utils/shopHelpers.js";
-import { auditService, AuditAction } from "./auditService.js";
-import { inventoryService } from "./inventory.service.js";
+import { OrderRepository } from "../../repositories/order.repository.js";
+import { ProductRepository } from "../../repositories/product.repository.js";
+import { OrderFilters, OrderStatus } from "../../types/shop.types.js";
+import { NotFoundError } from "../../utils/shopHelpers.js";
+import { auditService, AuditAction } from "../audit/audit.service.js";
+import { inventoryService } from "../inventory/inventory.service.js";
 
 export interface CreateOrderDTO {
   userId: number;
@@ -100,7 +100,7 @@ export class OrderService {
       prixUnitaire: number;
     }> = [];
 
-    for (const item of data.items) {
+    for (const item of data.items as any[]) {
       const product = await this.productRepository.getWithStock(item.productId);
       if (!product) {
         // Release reserved stock before throwing error
@@ -367,7 +367,7 @@ export class OrderService {
     let subtotal = 0;
     const itemDetails = [];
 
-    for (const item of items) {
+    for (const item of items as any[]) {
       const product = await this.productRepository.findById(item.productId);
       if (!product) {
         throw new NotFoundError(`Product with ID ${item.productId}`);
@@ -502,7 +502,7 @@ export class OrderService {
       totalSpent: 0,
     };
 
-    orders.orders.forEach((order) => {
+    orders.orders.forEach((order: any) => {
       summary.totalSpent += Number(order.montantTotal);
 
       switch (order.statut) {

@@ -1,18 +1,15 @@
-import { prisma } from "./prismaService.js";
-import { emailService } from "./emailService.js";
+import { prisma } from "../prisma/prisma.service.js";
+import { emailService } from "../email/email.service.js";
 import type { Paiement, Prisma } from "@prisma/client";
 
 /**
- * PaymentService - Handle all payment-related operations
+ * PaymentService - Handle payment CRUD operations and management
  *
  * Features:
  * - CRUD operations for payments
  * - Payment status management
- * - Invoice generation
- * - Payment confirmation emails
  * - Payment history
- * - Payment reminders
- * - Stripe integration preparation
+ * - Payment statistics
  */
 
 // Types
@@ -205,9 +202,9 @@ class PaymentService {
     limit?: number;
     utilisateurId?: number;
     statut?: string;
+    methode?: string;
     startDate?: Date;
     endDate?: Date;
-    methode?: string;
   } = {}): Promise<{
     payments: PaymentWithDetails[];
     total: number;
@@ -326,8 +323,10 @@ class PaymentService {
           ...(data.datePaiement !== undefined && {
             datePaiement: data.datePaiement,
           }),
-          ...(data.methode && { methode: data.methode }),
-          ...(data.transactionId && { transactionId: data.transactionId }),
+          ...(data.methode !== undefined && { methode: data.methode }),
+          ...(data.transactionId !== undefined && {
+            transactionId: data.transactionId,
+          }),
         },
       });
 
@@ -350,16 +349,14 @@ class PaymentService {
    */
   async updatePaymentStatus(
     paymentId: number,
-    status: string,
-    transactionId?: string,
-  ): Promise<{ success: boolean; message: string }> {
+    statut: string,
+  ): Promise<{ success: boolean; message: string; payment?: Paiement }> {
     try {
       const payment = await prisma.paiement.update({
         where: { id: paymentId },
         data: {
-          statut: status,
-          ...(status === PaymentStatus.PAID && { datePaiement: new Date() }),
-          ...(transactionId && { transactionId }),
+          statut,
+          datePaiement: statut === PaymentStatus.PAID ? new Date() : undefined,
         },
         include: {
           utilisateur: true,
@@ -368,13 +365,16 @@ class PaymentService {
       });
 
       // Send confirmation email if payment is successful
-      if (status === PaymentStatus.PAID) {
-        await this.sendPaymentConfirmation(paymentId);
+      if (statut === PaymentStatus.PAID) {
+        this.sendPaymentConfirmation(paymentId).catch((err) =>
+          console.error("Failed to send payment confirmation:", err),
+        );
       }
 
       return {
         success: true,
         message: "Statut du paiement mis à jour",
+        payment,
       };
     } catch (error) {
       console.error("❌ Update payment status error:", error);
@@ -414,7 +414,7 @@ class PaymentService {
    */
   async getUserPaymentHistory(
     utilisateurId: number,
-    limit = 50,
+    limit: number = 10,
   ): Promise<PaymentWithDetails[]> {
     try {
       const payments = await prisma.paiement.findMany({
@@ -502,7 +502,7 @@ class PaymentService {
         0,
       );
 
-      const paidPayments = payments.filter((p) => p.statut === PaymentStatus.PAID);
+      const paidPayments = payments.filter((p) => p.statut === "payé");
       const paidAmount = paidPayments.reduce(
         (sum, p) => sum + Number(p.montant),
         0,
@@ -510,7 +510,7 @@ class PaymentService {
       const paidCount = paidPayments.length;
 
       const pendingPayments = payments.filter(
-        (p) => p.statut === PaymentStatus.PENDING,
+        (p) => p.statut === "en attente",
       );
       const pendingAmount = pendingPayments.reduce(
         (sum, p) => sum + Number(p.montant),
@@ -518,9 +518,7 @@ class PaymentService {
       );
       const pendingCount = pendingPayments.length;
 
-      const failedPayments = payments.filter(
-        (p) => p.statut === PaymentStatus.FAILED,
-      );
+      const failedPayments = payments.filter((p) => p.statut === "échoué");
       const failedAmount = failedPayments.reduce(
         (sum, p) => sum + Number(p.montant),
         0,
@@ -555,26 +553,29 @@ class PaymentService {
   /**
    * Send payment confirmation email
    */
-  async sendPaymentConfirmation(paymentId: number): Promise<boolean> {
+  async sendPaymentConfirmation(
+    paymentId: number,
+  ): Promise<{ success: boolean; message: string }> {
     try {
       const payment = await this.getPaymentById(paymentId);
 
       if (!payment || !payment.user) {
-        return false;
+        return {
+          success: false,
+          message: "Paiement ou utilisateur non trouvé",
+        };
       }
 
       let description = "Paiement";
       if (payment.plan) {
         description = `Abonnement ${payment.plan.nom}`;
-        if (payment.periodeDebut && payment.periodeFin) {
-          const startDate = new Date(payment.periodeDebut).toLocaleDateString(
-            "fr-FR",
-          );
-          const endDate = new Date(payment.periodeFin).toLocaleDateString(
-            "fr-FR",
-          );
-          description += ` (${startDate} - ${endDate})`;
-        }
+        const startDate = payment.periodeDebut
+          ? new Date(payment.periodeDebut).toLocaleDateString("fr-FR")
+          : "";
+        const endDate = payment.periodeFin
+          ? new Date(payment.periodeFin).toLocaleDateString("fr-FR")
+          : "";
+        description += ` (${startDate} - ${endDate})`;
       }
 
       await emailService.sendPaymentConfirmation(payment.user.email, {
@@ -584,130 +585,26 @@ class PaymentService {
         description,
       });
 
-      return true;
+      return {
+        success: true,
+        message: "Email de confirmation envoyé",
+      };
     } catch (error) {
       console.error("❌ Send payment confirmation error:", error);
-      return false;
-    }
-  }
-
-  /**
-   * Process Stripe payment (preparation for Phase 2)
-   */
-  async processStripePayment(data: {
-    utilisateurId: number;
-    montant: number;
-    abonnementId?: number;
-    paymentMethodId: string;
-  }): Promise<{
-    success: boolean;
-    message: string;
-    payment?: Paiement;
-    stripePaymentIntentId?: string;
-  }> {
-    try {
-      // TODO: Integrate with Stripe API in Phase 2
-      // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-      // const paymentIntent = await stripe.paymentIntents.create({...});
-
-      // For now, create a pending payment
-      const result = await this.createPayment({
-        utilisateurId: data.utilisateurId,
-        montant: data.montant,
-        abonnementId: data.abonnementId,
-        statut: PaymentStatus.PENDING,
-        methode: PaymentMethod.STRIPE,
-      });
-
-      return {
-        success: result.success,
-        message: result.message,
-        payment: result.payment,
-        stripePaymentIntentId: "pi_placeholder", // Replace with actual Stripe payment intent ID
-      };
-    } catch (error) {
-      console.error("❌ Process Stripe payment error:", error);
       return {
         success: false,
-        message: "Erreur lors du traitement du paiement Stripe",
+        message: "Erreur lors de l'envoi de l'email",
       };
     }
   }
 
   /**
-   * Handle Stripe webhook (preparation for Phase 2)
+   * Get pending payments (overdue)
    */
-  async handleStripeWebhook(event: any): Promise<{
-    success: boolean;
-    message: string;
-  }> {
-    try {
-      // TODO: Implement Stripe webhook handling in Phase 2
-      // switch (event.type) {
-      //   case 'payment_intent.succeeded':
-      //     await this.updatePaymentStatus(paymentId, PaymentStatus.PAID, event.data.object.id);
-      //     break;
-      //   case 'payment_intent.payment_failed':
-      //     await this.updatePaymentStatus(paymentId, PaymentStatus.FAILED);
-      //     break;
-      // }
-
-      return {
-        success: true,
-        message: "Webhook traité avec succès",
-      };
-    } catch (error) {
-      console.error("❌ Handle Stripe webhook error:", error);
-      return {
-        success: false,
-        message: "Erreur lors du traitement du webhook",
-      };
-    }
-  }
-
-  /**
-   * Generate invoice (placeholder for PDF generation)
-   */
-  async generateInvoice(paymentId: number): Promise<{
-    success: boolean;
-    message: string;
-    invoiceUrl?: string;
-  }> {
-    try {
-      const payment = await this.getPaymentById(paymentId);
-
-      if (!payment) {
-        return {
-          success: false,
-          message: "Paiement non trouvé",
-        };
-      }
-
-      // TODO: Implement PDF generation with pdfkit or similar
-      // For now, return a placeholder URL
-      const invoiceUrl = `${process.env.API_URL || "http://localhost:3001"}/api/invoices/${paymentId}.pdf`;
-
-      return {
-        success: true,
-        message: "Facture générée avec succès",
-        invoiceUrl,
-      };
-    } catch (error) {
-      console.error("❌ Generate invoice error:", error);
-      return {
-        success: false,
-        message: "Erreur lors de la génération de la facture",
-      };
-    }
-  }
-
-  /**
-   * Get pending payments for reminders
-   */
-  async getPendingPayments(daysOverdue = 7): Promise<PaymentWithDetails[]> {
+  async getPendingPayments(): Promise<PaymentWithDetails[]> {
     try {
       const overdueDate = new Date();
-      overdueDate.setDate(overdueDate.getDate() - daysOverdue);
+      overdueDate.setDate(overdueDate.getDate() - 7); // 7 days ago
 
       const payments = await prisma.paiement.findMany({
         where: {

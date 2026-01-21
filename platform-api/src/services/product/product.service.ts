@@ -5,9 +5,9 @@
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import { ProductRepository } from "../repositories/product.repository.js";
-import { NotFoundError, ShopValidationError } from "../utils/shopHelpers.js";
-import { auditService, AuditAction } from "./auditService.js";
+import { ProductRepository } from "../../repositories/product.repository.js";
+import { NotFoundError, ShopValidationError } from "../../utils/shopHelpers.js";
+import { auditService, AuditAction } from "../audit/audit.service.js";
 
 export interface CreateProductDTO {
   nom: string;
@@ -347,12 +347,12 @@ export class ProductService {
       inactiveProducts: statusCounts.inactive,
       totalInventoryValue: totalValue,
       lowStockCount: lowStock.length,
-      lowStockProducts: lowStock.map((p) => ({
+      lowStockProducts: lowStock.map((p: any) => ({
         id: p.id,
         nom: p.nom,
         stock: p.stock[0]?.quantite || 0,
       })),
-      bestSelling: bestSelling.map((p) => ({
+      bestSelling: bestSelling.map((p: any) => ({
         id: p.id,
         nom: p.nom,
         totalSold: p.totalSold,
