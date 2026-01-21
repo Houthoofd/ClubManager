@@ -3,6 +3,7 @@ import { prisma } from "../prisma/prisma.service.js";
 import { emailService } from "../email/email.service.js";
 import { userService } from "./user.service.js";
 import type { User } from "@prisma/client";
+import type { UserProfile } from "../auth/auth.types.js";
 
 /**
  * UserAuthService - Handle user authentication operations
@@ -30,21 +31,6 @@ export interface RegisterUserData {
   dateOfBirth: Date;
   genderId?: number;
   userId?: string;
-}
-
-export interface UserProfile {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  userId: string | null;
-  dateOfBirth: Date;
-  status: string;
-  genre: string | null;
-  grade: string | null;
-  abonnement: string | null;
-  actif: boolean;
-  createdAt: Date;
 }
 
 export interface AuthResult {
@@ -135,14 +121,9 @@ class UserAuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        userId: user.userId,
         dateOfBirth: user.dateOfBirth,
-        status: user.status.nomRole,
-        genre: user.genre?.genreName || null,
-        grade: user.grade?.nom || null,
-        abonnement: user.abonnement?.nom || null,
         actif: user.actif,
-        createdAt: user.createdAt,
+        tenantId: user.tenantId,
       };
 
       return {
@@ -239,14 +220,9 @@ class UserAuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        userId: user.userId,
         dateOfBirth: user.dateOfBirth,
-        status: user.status.nomRole,
-        genre: user.genre?.genreName || null,
-        grade: user.grade?.nom || null,
-        abonnement: null,
         actif: user.actif,
-        createdAt: user.createdAt,
+        tenantId: user.tenantId,
       };
 
       return {
@@ -346,7 +322,7 @@ class UserAuthService {
     try {
       const result = await userService.verifyAuth(token);
 
-      if (!result.authenticated || !result.user) {
+      if (!result.success || !result.user) {
         return {
           authenticated: false,
           error: result.error || "Non authentifié",

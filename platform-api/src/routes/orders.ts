@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { orderService } from '../services/order.service.js';
+import { orderService } from '../services/order/order.service.js';
 import { getTenantId } from '../utils/tenant.util.js';
 import { getPaginationParams } from '../utils/pagination.util.js';
 import { sendSuccess, sendError, sendList } from '../utils/response.util.js';

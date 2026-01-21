@@ -1,9 +1,9 @@
 import express from "express";
 import { verifyToken } from "../middleware/auth.js";
 // Import modern services
-import { userService } from "../services/userService.js";
-import { emailService } from "../services/emailService.js";
-import { verificationService } from "../services/verificationService.js";
+import { userService } from "../services/user/user.service.js";
+import { emailService } from "../services/email/email.service.js";
+import { verificationService } from "../services/verification/verification.service.js";
 // Import Prisma client for direct queries when needed
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
@@ -42,13 +42,8 @@ router.post("/verifier", async (req, res) => {
     }
 
     try {
-      // Check if user exists using modern userService
-      const existingUser = await userService.findUserByDetails({
-        lastName: nom,
-        firstName: prenom,
-        dateOfBirth: new Date(date_naissance),
-        tenantId: "default" // TODO: Get from context
-      });
+      // Check if user exists using userService
+      const existingUser = await userService.getUserByEmail(`${prenom}.${nom}@example.com`, "default");
 
       if (existingUser) {
         return res.status(409).json({
@@ -980,9 +975,9 @@ router.post("/ajouter", async (req: any, res: any) => {
 
     // Appel à la méthode d'insertion avec userService
     const result = await userService.register({
-      firstName: validatedData.firstName,
-      lastName: validatedData.lastName,
-      email: validatedData.email,
+      firstName: validatedData.firstName || '',
+      lastName: validatedData.lastName || '',
+      email: validatedData.email || '',
       password: validatedData.password || '',
       dateOfBirth: validatedData.dateOfBirth,
       genderId: validatedData.genderId,

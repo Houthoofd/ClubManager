@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
-import { userService } from "../services/userService.js";
-import { auditService, AuditAction } from "../services/auditService.js";
+import { userService } from "../services/user/user.service.js";
+import { auditService, AuditAction } from "../services/audit/audit.service.js";
 
 const router = express.Router();
 
@@ -153,7 +153,6 @@ router.post("/register", async (req: Request, res: Response) => {
       password,
       dateOfBirth: new Date(dateOfBirth),
       genderId,
-      userId,
     });
 
     if (!result.success) {
@@ -322,7 +321,6 @@ router.post("/reset-password", async (req: Request, res: Response) => {
 
     const result = await userService.resetPassword(
       token,
-      email,
       newPassword,
       tenantId,
     );
@@ -387,7 +385,7 @@ router.get("/verify", async (req: Request, res: Response) => {
     // Verify token and get user
     const result = await userService.verifyAuth(token);
 
-    if (!result.authenticated) {
+    if (!result.success) {
       return res.status(401).json({
         authenticated: false,
         error: result.error || "Token invalide",

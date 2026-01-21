@@ -362,6 +362,131 @@ class CourseService {
       return null;
     }
   }
+
+  /**
+   * Get course enrollments
+   */
+  async getCourseEnrollments(courseId: number) {
+    try {
+      const enrollments = await prisma.inscription.findMany({
+        where: { coursId: courseId },
+        include: {
+          utilisateur: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      });
+      return enrollments;
+    } catch (error) {
+      console.error("❌ Get course enrollments error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Enroll user in course
+   */
+  async enrollUser(data: { userId: number; coursId: number }) {
+    try {
+      const enrollment = await prisma.inscription.create({
+        data: {
+          utilisateurId: data.userId,
+          coursId: data.coursId
+        }
+      });
+      return {
+        success: true,
+        message: "Inscription réussie",
+        enrollment
+      };
+    } catch (error) {
+      console.error("❌ Enroll user error:", error);
+      return {
+        success: false,
+        message: "Erreur lors de l'inscription"
+      };
+    }
+  }
+
+  /**
+   * Unenroll user from course
+   */
+  async unenrollUser(userId: number, courseId: number) {
+    try {
+      await prisma.inscription.delete({
+        where: {
+          utilisateurId_coursId: {
+            utilisateurId: userId,
+            coursId: courseId
+          }
+        }
+      });
+      return {
+        success: true,
+        message: "Désinscription réussie"
+      };
+    } catch (error) {
+      console.error("❌ Unenroll user error:", error);
+      return {
+        success: false,
+        message: "Erreur lors de la désinscription"
+      };
+    }
+  }
+
+  /**
+   * Get user enrollments
+   */
+  async getUserEnrollments(userId: number, options: { tenantId?: string } = {}) {
+    try {
+      const enrollments = await prisma.inscription.findMany({
+        where: { utilisateurId: userId },
+        include: {
+          cours: true
+        },
+        orderBy: { cours: { dateCours: 'desc' } }
+      });
+      return enrollments;
+    } catch (error) {
+      console.error("❌ Get user enrollments error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Mark attendance for user in course
+   */
+  async markAttendance(data: { userId: number; courseId: number; present: boolean }) {
+    try {
+      const attendance = await prisma.inscription.update({
+        where: {
+          utilisateurId_coursId: {
+            utilisateurId: data.userId,
+            coursId: data.courseId
+          }
+        },
+        data: {
+          present: data.present
+        }
+      });
+      return {
+        success: true,
+        message: "Présence enregistrée",
+        attendance
+      };
+    } catch (error) {
+      console.error("❌ Mark attendance error:", error);
+      return {
+        success: false,
+        message: "Erreur lors de l'enregistrement de la présence"
+      };
+    }
+  }
 }
 
 // Export singleton instance

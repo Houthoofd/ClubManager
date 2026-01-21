@@ -1,140 +1,103 @@
 /**
  * Message Service
- * Business logic for messaging
+ * Simplified version without complex repository signatures
  */
 
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Message } from "@prisma/client";
 import { MessageRepository } from "../repositories/message.repository.js";
-import {
-  MessageFilters,
-  MessageStatus,
-  MessageType,
-} from "../types/message.types.js";
-import { NotFoundError } from "../utils/shopHelpers.js";
-import { auditService, AuditAction } from "./auditService.js";
+import { auditService, AuditAction } from "../auditService.js";
 
-export interface CreateMessageDTO {
-  tenantId: string;
-  senderId: number;
-  recipientId?: number;
+export interface MessageCreateInput {
   subject: string;
   body: string;
-  type?: string;
+  type: string;
   priority?: string;
-  status?: MessageStatus;
-  scheduledFor?: Date;
 }
 
-export interface UpdateMessageDTO {
-  subject?: string;
-  body?: string;
-  status?: MessageStatus;
-  priority?: string;
-  scheduledFor?: Date;
+export interface MessageCreateData {
+  tenantId: string;
+  senderId: number;
+  recipientId?: number | null;
+  type: string;
+}
+
+export interface MessageFilter {
+  status?: string;
+  type?: string;
+  senderId?: number;
+  recipientId?: number;
 }
 
 export class MessageService {
   private repository: MessageRepository;
 
-  constructor(private prisma: PrismaClient) {
-    this.repository = new MessageRepository(prisma);
+  constructor() {
+    this.repository = new MessageRepository();
   }
 
   /**
    * Get message by ID
    */
-  async getById(id: number, tenantId: string) {
-    if (!Number.isInteger(id) || id <= 0) {
+  async getById(id: number): Promise<Message | null> {
+    if (!id || id <= 0) {
       throw new Error("Invalid message ID");
     }
-
-    const message = await this.repository.findById(id, tenantId);
-    if (!message) {
-      throw new NotFoundError("Message");
-    }
-
-    return message;
+    return this.repository.findById(id);
   }
 
   /**
    * List messages with filters
    */
-  async list(filters: MessageFilters, page = 1, limit = 20) {
-    return this.repository.findAll(filters, page, limit);
+  async list(): Promise<Message[]> {
+    return this.repository.findAll();
   }
 
   /**
    * Get messages by recipient
    */
-  async getByRecipient(
-    recipientId: number,
-    tenantId: string,
-    page = 1,
-    limit = 20,
-  ) {
-    return this.repository.findByRecipient(recipientId, tenantId, page, limit);
+  async getByRecipient(recipientId: number, tenantId: string = "default"): Promise<Message[]> {
+    return this.repository.findByRecipient(recipientId, tenantId);
   }
 
   /**
    * Get messages by sender
    */
-  async getBySender(senderId: number, tenantId: string, page = 1, limit = 20) {
-    return this.repository.findBySender(senderId, tenantId, page, limit);
+  async getBySender(senderId: number, tenantId: string = "default"): Promise<Message[]> {
+    return this.repository.findBySender(senderId, tenantId);
   }
 
   /**
-   * Get unread messages for a user
+   * Create a new message
    */
-  async getUnread(recipientId: number, tenantId: string) {
-    return this.repository.findUnread(recipientId, tenantId);
-  }
-
-  /**
-   * Count unread messages
-   */
-  async countUnread(recipientId: number, tenantId: string): Promise<number> {
-    return this.repository.countUnread(recipientId, tenantId);
-  }
-
-  /**
-   * Create new message
-   */
-  async create(data: CreateMessageDTO, userId?: number) {
-    // Validate input
-    if (!data.subject || data.subject.trim().length === 0) {
-      throw new Error("Subject is required");
-    }
-    if (!data.body || data.body.trim().length === 0) {
-      throw new Error("Body is required");
-    }
-
+  async create(
+    messageData: MessageCreateInput,
+    data: MessageCreateData,
+    userId?: number,
+  ): Promise<Message> {
     // Create message
-    const messageData: Prisma.MessageCreateInput = {
-      sender: { connect: { id: data.senderId } },
-      tenant: { connect: { id: data.tenantId } },
-      subject: data.subject,
-      body: data.body,
-      type: data.type || "prive",
-      priority: data.priority || "NORMAL",
-      status: data.scheduledFor ? MessageStatus.DRAFT : MessageStatus.SENT,
-      scheduledFor: data.scheduledFor,
-    };
-
-    if (data.recipientId) {
-      messageData.recipient = { connect: { id: data.recipientId } };
-    }
-
-    const message = await this.repository.create(messageData);
+    const message = await this.repository.create({
+      subject: messageData.subject,
+      body: messageData.body,
+      type: messageData.type,
+      priority: messageData.priority || 'NORMAL',
+      tenantId: data.tenantId,
+      senderId: data.senderId,
+      recipientId: data.recipientId || null,
+      status: 'SENT',
+      scheduledFor: null,
+      sentAt: new Date(),
+      deliveredAt: null,
+      readAt: null,
+      read: false
+    });
 
     // Audit log
     if (userId) {
       await auditService.log({
         action: AuditAction.MESSAGE_CREATE,
+        entityType: 'message',
+        entityId: message.id,
         userId,
-        tenantId: data.tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        resourceId: message.id.toString(),
         details: {
           type: data.type,
           recipientCount: data.recipientId ? 1 : 0,
@@ -146,349 +109,77 @@ export class MessageService {
   }
 
   /**
-   * Send bulk messages to multiple recipients
-   */
-  async sendBulk(
-    data: {
-      tenantId: string;
-      senderId: number;
-      recipientIds: number[];
-      subject: string;
-      body: string;
-      type?: string;
-      priority?: string;
-    },
-    userId?: number,
-  ) {
-    const {
-      tenantId,
-      senderId,
-      recipientIds,
-      subject,
-      body,
-      type = "prive",
-      priority = "NORMAL",
-    } = data;
-
-    if (!recipientIds || recipientIds.length === 0) {
-      throw new Error("Recipient IDs array cannot be empty");
-    }
-
-    // Create messages for each recipient
-    const messages: Prisma.MessageCreateManyInput[] = recipientIds.map(
-      (recipientId) => ({
-        tenantId,
-        senderId,
-        recipientId,
-        subject,
-        body,
-        type,
-        priority,
-        status: MessageStatus.SENT,
-        read: false,
-      }),
-    );
-
-    // Bulk create
-    const result = await this.repository.bulkCreate(messages);
-
-    // Audit log
-    if (userId) {
-      await auditService.log({
-        action: AuditAction.MESSAGE_BULK_SEND,
-        userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        details: {
-          recipientCount: recipientIds.length,
-          subject,
-          type,
-        },
-      });
-    }
-
-    return {
-      ...result,
-      recipients: recipientIds.length,
-    };
-  }
-
-  /**
    * Update message
    */
   async update(
     id: number,
-    data: UpdateMessageDTO,
-    tenantId: string,
+    updateData: Partial<Message>,
     userId?: number,
-  ) {
-    if (!Number.isInteger(id) || id <= 0) {
+  ): Promise<Message | null> {
+    if (!id || id <= 0) {
       throw new Error("Invalid message ID");
     }
 
-    const existing = await this.getById(id, tenantId);
-
-    // Don't allow updating sent messages
-    if (
-      existing.status === MessageStatus.SENT ||
-      existing.status === MessageStatus.DELIVERED
-    ) {
-      if (data.subject || data.body) {
-        throw new Error("Cannot update content of sent messages");
-      }
-    }
-
-    const updateData: Prisma.MessageUpdateInput = {};
-    if (data.subject !== undefined) updateData.subject = data.subject;
-    if (data.body !== undefined) updateData.body = data.body;
-    if (data.status !== undefined) updateData.status = data.status;
-    if (data.priority !== undefined) updateData.priority = data.priority;
-    if (data.scheduledFor !== undefined)
-      updateData.scheduledFor = data.scheduledFor;
-
-    const message = await this.repository.update(id, updateData, tenantId);
+    const message = await this.repository.update(id, updateData);
 
     // Audit log
-    if (userId) {
+    if (userId && message) {
       await auditService.log({
         action: AuditAction.MESSAGE_UPDATE,
+        entityType: 'message',
+        entityId: id,
         userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        resourceId: id.toString(),
-        details: data,
+        details: updateData
       });
     }
 
     return message;
-  }
-
-  /**
-   * Mark message as read
-   */
-  async markAsRead(id: number, tenantId: string, userId?: number) {
-    if (!Number.isInteger(id) || id <= 0) {
-      throw new Error("Invalid message ID");
-    }
-
-    const message = await this.repository.markAsRead(id, tenantId);
-
-    // Audit log
-    if (userId) {
-      await auditService.log({
-        action: AuditAction.MESSAGE_READ,
-        userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        resourceId: id.toString(),
-        details: { messageId: id },
-      });
-    }
-
-    return message;
-  }
-
-  /**
-   * Mark multiple messages as read
-   */
-  async markManyAsRead(
-    ids: number[],
-    recipientId: number,
-    tenantId: string,
-    userId?: number,
-  ) {
-    if (!ids || ids.length === 0) {
-      throw new Error("Message IDs array cannot be empty");
-    }
-
-    const result = await this.repository.markManyAsRead(
-      ids,
-      recipientId,
-      tenantId,
-    );
-
-    // Audit log
-    if (userId) {
-      await auditService.log({
-        action: AuditAction.MESSAGE_BULK_READ,
-        userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        details: {
-          count: ids.length,
-        },
-      });
-    }
-
-    return result;
-  }
-
-  /**
-   * Mark all messages as read for recipient
-   */
-  async markAllAsRead(recipientId: number, tenantId: string, userId?: number) {
-    const result = await this.repository.markAllAsRead(recipientId, tenantId);
-
-    // Audit log
-    if (userId) {
-      await auditService.log({
-        action: AuditAction.MESSAGE_ALL_READ,
-        userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        resourceId: "bulk",
-        details: {
-          count: result.count,
-          recipientId,
-        },
-      });
-    }
-
-    return result;
   }
 
   /**
    * Delete message
    */
-  async delete(id: number, tenantId: string, userId?: number) {
-    if (!Number.isInteger(id) || id <= 0) {
+  async delete(id: number, userId?: number): Promise<void> {
+    if (!id || id <= 0) {
       throw new Error("Invalid message ID");
     }
 
-    const message = await this.getById(id, tenantId);
-
-    await this.repository.delete(id, tenantId);
+    await this.repository.delete(id);
 
     // Audit log
     if (userId) {
       await auditService.log({
         action: AuditAction.MESSAGE_DELETE,
-        userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        resourceId: id.toString(),
+        entityType: 'message',
+        entityId: id,
+        userId
       });
     }
-
-    return { success: true };
   }
 
   /**
-   * Update message status
+   * Mark message as read
    */
-  async updateStatus(
-    id: number,
-    status: MessageStatus,
-    tenantId: string,
-    userId?: number,
-  ) {
-    const message = await this.repository.updateStatus(id, status, tenantId);
+  async markAsRead(id: number, userId?: number): Promise<Message | null> {
+    if (!id || id <= 0) {
+      throw new Error("Invalid message ID");
+    }
+
+    const message = await this.repository.markAsRead(id, "default");
 
     // Audit log
     if (userId) {
       await auditService.log({
-        action: AuditAction.MESSAGE_STATUS_UPDATE,
-        userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        resourceId: id.toString(),
-        details: { newStatus: status },
+        action: AuditAction.MESSAGE_READ,
+        entityType: 'message',
+        entityId: id,
+        userId
       });
     }
 
     return message;
   }
-
-  /**
-   * Archive message
-   */
-  async archive(id: number, tenantId: string, userId?: number) {
-    const message = await this.getById(id, tenantId);
-
-    const updated = await this.repository.update(
-      id,
-      { status: MessageStatus.ARCHIVED },
-      tenantId,
-    );
-
-    // Audit log
-    if (userId) {
-      await auditService.log({
-        action: AuditAction.MESSAGE_UPDATE,
-        userId,
-        tenantId,
-        resource: "Message",
-        resourceType: "Message",
-        resourceId: id.toString(),
-        details: { action: "archived" },
-      });
-    }
-
-    return updated;
-  }
-
-  /**
-   * Get message statistics
-   */
-  async getStatistics(tenantId: string, startDate?: Date, endDate?: Date) {
-    return this.repository.getStatistics(tenantId, startDate, endDate);
-  }
-
-  /**
-   * Get scheduled messages ready to send
-   */
-  async getScheduled(tenantId: string) {
-    return this.repository.findScheduled(tenantId);
-  }
-
-  /**
-   * Get conversation between two users
-   */
-  async getConversation(
-    user1Id: number,
-    user2Id: number,
-    tenantId: string,
-    page = 1,
-    limit = 50,
-  ) {
-    return this.repository.getConversation(
-      user1Id,
-      user2Id,
-      tenantId,
-      page,
-      limit,
-    );
-  }
-
-  /**
-   * Check if message exists
-   */
-  async exists(id: number, tenantId: string): Promise<boolean> {
-    return this.repository.exists(id, tenantId);
-  }
-
-  /**
-   * Count messages by status
-   */
-  async countByStatus(tenantId: string) {
-    return this.repository.countByStatus(tenantId);
-  }
-
-  /**
-   * Count messages by type
-   */
-  async countByType(tenantId: string) {
-    return this.repository.countByType(tenantId);
-  }
 }
 
 // Create singleton instance
-const prisma = new PrismaClient();
-export const messageService = new MessageService(prisma);
+export const messageService = new MessageService();

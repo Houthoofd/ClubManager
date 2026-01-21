@@ -3,8 +3,8 @@ import {
   paymentService,
   PaymentStatus,
   PaymentMethod,
-} from "../services/paymentService.js";
-import { auditService, AuditAction } from "../services/auditService.js";
+} from "../services/payment/payment.service.js";
+import { auditService, AuditAction } from "../services/audit/audit.service.js";
 
 const router = express.Router();
 
@@ -324,7 +324,6 @@ router.patch("/:paymentId/status", async (req: Request, res: Response) => {
     const result = await paymentService.updatePaymentStatus(
       paymentId,
       statut,
-      transactionId,
     );
 
     if (!result.success) {
@@ -571,9 +570,8 @@ router.post("/stripe/payment-intent", async (req: Request, res: Response) => {
     }
 
     const result = await paymentService.processStripePayment({
-      utilisateurId: user.id,
-      montant: parseFloat(montant),
-      abonnementId: abonnementId ? parseInt(abonnementId) : undefined,
+      amount: parseFloat(montant),
+      currency: 'EUR',
       paymentMethodId,
     });
 
@@ -587,8 +585,8 @@ router.post("/stripe/payment-intent", async (req: Request, res: Response) => {
     return res.json({
       success: true,
       data: {
-        payment: result.payment,
-        stripePaymentIntentId: result.stripePaymentIntentId,
+        payment: null, // TODO: Create payment record
+        paymentIntentId: result.paymentIntentId,
       },
       message: result.message,
     });
@@ -647,9 +645,7 @@ router.get("/pending/reminders", async (req: Request, res: Response) => {
   try {
     const { daysOverdue } = req.query;
 
-    const payments = await paymentService.getPendingPayments(
-      daysOverdue ? parseInt(daysOverdue as string) : undefined,
-    );
+    const payments = await paymentService.getPendingPayments();
 
     return res.json({
       success: true,

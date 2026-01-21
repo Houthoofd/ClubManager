@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import auditService, { AuditAction } from '../services/auditService.js';
+import auditService, { AuditAction } from '../services/audit/audit.service.js';
 
 /**
  * Middleware pour logger automatiquement les requêtes

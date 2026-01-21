@@ -18,8 +18,7 @@ export function getMessageStatusLabel(status: MessageStatus): string {
     [MessageStatus.SENT]: "Envoyé",
     [MessageStatus.DELIVERED]: "Délivré",
     [MessageStatus.READ]: "Lu",
-    [MessageStatus.FAILED]: "Échec",
-    [MessageStatus.ARCHIVED]: "Archivé",
+    [MessageStatus.FAILED]: "Échoué"
   };
   return labels[status];
 }
@@ -29,11 +28,9 @@ export function getMessageStatusLabel(status: MessageStatus): string {
  */
 export function getMessageTypeLabel(type: MessageType): string {
   const labels: Record<MessageType, string> = {
-    [MessageType.EMAIL]: "Email",
-    [MessageType.SMS]: "SMS",
-    [MessageType.PUSH]: "Notification Push",
-    [MessageType.IN_APP]: "In-App",
-    [MessageType.SYSTEM]: "Système",
+    [MessageType.PRIVATE]: "Privé",
+    [MessageType.GROUP]: "Groupe",
+    [MessageType.BROADCAST]: "Diffusion"
   };
   return labels[type];
 }
@@ -60,8 +57,7 @@ export function getMessageStatusColor(status: MessageStatus): string {
     [MessageStatus.SENT]: "blue",
     [MessageStatus.DELIVERED]: "cyan",
     [MessageStatus.READ]: "green",
-    [MessageStatus.FAILED]: "red",
-    [MessageStatus.ARCHIVED]: "orange",
+    [MessageStatus.FAILED]: "red"
   };
   return colors[status];
 }
@@ -119,14 +115,14 @@ export function canEditMessage(status: MessageStatus): boolean {
  * Check if message can be deleted
  */
 export function canDeleteMessage(status: MessageStatus): boolean {
-  return [MessageStatus.DRAFT, MessageStatus.ARCHIVED].includes(status);
+  return [MessageStatus.DRAFT].includes(status);
 }
 
 /**
  * Check if message can be archived
  */
 export function canArchiveMessage(status: MessageStatus): boolean {
-  return status !== MessageStatus.ARCHIVED;
+  return status !== MessageStatus.DRAFT;
 }
 
 /**
@@ -143,9 +139,7 @@ export function formatSubjectWithPrefix(
   subject: string,
   type: MessageType,
 ): string {
-  const prefixes: Partial<Record<MessageType, string>> = {
-    [MessageType.SYSTEM]: "[Système]",
-  };
+  const prefixes: Partial<Record<MessageType, string>> = {};
 
   const prefix = prefixes[type];
   return prefix ? `${prefix} ${subject}` : subject;
@@ -299,16 +293,11 @@ export function getNextValidStatuses(
   currentStatus: MessageStatus,
 ): MessageStatus[] {
   const transitions: Record<MessageStatus, MessageStatus[]> = {
-    [MessageStatus.DRAFT]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
-    [MessageStatus.SENT]: [
-      MessageStatus.DELIVERED,
-      MessageStatus.FAILED,
-      MessageStatus.ARCHIVED,
-    ],
-    [MessageStatus.DELIVERED]: [MessageStatus.READ, MessageStatus.ARCHIVED],
-    [MessageStatus.READ]: [MessageStatus.ARCHIVED],
-    [MessageStatus.FAILED]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
-    [MessageStatus.ARCHIVED]: [],
+    [MessageStatus.DRAFT]: [MessageStatus.SENT],
+    [MessageStatus.SENT]: [MessageStatus.DELIVERED, MessageStatus.FAILED],
+    [MessageStatus.DELIVERED]: [MessageStatus.READ],
+    [MessageStatus.READ]: [],
+    [MessageStatus.FAILED]: [MessageStatus.SENT]
   };
   return transitions[currentStatus] || [];
 }

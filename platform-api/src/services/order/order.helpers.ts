@@ -42,11 +42,10 @@ export function getOrderStatusLabel(status: OrderStatus): string {
   const labels: Record<OrderStatus, string> = {
     [OrderStatus.PENDING]: 'En attente',
     [OrderStatus.CONFIRMED]: 'Confirmée',
-    [OrderStatus.PREPARING]: 'En préparation',
-    [OrderStatus.READY]: 'Prête',
+    [OrderStatus.PROCESSING]: 'En traitement',
+    [OrderStatus.SHIPPED]: 'Expédiée',
     [OrderStatus.DELIVERED]: 'Livrée',
-    [OrderStatus.CANCELLED]: 'Annulée',
-    [OrderStatus.REFUNDED]: 'Remboursée'
+    [OrderStatus.CANCELLED]: 'Annulée'
   };
   return labels[status];
 }
@@ -58,11 +57,10 @@ export function getOrderStatusColor(status: OrderStatus): string {
   const colors: Record<OrderStatus, string> = {
     [OrderStatus.PENDING]: 'orange',
     [OrderStatus.CONFIRMED]: 'blue',
-    [OrderStatus.PREPARING]: 'purple',
-    [OrderStatus.READY]: 'cyan',
+    [OrderStatus.PROCESSING]: 'purple',
+    [OrderStatus.SHIPPED]: 'cyan',
     [OrderStatus.DELIVERED]: 'green',
-    [OrderStatus.CANCELLED]: 'red',
-    [OrderStatus.REFUNDED]: 'gray'
+    [OrderStatus.CANCELLED]: 'red'
   };
   return colors[status];
 }
@@ -73,8 +71,7 @@ export function getOrderStatusColor(status: OrderStatus): string {
 export function canCancelOrder(status: OrderStatus): boolean {
   return [
     OrderStatus.PENDING,
-    OrderStatus.CONFIRMED,
-    OrderStatus.PREPARING
+    OrderStatus.CONFIRMED
   ].includes(status);
 }
 
@@ -98,8 +95,7 @@ export function canRefundOrder(status: OrderStatus): boolean {
 export function isOrderFinal(status: OrderStatus): boolean {
   return [
     OrderStatus.DELIVERED,
-    OrderStatus.CANCELLED,
-    OrderStatus.REFUNDED
+    OrderStatus.CANCELLED
   ].includes(status);
 }
 
@@ -108,9 +104,7 @@ export function isOrderFinal(status: OrderStatus): boolean {
  */
 export function isOrderInProgress(status: OrderStatus): boolean {
   return [
-    OrderStatus.CONFIRMED,
-    OrderStatus.PREPARING,
-    OrderStatus.READY
+    OrderStatus.CONFIRMED
   ].includes(status);
 }
 
@@ -258,12 +252,11 @@ export function qualifiesForFreeShipping(
 export function getNextValidStatuses(currentStatus: OrderStatus): OrderStatus[] {
   const transitions: Record<OrderStatus, OrderStatus[]> = {
     [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-    [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
-    [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
-    [OrderStatus.READY]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-    [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
-    [OrderStatus.CANCELLED]: [],
-    [OrderStatus.REFUNDED]: []
+    [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+    [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+    [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+    [OrderStatus.DELIVERED]: [],
+    [OrderStatus.CANCELLED]: []
   };
   return transitions[currentStatus] || [];
 }
@@ -356,14 +349,11 @@ export function parseOrderFilters(query: any): {
 export function sortOrdersByPriority<T extends { status: OrderStatus; createdAt: Date }>(
   orders: T[]
 ): T[] {
-  const priorityOrder = {
-    [OrderStatus.READY]: 1,
-    [OrderStatus.PREPARING]: 2,
-    [OrderStatus.CONFIRMED]: 3,
-    [OrderStatus.PENDING]: 4,
-    [OrderStatus.DELIVERED]: 5,
-    [OrderStatus.CANCELLED]: 6,
-    [OrderStatus.REFUNDED]: 7
+  const priorityOrder: Record<string, number> = {
+    "confirmée": 1,
+    "en attente": 2,
+    "livrée": 3,
+    "annulée": 4
   };
 
   return [...orders].sort((a, b) => {

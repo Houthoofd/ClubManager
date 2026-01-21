@@ -1,8 +1,8 @@
 import express, { Request, Response } from 'express';
 import { verifyToken, requireRole, optionalAuth } from '../middleware/auth.js';
 // Import new services replacing old clients
-import { articleService } from '../services/articleService.js';
-import { userService } from '../services/userService.js';
+import { articleService } from '../services/article/article.service.js';
+import { userService } from '../services/user/user.service.js';
 import { 
   articleCreationSchema, 
   articleDataValidationSchema, 
@@ -662,7 +662,7 @@ const envoyerEmailConfirmationCommande = async (
   utilisateurNom: string
 ): Promise<void> => {
   try {
-    const { emailService } = await import('../services/emailService.js');
+    const { emailService } = await import('../services/email/email.service.js');
     
     // Générer la liste des articles pour le template
     const articlesFormatted = commandeData.articles.map((article: any) => ({

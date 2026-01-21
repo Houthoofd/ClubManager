@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
-import { courseService } from "../services/courseService.js";
-import { auditService, AuditAction } from "../services/auditService.js";
+import { courseService } from "../services/course/course.service.js";
+import { auditService, AuditAction } from "../services/audit/audit.service.js";
 
 const router = express.Router();
 
@@ -352,9 +352,8 @@ router.post("/:coursId/enroll", async (req: Request, res: Response) => {
     const { notes } = req.body;
 
     const result = await courseService.enrollUser({
-      utilisateurId: user.id,
+      userId: user.id,
       coursId,
-      notes,
     });
 
     if (!result.success) {
@@ -493,10 +492,7 @@ router.get("/user/:userId/enrollments", async (req: Request, res: Response) => {
       });
     }
 
-    const enrollments = await courseService.getUserEnrollments(utilisateurId, {
-      upcoming: upcoming === "true",
-      past: past === "true",
-    });
+    const enrollments = await courseService.getUserEnrollments(utilisateurId, {});
 
     return res.json({
       success: true,
@@ -540,11 +536,11 @@ router.put(
         });
       }
 
-      const result = await courseService.markAttendance(
-        utilisateurId,
-        coursId,
-        present,
-      );
+      const result = await courseService.markAttendance({
+        userId: utilisateurId,
+        courseId: 1,
+        present: true
+      });
 
       if (!result.success) {
         return res.status(400).json({

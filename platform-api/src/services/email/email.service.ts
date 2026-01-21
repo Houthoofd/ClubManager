@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { prisma } from "./prismaService.js";
+import { prisma } from "../prisma/prisma.service.js";
 
 /**
  * EmailService - Handle all email sending with nodemailer

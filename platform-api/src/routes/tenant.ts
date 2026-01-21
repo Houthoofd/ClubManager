@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import tenantService from '../services/tenantService.js';
+import tenantService from '../services/tenant/tenant.service.js';
 import { tenantResolver, validateUserTenant, checkTenantLimits } from '../middleware/tenant.js';
 import { TenantCreateInput, TenantUpdateInput } from '../types/tenant.js';
 
@@ -141,7 +141,7 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.params.id;
-      const updateData: TenantUpdateInput = req.body;
+      const updateData = req.body; // Use generic object instead of specific type
       
       const tenant = await tenantService.updateTenant(tenantId, updateData);
       

@@ -4,8 +4,8 @@
  */
 
 import { Router, Request, Response } from "express";
-import { productService } from "../services/product.service.js";
-import { inventoryService } from "../services/inventory.service.js";
+import { productService } from "../services/product/product.service.js";
+import { inventoryService } from "../services/inventory/inventory.service.js";
 import { getTenantId } from "../utils/tenant.util.js";
 import { getPaginationParams } from "../utils/pagination.util.js";
 import { sendSuccess, sendError, sendList } from "../utils/response.util.js";
