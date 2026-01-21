@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import { messageService } from "../../services/message/message.service.js";
-import { verifyToken } from "../../middleware/auth.js";
+import { verifyToken } from "../../middleware/auth/auth.js";
 
 const router = express.Router();
 

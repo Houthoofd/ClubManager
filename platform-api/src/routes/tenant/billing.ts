@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
-import { tenantMiddleware } from '../../middleware/tenant.middleware.js';
-import { authMiddleware } from '../../middleware/auth.middleware.js';
+import { tenantMiddleware } from '../../middleware/auth/tenant.middleware.js';
+import { authMiddleware } from '../../middleware/auth/auth.middleware.js';
 import { multiTenantService } from '../../services/tenant/multi-tenant.service.js';
 
 const router = express.Router();

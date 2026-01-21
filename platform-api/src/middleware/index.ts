@@ -10,7 +10,10 @@ export {
   optionalAuth,
   requireRole,
   type JWTPayload,
-} from "./auth.js";
+} from "./auth/auth.js";
+
+// Auth Middleware (class-based)
+export { authMiddleware } from "./auth/auth.middleware.js";
 
 // Tenant Management
 export {
@@ -18,10 +21,10 @@ export {
   validateUserTenant,
   checkTenantLimits,
   getTenantPrisma,
-} from "./tenant.js";
+} from "./auth/tenant.js";
 
 // Rate Limiting
-export { tenantRateLimiter, apiRateLimiter } from "./rateLimiter.js";
+export { tenantRateLimiter, apiRateLimiter } from "./security/rateLimiter.js";
 
 // Validation
 export {
@@ -33,7 +36,7 @@ export {
   validateFile,
   validateFiles,
   sanitizeInput,
-} from "./validation.js";
+} from "./validation/validation.js";
 
 // Error Handling
 export {
@@ -42,10 +45,10 @@ export {
   asyncHandler,
   setupGlobalErrorHandlers,
   errorLogger,
-} from "./errorHandler.js";
+} from "./validation/errorHandler.js";
 
 // Audit Logging
-export { auditLogger, auditUpdate, auditDelete } from "./auditLogger.js";
+export { auditLogger, auditUpdate, auditDelete } from "./logging/auditLogger.js";
 
 // CORS
 export {
@@ -55,7 +58,7 @@ export {
   adaptiveCors,
   apiCors,
   webhookCors,
-} from "./cors.js";
+} from "./security/cors.js";
 
 // Security
 export {
@@ -68,7 +71,7 @@ export {
   defaultSecurity,
   devSecurity,
   adaptiveSecurity,
-} from "./security.js";
+} from "./security/security.js";
 
 // Request Logging
 export {
@@ -80,7 +83,7 @@ export {
   standardLogger,
   verboseLogger,
   adaptiveLogger,
-} from "./logger.js";
+} from "./logging/logger.js";
 
 /**
  * Common middleware chains pour réutilisation
@@ -90,14 +93,14 @@ import {
   optionalAuth,
   requireRole,
   generateToken,
-} from "./auth.js";
+} from "./auth/auth.js";
 import {
   tenantResolver,
   validateUserTenant,
   checkTenantLimits,
   getTenantPrisma,
-} from "./tenant.js";
-import { tenantRateLimiter, apiRateLimiter } from "./rateLimiter.js";
+} from "./auth/tenant.js";
+import { tenantRateLimiter, apiRateLimiter } from "./security/rateLimiter.js";
 import {
   validate,
   sanitizeInput,
@@ -107,7 +110,7 @@ import {
   validateRequest,
   validateFile,
   validateFiles,
-} from "./validation.js";
+} from "./validation/validation.js";
 import {
   adaptiveCors,
   corsMiddleware,
@@ -115,7 +118,7 @@ import {
   prodCors,
   apiCors,
   webhookCors,
-} from "./cors.js";
+} from "./security/cors.js";
 import {
   adaptiveSecurity,
   securityMiddleware,
@@ -126,7 +129,7 @@ import {
   suspiciousRequestDetector,
   defaultSecurity,
   devSecurity,
-} from "./security.js";
+} from "./security/security.js";
 import {
   adaptiveLogger,
   requestLogger,
@@ -136,19 +139,19 @@ import {
   minimalLogger,
   standardLogger,
   verboseLogger,
-} from "./logger.js";
+} from "./logging/logger.js";
 import {
   errorHandler as errorHandlerFn,
   notFoundHandler,
   asyncHandler,
   setupGlobalErrorHandlers,
   errorLogger as errorLoggerFn,
-} from "./errorHandler.js";
+} from "./validation/errorHandler.js";
 import {
   auditLogger as auditLoggerFn,
   auditUpdate,
   auditDelete,
-} from "./auditLogger.js";
+} from "./logging/auditLogger.js";
 
 /**
  * Chain complète d'authentification + tenant

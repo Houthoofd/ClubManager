@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import { userService } from "../../services/user/user.service.js";
-import { verifyToken } from "../../middleware/auth.js";
+import { verifyToken } from "../../middleware/auth/auth.js";
 
 const router = express.Router();
 

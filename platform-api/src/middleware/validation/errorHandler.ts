@@ -7,7 +7,7 @@ import {
   NotFoundError,
   UnauthorizedError,
   ForbiddenError,
-} from "../utils/errors.util.js";
+} from "../../utils/errors.util.js";
 
 /**
  * Interface pour les erreurs standardisées

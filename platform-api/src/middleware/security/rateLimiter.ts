@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import rateLimitService from "../services/rate-limit/rate-limit.service.js";
+import rateLimitService from "../../services/rate-limit/rate-limit.service.js";
 
 /**
  * Middleware de rate limiting par tenant

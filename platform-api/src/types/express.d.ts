@@ -1,4 +1,4 @@
-import { JWTPayload } from '../middleware/auth.js';
+import { JWTPayload } from '../middleware/auth/auth.js';
 
 interface AuthenticatedUser {
   id: number;

@@ -6,7 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import healthRouter from './routes/utils/health.js';
-import { tenantRateLimiter } from './middleware/rateLimiter.js';
+import { tenantRateLimiter } from './middleware/security/rateLimiter.js';
 
 dotenv.config();
 

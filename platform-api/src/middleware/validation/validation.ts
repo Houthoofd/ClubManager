@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
-import { AppError } from '../utils/errors.util.js';
+import { AppError } from '../../utils/errors.util.js';
 
 /**
  * Middleware de validation générique avec Zod
