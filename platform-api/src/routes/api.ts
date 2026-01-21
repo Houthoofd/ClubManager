@@ -13,12 +13,12 @@ import {
 } from "../middleware/index.js";
 
 // Import route modules - MODERNIZED (Prisma)
-import productsRouter from "./products.js";
-import inventoryRouter from "./inventory.js";
-import ordersRouter from "./orders.js";
-import messagingRouter from "./messaging.js";
-import authRouter from "./auth.js";
-import healthRouter from "./health.js";
+import productsRouter from "./products/index.js";
+import inventoryRouter from "./inventory/index.js";
+import ordersRouter from "./orders/index.js";
+import messagingRouter from "./messaging/index.js";
+import authRouter from "./auth/index.js";
+import healthRouter from "./utils/health.js";
 
 // LEGACY ROUTES - TEMPORARILY DISABLED (depend on mysqlconnector/old DB clients)
 // These routes need to be rewritten to use Prisma

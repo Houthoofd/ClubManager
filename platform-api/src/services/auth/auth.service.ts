@@ -1,6 +1,6 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
+import * as bcrypt from "bcrypt";
+import * as jwt from "jsonwebtoken";
+import * as crypto from "crypto";
 import { prisma } from "../prisma/prisma.service.js";
 import type { User } from "@prisma/client";
 import type { LoginCredentials, RegisterUserData, AuthResult, PasswordResetData, ResetPasswordData } from "./auth.types.js";
@@ -232,9 +232,9 @@ export class AuthService {
           firstName: data.firstName,
           lastName: data.lastName,
           password: hashedPassword,
-          dateOfBirth: data.dateOfBirth,
+          dateOfBirth: data.dateOfBirth || new Date('1990-01-01'),
           genderId: data.genderId || null,
-          tenantId: data.tenantId,
+          tenantId: data.tenantId || 'default',
           actif: false, // User needs email verification
           // TODO: Add these fields to schema
           // emailVerified: false,

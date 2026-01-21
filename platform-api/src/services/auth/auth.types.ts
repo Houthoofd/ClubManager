@@ -9,12 +9,12 @@ export interface LoginCredentials {
 }
 
 export interface RegisterUserData {
-  tenantId: string;
+  tenantId?: string; // Made optional
   firstName: string;
   lastName: string;
   email: string;
   password: string;
-  dateOfBirth: Date;
+  dateOfBirth?: Date; // Made optional
   genderId?: number;
 }
 

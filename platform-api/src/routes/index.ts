@@ -1,43 +1,53 @@
 // src/routes/index.ts
 import express from "express";
-import utilisateursRouter from "./utilisateurs.js";
-import informationsRouter from "./informations.js";
-import coursRouter from "./cours.js";
-import paiementRouter from "./paiements.js";
-import statistiquesRouter from "./statistiques.js";
-import magasinRouter from "./magasin.js";
-import inscriptionRouter from "./inscription.js";
-import verificationRouter from "./verification.js";
-import authRouter from "./auth.js"; // CORRIGÉ: Import du router auth principal
-import authTenantRouter from "./authTenant.js"; // NOUVEAU: Authentification tenant-aware
-import tenantRouter from "./tenant.js"; // NOUVEAU: Router tenant management
 
-// NOUVEAU: Routes modulaires Day 3
-import productsRouter from "./products.js";
-import inventoryRouter from "./inventory.js";
-import ordersRouter from "./orders.js";
-import messagingRouter from "./messaging.js";
+// Import new modular routes
+import authRoutes from "./auth/index.js";
+import userRoutes from "./users/index.js";
+import paymentRoutes from "./payments/index.js";
+import messagingRoutes from "./messaging/index.js";
+import adminRoutes from "./admin/index.js";
+import utilsRoutes from "./utils/index.js";
+
+// Import new tenant and admin routes
+import tenantRouter from "./tenant/index.js";
+import adminRouter from "./admin/index.js";
+
+// Import active routes
+import productsRouter from "./products/index.js";
+import inventoryRouter from "./inventory/index.js";
+import ordersRouter from "./orders/index.js";
+import webhooksRouter from "./utils/webhooks.js";
+import healthRouter from "./utils/health.js";
+import apiRouter from "./api.js";
 
 const router = express.Router();
 
-// Correction : montez statistiquesRouter sur /statistiques AVANT les autres routes
-router.use("/statistiques", statistiquesRouter);
-// NOUVEAU: Routes tenant management (admin)
-router.use("/tenants", tenantRouter);
-router.use("/utilisateurs", utilisateursRouter);
-router.use("/informations", informationsRouter);
-router.use("/cours", coursRouter);
-router.use("/paiements", paiementRouter);
-router.use("/magasin", magasinRouter);
-router.use("/inscription", inscriptionRouter);
-router.use("/verification", verificationRouter);
-router.use("/auth", authRouter); // CORRIGÉ: Utiliser le router auth principal
-router.use("/auth-tenant", authTenantRouter); // NOUVEAU: Authentification SaaS multitenant
+// === NEW MODULAR ROUTES ===
+router.use("/auth", authRoutes);
+router.use("/users", userRoutes);
+router.use("/payments", paymentRoutes);
+router.use("/messaging", messagingRoutes);
+router.use("/admin", adminRouter);
+router.use("/utils", utilsRoutes);
+router.use("/tenant", tenantRouter);
 
-// NOUVEAU: Routes modulaires Day 3
-router.use("/products", productsRouter); // Gestion produits
-router.use("/inventory", inventoryRouter); // Gestion inventaire/stock
-router.use("/orders", ordersRouter); // Gestion commandes
-router.use("/messaging", messagingRouter); // Messagerie et notifications
+// === ACTIVE ROUTES ===
+router.use("/api", apiRouter);
+router.use("/health", healthRouter);
+router.use("/webhooks", webhooksRouter);
+router.use("/products", productsRouter);
+router.use("/inventory", inventoryRouter);
+router.use("/orders", ordersRouter);
+
+// Legacy commerce & inventory
+router.use("/products", productsRouter);
+router.use("/inventory", inventoryRouter);
+router.use("/orders", ordersRouter);
+
+// Other active routes
+router.use("/webhooks", webhooksRouter);
+router.use("/health", healthRouter);
+router.use("/api", apiRouter);
 
 export default router;

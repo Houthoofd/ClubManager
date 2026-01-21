@@ -2,8 +2,8 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import webhooksRouter from "./routes/webhooks.js";
-import healthRouter from "./routes/health.js";
+import webhooksRouter from "./routes/utils/webhooks.js";
+import healthRouter from "./routes/utils/health.js";
 import {
   fullAppChain,
   errorHandler,
