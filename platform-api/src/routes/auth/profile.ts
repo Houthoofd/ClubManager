@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
-import { userService } from "../../services/user/user.service.js";
-import { auditService, AuditAction } from "../../services/audit/audit.service.js";
+import { userService } from "../../services/members/user/user.service.js";
+import { auditService, AuditAction } from "../../services/infrastructure/audit/audit.service.js";
 import { getTenantId } from "./utils.js";
 
 const router = express.Router();

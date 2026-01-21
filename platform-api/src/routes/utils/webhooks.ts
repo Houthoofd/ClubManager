@@ -94,7 +94,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent): Promis
   
   try {
     const { prismaClient } = await import('../../db/prisma.js');
-    const { emailService } = await import('../../services/email/email.service.js');
+    const { emailService } = await import('../../services/operations/communication/email.service.js');
     
     // Extraire les métadonnées
     const echeanceId = paymentIntent.metadata?.echeance_id;
@@ -238,7 +238,7 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent): Promise
   
   try {
     const { prismaClient } = await import('../../db/prisma.js');
-    const { emailService } = await import('../../services/email/email.service.js');
+    const { emailService } = await import('../../services/operations/communication/email.service.js');
     
     const echeanceId = paymentIntent.metadata?.echeance_id;
     const utilisateurId = paymentIntent.metadata?.utilisateur_id;

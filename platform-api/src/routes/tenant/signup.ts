@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
-import { multiTenantService } from '../../services/tenant/multi-tenant.service.js';
-import { userService } from '../../services/user/user.service.js';
+import { multiTenantService } from '../../services/infrastructure/tenant/multi-tenant.service.js';
+import { userService } from '../../services/members/user/user.service.js';
 import { z } from 'zod';
 
 const router = express.Router();

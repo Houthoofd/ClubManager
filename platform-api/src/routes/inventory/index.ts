@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { inventoryService } from "../../services/inventory/inventory.service.js";
+import { inventoryService } from "../../services/operations/shop/inventory/inventory.service.js";
 import { getTenantId } from "../../utils/tenant.util.js";
 import { sendSuccess, sendError } from "../../utils/response.util.js";
 import { ShopValidationError } from "../../validators/shop.validator.js";

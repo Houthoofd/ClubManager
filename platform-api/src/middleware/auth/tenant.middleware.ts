@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { multiTenantService } from '../../services/tenant/multi-tenant.service.js';
+import { multiTenantService } from '../../services/infrastructure/tenant/multi-tenant.service.js';
 
 // Interface simplifiée pour éviter les conflits
 export interface TenantRequest extends Request {

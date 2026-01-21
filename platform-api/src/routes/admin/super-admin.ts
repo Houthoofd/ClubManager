@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { multiTenantService } from '../../services/tenant/multi-tenant.service.js';
+import { multiTenantService } from '../../services/infrastructure/tenant/multi-tenant.service.js';
 import { authMiddleware } from '../../middleware/auth/auth.middleware.js';
 
 const router = express.Router();
