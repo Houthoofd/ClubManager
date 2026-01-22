@@ -1,8 +1,25 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: clubmanager-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - clubmanager
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
-      dockerfile: platform-webapp/Dockerfile  # Dockerfile pour la construction du frontend
+      dockerfile: platform-webapp/Dockerfile # Dockerfile pour la construction du frontend
     ports:
       - "8081:8081"
     networks:
@@ -16,13 +33,19 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_KEY_PREFIX=clubmanager:
+    depends_on:
+      - redis
     networks:
       - clubmanager
 
   nginx:
     build:
       context: .
-      dockerfile: nginx/Dockerfile  # Dockerfile pour la construction de Nginx
+      dockerfile: nginx/Dockerfile # Dockerfile pour la construction de Nginx
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
     ports:
@@ -36,3 +59,7 @@ services:
 networks:
   clubmanager:
     driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

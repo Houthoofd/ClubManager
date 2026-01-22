@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import { prisma } from "./db/prisma.client.js";
 import webhooksRouter from "./routes/utils/webhooks.js";
 import healthRouter from "./routes/utils/health.js";
+import healthCheckRouter from "./routes/health.routes.js";
+import { rateLimiters } from "./middleware/cache/index.js";
 import {
   fullAppChain,
   errorHandler,
@@ -35,16 +37,22 @@ app.use(cookieParser());
 // Global middlewares (Logger + CORS + Security + Sanitization)
 app.use(fullAppChain);
 
+// Global rate limiting (IP-based)
+app.use(rateLimiters.global);
+
 // Tenant context middleware (MUST be after auth but before routes)
 app.use(setTenantContext());
 app.use(clearTenantContext());
 
 // ========== ROUTES ==========
+// Health check routes (no rate limiting)
+app.use("/health", healthCheckRouter);
+
 // Import API routes
 import apiRouter from "./routes/api.js";
 
-// Mount API routes
-app.use("/api", apiRouter);
+// Mount API routes with tenant/user rate limiting
+app.use("/api", rateLimiters.combined, apiRouter);
 
 // Route par défaut
 app.get("/", (req, res) => {
@@ -53,6 +61,8 @@ app.get("/", (req, res) => {
     version: "2.0.0",
     documentation: "/api/docs",
     health: "/health",
+    healthDetailed: "/health/detailed",
+    cache: "/health/cache",
     status: "ok",
   });
 });

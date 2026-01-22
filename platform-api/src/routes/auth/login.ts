@@ -1,9 +1,17 @@
 import express, { Request, Response } from "express";
 import { userService } from "../../services/members/user/user.service.js";
-import { auditService, AuditAction } from "../../services/infrastructure/audit/audit.service.js";
+import {
+  auditService,
+  AuditAction,
+} from "../../services/infrastructure/audit/audit.service.js";
 import { getTenantId } from "./utils.js";
+import { authRateLimit } from "../../middleware/cache/rate-limit.middleware.js";
+import { userCacheService } from "../../cache/user-cache.service.js";
 
 const router = express.Router();
+
+// Apply strict rate limiting to login endpoint (5 attempts per 5 minutes per IP)
+router.use(authRateLimit());
 
 /**
  * POST /api/auth/login

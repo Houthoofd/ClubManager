@@ -1,6 +1,11 @@
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import app, { prisma } from "./app.js";
+import {
+  initializeRedisWithTests,
+  shutdownRedis,
+  setupRedisShutdownHandlers,
+} from "./utils/redis-init.js";
 
 // Load environment variables
 dotenv.config();
@@ -22,6 +27,19 @@ async function startServer() {
     await prisma.$queryRaw`SELECT 1 as connected`;
     console.log("✅ [Server] Database connected successfully");
 
+    // Initialize Redis with tests
+    console.log("🔄 [Server] Initializing Redis cache...");
+    const redisInitialized = await initializeRedisWithTests();
+    if (!redisInitialized) {
+      console.warn(
+        "⚠️  [Server] Redis initialization failed - running without cache",
+      );
+      console.warn("⚠️  [Server] Some features may have degraded performance");
+    }
+
+    // Setup Redis shutdown handlers
+    setupRedisShutdownHandlers();
+
     // Start Express server
     const server = app.listen(PORT, () => {
       console.log("✅ [Server] Server started successfully");
@@ -39,6 +57,10 @@ async function startServer() {
         console.log("✅ HTTP server closed");
 
         try {
+          // Disconnect Redis
+          await shutdownRedis();
+
+          // Disconnect database
           await prisma.$disconnect();
           console.log("✅ Database connection closed");
           console.log("👋 Shutdown complete. Goodbye!");
