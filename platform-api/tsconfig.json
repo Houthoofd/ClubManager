@@ -16,10 +16,11 @@
     "baseUrl": ".",
     "paths": {
       "*": ["*"],
+      "@clubmanager/types": ["../platform-packages/types/dist/index.d.ts"],
     },
-    "typeRoots": ["./src/types", "./node_modules/@types"],
+    "typeRoots": ["./node_modules/@types"],
   },
-  "include": ["src/**/*", "src/types/**/*"],
+  "include": ["src/**/*", "../platform-packages/types/dist/express.d.ts"],
   "exclude": [
     "node_modules",
     "dist",

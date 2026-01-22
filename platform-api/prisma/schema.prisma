@@ -24,6 +24,7 @@ model Tenant {
   maxUsers    Int      @default(10)
   maxStorage  Int      @default(1000) // MB
   settings    Json?    // Tenant-specific settings
+  stripeCustomerId String? @map("stripe_customer_id") @db.VarChar(255)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -32,6 +33,14 @@ model Tenant {
   subscriptions TenantSubscription[]
   auditLogs   AuditLog[]
   messages    Message[]
+  cours       Cours[]
+  paiements   Paiement[]
+  echeances   EcheancePaiement[]
+  articles    Article[]
+  commandes   Commande[]
+  notifications Notification[]
+  groupes     Groupe[]
+  alertes     AlerteUtilisateur[]
 
   @@map("tenants")
 }
@@ -45,12 +54,15 @@ model TenantSubscription {
   endDate     DateTime? @map("end_date")
   price       Decimal  @db.Decimal(10, 2)
   currency    String   @default("EUR") @db.VarChar(3)
+  stripeSubscriptionId String? @map("stripe_subscription_id") @db.VarChar(255)
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan        PlanTarifaire @relation(fields: [planId], references: [id])
 
+  @@index([tenantId])
+  @@index([status])
   @@map("tenant_subscriptions")
 }
 
@@ -96,7 +108,7 @@ model AuditLog {
 }
 
 // ==========================================
-// TABLES DE RÉFÉRENCE
+// TABLES DE RÉFÉRENCE (SHARED - NO TENANT)
 // ==========================================
 
 model Genre {
@@ -135,6 +147,7 @@ model PlanTarifaire {
   maxUsers    Int       @default(10)
   maxStorage  Int       @default(1000) // MB
   features    Json?     // Features included in plan
+  stripePriceId String? @map("stripe_price_id") @db.VarChar(255)
   createdAt   DateTime  @default(now()) @map("created_at")
 
   // Relations
@@ -145,8 +158,16 @@ model PlanTarifaire {
   @@map("plans_tarifaires")
 }
 
+model Taille {
+  id       Int      @id @default(autoincrement())
+  nom      String   @unique @db.VarChar(10)
+  articles Article[]
+
+  @@map("tailles")
+}
+
 // ==========================================
-// UTILISATEURS
+// UTILISATEURS (TENANT-SPECIFIC)
 // ==========================================
 
 model User {
@@ -190,6 +211,8 @@ model User {
   // Unique constraint par tenant
   @@unique([email, tenantId], name: "unique_email_per_tenant")
   @@index([tenantId])
+  @@index([tenantId, actif])
+  @@index([tenantId, email])
   @@map("users")
 }
 
@@ -214,11 +237,12 @@ model PasswordResetToken {
 }
 
 // ==========================================
-// COURS
+// COURS (TENANT-SPECIFIC)
 // ==========================================
 
 model Cours {
   id          Int       @id @default(autoincrement())
+  tenantId    String    @map("tenant_id") // ✅ AJOUTÉ
   dateCours   DateTime  @map("date_cours") @db.Date
   typeCours   String    @map("type_cours") @db.VarChar(50)
   heureDebut  DateTime  @map("heure_debut") @db.Time(0)
@@ -229,9 +253,13 @@ model Cours {
   createdAt   DateTime  @default(now()) @map("created_at")
 
   // Relations
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   inscriptions Inscription[]
   reservations Reservation[]
 
+  @@index([tenantId])
+  @@index([tenantId, dateCours])
+  @@index([tenantId, typeCours])
   @@index([dateCours])
   @@index([typeCours])
   @@map("cours")
@@ -274,11 +302,12 @@ model Reservation {
 }
 
 // ==========================================
-// PAIEMENTS
+// PAIEMENTS (TENANT-SPECIFIC)
 // ==========================================
 
 model Paiement {
   id            Int       @id @default(autoincrement())
+  tenantId      String    @map("tenant_id") // ✅ AJOUTÉ
   utilisateurId Int       @map("utilisateur_id")
   montant       Decimal   @db.Decimal(10, 2)
   datePaiement  DateTime  @map("date_paiement") @db.Date
@@ -291,10 +320,15 @@ model Paiement {
   createdAt     DateTime  @default(now()) @map("created_at")
 
   // Relations
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   utilisateur User           @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
   abonnement  PlanTarifaire? @relation(fields: [abonnementId], references: [id])
 
-  @@unique([utilisateurId, periodeDebut])
+  @@unique([tenantId, utilisateurId, periodeDebut])
+  @@index([tenantId])
+  @@index([tenantId, utilisateurId])
+  @@index([tenantId, statut])
+  @@index([tenantId, datePaiement])
   @@index([utilisateurId])
   @@index([statut])
   @@index([datePaiement])
@@ -303,6 +337,7 @@ model Paiement {
 
 model EcheancePaiement {
   id            Int       @id @default(autoincrement())
+  tenantId      String    @map("tenant_id") // ✅ AJOUTÉ
   utilisateurId Int       @map("utilisateur_id")
   montant       Decimal   @db.Decimal(10, 2)
   dateEcheance  DateTime  @map("date_echeance") @db.Date
@@ -310,6 +345,13 @@ model EcheancePaiement {
   rappelEnvoye  Boolean   @default(false) @map("rappel_envoye")
   createdAt     DateTime  @default(now()) @map("created_at")
 
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, utilisateurId])
+  @@index([tenantId, dateEcheance])
+  @@index([tenantId, statut])
   @@index([utilisateurId])
   @@index([dateEcheance])
   @@index([statut])
@@ -317,19 +359,12 @@ model EcheancePaiement {
 }
 
 // ==========================================
-// BOUTIQUE / MAGASIN
+// BOUTIQUE / MAGASIN (TENANT-SPECIFIC)
 // ==========================================
-
-model Taille {
-  id       Int      @id @default(autoincrement())
-  nom      String   @unique @db.VarChar(10)
-  articles Article[]
-
-  @@map("tailles")
-}
 
 model Article {
   id          Int       @id @default(autoincrement())
+  tenantId    String    @map("tenant_id") // ✅ AJOUTÉ
   nom         String    @db.VarChar(100)
   description String?   @db.Text
   prix        Decimal   @db.Decimal(10, 2)
@@ -340,10 +375,13 @@ model Article {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // Relations
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   taille           Taille?           @relation(fields: [tailleId], references: [id])
   stock            Stock[]
   commandesArticles CommandeArticle[]
 
+  @@index([tenantId])
+  @@index([tenantId, actif])
   @@index([tailleId])
   @@index([actif])
   @@map("articles")
@@ -365,6 +403,7 @@ model Stock {
 
 model Commande {
   id            Int       @id @default(autoincrement())
+  tenantId      String    @map("tenant_id") // ✅ AJOUTÉ
   utilisateurId Int       @map("utilisateur_id")
   dateCommande  DateTime  @default(now()) @map("date_commande")
   statut        String    @default("en attente") @db.VarChar(50)
@@ -373,9 +412,14 @@ model Commande {
   notes         String?   @db.Text
 
   // Relations
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   utilisateur User              @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
   articles    CommandeArticle[]
 
+  @@index([tenantId])
+  @@index([tenantId, utilisateurId])
+  @@index([tenantId, statut])
+  @@index([tenantId, dateCommande])
   @@index([utilisateurId])
   @@index([statut])
   @@index([dateCommande])
@@ -399,12 +443,12 @@ model CommandeArticle {
 }
 
 // ==========================================
-// COMMUNICATION
+// COMMUNICATION (TENANT-SPECIFIC)
 // ==========================================
 
 model Message {
   id             Int       @id @default(autoincrement())
-  tenantId       String    @map("tenant_id") @db.VarChar(255)
+  tenantId       String    @map("tenant_id")
   senderId       Int       @map("expediteur_id")
   recipientId    Int?      @map("destinataire_id")
   subject        String    @map("sujet") @db.VarChar(200)
@@ -426,6 +470,9 @@ model Message {
   recipient    User?  @relation("MessageReceiver", fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
+  @@index([tenantId, senderId])
+  @@index([tenantId, recipientId])
+  @@index([tenantId, status])
   @@index([senderId])
   @@index([recipientId])
   @@index([status])
@@ -453,6 +500,7 @@ model MessagePersonnalise {
 
 model Notification {
   id            Int       @id @default(autoincrement())
+  tenantId      String    @map("tenant_id") // ✅ AJOUTÉ
   utilisateurId Int       @map("utilisateur_id")
   titre         String    @db.VarChar(200)
   message       String    @db.Text
@@ -462,8 +510,12 @@ model Notification {
   createdAt     DateTime  @default(now()) @map("created_at")
 
   // Relations
-  utilisateur User @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  utilisateur User   @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
+  @@index([tenantId, utilisateurId])
+  @@index([tenantId, lu])
   @@index([utilisateurId])
   @@index([lu])
   @@index([createdAt])
@@ -471,19 +523,23 @@ model Notification {
 }
 
 // ==========================================
-// GROUPES
+// GROUPES (TENANT-SPECIFIC)
 // ==========================================
 
 model Groupe {
   id          Int      @id @default(autoincrement())
+  tenantId    String   @map("tenant_id") // ✅ AJOUTÉ
   nom         String   @db.VarChar(100)
   description String?  @db.Text
   actif       Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
+  tenant  Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   membres GroupeUtilisateur[]
 
+  @@index([tenantId])
+  @@index([tenantId, actif])
   @@map("groupes")
 }
 
@@ -504,7 +560,7 @@ model GroupeUtilisateur {
 }
 
 // ==========================================
-// SYSTÈME D'ALERTES
+// SYSTÈME D'ALERTES (TENANT-SPECIFIC)
 // ==========================================
 
 model AlerteType {
@@ -524,6 +580,7 @@ model AlerteType {
 
 model AlerteUtilisateur {
   id              Int       @id @default(autoincrement())
+  tenantId        String    @map("tenant_id") // ✅ AJOUTÉ
   utilisateurId   Int       @map("utilisateur_id")
   alerteTypeId    Int       @map("alerte_type_id")
   statut          String    @default("active") @db.VarChar(20)
@@ -533,10 +590,14 @@ model AlerteUtilisateur {
   notes           String?   @db.Text
 
   // Relations
-  utilisateur User        @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
-  alerteType  AlerteType  @relation(fields: [alerteTypeId], references: [id], onDelete: Cascade)
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  utilisateur User         @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  alerteType  AlerteType   @relation(fields: [alerteTypeId], references: [id], onDelete: Cascade)
   actions     AlerteAction[]
 
+  @@index([tenantId])
+  @@index([tenantId, utilisateurId])
+  @@index([tenantId, statut])
   @@index([utilisateurId, statut])
   @@index([alerteTypeId, statut])
   @@map("alertes_utilisateurs")

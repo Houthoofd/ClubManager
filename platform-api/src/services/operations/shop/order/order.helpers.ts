@@ -3,13 +3,13 @@
  * Utility functions for order operations
  */
 
-import { OrderStatus } from '../../../types/shop.types.js';
+import { OrderStatus } from "@clubmanager/types";
 
 /**
  * Calculate order subtotal
  */
 export function calculateSubtotal(
-  items: Array<{ price: number; quantity: number }>
+  items: Array<{ price: number; quantity: number }>,
 ): number {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 }
@@ -24,15 +24,19 @@ export function calculateTax(subtotal: number, taxRate: number): number {
 /**
  * Calculate order total with tax
  */
-export function calculateTotal(subtotal: number, tax: number, shipping = 0): number {
+export function calculateTotal(
+  subtotal: number,
+  tax: number,
+  shipping = 0,
+): number {
   return Math.round((subtotal + tax + shipping) * 100) / 100;
 }
 
 /**
  * Format order number
  */
-export function formatOrderNumber(id: number, prefix = 'ORD'): string {
-  return `${prefix}-${String(id).padStart(8, '0')}`;
+export function formatOrderNumber(id: number, prefix = "ORD"): string {
+  return `${prefix}-${String(id).padStart(8, "0")}`;
 }
 
 /**
@@ -40,12 +44,12 @@ export function formatOrderNumber(id: number, prefix = 'ORD'): string {
  */
 export function getOrderStatusLabel(status: OrderStatus): string {
   const labels: Record<OrderStatus, string> = {
-    [OrderStatus.PENDING]: 'En attente',
-    [OrderStatus.CONFIRMED]: 'Confirmée',
-    [OrderStatus.PROCESSING]: 'En traitement',
-    [OrderStatus.SHIPPED]: 'Expédiée',
-    [OrderStatus.DELIVERED]: 'Livrée',
-    [OrderStatus.CANCELLED]: 'Annulée'
+    [OrderStatus.PENDING]: "En attente",
+    [OrderStatus.CONFIRMED]: "Confirmée",
+    [OrderStatus.PROCESSING]: "En traitement",
+    [OrderStatus.SHIPPED]: "Expédiée",
+    [OrderStatus.DELIVERED]: "Livrée",
+    [OrderStatus.CANCELLED]: "Annulée",
   };
   return labels[status];
 }
@@ -55,12 +59,12 @@ export function getOrderStatusLabel(status: OrderStatus): string {
  */
 export function getOrderStatusColor(status: OrderStatus): string {
   const colors: Record<OrderStatus, string> = {
-    [OrderStatus.PENDING]: 'orange',
-    [OrderStatus.CONFIRMED]: 'blue',
-    [OrderStatus.PROCESSING]: 'purple',
-    [OrderStatus.SHIPPED]: 'cyan',
-    [OrderStatus.DELIVERED]: 'green',
-    [OrderStatus.CANCELLED]: 'red'
+    [OrderStatus.PENDING]: "orange",
+    [OrderStatus.CONFIRMED]: "blue",
+    [OrderStatus.PROCESSING]: "purple",
+    [OrderStatus.SHIPPED]: "cyan",
+    [OrderStatus.DELIVERED]: "green",
+    [OrderStatus.CANCELLED]: "red",
   };
   return colors[status];
 }
@@ -69,10 +73,7 @@ export function getOrderStatusColor(status: OrderStatus): string {
  * Check if order can be cancelled
  */
 export function canCancelOrder(status: OrderStatus): boolean {
-  return [
-    OrderStatus.PENDING,
-    OrderStatus.CONFIRMED
-  ].includes(status);
+  return [OrderStatus.PENDING, OrderStatus.CONFIRMED].includes(status);
 }
 
 /**
@@ -93,19 +94,14 @@ export function canRefundOrder(status: OrderStatus): boolean {
  * Check if order is final (cannot be changed)
  */
 export function isOrderFinal(status: OrderStatus): boolean {
-  return [
-    OrderStatus.DELIVERED,
-    OrderStatus.CANCELLED
-  ].includes(status);
+  return [OrderStatus.DELIVERED, OrderStatus.CANCELLED].includes(status);
 }
 
 /**
  * Check if order is in progress
  */
 export function isOrderInProgress(status: OrderStatus): boolean {
-  return [
-    OrderStatus.CONFIRMED
-  ].includes(status);
+  return [OrderStatus.CONFIRMED].includes(status);
 }
 
 /**
@@ -118,9 +114,12 @@ export function calculateItemSubtotal(price: number, quantity: number): number {
 /**
  * Calculate discount amount
  */
-export function calculateDiscount(subtotal: number, discountPercent: number): number {
+export function calculateDiscount(
+  subtotal: number,
+  discountPercent: number,
+): number {
   if (discountPercent < 0 || discountPercent > 100) {
-    throw new Error('Discount percent must be between 0 and 100');
+    throw new Error("Discount percent must be between 0 and 100");
   }
   return Math.round(subtotal * (discountPercent / 100) * 100) / 100;
 }
@@ -137,12 +136,12 @@ export function applyDiscount(price: number, discountPercent: number): number {
  * Validate order items
  */
 export function validateOrderItems(
-  items: Array<{ productId: number; quantity: number }>
+  items: Array<{ productId: number; quantity: number }>,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   if (!items || items.length === 0) {
-    errors.push('Order must contain at least one item');
+    errors.push("Order must contain at least one item");
   }
 
   items.forEach((item, index) => {
@@ -159,19 +158,19 @@ export function validateOrderItems(
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
 /**
  * Group order items by product
  */
-export function groupOrderItems<T extends { productId: number; quantity: number }>(
-  items: T[]
-): Map<number, T[]> {
+export function groupOrderItems<
+  T extends { productId: number; quantity: number },
+>(items: T[]): Map<number, T[]> {
   const grouped = new Map<number, T[]>();
 
-  items.forEach(item => {
+  items.forEach((item) => {
     const existing = grouped.get(item.productId) || [];
     grouped.set(item.productId, [...existing, item]);
   });
@@ -183,7 +182,7 @@ export function groupOrderItems<T extends { productId: number; quantity: number 
  * Calculate total quantity of items
  */
 export function calculateTotalQuantity(
-  items: Array<{ quantity: number }>
+  items: Array<{ quantity: number }>,
 ): number {
   return items.reduce((sum, item) => sum + item.quantity, 0);
 }
@@ -191,7 +190,9 @@ export function calculateTotalQuantity(
 /**
  * Calculate average order value
  */
-export function calculateAverageOrderValue(orders: Array<{ totalAmount: number }>): number {
+export function calculateAverageOrderValue(
+  orders: Array<{ totalAmount: number }>,
+): number {
   if (orders.length === 0) return 0;
   const total = orders.reduce((sum, order) => sum + order.totalAmount, 0);
   return Math.round((total / orders.length) * 100) / 100;
@@ -230,7 +231,7 @@ export function formatOrderSummary(order: {
  */
 export function calculateShipping(
   total: number,
-  freeShippingThreshold = 50
+  freeShippingThreshold = 50,
 ): number {
   if (total >= freeShippingThreshold) return 0;
   return 5.99; // Default shipping cost
@@ -241,7 +242,7 @@ export function calculateShipping(
  */
 export function qualifiesForFreeShipping(
   total: number,
-  threshold = 50
+  threshold = 50,
 ): boolean {
   return total >= threshold;
 }
@@ -249,14 +250,16 @@ export function qualifiesForFreeShipping(
 /**
  * Get next valid statuses for current status
  */
-export function getNextValidStatuses(currentStatus: OrderStatus): OrderStatus[] {
+export function getNextValidStatuses(
+  currentStatus: OrderStatus,
+): OrderStatus[] {
   const transitions: Record<OrderStatus, OrderStatus[]> = {
     [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
     [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
     [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
     [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
     [OrderStatus.DELIVERED]: [],
-    [OrderStatus.CANCELLED]: []
+    [OrderStatus.CANCELLED]: [],
   };
   return transitions[currentStatus] || [];
 }
@@ -266,7 +269,7 @@ export function getNextValidStatuses(currentStatus: OrderStatus): OrderStatus[] 
  */
 export function isValidStatusTransition(
   from: OrderStatus,
-  to: OrderStatus
+  to: OrderStatus,
 ): boolean {
   const validNext = getNextValidStatuses(from);
   return validNext.includes(to);
@@ -277,7 +280,7 @@ export function isValidStatusTransition(
  */
 export function calculateProcessingTime(
   createdAt: Date,
-  completedAt: Date
+  completedAt: Date,
 ): number {
   const diffMs = completedAt.getTime() - createdAt.getTime();
   return Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
@@ -289,10 +292,10 @@ export function calculateProcessingTime(
 export function generateInvoiceNumber(
   orderId: number,
   year: number,
-  month: number
+  month: number,
 ): string {
-  const monthStr = String(month).padStart(2, '0');
-  const orderStr = String(orderId).padStart(6, '0');
+  const monthStr = String(month).padStart(2, "0");
+  const orderStr = String(orderId).padStart(6, "0");
   return `INV-${year}${monthStr}-${orderStr}`;
 }
 
@@ -346,14 +349,14 @@ export function parseOrderFilters(query: any): {
 /**
  * Sort orders by priority
  */
-export function sortOrdersByPriority<T extends { status: OrderStatus; createdAt: Date }>(
-  orders: T[]
-): T[] {
+export function sortOrdersByPriority<
+  T extends { status: OrderStatus; createdAt: Date },
+>(orders: T[]): T[] {
   const priorityOrder: Record<string, number> = {
-    "confirmée": 1,
+    confirmée: 1,
     "en attente": 2,
-    "livrée": 3,
-    "annulée": 4
+    livrée: 3,
+    annulée: 4,
   };
 
   return [...orders].sort((a, b) => {

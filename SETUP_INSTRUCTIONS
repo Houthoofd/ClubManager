@@ -1,0 +1,315 @@
+================================================================================
+  🚀 CLUBMANAGER - SETUP INSTRUCTIONS MULTI-TENANT SAAS
+================================================================================
+
+✅ ÉTAPE 1 : VÉRIFICATION DE L'INSTALLATION
+--------------------------------------------------------------------------------
+
+La base de données a été mise à jour avec succès ! Vérifiez :
+
+  cd platform-api
+  npx tsx verify-setup.ts
+
+Résultat attendu :
+  ✅ Database connected
+  ✅ Found 1 tenant(s)
+  ✅ Tenant isolation working
+  ✅ Users found
+
+
+================================================================================
+  🔧 ÉTAPE 2 : CONFIGURATION STRIPE
+================================================================================
+
+1. Copier le fichier d'exemple :
+
+   cd platform-api
+   cp .env.stripe.example .env
+
+2. Ouvrir Stripe Dashboard : https://dashboard.stripe.com
+
+3. Récupérer vos clés API (Developers > API keys) :
+   - Test Secret Key : sk_test_xxxxx
+   - Webhook Secret : whsec_xxxxx (après création du webhook)
+
+4. Mettre à jour le fichier .env :
+
+   STRIPE_SECRET_KEY=sk_test_xxxxx
+   STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+
+5. Créer les produits et prix dans Stripe :
+
+   Aller dans : Products > Add product
+
+   Créer 3 produits :
+   - STARTER : 29.99€/mois → copier le Price ID
+   - PRO : 79.99€/mois → copier le Price ID
+   - ENTERPRISE : 199.99€/mois → copier le Price ID
+
+6. Ajouter les Price IDs dans .env :
+
+   STRIPE_PRICE_STARTER=price_xxxxx
+   STRIPE_PRICE_PRO=price_xxxxx
+   STRIPE_PRICE_ENTERPRISE=price_xxxxx
+
+7. Configurer le webhook :
+
+   Aller dans : Developers > Webhooks > Add endpoint
+   URL : https://votre-domaine.com/webhooks/stripe
+
+   Événements à écouter :
+   ✓ customer.subscription.created
+   ✓ customer.subscription.updated
+   ✓ customer.subscription.deleted
+   ✓ invoice.payment_succeeded
+   ✓ invoice.payment_failed
+   ✓ payment_intent.succeeded
+   ✓ payment_intent.payment_failed
+
+
+================================================================================
+  🔐 ÉTAPE 3 : ACTIVER L'ISOLATION TENANT (CRITIQUE)
+================================================================================
+
+⚠️  IMPORTANT : Le middleware d'isolation est créé mais pas encore appliqué
+                 partout dans votre code existant.
+
+1. Remplacer tous les imports de PrismaClient par le client amélioré :
+
+   AVANT :
+   import { PrismaClient } from '@prisma/client';
+   const prisma = new PrismaClient();
+
+   APRÈS :
+   import { prisma } from '../db/prisma.client.js';
+
+2. Le middleware est déjà appliqué dans app.ts :
+
+   ✅ setTenantContext() - Définit le contexte
+   ✅ clearTenantContext() - Nettoie après la requête
+
+3. Tester l'isolation :
+
+   # Sans contexte tenant (doit échouer) :
+   const users = await prisma.user.findMany();
+   // ❌ Erreur : "without tenant context"
+
+   # Avec contexte tenant (fonctionne) :
+   setCurrentTenantId('tenant_xxx');
+   const users = await prisma.user.findMany();
+   // ✅ Retourne uniquement les users du tenant
+
+
+================================================================================
+  📊 ÉTAPE 4 : UTILISER LES SERVICES DE FACTURATION
+================================================================================
+
+Les services sont modulaires et prêts à l'emploi :
+
+1. Créer un abonnement :
+
+   import { billingService } from './services/infrastructure/billing';
+
+   const subscription = await billingService.subscription.createSubscription({
+     tenantId: 'tenant_xxx',
+     planId: 'PRO',
+     paymentMethodId: 'pm_xxxxx',
+     trialDays: 14,
+     email: 'admin@club.com'
+   });
+
+2. Changer de plan :
+
+   await billingService.subscription.changePlan({
+     tenantId: 'tenant_xxx',
+     newPlanId: 'ENTERPRISE'
+   });
+
+3. Gérer les factures :
+
+   const invoices = await billingService.invoice.getInvoices({
+     tenantId: 'tenant_xxx',
+     limit: 10
+   });
+
+4. Créer un portail client :
+
+   const portalUrl = await billingService.portal.createPortalSession({
+     tenantId: 'tenant_xxx',
+     returnUrl: 'https://app.clubmanager.com/settings'
+   });
+
+5. Traiter les webhooks (déjà configuré) :
+
+   Le fichier routes/utils/webhooks.ts traite automatiquement :
+   - Paiements réussis/échoués
+   - Changements d'abonnement
+   - Dunning automatique (3 tentatives)
+
+
+================================================================================
+  🧪 ÉTAPE 5 : TESTER L'APPLICATION
+================================================================================
+
+1. Démarrer le serveur :
+
+   cd platform-api
+   npm run dev
+
+2. Tester avec un client (Postman, curl, etc.) :
+
+   # Login
+   POST http://localhost:5000/api/auth/login
+   Headers: X-Tenant-ID: default-club
+   Body: {
+     "email": "admin@default-club.com",
+     "password": "admin123"
+   }
+
+3. Utiliser le token JWT dans les requêtes suivantes :
+
+   GET http://localhost:5000/api/users
+   Headers:
+     X-Tenant-ID: default-club
+     Authorization: Bearer <token>
+
+4. Tester l'isolation :
+
+   # Créer un 2e tenant
+   POST http://localhost:5000/api/tenant/signup
+   Body: {
+     "name": "Club Test 2",
+     "slug": "club-test-2",
+     "adminEmail": "admin@club-test-2.com"
+   }
+
+   # Essayer d'accéder aux users du tenant 1 avec le contexte du tenant 2
+   # ❌ Doit échouer ou retourner 0 résultats
+
+
+================================================================================
+  📁 STRUCTURE DES FICHIERS CRÉÉS
+================================================================================
+
+platform-api/
+├── src/
+│   ├── db/
+│   │   └── prisma.client.ts              ✅ Client avec isolation
+│   ├── middleware/
+│   │   ├── tenant-context.middleware.ts   ✅ Context Express
+│   │   └── prisma/
+│   │       └── tenant-isolation.middleware.ts ✅ Isolation Prisma
+│   ├── services/infrastructure/billing/
+│   │   ├── stripe.client.ts              ✅ Client Stripe
+│   │   ├── customer.service.ts           ✅ Customers
+│   │   ├── subscription.service.ts       ✅ Abonnements
+│   │   ├── payment.service.ts            ✅ Paiements
+│   │   ├── invoice.service.ts            ✅ Factures
+│   │   ├── webhook.service.ts            ✅ Webhooks
+│   │   ├── portal.service.ts             ✅ Portail
+│   │   ├── types.ts                      ✅ Types
+│   │   └── index.ts                      ✅ Export
+│   ├── utils/
+│   │   └── tenant.helper.ts              ✅ Helpers
+│   └── __tests__/
+│       └── tenant-isolation.test.ts      ✅ Tests
+├── prisma/
+│   ├── schema.prisma                     ✅ Schéma mis à jour
+│   ├── seed.ts                           ✅ Données test
+│   └── migrations/
+│       └── 20240101000000_add_tenant_isolation/
+│           └── migration.sql             ✅ Migration appliquée
+├── .env.stripe.example                   ✅ Template config
+└── verify-setup.ts                       ✅ Script vérification
+
+
+================================================================================
+  🎯 COMPTE DE TEST CRÉÉ
+================================================================================
+
+Tenant : default-club
+Email  : admin@default-club.com
+Pass   : admin123
+Plan   : PRO
+Status : ACTIVE
+
+Utilisez ces identifiants pour tester l'application.
+
+
+================================================================================
+  ⚠️  POINTS D'ATTENTION
+================================================================================
+
+1. SÉCURITÉ CRITIQUE
+   Le middleware d'isolation DOIT être actif sur toutes les requêtes métier.
+   Vérifiez que chaque route utilise le contexte tenant.
+
+2. PERFORMANCES
+   Des index ont été créés sur (tenant_id, *) pour optimiser les requêtes.
+   Surveillez les performances avec des outils comme New Relic ou DataDog.
+
+3. WEBHOOKS STRIPE
+   En production, configurez l'URL webhook HTTPS avec SSL.
+   Stripe ne peut pas envoyer vers localhost.
+
+4. ENVIRONNEMENT
+   Ne commitez JAMAIS le fichier .env !
+   Utilisez des secrets managers en production (AWS Secrets, Vault, etc.)
+
+5. BACKUP
+   Configurez des backups automatiques de la base de données.
+   Les données tenant sont critiques.
+
+
+================================================================================
+  📚 RESSOURCES
+================================================================================
+
+Documentation :
+  - Architecture SaaS : ARCHITECTURE_SAAS_MULTI_TENANT.md
+  - Plan d'implémentation : SAAS_IMPLEMENTATION_PLAN.md
+  - Roadmap : ROADMAP_AMELIORATIONS.md
+  - Changelog : CHANGELOG
+
+Stripe :
+  - Dashboard : https://dashboard.stripe.com
+  - Documentation : https://stripe.com/docs
+  - Webhooks : https://stripe.com/docs/webhooks
+
+Prisma :
+  - Documentation : https://www.prisma.io/docs
+  - Middleware : https://www.prisma.io/docs/concepts/components/prisma-client/middleware
+
+
+================================================================================
+  🚀 PROCHAINES ÉTAPES
+================================================================================
+
+MAINTENANT :
+  ✅ Configurer Stripe (étape 2)
+  ✅ Tester la création d'abonnement
+  ✅ Vérifier les webhooks
+
+CETTE SEMAINE :
+  □ Implémenter Redis pour le caching
+  □ Ajouter rate limiting par tenant
+  □ Configurer monitoring (Sentry)
+  □ Créer dashboard admin
+
+CE MOIS :
+  □ Tests de charge
+  □ Documentation API
+  □ Onboarding nouveaux tenants
+  □ Analytics par tenant
+
+
+================================================================================
+  ✅ SETUP COMPLET !
+================================================================================
+
+Votre application est maintenant prête pour le multi-tenant SaaS !
+
+Questions ? Consultez la documentation ou créez une issue sur GitHub.
+
+Bonne chance ! 🎉
+================================================================================

@@ -4,7 +4,7 @@ import {
   TenantUpdateInput,
   TenantWithSubscription,
   CreateSubscriptionInput,
-} from "../../types/tenant.js";
+} from "@clubmanager/types";
 
 const prisma = new PrismaClient();
 
@@ -16,8 +16,8 @@ function transformTenantData(tenant: any): TenantWithSubscription {
     ...tenant,
     subscriptions: tenant.subscriptions.map((sub: any) => ({
       ...sub,
-      price: Number(sub.price)
-    }))
+      price: Number(sub.price),
+    })),
   };
 }
 

@@ -5,7 +5,7 @@
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import { OrderFilters, OrderStatus } from "../types/shop.types.js";
+import { OrderFilters, OrderStatus } from "@clubmanager/types";
 
 export class OrderRepository {
   constructor(private prisma: PrismaClient) {}

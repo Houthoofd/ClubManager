@@ -1,7 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "./db/prisma.client.js";
 import webhooksRouter from "./routes/utils/webhooks.js";
 import healthRouter from "./routes/utils/health.js";
 import {
@@ -10,15 +10,16 @@ import {
   notFoundHandler,
   setupGlobalErrorHandlers,
 } from "./middleware/index.js";
+import {
+  setTenantContext,
+  clearTenantContext,
+} from "./middleware/tenant-context.middleware.js";
 
 // Charger les variables d'environnement
 dotenv.config();
 
 // Setup global error handlers
 setupGlobalErrorHandlers();
-
-// Initialize Prisma Client
-const prisma = new PrismaClient();
 
 const app = express();
 
@@ -33,6 +34,10 @@ app.use(cookieParser());
 
 // Global middlewares (Logger + CORS + Security + Sanitization)
 app.use(fullAppChain);
+
+// Tenant context middleware (MUST be after auth but before routes)
+app.use(setTenantContext());
+app.use(clearTenantContext());
 
 // ========== ROUTES ==========
 // Import API routes

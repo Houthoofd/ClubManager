@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
-import { AuthenticatedUser } from "../../types/auth.js";
+import { AuthenticatedUser } from "@clubmanager/types";
 
 export interface JWTPayload {
   id: number;

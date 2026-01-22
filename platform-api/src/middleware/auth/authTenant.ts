@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
-import { AuthenticatedUser } from "../../types/auth.js";
+import { AuthenticatedUser } from "@clubmanager/types";
 
 const prisma = new PrismaClient();
 

@@ -1,7 +1,6 @@
-import { EmailResult, CoursInfo, EmailAction } from '../types/emailTypes.js';
+import { EmailResult, CoursInfo, EmailAction } from "@clubmanager/types";
 
 export class EmailUtils {
-  
   // Valider une adresse email
   static isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,11 +8,14 @@ export class EmailUtils {
   }
 
   // Valider une liste d'emails
-  static validateEmailList(emails: string[]): { valid: string[]; invalid: string[] } {
+  static validateEmailList(emails: string[]): {
+    valid: string[];
+    invalid: string[];
+  } {
     const valid: string[] = [];
     const invalid: string[] = [];
 
-    emails.forEach(email => {
+    emails.forEach((email) => {
       if (this.isValidEmail(email.trim())) {
         valid.push(email.trim());
       } else {
@@ -31,19 +33,19 @@ export class EmailUtils {
 
   // Formater une date pour l'affichage dans les emails
   static formatDateForEmail(date: string | Date): string {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   }
 
   // Formater une heure pour l'affichage dans les emails
   static formatTimeForEmail(time: string): string {
     // Suppose un format HH:MM ou HH:MM:SS
-    const timeParts = time.split(':');
+    const timeParts = time.split(":");
     return `${timeParts[0]}h${timeParts[1]}`;
   }
 
@@ -55,7 +57,7 @@ export class EmailUtils {
     successRate: number;
   } {
     const total = results.length;
-    const success = results.filter(r => r.success).length;
+    const success = results.filter((r) => r.success).length;
     const failed = total - success;
     const successRate = total > 0 ? Math.round((success / total) * 100) : 0;
 
@@ -64,15 +66,23 @@ export class EmailUtils {
 
   // Extraire le domaine d'un email
   static getEmailDomain(email: string): string {
-    return email.split('@')[1] || '';
+    return email.split("@")[1] || "";
   }
 
   // Vérifier si un email est d'un domaine temporaire/jetable
   static isTemporaryEmail(email: string): boolean {
     const temporaryDomains = [
-      '10minutemail.com', 'guerrillamail.com', 'mailinator.com', 
-      'tempmail.org', 'yopmail.com', 'maildrop.cc', 'throwaway.email',
-      'getnada.com', 'temp-mail.org', 'mohmal.com', 'emailondeck.com'
+      "10minutemail.com",
+      "guerrillamail.com",
+      "mailinator.com",
+      "tempmail.org",
+      "yopmail.com",
+      "maildrop.cc",
+      "throwaway.email",
+      "getnada.com",
+      "temp-mail.org",
+      "mohmal.com",
+      "emailondeck.com",
     ];
 
     const domain = this.getEmailDomain(email.toLowerCase());
@@ -87,36 +97,36 @@ export class EmailUtils {
   // Convertir du texte en HTML sécurisé
   static textToSafeHtml(text: string): string {
     return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/\n/g, '<br>');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+      .replace(/\n/g, "<br>");
   }
 
   // Convertir du HTML en texte
   static htmlToText(html: string): string {
     return html
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n\n')
-      .replace(/<\/div>/gi, '\n')
-      .replace(/<\/h[1-6]>/gi, '\n\n')
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n\n")
+      .replace(/<\/div>/gi, "\n")
+      .replace(/<\/h[1-6]>/gi, "\n\n")
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/\s+/g, ' ')
+      .replace(/\s+/g, " ")
       .trim();
   }
 
   // Tronquer un texte pour les aperçus d'email
   static truncateText(text: string, maxLength: number = 100): string {
     if (text.length <= maxLength) return text;
-    return text.substr(0, maxLength - 3) + '...';
+    return text.substr(0, maxLength - 3) + "...";
   }
 
   // Calculer le délai optimal entre les emails groupés
@@ -140,11 +150,11 @@ export class EmailUtils {
   // Créer un message d'erreur convivial
   static formatErrorMessage(error: string): string {
     const errorMappings: { [key: string]: string } = {
-      'EAUTH': 'Problème d\'authentification email. Vérifiez vos identifiants.',
-      'ENOTFOUND': 'Serveur email introuvable. Vérifiez la configuration.',
-      'ECONNREFUSED': 'Connexion refusée par le serveur email.',
-      'ETIMEDOUT': 'Délai d\'attente dépassé lors de l\'envoi.',
-      'Unauthorized': 'Clé API invalide ou expirée.'
+      EAUTH: "Problème d'authentification email. Vérifiez vos identifiants.",
+      ENOTFOUND: "Serveur email introuvable. Vérifiez la configuration.",
+      ECONNREFUSED: "Connexion refusée par le serveur email.",
+      ETIMEDOUT: "Délai d'attente dépassé lors de l'envoi.",
+      Unauthorized: "Clé API invalide ou expirée.",
     };
 
     for (const [key, message] of Object.entries(errorMappings)) {
@@ -153,7 +163,7 @@ export class EmailUtils {
       }
     }
 
-    return 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.';
+    return "Erreur lors de l'envoi de l'email. Veuillez réessayer.";
   }
 
   // Créer une signature email standardisée
@@ -176,15 +186,17 @@ export class EmailUtils {
     action: string,
     recipient: string | string[],
     success: boolean,
-    details?: any
+    details?: any,
   ): void {
     const timestamp = new Date().toISOString();
     const recipientCount = Array.isArray(recipient) ? recipient.length : 1;
-    
+
     console.log(`📧 [EmailActivity] ${timestamp} - ${action}:`, {
       success,
       recipientCount,
-      details: details ? { messageId: details.messageId, error: details.error } : undefined
+      details: details
+        ? { messageId: details.messageId, error: details.error }
+        : undefined,
     });
   }
 }

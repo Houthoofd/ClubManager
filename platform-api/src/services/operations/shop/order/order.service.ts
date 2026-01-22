@@ -7,9 +7,12 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { OrderRepository } from "../../../../repositories/order.repository.js";
 import { ProductRepository } from "../../../repositories/product.repository.js";
-import { OrderFilters, OrderStatus } from "../../../../shared/types/shop.types.js";
+import { OrderFilters, OrderStatus } from "@clubmanager/types";
 import { NotFoundError } from "../../../shared/errors/index.js";
-import { auditService, AuditAction } from "../../../infrastructure/audit/audit.service.js";
+import {
+  auditService,
+  AuditAction,
+} from "../../../infrastructure/audit/audit.service.js";
 import { inventoryService } from "../inventory/inventory.service.js";
 
 export interface CreateOrderDTO {

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
-import { TenantContext } from "../../types/tenant.js";
+import { TenantContext } from "@clubmanager/types";
 
 const prisma = new PrismaClient();
 

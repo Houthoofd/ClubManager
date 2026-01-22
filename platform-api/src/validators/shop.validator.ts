@@ -3,12 +3,22 @@
  * Validation logic for shop, products, and orders
  */
 
-import { ProductStatus, OrderStatus, CreateProductDTO, UpdateProductDTO, CreateOrderDTO, OrderItemDTO } from '../types/shop.types.js';
+import {
+  ProductStatus,
+  OrderStatus,
+  CreateProductDTO,
+  UpdateProductDTO,
+  CreateOrderDTO,
+  OrderItemDTO,
+} from "@clubmanager/types";
 
 export class ShopValidationError extends Error {
-  constructor(message: string, public field?: string) {
+  constructor(
+    message: string,
+    public field?: string,
+  ) {
     super(message);
-    this.name = 'ShopValidationError';
+    this.name = "ShopValidationError";
   }
 }
 
@@ -17,51 +27,60 @@ export class ShopValidationError extends Error {
  */
 export function validateCreateProduct(data: CreateProductDTO): void {
   if (!data.name || data.name.trim().length === 0) {
-    throw new ShopValidationError('Product name is required', 'name');
+    throw new ShopValidationError("Product name is required", "name");
   }
 
   if (data.name.length > 200) {
-    throw new ShopValidationError('Product name must be less than 200 characters', 'name');
+    throw new ShopValidationError(
+      "Product name must be less than 200 characters",
+      "name",
+    );
   }
 
   if (data.price === undefined || data.price === null) {
-    throw new ShopValidationError('Product price is required', 'price');
+    throw new ShopValidationError("Product price is required", "price");
   }
 
   if (data.price < 0) {
-    throw new ShopValidationError('Product price must be positive', 'price');
+    throw new ShopValidationError("Product price must be positive", "price");
   }
 
   if (data.price > 999999.99) {
-    throw new ShopValidationError('Product price is too high', 'price');
+    throw new ShopValidationError("Product price is too high", "price");
   }
 
   if (data.stock === undefined || data.stock === null) {
-    throw new ShopValidationError('Product stock is required', 'stock');
+    throw new ShopValidationError("Product stock is required", "stock");
   }
 
   if (data.stock < 0) {
-    throw new ShopValidationError('Product stock cannot be negative', 'stock');
+    throw new ShopValidationError("Product stock cannot be negative", "stock");
   }
 
   if (!Number.isInteger(data.stock)) {
-    throw new ShopValidationError('Product stock must be an integer', 'stock');
+    throw new ShopValidationError("Product stock must be an integer", "stock");
   }
 
   if (data.description && data.description.length > 2000) {
-    throw new ShopValidationError('Product description must be less than 2000 characters', 'description');
+    throw new ShopValidationError(
+      "Product description must be less than 2000 characters",
+      "description",
+    );
   }
 
   if (data.imageUrl && data.imageUrl.length > 500) {
-    throw new ShopValidationError('Image URL must be less than 500 characters', 'imageUrl');
+    throw new ShopValidationError(
+      "Image URL must be less than 500 characters",
+      "imageUrl",
+    );
   }
 
   if (data.status && !Object.values(ProductStatus).includes(data.status)) {
-    throw new ShopValidationError('Invalid product status', 'status');
+    throw new ShopValidationError("Invalid product status", "status");
   }
 
   if (!data.tenantId || data.tenantId <= 0) {
-    throw new ShopValidationError('Valid tenant ID is required', 'tenantId');
+    throw new ShopValidationError("Valid tenant ID is required", "tenantId");
   }
 }
 
@@ -71,41 +90,59 @@ export function validateCreateProduct(data: CreateProductDTO): void {
 export function validateUpdateProduct(data: UpdateProductDTO): void {
   if (data.name !== undefined) {
     if (!data.name || data.name.trim().length === 0) {
-      throw new ShopValidationError('Product name cannot be empty', 'name');
+      throw new ShopValidationError("Product name cannot be empty", "name");
     }
     if (data.name.length > 200) {
-      throw new ShopValidationError('Product name must be less than 200 characters', 'name');
+      throw new ShopValidationError(
+        "Product name must be less than 200 characters",
+        "name",
+      );
     }
   }
 
   if (data.price !== undefined) {
     if (data.price < 0) {
-      throw new ShopValidationError('Product price must be positive', 'price');
+      throw new ShopValidationError("Product price must be positive", "price");
     }
     if (data.price > 999999.99) {
-      throw new ShopValidationError('Product price is too high', 'price');
+      throw new ShopValidationError("Product price is too high", "price");
     }
   }
 
   if (data.stock !== undefined) {
     if (data.stock < 0) {
-      throw new ShopValidationError('Product stock cannot be negative', 'stock');
+      throw new ShopValidationError(
+        "Product stock cannot be negative",
+        "stock",
+      );
     }
     if (!Number.isInteger(data.stock)) {
-      throw new ShopValidationError('Product stock must be an integer', 'stock');
+      throw new ShopValidationError(
+        "Product stock must be an integer",
+        "stock",
+      );
     }
   }
 
   if (data.description !== undefined && data.description.length > 2000) {
-    throw new ShopValidationError('Product description must be less than 2000 characters', 'description');
+    throw new ShopValidationError(
+      "Product description must be less than 2000 characters",
+      "description",
+    );
   }
 
   if (data.imageUrl !== undefined && data.imageUrl.length > 500) {
-    throw new ShopValidationError('Image URL must be less than 500 characters', 'imageUrl');
+    throw new ShopValidationError(
+      "Image URL must be less than 500 characters",
+      "imageUrl",
+    );
   }
 
-  if (data.status !== undefined && !Object.values(ProductStatus).includes(data.status)) {
-    throw new ShopValidationError('Invalid product status', 'status');
+  if (
+    data.status !== undefined &&
+    !Object.values(ProductStatus).includes(data.status)
+  ) {
+    throw new ShopValidationError("Invalid product status", "status");
   }
 }
 
@@ -114,27 +151,33 @@ export function validateUpdateProduct(data: UpdateProductDTO): void {
  */
 export function validateOrderItem(item: OrderItemDTO): void {
   if (!item.productId || item.productId <= 0) {
-    throw new ShopValidationError('Valid product ID is required', 'productId');
+    throw new ShopValidationError("Valid product ID is required", "productId");
   }
 
   if (!item.quantity || item.quantity <= 0) {
-    throw new ShopValidationError('Quantity must be greater than 0', 'quantity');
+    throw new ShopValidationError(
+      "Quantity must be greater than 0",
+      "quantity",
+    );
   }
 
   if (!Number.isInteger(item.quantity)) {
-    throw new ShopValidationError('Quantity must be an integer', 'quantity');
+    throw new ShopValidationError("Quantity must be an integer", "quantity");
   }
 
   if (item.quantity > 1000) {
-    throw new ShopValidationError('Quantity cannot exceed 1000 per item', 'quantity');
+    throw new ShopValidationError(
+      "Quantity cannot exceed 1000 per item",
+      "quantity",
+    );
   }
 
   if (item.price !== undefined) {
     if (item.price < 0) {
-      throw new ShopValidationError('Item price must be positive', 'price');
+      throw new ShopValidationError("Item price must be positive", "price");
     }
     if (item.price > 999999.99) {
-      throw new ShopValidationError('Item price is too high', 'price');
+      throw new ShopValidationError("Item price is too high", "price");
     }
   }
 }
@@ -144,15 +187,21 @@ export function validateOrderItem(item: OrderItemDTO): void {
  */
 export function validateCreateOrder(data: CreateOrderDTO): void {
   if (!data.userId || data.userId <= 0) {
-    throw new ShopValidationError('Valid user ID is required', 'userId');
+    throw new ShopValidationError("Valid user ID is required", "userId");
   }
 
   if (!data.items || !Array.isArray(data.items) || data.items.length === 0) {
-    throw new ShopValidationError('Order must contain at least one item', 'items');
+    throw new ShopValidationError(
+      "Order must contain at least one item",
+      "items",
+    );
   }
 
   if (data.items.length > 100) {
-    throw new ShopValidationError('Order cannot contain more than 100 items', 'items');
+    throw new ShopValidationError(
+      "Order cannot contain more than 100 items",
+      "items",
+    );
   }
 
   // Validate each item
@@ -163,7 +212,7 @@ export function validateCreateOrder(data: CreateOrderDTO): void {
       if (error instanceof ShopValidationError) {
         throw new ShopValidationError(
           `Item ${index + 1}: ${error.message}`,
-          `items[${index}].${error.field}`
+          `items[${index}].${error.field}`,
         );
       }
       throw error;
@@ -171,18 +220,24 @@ export function validateCreateOrder(data: CreateOrderDTO): void {
   });
 
   if (data.notes && data.notes.length > 1000) {
-    throw new ShopValidationError('Order notes must be less than 1000 characters', 'notes');
+    throw new ShopValidationError(
+      "Order notes must be less than 1000 characters",
+      "notes",
+    );
   }
 
   if (!data.tenantId || data.tenantId <= 0) {
-    throw new ShopValidationError('Valid tenant ID is required', 'tenantId');
+    throw new ShopValidationError("Valid tenant ID is required", "tenantId");
   }
 }
 
 /**
  * Validate order status transition
  */
-export function validateOrderStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): void {
+export function validateOrderStatusTransition(
+  currentStatus: OrderStatus,
+  newStatus: OrderStatus,
+): void {
   const validTransitions: Record<OrderStatus, OrderStatus[]> = {
     [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
     [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
@@ -190,14 +245,14 @@ export function validateOrderStatusTransition(currentStatus: OrderStatus, newSta
     [OrderStatus.READY]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
     [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
     [OrderStatus.CANCELLED]: [],
-    [OrderStatus.REFUNDED]: []
+    [OrderStatus.REFUNDED]: [],
   };
 
   const allowed = validTransitions[currentStatus];
   if (!allowed.includes(newStatus)) {
     throw new ShopValidationError(
       `Cannot transition from ${currentStatus} to ${newStatus}`,
-      'status'
+      "status",
     );
   }
 }
@@ -205,11 +260,15 @@ export function validateOrderStatusTransition(currentStatus: OrderStatus, newSta
 /**
  * Validate stock availability
  */
-export function validateStockAvailability(requested: number, available: number, productName: string): void {
+export function validateStockAvailability(
+  requested: number,
+  available: number,
+  productName: string,
+): void {
   if (requested > available) {
     throw new ShopValidationError(
       `Insufficient stock for ${productName}. Requested: ${requested}, Available: ${available}`,
-      'stock'
+      "stock",
     );
   }
 }
@@ -219,7 +278,7 @@ export function validateStockAvailability(requested: number, available: number, 
  */
 export function validateProductId(id: number): void {
   if (!id || id <= 0 || !Number.isInteger(id)) {
-    throw new ShopValidationError('Valid product ID is required', 'productId');
+    throw new ShopValidationError("Valid product ID is required", "productId");
   }
 }
 
@@ -228,6 +287,6 @@ export function validateProductId(id: number): void {
  */
 export function validateOrderId(id: number): void {
   if (!id || id <= 0 || !Number.isInteger(id)) {
-    throw new ShopValidationError('Valid order ID is required', 'orderId');
+    throw new ShopValidationError("Valid order ID is required", "orderId");
   }
 }

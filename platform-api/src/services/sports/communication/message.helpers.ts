@@ -7,7 +7,8 @@ import {
   MessageStatus,
   MessageType,
   MessagePriority,
-} from "../../../shared/types/message.types.js";
+  NotificationType,
+} from "@clubmanager/types";
 
 /**
  * Get message status label in French
@@ -18,7 +19,7 @@ export function getMessageStatusLabel(status: MessageStatus): string {
     [MessageStatus.SENT]: "Envoyé",
     [MessageStatus.DELIVERED]: "Délivré",
     [MessageStatus.READ]: "Lu",
-    [MessageStatus.FAILED]: "Échoué"
+    [MessageStatus.FAILED]: "Échoué",
   };
   return labels[status];
 }
@@ -30,7 +31,7 @@ export function getMessageTypeLabel(type: MessageType): string {
   const labels: Record<MessageType, string> = {
     [MessageType.PRIVATE]: "Privé",
     [MessageType.GROUP]: "Groupe",
-    [MessageType.BROADCAST]: "Diffusion"
+    [MessageType.BROADCAST]: "Diffusion",
   };
   return labels[type];
 }
@@ -57,7 +58,7 @@ export function getMessageStatusColor(status: MessageStatus): string {
     [MessageStatus.SENT]: "blue",
     [MessageStatus.DELIVERED]: "cyan",
     [MessageStatus.READ]: "green",
-    [MessageStatus.FAILED]: "red"
+    [MessageStatus.FAILED]: "red",
   };
   return colors[status];
 }
@@ -297,7 +298,7 @@ export function getNextValidStatuses(
     [MessageStatus.SENT]: [MessageStatus.DELIVERED, MessageStatus.FAILED],
     [MessageStatus.DELIVERED]: [MessageStatus.READ],
     [MessageStatus.READ]: [],
-    [MessageStatus.FAILED]: [MessageStatus.SENT]
+    [MessageStatus.FAILED]: [MessageStatus.SENT],
   };
   return transitions[currentStatus] || [];
 }
