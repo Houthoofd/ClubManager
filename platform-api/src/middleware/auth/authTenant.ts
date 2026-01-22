@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { AuthenticatedUser } from "@clubmanager/types";
+import { AuthenticatedUser } from "../../shared/types/auth.js";
 import { prisma } from "../../db/prisma.client.js";
 
 /**

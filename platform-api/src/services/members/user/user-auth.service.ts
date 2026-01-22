@@ -3,7 +3,7 @@ import { prisma } from "../../prisma/prisma.service.js";
 import { emailService } from "../../operations/communication/email.service.js";
 import { userService } from "./user.service.js";
 import type { User } from "@prisma/client";
-import type { UserProfile } from "../../infrastructure/auth/auth.types.js";
+import type { UserProfile } from "../../../shared/types/auth.js";
 
 /**
  * UserAuthService - Handle user authentication operations
@@ -353,6 +353,14 @@ class UserAuthService {
         error: "Erreur de vérification",
       };
     }
+  }
+
+  /**
+   * Verify email token
+   */
+  async verifyEmailToken(token: string, email: string) {
+    // Placeholder implementation
+    return { success: false, message: "Email verification not implemented" };
   }
 }
 

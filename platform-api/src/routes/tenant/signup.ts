@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { multiTenantService } from '../../services/infrastructure/tenant/multi-tenant.service.js';
-import { userService } from '../../services/members/user/user.service.js';
+import { userManagerService as userService } from '../../services/members/users/user-manager.service.js';
 import { z } from 'zod';
 
 const router = express.Router();
@@ -85,6 +85,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       password: data.adminPassword,
       firstName: data.adminFirstName,
       lastName: data.adminLastName,
+      dateOfBirth: new Date('1990-01-01'), // Default date
     });
 
     // Generate access token for immediate login

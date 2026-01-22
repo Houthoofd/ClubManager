@@ -74,7 +74,8 @@ export async function checkLimit(
       break;
 
     case 'courses':
-      current = await prisma.cours.count({ where: { tenantId } });
+      // current = await prisma.cours.count({ where: { tenantId } });
+      current = await prisma.cours.count();
       limit = 100; // Default, should come from plan
       break;
 

@@ -8,7 +8,7 @@ import {
   MessageFilters,
   MessageStatus,
   MessageType,
-} from "@clubmanager/types";
+} from "../shared/types/message.types.js";
 
 export class MessageRepository {
   constructor(private prisma: PrismaClient) {}

@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { tenantMiddleware } from '../../middleware/auth/tenant.middleware.js';
 import { authMiddleware } from '../../middleware/auth/auth.middleware.js';
 import { multiTenantService } from '../../services/infrastructure/tenant/multi-tenant.service.js';
-import { userService } from '../../services/members/user/user.service.js';
+import { userManagerService as userService } from '../../services/members/users/user-manager.service.js';
 import { z } from 'zod';
 
 const router = express.Router();

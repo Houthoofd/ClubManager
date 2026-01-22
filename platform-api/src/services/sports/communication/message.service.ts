@@ -4,7 +4,7 @@
  */
 
 import { PrismaClient, Message } from "@prisma/client";
-import { MessageRepository } from "../../repositories/message.repository.js";
+import { MessageRepository } from "../../../repositories/message.repository.js";
 import { auditService, AuditAction } from "../../infrastructure/audit/audit.service.js";
 
 export interface MessageCreateInput {
@@ -30,9 +30,11 @@ export interface MessageFilter {
 
 export class MessageService {
   private repository: MessageRepository;
+  private prisma: PrismaClient;
 
   constructor() {
-    this.repository = new MessageRepository();
+    this.prisma = new PrismaClient();
+    this.repository = new MessageRepository(this.prisma);
   }
 
   /**
@@ -48,21 +50,21 @@ export class MessageService {
   /**
    * List messages with filters
    */
-  async list(): Promise<Message[]> {
-    return this.repository.findAll();
+  async list(): Promise<any> {
+    return this.repository.findAll({});
   }
 
   /**
    * Get messages by recipient
    */
-  async getByRecipient(recipientId: number, tenantId: string = "default"): Promise<Message[]> {
+  async getByRecipient(recipientId: number, tenantId: string = "default"): Promise<{ messages: Message[]; pagination: any }> {
     return this.repository.findByRecipient(recipientId, tenantId);
   }
 
   /**
    * Get messages by sender
    */
-  async getBySender(senderId: number, tenantId: string = "default"): Promise<Message[]> {
+  async getBySender(senderId: number, tenantId: string = "default"): Promise<{ messages: Message[]; pagination: any }> {
     return this.repository.findBySender(senderId, tenantId);
   }
 
@@ -80,9 +82,9 @@ export class MessageService {
       body: messageData.body,
       type: messageData.type,
       priority: messageData.priority || 'NORMAL',
-      tenantId: data.tenantId,
-      senderId: data.senderId,
-      recipientId: data.recipientId || null,
+      tenant: { connect: { id: data.tenantId } },
+      sender: { connect: { id: data.senderId } },
+      recipient: data.recipientId ? { connect: { id: data.recipientId } } : undefined,
       status: 'SENT',
       scheduledFor: null,
       sentAt: new Date(),
@@ -94,9 +96,9 @@ export class MessageService {
     // Audit log
     if (userId) {
       await auditService.log({
+        tenantId: data.tenantId,
         action: AuditAction.MESSAGE_CREATE,
-        tenantId: message.tenantId || 'unknown',
-        resource: "Message",
+        resource: 'messages',
         resourceType: 'message',
         resourceId: message.id.toString(),
         userId,
@@ -127,9 +129,9 @@ export class MessageService {
     // Audit log
     if (userId && message) {
       await auditService.log({
+        tenantId: message.tenantId,
         action: AuditAction.MESSAGE_UPDATE,
-        tenantId: 'unknown',
-        resource: "Message",
+        resource: 'messages',
         resourceType: 'message',
         resourceId: id.toString(),
         userId,
@@ -148,14 +150,17 @@ export class MessageService {
       throw new Error("Invalid message ID");
     }
 
+    // Get message before deletion for audit
+    const messageToDelete = await this.repository.findById(id);
+
     await this.repository.delete(id);
 
     // Audit log
-    if (userId) {
+    if (userId && messageToDelete) {
       await auditService.log({
+        tenantId: messageToDelete.tenantId,
         action: AuditAction.MESSAGE_DELETE,
-        tenantId: 'unknown',
-        resource: "Message",
+        resource: 'messages',
         resourceType: 'message',
         resourceId: id.toString(),
         userId
@@ -176,9 +181,9 @@ export class MessageService {
     // Audit log
     if (userId) {
       await auditService.log({
+        tenantId: message.tenantId,
         action: AuditAction.MESSAGE_READ,
-        tenantId: 'unknown',
-        resource: "Message",
+        resource: 'messages',
         resourceType: 'message',
         resourceId: id.toString(),
         userId

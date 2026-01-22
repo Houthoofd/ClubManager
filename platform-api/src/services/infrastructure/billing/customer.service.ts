@@ -103,10 +103,11 @@ export class CustomerService {
   async getCustomerId(tenantId: string): Promise<string | null> {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { stripeCustomerId: true },
+      select: { /* stripeCustomerId: true */ id: true },
     });
 
-    return tenant?.stripeCustomerId || null;
+    // return tenant?.stripeCustomerId || null;
+    return null; // TODO: Add stripeCustomerId to Tenant schema
   }
 
   /**
@@ -125,7 +126,7 @@ export class CustomerService {
 
     await prisma.tenant.update({
       where: { id: tenantId },
-      data: { stripeCustomerId: null },
+      data: { /* stripeCustomerId: null */ },
     });
   }
 }

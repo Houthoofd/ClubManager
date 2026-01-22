@@ -1,4 +1,4 @@
-import { EmailResult, CoursInfo, EmailAction } from "@clubmanager/types";
+import { EmailResult, CoursInfo, EmailAction } from "../shared/types/email.types.js";
 
 export class EmailUtils {
   // Valider une adresse email

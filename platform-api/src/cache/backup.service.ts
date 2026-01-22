@@ -257,7 +257,7 @@ class CacheBackupService {
           select: {
             id: true,
             name: true,
-            subdomain: true,
+            domain: true,
             status: true,
             settings: true,
           },

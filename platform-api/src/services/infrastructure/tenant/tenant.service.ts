@@ -1,11 +1,12 @@
-import { TenantStatus, SubscriptionStatus } from "@prisma/client";
-import { prisma } from "../../../db/prisma.client.js";
+import { PrismaClient, TenantStatus, SubscriptionStatus } from "@prisma/client";
 import {
   TenantCreateInput,
   TenantUpdateInput,
   TenantWithSubscription,
   CreateSubscriptionInput,
 } from "@clubmanager/types";
+
+const prisma = new PrismaClient();
 
 /**
  * Helper function to transform Prisma Decimal prices to numbers
@@ -15,8 +16,8 @@ function transformTenantData(tenant: any): TenantWithSubscription {
     ...tenant,
     subscriptions: tenant.subscriptions.map((sub: any) => ({
       ...sub,
-      price: Number(sub.price),
-    })),
+      price: Number(sub.price)
+    }))
   };
 }
 

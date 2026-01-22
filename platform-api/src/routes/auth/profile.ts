@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { userService } from "../../services/members/user/user.service.js";
+import { userManagerService as userService } from "../../services/members/users/user-manager.service.js";
 import { auditService, AuditAction } from "../../services/infrastructure/audit/audit.service.js";
 import { getTenantId } from "./utils.js";
 
@@ -64,7 +64,7 @@ router.put("/profile", async (req: Request, res: Response) => {
       firstName,
       lastName,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-      genderId,
+      // genderId,
     });
 
     if (!result.success) {

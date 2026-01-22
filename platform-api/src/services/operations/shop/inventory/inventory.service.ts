@@ -2,10 +2,9 @@
  * Inventory Service
  * Business logic for inventory management
  */
-
-import { ProductRepository } from "../../../repositories/product.repository.js";
+import { PrismaClient } from '@prisma/client';import { ProductRepository } from "../../../../repositories/product.repository.js";
 import { auditService, AuditAction } from "../../../infrastructure/audit/audit.service.js";
-import { ValidationError } from "../../../shared/errors/index.js";
+import { ValidationError } from "../../../../shared/errors/index.js";
 
 export class InventoryService {
   constructor(private repository: ProductRepository) {}
@@ -40,12 +39,12 @@ export class InventoryService {
     // Audit log
     if (userId) {
       await auditService.log({
-        action: AuditAction.INVENTORY_ADD,
-        userId,
         tenantId,
-        resource: "Product",
-        resourceType: "inventory",
-        resourceId: productId.toString(),
+        action: AuditAction.INVENTORY_ADD,
+        resource: 'inventory',
+        userId,
+        // entityType: "inventory", // TODO: Add to AuditLogData type
+        // entityId: productId, // TODO: Add to AuditLogData type
         details: {
           productName: product.nom,
           addedQuantity: quantity,
@@ -87,12 +86,12 @@ export class InventoryService {
     // Audit log
     if (userId) {
       await auditService.log({
-        action: AuditAction.INVENTORY_REMOVE,
-        userId,
         tenantId,
-        resource: "Product",
-        resourceType: "inventory",
-        resourceId: productId.toString(),
+        action: AuditAction.INVENTORY_REMOVE,
+        resource: 'inventory',
+        userId,
+        // entityType: "inventory", // TODO: Add to AuditLogData type
+        // entityId: productId, // TODO: Add to AuditLogData type
         details: {
           productName: product.nom,
           removedQuantity: quantity,
@@ -134,12 +133,12 @@ export class InventoryService {
     // Audit log
     if (userId) {
       await auditService.log({
-        action: AuditAction.INVENTORY_SET,
-        userId,
         tenantId,
-        resource: "Product",
-        resourceType: "inventory",
-        resourceId: productId.toString(),
+        action: AuditAction.INVENTORY_SET,
+        resource: 'inventory',
+        userId,
+        // entityType: "inventory", // TODO: Add to AuditLogData type
+        // entityId: productId, // TODO: Add to AuditLogData type
         details: {
           productName: product.nom,
           newStock: quantity,
@@ -336,7 +335,7 @@ export class InventoryService {
     let outOfStockCount = 0;
     let totalValue = 0;
 
-    for (const product of articles) {
+    for (const product of articles.products) {
       totalProducts++;
       // Simuler un stock de 0 car pas de relation stock définie
       const stock = 0;
@@ -444,5 +443,6 @@ export class InventoryService {
 }
 
 // Create singleton instance
-const productRepository = new ProductRepository();
+const prisma = new PrismaClient();
+const productRepository = new ProductRepository(prisma);
 export const inventoryService = new InventoryService(productRepository);

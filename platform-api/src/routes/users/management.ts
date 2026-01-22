@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { userService } from "../../services/members/user/user.service.js";
+import { userManagerService as userService } from "../../services/members/users/user-manager.service.js";
 import { verifyToken } from "../../middleware/auth/auth.js";
 
 const router = express.Router();
@@ -137,7 +137,7 @@ router.put("/:id", verifyToken, async (req: Request, res: Response) => {
       lastName,
       email,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-      genderId,
+      // genderId,
     });
 
     if (!result.success) {

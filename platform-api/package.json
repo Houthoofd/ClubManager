@@ -68,7 +68,7 @@
   },
   "dependencies": {
     "@apollo/server": "^5.2.0",
-    "@clubmanager/types": "file:../packages/types",
+    "@clubmanager/types": "file:../platform-packages/types",
     "@clubmanager/utils": "file:../packages/utils",
     "@prisma/client": "^5.22.0",
     "@sendgrid/mail": "^8.1.6",

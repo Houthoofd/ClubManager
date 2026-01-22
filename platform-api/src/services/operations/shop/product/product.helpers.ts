@@ -3,19 +3,16 @@
  * Utility functions for product operations
  */
 
-import { ProductStatus } from "@clubmanager/types";
+import { ProductStatus } from '@clubmanager/types';
 
 /**
  * Calculate product discount price
  */
-export function calculateDiscountPrice(
-  price: number,
-  discountPercent: number,
-): number {
+export function calculateDiscountPrice(price: number, discountPercent: number): number {
   if (discountPercent < 0 || discountPercent > 100) {
-    throw new Error("Discount percent must be between 0 and 100");
+    throw new Error('Discount percent must be between 0 and 100');
   }
-  return Math.round(price * (1 - discountPercent / 100) * 100) / 100;
+  return Math.round((price * (1 - discountPercent / 100)) * 100) / 100;
 }
 
 /**
@@ -28,17 +25,14 @@ export function calculateProductValue(price: number, stock: number): number {
 /**
  * Format price for display
  */
-export function formatPrice(price: number, currency = "€"): string {
+export function formatPrice(price: number, currency = '€'): string {
   return `${price.toFixed(2)} ${currency}`;
 }
 
 /**
  * Check if product is available
  */
-export function isProductAvailable(
-  status: ProductStatus,
-  stock: number,
-): boolean {
+export function isProductAvailable(status: ProductStatus, stock: number): boolean {
   return status === ProductStatus.ACTIVE && stock > 0;
 }
 
@@ -52,13 +46,10 @@ export function isLowStock(stock: number, threshold = 10): boolean {
 /**
  * Get stock status
  */
-export function getStockStatus(
-  stock: number,
-  lowThreshold = 10,
-): "out_of_stock" | "low_stock" | "in_stock" {
-  if (stock === 0) return "out_of_stock";
-  if (stock <= lowThreshold) return "low_stock";
-  return "in_stock";
+export function getStockStatus(stock: number, lowThreshold = 10): 'out_of_stock' | 'low_stock' | 'in_stock' {
+  if (stock === 0) return 'out_of_stock';
+  if (stock <= lowThreshold) return 'low_stock';
+  return 'in_stock';
 }
 
 /**
@@ -67,9 +58,9 @@ export function getStockStatus(
 export function getStockStatusLabel(stock: number, lowThreshold = 10): string {
   const status = getStockStatus(stock, lowThreshold);
   const labels = {
-    out_of_stock: "Rupture de stock",
-    low_stock: "Stock faible",
-    in_stock: "En stock",
+    out_of_stock: 'Rupture de stock',
+    low_stock: 'Stock faible',
+    in_stock: 'En stock'
   };
   return labels[status];
 }
@@ -85,10 +76,7 @@ export function calculateStockPercentage(current: number, max: number): number {
 /**
  * Validate price range
  */
-export function isValidPriceRange(
-  minPrice?: number,
-  maxPrice?: number,
-): boolean {
+export function isValidPriceRange(minPrice?: number, maxPrice?: number): boolean {
   if (minPrice !== undefined && maxPrice !== undefined) {
     return minPrice <= maxPrice;
   }
@@ -101,7 +89,7 @@ export function isValidPriceRange(
 export function generateSKU(name: string, id: number): string {
   const prefix = name
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
+    .replace(/[^A-Z0-9]/g, '')
     .substring(0, 3);
   const timestamp = Date.now().toString().slice(-6);
   return `${prefix}-${id}-${timestamp}`;
@@ -114,7 +102,7 @@ export function parseSearchQuery(query: string): string[] {
   return query
     .toLowerCase()
     .split(/\s+/)
-    .filter((term) => term.length > 2);
+    .filter(term => term.length > 2);
 }
 
 /**
@@ -123,7 +111,7 @@ export function parseSearchQuery(query: string): string[] {
 export function calculateReorderQuantity(
   currentStock: number,
   minStock: number,
-  maxStock: number,
+  maxStock: number
 ): number {
   if (currentStock >= minStock) return 0;
   return maxStock - currentStock;
@@ -132,10 +120,7 @@ export function calculateReorderQuantity(
 /**
  * Check if reorder is needed
  */
-export function needsReorder(
-  currentStock: number,
-  reorderPoint: number,
-): boolean {
+export function needsReorder(currentStock: number, reorderPoint: number): boolean {
   return currentStock <= reorderPoint;
 }
 
@@ -151,18 +136,14 @@ export function calculateAverageRating(ratings: number[]): number {
 /**
  * Format stock quantity
  */
-export function formatStockQuantity(stock: number, unit = "pcs"): string {
+export function formatStockQuantity(stock: number, unit = 'pcs'): string {
   return `${stock} ${unit}`;
 }
 
 /**
  * Check if product can be ordered
  */
-export function canOrder(
-  status: ProductStatus,
-  stock: number,
-  quantity: number,
-): boolean {
+export function canOrder(status: ProductStatus, stock: number, quantity: number): boolean {
   return status === ProductStatus.ACTIVE && stock >= quantity;
 }
 
@@ -172,11 +153,9 @@ export function canOrder(
 export function calculateBulkDiscount(
   quantity: number,
   price: number,
-  discountTiers: Array<{ minQuantity: number; discountPercent: number }>,
+  discountTiers: Array<{ minQuantity: number; discountPercent: number }>
 ): number {
-  const sortedTiers = discountTiers.sort(
-    (a, b) => b.minQuantity - a.minQuantity,
-  );
+  const sortedTiers = discountTiers.sort((a, b) => b.minQuantity - a.minQuantity);
 
   for (const tier of sortedTiers) {
     if (quantity >= tier.minQuantity) {
@@ -192,15 +171,15 @@ export function calculateBulkDiscount(
  */
 export function validateStockOperation(
   currentStock: number,
-  operation: "add" | "remove",
-  quantity: number,
+  operation: 'add' | 'remove',
+  quantity: number
 ): { valid: boolean; error?: string } {
   if (quantity <= 0) {
-    return { valid: false, error: "Quantity must be positive" };
+    return { valid: false, error: 'Quantity must be positive' };
   }
 
-  if (operation === "remove" && currentStock < quantity) {
-    return { valid: false, error: "Insufficient stock" };
+  if (operation === 'remove' && currentStock < quantity) {
+    return { valid: false, error: 'Insufficient stock' };
   }
 
   return { valid: true };
@@ -211,15 +190,15 @@ export function validateStockOperation(
  */
 export function calculateNewStock(
   currentStock: number,
-  operation: "add" | "remove" | "set",
-  quantity: number,
+  operation: 'add' | 'remove' | 'set',
+  quantity: number
 ): number {
   switch (operation) {
-    case "add":
+    case 'add':
       return currentStock + quantity;
-    case "remove":
+    case 'remove':
       return Math.max(0, currentStock - quantity);
-    case "set":
+    case 'set':
       return Math.max(0, quantity);
     default:
       return currentStock;
@@ -231,10 +210,8 @@ export function calculateNewStock(
  */
 export function getStatusColor(status: ProductStatus): string {
   const colors: Record<ProductStatus, string> = {
-    [ProductStatus.ACTIVE]: "green",
-    [ProductStatus.INACTIVE]: "gray",
-    [ProductStatus.OUT_OF_STOCK]: "orange",
-    [ProductStatus.DISCONTINUED]: "red",
+    [ProductStatus.ACTIVE]: 'green',
+    [ProductStatus.INACTIVE]: 'gray',    [ProductStatus.OUT_OF_STOCK]: 'red',    [ProductStatus.DISCONTINUED]: 'red'
   };
   return colors[status];
 }
@@ -244,10 +221,8 @@ export function getStatusColor(status: ProductStatus): string {
  */
 export function getStatusLabel(status: ProductStatus): string {
   const labels: Record<ProductStatus, string> = {
-    [ProductStatus.ACTIVE]: "Actif",
-    [ProductStatus.INACTIVE]: "Inactif",
-    [ProductStatus.OUT_OF_STOCK]: "Rupture de stock",
-    [ProductStatus.DISCONTINUED]: "Discontinué",
+    [ProductStatus.ACTIVE]: 'Actif',
+    [ProductStatus.INACTIVE]: 'Inactif',    [ProductStatus.OUT_OF_STOCK]: 'En rupture',    [ProductStatus.DISCONTINUED]: 'Discontinué'
   };
   return labels[status];
 }
@@ -255,25 +230,12 @@ export function getStatusLabel(status: ProductStatus): string {
 /**
  * Check if status transition is allowed
  */
-export function canTransitionStatus(
-  from: ProductStatus,
-  to: ProductStatus,
-): boolean {
+export function canTransitionStatus(from: ProductStatus, to: ProductStatus): boolean {
   const allowedTransitions: Record<ProductStatus, ProductStatus[]> = {
-    [ProductStatus.ACTIVE]: [
-      ProductStatus.INACTIVE,
-      ProductStatus.OUT_OF_STOCK,
-      ProductStatus.DISCONTINUED,
-    ],
-    [ProductStatus.INACTIVE]: [
-      ProductStatus.ACTIVE,
-      ProductStatus.DISCONTINUED,
-    ],
-    [ProductStatus.OUT_OF_STOCK]: [
-      ProductStatus.ACTIVE,
-      ProductStatus.DISCONTINUED,
-    ],
-    [ProductStatus.DISCONTINUED]: [],
+    [ProductStatus.ACTIVE]: [ProductStatus.INACTIVE, ProductStatus.OUT_OF_STOCK, ProductStatus.DISCONTINUED],
+    [ProductStatus.INACTIVE]: [ProductStatus.ACTIVE, ProductStatus.DISCONTINUED],
+    [ProductStatus.OUT_OF_STOCK]: [ProductStatus.ACTIVE, ProductStatus.DISCONTINUED],
+    [ProductStatus.DISCONTINUED]: []
   };
 
   return allowedTransitions[from].includes(to);
@@ -283,7 +245,7 @@ export function canTransitionStatus(
  * Sanitize product name
  */
 export function sanitizeProductName(name: string): string {
-  return name.trim().replace(/\s+/g, " ");
+  return name.trim().replace(/\s+/g, ' ');
 }
 
 /**
@@ -292,10 +254,10 @@ export function sanitizeProductName(name: string): string {
 export function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /**

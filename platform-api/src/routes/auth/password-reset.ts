@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { userService } from "../../services/members/user/user.service.js";
+import { userManagerService as userService } from "../../services/members/users/user-manager.service.js";
 import { auditService, AuditAction } from "../../services/infrastructure/audit/audit.service.js";
 import { getTenantId } from "./utils.js";
 
@@ -63,8 +63,7 @@ router.post("/reset", async (req: Request, res: Response) => {
 
     const result = await userService.resetPassword(
       token,
-      newPassword,
-      tenantId,
+      newPassword
     );
 
     if (!result.success) {

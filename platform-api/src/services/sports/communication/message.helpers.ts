@@ -7,7 +7,6 @@ import {
   MessageStatus,
   MessageType,
   MessagePriority,
-  NotificationType,
 } from "@clubmanager/types";
 
 /**
@@ -20,7 +19,7 @@ export function getMessageStatusLabel(status: MessageStatus): string {
     [MessageStatus.DELIVERED]: "Délivré",
     [MessageStatus.READ]: "Lu",
     [MessageStatus.FAILED]: "Échoué",
-    [MessageStatus.ARCHIVED]: "Archivé",
+    [MessageStatus.ARCHIVED]: 'Archivé',
   };
   return labels[status];
 }
@@ -30,11 +29,11 @@ export function getMessageStatusLabel(status: MessageStatus): string {
  */
 export function getMessageTypeLabel(type: MessageType): string {
   const labels: Record<MessageType, string> = {
-    [MessageType.EMAIL]: "Email",
-    [MessageType.SMS]: "SMS",
-    [MessageType.PUSH]: "Notification Push",
-    [MessageType.IN_APP]: "Dans l'application",
-    [MessageType.SYSTEM]: "Système",
+    [MessageType.EMAIL]: 'Email',
+    [MessageType.SMS]: 'SMS',
+    [MessageType.PUSH]: 'Notification Push',
+    [MessageType.IN_APP]: 'In-App',
+    [MessageType.SYSTEM]: 'Système'
   };
   return labels[type];
 }
@@ -62,7 +61,7 @@ export function getMessageStatusColor(status: MessageStatus): string {
     [MessageStatus.DELIVERED]: "cyan",
     [MessageStatus.READ]: "green",
     [MessageStatus.FAILED]: "red",
-    [MessageStatus.ARCHIVED]: "darkgray",
+    [MessageStatus.ARCHIVED]: "slate",
   };
   return colors[status];
 }
@@ -298,15 +297,11 @@ export function getNextValidStatuses(
   currentStatus: MessageStatus,
 ): MessageStatus[] {
   const transitions: Record<MessageStatus, MessageStatus[]> = {
-    [MessageStatus.DRAFT]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
-    [MessageStatus.SENT]: [
-      MessageStatus.DELIVERED,
-      MessageStatus.FAILED,
-      MessageStatus.ARCHIVED,
-    ],
-    [MessageStatus.DELIVERED]: [MessageStatus.READ, MessageStatus.ARCHIVED],
+    [MessageStatus.DRAFT]: [MessageStatus.SENT],
+    [MessageStatus.SENT]: [MessageStatus.DELIVERED, MessageStatus.FAILED],
+    [MessageStatus.DELIVERED]: [MessageStatus.READ],
     [MessageStatus.READ]: [MessageStatus.ARCHIVED],
-    [MessageStatus.FAILED]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
+    [MessageStatus.FAILED]: [MessageStatus.SENT],
     [MessageStatus.ARCHIVED]: [],
   };
   return transitions[currentStatus] || [];

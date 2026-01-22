@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import { emailService } from "../../services/operations/communication/email.service.js";
-import { verificationService } from "../../services/members/verification/verification.service.js";
+import { userAuthService as verificationService } from "../../services/members/user/user-auth.service.js";
 
 const router = express.Router();
 

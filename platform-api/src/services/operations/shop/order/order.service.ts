@@ -5,15 +5,11 @@
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
-import { prisma } from "../../../../db/prisma.client.js";
 import { OrderRepository } from "../../../../repositories/order.repository.js";
-import { ProductRepository } from "../../../repositories/product.repository.js";
+import { ProductRepository } from "../../../../repositories/product.repository.js";
 import { OrderFilters, OrderStatus } from "@clubmanager/types";
-import { NotFoundError } from "../../../shared/errors/index.js";
-import {
-  auditService,
-  AuditAction,
-} from "../../../infrastructure/audit/audit.service.js";
+import { NotFoundError } from "../../../../shared/errors/index.js";
+import { auditService, AuditAction } from "../../../infrastructure/audit/audit.service.js";
 import { inventoryService } from "../inventory/inventory.service.js";
 
 export interface CreateOrderDTO {
@@ -39,7 +35,7 @@ export class OrderService {
 
   constructor(private prisma: PrismaClient) {
     this.repository = new OrderRepository(prisma);
-    this.productRepository = new ProductRepository();
+    this.productRepository = new ProductRepository(prisma);
   }
 
   /**
@@ -128,9 +124,7 @@ export class OrderService {
 
     // Create order
     const orderData: Prisma.CommandeCreateInput = {
-      tenant: {
-        connect: { id: data.tenantId },
-      },
+      tenant: { connect: { id: data.tenantId } },
       utilisateur: {
         connect: { id: data.userId },
       },
@@ -536,4 +530,5 @@ export class OrderService {
 }
 
 // Create singleton instance
+const prisma = new PrismaClient();
 export const orderService = new OrderService(prisma);

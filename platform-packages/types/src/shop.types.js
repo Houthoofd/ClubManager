@@ -1,0 +1,27 @@
+/**
+ * Shop Types & Interfaces
+ * Types for shop, products, orders, and inventory management
+ */
+export var ProductStatus;
+(function (ProductStatus) {
+    ProductStatus["ACTIVE"] = "ACTIVE";
+    ProductStatus["INACTIVE"] = "INACTIVE";
+    ProductStatus["OUT_OF_STOCK"] = "OUT_OF_STOCK";
+    ProductStatus["DISCONTINUED"] = "DISCONTINUED";
+})(ProductStatus || (ProductStatus = {}));
+export var OrderStatus;
+(function (OrderStatus) {
+    OrderStatus["PENDING"] = "PENDING";
+    OrderStatus["CONFIRMED"] = "CONFIRMED";
+    OrderStatus["PREPARING"] = "PREPARING";
+    OrderStatus["READY"] = "READY";
+    OrderStatus["DELIVERED"] = "DELIVERED";
+    OrderStatus["CANCELLED"] = "CANCELLED";
+    OrderStatus["REFUNDED"] = "REFUNDED";
+})(OrderStatus || (OrderStatus = {}));
+export var OrderItemStatus;
+(function (OrderItemStatus) {
+    OrderItemStatus["PENDING"] = "PENDING";
+    OrderItemStatus["CONFIRMED"] = "CONFIRMED";
+    OrderItemStatus["CANCELLED"] = "CANCELLED";
+})(OrderItemStatus || (OrderItemStatus = {}));

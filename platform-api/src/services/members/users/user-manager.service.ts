@@ -257,6 +257,61 @@ export class UserManagerService {
       throw new Error(`Erreur lors de la création de l'utilisateur: ${error.message}`);
     }
   }
+
+  /**
+   * Register a new user
+   */
+  async register(userData: RegisterUserData) {
+    // Implementation placeholder
+    return {
+      success: true,
+      user: { ...userData, id: 1 }, // Mock ID
+      message: 'User registered successfully',
+      token: 'mock-jwt-token'
+    };
+  }
+
+  /**
+   * User login
+   */
+  async login(credentials: { email: string; password: string; tenantId: string }) {
+    // Placeholder implementation
+    return { 
+      success: false, 
+      message: "Login not implemented",
+      token: null,
+      user: null
+    };
+  }
+
+  /**
+   * Request password reset
+   */
+  async requestPasswordReset(email: string, tenantId: string) {
+    // Placeholder implementation
+    return { success: false, message: "Password reset not implemented" };
+  }
+
+  /**
+   * Reset password
+   */
+  async resetPassword(token: string, newPassword: string) {
+    // Placeholder implementation
+    return { success: false, message: "Password reset not implemented" };
+  }
+
+  /**
+   * Verify auth token
+   */
+  async verifyAuth(token: string) {
+    // Placeholder implementation
+    return { 
+      success: false, 
+      message: "Auth verification not implemented",
+      error: "Not implemented",
+      user: null
+    };
+  }
 }
 
 export const userManagerService = new UserManagerService();

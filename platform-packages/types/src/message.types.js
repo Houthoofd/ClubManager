@@ -1,0 +1,35 @@
+/**
+ * Message Types & Interfaces
+ * Types for messaging, notifications, and communication system
+ */
+export var MessageStatus;
+(function (MessageStatus) {
+    MessageStatus["DRAFT"] = "DRAFT";
+    MessageStatus["SENT"] = "SENT";
+    MessageStatus["DELIVERED"] = "DELIVERED";
+    MessageStatus["READ"] = "READ";
+    MessageStatus["FAILED"] = "FAILED";
+    MessageStatus["ARCHIVED"] = "ARCHIVED";
+})(MessageStatus || (MessageStatus = {}));
+export var MessageType;
+(function (MessageType) {
+    MessageType["EMAIL"] = "EMAIL";
+    MessageType["SMS"] = "SMS";
+    MessageType["PUSH"] = "PUSH";
+    MessageType["IN_APP"] = "IN_APP";
+    MessageType["SYSTEM"] = "SYSTEM";
+})(MessageType || (MessageType = {}));
+export var MessagePriority;
+(function (MessagePriority) {
+    MessagePriority["LOW"] = "LOW";
+    MessagePriority["NORMAL"] = "NORMAL";
+    MessagePriority["HIGH"] = "HIGH";
+    MessagePriority["URGENT"] = "URGENT";
+})(MessagePriority || (MessagePriority = {}));
+export var NotificationType;
+(function (NotificationType) {
+    NotificationType["INFO"] = "INFO";
+    NotificationType["SUCCESS"] = "SUCCESS";
+    NotificationType["WARNING"] = "WARNING";
+    NotificationType["ERROR"] = "ERROR";
+})(NotificationType || (NotificationType = {}));

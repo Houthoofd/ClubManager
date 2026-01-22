@@ -10,7 +10,7 @@ import {
   CreateMessageDTO,
   BulkMessageDTO,
   UpdateMessageDTO,
-} from "@clubmanager/types";
+} from "../shared/types/message.types.js";
 
 export class MessageValidationError extends Error {
   constructor(
