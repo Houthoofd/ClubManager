@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../../db/prisma.client.js';
 import { stripe } from './stripe.client.js';
 import { customerService } from './customer.service.js';
 import type { GetInvoicesParams, InvoiceInfo } from './types.js';
@@ -11,11 +11,7 @@ import type { GetInvoicesParams, InvoiceInfo } from './types.js';
  * - Gérer les paiements de factures
  */
 export class InvoiceService {
-  private prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
 
   /**
    * Récupérer les factures d'un tenant

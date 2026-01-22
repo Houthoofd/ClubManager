@@ -4,9 +4,8 @@
  * Replaces the old Statistiques client
  */
 
-import { PrismaClient, Prisma } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { Prisma } from "@prisma/client";
+import { prisma } from "../../../db/prisma.client.js";
 
 interface DateRange {
   startDate: Date;
@@ -20,13 +19,12 @@ interface StatisticsFilters {
 }
 
 export class StatisticsService {
-  
   /**
    * Get user statistics
    */
   async getUserStats(filters: StatisticsFilters = {}) {
     const where: Prisma.UserWhereInput = {};
-    
+
     if (filters.tenantId) {
       where.tenantId = filters.tenantId;
     }
@@ -53,14 +51,14 @@ export class StatisticsService {
 
     // Get users by status
     const usersByStatus = await prisma.user.groupBy({
-      by: ['statusId'],
+      by: ["statusId"],
       where,
       _count: true,
     });
 
     // Get users by gender
     const usersByGender = await prisma.user.groupBy({
-      by: ['genderId'],
+      by: ["genderId"],
       where,
       _count: true,
     });
@@ -70,11 +68,11 @@ export class StatisticsService {
       activeUsers,
       inactiveUsers: totalUsers - activeUsers,
       newUsersThisMonth,
-      usersByStatus: usersByStatus.map(item => ({
+      usersByStatus: usersByStatus.map((item) => ({
         statusId: item.statusId,
         count: item._count,
       })),
-      usersByGender: usersByGender.map(item => ({
+      usersByGender: usersByGender.map((item) => ({
         genderId: item.genderId,
         count: item._count,
       })),
@@ -86,7 +84,7 @@ export class StatisticsService {
    */
   async getPaymentStats(filters: StatisticsFilters = {}) {
     const where: Prisma.PaiementWhereInput = {};
-    
+
     if (filters.tenantId) {
       where.utilisateur = {
         tenantId: filters.tenantId,
@@ -114,7 +112,7 @@ export class StatisticsService {
 
     // Get payments by status
     const paymentsByStatus = await prisma.paiement.groupBy({
-      by: ['statut'],
+      by: ["statut"],
       where,
       _count: true,
       _sum: { montant: true },
@@ -122,7 +120,7 @@ export class StatisticsService {
 
     // Get payments by method
     const paymentsByMethod = await prisma.paiement.groupBy({
-      by: ['methode'],
+      by: ["methode"],
       where,
       _count: true,
       _sum: { montant: true },
@@ -132,12 +130,12 @@ export class StatisticsService {
       totalPayments,
       totalRevenue: Number(totalRevenue._sum.montant || 0),
       averagePayment: Number(averagePayment._avg.montant || 0),
-      paymentsByStatus: paymentsByStatus.map(item => ({
+      paymentsByStatus: paymentsByStatus.map((item) => ({
         status: item.statut,
         count: item._count,
         total: Number(item._sum.montant || 0),
       })),
-      paymentsByMethod: paymentsByMethod.map(item => ({
+      paymentsByMethod: paymentsByMethod.map((item) => ({
         method: item.methode,
         count: item._count,
         total: Number(item._sum.montant || 0),
@@ -150,7 +148,7 @@ export class StatisticsService {
    */
   async getOrderStats(filters: StatisticsFilters = {}) {
     const where: Prisma.CommandeWhereInput = {};
-    
+
     if (filters.tenantId) {
       where.utilisateur = {
         tenantId: filters.tenantId,
@@ -164,21 +162,23 @@ export class StatisticsService {
       };
     }
 
-    const [totalOrders, totalOrderValue, averageOrderValue] = await Promise.all([
-      prisma.commande.count({ where }),
-      prisma.commande.aggregate({
-        where,
-        _sum: { montantTotal: true },
-      }),
-      prisma.commande.aggregate({
-        where,
-        _avg: { montantTotal: true },
-      }),
-    ]);
+    const [totalOrders, totalOrderValue, averageOrderValue] = await Promise.all(
+      [
+        prisma.commande.count({ where }),
+        prisma.commande.aggregate({
+          where,
+          _sum: { montantTotal: true },
+        }),
+        prisma.commande.aggregate({
+          where,
+          _avg: { montantTotal: true },
+        }),
+      ],
+    );
 
     // Get orders by status
     const ordersByStatus = await prisma.commande.groupBy({
-      by: ['statut'],
+      by: ["statut"],
       where,
       _count: true,
       _sum: { montantTotal: true },
@@ -188,7 +188,7 @@ export class StatisticsService {
       totalOrders,
       totalOrderValue: Number(totalOrderValue._sum.montantTotal || 0),
       averageOrderValue: Number(averageOrderValue._avg.montantTotal || 0),
-      ordersByStatus: ordersByStatus.map(item => ({
+      ordersByStatus: ordersByStatus.map((item) => ({
         status: item.statut,
         count: item._count,
         total: Number(item._sum.montantTotal || 0),
@@ -201,7 +201,7 @@ export class StatisticsService {
    */
   async getMessageStats(filters: StatisticsFilters = {}) {
     const where: Prisma.MessageWhereInput = {};
-    
+
     if (filters.tenantId) {
       where.tenantId = filters.tenantId;
     }
@@ -221,14 +221,14 @@ export class StatisticsService {
 
     // Get messages by status
     const messagesByStatus = await prisma.message.groupBy({
-      by: ['status'],
+      by: ["status"],
       where,
       _count: true,
     });
 
     // Get messages by type
     const messagesByType = await prisma.message.groupBy({
-      by: ['type'],
+      by: ["type"],
       where,
       _count: true,
     });
@@ -237,12 +237,13 @@ export class StatisticsService {
       totalMessages,
       readMessages,
       unreadMessages,
-      readPercentage: totalMessages > 0 ? (readMessages / totalMessages) * 100 : 0,
-      messagesByStatus: messagesByStatus.map(item => ({
+      readPercentage:
+        totalMessages > 0 ? (readMessages / totalMessages) * 100 : 0,
+      messagesByStatus: messagesByStatus.map((item) => ({
         status: item.status,
         count: item._count,
       })),
-      messagesByType: messagesByType.map(item => ({
+      messagesByType: messagesByType.map((item) => ({
         type: item.type,
         count: item._count,
       })),
@@ -254,25 +255,27 @@ export class StatisticsService {
    */
   async getInventoryStats(filters: StatisticsFilters = {}) {
     const where: Prisma.ArticleWhereInput = {};
-    
+
     // Articles don't have direct tenant relationship, but we can filter by active status
-    const [totalArticles, activeArticles, lowStockArticles] = await Promise.all([
-      prisma.article.count({ where }),
-      prisma.article.count({ where: { ...where, actif: true } }),
-      prisma.article.count({
-        where: {
-          ...where,
-          actif: true,
-          stock: {
-            some: {
-              quantite: {
-                lte: 10, // Seuil minimal pour articles en rupture
+    const [totalArticles, activeArticles, lowStockArticles] = await Promise.all(
+      [
+        prisma.article.count({ where }),
+        prisma.article.count({ where: { ...where, actif: true } }),
+        prisma.article.count({
+          where: {
+            ...where,
+            actif: true,
+            stock: {
+              some: {
+                quantite: {
+                  lte: 10, // Seuil minimal pour articles en rupture
+                },
               },
             },
           },
-        },
-      }),
-    ]);
+        }),
+      ],
+    );
 
     // Get total stock value (approximation)
     const stockValue = await prisma.article.aggregate({
@@ -294,7 +297,7 @@ export class StatisticsService {
    */
   async getCourseStats(filters: StatisticsFilters = {}) {
     const where: Prisma.CoursWhereInput = {};
-    
+
     if (filters.dateRange) {
       where.dateCours = {
         gte: filters.dateRange.startDate,
@@ -302,7 +305,12 @@ export class StatisticsService {
       };
     }
 
-    const [totalCourses, activeCourses, totalInscriptions, completedInscriptions] = await Promise.all([
+    const [
+      totalCourses,
+      activeCourses,
+      totalInscriptions,
+      completedInscriptions,
+    ] = await Promise.all([
       prisma.cours.count({ where }),
       prisma.cours.count({ where: { ...where, actif: true } }),
       prisma.inscription.count(),
@@ -311,7 +319,7 @@ export class StatisticsService {
 
     // Get inscriptions by course type
     const inscriptionsByCourseType = await prisma.inscription.groupBy({
-      by: ['coursId'],
+      by: ["coursId"],
       _count: true,
     });
 
@@ -320,8 +328,12 @@ export class StatisticsService {
       activeCourses,
       totalInscriptions,
       completedInscriptions,
-      attendanceRate: totalInscriptions > 0 ? (completedInscriptions / totalInscriptions) * 100 : 0,
-      avgInscriptionsPerCourse: totalCourses > 0 ? totalInscriptions / totalCourses : 0,
+      attendanceRate:
+        totalInscriptions > 0
+          ? (completedInscriptions / totalInscriptions) * 100
+          : 0,
+      avgInscriptionsPerCourse:
+        totalCourses > 0 ? totalInscriptions / totalCourses : 0,
     };
   }
 
@@ -359,21 +371,28 @@ export class StatisticsService {
   /**
    * Get statistics for a specific time period
    */
-  async getTimeBasedStats(period: 'day' | 'week' | 'month' | 'year', tenantId?: string) {
+  async getTimeBasedStats(
+    period: "day" | "week" | "month" | "year",
+    tenantId?: string,
+  ) {
     const now = new Date();
     let startDate: Date;
 
     switch (period) {
-      case 'day':
+      case "day":
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
-      case 'week':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      case "week":
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() - 7,
+        );
         break;
-      case 'month':
+      case "month":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
-      case 'year':
+      case "year":
         startDate = new Date(now.getFullYear(), 0, 1);
         break;
     }

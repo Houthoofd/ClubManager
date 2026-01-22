@@ -19,6 +19,7 @@ export interface CreateCourseData {
   heureFin: Date;
   capaciteMax?: number;
   description?: string;
+  tenantId: string;
 }
 
 export interface UpdateCourseData {
@@ -67,6 +68,7 @@ class CourseService {
       // Create course
       const course = await prisma.cours.create({
         data: {
+          tenantId: data.tenantId,
           dateCours: data.dateCours,
           typeCours: data.typeCours,
           heureDebut: data.heureDebut,
@@ -140,14 +142,16 @@ class CourseService {
   /**
    * List courses with pagination and filters
    */
-  async listCourses(options: {
-    page?: number;
-    limit?: number;
-    typeCours?: string;
-    startDate?: Date;
-    endDate?: Date;
-    actif?: boolean;
-  } = {}): Promise<{
+  async listCourses(
+    options: {
+      page?: number;
+      limit?: number;
+      typeCours?: string;
+      startDate?: Date;
+      endDate?: Date;
+      actif?: boolean;
+    } = {},
+  ): Promise<{
     courses: CourseWithStats[];
     total: number;
     page: number;
@@ -195,8 +199,7 @@ class CourseService {
             ? course.capaciteMax - enrollmentCount
             : null;
         const isFull =
-          course.capaciteMax !== null &&
-          enrollmentCount >= course.capaciteMax;
+          course.capaciteMax !== null && enrollmentCount >= course.capaciteMax;
 
         return {
           id: course.id,
@@ -240,7 +243,11 @@ class CourseService {
   ): Promise<{ success: boolean; message: string; course?: Cours }> {
     try {
       // Validate dates if both are provided
-      if (data.heureDebut && data.heureFin && data.heureDebut >= data.heureFin) {
+      if (
+        data.heureDebut &&
+        data.heureFin &&
+        data.heureDebut >= data.heureFin
+      ) {
         return {
           success: false,
           message: "L'heure de début doit être avant l'heure de fin",
@@ -376,10 +383,10 @@ class CourseService {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
-          }
-        }
+              email: true,
+            },
+          },
+        },
       });
       return enrollments;
     } catch (error) {
@@ -396,19 +403,19 @@ class CourseService {
       const enrollment = await prisma.inscription.create({
         data: {
           utilisateurId: data.userId,
-          coursId: data.coursId
-        }
+          coursId: data.coursId,
+        },
       });
       return {
         success: true,
         message: "Inscription réussie",
-        enrollment
+        enrollment,
       };
     } catch (error) {
       console.error("❌ Enroll user error:", error);
       return {
         success: false,
-        message: "Erreur lors de l'inscription"
+        message: "Erreur lors de l'inscription",
       };
     }
   }
@@ -422,19 +429,19 @@ class CourseService {
         where: {
           utilisateurId_coursId: {
             utilisateurId: userId,
-            coursId: courseId
-          }
-        }
+            coursId: courseId,
+          },
+        },
       });
       return {
         success: true,
-        message: "Désinscription réussie"
+        message: "Désinscription réussie",
       };
     } catch (error) {
       console.error("❌ Unenroll user error:", error);
       return {
         success: false,
-        message: "Erreur lors de la désinscription"
+        message: "Erreur lors de la désinscription",
       };
     }
   }
@@ -442,14 +449,17 @@ class CourseService {
   /**
    * Get user enrollments
    */
-  async getUserEnrollments(userId: number, options: { tenantId?: string } = {}) {
+  async getUserEnrollments(
+    userId: number,
+    options: { tenantId?: string } = {},
+  ) {
     try {
       const enrollments = await prisma.inscription.findMany({
         where: { utilisateurId: userId },
         include: {
-          cours: true
+          cours: true,
         },
-        orderBy: { cours: { dateCours: 'desc' } }
+        orderBy: { cours: { dateCours: "desc" } },
       });
       return enrollments;
     } catch (error) {
@@ -461,29 +471,33 @@ class CourseService {
   /**
    * Mark attendance for user in course
    */
-  async markAttendance(data: { userId: number; courseId: number; present: boolean }) {
+  async markAttendance(data: {
+    userId: number;
+    courseId: number;
+    present: boolean;
+  }) {
     try {
       const attendance = await prisma.inscription.update({
         where: {
           utilisateurId_coursId: {
             utilisateurId: data.userId,
-            coursId: data.courseId
-          }
+            coursId: data.courseId,
+          },
         },
         data: {
-          present: data.present
-        }
+          present: data.present,
+        },
       });
       return {
         success: true,
         message: "Présence enregistrée",
-        attendance
+        attendance,
       };
     } catch (error) {
       console.error("❌ Mark attendance error:", error);
       return {
         success: false,
-        message: "Erreur lors de l'enregistrement de la présence"
+        message: "Erreur lors de l'enregistrement de la présence",
       };
     }
   }

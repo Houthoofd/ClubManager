@@ -4,16 +4,15 @@ import { verifyToken } from "../middleware/auth.js";
 import { userService } from "../services/infrastructure/user/user.service.js";
 import { emailService } from "../services/business/communication/email/email.service.js";
 import { verificationService } from "../services/verification/verification.service.js";
-// Import Prisma client for direct queries when needed
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+// Import Prisma singleton client for direct queries when needed
+import { prisma } from "../db/prisma.client.js";
 // Import local schemas
-import { 
+import {
   utilisateurInscriptionSchema,
   userDataLoginSchema,
   userDataLoginByUserIdSchema,
   userSearchByEmailSchema,
-  userDataAjoutSchema
+  userDataAjoutSchema,
 } from "../validators/localSchemas.js";
 import { z } from "zod";
 import * as bcrypt from "bcrypt";
@@ -43,17 +42,20 @@ router.post("/verifier", async (req, res) => {
 
     try {
       // Check if user exists using userService
-      const existingUser = await userService.getUserByEmail(`${prenom}.${nom}@example.com`, "default");
+      const existingUser = await userService.getUserByEmail(
+        `${prenom}.${nom}@example.com`,
+        "default",
+      );
 
       if (existingUser) {
         return res.status(409).json({
           message: "Un utilisateur avec ces informations existe déjà",
           type: "USER_EXISTS",
-          userExists: 'default',
+          userExists: "default",
           userData: {
             firstName: existingUser.firstName,
             lastName: existingUser.lastName,
-            email: existingUser.email
+            email: existingUser.email,
           },
         });
       } else {
@@ -62,7 +64,7 @@ router.post("/verifier", async (req, res) => {
           message: "Aucun utilisateur trouvé avec ces informations",
           type: "USER_AVAILABLE",
           userExists: false,
-          canRegister: 'default',
+          canRegister: "default",
         });
       }
     } catch (error: any) {
@@ -91,7 +93,9 @@ router.get("/test-email-config", async (req, res) => {
       message: configTest
         ? "Configuration email OK"
         : "Problèmes de configuration détectés",
-      details: configTest ? "Email service is working" : "Email service configuration error",
+      details: configTest
+        ? "Email service is working"
+        : "Email service configuration error",
     });
   } catch (error: any) {
     console.error("❌ [Route] Erreur lors du test de config email:", error);
@@ -118,15 +122,15 @@ router.post("/test-email", async (req, res) => {
     console.log("🧪 [Route] Test d'envoi email vers:", email);
 
     const result = await emailService.sendEmail({
-      to: 'test@example.com',
+      to: "test@example.com",
       subject: "Test Email - ClubManager",
       html: "<h1>Test Email</h1><p>Si vous recevez cet email, la configuration fonctionne correctement.</p>",
-      text: "Test Email - Si vous recevez cet email, la configuration fonctionne correctement."
+      text: "Test Email - Si vous recevez cet email, la configuration fonctionne correctement.",
     });
 
     if (result) {
       res.json({
-        success: 'default',
+        success: "default",
         message: "Email de test envoyé avec succès",
         messageId: "test-email",
         details: "Email sent successfully",
@@ -177,16 +181,16 @@ router.get("/verify-email-token", async (req, res) => {
     if (result.success) {
       console.log("✅ [Route PUBLIC] Token validé avec succès");
       res.json({
-        success: 'default',
-        message: 'Success',
+        success: "default",
+        message: "Success",
         data: result.data,
         redirect_to: "/pages/connexion?verified=true",
       });
     } else {
-      console.warn("⚠️ [Route PUBLIC] Échec validation token:", 'Success');
+      console.warn("⚠️ [Route PUBLIC] Échec validation token:", "Success");
       res.status(400).json({
         success: false,
-        error: 'Success',
+        error: "Success",
         redirect_to: "/pages/connexion?error=invalid_token",
       });
     }
@@ -241,24 +245,23 @@ router.post("/inscription", async (req: any, res: any) => {
 
     // Mapper vers le format attendu par la base de données
     const mappedData = {
-
-
-      
-
-      password: validatedData.password || '',
+      password: validatedData.password || "",
       genderId: validatedData.genderId,
-      
+
       dateOfBirth: validatedData.dateOfBirth,
-      
-      
-      
     };
 
     console.log("[Route] Données mappées pour DB:", mappedData);
 
     // Appel de la méthode d'inscription
     const client = userService;
-    const result = await userService.register({...mappedData, firstName: validatedData.firstName, lastName: validatedData.lastName, email: validatedData.email, tenantId: 'default'});
+    const result = await userService.register({
+      ...mappedData,
+      firstName: validatedData.firstName,
+      lastName: validatedData.lastName,
+      email: validatedData.email,
+      tenantId: "default",
+    });
 
     console.log("[Route] Résultat inscription:", result);
 
@@ -273,26 +276,23 @@ router.post("/inscription", async (req: any, res: any) => {
         console.log(`📧 [Route] UserId généré: ${result?.user?.id}`);
 
         // ✅ CORRECTION: Utiliser l'email réel de l'utilisateur
-        const emailResult = await emailService.sendVerificationEmail('default', {userName: 'User', verificationUrl: 'http://localhost:3000/verify',
-
-
-
-
-
-        });
+        const emailResult = await emailService.sendVerificationEmail(
+          "default",
+          { userName: "User", verificationUrl: "http://localhost:3000/verify" },
+        );
 
         if (emailResult) {
           console.log("✅ [Route] Email de vérification envoyé avec succès !");
-          console.log("✅ [Route] Message:", 'Email sent');
+          console.log("✅ [Route] Message:", "Email sent");
 
           res.status(201).json({
             message: "Inscription réussie et email de vérification envoyé",
             generatedUserId: result?.user?.id,
             inscriptionDetails: result,
             emailStatus: {
-              sent: 'default',
-              message: 'Email sent',
-              details: 'Email sent successfully',
+              sent: "default",
+              message: "Email sent",
+              details: "Email sent successfully",
               emailDestination: validatedData.email,
               isTestMode: false,
               note: `Email de vérification envoyé à ${validatedData.email}`,
@@ -306,8 +306,8 @@ router.post("/inscription", async (req: any, res: any) => {
             inscriptionDetails: result,
             emailStatus: {
               sent: false,
-              message: 'Email sent',
-              details: 'Email sent successfully',
+              message: "Email sent",
+              details: "Email sent successfully",
               emailDestination: validatedData.email,
               isTestMode: false,
             },
@@ -373,11 +373,9 @@ router.post("/connexion-userid", async (req, res) => {
     );
 
     if (result !== null) {
-      res
-        .status(200)
-        .json({ message: 'Success', data: result });
+      res.status(200).json({ message: "Success", data: result });
     } else {
-      res.status(404).json({ message: 'Success' });
+      res.status(404).json({ message: "Success" });
     }
   } catch (error) {
     console.error("Erreur lors de la connexion par userId :", error);
@@ -392,14 +390,15 @@ router.post("/connexion", async (req, res) => {
     console.log("Connexion par email (legacy) :", validatedData.email);
 
     const client = userService;
-    const result = await userService.login({...validatedData, tenantId: 'default'});
+    const result = await userService.login({
+      ...validatedData,
+      tenantId: "default",
+    });
 
     if (result !== null) {
-      res
-        .status(200)
-        .json({ message: 'Success', data: result });
+      res.status(200).json({ message: "Success", data: result });
     } else {
-      res.status(404).json({ message: 'Success' });
+      res.status(404).json({ message: "Success" });
     }
   } catch (error) {
     console.error("Erreur lors de la connexion :", error);
@@ -435,16 +434,16 @@ router.get("/verify-email-token", async (req, res) => {
     if (result.success) {
       console.log("✅ [Route PUBLIC] Token validé avec succès");
       res.json({
-        success: 'default',
-        message: 'Success',
+        success: "default",
+        message: "Success",
         data: result.data,
         redirect_to: "/pages/connexion?verified=true",
       });
     } else {
-      console.warn("⚠️ [Route PUBLIC] Échec validation token:", 'Success');
+      console.warn("⚠️ [Route PUBLIC] Échec validation token:", "Success");
       res.status(400).json({
         success: false,
-        error: 'Success',
+        error: "Success",
         redirect_to: "/pages/connexion?error=invalid_token",
       });
     }
@@ -499,24 +498,23 @@ router.post("/inscription", async (req: any, res: any) => {
 
     // Mapper vers le format attendu par la base de données
     const mappedData = {
-
-
-      
-
-      password: validatedData.password || '',
+      password: validatedData.password || "",
       genderId: validatedData.genderId,
-      
+
       dateOfBirth: validatedData.dateOfBirth,
-      
-      
-      
     };
 
     console.log("[Route] Données mappées pour DB:", mappedData);
 
     // Appel de la méthode d'inscription
     const client = userService;
-    const result = await userService.register({...mappedData, firstName: validatedData.firstName, lastName: validatedData.lastName, email: validatedData.email, tenantId: 'default'});
+    const result = await userService.register({
+      ...mappedData,
+      firstName: validatedData.firstName,
+      lastName: validatedData.lastName,
+      email: validatedData.email,
+      tenantId: "default",
+    });
 
     console.log("[Route] Résultat inscription:", result);
 
@@ -531,26 +529,23 @@ router.post("/inscription", async (req: any, res: any) => {
         console.log(`📧 [Route] UserId généré: ${result?.user?.id}`);
 
         // ✅ CORRECTION: Utiliser l'email réel de l'utilisateur
-        const emailResult = await emailService.sendVerificationEmail('default', {userName: 'User', verificationUrl: 'http://localhost:3000/verify',
-
-
-
-
-
-        });
+        const emailResult = await emailService.sendVerificationEmail(
+          "default",
+          { userName: "User", verificationUrl: "http://localhost:3000/verify" },
+        );
 
         if (emailResult) {
           console.log("✅ [Route] Email de vérification envoyé avec succès !");
-          console.log("✅ [Route] Message:", 'Email sent');
+          console.log("✅ [Route] Message:", "Email sent");
 
           res.status(201).json({
             message: "Inscription réussie et email de vérification envoyé",
             generatedUserId: result?.user?.id,
             inscriptionDetails: result,
             emailStatus: {
-              sent: 'default',
-              message: 'Email sent',
-              details: 'Email sent successfully',
+              sent: "default",
+              message: "Email sent",
+              details: "Email sent successfully",
               emailDestination: validatedData.email,
               isTestMode: false,
               note: `Email de vérification envoyé à ${validatedData.email}`,
@@ -564,8 +559,8 @@ router.post("/inscription", async (req: any, res: any) => {
             inscriptionDetails: result,
             emailStatus: {
               sent: false,
-              message: 'Email sent',
-              details: 'Email sent successfully',
+              message: "Email sent",
+              details: "Email sent successfully",
               emailDestination: validatedData.email,
               isTestMode: false,
             },
@@ -631,11 +626,9 @@ router.post("/connexion-userid", async (req, res) => {
     );
 
     if (result !== null) {
-      res
-        .status(200)
-        .json({ message: 'Success', data: result });
+      res.status(200).json({ message: "Success", data: result });
     } else {
-      res.status(404).json({ message: 'Success' });
+      res.status(404).json({ message: "Success" });
     }
   } catch (error) {
     console.error("Erreur lors de la connexion par userId :", error);
@@ -650,14 +643,15 @@ router.post("/connexion", async (req, res) => {
     console.log("Connexion par email (legacy) :", validatedData.email);
 
     const client = userService;
-    const result = await userService.login({...validatedData, tenantId: 'default'});
+    const result = await userService.login({
+      ...validatedData,
+      tenantId: "default",
+    });
 
     if (result !== null) {
-      res
-        .status(200)
-        .json({ message: 'Success', data: result });
+      res.status(200).json({ message: "Success", data: result });
     } else {
-      res.status(404).json({ message: 'Success' });
+      res.status(404).json({ message: "Success" });
     }
   } catch (error) {
     console.error("Erreur lors de la connexion :", error);
@@ -687,18 +681,15 @@ router.post("/verify-email-token", async (req, res) => {
     if (result.success) {
       console.log("✅ [Route PUBLIC POST] Token validé avec succès");
       res.json({
-        success: 'default',
-        message: 'Success',
+        success: "default",
+        message: "Success",
         data: result.data,
       });
     } else {
-      console.warn(
-        "⚠️ [Route PUBLIC POST] Échec validation token:",
-        'Success',
-      );
+      console.warn("⚠️ [Route PUBLIC POST] Échec validation token:", "Success");
       res.status(400).json({
         success: false,
-        error: 'Success',
+        error: "Success",
       });
     }
   } catch (error: any) {
@@ -759,7 +750,11 @@ router.put("/modifier", async (req: any, res: any) => {
     });
 
     // Appel à la méthode userService qui gère la modification
-    const result = await userService.updateUser(Number(req.params.utilisateurId), 'default', dataToUpdate);
+    const result = await userService.updateUser(
+      Number(req.params.utilisateurId),
+      "default",
+      dataToUpdate,
+    );
 
     if (result.success) {
       res.status(200).json({ message: "Utilisateur modifié avec succès." });
@@ -768,11 +763,9 @@ router.put("/modifier", async (req: any, res: any) => {
     }
   } catch (error) {
     console.error("Erreur lors de la modification de l'utilisateur :", error);
-    res
-      .status(500)
-      .json({
-        message: "Erreur serveur lors de la modification de l'utilisateur.",
-      });
+    res.status(500).json({
+      message: "Erreur serveur lors de la modification de l'utilisateur.",
+    });
   }
 });
 
@@ -792,7 +785,7 @@ router.delete("/supprimer/:id", async (req: any, res: any) => {
     // Vérifier que l'utilisateur existe (actif ou inactif)
     const utilisateurSimple = await userService.getUserById(
       utilisateurId,
-      'default',
+      "default",
     ); // includeInactive = true
     console.log(
       `[DELETE] Résultat de obtenirUnUtilisateur :`,
@@ -807,14 +800,14 @@ router.delete("/supprimer/:id", async (req: any, res: any) => {
     }
 
     // Désactiver l'utilisateur au lieu de le supprimer
-    const result = await userService.deleteUser(utilisateurId, 'default');
+    const result = await userService.deleteUser(utilisateurId, "default");
     console.log(`[DELETE] Résultat de desactiverUtilisateur :`, result);
 
     if (result.success) {
       console.log(`[DELETE] Désactivation réussie pour id =`, utilisateurId);
       res.status(200).json({
-        isConfirm: 'default',
-        message: 'Success',
+        isConfirm: "default",
+        message: "Success",
         action: "désactivé", // Indiquer l'action réelle
       });
     } else {
@@ -822,16 +815,14 @@ router.delete("/supprimer/:id", async (req: any, res: any) => {
         `[DELETE] La désactivation a échoué pour id =`,
         utilisateurId,
       );
-      res.status(400).json({ isConfirm: false, message: 'Success' });
+      res.status(400).json({ isConfirm: false, message: "Success" });
     }
   } catch (error) {
     console.error("Erreur lors de la désactivation de l'utilisateur :", error);
-    res
-      .status(500)
-      .json({
-        isConfirm: false,
-        message: "Erreur serveur lors de la désactivation de l'utilisateur.",
-      });
+    res.status(500).json({
+      isConfirm: false,
+      message: "Erreur serveur lors de la désactivation de l'utilisateur.",
+    });
   }
 });
 
@@ -849,28 +840,26 @@ router.put("/reactiver/:id", async (req: any, res: any) => {
     }
 
     // Réactiver l'utilisateur
-    const result = await userService.updateUser(utilisateurId, 'default', {});
+    const result = await userService.updateUser(utilisateurId, "default", {});
     console.log(`[PUT] Résultat de reactiverUtilisateur :`, result);
 
     if (result.success) {
       console.log(`[PUT] Réactivation réussie pour id =`, utilisateurId);
       res.status(200).json({
-        isConfirm: 'default',
-        message: 'Success',
+        isConfirm: "default",
+        message: "Success",
         action: "réactivé",
       });
     } else {
       console.log(`[PUT] La réactivation a échoué pour id =`, utilisateurId);
-      res.status(400).json({ isConfirm: false, message: 'Success' });
+      res.status(400).json({ isConfirm: false, message: "Success" });
     }
   } catch (error) {
     console.error("Erreur lors de la réactivation de l'utilisateur :", error);
-    res
-      .status(500)
-      .json({
-        isConfirm: false,
-        message: "Erreur serveur lors de la réactivation de l'utilisateur.",
-      });
+    res.status(500).json({
+      isConfirm: false,
+      message: "Erreur serveur lors de la réactivation de l'utilisateur.",
+    });
   }
 });
 
@@ -880,16 +869,14 @@ router.get("/statistiques", async (req: any, res: any) => {
     const stats = await prisma.user.count();
 
     res.status(200).json({
-      success: 'default',
+      success: "default",
       data: stats,
     });
   } catch (error) {
     console.error("Erreur lors de la récupération des statistiques :", error);
-    res
-      .status(500)
-      .json({
-        message: "Erreur serveur lors de la récupération des statistiques.",
-      });
+    res.status(500).json({
+      message: "Erreur serveur lors de la récupération des statistiques.",
+    });
   }
 });
 
@@ -899,7 +886,9 @@ router.get("/", async (req: any, res: any) => {
     const includeInactive = req.query.includeInactive === "true";
 
     // Attendre la résolution de la méthode avec userService
-    const utilisateurs = await userService.listUsers('default', { actif: !includeInactive });
+    const utilisateurs = await userService.listUsers("default", {
+      actif: !includeInactive,
+    });
 
     // Vérifier si des utilisateurs ont été trouvés et renvoyer une réponse appropriée
     if (utilisateurs.users.length > 0) {
@@ -924,7 +913,10 @@ router.get("/:id", async (req: any, res: any) => {
 
   try {
     // Récupère l'utilisateur à partir de l'id avec userService
-    const utilisateur = await userService.getUserById(Number(utilisateurId), 'default');
+    const utilisateur = await userService.getUserById(
+      Number(utilisateurId),
+      "default",
+    );
 
     if (utilisateur !== null) {
       res.status(200).json({ utilisateur: utilisateur }); // Renvoie les données enrichies de l'utilisateur
@@ -965,7 +957,10 @@ router.post("/ajouter", async (req: any, res: any) => {
     }
 
     // Vérifie si l'utilisateur existe déjà par email
-    const verifUtilisateur = await userService.findByEmail(validatedData.email, 'default');
+    const verifUtilisateur = await userService.findByEmail(
+      validatedData.email,
+      "default",
+    );
 
     if (verifUtilisateur) {
       return res.status(400).json({ message: "Utilisateur déjà inscrit." });
@@ -975,25 +970,23 @@ router.post("/ajouter", async (req: any, res: any) => {
 
     // Appel à la méthode d'insertion avec userService
     const result = await userService.register({
-      firstName: validatedData.firstName || '',
-      lastName: validatedData.lastName || '',
-      email: validatedData.email || '',
-      password: validatedData.password || '',
+      firstName: validatedData.firstName || "",
+      lastName: validatedData.lastName || "",
+      email: validatedData.email || "",
+      password: validatedData.password || "",
       dateOfBirth: validatedData.dateOfBirth,
       genderId: validatedData.genderId,
-      tenantId: "default" // TODO: Get from context
+      tenantId: "default", // TODO: Get from context
     });
 
     console.log("utilisateur ajouté avec succès:", result);
     res.status(200).json(result);
   } catch (error) {
     console.error("Erreur lors de l'ajout ou de la modification :", error);
-    res
-      .status(500)
-      .json({
-        message:
-          "Erreur serveur lors de la récupération du cours et des utilisateurs.",
-      });
+    res.status(500).json({
+      message:
+        "Erreur serveur lors de la récupération du cours et des utilisateurs.",
+    });
   }
 });
 
@@ -1017,7 +1010,7 @@ router.post("/send-verification-email", async (req, res) => {
     });
 
     // Récupérer l'utilisateur avec userService
-    const utilisateur = await userService.getUserById(userId, 'default');
+    const utilisateur = await userService.getUserById(userId, "default");
 
     if (!utilisateur) {
       console.warn("⚠️ Utilisateur non trouvé avec userId:", userId);
@@ -1040,15 +1033,15 @@ router.post("/send-verification-email", async (req, res) => {
 
     // CORRIGÉ: Envoyer l'email de vérification avec emailService
     const result = await emailService.sendVerificationEmail(utilisateur.email, {
-      userName: utilisateur.firstName, 
-      verificationUrl: 'http://localhost:3000/verify'
+      userName: utilisateur.firstName,
+      verificationUrl: "http://localhost:3000/verify",
     });
 
     console.log("📧 Résultat envoi email:", result);
     res.json({
       success: true,
-      message: 'Success',
-      details: 'Email verification sent',
+      message: "Success",
+      details: "Email verification sent",
     });
   } catch (error: any) {
     console.error("❌ Erreur envoi email vérification:", error);
@@ -1081,18 +1074,15 @@ router.post("/verify-email-token", async (req, res) => {
     if (result.success) {
       console.log("✅ [Route PUBLIC POST] Token validé avec succès");
       res.json({
-        success: 'default',
-        message: 'Success',
+        success: "default",
+        message: "Success",
         data: result.data,
       });
     } else {
-      console.warn(
-        "⚠️ [Route PUBLIC POST] Échec validation token:",
-        'Success',
-      );
+      console.warn("⚠️ [Route PUBLIC POST] Échec validation token:", "Success");
       res.status(400).json({
         success: false,
-        error: 'Success',
+        error: "Success",
       });
     }
   } catch (error: any) {
@@ -1105,4 +1095,3 @@ router.post("/verify-email-token", async (req, res) => {
 });
 
 export default router;
-

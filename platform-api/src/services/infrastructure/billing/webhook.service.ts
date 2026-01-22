@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../../db/prisma.client.js';
 import { stripe, getWebhookSecret } from './stripe.client.js';
 import Stripe from 'stripe';
 
@@ -11,11 +11,7 @@ import Stripe from 'stripe';
  * - Gérer le Dunning (échecs de paiement)
  */
 export class WebhookService {
-  private prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
 
   /**
    * Traiter un webhook Stripe
@@ -109,7 +105,7 @@ export class WebhookService {
     console.log(`[Webhook] Subscription updated for tenant ${tenantId}: ${subscription.status}`);
 
     // Mettre à jour le statut dans la BD
-    await this.prisma.tenantSubscription.updateMany({
+    await prisma.tenantSubscription.updateMany({
       where: {
         tenantId,
         stripeSubscriptionId: subscription.id,
@@ -122,7 +118,7 @@ export class WebhookService {
 
     // Mettre à jour le statut du tenant
     const tenantStatus = this.determineTenantStatus(subscription.status);
-    await this.prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: tenantId },
       data: { status: tenantStatus },
     });
@@ -141,7 +137,7 @@ export class WebhookService {
 
     console.log(`[Webhook] Subscription deleted for tenant ${tenantId}`);
 
-    await this.prisma.tenantSubscription.updateMany({
+    await prisma.tenantSubscription.updateMany({
       where: {
         tenantId,
         stripeSubscriptionId: subscription.id,
@@ -151,7 +147,7 @@ export class WebhookService {
       },
     });
 
-    await this.prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: tenantId },
       data: { status: 'INACTIVE' },
     });
@@ -165,7 +161,7 @@ export class WebhookService {
   private async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
     const customerId = invoice.customer as string;
 
-    const tenant = await this.prisma.tenant.findFirst({
+    const tenant = await prisma.tenant.findFirst({
       where: { stripeCustomerId: customerId },
     });
 
@@ -178,7 +174,7 @@ export class WebhookService {
 
     // Réactiver le tenant si suspendu
     if (tenant.status === 'SUSPENDED') {
-      await this.prisma.tenant.update({
+      await prisma.tenant.update({
         where: { id: tenant.id },
         data: { status: 'ACTIVE' },
       });
@@ -195,7 +191,7 @@ export class WebhookService {
   private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     const customerId = invoice.customer as string;
 
-    const tenant = await this.prisma.tenant.findFirst({
+    const tenant = await prisma.tenant.findFirst({
       where: { stripeCustomerId: customerId },
     });
 
@@ -211,7 +207,7 @@ export class WebhookService {
     // Stratégie de Dunning
     if (attemptCount >= 3) {
       // Après 3 échecs, suspendre le compte
-      await this.prisma.tenant.update({
+      await prisma.tenant.update({
         where: { id: tenant.id },
         data: { status: 'SUSPENDED' },
       });
@@ -235,7 +231,7 @@ export class WebhookService {
     }
 
     // Log l'échec dans les audit logs
-    await this.prisma.auditLog.create({
+    await prisma.auditLog.create({
       data: {
         tenantId: tenant.id,
         action: 'PAYMENT_FAILED',
@@ -270,7 +266,7 @@ export class WebhookService {
     console.log(`[Webhook] Trial will end in ${daysUntilEnd} days for tenant ${tenantId}`);
 
     // TODO: Envoyer email de rappel
-    // const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    // const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     // await emailService.sendTrialEndingEmail(tenant, daysUntilEnd);
   }
 
@@ -290,7 +286,7 @@ export class WebhookService {
     subscriptionId: string,
     status: string
   ): Promise<void> {
-    await this.prisma.tenantSubscription.updateMany({
+    await prisma.tenantSubscription.updateMany({
       where: {
         tenantId,
         stripeSubscriptionId: subscriptionId,

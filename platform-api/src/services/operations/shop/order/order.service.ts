@@ -5,6 +5,7 @@
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
+import { prisma } from "../../../../db/prisma.client.js";
 import { OrderRepository } from "../../../../repositories/order.repository.js";
 import { ProductRepository } from "../../../repositories/product.repository.js";
 import { OrderFilters, OrderStatus } from "@clubmanager/types";
@@ -127,6 +128,9 @@ export class OrderService {
 
     // Create order
     const orderData: Prisma.CommandeCreateInput = {
+      tenant: {
+        connect: { id: data.tenantId },
+      },
       utilisateur: {
         connect: { id: data.userId },
       },
@@ -532,5 +536,4 @@ export class OrderService {
 }
 
 // Create singleton instance
-const prisma = new PrismaClient();
 export const orderService = new OrderService(prisma);

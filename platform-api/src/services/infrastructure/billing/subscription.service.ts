@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../../db/prisma.client.js';
 import { stripe, getPriceId } from './stripe.client.js';
 import { customerService } from './customer.service.js';
 import type {
@@ -17,11 +17,7 @@ import type {
  * - Synchroniser avec la base de données
  */
 export class SubscriptionService {
-  private prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
 
   /**
    * Créer un nouvel abonnement pour un tenant
@@ -29,7 +25,7 @@ export class SubscriptionService {
   async createSubscription(params: CreateSubscriptionParams): Promise<SubscriptionInfo> {
     const { tenantId, planId, paymentMethodId, trialDays = 0, email } = params;
 
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
@@ -77,12 +73,12 @@ export class SubscriptionService {
     });
 
     // Créer l'enregistrement dans la BD
-    const plan = await this.prisma.planTarifaire.findFirst({
+    const plan = await prisma.planTarifaire.findFirst({
       where: { nom: planId },
     });
 
     if (plan) {
-      await this.prisma.tenantSubscription.create({
+      await prisma.tenantSubscription.create({
         data: {
           tenantId,
           planId: plan.id,
@@ -97,7 +93,7 @@ export class SubscriptionService {
     }
 
     // Mettre à jour le tenant
-    await this.prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         plan: planId,
@@ -150,7 +146,7 @@ export class SubscriptionService {
     );
 
     // Mettre à jour dans la BD
-    await this.prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: tenantId },
       data: { plan: newPlanId },
     });
@@ -180,12 +176,12 @@ export class SubscriptionService {
         },
       });
 
-      await this.prisma.tenant.update({
+      await prisma.tenant.update({
         where: { id: tenantId },
         data: { status: 'INACTIVE' },
       });
 
-      await this.prisma.tenantSubscription.updateMany({
+      await prisma.tenantSubscription.updateMany({
         where: {
           tenantId,
           stripeSubscriptionId: subscriptionId,
@@ -225,12 +221,12 @@ export class SubscriptionService {
       }
     );
 
-    await this.prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: tenantId },
       data: { status: 'ACTIVE' },
     });
 
-    await this.prisma.tenantSubscription.updateMany({
+    await prisma.tenantSubscription.updateMany({
       where: {
         tenantId,
         stripeSubscriptionId: subscriptionId,
@@ -247,7 +243,7 @@ export class SubscriptionService {
    * Récupérer l'abonnement actif d'un tenant
    */
   async getActiveSubscription(tenantId: string) {
-    return this.prisma.tenantSubscription.findFirst({
+    return prisma.tenantSubscription.findFirst({
       where: {
         tenantId,
         status: 'ACTIVE',
@@ -262,7 +258,7 @@ export class SubscriptionService {
    * Récupérer le dernier abonnement d'un tenant
    */
   async getLatestSubscription(tenantId: string) {
-    return this.prisma.tenantSubscription.findFirst({
+    return prisma.tenantSubscription.findFirst({
       where: { tenantId },
       orderBy: {
         createdAt: 'desc',

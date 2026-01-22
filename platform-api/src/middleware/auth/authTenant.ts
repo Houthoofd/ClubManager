@@ -1,9 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { PrismaClient } from "@prisma/client";
 import { AuthenticatedUser } from "@clubmanager/types";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../db/prisma.client.js";
 
 /**
  * Middleware d'authentification tenant-aware

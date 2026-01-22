@@ -20,6 +20,7 @@ export function getMessageStatusLabel(status: MessageStatus): string {
     [MessageStatus.DELIVERED]: "Délivré",
     [MessageStatus.READ]: "Lu",
     [MessageStatus.FAILED]: "Échoué",
+    [MessageStatus.ARCHIVED]: "Archivé",
   };
   return labels[status];
 }
@@ -29,9 +30,11 @@ export function getMessageStatusLabel(status: MessageStatus): string {
  */
 export function getMessageTypeLabel(type: MessageType): string {
   const labels: Record<MessageType, string> = {
-    [MessageType.PRIVATE]: "Privé",
-    [MessageType.GROUP]: "Groupe",
-    [MessageType.BROADCAST]: "Diffusion",
+    [MessageType.EMAIL]: "Email",
+    [MessageType.SMS]: "SMS",
+    [MessageType.PUSH]: "Notification Push",
+    [MessageType.IN_APP]: "Dans l'application",
+    [MessageType.SYSTEM]: "Système",
   };
   return labels[type];
 }
@@ -59,6 +62,7 @@ export function getMessageStatusColor(status: MessageStatus): string {
     [MessageStatus.DELIVERED]: "cyan",
     [MessageStatus.READ]: "green",
     [MessageStatus.FAILED]: "red",
+    [MessageStatus.ARCHIVED]: "darkgray",
   };
   return colors[status];
 }
@@ -294,11 +298,16 @@ export function getNextValidStatuses(
   currentStatus: MessageStatus,
 ): MessageStatus[] {
   const transitions: Record<MessageStatus, MessageStatus[]> = {
-    [MessageStatus.DRAFT]: [MessageStatus.SENT],
-    [MessageStatus.SENT]: [MessageStatus.DELIVERED, MessageStatus.FAILED],
-    [MessageStatus.DELIVERED]: [MessageStatus.READ],
-    [MessageStatus.READ]: [],
-    [MessageStatus.FAILED]: [MessageStatus.SENT],
+    [MessageStatus.DRAFT]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
+    [MessageStatus.SENT]: [
+      MessageStatus.DELIVERED,
+      MessageStatus.FAILED,
+      MessageStatus.ARCHIVED,
+    ],
+    [MessageStatus.DELIVERED]: [MessageStatus.READ, MessageStatus.ARCHIVED],
+    [MessageStatus.READ]: [MessageStatus.ARCHIVED],
+    [MessageStatus.FAILED]: [MessageStatus.SENT, MessageStatus.ARCHIVED],
+    [MessageStatus.ARCHIVED]: [],
   };
   return transitions[currentStatus] || [];
 }

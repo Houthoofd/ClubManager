@@ -4,12 +4,10 @@
  * Replaces the old Verifiation client
  */
 
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../../db/prisma.client.js";
 import { z } from "zod";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
-
-const prisma = new PrismaClient();
 
 // Validation schemas
 export const emailVerificationSchema = z.object({
@@ -25,7 +23,9 @@ export const phoneVerificationSchema = z.object({
 export const passwordResetSchema = z.object({
   email: z.string().email("Email invalide"),
   token: z.string().min(1, "Token requis"),
-  newPassword: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  newPassword: z
+    .string()
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
 });
 
 interface VerificationResult {
@@ -38,17 +38,16 @@ interface VerificationResult {
 interface TokenData {
   userId: number;
   email: string;
-  type: 'email' | 'password_reset' | 'account_activation';
+  type: "email" | "password_reset" | "account_activation";
   expiresAt: Date;
 }
 
 export class VerificationService {
-
   /**
    * Generate a secure random token
    */
   private generateToken(): string {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString("hex");
   }
 
   /**
@@ -61,7 +60,10 @@ export class VerificationService {
   /**
    * Verify a token against its hash
    */
-  private async verifyToken(token: string, hashedToken: string): Promise<boolean> {
+  private async verifyToken(
+    token: string,
+    hashedToken: string,
+  ): Promise<boolean> {
     return bcrypt.compare(token, hashedToken);
   }
 
@@ -89,7 +91,10 @@ export class VerificationService {
   /**
    * Verify email verification token
    */
-  async verifyEmailToken(token: string, userId: number): Promise<VerificationResult> {
+  async verifyEmailToken(
+    token: string,
+    userId: number,
+  ): Promise<VerificationResult> {
     try {
       const tokenData = await prisma.passwordResetToken.findFirst({
         where: {
@@ -109,7 +114,7 @@ export class VerificationService {
       }
 
       const isValid = await this.verifyToken(token, tokenData.token);
-      
+
       if (!isValid) {
         return {
           success: false,
@@ -129,7 +134,7 @@ export class VerificationService {
         data: { userId },
       };
     } catch (error) {
-      console.error('Error verifying email token:', error);
+      console.error("Error verifying email token:", error);
       return {
         success: false,
         message: "Erreur lors de la vérification",
@@ -150,7 +155,8 @@ export class VerificationService {
         // Don't reveal if email exists or not for security
         return {
           success: true,
-          message: "Si cet email existe, vous recevrez un lien de réinitialisation",
+          message:
+            "Si cet email existe, vous recevrez un lien de réinitialisation",
         };
       }
 
@@ -179,7 +185,7 @@ export class VerificationService {
         data: { token, userId: user.id },
       };
     } catch (error) {
-      console.error('Error generating password reset token:', error);
+      console.error("Error generating password reset token:", error);
       return {
         success: false,
         message: "Erreur lors de la génération du token",
@@ -212,7 +218,7 @@ export class VerificationService {
       }
 
       const isValid = await this.verifyToken(token, tokenData.token);
-      
+
       if (!isValid) {
         return {
           success: false,
@@ -223,13 +229,13 @@ export class VerificationService {
       return {
         success: true,
         message: "Token valide",
-        data: { 
+        data: {
           userId: tokenData.userId,
           email: tokenData.user.email,
         },
       };
     } catch (error) {
-      console.error('Error verifying password reset token:', error);
+      console.error("Error verifying password reset token:", error);
       return {
         success: false,
         message: "Erreur lors de la vérification",
@@ -240,10 +246,13 @@ export class VerificationService {
   /**
    * Reset password with token
    */
-  async resetPassword(token: string, newPassword: string): Promise<VerificationResult> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<VerificationResult> {
     try {
       const verification = await this.verifyPasswordResetToken(token);
-      
+
       if (!verification.success) {
         return verification;
       }
@@ -268,7 +277,7 @@ export class VerificationService {
         message: "Mot de passe réinitialisé avec succès",
       };
     } catch (error) {
-      console.error('Error resetting password:', error);
+      console.error("Error resetting password:", error);
       return {
         success: false,
         message: "Erreur lors de la réinitialisation",
@@ -291,7 +300,7 @@ export class VerificationService {
         message: "Compte activé avec succès",
       };
     } catch (error) {
-      console.error('Error verifying account:', error);
+      console.error("Error verifying account:", error);
       return {
         success: false,
         message: "Erreur lors de l'activation du compte",
@@ -304,7 +313,7 @@ export class VerificationService {
    */
   validateEmailFormat(email: string): VerificationResult {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
+
     if (!emailRegex.test(email)) {
       return {
         success: false,
@@ -313,9 +322,9 @@ export class VerificationService {
     }
 
     // Additional domain validation could be added here
-    const domain = email.split('@')[1];
-    const blockedDomains = ['tempmail.com', '10minutemail.com']; // Example blocked domains
-    
+    const domain = email.split("@")[1];
+    const blockedDomains = ["tempmail.com", "10minutemail.com"]; // Example blocked domains
+
     if (blockedDomains.includes(domain)) {
       return {
         success: false,
@@ -364,7 +373,7 @@ export class VerificationService {
     if (errors.length > 0) {
       return {
         success: false,
-        message: `Mot de passe faible. Requis: ${errors.join(', ')}`,
+        message: `Mot de passe faible. Requis: ${errors.join(", ")}`,
       };
     }
 
@@ -393,7 +402,7 @@ export class VerificationService {
         data: { deletedCount: result.count },
       };
     } catch (error) {
-      console.error('Error cleaning up expired tokens:', error);
+      console.error("Error cleaning up expired tokens:", error);
       return {
         success: false,
         message: "Erreur lors du nettoyage des tokens",
@@ -408,20 +417,20 @@ export class VerificationService {
     try {
       const user = await prisma.user.findFirst({
         where: { email },
-        select: { id: true }
+        select: { id: true },
       });
 
       return {
         success: true,
         exists: !!user,
-        message: user ? "Email déjà utilisé" : "Email disponible"
+        message: user ? "Email déjà utilisé" : "Email disponible",
       };
     } catch (error) {
-      console.error('Error checking email:', error);
+      console.error("Error checking email:", error);
       return {
         success: false,
         exists: false,
-        message: "Erreur lors de la vérification de l'email"
+        message: "Erreur lors de la vérification de l'email",
       };
     }
   }
@@ -432,28 +441,27 @@ export class VerificationService {
   async checkUsernameExists(username: string): Promise<VerificationResult> {
     try {
       // Since there's no nom_utilisateur field, we'll check firstName + lastName
-      const [firstName, lastName] = username.split(' ');
+      const [firstName, lastName] = username.split(" ");
       const user = await prisma.user.findFirst({
-        where: { 
-          AND: [
-            { firstName: firstName || '' },
-            { lastName: lastName || '' }
-          ]
+        where: {
+          AND: [{ firstName: firstName || "" }, { lastName: lastName || "" }],
         },
-        select: { id: true }
+        select: { id: true },
       });
 
       return {
         success: true,
         exists: !!user,
-        message: user ? "Nom d'utilisateur déjà utilisé" : "Nom d'utilisateur disponible"
+        message: user
+          ? "Nom d'utilisateur déjà utilisé"
+          : "Nom d'utilisateur disponible",
       };
     } catch (error) {
-      console.error('Error checking username:', error);
+      console.error("Error checking username:", error);
       return {
         success: false,
         exists: false,
-        message: "Erreur lors de la vérification du nom d'utilisateur"
+        message: "Erreur lors de la vérification du nom d'utilisateur",
       };
     }
   }
@@ -464,30 +472,30 @@ export class VerificationService {
   async initiatePasswordReset(email: string): Promise<VerificationResult> {
     try {
       const user = await prisma.user.findFirst({
-        where: { email }
+        where: { email },
       });
 
       if (!user) {
         return {
           success: false,
-          message: "Aucun utilisateur trouvé avec cet email"
+          message: "Aucun utilisateur trouvé avec cet email",
         };
       }
 
       const token = await this.generateEmailVerificationToken(user.id);
-      
+
       // In a real app, send email here
       console.log(`Password reset token for ${email}: ${token}`);
 
       return {
         success: true,
-        message: "Email de réinitialisation envoyé"
+        message: "Email de réinitialisation envoyé",
       };
     } catch (error) {
-      console.error('Error initiating password reset:', error);
+      console.error("Error initiating password reset:", error);
       return {
         success: false,
-        message: "Erreur lors de l'envoi de l'email de réinitialisation"
+        message: "Erreur lors de l'envoi de l'email de réinitialisation",
       };
     }
   }

@@ -1,4 +1,4 @@
-import Stripe from 'stripe';
+import Stripe from "stripe";
 
 /**
  * Singleton Stripe client
@@ -15,13 +15,11 @@ class StripeClient {
       const apiKey = process.env.STRIPE_SECRET_KEY;
 
       if (!apiKey) {
-        throw new Error(
-          'STRIPE_SECRET_KEY environment variable is required'
-        );
+        throw new Error("STRIPE_SECRET_KEY environment variable is required");
       }
 
       StripeClient.instance = new Stripe(apiKey, {
-        apiVersion: '2024-11-20.acacia',
+        apiVersion: "2025-02-24.acacia",
         typescript: true,
       });
     }
@@ -36,9 +34,7 @@ class StripeClient {
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
     if (!secret) {
-      throw new Error(
-        'STRIPE_WEBHOOK_SECRET environment variable is required'
-      );
+      throw new Error("STRIPE_WEBHOOK_SECRET environment variable is required");
     }
 
     return secret;

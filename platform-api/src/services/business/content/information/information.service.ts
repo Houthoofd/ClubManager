@@ -4,18 +4,16 @@
  * Replaces the old Informations client
  */
 
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../../../db/prisma.client.js";
 import { z } from "zod";
-
-const prisma = new PrismaClient();
 
 // Validation schemas
 export const informationSchema = z.object({
   key: z.string().min(1, "La clé est requise"),
   value: z.string(),
-  type: z.enum(['string', 'number', 'boolean', 'json']).default('string'),
+  type: z.enum(["string", "number", "boolean", "json"]).default("string"),
   description: z.string().optional(),
-  category: z.string().default('general'),
+  category: z.string().default("general"),
   isPublic: z.boolean().default(false),
 });
 
@@ -25,7 +23,6 @@ export type InformationData = z.infer<typeof informationSchema>;
 // This service will handle system configurations and settings
 
 export class InformationService {
-  
   /**
    * Get system information - placeholder for now
    * In a real implementation, this would fetch from a settings table
@@ -33,7 +30,7 @@ export class InformationService {
   async getSystemInfo() {
     return {
       version: "1.0.0",
-      environment: process.env.NODE_ENV || 'development',
+      environment: process.env.NODE_ENV || "development",
       database: "connected",
       timestamp: new Date().toISOString(),
     };
@@ -45,11 +42,11 @@ export class InformationService {
   async getAppConfig() {
     return {
       appName: "ClubManager",
-      maxUsers: parseInt(process.env.MAX_USERS || '100'),
-      maxStorage: parseInt(process.env.MAX_STORAGE || '1000'),
-      emailEnabled: process.env.EMAIL_ENABLED === 'true',
+      maxUsers: parseInt(process.env.MAX_USERS || "100"),
+      maxStorage: parseInt(process.env.MAX_STORAGE || "1000"),
+      emailEnabled: process.env.EMAIL_ENABLED === "true",
       stripeEnabled: !!process.env.STRIPE_SECRET_KEY,
-      jwtExpiration: process.env.JWT_EXPIRES_IN || '24h',
+      jwtExpiration: process.env.JWT_EXPIRES_IN || "24h",
     };
   }
 
@@ -58,19 +55,14 @@ export class InformationService {
    */
   async getDatabaseStats() {
     try {
-      const [
-        userCount,
-        tenantCount,
-        messageCount,
-        orderCount,
-        articleCount,
-      ] = await Promise.all([
-        prisma.user.count(),
-        prisma.tenant.count(),
-        prisma.message.count(),
-        prisma.commande.count(),
-        prisma.article.count(),
-      ]);
+      const [userCount, tenantCount, messageCount, orderCount, articleCount] =
+        await Promise.all([
+          prisma.user.count(),
+          prisma.tenant.count(),
+          prisma.message.count(),
+          prisma.commande.count(),
+          prisma.article.count(),
+        ]);
 
       return {
         users: userCount,
@@ -81,9 +73,9 @@ export class InformationService {
         lastUpdated: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Error fetching database stats:', error);
+      console.error("Error fetching database stats:", error);
       return {
-        error: 'Unable to fetch database statistics',
+        error: "Unable to fetch database statistics",
         timestamp: new Date().toISOString(),
       };
     }
@@ -102,7 +94,7 @@ export class InformationService {
             select: { id: true },
           },
           subscriptions: {
-            where: { status: 'ACTIVE' },
+            where: { status: "ACTIVE" },
             include: {
               plan: {
                 select: { nom: true, prix: true },
@@ -113,7 +105,7 @@ export class InformationService {
       });
 
       if (!tenant) {
-        throw new Error('Tenant not found');
+        throw new Error("Tenant not found");
       }
 
       return {
@@ -131,7 +123,7 @@ export class InformationService {
         updatedAt: tenant.updatedAt,
       };
     } catch (error) {
-      console.error('Error fetching tenant info:', error);
+      console.error("Error fetching tenant info:", error);
       throw error;
     }
   }
@@ -143,10 +135,10 @@ export class InformationService {
     try {
       // Test database connection
       await prisma.$queryRaw`SELECT 1`;
-      
+
       return {
-        status: 'healthy',
-        database: 'connected',
+        status: "healthy",
+        database: "connected",
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         memory: process.memoryUsage(),
@@ -154,10 +146,10 @@ export class InformationService {
       };
     } catch (error) {
       return {
-        status: 'unhealthy',
-        database: 'disconnected',
+        status: "unhealthy",
+        database: "disconnected",
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -230,13 +222,13 @@ export class InformationService {
     try {
       // For now, return static data. In a real app, this would come from a database table
       return [
-        { id: 1, nom: 'Débutant', ordre: 1 },
-        { id: 2, nom: 'Intermédiaire', ordre: 2 },
-        { id: 3, nom: 'Avancé', ordre: 3 },
-        { id: 4, nom: 'Expert', ordre: 4 },
+        { id: 1, nom: "Débutant", ordre: 1 },
+        { id: 2, nom: "Intermédiaire", ordre: 2 },
+        { id: 3, nom: "Avancé", ordre: 3 },
+        { id: 4, nom: "Expert", ordre: 4 },
       ];
     } catch (error) {
-      console.error('Error fetching grades:', error);
+      console.error("Error fetching grades:", error);
       return [];
     }
   }
@@ -248,12 +240,12 @@ export class InformationService {
     try {
       // For now, return static data. In a real app, this would come from a database table
       return [
-        { id: 1, nom: 'Masculin' },
-        { id: 2, nom: 'Féminin' },
-        { id: 3, nom: 'Autre' },
+        { id: 1, nom: "Masculin" },
+        { id: 2, nom: "Féminin" },
+        { id: 3, nom: "Autre" },
       ];
     } catch (error) {
-      console.error('Error fetching genres:', error);
+      console.error("Error fetching genres:", error);
       return [];
     }
   }
@@ -265,12 +257,12 @@ export class InformationService {
     try {
       // For now, return static data. In a real app, this would come from a database table
       return [
-        { id: 1, nom: 'Actif', couleur: 'green' },
-        { id: 2, nom: 'Inactif', couleur: 'red' },
-        { id: 3, nom: 'Suspendu', couleur: 'orange' },
+        { id: 1, nom: "Actif", couleur: "green" },
+        { id: 2, nom: "Inactif", couleur: "red" },
+        { id: 3, nom: "Suspendu", couleur: "orange" },
       ];
     } catch (error) {
-      console.error('Error fetching status:', error);
+      console.error("Error fetching status:", error);
       return [];
     }
   }
@@ -282,30 +274,30 @@ export class InformationService {
     try {
       // For now, return static data. In a real app, this would come from a database table
       return [
-        { 
-          id: 1, 
-          nom: 'Plan Basique', 
-          prix: 29.99, 
-          duree: '1 mois',
-          description: 'Accès basique aux cours'
+        {
+          id: 1,
+          nom: "Plan Basique",
+          prix: 29.99,
+          duree: "1 mois",
+          description: "Accès basique aux cours",
         },
-        { 
-          id: 2, 
-          nom: 'Plan Premium', 
-          prix: 49.99, 
-          duree: '1 mois',
-          description: 'Accès complet + coaching'
+        {
+          id: 2,
+          nom: "Plan Premium",
+          prix: 49.99,
+          duree: "1 mois",
+          description: "Accès complet + coaching",
         },
-        { 
-          id: 3, 
-          nom: 'Plan Annuel', 
-          prix: 299.99, 
-          duree: '12 mois',
-          description: 'Accès complet pour une année'
+        {
+          id: 3,
+          nom: "Plan Annuel",
+          prix: 299.99,
+          duree: "12 mois",
+          description: "Accès complet pour une année",
         },
       ];
     } catch (error) {
-      console.error('Error fetching pricing plans:', error);
+      console.error("Error fetching pricing plans:", error);
       return [];
     }
   }

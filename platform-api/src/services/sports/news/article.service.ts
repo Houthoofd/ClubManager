@@ -4,10 +4,9 @@
  * Replaces the old Magasin client
  */
 
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../../../db/prisma.client.js";
 import { z } from "zod";
-
-const prisma = new PrismaClient();
 
 // Validation schemas
 export const articleCreationSchema = z.object({
@@ -17,6 +16,7 @@ export const articleCreationSchema = z.object({
   tailleId: z.number().optional(),
   imageUrl: z.string().url().optional(),
   actif: z.boolean().default(true),
+  tenantId: z.string().min(1, "Le tenantId est requis"),
 });
 
 export const articleUpdateSchema = z.object({
@@ -43,11 +43,11 @@ export class ArticleService {
    */
   async getAllArticles(filters: { actif?: boolean; tailleId?: number } = {}) {
     const where: Prisma.ArticleWhereInput = {};
-    
+
     if (filters.actif !== undefined) {
       where.actif = filters.actif;
     }
-    
+
     if (filters.tailleId) {
       where.tailleId = filters.tailleId;
     }
@@ -58,7 +58,7 @@ export class ArticleService {
         taille: true,
         stock: true,
       },
-      orderBy: { nom: 'asc' },
+      orderBy: { nom: "asc" },
     });
   }
 
@@ -81,7 +81,15 @@ export class ArticleService {
   async createArticle(data: ArticleCreationData) {
     return prisma.$transaction(async (tx) => {
       const article = await tx.article.create({
-        data,
+        data: {
+          nom: data.nom,
+          description: data.description,
+          prix: data.prix,
+          tailleId: data.tailleId,
+          imageUrl: data.imageUrl,
+          actif: data.actif,
+          tenantId: data.tenantId,
+        },
         include: {
           taille: true,
         },
@@ -129,7 +137,7 @@ export class ArticleService {
    */
   async getAllTailles() {
     return prisma.taille.findMany({
-      orderBy: { nom: 'asc' },
+      orderBy: { nom: "asc" },
     });
   }
 
@@ -193,7 +201,10 @@ export class ArticleService {
   /**
    * Check if article has sufficient stock
    */
-  async checkStock(articleId: number, requestedQuantity: number): Promise<boolean> {
+  async checkStock(
+    articleId: number,
+    requestedQuantity: number,
+  ): Promise<boolean> {
     const stock = await prisma.stock.findUnique({
       where: { articleId },
     });
@@ -234,7 +245,7 @@ export class ArticleService {
    */
   async getShopCatalog() {
     return prisma.article.findMany({
-      where: { 
+      where: {
         actif: true,
         stock: {
           some: {
@@ -248,7 +259,7 @@ export class ArticleService {
         taille: true,
         stock: true,
       },
-      orderBy: { nom: 'asc' },
+      orderBy: { nom: "asc" },
     });
   }
 
@@ -259,13 +270,13 @@ export class ArticleService {
     try {
       // For now, return static categories. In a real app, this would come from a database table
       return [
-        { id: 1, nom: 'Vêtements', description: 'Articles vestimentaires' },
-        { id: 2, nom: 'Équipements', description: 'Équipements sportifs' },
-        { id: 3, nom: 'Accessoires', description: 'Accessoires divers' },
-        { id: 4, nom: 'Nutrition', description: 'Suppléments et nutrition' },
+        { id: 1, nom: "Vêtements", description: "Articles vestimentaires" },
+        { id: 2, nom: "Équipements", description: "Équipements sportifs" },
+        { id: 3, nom: "Accessoires", description: "Accessoires divers" },
+        { id: 4, nom: "Nutrition", description: "Suppléments et nutrition" },
       ];
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error("Error fetching categories:", error);
       return [];
     }
   }

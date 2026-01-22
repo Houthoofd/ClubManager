@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
-import { stripe, getPriceId } from './stripe.client.js';
-import type { CustomerInfo } from './types.js';
+import { prisma } from "../../../db/prisma.client.js";
+import { stripe, getPriceId } from "./stripe.client.js";
+import type { CustomerInfo } from "./types.js";
 
 /**
  * Service de gestion des customers Stripe
@@ -10,20 +10,11 @@ import type { CustomerInfo } from './types.js';
  * - Gérer les métadonnées customer
  */
 export class CustomerService {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
-
   /**
    * Obtenir ou créer un customer Stripe pour un tenant
    */
-  async getOrCreateCustomer(
-    tenantId: string,
-    email: string
-  ): Promise<string> {
-    const tenant = await this.prisma.tenant.findUnique({
+  async getOrCreateCustomer(tenantId: string, email: string): Promise<string> {
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
@@ -48,7 +39,7 @@ export class CustomerService {
     });
 
     // Mettre à jour le tenant avec l'ID customer
-    await this.prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: tenantId },
       data: { stripeCustomerId: customer.id },
     });
@@ -59,8 +50,8 @@ export class CustomerService {
   /**
    * Récupérer les informations d'un customer
    */
-  async getCustomerInfo(tenantId: string): Promise<CustomerInfo | null> {
-    const tenant = await this.prisma.tenant.findUnique({
+  async getCustomer(tenantId: string): Promise<CustomerInfo | null> {
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
@@ -68,9 +59,7 @@ export class CustomerService {
       return null;
     }
 
-    const customer = await stripe.customers.retrieve(
-      tenant.stripeCustomerId
-    );
+    const customer = await stripe.customers.retrieve(tenant.stripeCustomerId);
 
     if (customer.deleted) {
       return null;
@@ -78,10 +67,10 @@ export class CustomerService {
 
     return {
       id: customer.id,
-      email: customer.email || '',
+      email: customer.email || "",
       name: customer.name || undefined,
       defaultPaymentMethod:
-        typeof customer.invoice_settings?.default_payment_method === 'string'
+        typeof customer.invoice_settings?.default_payment_method === "string"
           ? customer.invoice_settings.default_payment_method
           : undefined,
     };
@@ -92,14 +81,14 @@ export class CustomerService {
    */
   async updateCustomer(
     tenantId: string,
-    data: { email?: string; name?: string }
+    data: { email?: string; name?: string },
   ): Promise<void> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
     if (!tenant || !tenant.stripeCustomerId) {
-      throw new Error('Customer not found');
+      throw new Error("Customer not found");
     }
 
     await stripe.customers.update(tenant.stripeCustomerId, {
@@ -112,7 +101,7 @@ export class CustomerService {
    * Récupérer le customer ID pour un tenant
    */
   async getCustomerId(tenantId: string): Promise<string | null> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { stripeCustomerId: true },
     });
@@ -124,7 +113,7 @@ export class CustomerService {
    * Supprimer un customer Stripe
    */
   async deleteCustomer(tenantId: string): Promise<void> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
@@ -134,7 +123,7 @@ export class CustomerService {
 
     await stripe.customers.del(tenant.stripeCustomerId);
 
-    await this.prisma.tenant.update({
+    await prisma.tenant.update({
       where: { id: tenantId },
       data: { stripeCustomerId: null },
     });

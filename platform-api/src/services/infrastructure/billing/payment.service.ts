@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../../db/prisma.client.js';
 import { stripe } from './stripe.client.js';
 import { customerService } from './customer.service.js';
 import type { UpdatePaymentMethodParams } from './types.js';
@@ -11,11 +11,7 @@ import type { UpdatePaymentMethodParams } from './types.js';
  * - Supprimer les moyens de paiement
  */
 export class PaymentService {
-  private prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
 
   /**
    * Mettre à jour le moyen de paiement par défaut

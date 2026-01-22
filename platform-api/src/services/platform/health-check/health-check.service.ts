@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../../db/prisma.client.js";
 
-const prisma = new PrismaClient();
 const startTime = Date.now();
 
 export interface HealthCheckResult {

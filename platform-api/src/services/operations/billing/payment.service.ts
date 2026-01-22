@@ -23,6 +23,7 @@ export interface CreatePaymentData {
   periodeFin?: Date;
   methode?: string;
   transactionId?: string;
+  tenantId: string;
 }
 
 export interface UpdatePaymentData {
@@ -115,6 +116,7 @@ class PaymentService {
           periodeFin: data.periodeFin,
           methode: data.methode,
           transactionId: data.transactionId,
+          tenantId: data.tenantId,
         },
       });
 
@@ -197,15 +199,17 @@ class PaymentService {
   /**
    * List payments with pagination and filters
    */
-  async listPayments(options: {
-    page?: number;
-    limit?: number;
-    utilisateurId?: number;
-    statut?: string;
-    methode?: string;
-    startDate?: Date;
-    endDate?: Date;
-  } = {}): Promise<{
+  async listPayments(
+    options: {
+      page?: number;
+      limit?: number;
+      utilisateurId?: number;
+      statut?: string;
+      methode?: string;
+      startDate?: Date;
+      endDate?: Date;
+    } = {},
+  ): Promise<{
     payments: PaymentWithDetails[];
     total: number;
     page: number;
@@ -475,11 +479,13 @@ class PaymentService {
   /**
    * Get payment statistics
    */
-  async getPaymentStats(options: {
-    utilisateurId?: number;
-    startDate?: Date;
-    endDate?: Date;
-  } = {}): Promise<PaymentStats> {
+  async getPaymentStats(
+    options: {
+      utilisateurId?: number;
+      startDate?: Date;
+      endDate?: Date;
+    } = {},
+  ): Promise<PaymentStats> {
     try {
       const where: Prisma.PaiementWhereInput = {
         ...(options.utilisateurId && {
@@ -509,9 +515,7 @@ class PaymentService {
       );
       const paidCount = paidPayments.length;
 
-      const pendingPayments = payments.filter(
-        (p) => p.statut === "en attente",
-      );
+      const pendingPayments = payments.filter((p) => p.statut === "en attente");
       const pendingAmount = pendingPayments.reduce(
         (sum, p) => sum + Number(p.montant),
         0,
@@ -674,13 +678,13 @@ class PaymentService {
       return {
         success: true,
         message: "Facture générée",
-        invoiceUrl: `/invoices/${paymentId}.pdf`
+        invoiceUrl: `/invoices/${paymentId}.pdf`,
       };
     } catch (error) {
       console.error("❌ Generate invoice error:", error);
       return {
         success: false,
-        message: "Erreur lors de la génération de la facture"
+        message: "Erreur lors de la génération de la facture",
       };
     }
   }
@@ -699,13 +703,13 @@ class PaymentService {
       return {
         success: true,
         message: "Paiement traité",
-        paymentIntentId: `pi_${Date.now()}`
+        paymentIntentId: `pi_${Date.now()}`,
       };
     } catch (error) {
       console.error("❌ Process Stripe payment error:", error);
       return {
         success: false,
-        message: "Erreur lors du traitement du paiement"
+        message: "Erreur lors du traitement du paiement",
       };
     }
   }
@@ -718,13 +722,13 @@ class PaymentService {
       console.log("TODO: Handle Stripe webhook", event.type);
       return {
         success: true,
-        message: "Webhook traité"
+        message: "Webhook traité",
       };
     } catch (error) {
       console.error("❌ Handle Stripe webhook error:", error);
       return {
         success: false,
-        message: "Erreur lors du traitement du webhook"
+        message: "Erreur lors du traitement du webhook",
       };
     }
   }

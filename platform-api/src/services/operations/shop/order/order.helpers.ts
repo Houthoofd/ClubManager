@@ -46,10 +46,11 @@ export function getOrderStatusLabel(status: OrderStatus): string {
   const labels: Record<OrderStatus, string> = {
     [OrderStatus.PENDING]: "En attente",
     [OrderStatus.CONFIRMED]: "Confirmée",
-    [OrderStatus.PROCESSING]: "En traitement",
-    [OrderStatus.SHIPPED]: "Expédiée",
+    [OrderStatus.PREPARING]: "En préparation",
+    [OrderStatus.READY]: "Prête",
     [OrderStatus.DELIVERED]: "Livrée",
     [OrderStatus.CANCELLED]: "Annulée",
+    [OrderStatus.REFUNDED]: "Remboursée",
   };
   return labels[status];
 }
@@ -61,10 +62,11 @@ export function getOrderStatusColor(status: OrderStatus): string {
   const colors: Record<OrderStatus, string> = {
     [OrderStatus.PENDING]: "orange",
     [OrderStatus.CONFIRMED]: "blue",
-    [OrderStatus.PROCESSING]: "purple",
-    [OrderStatus.SHIPPED]: "cyan",
+    [OrderStatus.PREPARING]: "purple",
+    [OrderStatus.READY]: "cyan",
     [OrderStatus.DELIVERED]: "green",
     [OrderStatus.CANCELLED]: "red",
+    [OrderStatus.REFUNDED]: "gray",
   };
   return colors[status];
 }
@@ -255,11 +257,12 @@ export function getNextValidStatuses(
 ): OrderStatus[] {
   const transitions: Record<OrderStatus, OrderStatus[]> = {
     [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-    [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
-    [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
-    [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
-    [OrderStatus.DELIVERED]: [],
-    [OrderStatus.CANCELLED]: [],
+    [OrderStatus.CONFIRMED]: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+    [OrderStatus.PREPARING]: [OrderStatus.READY, OrderStatus.CANCELLED],
+    [OrderStatus.READY]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+    [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
+    [OrderStatus.CANCELLED]: [OrderStatus.REFUNDED],
+    [OrderStatus.REFUNDED]: [],
   };
   return transitions[currentStatus] || [];
 }

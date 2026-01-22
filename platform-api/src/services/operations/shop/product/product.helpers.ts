@@ -233,6 +233,7 @@ export function getStatusColor(status: ProductStatus): string {
   const colors: Record<ProductStatus, string> = {
     [ProductStatus.ACTIVE]: "green",
     [ProductStatus.INACTIVE]: "gray",
+    [ProductStatus.OUT_OF_STOCK]: "orange",
     [ProductStatus.DISCONTINUED]: "red",
   };
   return colors[status];
@@ -245,6 +246,7 @@ export function getStatusLabel(status: ProductStatus): string {
   const labels: Record<ProductStatus, string> = {
     [ProductStatus.ACTIVE]: "Actif",
     [ProductStatus.INACTIVE]: "Inactif",
+    [ProductStatus.OUT_OF_STOCK]: "Rupture de stock",
     [ProductStatus.DISCONTINUED]: "Discontinué",
   };
   return labels[status];
@@ -260,9 +262,14 @@ export function canTransitionStatus(
   const allowedTransitions: Record<ProductStatus, ProductStatus[]> = {
     [ProductStatus.ACTIVE]: [
       ProductStatus.INACTIVE,
+      ProductStatus.OUT_OF_STOCK,
       ProductStatus.DISCONTINUED,
     ],
     [ProductStatus.INACTIVE]: [
+      ProductStatus.ACTIVE,
+      ProductStatus.DISCONTINUED,
+    ],
+    [ProductStatus.OUT_OF_STOCK]: [
       ProductStatus.ACTIVE,
       ProductStatus.DISCONTINUED,
     ],

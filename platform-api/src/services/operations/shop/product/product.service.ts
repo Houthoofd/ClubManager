@@ -5,9 +5,16 @@
  */
 
 import { PrismaClient, Prisma } from "@prisma/client";
+import { prisma } from "../../../../db/prisma.client.js";
 import { ProductRepository } from "../../../../repositories/product.repository.js";
-import { NotFoundError, ValidationError } from "../../../shared/errors/index.js";
-import { auditService, AuditAction } from "../../../infrastructure/audit/audit.service.js";
+import {
+  NotFoundError,
+  ValidationError,
+} from "../../../shared/errors/index.js";
+import {
+  auditService,
+  AuditAction,
+} from "../../../infrastructure/audit/audit.service.js";
 
 export interface CreateProductDTO {
   nom: string;
@@ -54,9 +61,18 @@ export class ProductService {
   /**
    * List products with filters
    */
-  async list(filters: any = {}, page = 1, limit = 20): Promise<{
-    products: any[]; 
-    pagination: { page: number; limit: number; total: number; totalPages: number; };
+  async list(
+    filters: any = {},
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    products: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   }> {
     return this.repository.findAll(filters, page, limit);
   }
@@ -90,6 +106,9 @@ export class ProductService {
 
     // Create product
     const productData: Prisma.ArticleCreateInput = {
+      tenant: {
+        connect: { id: tenantId },
+      },
       nom: data.nom.trim(),
       description: data.description?.trim() || null,
       prix: data.prix,
@@ -451,5 +470,4 @@ export class ProductService {
 }
 
 // Create singleton instance
-const prisma = new PrismaClient();
 export const productService = new ProductService(prisma);

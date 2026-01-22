@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import { generateUUID } from '../../../utils/helpers.js';
+import { prisma } from "../../../db/prisma.client.js";
+import { generateUUID } from "../../../utils/helpers.js";
 
 export interface MultiTenantSettings {
   maxUsers: number;
@@ -14,7 +14,7 @@ export interface CreateTenantInput {
   name: string;
   subdomain: string;
   adminEmail: string;
-  plan?: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE';
+  plan?: "FREE" | "STARTER" | "PRO" | "ENTERPRISE";
 }
 
 export interface TenantContext {
@@ -29,32 +29,27 @@ export interface TenantContext {
 /**
  * Enhanced Multi-Tenant Service
  * Handles SaaS multi-tenancy with proper isolation
+ * Multi-tenant management service
  */
 export class MultiTenantService {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
-
   /**
    * Create a new tenant
    */
   async createTenant(input: CreateTenantInput): Promise<TenantContext> {
     const tenantId = this.generateTenantId();
-    
+
     // Validate subdomain
     await this.validateSubdomain(input.subdomain);
 
-    const tenant = await this.prisma.tenant.create({
+    const tenant = await prisma.tenant.create({
       data: {
         id: tenantId,
         name: input.name,
         domain: input.subdomain,
         slug: input.subdomain.toLowerCase(),
-        status: 'TRIAL',
-        plan: input.plan || 'FREE',
-        settings: JSON.stringify(this.getPlanSettings(input.plan || 'FREE')),
+        status: "TRIAL",
+        plan: input.plan || "FREE",
+        settings: JSON.stringify(this.getPlanSettings(input.plan || "FREE")),
         createdAt: new Date(),
       },
     });
@@ -66,7 +61,7 @@ export class MultiTenantService {
    * Get tenant by subdomain
    */
   async getTenantBySubdomain(subdomain: string): Promise<TenantContext | null> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { domain: subdomain },
     });
 
@@ -78,7 +73,7 @@ export class MultiTenantService {
    * Get tenant by ID
    */
   async getTenantById(tenantId: string): Promise<TenantContext | null> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
@@ -91,26 +86,26 @@ export class MultiTenantService {
    */
   async checkTenantLimit(
     tenantId: string,
-    resource: 'users' | 'courses' | 'storage'
+    resource: "users" | "courses" | "storage",
   ): Promise<{ allowed: boolean; current: number; limit: number }> {
     const tenant = await this.getTenantById(tenantId);
-    if (!tenant) throw new Error('Tenant not found');
+    if (!tenant) throw new Error("Tenant not found");
 
     const usage = await this.getTenantUsage(tenantId);
-    
+
     let current: number;
     let limit: number;
 
     switch (resource) {
-      case 'users':
+      case "users":
         current = usage.userCount;
         limit = tenant.settings.maxUsers;
         break;
-      case 'courses':
+      case "courses":
         current = usage.courseCount;
         limit = tenant.settings.maxCourses;
         break;
-      case 'storage':
+      case "storage":
         current = usage.storageUsed;
         limit = tenant.settings.storage;
         break;
@@ -131,7 +126,7 @@ export class MultiTenantService {
   async getTenantUsage(tenantId: string) {
     // Mock data for now since exact Prisma schema fields need verification
     const [userCount, courseCount] = await Promise.all([
-      this.prisma.user.count({ where: { tenantId } }),
+      prisma.user.count({ where: { tenantId } }),
       0, // Mock cours count until schema is confirmed
     ]);
 
@@ -149,22 +144,22 @@ export class MultiTenantService {
     // Check format
     const subdomainRegex = /^[a-z0-9-]+$/;
     if (!subdomainRegex.test(subdomain)) {
-      throw new Error('Invalid subdomain format');
+      throw new Error("Invalid subdomain format");
     }
 
     // Check reserved names
-    const reserved = ['api', 'www', 'admin', 'app', 'mail', 'ftp'];
+    const reserved = ["api", "www", "admin", "app", "mail", "ftp"];
     if (reserved.includes(subdomain)) {
-      throw new Error('Subdomain is reserved');
+      throw new Error("Subdomain is reserved");
     }
 
     // Check availability
-    const existing = await this.prisma.tenant.findUnique({
+    const existing = await prisma.tenant.findUnique({
       where: { domain: subdomain },
     });
 
     if (existing) {
-      throw new Error('Subdomain already taken');
+      throw new Error("Subdomain already taken");
     }
   }
 
@@ -179,7 +174,7 @@ export class MultiTenantService {
         customBranding: false,
         apiAccess: false,
         storage: 100,
-        features: ['basic'],
+        features: ["basic"],
       },
       STARTER: {
         maxUsers: 50,
@@ -187,7 +182,7 @@ export class MultiTenantService {
         customBranding: false,
         apiAccess: true,
         storage: 1000,
-        features: ['basic', 'analytics'],
+        features: ["basic", "analytics"],
       },
       PRO: {
         maxUsers: 200,
@@ -195,7 +190,7 @@ export class MultiTenantService {
         customBranding: true,
         apiAccess: true,
         storage: 5000,
-        features: ['basic', 'analytics', 'custom-branding'],
+        features: ["basic", "analytics", "custom-branding"],
       },
       ENTERPRISE: {
         maxUsers: -1, // unlimited
@@ -203,7 +198,7 @@ export class MultiTenantService {
         customBranding: true,
         apiAccess: true,
         storage: -1,
-        features: ['*'],
+        features: ["*"],
       },
     };
 
@@ -250,9 +245,9 @@ export class MultiTenantService {
   async getTenantSubscription(tenantId: string) {
     // TODO: Implémenter avec Stripe
     return {
-      id: 'sub_123',
-      plan: 'FREE',
-      status: 'active',
+      id: "sub_123",
+      plan: "FREE",
+      status: "active",
       currentPeriodEnd: new Date(),
     };
   }
@@ -297,26 +292,26 @@ export class MultiTenantService {
   }
 
   async getTenantSettings(tenantId: string) {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
     if (!tenant) {
-      throw new Error('Tenant not found');
+      throw new Error("Tenant not found");
     }
 
     return {
       id: tenant.id,
       name: tenant.name,
       subdomain: tenant.domain,
-      timezone: 'Europe/Brussels',
-      language: 'fr',
+      timezone: "Europe/Brussels",
+      language: "fr",
       settings: tenant.settings,
     };
   }
 
   async updateTenantSettings(tenantId: string, settings: any) {
-    const updated = await this.prisma.tenant.update({
+    const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         name: settings.name,
@@ -341,21 +336,21 @@ export class MultiTenantService {
   async exportTenantData(tenantId: string, options: any) {
     // TODO: Implémenter
     return {
-      id: 'job_123',
-      status: 'pending',
+      id: "job_123",
+      status: "pending",
     };
   }
 
   async deleteTenant(tenantId: string, options: any) {
     // TODO: Implémenter
     return {
-      id: 'deletion_123',
+      id: "deletion_123",
       scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
   }
 
   async getAllTenants(options: any) {
-    const tenants = await this.prisma.tenant.findMany({
+    const tenants = await prisma.tenant.findMany({
       take: options.limit,
       skip: (options.page - 1) * options.limit,
       orderBy: {
@@ -363,10 +358,10 @@ export class MultiTenantService {
       },
     });
 
-    const total = await this.prisma.tenant.count();
+    const total = await prisma.tenant.count();
 
     return {
-      data: tenants.map(t => this.formatTenantContext(t)),
+      data: tenants.map((t) => this.formatTenantContext(t)),
       page: options.page,
       limit: options.limit,
       total,
@@ -374,7 +369,7 @@ export class MultiTenantService {
   }
 
   async getTenantDetails(tenantId: string) {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
         _count: {
@@ -396,7 +391,7 @@ export class MultiTenantService {
   }
 
   async updateTenantStatus(tenantId: string, options: any) {
-    const updated = await this.prisma.tenant.update({
+    const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         status: options.status,
@@ -408,9 +403,9 @@ export class MultiTenantService {
   }
 
   async getPlatformAnalytics(options: any) {
-    const total = await this.prisma.tenant.count();
-    const active = await this.prisma.tenant.count({
-      where: { status: 'ACTIVE' },
+    const total = await prisma.tenant.count();
+    const active = await prisma.tenant.count({
+      where: { status: "ACTIVE" },
     });
 
     return {
@@ -431,12 +426,12 @@ export class MultiTenantService {
   }
 
   async createImpersonationToken(tenantId: string, options: any) {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
     if (!tenant) {
-      throw new Error('Tenant not found');
+      throw new Error("Tenant not found");
     }
 
     // TODO: Créer un vrai token JWT
@@ -449,7 +444,7 @@ export class MultiTenantService {
 
   async getSystemHealth() {
     return {
-      status: 'healthy',
+      status: "healthy",
       uptime: process.uptime(),
       memory: process.memoryUsage(),
       timestamp: new Date(),

@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
 import { TenantContext } from "@clubmanager/types";
-
-const prisma = new PrismaClient();
+import { prisma } from "../../db/prisma.client.js";
 
 /**
  * Middleware pour identifier et valider le tenant basé sur le sous-domaine ou domaine personnalisé
@@ -79,7 +77,15 @@ export const tenantResolver = async (
     // Attacher le contexte tenant à la requête
     req.tenant = {
       tenantId: tenant.id,
-      tenant: tenant,
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        status: tenant.status as any,
+        plan: tenant.plan,
+        maxUsers: tenant.maxUsers,
+        maxStorage: tenant.maxStorage,
+      },
     };
 
     next();

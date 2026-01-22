@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../../../db/prisma.client.js';
 import { stripe } from './stripe.client.js';
 import { customerService } from './customer.service.js';
 import type { CreatePortalSessionParams } from './types.js';
@@ -11,11 +11,7 @@ import type { CreatePortalSessionParams } from './types.js';
  * - Gérer les factures et moyens de paiement
  */
 export class PortalService {
-  private prisma: PrismaClient;
 
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
 
   /**
    * Créer une session de portail client
@@ -37,7 +33,7 @@ export class PortalService {
     });
 
     // Logger l'accès au portail
-    await this.prisma.auditLog.create({
+    await prisma.auditLog.create({
       data: {
         tenantId,
         action: 'PORTAL_ACCESS',
@@ -60,7 +56,7 @@ export class PortalService {
     successUrl: string,
     cancelUrl: string
   ): Promise<string> {
-    const tenant = await this.prisma.tenant.findUnique({
+    const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
