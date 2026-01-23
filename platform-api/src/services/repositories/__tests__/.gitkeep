@@ -1,0 +1,2 @@
+# This directory is reserved for unit tests specific to repository services.
+# Tests should follow the naming convention: *.test.ts or *.spec.ts

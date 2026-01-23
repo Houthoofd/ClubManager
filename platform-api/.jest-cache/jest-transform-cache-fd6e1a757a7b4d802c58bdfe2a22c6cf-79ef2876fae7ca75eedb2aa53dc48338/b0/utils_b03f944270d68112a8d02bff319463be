@@ -1,0 +1,28 @@
+6b4837b09627415f5821c449373f172d
+/**
+ * Extract tenantId from request
+ * In production, this would come from:
+ * - Subdomain: tenant1.clubmanager.com
+ * - Custom domain mapping
+ * - JWT token after login
+ * For now, we'll use a header or default
+ */
+export function getTenantId(req) {
+    // Priority: JWT token > Header > Default
+    const user = req.user;
+    if (user?.tenantId) {
+        return user.tenantId;
+    }
+    // From header (for testing)
+    const headerTenant = req.headers["x-tenant-id"];
+    if (headerTenant) {
+        return headerTenant;
+    }
+    // From subdomain (e.g., tenant1.clubmanager.com)
+    const host = req.headers.host || "";
+    const subdomain = host.split(".")[0];
+    // For development, use a default tenant
+    // In production, this should be required
+    return process.env.DEFAULT_TENANT_ID || subdomain || "default-tenant";
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJmaWxlIjoiRTpcXERldmVsb3BwZW1lbnRcXENsdWJNYW5hZ2VyXFxwbGF0Zm9ybS1hcGlcXHNyY1xccm91dGVzXFxhdXRoXFx1dGlscy50cyIsIm1hcHBpbmdzIjoiQUFFQTs7Ozs7OztHQU9HO0FBQ0gsTUFBTSxVQUFVLFdBQVcsQ0FBQyxHQUFZO0lBQ3RDLHlDQUF5QztJQUN6QyxNQUFNLElBQUksR0FBSSxHQUFXLENBQUMsSUFBSSxDQUFDO0lBQy9CLElBQUksSUFBSSxFQUFFLFFBQVEsRUFBRSxDQUFDO1FBQ25CLE9BQU8sSUFBSSxDQUFDLFFBQVEsQ0FBQztJQUN2QixDQUFDO0lBRUQsNEJBQTRCO0lBQzVCLE1BQU0sWUFBWSxHQUFHLEdBQUcsQ0FBQyxPQUFPLENBQUMsYUFBYSxDQUFXLENBQUM7SUFDMUQsSUFBSSxZQUFZLEVBQUUsQ0FBQztRQUNqQixPQUFPLFlBQVksQ0FBQztJQUN0QixDQUFDO0lBRUQsaURBQWlEO0lBQ2pELE1BQU0sSUFBSSxHQUFHLEdBQUcsQ0FBQyxPQUFPLENBQUMsSUFBSSxJQUFJLEVBQUUsQ0FBQztJQUNwQyxNQUFNLFNBQVMsR0FBRyxJQUFJLENBQUMsS0FBSyxDQUFDLEdBQUcsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO0lBRXJDLHdDQUF3QztJQUN4Qyx5Q0FBeUM7SUFDekMsT0FBTyxPQUFPLENBQUMsR0FBRyxDQUFDLGlCQUFpQixJQUFJLFNBQVMsSUFBSSxnQkFBZ0IsQ0FBQztBQUN4RSxDQUFDIiwibmFtZXMiOltdLCJzb3VyY2VzIjpbIkU6XFxEZXZlbG9wcGVtZW50XFxDbHViTWFuYWdlclxccGxhdGZvcm0tYXBpXFxzcmNcXHJvdXRlc1xcYXV0aFxcdXRpbHMudHMiXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgUmVxdWVzdCB9IGZyb20gXCJleHByZXNzXCI7XG5cbi8qKlxuICogRXh0cmFjdCB0ZW5hbnRJZCBmcm9tIHJlcXVlc3RcbiAqIEluIHByb2R1Y3Rpb24sIHRoaXMgd291bGQgY29tZSBmcm9tOlxuICogLSBTdWJkb21haW46IHRlbmFudDEuY2x1Ym1hbmFnZXIuY29tXG4gKiAtIEN1c3RvbSBkb21haW4gbWFwcGluZ1xuICogLSBKV1QgdG9rZW4gYWZ0ZXIgbG9naW5cbiAqIEZvciBub3csIHdlJ2xsIHVzZSBhIGhlYWRlciBvciBkZWZhdWx0XG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBnZXRUZW5hbnRJZChyZXE6IFJlcXVlc3QpOiBzdHJpbmcge1xuICAvLyBQcmlvcml0eTogSldUIHRva2VuID4gSGVhZGVyID4gRGVmYXVsdFxuICBjb25zdCB1c2VyID0gKHJlcSBhcyBhbnkpLnVzZXI7XG4gIGlmICh1c2VyPy50ZW5hbnRJZCkge1xuICAgIHJldHVybiB1c2VyLnRlbmFudElkO1xuICB9XG5cbiAgLy8gRnJvbSBoZWFkZXIgKGZvciB0ZXN0aW5nKVxuICBjb25zdCBoZWFkZXJUZW5hbnQgPSByZXEuaGVhZGVyc1tcIngtdGVuYW50LWlkXCJdIGFzIHN0cmluZztcbiAgaWYgKGhlYWRlclRlbmFudCkge1xuICAgIHJldHVybiBoZWFkZXJUZW5hbnQ7XG4gIH1cblxuICAvLyBGcm9tIHN1YmRvbWFpbiAoZS5nLiwgdGVuYW50MS5jbHVibWFuYWdlci5jb20pXG4gIGNvbnN0IGhvc3QgPSByZXEuaGVhZGVycy5ob3N0IHx8IFwiXCI7XG4gIGNvbnN0IHN1YmRvbWFpbiA9IGhvc3Quc3BsaXQoXCIuXCIpWzBdO1xuXG4gIC8vIEZvciBkZXZlbG9wbWVudCwgdXNlIGEgZGVmYXVsdCB0ZW5hbnRcbiAgLy8gSW4gcHJvZHVjdGlvbiwgdGhpcyBzaG91bGQgYmUgcmVxdWlyZWRcbiAgcmV0dXJuIHByb2Nlc3MuZW52LkRFRkFVTFRfVEVOQU5UX0lEIHx8IHN1YmRvbWFpbiB8fCBcImRlZmF1bHQtdGVuYW50XCI7XG59Il0sInZlcnNpb24iOjN9

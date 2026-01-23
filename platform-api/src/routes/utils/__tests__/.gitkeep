@@ -1,0 +1,2 @@
+# This file ensures the __tests__ directory is tracked by Git
+# Unit tests for utility functions should be placed here

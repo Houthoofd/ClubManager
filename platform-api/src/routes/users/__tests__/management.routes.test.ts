@@ -18,9 +18,9 @@
 import request from 'supertest';
 import express, { Express } from 'express';
 import { describe, it, expect, jest, beforeEach, afterEach, beforeAll } from '@jest/globals';
-import userManagementRoutes from '../management';
-import { userService } from '../../../services/members/user/user.service';
-import { verifyToken } from '../../../middleware/auth/auth';
+import userManagementRoutes from '../management.js';
+import { userService } from '../../../services/members/user/user.service.js';
+import { verifyToken } from '../../../middleware/auth/auth.js';
 
 // Mock dependencies
 jest.mock('../../../services/members/user/user.service');

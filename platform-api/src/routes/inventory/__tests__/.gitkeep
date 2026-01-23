@@ -1,0 +1,2 @@
+# This file ensures that the __tests__ directory is tracked by Git
+# Unit tests for inventory routes should be placed in this directory

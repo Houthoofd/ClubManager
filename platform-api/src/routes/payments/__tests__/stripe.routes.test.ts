@@ -23,7 +23,7 @@ import {
   afterEach,
   beforeAll,
 } from "@jest/globals";
-import stripeRoutes from "../stripe";
+import stripeRoutes from "../stripe.js";
 
 // Mock Stripe SDK (if needed in future)
 jest.mock("stripe", () => {

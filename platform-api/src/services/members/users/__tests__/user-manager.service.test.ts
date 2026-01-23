@@ -16,8 +16,8 @@
  */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { userManagerService } from '../user-manager.service';
-import { prisma } from '../../../prisma/prisma.service';
+import { userManagerService } from '../user-manager.service.js';
+import { prisma } from '../../../prisma/prisma.service.js';
 import type { User } from '@prisma/client';
 
 // Mock Prisma

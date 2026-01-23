@@ -13,10 +13,10 @@
  */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { paymentService, PaymentStatus, PaymentMethod } from '../payment.service';
-import type { CreatePaymentData, UpdatePaymentData, PaymentWithDetails } from '../payment.service';
-import { prisma } from '../../../prisma/prisma.service';
-import { emailService } from '../../communication/email.service';
+import { paymentService, PaymentStatus, PaymentMethod } from '../payment.service.js';
+import type { CreatePaymentData, UpdatePaymentData, PaymentWithDetails } from '../payment.service.js';
+import { prisma } from '../../../prisma/prisma.service.js';
+import { emailService } from '../../communication/email.service.js';
 
 // Mock dependencies
 jest.mock('../../../prisma/prisma.service', () => ({

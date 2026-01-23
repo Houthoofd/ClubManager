@@ -1,27 +1,27 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import request from "supertest";
 import express, { Express } from "express";
-import loginRoutes from "../login";
-import registerRoutes from "../register";
-import { userService } from "../../../services/members/user/user.service";
-import { auditService } from "../../../services/infrastructure/audit/audit.service";
-import { authRateLimit } from "../../../middleware/cache/rate-limit.middleware";
+import loginRoutes from "../login.js";
+import registerRoutes from "../register.js";
+import { userService } from "../../../services/members/user/user.service.js";
+import { auditService } from "../../../services/infrastructure/audit/audit.service.js";
+import { authRateLimit } from "../../../middleware/cache/rate-limit.middleware.js";
 
 // Mock dependencies
-vi.mock("../../../services/members/user/user.service");
-vi.mock("../../../services/infrastructure/audit/audit.service");
-vi.mock("../../../middleware/cache/rate-limit.middleware", () => ({
-  authRateLimit: vi.fn(() => (req: any, res: any, next: any) => next()),
+jest.mock("../../../services/members/user/user.service");
+jest.mock("../../../services/infrastructure/audit/audit.service");
+jest.mock("../../../middleware/cache/rate-limit.middleware", () => ({
+  authRateLimit: jest.fn(() => (req: any, res: any, next: any) => next()),
 }));
-vi.mock("../utils", () => ({
-  getTenantId: vi.fn(() => "tenant-123"),
+jest.mock("../utils", () => ({
+  getTenantId: jest.fn(() => "tenant-123"),
 }));
 
 describe("Auth Routes", () => {
   let app: Express;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
 
     // Create Express app with routes
     app = express();
@@ -29,11 +29,11 @@ describe("Auth Routes", () => {
     app.use(express.urlencoded({ extended: true }));
 
     // Mock audit service
-    vi.mocked(auditService.log).mockResolvedValue(undefined);
+    jest.fn(auditService.log).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    jest.restoreAllMocks();
   });
 
   // ==========================================
@@ -57,7 +57,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/login")
@@ -80,7 +80,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/login")
@@ -133,7 +133,7 @@ describe("Auth Routes", () => {
         message: "Email ou mot de passe incorrect",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/login")
@@ -155,7 +155,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       await request(app)
         .post("/login")
@@ -182,7 +182,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       await request(app)
         .post("/login")
@@ -199,7 +199,7 @@ describe("Auth Routes", () => {
     });
 
     it("should return 500 on server error", async () => {
-      vi.mocked(userService.login).mockRejectedValue(new Error("Database error"));
+      jest.fn(userService.login).mockRejectedValue(new Error("Database error"));
 
       const response = await request(app)
         .post("/login")
@@ -224,7 +224,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/login")
@@ -271,7 +271,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       await request(app)
         .post("/login")
@@ -300,7 +300,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.login).mockResolvedValue(mockResult);
+      jest.fn(userService.login).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/login")
@@ -348,7 +348,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/register")
@@ -368,7 +368,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/register")
@@ -488,7 +488,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/register")
@@ -506,7 +506,7 @@ describe("Auth Routes", () => {
         message: "Un utilisateur avec cet email existe déjà",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/register")
@@ -526,7 +526,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       await request(app).post("/register").send(validRegistrationData);
 
@@ -548,7 +548,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       await request(app).post("/register").send(validRegistrationData);
 
@@ -568,7 +568,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       await request(app).post("/register").send(validRegistrationData);
 
@@ -587,7 +587,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const dataWithoutGender = { ...validRegistrationData };
       delete (dataWithoutGender as any).genderId;
@@ -605,7 +605,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/register")
@@ -623,7 +623,7 @@ describe("Auth Routes", () => {
     });
 
     it("should return 500 on server error", async () => {
-      vi.mocked(userService.register).mockRejectedValue(
+      jest.fn(userService.register).mockRejectedValue(
         new Error("Database error")
       );
 
@@ -646,7 +646,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/register")
@@ -666,7 +666,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const validEmails = [
         "user@example.com",
@@ -695,7 +695,7 @@ describe("Auth Routes", () => {
         token: "jwt.token.here",
       };
 
-      vi.mocked(userService.register).mockResolvedValue(mockResult);
+      jest.fn(userService.register).mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/register")

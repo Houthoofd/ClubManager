@@ -1,29 +1,36 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { AuthService } from "../auth.service";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  jest,
+  afterEach,
+} from "@jest/globals";
+import { AuthService } from "../auth.service.js";
 import * as bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
-import { prisma } from "../../../prisma/prisma.service";
+import { prisma } from "../../../services/prisma/prisma.service.js";
 
 // Mock dependencies
-vi.mock("../../../prisma/prisma.service", () => ({
+jest.mock("../../../services/prisma/prisma.service", () => ({
   prisma: {
     user: {
-      findFirst: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
     },
   },
 }));
 
-vi.mock("bcrypt");
-vi.mock("jsonwebtoken");
+jest.mock("bcrypt");
+jest.mock("jsonwebtoken");
 
 describe("AuthService", () => {
   let authService: AuthService;
   const mockJwtSecret = "test-jwt-secret";
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     process.env.JWT_SECRET = mockJwtSecret;
     authService = new AuthService();
   });
@@ -40,7 +47,7 @@ describe("AuthService", () => {
       const password = "TestPassword123!";
       const hashedPassword = "$2b$10$hashedpassword";
 
-      vi.mocked(bcrypt.hash).mockResolvedValue(hashedPassword as never);
+      jest.fn(bcrypt.hash).mockResolvedValue(hashedPassword);
 
       const result = await authService.hashPassword(password);
 
@@ -50,7 +57,7 @@ describe("AuthService", () => {
 
     it("should use correct salt rounds", async () => {
       const password = "password123";
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
 
       await authService.hashPassword(password);
 
@@ -61,15 +68,15 @@ describe("AuthService", () => {
       const password = "password123";
       const error = new Error("Hashing failed");
 
-      vi.mocked(bcrypt.hash).mockRejectedValue(error);
+      jest.fn(bcrypt.hash).mockRejectedValue(error);
 
       await expect(authService.hashPassword(password)).rejects.toThrow(
-        "Error hashing password"
+        "Error hashing password",
       );
     });
 
     it("should handle empty password", async () => {
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
 
       await authService.hashPassword("");
 
@@ -78,7 +85,7 @@ describe("AuthService", () => {
 
     it("should handle very long passwords", async () => {
       const longPassword = "a".repeat(1000);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
 
       await authService.hashPassword(longPassword);
 
@@ -94,7 +101,7 @@ describe("AuthService", () => {
       const password = "correctPassword";
       const hash = "$2b$10$hashedpassword";
 
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      jest.fn(bcrypt.compare).mockResolvedValue(true);
 
       const result = await authService.verifyPassword(password, hash);
 
@@ -106,7 +113,7 @@ describe("AuthService", () => {
       const password = "wrongPassword";
       const hash = "$2b$10$hashedpassword";
 
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+      jest.fn(bcrypt.compare).mockResolvedValue(false);
 
       const result = await authService.verifyPassword(password, hash);
 
@@ -117,7 +124,7 @@ describe("AuthService", () => {
       const password = "password";
       const hash = "invalid-hash";
 
-      vi.mocked(bcrypt.compare).mockRejectedValue(new Error("Invalid hash"));
+      jest.fn(bcrypt.compare).mockRejectedValue(new Error("Invalid hash"));
 
       const result = await authService.verifyPassword(password, hash);
 
@@ -125,7 +132,7 @@ describe("AuthService", () => {
     });
 
     it("should handle empty password", async () => {
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+      jest.fn(bcrypt.compare).mockResolvedValue(false);
 
       const result = await authService.verifyPassword("", "hash");
 
@@ -133,7 +140,7 @@ describe("AuthService", () => {
     });
 
     it("should handle empty hash", async () => {
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+      jest.fn(bcrypt.compare).mockResolvedValue(false);
 
       const result = await authService.verifyPassword("password", "");
 
@@ -153,7 +160,7 @@ describe("AuthService", () => {
       };
       const mockToken = "jwt.token.here";
 
-      vi.mocked(jwt.sign).mockReturnValue(mockToken as never);
+      jest.fn(jwt.sign).mockReturnValue(mockToken);
 
       const token = authService.generateToken(user);
 
@@ -165,46 +172,46 @@ describe("AuthService", () => {
           tenantId: user.tenantId,
         },
         mockJwtSecret,
-        { expiresIn: "24h" }
+        { expiresIn: "24h" },
       );
     });
 
     it("should use JWT_SECRET from environment", () => {
       const user = { id: 1, email: "test@example.com", tenantId: "tenant-1" };
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       authService.generateToken(user);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.any(Object),
         mockJwtSecret,
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
     it("should set 24h expiration", () => {
       const user = { id: 1, email: "test@example.com", tenantId: "tenant-1" };
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       authService.generateToken(user);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.any(Object),
         expect.any(String),
-        { expiresIn: "24h" }
+        { expiresIn: "24h" },
       );
     });
 
     it("should handle numeric user ID", () => {
       const user = { id: 999, email: "test@example.com", tenantId: "tenant-1" };
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       authService.generateToken(user);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({ id: 999 }),
         expect.any(String),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -215,9 +222,13 @@ describe("AuthService", () => {
   describe("verifyToken", () => {
     it("should verify valid token and return decoded payload", () => {
       const token = "valid.jwt.token";
-      const decoded = { id: 1, email: "test@example.com", tenantId: "tenant-1" };
+      const decoded = {
+        id: 1,
+        email: "test@example.com",
+        tenantId: "tenant-1",
+      };
 
-      vi.mocked(jwt.verify).mockReturnValue(decoded as never);
+      jest.fn(jwt.verify).mockReturnValue(decoded);
 
       const result = authService.verifyToken(token);
 
@@ -227,9 +238,13 @@ describe("AuthService", () => {
 
     it("should strip Bearer prefix from token", () => {
       const token = "Bearer valid.jwt.token";
-      const decoded = { id: 1, email: "test@example.com", tenantId: "tenant-1" };
+      const decoded = {
+        id: 1,
+        email: "test@example.com",
+        tenantId: "tenant-1",
+      };
 
-      vi.mocked(jwt.verify).mockReturnValue(decoded as never);
+      jest.fn(jwt.verify).mockReturnValue(decoded);
 
       const result = authService.verifyToken(token);
 
@@ -240,7 +255,7 @@ describe("AuthService", () => {
     it("should return null for invalid token", () => {
       const token = "invalid.token";
 
-      vi.mocked(jwt.verify).mockImplementation(() => {
+      jest.fn(jwt.verify).mockImplementation(() => {
         throw new Error("Invalid token");
       });
 
@@ -252,8 +267,8 @@ describe("AuthService", () => {
     it("should return null for expired token", () => {
       const token = "expired.token";
 
-      vi.mocked(jwt.verify).mockImplementation(() => {
-        throw new jwt.TokenExpiredError("Token expired", new Date());
+      jest.fn(jwt.verify).mockImplementation(() => {
+        throw Object.assign(new Error("jwt expired"), { name: "TokenExpiredError" }));
       });
 
       const result = authService.verifyToken(token);
@@ -263,9 +278,13 @@ describe("AuthService", () => {
 
     it("should handle case-insensitive Bearer prefix", () => {
       const token = "bearer valid.jwt.token";
-      const decoded = { id: 1, email: "test@example.com", tenantId: "tenant-1" };
+      const decoded = {
+        id: 1,
+        email: "test@example.com",
+        tenantId: "tenant-1",
+      };
 
-      vi.mocked(jwt.verify).mockReturnValue(decoded as never);
+      jest.fn(jwt.verify).mockReturnValue(decoded);
 
       authService.verifyToken(token);
 
@@ -294,10 +313,14 @@ describe("AuthService", () => {
     };
 
     it("should return success with user for valid token", async () => {
-      const decoded = { id: 1, email: "test@example.com", tenantId: "tenant-123" };
+      const decoded = {
+        id: 1,
+        email: "test@example.com",
+        tenantId: "tenant-123",
+      };
 
-      vi.mocked(jwt.verify).mockReturnValue(decoded as never);
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
+      jest.fn(jwt.verify).mockReturnValue(decoded);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
 
       const result = await authService.verifyAuth(validToken);
 
@@ -308,10 +331,14 @@ describe("AuthService", () => {
 
     it("should strip Bearer prefix before verification", async () => {
       const tokenWithBearer = "Bearer valid.jwt.token";
-      const decoded = { id: 1, email: "test@example.com", tenantId: "tenant-123" };
+      const decoded = {
+        id: 1,
+        email: "test@example.com",
+        tenantId: "tenant-123",
+      };
 
-      vi.mocked(jwt.verify).mockReturnValue(decoded as never);
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
+      jest.fn(jwt.verify).mockReturnValue(decoded);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
 
       await authService.verifyAuth(tokenWithBearer);
 
@@ -327,10 +354,14 @@ describe("AuthService", () => {
     });
 
     it("should return error when user not found", async () => {
-      const decoded = { id: 999, email: "notfound@example.com", tenantId: "tenant-1" };
+      const decoded = {
+        id: 999,
+        email: "notfound@example.com",
+        tenantId: "tenant-1",
+      };
 
-      vi.mocked(jwt.verify).mockReturnValue(decoded as never);
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(jwt.verify).mockReturnValue(decoded);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
 
       const result = await authService.verifyAuth(validToken);
 
@@ -339,8 +370,8 @@ describe("AuthService", () => {
     });
 
     it("should return TOKEN_EXPIRED error for expired token", async () => {
-      vi.mocked(jwt.verify).mockImplementation(() => {
-        throw new jwt.TokenExpiredError("Token expired", new Date());
+      jest.fn(jwt.verify).mockImplementation(() => {
+        throw Object.assign(new Error("jwt expired"), { name: "TokenExpiredError" }));
       });
 
       const result = await authService.verifyAuth(validToken);
@@ -351,7 +382,7 @@ describe("AuthService", () => {
     });
 
     it("should return INVALID_TOKEN error for malformed token", async () => {
-      vi.mocked(jwt.verify).mockImplementation(() => {
+      jest.fn(jwt.verify).mockImplementation(() => {
         const error = new Error("Invalid token");
         error.name = "JsonWebTokenError";
         throw error;
@@ -365,7 +396,7 @@ describe("AuthService", () => {
     });
 
     it("should return VERIFICATION_ERROR for other errors", async () => {
-      vi.mocked(jwt.verify).mockImplementation(() => {
+      jest.fn(jwt.verify).mockImplementation(() => {
         throw new Error("Database error");
       });
 
@@ -377,10 +408,14 @@ describe("AuthService", () => {
     });
 
     it("should query user with correct tenant and active status", async () => {
-      const decoded = { id: 1, email: "test@example.com", tenantId: "tenant-123" };
+      const decoded = {
+        id: 1,
+        email: "test@example.com",
+        tenantId: "tenant-123",
+      };
 
-      vi.mocked(jwt.verify).mockReturnValue(decoded as never);
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
+      jest.fn(jwt.verify).mockReturnValue(decoded);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
 
       await authService.verifyAuth(validToken);
 
@@ -420,9 +455,9 @@ describe("AuthService", () => {
     };
 
     it("should login successfully with valid credentials", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-      vi.mocked(jwt.sign).mockReturnValue("jwt.token.here" as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
+      jest.fn(bcrypt.compare).mockResolvedValue(true);
+      jest.fn(jwt.sign).mockReturnValue("jwt.token.here");
 
       const result = await authService.login(credentials);
 
@@ -438,7 +473,7 @@ describe("AuthService", () => {
     });
 
     it("should fail when user not found", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
 
       const result = await authService.login(credentials);
 
@@ -450,7 +485,7 @@ describe("AuthService", () => {
 
     it("should fail when user is inactive", async () => {
       const inactiveUser = { ...mockUser, actif: false };
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(inactiveUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(inactiveUser);
 
       const result = await authService.login(credentials);
 
@@ -459,8 +494,8 @@ describe("AuthService", () => {
     });
 
     it("should fail with incorrect password", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
+      jest.fn(bcrypt.compare).mockResolvedValue(false);
 
       const result = await authService.login(credentials);
 
@@ -469,9 +504,9 @@ describe("AuthService", () => {
     });
 
     it("should query user with email, tenantId, and active status", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
+      jest.fn(bcrypt.compare).mockResolvedValue(true);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       await authService.login(credentials);
 
@@ -485,22 +520,22 @@ describe("AuthService", () => {
     });
 
     it("should verify password correctly", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
+      jest.fn(bcrypt.compare).mockResolvedValue(true);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       await authService.login(credentials);
 
       expect(bcrypt.compare).toHaveBeenCalledWith(
         "Password123!",
-        "$2b$10$hashedpassword"
+        "$2b$10$hashedpassword",
       );
     });
 
     it("should generate token with correct payload", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
+      jest.fn(bcrypt.compare).mockResolvedValue(true);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       await authService.login(credentials);
 
@@ -511,13 +546,13 @@ describe("AuthService", () => {
           tenantId: "tenant-123",
         },
         mockJwtSecret,
-        { expiresIn: "24h" }
+        { expiresIn: "24h" },
       );
     });
 
     it("should handle database errors gracefully", async () => {
-      vi.mocked(prisma.user.findFirst).mockRejectedValue(
-        new Error("Database error")
+      jest.fn(prisma.user.findFirst).mockRejectedValue(
+        new Error("Database error"),
       );
 
       const result = await authService.login(credentials);
@@ -528,10 +563,10 @@ describe("AuthService", () => {
 
     it("should handle null password in database", async () => {
       const userWithNoPassword = { ...mockUser, password: null };
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(
-        userWithNoPassword as never
+      jest.fn(prisma.user.findFirst).mockResolvedValue(
+        userWithNoPassword,
       );
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+      jest.fn(bcrypt.compare).mockResolvedValue(false);
 
       const result = await authService.login(credentials);
 
@@ -582,9 +617,11 @@ describe("AuthService", () => {
     };
 
     it("should register new user successfully", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null); // No existing user
-      vi.mocked(bcrypt.hash).mockResolvedValue("$2b$10$hashedpassword" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null); // No existing user
+      jest.fn(bcrypt.hash).mockResolvedValue(
+        "$2b$10$hashedpassword",
+      );
+      jest.fn(prisma.user.create).mockResolvedValue(mockCreatedUser);
 
       const result = await authService.register(registerData);
 
@@ -599,10 +636,10 @@ describe("AuthService", () => {
     });
 
     it("should fail when user already exists", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+      jest.fn(prisma.user.findFirst).mockResolvedValue({
         id: 1,
         email: "newuser@example.com",
-      } as never);
+      });
 
       const result = await authService.register(registerData);
 
@@ -611,9 +648,11 @@ describe("AuthService", () => {
     });
 
     it("should hash password before storing", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("$2b$10$hashedpassword" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue(
+        "$2b$10$hashedpassword",
+      );
+      jest.fn(prisma.user.create).mockResolvedValue(mockCreatedUser);
 
       await authService.register(registerData);
 
@@ -623,14 +662,14 @@ describe("AuthService", () => {
           data: expect.objectContaining({
             password: "$2b$10$hashedpassword",
           }),
-        })
+        }),
       );
     });
 
     it("should create user with actif = false (email verification required)", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockResolvedValue(mockCreatedUser);
 
       await authService.register(registerData);
 
@@ -639,14 +678,14 @@ describe("AuthService", () => {
           data: expect.objectContaining({
             actif: false,
           }),
-        })
+        }),
       );
     });
 
     it("should use default dateOfBirth when not provided", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockResolvedValue(mockCreatedUser);
 
       const dataWithoutDob = { ...registerData };
       delete (dataWithoutDob as any).dateOfBirth;
@@ -658,14 +697,14 @@ describe("AuthService", () => {
           data: expect.objectContaining({
             dateOfBirth: new Date("1990-01-01"),
           }),
-        })
+        }),
       );
     });
 
     it("should use default tenantId when not provided", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockResolvedValue(mockCreatedUser);
 
       const dataWithoutTenant = { ...registerData };
       delete (dataWithoutTenant as any).tenantId;
@@ -677,14 +716,14 @@ describe("AuthService", () => {
           data: expect.objectContaining({
             tenantId: "default",
           }),
-        })
+        }),
       );
     });
 
     it("should handle null genderId", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockResolvedValue(mockCreatedUser);
 
       const dataWithoutGender = { ...registerData, genderId: undefined };
 
@@ -695,15 +734,15 @@ describe("AuthService", () => {
           data: expect.objectContaining({
             genderId: null,
           }),
-        })
+        }),
       );
     });
 
     it("should handle database errors gracefully", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockRejectedValue(
-        new Error("Database error")
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockRejectedValue(
+        new Error("Database error"),
       );
 
       const result = await authService.register(registerData);
@@ -713,9 +752,9 @@ describe("AuthService", () => {
     });
 
     it("should store all required user fields", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockResolvedValue(mockCreatedUser);
 
       await authService.register(registerData);
 
@@ -734,7 +773,7 @@ describe("AuthService", () => {
     });
 
     it("should check for existing user with correct email and tenantId", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
 
       await authService.register(registerData);
 
@@ -756,14 +795,14 @@ describe("AuthService", () => {
       const service = new AuthService();
       const user = { id: 1, email: "test@example.com", tenantId: "tenant-1" };
 
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       service.generateToken(user);
 
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.any(Object),
         "fallback-secret-key",
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -783,9 +822,9 @@ describe("AuthService", () => {
         userId: null,
       };
 
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(mockUser as never);
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
-      vi.mocked(jwt.sign).mockReturnValue("token" as never);
+      jest.fn(prisma.user.findFirst).mockResolvedValue(mockUser);
+      jest.fn(bcrypt.compare).mockResolvedValue(true);
+      jest.fn(jwt.sign).mockReturnValue("token");
 
       const result = await authService.login({
         email: "test@example.com",
@@ -797,15 +836,15 @@ describe("AuthService", () => {
     });
 
     it("should not expose password in register response", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue({
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockResolvedValue({
         id: 1,
         email: "test@example.com",
         password: "hashed",
         firstName: "John",
         lastName: "Doe",
-      } as never);
+      });
 
       const result = await authService.register({
         email: "test@example.com",
@@ -846,7 +885,7 @@ describe("AuthService", () => {
 
     it("should handle special characters in password", async () => {
       const specialPassword = "P@$$w0rd!#%&*()[]{}";
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
 
       await authService.hashPassword(specialPassword);
 
@@ -854,14 +893,14 @@ describe("AuthService", () => {
     });
 
     it("should handle Unicode characters in name fields", async () => {
-      vi.mocked(prisma.user.findFirst).mockResolvedValue(null);
-      vi.mocked(bcrypt.hash).mockResolvedValue("hashed" as never);
-      vi.mocked(prisma.user.create).mockResolvedValue({
+      jest.fn(prisma.user.findFirst).mockResolvedValue(null);
+      jest.fn(bcrypt.hash).mockResolvedValue("hashed");
+      jest.fn(prisma.user.create).mockResolvedValue({
         id: 1,
         email: "test@example.com",
         firstName: "José",
         lastName: "François",
-      } as never);
+      });
 
       await authService.register({
         email: "test@example.com",
@@ -878,7 +917,7 @@ describe("AuthService", () => {
             firstName: "José",
             lastName: "François",
           }),
-        })
+        }),
       );
     });
   });

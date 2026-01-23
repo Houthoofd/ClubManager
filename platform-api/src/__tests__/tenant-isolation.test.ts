@@ -3,7 +3,7 @@ import {
   setCurrentTenantId,
   clearCurrentTenantId,
   withTenantContext,
-} from '../middleware/prisma/tenant-isolation.middleware';
+} from '../middleware/prisma/tenant-isolation.middleware.js';
 
 describe('Tenant Isolation Tests', () => {
   let prisma: PrismaClient;

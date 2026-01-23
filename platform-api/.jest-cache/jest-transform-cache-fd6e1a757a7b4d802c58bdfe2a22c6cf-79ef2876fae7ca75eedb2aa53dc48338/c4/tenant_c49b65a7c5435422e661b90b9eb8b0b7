@@ -1,0 +1,17 @@
+16dc72b4cd1fab27a8108a641c60f212
+// Define enums matching Prisma schema to avoid circular dependency
+export var TenantStatus;
+(function (TenantStatus) {
+    TenantStatus["ACTIVE"] = "ACTIVE";
+    TenantStatus["SUSPENDED"] = "SUSPENDED";
+    TenantStatus["INACTIVE"] = "INACTIVE";
+    TenantStatus["TRIAL"] = "TRIAL";
+})(TenantStatus || (TenantStatus = {}));
+export var SubscriptionStatus;
+(function (SubscriptionStatus) {
+    SubscriptionStatus["ACTIVE"] = "ACTIVE";
+    SubscriptionStatus["EXPIRED"] = "EXPIRED";
+    SubscriptionStatus["CANCELLED"] = "CANCELLED";
+    SubscriptionStatus["TRIAL"] = "TRIAL";
+    SubscriptionStatus["PENDING"] = "PENDING";
+})(SubscriptionStatus || (SubscriptionStatus = {}));

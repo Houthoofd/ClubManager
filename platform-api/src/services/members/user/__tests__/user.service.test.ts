@@ -12,10 +12,10 @@
  */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { userService } from '../user.service';
-import { authService } from '../../../infrastructure/auth/auth.service';
-import { userManagerService } from '../../users/user-manager.service';
-import type { LoginCredentials, RegisterUserData, AuthResult } from '../../../infrastructure/auth/auth.types';
+import { userService } from '../user.service.js';
+import { authService } from '../../../infrastructure/auth/auth.service.js';
+import { userManagerService } from '../../users/user-manager.service.js';
+import type { LoginCredentials, RegisterUserData, AuthResult } from '../../../infrastructure/auth/auth.types.js';
 
 // Mock dependencies
 jest.mock('../../../infrastructure/auth/auth.service');

@@ -1,0 +1,7 @@
+d25714b11b3d89faf702dd3adfc9c634
+export var errorUtil;
+(function (errorUtil) {
+    errorUtil.errToObj = (message) => typeof message === "string" ? { message } : message || {};
+    // biome-ignore lint:
+    errorUtil.toString = (message) => typeof message === "string" ? message : message?.message;
+})(errorUtil || (errorUtil = {}));

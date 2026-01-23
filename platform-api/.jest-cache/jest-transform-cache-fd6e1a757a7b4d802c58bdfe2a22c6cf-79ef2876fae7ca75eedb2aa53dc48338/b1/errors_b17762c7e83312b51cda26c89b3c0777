@@ -1,0 +1,10 @@
+a3699bd1363a15b73b21ac814eb64fb8
+import defaultErrorMap from "./locales/en.js";
+let overrideErrorMap = defaultErrorMap;
+export { defaultErrorMap };
+export function setErrorMap(map) {
+    overrideErrorMap = map;
+}
+export function getErrorMap() {
+    return overrideErrorMap;
+}
