@@ -1,0 +1,110 @@
+/**
+ * Mutations des alertes (créer, résoudre, ignorer)
+ */
+
+import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import type {
+  AlerteUtilisateur,
+  CreateAlerteInput,
+  ResoudreAlerteInput,
+  IgnorerAlerteInput,
+  AlerteResult,
+} from '@clubmanager/types';
+
+/**
+ * Résout une alerte
+ */
+export async function resoudreAlerte(input: ResoudreAlerteInput): Promise<AlerteResult> {
+  console.log(`✅ [AlertesMutations] Résolution alerte ${input.alerteId}`);
+
+  await prisma.$transaction(async (tx: any) => {
+    // Mettre à jour l'alerte
+    await tx.alertes_utilisateurs.update({
+      where: { id: input.alerteId },
+      data: {
+        statut: 'resolue',
+        notes: input.notes,
+        date_resolution: new Date(),
+        resolu_par: input.effectuePar,
+      },
+    });
+
+    // Enregistrer l'action
+    await tx.alertes_actions.create({
+      data: {
+        alerte_id: input.alerteId,
+        action_type: 'autre',
+        description: `Alerte résolue: ${input.notes}`,
+        effectue_par: input.effectuePar,
+      },
+    });
+  });
+
+  return {
+    success: true,
+    message: 'Alerte résolue avec succès',
+  };
+}
+
+/**
+ * Ignore une alerte
+ */
+export async function ignorerAlerte(input: IgnorerAlerteInput): Promise<AlerteResult> {
+  console.log(`🚫 [AlertesMutations] Ignore alerte ${input.alerteId}`);
+
+  await prisma.alertes_utilisateurs.update({
+    where: { id: input.alerteId },
+    data: {
+      statut: 'ignoree',
+      notes: input.notes,
+      date_resolution: new Date(),
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Alerte ignorée avec succès',
+  };
+}
+
+/**
+ * Crée une nouvelle alerte manuellement
+ */
+export async function creerAlerte(input: CreateAlerteInput): Promise<AlerteUtilisateur> {
+  console.log(`➕ [AlertesMutations] Création alerte utilisateur ${input.utilisateurId}`);
+
+  const alerte = await prisma.alertes_utilisateurs.create({
+    data: {
+      utilisateur_id: input.utilisateurId,
+      alerte_type_id: input.typeAlerteId,
+      donnees_contexte: input.contexte || {},
+      statut: 'active',
+    },
+    include: {
+      alertes_types: true,
+      utilisateurs: {
+        select: {
+          first_name: true,
+          last_name: true,
+          email: true,
+          status_id: true,
+        },
+      },
+    },
+  });
+
+  return {
+    id: alerte.id,
+    utilisateurId: alerte.utilisateur_id,
+    typeAlerte: alerte.alertes_types.nom,
+    code: alerte.alertes_types.code,
+    description: alerte.alertes_types.description || '',
+    priorite: alerte.alertes_types.priorite as 'basse' | 'normale' | 'haute' | 'critique',
+    statut: alerte.statut as 'active',
+    donneesContexte: alerte.donnees_contexte,
+    dateDetection: alerte.date_detection || new Date(),
+    nomUtilisateur: `${alerte.utilisateurs.first_name} ${alerte.utilisateurs.last_name}`,
+    email: alerte.utilisateurs.email,
+    statusId: alerte.utilisateurs.status_id,
+  };
+}

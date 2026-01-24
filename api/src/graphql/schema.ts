@@ -1,6 +1,7 @@
 import { createSchema } from 'graphql-yoga';
 import { DateTimeResolver } from 'graphql-scalars';
 import { prisma } from '../infrastructure/database/prisma-client.js';
+import { alertesResolvers } from '../services/alertes/index.js';
 
 /**
  * Schéma GraphQL de base
@@ -26,12 +27,24 @@ export const schema = createSchema({
       # Articles/Magasin
       articles(take: Int, skip: Int): [Article!]!
       article(id: Int!): Article
+      
+      # Alertes
+      dashboardAlertes: AlerteDashboard!
+      alertesActives: [AlerteUtilisateur!]!
+      alertesUtilisateur(utilisateurId: Int!): [AlerteUtilisateur!]!
+      statistiquesAlertes: AlerteStats!
     }
 
     type Mutation {
       # Authentification (à implémenter)
       login(email: String!, password: String!): AuthPayload!
       register(input: RegisterInput!): AuthPayload!
+      
+      # Alertes
+      detecterAlertes: AlerteResult!
+      resoudreAlerte(input: ResoudreAlerteInput!): AlerteResult!
+      ignorerAlerte(input: IgnorerAlerteInput!): AlerteResult!
+      creerAlerte(input: CreateAlerteInput!): AlerteUtilisateur!
     }
 
     # Types de base
@@ -113,6 +126,68 @@ export const schema = createSchema({
     type Taille {
       id: Int!
       taille: String!
+    }
+    
+    # Types pour les alertes
+    
+    type AlerteUtilisateur {
+      id: Int!
+      utilisateurId: Int!
+      alerteTypeId: Int!
+      statut: String!
+      donneesContexte: String
+      dateDetection: DateTime!
+      dateResolution: DateTime
+      notes: String
+      effectueParId: Int
+      typeAlerte: String
+      nomUtilisateur: String
+      email: String
+      priorite: String
+    }
+    
+    type AlerteDashboard {
+      alertesCritiques: Int!
+      alertesHautes: Int!
+      alertesNormales: Int!
+      alertesBasses: Int!
+      totalAlertes: Int!
+      alertesParType: [AlerteParType!]!
+    }
+    
+    type AlerteParType {
+      typeAlerte: String!
+      count: Int!
+      priorite: String!
+    }
+    
+    type AlerteStats {
+      totalAlertes: Int!
+      alertesActives: Int!
+      alertesResolues: Int!
+      alertesCritiques: Int!
+    }
+    
+    type AlerteResult {
+      success: Boolean!
+      message: String!
+    }
+    
+    input CreateAlerteInput {
+      utilisateurId: Int!
+      alerteTypeId: Int!
+      donneesContexte: String
+    }
+    
+    input ResoudreAlerteInput {
+      alerteId: Int!
+      notes: String!
+      effectueParId: Int!
+    }
+    
+    input IgnorerAlerteInput {
+      alerteId: Int!
+      notes: String
     }
 
     # Auth types

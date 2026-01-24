@@ -11,6 +11,8 @@ module.exports = {
     "ipaddr.js": "<rootDir>/node_modules/ipaddr.js/lib/ipaddr.js",
     "@clubmanager/(.*)": "<rootDir>/../packages/$1/src",
     '^@clubmanager/types$': '<rootDir>/../packages/types/dist/index.js',
+    "^\\.\\./generated/prisma/index\\.js$": "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
+    "^\\.\\./(\\.\\./)*/generated/prisma/index\\.js$": "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   transform: {
