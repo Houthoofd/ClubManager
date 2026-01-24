@@ -78,7 +78,7 @@ export class TemplateLoader {
 
     Object.entries(variables).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
-      processedContent = processedContent.replace(regex, value || '');
+      processedContent = processedContent.replace(regex, String(value || ''));
     });
 
     return processedContent;
@@ -103,7 +103,7 @@ export class TemplateLoader {
     // Remplacer les variables dans le sujet
     Object.entries(variables).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
-      subject = subject.replace(regex, value || '');
+      subject = subject.replace(regex, String(value || ''));
     });
 
     return subject;

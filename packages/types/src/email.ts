@@ -41,7 +41,7 @@ export interface EmailTemplate {
   htmlContent: string;
 }
 
-export interface EmailTemplateVariables extends Record<string, string> {
+export interface EmailTemplateVariables {
   clubName?: string;
   clubWebsite?: string;
   supportEmail?: string;
@@ -51,6 +51,7 @@ export interface EmailTemplateVariables extends Record<string, string> {
   firstName?: string;
   lastName?: string;
   email?: string;
+  [key: string]: string | undefined;
 }
 
 export interface SendGridOptions {
