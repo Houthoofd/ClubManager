@@ -2,13 +2,13 @@
  * Module de mutations - Création et modification des commandes
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { Commande, CreateCommandeInput, UpdateCommandeInput } from '@clubmanager/types';
 
 /**
  * Crée une nouvelle commande
  */
-export async function creerCommande(input: CreateCommandeInput): Promise<Commande> {
+export async function creerCommande(input: CreateCommandeInput, prisma = defaultPrisma): Promise<Commande> {
   console.log(`➕ [CommandesMutations] Création commande pour utilisateur ${input.utilisateur_id}`);
 
   const commande = await prisma.commandes.create({
@@ -55,7 +55,8 @@ export async function creerCommande(input: CreateCommandeInput): Promise<Command
  */
 export async function modifierStatutCommande(
   commandeId: string,
-  nouveauStatut: string
+  nouveauStatut: string,
+  prisma = defaultPrisma
 ): Promise<Commande | null> {
   console.log(`🔄 [CommandesMutations] Modification statut commande ${commandeId} → ${nouveauStatut}`);
 
@@ -107,7 +108,8 @@ export async function modifierStatutCommande(
  */
 export async function modifierCommande(
   commandeId: string,
-  updates: UpdateCommandeInput
+  updates: UpdateCommandeInput,
+  prisma = defaultPrisma
 ): Promise<Commande | null> {
   console.log(`✏️ [CommandesMutations] Modification commande ${commandeId}`);
 
@@ -163,7 +165,7 @@ export async function modifierCommande(
 /**
  * Supprime une commande
  */
-export async function supprimerCommande(commandeId: string): Promise<boolean> {
+export async function supprimerCommande(commandeId: string, prisma = defaultPrisma): Promise<boolean> {
   console.log(`🗑️ [CommandesMutations] Suppression commande ${commandeId}`);
 
   try {

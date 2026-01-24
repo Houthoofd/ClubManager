@@ -2,13 +2,13 @@
  * Module de requêtes - Récupération des commandes
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { Commande } from '@clubmanager/types';
 
 /**
  * Récupère toutes les commandes
  */
-export async function obtenirToutesCommandes(): Promise<Commande[]> {
+export async function obtenirToutesCommandes(prisma = defaultPrisma): Promise<Commande[]> {
   console.log('📋 [CommandesQueries] Récupération toutes commandes');
 
   const commandes = await prisma.commandes.findMany({
@@ -33,7 +33,7 @@ export async function obtenirToutesCommandes(): Promise<Commande[]> {
 /**
  * Récupère une commande par ID
  */
-export async function obtenirCommandeParId(commandeId: string): Promise<Commande | null> {
+export async function obtenirCommandeParId(commandeId: string, prisma = defaultPrisma): Promise<Commande | null> {
   console.log(`🔍 [CommandesQueries] Recherche commande ${commandeId}`);
 
   const commande = await prisma.commandes.findUnique({
@@ -60,7 +60,7 @@ export async function obtenirCommandeParId(commandeId: string): Promise<Commande
 /**
  * Récupère les commandes d'un utilisateur
  */
-export async function obtenirCommandesUtilisateur(utilisateurId: number): Promise<Commande[]> {
+export async function obtenirCommandesUtilisateur(utilisateurId: number, prisma = defaultPrisma): Promise<Commande[]> {
   console.log(`👤 [CommandesQueries] Récupération commandes utilisateur ${utilisateurId}`);
 
   const commandes = await prisma.commandes.findMany({
@@ -86,7 +86,7 @@ export async function obtenirCommandesUtilisateur(utilisateurId: number): Promis
 /**
  * Récupère les commandes par statut
  */
-export async function obtenirCommandesParStatut(statut: string): Promise<Commande[]> {
+export async function obtenirCommandesParStatut(statut: string, prisma = defaultPrisma): Promise<Commande[]> {
   console.log(`📊 [CommandesQueries] Récupération commandes statut ${statut}`);
 
   const commandes = await prisma.commandes.findMany({
@@ -112,7 +112,7 @@ export async function obtenirCommandesParStatut(statut: string): Promise<Command
 /**
  * Compte les commandes par statut
  */
-export async function compterCommandesParStatut(): Promise<Record<string, number>> {
+export async function compterCommandesParStatut(prisma = defaultPrisma): Promise<Record<string, number>> {
   console.log('📊 [CommandesQueries] Comptage par statut');
 
   const counts = await prisma.commandes.groupBy({

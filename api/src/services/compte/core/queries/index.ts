@@ -2,13 +2,13 @@
  * Module de requêtes - Récupération des informations de compte
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { CompteInfo } from '@clubmanager/types';
 
 /**
  * Récupère les informations d'un compte par ID
  */
-export async function obtenirCompteParId(utilisateurId: number): Promise<CompteInfo | null> {
+export async function obtenirCompteParId(utilisateurId: number, prisma = defaultPrisma): Promise<CompteInfo | null> {
   console.log(`🔍 [CompteQueries] Recherche compte ID ${utilisateurId}`);
 
   const utilisateur = await prisma.utilisateurs.findUnique({
@@ -33,7 +33,8 @@ export async function obtenirCompteParId(utilisateurId: number): Promise<CompteI
  */
 export async function obtenirCompteParNomPrenom(
   prenom: string,
-  nom: string
+  nom: string,
+  prisma = defaultPrisma
 ): Promise<CompteInfo[]> {
   console.log(`🔍 [CompteQueries] Recherche compte ${prenom} ${nom}`);
 
@@ -58,7 +59,8 @@ export async function obtenirCompteParNomPrenom(
  */
 export async function obtenirInformationsCompte(
   prenom: string,
-  nom: string
+  nom: string,
+  prisma = defaultPrisma
 ): Promise<CompteInfo | null> {
   console.log(`🔍 [CompteQueries] Informations compte ${prenom} ${nom}`);
 

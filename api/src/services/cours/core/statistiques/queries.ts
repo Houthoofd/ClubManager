@@ -2,7 +2,7 @@
  * Queries pour le domaine Statistiques
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type {
   StatistiquesPresenceCours,
   StatistiquesPresenceUtilisateur
@@ -12,7 +12,7 @@ import { getWeekNumber } from '../helpers.js';
 /**
  * Obtenir les semaines avec cours pour un participant
  */
-export async function obtenirSemainesAvecCours(participantId: number): Promise<number[]> {
+export async function obtenirSemainesAvecCours(participantId: number, prisma = defaultPrisma): Promise<number[]> {
   const cours = await prisma.cours.findMany({
     where: {
       inscriptions: {
@@ -41,7 +41,7 @@ export async function obtenirSemainesAvecCours(participantId: number): Promise<n
 /**
  * Obtenir statistiques de présence pour un cours
  */
-export async function obtenirStatistiquesPresenceCours(coursId: number): Promise<StatistiquesPresenceCours> {
+export async function obtenirStatistiquesPresenceCours(coursId: number, prisma = defaultPrisma): Promise<StatistiquesPresenceCours> {
   const inscriptions = await prisma.inscriptions.findMany({
     where: {
       cours_id: coursId
@@ -69,7 +69,7 @@ export async function obtenirStatistiquesPresenceCours(coursId: number): Promise
 /**
  * Obtenir statistiques de présence pour un utilisateur
  */
-export async function obtenirStatistiquesPresenceUtilisateur(utilisateurId: number): Promise<StatistiquesPresenceUtilisateur> {
+export async function obtenirStatistiquesPresenceUtilisateur(utilisateurId: number, prisma = defaultPrisma): Promise<StatistiquesPresenceUtilisateur> {
   const inscriptions = await prisma.inscriptions.findMany({
     where: {
       utilisateur_id: utilisateurId,

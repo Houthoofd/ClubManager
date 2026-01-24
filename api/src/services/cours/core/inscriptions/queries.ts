@@ -2,7 +2,7 @@
  * Queries pour le domaine Inscriptions
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type {
   CoursInfo,
   CoursAvecUtilisateurs,
@@ -14,7 +14,7 @@ import { obtenirCoursPourParticipant } from '../cours/queries.js';
 /**
  * Obtenir les utilisateurs d'un cours avec leur statut
  */
-export async function obtenirUtilisateursParCours(coursId: number): Promise<UtilisateursParCoursResult> {
+export async function obtenirUtilisateursParCours(coursId: number, prisma = defaultPrisma): Promise<UtilisateursParCoursResult> {
   const inscriptions = await prisma.inscriptions.findMany({
     where: {
       cours_id: coursId
@@ -52,12 +52,12 @@ export async function obtenirUtilisateursParCours(coursId: number): Promise<Util
 /**
  * Obtenir cours avec utilisateurs (combiné)
  */
-export async function obtenirCoursAvecUtilisateurs(participantId: number): Promise<CoursAvecUtilisateurs[]> {
-  const cours = await obtenirCoursPourParticipant(participantId);
+export async function obtenirCoursAvecUtilisateurs(participantId: number, prisma = defaultPrisma): Promise<CoursAvecUtilisateurs[]> {
+  const cours = await obtenirCoursPourParticipant(participantId, prisma);
   
   const coursAvecUtilisateurs = await Promise.all(
     cours.map(async c => {
-      const { utilisateurs } = await obtenirUtilisateursParCours(c.id);
+      const { utilisateurs } = await obtenirUtilisateursParCours(c.id, prisma);
       return {
         ...c,
         utilisateurs
@@ -71,13 +71,13 @@ export async function obtenirCoursAvecUtilisateurs(participantId: number): Promi
 /**
  * Obtenir utilisateurs participants pour un cours (avec détails complets)
  */
-export async function obtenirUtilisateursParticipantsParCours(coursId: number): Promise<UtilisateursParCoursResult> {
-  return await obtenirUtilisateursParCours(coursId);
+export async function obtenirUtilisateursParticipantsParCours(coursId: number, prisma = defaultPrisma): Promise<UtilisateursParCoursResult> {
+  return await obtenirUtilisateursParCours(coursId, prisma);
 }
 
 /**
  * Obtenir cours inscrits pour un utilisateur
  */
-export async function obtenirCoursInscritsParUtilisateur(userId: number): Promise<CoursInfo[]> {
-  return await obtenirCoursPourParticipant(userId);
+export async function obtenirCoursInscritsParUtilisateur(userId: number, prisma = defaultPrisma): Promise<CoursInfo[]> {
+  return await obtenirCoursPourParticipant(userId, prisma);
 }

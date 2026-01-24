@@ -2,7 +2,7 @@
  * Module de mutations - Modification et suppression de compte
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { CompteInfo, CompteUpdateInput } from '@clubmanager/types';
 
 /**
@@ -10,7 +10,8 @@ import type { CompteInfo, CompteUpdateInput } from '@clubmanager/types';
  */
 export async function modifierCompte(
   utilisateurId: number,
-  updates: CompteUpdateInput
+  updates: CompteUpdateInput,
+  prisma = defaultPrisma
 ): Promise<CompteInfo | null> {
   console.log(`✏️ [CompteMutations] Modification compte ${utilisateurId}`);
 
@@ -69,7 +70,7 @@ export async function modifierCompte(
 /**
  * Supprime un compte (soft delete - change status_id à 0)
  */
-export async function supprimerCompte(utilisateurId: number): Promise<boolean> {
+export async function supprimerCompte(utilisateurId: number, prisma = defaultPrisma): Promise<boolean> {
   console.log(`🗑️ [CompteMutations] Suppression compte ${utilisateurId}`);
 
   try {
@@ -100,7 +101,8 @@ export async function supprimerCompte(utilisateurId: number): Promise<boolean> {
 export async function mettreAJourMotDePasse(
   utilisateurId: number,
   hashedPassword: string,
-  isCreation: boolean = false
+  isCreation: boolean = false,
+  prisma = defaultPrisma
 ): Promise<boolean> {
   console.log(`🔐 [CompteMutations] MAJ mot de passe utilisateur ${utilisateurId}`);
 

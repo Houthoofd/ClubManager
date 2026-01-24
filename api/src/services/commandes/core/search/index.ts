@@ -2,14 +2,15 @@
  * Module de recherche - Recherche de commandes avec filtres
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { Commande, CommandeSearchFilters, CommandeSearchResult } from '@clubmanager/types';
 
 /**
  * Recherche des commandes avec filtres
  */
 export async function rechercherCommandes(
-  filters: CommandeSearchFilters
+  filters: CommandeSearchFilters,
+  prisma = defaultPrisma
 ): Promise<CommandeSearchResult> {
   console.log('🔍 [CommandesSearch] Recherche avec filtres:', filters);
 

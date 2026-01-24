@@ -2,13 +2,13 @@
  * Module de conversions - Convertit les noms en IDs pour les références
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { ConversionResult } from '@clubmanager/types';
 
 /**
  * Obtient l'ID d'un genre par son nom
  */
-export async function obtenirIdGenreParNom(genreName: string): Promise<number> {
+export async function obtenirIdGenreParNom(genreName: string, prisma = defaultPrisma): Promise<number> {
   console.log(`🔄 [CompteConversions] Recherche genre "${genreName}"`);
 
   const genre = await prisma.genres.findFirst({
@@ -25,7 +25,7 @@ export async function obtenirIdGenreParNom(genreName: string): Promise<number> {
 /**
  * Obtient l'ID d'un grade par son nom/code
  */
-export async function obtenirIdGradeParNom(gradeName: string): Promise<number> {
+export async function obtenirIdGradeParNom(gradeName: string, prisma = defaultPrisma): Promise<number> {
   console.log(`🔄 [CompteConversions] Recherche grade "${gradeName}"`);
 
   const grade = await prisma.grades.findFirst({
@@ -42,7 +42,7 @@ export async function obtenirIdGradeParNom(gradeName: string): Promise<number> {
 /**
  * Obtient l'ID d'un status par son nom
  */
-export async function obtenirIdStatusParNom(statusName: string): Promise<number> {
+export async function obtenirIdStatusParNom(statusName: string, prisma = defaultPrisma): Promise<number> {
   console.log(`🔄 [CompteConversions] Recherche status "${statusName}"`);
 
   const status = await prisma.status.findFirst({
@@ -59,7 +59,7 @@ export async function obtenirIdStatusParNom(statusName: string): Promise<number>
 /**
  * Obtient l'ID d'un abonnement par son nom
  */
-export async function obtenirIdAbonnementParNom(abonnementName: string): Promise<number> {
+export async function obtenirIdAbonnementParNom(abonnementName: string, prisma = defaultPrisma): Promise<number> {
   console.log(`🔄 [CompteConversions] Recherche abonnement "${abonnementName}"`);
 
   const abonnement = await prisma.plans_tarifaires.findFirst({
@@ -76,35 +76,35 @@ export async function obtenirIdAbonnementParNom(abonnementName: string): Promise
 /**
  * Convertit automatiquement les noms en IDs
  */
-export async function convertirNomsEnIds(input: any): Promise<ConversionResult> {
+export async function convertirNomsEnIds(input: any, prisma = defaultPrisma): Promise<ConversionResult> {
   console.log(`🔄 [CompteConversions] Conversion automatique`, input);
 
   const result: ConversionResult = {};
 
   // Conversion genre
   if (input.genres && isNaN(Number(input.genres))) {
-    result.genre_id = await obtenirIdGenreParNom(input.genres);
+    result.genre_id = await obtenirIdGenreParNom(input.genres, prisma);
   } else if (input.genres) {
     result.genre_id = Number(input.genres);
   }
 
   // Conversion grade
   if (input.grades && isNaN(Number(input.grades))) {
-    result.grade_id = await obtenirIdGradeParNom(input.grades);
+    result.grade_id = await obtenirIdGradeParNom(input.grades, prisma);
   } else if (input.grades) {
     result.grade_id = Number(input.grades);
   }
 
   // Conversion status
   if (input.status && isNaN(Number(input.status))) {
-    result.status_id = await obtenirIdStatusParNom(input.status);
+    result.status_id = await obtenirIdStatusParNom(input.status, prisma);
   } else if (input.status) {
     result.status_id = Number(input.status);
   }
 
   // Conversion abonnement
   if (input.abonnement && isNaN(Number(input.abonnement))) {
-    result.abonnement_id = await obtenirIdAbonnementParNom(input.abonnement);
+    result.abonnement_id = await obtenirIdAbonnementParNom(input.abonnement, prisma);
   } else if (input.abonnement) {
     result.abonnement_id = Number(input.abonnement);
   }

@@ -42,7 +42,7 @@ export const mockUtilisateurs = [
   {
     id: 1,
     email: 'jean@test.com',
-    password: '',
+    password: '$2b$12$existinghashedpassword',
     first_name: 'Jean',
     last_name: 'Dupont',
     nom_utilisateur: 'jdupont',
@@ -149,6 +149,12 @@ export const createMockPrisma = () => {
         if (args?.where?.email) {
           results = results.filter((u: any) => u.email === args.where.email);
         }
+        if (args?.where?.first_name) {
+          results = results.filter((u: any) => u.first_name === args.where.first_name);
+        }
+        if (args?.where?.last_name) {
+          results = results.filter((u: any) => u.last_name === args.where.last_name);
+        }
         
         const user = results[0];
         if (!user) return Promise.resolve(null);
@@ -159,6 +165,11 @@ export const createMockPrisma = () => {
           if (args.include.genres) result.genres = genres.find((g: any) => g.id === user.genre_id);
           if (args.include.grades) result.grades = grades.find((g: any) => g.id === user.grade_id);
           if (args.include.status) result.status = status.find((s: any) => s.id === user.status_id);
+          if (args.include.plans_tarifaires) {
+            result.plans_tarifaires = user.abonnement_id 
+              ? plansTarifaires.find((p: any) => p.id === user.abonnement_id)
+              : null;
+          }
           return Promise.resolve(result);
         }
         
@@ -172,12 +183,29 @@ export const createMockPrisma = () => {
         utilisateurs[index] = { ...utilisateurs[index], ...args.data };
         return Promise.resolve(utilisateurs[index]);
       }),
+
+      delete: createMockFn((args: any) => {
+        const index = utilisateurs.findIndex((u: any) => u.id === args.where.id);
+        if (index === -1) {
+          const error: any = new Error('Record not found');
+          error.code = 'P2025';
+          throw error;
+        }
+        
+        const deleted = utilisateurs[index];
+        utilisateurs.splice(index, 1);
+        return Promise.resolve(deleted);
+      }),
     },
 
     genres: {
       findMany: createMockFn(() => Promise.resolve([...genres])),
       findUnique: createMockFn((args: any) => {
         const genre = genres.find(g => g.id === args.where.id);
+        return Promise.resolve(genre || null);
+      }),
+      findFirst: createMockFn((args: any) => {
+        const genre = genres.find(g => g.genre_name === args.where?.genre_name);
         return Promise.resolve(genre || null);
       }),
     },
@@ -188,6 +216,10 @@ export const createMockPrisma = () => {
         const grade = grades.find(g => g.id === args.where.id);
         return Promise.resolve(grade || null);
       }),
+      findFirst: createMockFn((args: any) => {
+        const grade = grades.find(g => g.grade_id === args.where?.grade_id);
+        return Promise.resolve(grade || null);
+      }),
     },
 
     status: {
@@ -196,10 +228,18 @@ export const createMockPrisma = () => {
         const s = status.find(s => s.id === args.where.id);
         return Promise.resolve(s || null);
       }),
+      findFirst: createMockFn((args: any) => {
+        const s = status.find(s => s.nom_role === args.where?.nom_role);
+        return Promise.resolve(s || null);
+      }),
     },
 
     plans_tarifaires: {
       findMany: createMockFn(() => Promise.resolve([...plansTarifaires])),
+      findFirst: createMockFn((args: any) => {
+        const plan = plansTarifaires.find(p => p.nom_plan === args.where?.nom_plan);
+        return Promise.resolve(plan || null);
+      }),
     },
 
     // Méthode pour réinitialiser les données entre les tests

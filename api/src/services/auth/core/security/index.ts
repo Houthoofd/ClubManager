@@ -2,13 +2,13 @@
  * Module de sécurité et audit
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { SecurityInfo, AuthStats } from '@clubmanager/types';
 
 /**
  * Recherche un utilisateur par email
  */
-export async function rechercherUtilisateurParEmail(email: string): Promise<any | null> {
+export async function rechercherUtilisateurParEmail(email: string, prisma = defaultPrisma): Promise<any | null> {
   console.log(`🔍 [AuthSecurity] Recherche utilisateur: ${email}`);
 
   const user = await prisma.utilisateurs.findFirst({
@@ -28,7 +28,7 @@ export async function rechercherUtilisateurParEmail(email: string): Promise<any 
 /**
  * Obtient les informations de sécurité d'un utilisateur
  */
-export async function obtenirInformationsSecurite(userId: number): Promise<SecurityInfo | null> {
+export async function obtenirInformationsSecurite(userId: number, prisma = defaultPrisma): Promise<SecurityInfo | null> {
   console.log(`📋 [AuthSecurity] Récupération infos sécurité utilisateur ${userId}`);
 
   const user = await prisma.utilisateurs.findUnique({
@@ -70,7 +70,7 @@ export async function obtenirInformationsSecurite(userId: number): Promise<Secur
 /**
  * Obtient les statistiques d'authentification
  */
-export async function obtenirStatistiquesAuth(): Promise<AuthStats> {
+export async function obtenirStatistiquesAuth(prisma = defaultPrisma): Promise<AuthStats> {
   console.log('📊 [AuthSecurity] Calcul statistiques auth');
 
   const startOfDay = new Date();
@@ -134,7 +134,8 @@ export async function obtenirStatistiquesAuth(): Promise<AuthStats> {
 export async function creerDemandeRecuperationManuelle(
   userId: number,
   reason: string,
-  verificationData: any
+  verificationData: any,
+  prisma = defaultPrisma
 ): Promise<{ success: boolean; message: string }> {
   console.log(`📝 [AuthSecurity] Création demande récupération manuelle pour ${userId}`);
 

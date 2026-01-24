@@ -3,13 +3,13 @@
  * Opérations de lecture sur la table cours
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { CoursInfo } from '@clubmanager/types';
 
 /**
  * Obtenir les cours pour un participant (limité à 12 prochains cours)
  */
-export async function obtenirCoursPourParticipant(participantId: number): Promise<CoursInfo[]> {
+export async function obtenirCoursPourParticipant(participantId: number, prisma = defaultPrisma): Promise<CoursInfo[]> {
   const cours = await prisma.cours.findMany({
     where: {
       inscriptions: {
@@ -64,7 +64,7 @@ export async function obtenirCoursPourParticipant(participantId: number): Promis
 /**
  * Obtenir cours par semaine pour un participant
  */
-export async function obtenirCoursParSemaine(participantId: number, semaine: number): Promise<CoursInfo[]> {
+export async function obtenirCoursParSemaine(participantId: number, semaine: number, prisma = defaultPrisma): Promise<CoursInfo[]> {
   const { getDateOfISOWeek } = await import('../helpers.js');
   
   const currentYear = new Date().getFullYear();
@@ -126,7 +126,7 @@ export async function obtenirCoursParSemaine(participantId: number, semaine: num
 /**
  * Obtenir tous les cours (pour admin)
  */
-export async function obtenirTousLesCours(): Promise<CoursInfo[]> {
+export async function obtenirTousLesCours(prisma = defaultPrisma): Promise<CoursInfo[]> {
   const cours = await prisma.cours.findMany({
     where: {
       date_cours: {

@@ -2,7 +2,7 @@
  * Détection automatique des alertes
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { AlerteResult } from '@clubmanager/types';
 
 /**
@@ -11,7 +11,8 @@ import type { AlerteResult } from '@clubmanager/types';
 async function creerAlerteIfNotExists(
   utilisateurId: number,
   alerteTypeId: number,
-  contexte: any
+  contexte: any,
+  prisma = defaultPrisma
 ): Promise<void> {
   const exists = await prisma.alertes_utilisateurs.findFirst({
     where: {
@@ -36,7 +37,7 @@ async function creerAlerteIfNotExists(
 /**
  * Détecte et crée automatiquement les alertes basées sur les règles métier
  */
-export async function detecterAlertes(): Promise<AlerteResult> {
+export async function detecterAlertes(prisma = defaultPrisma): Promise<AlerteResult> {
   console.log('🔍 [AlertesDetection] Détection des alertes');
 
   let alertesCreees = 0;
@@ -79,7 +80,8 @@ export async function detecterAlertes(): Promise<AlerteResult> {
             !user.genre_id ? 'genre' : null,
             !user.abonnement_id ? 'abonnement' : null,
           ].filter(Boolean),
-        }
+        },
+        prisma
       );
       alertesCreees++;
     }
@@ -98,7 +100,8 @@ export async function detecterAlertes(): Promise<AlerteResult> {
         {
           echeancesRetard: paiementsRetard.length,
           montantTotal: montantTotal.toFixed(2),
-        }
+        },
+        prisma
       );
       alertesCreees++;
     }
@@ -120,7 +123,8 @@ export async function detecterAlertes(): Promise<AlerteResult> {
         {
           joursRetard,
           montantTotal: montantTotal.toFixed(2),
-        }
+        },
+        prisma
       );
       alertesCreees++;
     }
@@ -130,7 +134,8 @@ export async function detecterAlertes(): Promise<AlerteResult> {
       await creerAlerteIfNotExists(
         user.id,
         typesMap['SANS_ABONNEMENT'],
-        { statut: 'Aucun abonnement actif' }
+        { statut: 'Aucun abonnement actif' },
+        prisma
       );
       alertesCreees++;
     }

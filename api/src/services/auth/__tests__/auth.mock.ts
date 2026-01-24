@@ -2,60 +2,41 @@
  * Mock local pour les tests du service Auth
  */
 
-// Helper pour créer des fonctions mock sans dépendance à jest
+import bcrypt from 'bcrypt';
+
+// Helper pour créer des fonctions mock
 const createMockFn = <T extends (...args: any[]) => any>(implementation: T) => {
   return implementation;
 };
+
+// Hash précalculé de 'password123' avec bcrypt - sera généré au runtime
+let PASSWORD_HASH = '$2b$12$veryLongHashThatWillBeReplaced';
 
 // Données mock - Utilisateurs
 export const mockUtilisateurs = [
   {
     id: 1,
-    email: 'jean@test.com',
-    password: '$2b$12$/CLuvALRTiMm.h0.k2dBM.vbyriSZ.4llhqtCvT7/OkL9RLW58Wce', // hash de "password123"
     first_name: 'Jean',
     last_name: 'Dupont',
-    nom_utilisateur: 'jdupont',
-    phone: '0612345678',
-    date_of_birth: new Date('1990-01-01'),
-    genre_id: 1,
-    grade_id: 2,
-    abonnement_id: null,
+    email: 'jean@test.com',
+    password: PASSWORD_HASH,
     status_id: 1,
     date_inscription: new Date('2025-01-01'),
-    paiements: [],
-    inscriptions: [],
-    echeances_paiements: [],
+    date_of_birth: new Date('1990-01-01'),
   },
   {
     id: 2,
-    email: 'marie@test.com',
-    password: '$2b$12$/CLuvALRTiMm.h0.k2dBM.vbyriSZ.4llhqtCvT7/OkL9RLW58Wce',
     first_name: 'Marie',
     last_name: 'Martin',
-    nom_utilisateur: 'mmartin',
-    phone: '0698765432',
-    date_of_birth: new Date('1985-05-15'),
-    genre_id: 2,
-    grade_id: 3,
-    abonnement_id: 1,
+    email: 'marie@test.com',
+    password: PASSWORD_HASH,
     status_id: 1,
-    date_inscription: new Date('2024-06-15'),
-    paiements: [{ id: 1, date_paiement: new Date('2026-01-10') }],
-    inscriptions: [{ id: 1 }, { id: 2 }],
-    echeances_paiements: [
-      {
-        id: 1,
-        utilisateur_id: 2,
-        date_echeance: new Date('2025-12-01'),
-        montant: 150,
-        statut: 'en_attente',
-      },
-    ],
+    date_inscription: new Date('2025-01-02'),
+    date_of_birth: new Date('1992-05-15'),
   },
 ];
 
-// Données mock - Tokens de réinitialisation
+// Données mock - Tokens de récupération
 export const mockPasswordResetTokens = [
   {
     id: 1,
@@ -69,138 +50,179 @@ export const mockPasswordResetTokens = [
     id: 2,
     user_id: 2,
     token: 'expired-token-456',
-    expires_at: new Date(Date.now() - 60 * 60 * 1000), // Expiré
+    expires_at: new Date(Date.now() - 60 * 60 * 1000), // Expiré il y a 1h
     created_at: new Date(Date.now() - 2 * 60 * 60 * 1000),
     utilisateurs: mockUtilisateurs[1],
   },
 ];
 
-// Données mock - Tentatives d'authentification
-export const mockAuthAttempts = [
-  { id: 1, email: 'jean@test.com', success: true, attempted_at: new Date() },
-  { id: 2, email: 'wrong@test.com', success: false, attempted_at: new Date() },
-];
-
-// Données mock - Tentatives de réinitialisation
-export const mockPasswordResetAttempts = [
-  { id: 1, email: 'jean@test.com', success: true, attempted_at: new Date() },
-];
+// Initialiser le hash password au chargement du module
+(async () => {
+  PASSWORD_HASH = await bcrypt.hash('password123', 12);
+  mockUtilisateurs[0].password = PASSWORD_HASH;
+  mockUtilisateurs[1].password = PASSWORD_HASH;
+})();
 
 // Factory pour créer un mock Prisma
 export const createMockPrisma = () => {
   // Copie des données pour permettre la réinitialisation
-  let utilisateurs = JSON.parse(JSON.stringify(mockUtilisateurs));
+  let utilisateurs = [...mockUtilisateurs];
   let passwordResetTokens = [...mockPasswordResetTokens];
-  let authAttempts = [...mockAuthAttempts];
-  let passwordResetAttempts = [...mockPasswordResetAttempts];
+  let authAttempts: any[] = [];
+  let passwordResetAttempts: any[] = [];
+  let manualRecoveryRequests: any[] = [];
 
   return {
     utilisateurs: {
-      findUnique: createMockFn((args: any) => {
-        const user = utilisateurs.find((u: any) => 
-          (args.where.email && u.email === args.where.email) ||
-          (args.where.id && u.id === args.where.id)
-        );
-        return Promise.resolve(user || null);
-      }),
-
-      findFirst: createMockFn((args: any) => {
+      findFirst: createMockFn(async (args?: any) => {
         let results = [...utilisateurs];
         
         if (args?.where?.email) {
-          results = results.filter((u: any) => u.email === args.where.email);
+          results = results.filter(u => u.email === args.where.email);
+        }
+        if (args?.where?.status_id) {
+          results = results.filter(u => u.status_id === args.where.status_id);
+        }
+        if (args?.where?.id) {
+          results = results.filter(u => u.id === args.where.id);
         }
         
-        return Promise.resolve(results[0] || null);
+        return results[0] || null;
       }),
 
-      create: createMockFn((args: any) => {
-        // Vérifier contrainte unique sur email
-        if (utilisateurs.some((u: any) => u.email === args.data.email)) {
-          throw new Error('Unique constraint failed');
+      findUnique: createMockFn(async (args: any) => {
+        const user = utilisateurs.find(u => u.id === args.where.id);
+        if (!user) return null;
+        
+        // Simuler les relations si demandées
+        const result: any = { ...user };
+        if (args.include?.paiements || args.select?.paiements) {
+          result.paiements = [];
+        }
+        if (args.include?.inscriptions || args.select?.inscriptions) {
+          result.inscriptions = [];
         }
         
+        return result;
+      }),
+
+      create: createMockFn(async (args: any) => {
         const newUser = {
           id: utilisateurs.length + 1,
           ...args.data,
-          date_inscription: new Date(),
-          paiements: [],
-          inscriptions: [],
-          echeances_paiements: [],
+          date_inscription: args.data.date_inscription || new Date(),
         };
+        
+        // Vérifier doublon email (erreur P2002)
+        if (utilisateurs.find(u => u.email === args.data.email)) {
+          const error: any = new Error('Unique constraint failed');
+          error.code = 'P2002';
+          throw error;
+        }
+        
         utilisateurs.push(newUser);
-        return Promise.resolve(newUser);
+        return newUser;
       }),
 
-      update: createMockFn((args: any) => {
-        const index = utilisateurs.findIndex((u: any) => u.id === args.where.id);
-        if (index === -1) return Promise.resolve(null);
+      update: createMockFn(async (args: any) => {
+        const index = utilisateurs.findIndex(u => u.id === args.where.id);
+        if (index === -1) return null;
         
         utilisateurs[index] = { ...utilisateurs[index], ...args.data };
-        return Promise.resolve(utilisateurs[index]);
+        return utilisateurs[index];
       }),
 
-      count: createMockFn((args?: any) => {
+      updateMany: createMockFn(async (args: any) => {
+        let count = 0;
+        utilisateurs = utilisateurs.map(u => {
+          const matches = (!args.where.id || u.id === args.where.id) &&
+                         (!args.where.status_id || u.status_id === args.where.status_id);
+          if (matches) {
+            count++;
+            return { ...u, ...args.data };
+          }
+          return u;
+        });
+        return { count };
+      }),
+
+      count: createMockFn(async (args?: any) => {
         let results = [...utilisateurs];
         
         if (args?.where?.email) {
-          results = results.filter((u: any) => u.email === args.where.email);
+          results = results.filter(u => u.email === args.where.email);
+        }
+        if (args?.where?.status_id) {
+          results = results.filter(u => u.status_id === args.where.status_id);
         }
         
-        return Promise.resolve(results.length);
+        return results.length;
       }),
     },
 
     password_reset_tokens: {
-      create: createMockFn((args: any) => {
+      findFirst: createMockFn(async (args: any) => {
+        let results = [...passwordResetTokens];
+        
+        if (args?.where?.token) {
+          results = results.filter(t => t.token === args.where.token);
+        }
+        if (args?.where?.expires_at?.gt) {
+          results = results.filter(t => t.expires_at > args.where.expires_at.gt);
+        }
+        
+        return results[0] || null;
+      }),
+
+      create: createMockFn(async (args: any) => {
         const newToken = {
           id: passwordResetTokens.length + 1,
           ...args.data,
-          created_at: new Date(),
+          created_at: args.data.created_at || new Date(),
         };
         passwordResetTokens.push(newToken);
-        return Promise.resolve(newToken);
+        return newToken;
       }),
 
-      findFirst: createMockFn((args: any) => {
-        const token = passwordResetTokens.find(t => t.token === args.where.token);
-        if (token && args.include?.utilisateurs) {
-          return Promise.resolve({
-            ...token,
-            utilisateurs: utilisateurs.find((u: any) => u.id === token.user_id),
-          });
-        }
-        return Promise.resolve(token || null);
-      }),
-
-      delete: createMockFn((args: any) => {
-        const index = passwordResetTokens.findIndex(t => t.id === args.where.id);
-        if (index === -1) return Promise.resolve(null);
+      deleteMany: createMockFn(async (args: any) => {
+        const before = passwordResetTokens.length;
         
-        const deleted = passwordResetTokens[index];
-        passwordResetTokens.splice(index, 1);
-        return Promise.resolve(deleted);
+        if (args?.where?.user_id) {
+          passwordResetTokens = passwordResetTokens.filter(t => t.user_id !== args.where.user_id);
+        }
+        if (args?.where?.token) {
+          passwordResetTokens = passwordResetTokens.filter(t => t.token !== args.where.token);
+        }
+        if (args?.where?.expires_at?.lt) {
+          passwordResetTokens = passwordResetTokens.filter(t => t.expires_at >= args.where.expires_at.lt);
+        }
+        
+        return { count: before - passwordResetTokens.length };
       }),
 
-      deleteMany: createMockFn((args: any) => {
-        const initialLength = passwordResetTokens.length;
-        passwordResetTokens = passwordResetTokens.filter(t => t.user_id !== args.where.user_id);
-        return Promise.resolve({ count: initialLength - passwordResetTokens.length });
+      count: createMockFn(async (args?: any) => {
+        let results = [...passwordResetTokens];
+        
+        if (args?.where?.expires_at?.gt) {
+          results = results.filter(t => t.expires_at > args.where.expires_at.gt);
+        }
+        
+        return results.length;
       }),
     },
 
     auth_attempts: {
-      create: createMockFn((args: any) => {
+      create: createMockFn(async (args: any) => {
         const newAttempt = {
           id: authAttempts.length + 1,
           ...args.data,
-          attempted_at: new Date(),
+          attempted_at: args.data.attempted_at || new Date(),
         };
         authAttempts.push(newAttempt);
-        return Promise.resolve(newAttempt);
+        return newAttempt;
       }),
 
-      findMany: createMockFn((args?: any) => {
+      count: createMockFn(async (args?: any) => {
         let results = [...authAttempts];
         
         if (args?.where?.email) {
@@ -209,29 +231,82 @@ export const createMockPrisma = () => {
         if (args?.where?.attempted_at?.gte) {
           results = results.filter(a => a.attempted_at >= args.where.attempted_at.gte);
         }
+        if (args?.where?.success !== undefined) {
+          results = results.filter(a => a.success === args.where.success);
+        }
         
-        return Promise.resolve(results);
+        return results.length;
       }),
     },
 
     password_reset_attempts: {
-      create: createMockFn((args: any) => {
+      create: createMockFn(async (args: any) => {
         const newAttempt = {
           id: passwordResetAttempts.length + 1,
           ...args.data,
-          attempted_at: new Date(),
+          attempted_at: args.data.attempted_at || new Date(),
         };
         passwordResetAttempts.push(newAttempt);
-        return Promise.resolve(newAttempt);
+        return newAttempt;
+      }),
+
+      count: createMockFn(async (args?: any) => {
+        let results = [...passwordResetAttempts];
+        
+        if (args?.where?.email) {
+          results = results.filter(a => a.email === args.where.email);
+        }
+        if (args?.where?.attempted_at?.gte) {
+          results = results.filter(a => a.attempted_at >= args.where.attempted_at.gte);
+        }
+        
+        return results.length;
       }),
     },
+
+    manual_recovery_requests: {
+      create: createMockFn(async (args: any) => {
+        const newRequest = {
+          id: manualRecoveryRequests.length + 1,
+          ...args.data,
+          created_at: args.data.created_at || new Date(),
+        };
+        manualRecoveryRequests.push(newRequest);
+        return newRequest;
+      }),
+    },
+
+    // Mock de la transaction Prisma
+    $transaction: createMockFn(async (callback: any) => {
+      const tx = {
+        utilisateurs: {
+          update: createMockFn(async (args: any) => {
+            const index = utilisateurs.findIndex(u => u.id === args.where.id);
+            if (index === -1) return null;
+            
+            utilisateurs[index] = { ...utilisateurs[index], ...args.data };
+            return utilisateurs[index];
+          }),
+        },
+        password_reset_tokens: {
+          deleteMany: createMockFn(async (args: any) => {
+            const before = passwordResetTokens.length;
+            passwordResetTokens = passwordResetTokens.filter(t => t.user_id !== args.where.user_id);
+            return { count: before - passwordResetTokens.length };
+          }),
+        },
+      };
+      
+      return callback(tx);
+    }),
 
     // Méthode pour réinitialiser les données entre les tests
     _reset: () => {
       utilisateurs = JSON.parse(JSON.stringify(mockUtilisateurs));
-      passwordResetTokens = [...mockPasswordResetTokens];
-      authAttempts = [...mockAuthAttempts];
-      passwordResetAttempts = [...mockPasswordResetAttempts];
+      passwordResetTokens = JSON.parse(JSON.stringify(mockPasswordResetTokens));
+      authAttempts = [];
+      passwordResetAttempts = [];
+      manualRecoveryRequests = [];
     },
   };
 };

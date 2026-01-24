@@ -2,7 +2,7 @@
  * Mutations des alertes (créer, résoudre, ignorer)
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type {
   AlerteUtilisateur,
   CreateAlerteInput,
@@ -14,7 +14,7 @@ import type {
 /**
  * Résout une alerte
  */
-export async function resoudreAlerte(input: ResoudreAlerteInput): Promise<AlerteResult> {
+export async function resoudreAlerte(input: ResoudreAlerteInput, prisma = defaultPrisma): Promise<AlerteResult> {
   console.log(`✅ [AlertesMutations] Résolution alerte ${input.alerteId}`);
 
   await prisma.$transaction(async (tx: any) => {
@@ -49,7 +49,7 @@ export async function resoudreAlerte(input: ResoudreAlerteInput): Promise<Alerte
 /**
  * Ignore une alerte
  */
-export async function ignorerAlerte(input: IgnorerAlerteInput): Promise<AlerteResult> {
+export async function ignorerAlerte(input: IgnorerAlerteInput, prisma = defaultPrisma): Promise<AlerteResult> {
   console.log(`🚫 [AlertesMutations] Ignore alerte ${input.alerteId}`);
 
   await prisma.alertes_utilisateurs.update({
@@ -70,7 +70,7 @@ export async function ignorerAlerte(input: IgnorerAlerteInput): Promise<AlerteRe
 /**
  * Crée une nouvelle alerte manuellement
  */
-export async function creerAlerte(input: CreateAlerteInput): Promise<AlerteUtilisateur> {
+export async function creerAlerte(input: CreateAlerteInput, prisma = defaultPrisma): Promise<AlerteUtilisateur> {
   console.log(`➕ [AlertesMutations] Création alerte utilisateur ${input.utilisateurId}`);
 
   const alerte = await prisma.alertes_utilisateurs.create({

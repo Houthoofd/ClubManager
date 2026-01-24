@@ -2,7 +2,7 @@
  * Mutations pour le domaine Inscriptions
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type {
   CoursOperationResult,
   InscriptionUtilisateur,
@@ -15,7 +15,8 @@ import type {
  */
 export async function verifierInscriptionUtilisateur(
   coursId: number,
-  utilisateurId: number
+  utilisateurId: number,
+  prisma = defaultPrisma
 ): Promise<VerificationInscriptionResult> {
   const inscription = await prisma.inscriptions.findFirst({
     where: {
@@ -52,10 +53,11 @@ export async function verifierInscriptionUtilisateur(
  * Inscrire un utilisateur à un cours
  */
 export async function inscrireUtilisateurAuCours(
-  data: InscriptionUtilisateur
+  data: InscriptionUtilisateur,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
-    const verification = await verifierInscriptionUtilisateur(data.cours_id, data.utilisateur_id);
+    const verification = await verifierInscriptionUtilisateur(data.cours_id, data.utilisateur_id, prisma);
     
     if (verification.isBooked) {
       return {
@@ -101,10 +103,11 @@ export async function inscrireUtilisateurAuCours(
  * Désinscrire un utilisateur d'un cours
  */
 export async function desinscrireUtilisateurDuCours(
-  data: InscriptionUtilisateur
+  data: InscriptionUtilisateur,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
-    const verification = await verifierInscriptionUtilisateur(data.cours_id, data.utilisateur_id);
+    const verification = await verifierInscriptionUtilisateur(data.cours_id, data.utilisateur_id, prisma);
     
     if (!verification.isBooked) {
       return {
@@ -137,7 +140,8 @@ export async function desinscrireUtilisateurDuCours(
  * Valider la présence d'un utilisateur à un cours
  */
 export async function validerPresenceUtilisateur(
-  data: ValidationPresence
+  data: ValidationPresence,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
     const updated = await prisma.inscriptions.updateMany({
@@ -175,7 +179,8 @@ export async function validerPresenceUtilisateur(
  * Annuler/Marquer absent un utilisateur pour un cours
  */
 export async function annulerPresenceUtilisateur(
-  data: ValidationPresence
+  data: ValidationPresence,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
     const updated = await prisma.inscriptions.updateMany({

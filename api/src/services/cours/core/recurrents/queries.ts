@@ -2,13 +2,13 @@
  * Queries pour le domaine Cours Récurrents
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { JourCoursRecurrent } from '@clubmanager/types';
 
 /**
  * Obtenir tous les jours de cours récurrents avec professeurs
  */
-export async function obtenirJoursDeCours(): Promise<JourCoursRecurrent[]> {
+export async function obtenirJoursDeCours(prisma = defaultPrisma): Promise<JourCoursRecurrent[]> {
   const coursRecurrents = await prisma.cours_recurrent.findMany({
     include: {
       cours_recurrent_professeur: {
@@ -44,14 +44,14 @@ export async function obtenirJoursDeCours(): Promise<JourCoursRecurrent[]> {
 /**
  * Obtenir jours de cours par semaine
  */
-export async function obtenirJoursDeCoursParSemaine(semaine: number): Promise<JourCoursRecurrent[]> {
-  return await obtenirJoursDeCours();
+export async function obtenirJoursDeCoursParSemaine(semaine: number, prisma = defaultPrisma): Promise<JourCoursRecurrent[]> {
+  return await obtenirJoursDeCours(prisma);
 }
 
 /**
  * Obtenir un cours récurrent par ID
  */
-export async function obtenirCoursRecurrentParId(id: number) {
+export async function obtenirCoursRecurrentParId(id: number, prisma = defaultPrisma) {
   return await prisma.cours_recurrent.findUnique({
     where: { id },
     include: {
@@ -78,7 +78,8 @@ export async function trouverCoursRecurrent(
   jour: string,
   type_cours: string,
   heure_debut: string,
-  heure_fin: string
+  heure_fin: string,
+  prisma = defaultPrisma
 ): Promise<number | null> {
   const { joursSemaineMap } = await import('../helpers.js');
   const jourNum = joursSemaineMap[jour.toLowerCase()];

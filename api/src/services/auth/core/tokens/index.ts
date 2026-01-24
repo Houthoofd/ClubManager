@@ -2,7 +2,7 @@
  * Module de gestion des tokens de récupération de mot de passe
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import crypto from 'crypto';
 import type { AuthResult, PasswordResetToken } from '@clubmanager/types';
 
@@ -18,7 +18,8 @@ export function genererTokenSecurise(length: number = 32): string {
  */
 export async function creerTokenRecuperation(
   userId: number,
-  expirationHours: number = 1
+  expirationHours: number = 1,
+  prisma = defaultPrisma
 ): Promise<{ success: boolean; token?: string; message: string }> {
   console.log(`🎫 [AuthTokens] Création token récupération pour utilisateur ${userId}`);
 
@@ -61,7 +62,8 @@ export async function creerTokenRecuperation(
  * Vérifie un token de récupération
  */
 export async function verifierTokenRecuperation(
-  token: string
+  token: string,
+  prisma = defaultPrisma
 ): Promise<PasswordResetToken | null> {
   console.log('🔍 [AuthTokens] Vérification token récupération');
 
@@ -109,7 +111,7 @@ export async function verifierTokenRecuperation(
 /**
  * Supprime un token après utilisation
  */
-export async function marquerTokenUtilise(token: string): Promise<AuthResult> {
+export async function marquerTokenUtilise(token: string, prisma = defaultPrisma): Promise<AuthResult> {
   console.log('🗑️ [AuthTokens] Suppression token utilisé');
 
   const deleted = await prisma.password_reset_tokens.deleteMany({
@@ -134,12 +136,13 @@ export async function marquerTokenUtilise(token: string): Promise<AuthResult> {
  */
 export async function reinitialiserMotDePasseAvecToken(
   token: string,
-  newPasswordHash: string
+  newPasswordHash: string,
+  prisma = defaultPrisma
 ): Promise<AuthResult> {
   console.log('🔄 [AuthTokens] Réinitialisation mot de passe avec token');
 
   // Vérifier le token
-  const tokenData = await verifierTokenRecuperation(token);
+  const tokenData = await verifierTokenRecuperation(token, prisma);
 
   if (!tokenData) {
     return {
@@ -181,7 +184,7 @@ export async function reinitialiserMotDePasseAvecToken(
 /**
  * Nettoie les tokens expirés
  */
-export async function nettoyerTokensExpires(): Promise<{ count: number }> {
+export async function nettoyerTokensExpires(prisma = defaultPrisma): Promise<{ count: number }> {
   console.log('🧹 [AuthTokens] Nettoyage tokens expirés');
 
   const deleted = await prisma.password_reset_tokens.deleteMany({
@@ -202,7 +205,8 @@ export async function nettoyerTokensExpires(): Promise<{ count: number }> {
  */
 export async function enregistrerTentativeRecuperation(
   email: string,
-  success: boolean
+  success: boolean,
+  prisma = defaultPrisma
 ): Promise<void> {
   try {
     await prisma.password_reset_attempts.create({
@@ -223,7 +227,8 @@ export async function enregistrerTentativeRecuperation(
  */
 export async function verifierTentativesRecuperationRecentes(
   email: string,
-  minutes: number = 15
+  minutes: number = 15,
+  prisma = defaultPrisma
 ): Promise<number> {
   const timeAgo = new Date(Date.now() - minutes * 60 * 1000);
 

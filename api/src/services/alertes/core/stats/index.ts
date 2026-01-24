@@ -2,13 +2,13 @@
  * Statistiques et dashboard des alertes
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { AlerteDashboard, AlerteStats } from '@clubmanager/types';
 
 /**
  * Obtient le dashboard des alertes avec compteurs par priorité
  */
-export async function obtenirDashboardAlertes(): Promise<AlerteDashboard> {
+export async function obtenirDashboardAlertes(prisma = defaultPrisma): Promise<AlerteDashboard> {
   console.log('📊 [AlertesStats] Récupération dashboard alertes');
 
   const [alertesParPriorite, total] = await Promise.all([
@@ -58,7 +58,7 @@ export async function obtenirDashboardAlertes(): Promise<AlerteDashboard> {
 /**
  * Obtient les statistiques des alertes (30 derniers jours)
  */
-export async function obtenirStatistiquesAlertes(): Promise<AlerteStats> {
+export async function obtenirStatistiquesAlertes(prisma = defaultPrisma): Promise<AlerteStats> {
   console.log('📈 [AlertesStats] Récupération statistiques');
 
   const date30JoursAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

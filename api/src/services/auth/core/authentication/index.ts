@@ -2,14 +2,18 @@
  * Module d'authentification - Connexion et validation
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import bcrypt from 'bcrypt';
 import type { AuthResult } from '@clubmanager/types';
 
 /**
  * Authentifie un utilisateur avec email et mot de passe
  */
-export async function authentifierUtilisateur(email: string, password: string): Promise<AuthResult> {
+export async function authentifierUtilisateur(
+  email: string,
+  password: string,
+  prisma = defaultPrisma
+): Promise<AuthResult> {
   console.log(`🔐 [AuthAuthentication] Tentative d'authentification pour ${email}`);
 
   // Rechercher l'utilisateur actif
@@ -65,12 +69,15 @@ export async function authentifierUtilisateur(email: string, password: string): 
 /**
  * Crée un nouveau compte utilisateur
  */
-export async function creerCompteUtilisateur(input: {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-}): Promise<AuthResult> {
+export async function creerCompteUtilisateur(
+  input: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  },
+  prisma = defaultPrisma
+): Promise<AuthResult> {
   console.log(`➕ [AuthAuthentication] Création compte pour ${input.email}`);
 
   // Hasher le mot de passe
@@ -126,7 +133,7 @@ export async function creerCompteUtilisateur(input: {
 /**
  * Vérifie si un email existe déjà
  */
-export async function emailExiste(email: string): Promise<boolean> {
+export async function emailExiste(email: string, prisma = defaultPrisma): Promise<boolean> {
   const count = await prisma.utilisateurs.count({
     where: { email },
   });
@@ -139,7 +146,8 @@ export async function emailExiste(email: string): Promise<boolean> {
  */
 export async function enregistrerTentativeConnexion(
   email: string,
-  success: boolean
+  success: boolean,
+  prisma = defaultPrisma
 ): Promise<void> {
   try {
     await prisma.auth_attempts.create({
@@ -160,7 +168,8 @@ export async function enregistrerTentativeConnexion(
  */
 export async function obtenirTentativesConnexionRecentes(
   email: string,
-  minutes: number = 15
+  minutes: number = 15,
+  prisma = defaultPrisma
 ): Promise<number> {
   const timeAgo = new Date(Date.now() - minutes * 60 * 1000);
 

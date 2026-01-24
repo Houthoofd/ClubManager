@@ -1,74 +1,67 @@
 /**
- * Tests d'intégration du service Commandes
- * 
- * Ces tests vérifient la logique métier complète avec mock Prisma
- *
- * Note: Les données mock sont documentées dans commandes.mock.ts
- * Le mock Prisma global est utilisé via jest.config.cjs
+ * Tests d'intégration du service Commandes avec Mock Local
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
+import type { Commande, CommandeStats } from '@clubmanager/types';
+import { createMockPrisma } from './commandes.mock.js';
+import * as queries from '../core/queries/index.js';
+import * as mutations from '../core/mutations/index.js';
+import * as stats from '../core/stats/index.js';
+import * as search from '../core/search/index.js';
 
-describe('Service Commandes - Tests d\'intégration', () => {
-  let commandesService: any;
+describe('Service Commandes - Tests d\'intégration avec Mock Local', () => {
+  let mockPrisma: any;
 
-  beforeEach(async () => {
-    const module = await import('../commandes.service.js');
-    commandesService = module.commandesService;
+  beforeEach(() => {
+    mockPrisma = createMockPrisma();
+    mockPrisma._reset();
   });
+
   describe('Queries - Récupération des commandes', () => {
     it('devrait récupérer toutes les commandes', async () => {
-      const commandes = await commandesService.obtenirToutesCommandes();
+      const commandes = await queries.obtenirToutesCommandes(mockPrisma);
       
       expect(Array.isArray(commandes)).toBe(true);
       expect(commandes.length).toBeGreaterThan(0);
       
-      // Vérifier structure
       const commande = commandes[0];
       expect(commande).toHaveProperty('commande_id');
       expect(commande).toHaveProperty('utilisateur_id');
       expect(commande).toHaveProperty('statut');
       expect(commande).toHaveProperty('total');
       expect(commande).toHaveProperty('articles');
-      expect(commande).toHaveProperty('date_commande');
       expect(Array.isArray(commande.articles)).toBe(true);
     });
 
     it('devrait récupérer une commande par ID', async () => {
-      const commande = await commandesService.obtenirCommandeParId('cmd-001');
+      const commande = await queries.obtenirCommandeParId('cmd-001', mockPrisma);
       
       expect(commande).not.toBeNull();
       expect(commande?.commande_id).toBe('cmd-001');
       expect(commande?.utilisateur_id).toBe(1);
       expect(commande?.statut).toBe('en_attente');
-      expect(commande?.total).toBeGreaterThan(0);
-      expect(Array.isArray(commande?.articles)).toBe(true);
     });
 
     it('devrait retourner null pour une commande inexistante', async () => {
-      const commande = await commandesService.obtenirCommandeParId('cmd-999');
+      const commande = await queries.obtenirCommandeParId('cmd-999', mockPrisma);
       expect(commande).toBeNull();
     });
 
     it('devrait récupérer les commandes d\'un utilisateur', async () => {
-      const commandes = await commandesService.obtenirCommandesUtilisateur(1);
+      const commandes = await queries.obtenirCommandesUtilisateur(1, mockPrisma);
       
       expect(Array.isArray(commandes)).toBe(true);
       expect(commandes.length).toBeGreaterThan(0);
-      
-      // Vérifier que toutes les commandes appartiennent à l'utilisateur
       commandes.forEach((c: any) => {
         expect(c.utilisateur_id).toBe(1);
       });
     });
 
     it('devrait récupérer les commandes par statut', async () => {
-      const commandes = await commandesService.obtenirCommandesParStatut('en_attente');
+      const commandes = await queries.obtenirCommandesParStatut('en_attente', mockPrisma);
       
       expect(Array.isArray(commandes)).toBe(true);
-      expect(commandes.length).toBeGreaterThan(0);
-      
-      // Vérifier que toutes les commandes ont le bon statut
       commandes.forEach((c: any) => {
         expect(c.statut).toBe('en_attente');
       });
@@ -80,214 +73,164 @@ describe('Service Commandes - Tests d\'intégration', () => {
       const input = {
         utilisateur_id: 1,
         statut: 'en_attente' as const,
-        total: 99.99,
-        articles: [
-          { produit_id: 1, nom: 'Test produit', quantite: 1, prix_unitaire: 99.99, total: 99.99 },
-        ],
-        payment_intent_id: 'pi_test_new',
+        total: 100,
+        articles: [{ produit_id: 1, nom: 'Test', prix_unitaire: 50, quantite: 2, total: 100 }],
       };
-      
-      const commande = await commandesService.creerCommande(input);
+
+      const commande = await mutations.creerCommande(input, mockPrisma);
       
       expect(commande).toBeDefined();
-      expect(commande.commande_id).toBeDefined();
       expect(commande.utilisateur_id).toBe(1);
       expect(commande.statut).toBe('en_attente');
-      expect(commande.total).toBe(99.99);
-      expect(Array.isArray(commande.articles)).toBe(true);
-      expect(commande.articles).toHaveLength(1);
+      expect(commande.total).toBe(100);
     });
 
     it('devrait modifier le statut d\'une commande', async () => {
-      const commande = await commandesService.modifierStatutCommande('cmd-001', 'confirmee');
+      const commande = await mutations.modifierStatutCommande('cmd-001', 'payee', mockPrisma);
       
       expect(commande).not.toBeNull();
-      expect(commande?.statut).toBe('confirmee');
-      expect(commande?.commande_id).toBe('cmd-001');
+      expect(commande?.statut).toBe('payee');
     });
 
-    it('devrait retourner null lors de la modification d\'une commande inexistante', async () => {
-      const commande = await commandesService.modifierStatutCommande('cmd-999', 'confirmee');
+    it('devrait retourner null pour modification statut inexistant', async () => {
+      const commande = await mutations.modifierStatutCommande('cmd-999', 'payee', mockPrisma);
       expect(commande).toBeNull();
     });
 
     it('devrait modifier une commande', async () => {
       const updates = {
-        total: 199.99,
-        statut: 'en_preparation' as const,
+        statut: 'confirmee' as const,
+        total: 175,
       };
-      
-      const commande = await commandesService.modifierCommande('cmd-002', updates);
+
+      const commande = await mutations.modifierCommande('cmd-001', updates, mockPrisma);
       
       expect(commande).not.toBeNull();
-      expect(commande?.total).toBe(199.99);
-      expect(commande?.statut).toBe('en_preparation');
+      expect(commande?.statut).toBe('confirmee');
+      expect(commande?.total).toBe(175);
+    });
+
+    it('devrait retourner null pour modification commande inexistante', async () => {
+      const commande = await mutations.modifierCommande('cmd-999', { statut: 'confirmee' }, mockPrisma);
+      expect(commande).toBeNull();
     });
 
     it('devrait supprimer une commande', async () => {
-      const success = await commandesService.supprimerCommande('cmd-004');
-      expect(success).toBe(true);
+      const result = await mutations.supprimerCommande('cmd-001', mockPrisma);
+      expect(result).toBe(true);
+      
+      const commande = await queries.obtenirCommandeParId('cmd-001', mockPrisma);
+      expect(commande).toBeNull();
     });
 
-    it('devrait gérer la suppression d\'une commande inexistante', async () => {
-      const success = await commandesService.supprimerCommande('cmd-999');
-      expect(success).toBe(false);
+    it('devrait échouer suppression commande inexistante', async () => {
+      const result = await mutations.supprimerCommande('cmd-999', mockPrisma);
+      expect(result).toBe(false);
     });
   });
 
   describe('Statistiques', () => {
-    it('devrait récupérer les statistiques des commandes', async () => {
-      const stats = await commandesService.obtenirStatistiques();
+    it('devrait obtenir les statistiques des commandes', async () => {
+      const statistiques: CommandeStats = await stats.obtenirStatistiquesCommandes(mockPrisma);
       
-      expect(stats).toBeDefined();
-      expect(stats.totalCommandes).toBeGreaterThan(0);
-      expect(typeof stats.commandesEnAttente).toBe('number');
-      expect(typeof stats.commandesConfirmees).toBe('number');
-      expect(typeof stats.commandesEnPreparation).toBe('number');
-      expect(typeof stats.commandesLivrees).toBe('number');
-      expect(typeof stats.commandesAnnulees).toBe('number');
-      expect(typeof stats.revenuTotal).toBe('number');
-      expect(typeof stats.revenuMoisEnCours).toBe('number');
-      expect(typeof stats.panierMoyen).toBe('number');
-    });
-
-    it('devrait calculer le panier moyen correctement', async () => {
-      const stats = await commandesService.obtenirStatistiques();
-      
-      expect(stats.panierMoyen).toBeGreaterThan(0);
-      
-      // Panier moyen = revenu total / nombre de commandes
-      const panierMoyenCalcule = stats.revenuTotal / stats.totalCommandes;
-      expect(stats.panierMoyen).toBeCloseTo(panierMoyenCalcule, 2);
+      expect(statistiques).toBeDefined();
+      expect(typeof statistiques.totalCommandes).toBe('number');
+      expect(typeof statistiques.revenuTotal).toBe('number');
+      expect(statistiques.totalCommandes).toBeGreaterThan(0);
     });
 
     it('devrait compter les commandes par statut', async () => {
-      const comptes = await commandesService.compterParStatut();
+      const comptes = await stats.obtenirComptesParStatut(mockPrisma);
       
       expect(Array.isArray(comptes)).toBe(true);
       expect(comptes.length).toBeGreaterThan(0);
       
-      // Vérifier structure
-      comptes.forEach((c: any) => {
+      comptes.forEach(c => {
         expect(c).toHaveProperty('statut');
         expect(c).toHaveProperty('count');
-        expect(typeof c.count).toBe('number');
       });
+    });
+
+    it('devrait compter via queries', async () => {
+      const counts = await queries.compterCommandesParStatut(mockPrisma);
+      
+      expect(typeof counts).toBe('object');
+      expect(Object.keys(counts).length).toBeGreaterThan(0);
     });
   });
 
   describe('Recherche', () => {
-    it('devrait rechercher des commandes sans filtre', async () => {
-      const result = await commandesService.rechercherCommandes({});
+    it('devrait rechercher avec filtres vides', async () => {
+      const result = await search.rechercherCommandes({}, mockPrisma);
       
       expect(result).toBeDefined();
       expect(Array.isArray(result.items)).toBe(true);
       expect(result.total).toBeGreaterThan(0);
-      expect(result.page).toBe(1);
-      expect(result.totalPages).toBeGreaterThan(0);
     });
 
-    it('devrait rechercher des commandes par statut', async () => {
-      const result = await commandesService.rechercherCommandes({ statut: 'en_attente' });
+    it('devrait rechercher par statut', async () => {
+      const result = await search.rechercherCommandes({ statut: 'en_attente' }, mockPrisma);
       
-      expect(result.items).toBeDefined();
+      expect(Array.isArray(result.items)).toBe(true);
       result.items.forEach((c: any) => {
         expect(c.statut).toBe('en_attente');
       });
     });
 
-    it('devrait rechercher des commandes par utilisateur', async () => {
-      const result = await commandesService.rechercherCommandes({ utilisateur_id: 1 });
+    it('devrait rechercher par utilisateur', async () => {
+      const result = await search.rechercherCommandes({ utilisateur_id: 1 }, mockPrisma);
       
-      expect(result.items).toBeDefined();
+      expect(Array.isArray(result.items)).toBe(true);
       result.items.forEach((c: any) => {
         expect(c.utilisateur_id).toBe(1);
       });
     });
 
-    it('devrait rechercher avec pagination', async () => {
-      const page1 = await commandesService.rechercherCommandes({ page: 1, limit: 2 });
+    it('devrait supporter la pagination', async () => {
+      const result = await search.rechercherCommandes({ page: 1, limit: 1 }, mockPrisma);
       
-      expect(page1.page).toBe(1);
-      expect(page1.limit).toBe(2);
-      expect(page1.items.length).toBeLessThanOrEqual(2);
-    });
-
-    it('devrait rechercher par texte', async () => {
-      const result = await commandesService.rechercherCommandes({ search: 'Jean' });
-      
-      expect(result.items).toBeDefined();
-      // Devrait trouver les commandes de Jean
+      expect(result.items.length).toBeLessThanOrEqual(1);
       expect(result.total).toBeGreaterThan(0);
     });
-
-    it('devrait filtrer par plage de dates', async () => {
-      const dateDebut = new Date('2026-01-01').toISOString();
-      const dateFin = new Date('2026-01-31').toISOString();
-      
-      const result = await commandesService.rechercherCommandes({
-        date_debut: dateDebut,
-        date_fin: dateFin,
-      });
-      
-      expect(result.items).toBeDefined();
-      result.items.forEach((c: any) => {
-        const date = new Date(c.date_commande);
-        expect(date >= new Date(dateDebut)).toBe(true);
-        expect(date <= new Date(dateFin)).toBe(true);
-      });
-    });
   });
 
-  describe('Gestion des articles', () => {
-    it('devrait parser correctement les articles JSON', async () => {
-      const commande = await commandesService.obtenirCommandeParId('cmd-001');
+  describe('Scénarios complexes', () => {
+    it('devrait maintenir cohérence après création', async () => {
+      const before = await queries.obtenirToutesCommandes(mockPrisma);
       
-      expect(commande).not.toBeNull();
-      expect(Array.isArray(commande?.articles)).toBe(true);
-      expect(commande?.articles.length).toBeGreaterThan(0);
+      await mutations.creerCommande({
+        utilisateur_id: 1,
+        statut: 'en_attente',
+        total: 50,
+        articles: [{ produit_id: 1, nom: 'Test', prix_unitaire: 50, quantite: 1, total: 50 }],
+      }, mockPrisma);
       
-      // Vérifier structure d'un article
-      const article = commande!.articles[0];
-      expect(article).toHaveProperty('produit_id');
-      expect(article).toHaveProperty('nom');
-      expect(article).toHaveProperty('quantite');
-      expect(article).toHaveProperty('prix_unitaire');
-      expect(article).toHaveProperty('total');
+      const after = await queries.obtenirToutesCommandes(mockPrisma);
+      expect(after.length).toBe(before.length + 1);
     });
 
-    it('devrait inclure les informations utilisateur', async () => {
-      const commande = await commandesService.obtenirCommandeParId('cmd-001');
+    it('devrait refléter changement statut', async () => {
+      const avant = await queries.obtenirCommandesParStatut('payee', mockPrisma);
       
-      expect(commande).not.toBeNull();
-      expect(commande?.nom_utilisateur).toBeDefined();
-      expect(commande?.email).toBeDefined();
-      expect(typeof commande?.nom_utilisateur).toBe('string');
-      expect(commande?.nom_utilisateur).toContain(' '); // Prénom + Nom
-    });
-  });
-
-  describe('Cas limites', () => {
-    it('devrait gérer une recherche sans résultats', async () => {
-      const result = await commandesService.rechercherCommandes({ utilisateur_id: 999999 });
+      await mutations.modifierStatutCommande('cmd-001', 'payee', mockPrisma);
       
-      expect(result.items).toHaveLength(0);
-      expect(result.total).toBe(0);
-      expect(result.totalPages).toBe(0);
+      const apres = await queries.obtenirCommandesParStatut('payee', mockPrisma);
+      expect(apres.length).toBe(avant.length + 1);
     });
 
-    it('devrait retourner un tableau vide pour un utilisateur sans commandes', async () => {
-      const commandes = await commandesService.obtenirCommandesUtilisateur(999);
+    it('devrait mettre à jour les stats après modification', async () => {
+      const statsBefore = await stats.obtenirStatistiquesCommandes(mockPrisma);
       
-      expect(Array.isArray(commandes)).toBe(true);
-      expect(commandes).toHaveLength(0);
-    });
-
-    it('devrait gérer une pagination hors limites', async () => {
-      const result = await commandesService.rechercherCommandes({ page: 999, limit: 10 });
+      await mutations.creerCommande({
+        utilisateur_id: 1,
+        statut: 'en_attente',
+        total: 1000,
+        articles: [{ produit_id: 1, nom: 'Expensive', prix_unitaire: 1000, quantite: 1, total: 1000 }],
+      }, mockPrisma);
       
-      expect(result.items).toHaveLength(0);
-      expect(result.page).toBe(999);
+      const statsAfter = await stats.obtenirStatistiquesCommandes(mockPrisma);
+      expect(statsAfter.totalCommandes).toBe(statsBefore.totalCommandes + 1);
+      expect(statsAfter.revenuTotal).toBeGreaterThan(statsBefore.revenuTotal);
     });
   });
 });

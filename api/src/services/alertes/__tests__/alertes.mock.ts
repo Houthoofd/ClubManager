@@ -82,12 +82,33 @@ export const createMockPrisma = () => {
         return Promise.resolve(alerte || null);
       }),
 
+      findFirst: createMockFn((args: any) => {
+        let result = alertesUtilisateurs.find(a => {
+          if (args.where.utilisateur_id && a.utilisateur_id !== args.where.utilisateur_id) return false;
+          if (args.where.alerte_type_id && a.alerte_type_id !== args.where.alerte_type_id) return false;
+          if (args.where.statut && a.statut !== args.where.statut) return false;
+          return true;
+        });
+        return Promise.resolve(result || null);
+      }),
+
       create: createMockFn((args: any) => {
+        const typeAlerte = alertesTypes.find(t => t.id === args.data.alerte_type_id);
+        const user = mockAlertesUtilisateurs[0]?.utilisateurs || {
+          id: args.data.utilisateur_id,
+          first_name: 'Test',
+          last_name: 'User',
+          email: 'test@test.com',
+          status_id: 1,
+        };
+        
         const newAlerte = {
           id: alertesUtilisateurs.length + 1,
           ...args.data,
           date_detection: new Date(),
           date_resolution: null,
+          alertes_types: typeAlerte || mockAlertesTypes[0], // Inclure la relation
+          utilisateurs: user, // Inclure la relation utilisateur
         };
         alertesUtilisateurs.push(newAlerte);
         return Promise.resolve(newAlerte);
@@ -134,7 +155,79 @@ export const createMockPrisma = () => {
 
     alertes_types: {
       findMany: createMockFn(() => Promise.resolve([...alertesTypes])),
+      findUnique: createMockFn((args: any) => {
+        const type = alertesTypes.find(t => t.id === args.where.id);
+        return Promise.resolve(type || null);
+      }),
     },
+
+    utilisateurs: {
+      findMany: createMockFn((args?: any) => {
+        const users = [
+          { 
+            id: 1, 
+            first_name: 'Jean', 
+            last_name: 'Dupont', 
+            email: 'jean@test.com', 
+            status_id: 1,
+            echeances_paiements: [], // Pas de paiements en retard
+            abonnements: [{ id: 1, actif: true }], // A un abonnement
+          },
+          { 
+            id: 2, 
+            first_name: 'Marie', 
+            last_name: 'Martin', 
+            email: 'marie@test.com', 
+            status_id: 1,
+            echeances_paiements: [], // Pas de paiements en retard
+            abonnements: [], // Pas d'abonnement
+          },
+        ];
+        
+        let results = [...users];
+        if (args?.where?.status_id?.in) {
+          results = results.filter(u => args.where.status_id.in.includes(u.status_id));
+        }
+        
+        return Promise.resolve(results);
+      }),
+    },
+
+    // Mock de la transaction Prisma
+    $transaction: createMockFn(async (callback: any) => {
+      // Créer un objet transaction qui utilise les mêmes mocks
+      const tx = {
+        alertes_utilisateurs: {
+          update: createMockFn(async (args: any) => {
+            const index = alertesUtilisateurs.findIndex(a => a.id === args.where.id);
+            if (index === -1) return null;
+            
+            alertesUtilisateurs[index] = { ...alertesUtilisateurs[index], ...args.data };
+            return alertesUtilisateurs[index];
+          }),
+        },
+        alertes_resolutions: {
+          create: createMockFn(async (args: any) => {
+            return {
+              id: 1,
+              ...args.data,
+              date_resolution: new Date(),
+            };
+          }),
+        },
+        alertes_actions: {
+          create: createMockFn(async (args: any) => {
+            return {
+              id: 1,
+              ...args.data,
+              date_action: new Date(),
+            };
+          }),
+        },
+      };
+      
+      return callback(tx);
+    }),
 
     // Méthode pour réinitialiser les données entre les tests
     _reset: () => {

@@ -2,13 +2,13 @@
  * Module de statistiques - Calcul des métriques des commandes
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { CommandeStats, CommandeCountByStatut } from '@clubmanager/types';
 
 /**
  * Récupère les statistiques des commandes
  */
-export async function obtenirStatistiquesCommandes(): Promise<CommandeStats> {
+export async function obtenirStatistiquesCommandes(prisma = defaultPrisma): Promise<CommandeStats> {
   console.log('📊 [CommandesStats] Calcul statistiques commandes');
 
   // Compter par statut
@@ -68,7 +68,7 @@ export async function obtenirStatistiquesCommandes(): Promise<CommandeStats> {
 /**
  * Compte les commandes par statut
  */
-export async function obtenirComptesParStatut(): Promise<CommandeCountByStatut[]> {
+export async function obtenirComptesParStatut(prisma = defaultPrisma): Promise<CommandeCountByStatut[]> {
   console.log('📊 [CommandesStats] Comptage par statut');
 
   const comptes = await prisma.commandes.groupBy({

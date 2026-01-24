@@ -2,7 +2,7 @@
  * Module de gestion des mots de passe
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import bcrypt from 'bcrypt';
 import type { AuthResult, PasswordValidation } from '@clubmanager/types';
 
@@ -11,7 +11,8 @@ import type { AuthResult, PasswordValidation } from '@clubmanager/types';
  */
 export async function modifierMotDePasse(
   userId: number,
-  newPassword: string
+  newPassword: string,
+  prisma = defaultPrisma
 ): Promise<AuthResult> {
   console.log(`🔑 [AuthPassword] Modification mot de passe pour utilisateur ${userId}`);
 

@@ -2,7 +2,7 @@
  * Mutations pour le domaine Cours Récurrents
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type {
   CoursOperationResult,
   AjoutCoursRecurrent,
@@ -19,7 +19,8 @@ import { associerProfesseursAuCoursRecurrent } from '../professeurs/mutations.js
  * Ajouter un cours récurrent avec génération des cours hebdomadaires
  */
 export async function ajouterCoursRecurrent(
-  data: AjoutCoursRecurrent
+  data: AjoutCoursRecurrent,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
     const jourSemaine = jourVersNumero(data.jour_semaine);
@@ -64,7 +65,8 @@ export async function ajouterCoursRecurrent(
     if (data.professeurs && data.professeurs.length > 0) {
       const result = await associerProfesseursAuCoursRecurrent(
         coursRecurrent.id,
-        data.professeurs
+        data.professeurs,
+        prisma
       );
       
       if (!result.success) {
@@ -93,7 +95,8 @@ export async function ajouterCoursRecurrent(
  * Modifier un cours récurrent (et ses occurrences futures)
  */
 export async function modifierCoursRecurrent(
-  data: ModificationCoursRecurrent
+  data: ModificationCoursRecurrent,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
     const updateData: any = {};
@@ -152,7 +155,8 @@ export async function modifierCoursRecurrent(
       
       const result = await associerProfesseursAuCoursRecurrent(
         data.cours_recurrent_id,
-        data.professeurs
+        data.professeurs,
+        prisma
       );
       
       if (!result.success) {
@@ -178,7 +182,8 @@ export async function modifierCoursRecurrent(
  * Supprimer un cours récurrent et toutes ses occurrences futures
  */
 export async function supprimerCoursRecurrent(
-  coursRecurrentId: number
+  coursRecurrentId: number,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
     await prisma.inscriptions.deleteMany({
@@ -228,7 +233,8 @@ export async function supprimerCoursRecurrent(
  * Supprimer un cours récurrent par jour de semaine
  */
 export async function supprimerCoursRecurrentParJour(
-  jour: string
+  jour: string,
+  prisma = defaultPrisma
 ): Promise<CoursOperationResult> {
   try {
     const jourNum = jourVersNumero(jour);
@@ -251,7 +257,7 @@ export async function supprimerCoursRecurrentParJour(
       };
     }
 
-    return await supprimerCoursRecurrent(coursRecurrent.id);
+    return await supprimerCoursRecurrent(coursRecurrent.id, prisma);
   } catch (error: any) {
     console.error('Erreur lors de la suppression par jour:', error);
     return {

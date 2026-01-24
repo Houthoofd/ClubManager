@@ -2,13 +2,13 @@
  * Requêtes de récupération des alertes
  */
 
-import { prisma } from '../../../../infrastructure/database/prisma-client.js';
+import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { AlerteUtilisateur } from '@clubmanager/types';
 
 /**
  * Obtient les alertes actives avec détails utilisateur et type
  */
-export async function obtenirAlertesActives(): Promise<AlerteUtilisateur[]> {
+export async function obtenirAlertesActives(prisma = defaultPrisma): Promise<AlerteUtilisateur[]> {
   console.log('📋 [AlertesQueries] Récupération alertes actives');
 
   const alertes = await prisma.alertes_utilisateurs.findMany({
@@ -60,7 +60,7 @@ export async function obtenirAlertesActives(): Promise<AlerteUtilisateur[]> {
 /**
  * Obtient les alertes d'un utilisateur spécifique
  */
-export async function obtenirAlertesUtilisateur(utilisateurId: number): Promise<AlerteUtilisateur[]> {
+export async function obtenirAlertesUtilisateur(utilisateurId: number, prisma = defaultPrisma): Promise<AlerteUtilisateur[]> {
   console.log(`👤 [AlertesQueries] Récupération alertes utilisateur ${utilisateurId}`);
 
   const alertes = await prisma.alertes_utilisateurs.findMany({
