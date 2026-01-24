@@ -10,6 +10,7 @@ export * from './commandes-service.js';
 export * from './compte-service.js';
 export * from './cours-service.js';
 export * from './informations-service.js';
+export * from './inscriptions-service.js';
 export * from './magasin.js';
 export type { Commande as CommandeStore, CreateCommandeData, UpdateCommandeData, CommandeComplete } from './commandes.js';
 export type { UserDataLoginByUserId, UserSearchByEmail } from './utilisateurs.js';
