@@ -24,7 +24,20 @@
 - Gestion des photos de produits magasin
 - Optimisation des coûts de stockage
 
-### 4. **Migration Base de Données**
+### 4. **Migration GraphQL + Prisma**
+- **Remplacer REST par GraphQL**:
+  - API unifiée et type-safe
+  - Réduction du sur-fetching/under-fetching
+  - Subscriptions en temps réel (chat, notifications)
+  - Apollo Server ou Yoga GraphQL
+- **Migration vers Prisma ORM**:
+  - Remplacer les queries SQL brutes
+  - Type-safety complet avec TypeScript
+  - Migrations versionnées automatiques
+  - Query builder intuitif
+  - Relations simplifiées
+
+### 5. **Migration Base de Données**
 - **Problème actuel**: RDS coûte 45€/mois
 - **Solutions à évaluer**:
   - Aurora Serverless v2 (pay-per-use)
@@ -77,11 +90,10 @@
 api/src/
 ├── modules/                    # Organisation par feature
 │   ├── auth/
-│   │   ├── controllers/
+│   │   ├── resolvers/         # GraphQL resolvers
 │   │   ├── services/
-│   │   ├── repositories/
 │   │   ├── validators/
-│   │   ├── routes/
+│   │   ├── schema.graphql
 │   │   └── __tests__/
 │   ├── users/
 │   ├── payments/
@@ -94,11 +106,18 @@ api/src/
 │   ├── types/
 │   ├── constants/
 │   └── config/
+├── graphql/                    # GraphQL core
+│   ├── schema.graphql         # Schéma global
+│   ├── context.ts             # Context builder
+│   ├── scalars/               # Custom scalars
+│   └── directives/            # Custom directives
 ├── infrastructure/             # Couche infra
 │   ├── database/
-│   │   ├── connection.ts
-│   │   ├── migrations/
-│   │   └── seeds/
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma
+│   │   │   ├── migrations/
+│   │   │   └── seed.ts
+│   │   └── client.ts
 │   ├── storage/
 │   │   ├── s3-client.ts
 │   │   └── local-storage.ts (fallback)
@@ -116,52 +135,72 @@ api/src/
 - [ ] Créer service S3 avec AWS SDK v3
 - [ ] Configurer environnement (variables, credentials)
 - [ ] Tests du client S3
+- [ ] **Setup Prisma ORM**
+- [ ] Introspection schéma DB existant
+- [ ] Générer schema.prisma initial
+- [ ] Premier test de migration
 
-### Phase 2: Refactoring Routes Paiements (Semaine 2)
-- [ ] Découper paiements2.ts en modules
-- [ ] Migrer vers nouvelle structure
-- [ ] Ajouter tests unitaires
-- [ ] Tests d'intégration
+### Phase 2: Migration Prisma (Semaines 2-3)
+- [ ] Définir schéma Prisma complet
+- [ ] Créer migrations initiales
+- [ ] Migrer utilisateurs vers Prisma
+- [ ] Migrer cours vers Prisma
+- [ ] Migrer paiements vers Prisma
+- [ ] Migrer magasin vers Prisma
+- [ ] Tests de migration
 
-### Phase 3: Refactoring Utilisateurs (Semaine 3)
-- [ ] Fusionner utilisateur2 + utilisateurs
-- [ ] Créer UserRepository
-- [ ] Créer UserService
-- [ ] Migrer routes
-- [ ] Tests complets
+### Phase 3: Setup GraphQL (Semaine 4)
+- [ ] Installer Apollo Server / GraphQL Yoga
+- [ ] Définir schéma GraphQL de base
+- [ ] Setup context avec Prisma client
+- [ ] Créer resolvers de test
+- [ ] Setup GraphQL Playground/Studio
+- [ ] Tests GraphQL queries/mutations
 
-### Phase 4: Migration Uploads S3 (Semaine 4)
+### Phase 4: Migration Routes → GraphQL (Semaines 5-7)
+- [ ] **Auth module**: mutations login/register/logout
+- [ ] **Users module**: queries + mutations CRUD
+- [ ] **Courses module**: queries + mutations + subscriptions
+- [ ] **Payments module**: mutations + webhooks Stripe
+- [ ] **Store module**: queries + mutations produits
+- [ ] **Messaging module**: queries + subscriptions temps réel
+- [ ] Tests d'intégration GraphQL
+
+### Phase 5: Migration Uploads S3 (Semaine 8)
 - [ ] Migrer upload avatars vers S3
 - [ ] Migrer images cours
 - [ ] Migrer images produits
+- [ ] GraphQL mutations pour uploads (multipart)
 - [ ] Cleanup ancien système de fichiers
 - [ ] Tests E2E upload
 
-### Phase 5: Autres Modules (Semaines 5-6)
-- [ ] Refactorer module cours
-- [ ] Refactorer module messagerie
-- [ ] Refactorer module magasin
-- [ ] Refactorer services email
+### Phase 6: Optimisations GraphQL (Semaine 9)
+- [ ] DataLoader pour N+1 queries
+- [ ] Query complexity analysis
+- [ ] Rate limiting GraphQL
+- [ ] Caching avec Redis
+- [ ] Monitoring performances
 
-### Phase 6: Base de Données (Semaines 7-8)
+### Phase 7: Base de Données (Semaine 10)
 - [ ] Benchmark coûts alternatives RDS
 - [ ] POC Aurora Serverless
-- [ ] Plan de migration
-- [ ] Migration progressive
+- [ ] Migration Prisma vers nouvelle DB
 - [ ] Tests de charge
 - [ ] Rollback plan
 
-### Phase 7: Tests & Documentation (Semaine 9)
+### Phase 8: Tests & Documentation (Semaine 11)
 - [ ] Augmenter couverture tests >80%
-- [ ] Documentation API (Swagger/OpenAPI)
+- [ ] Documentation GraphQL Schema (descriptions)
 - [ ] Documentation architecture
+- [ ] Guide de migration frontend
 - [ ] Guide de déploiement
 
-### Phase 8: Optimisations (Semaine 10)
-- [ ] Performance profiling
-- [ ] Optimisation requêtes DB
-- [ ] CDN pour assets S3
-- [ ] Monitoring & logs (CloudWatch)
+### Phase 9: Migration Frontend (Semaine 12)
+- [ ] Setup Apollo Client frontend
+- [ ] Remplacer fetch/axios par GraphQL queries
+- [ ] Setup subscriptions WebSocket
+- [ ] Tests frontend intégration
+- [ ] Performance optimization
 
 ## 💰 Estimation Coûts AWS (optimisés)
 
@@ -183,13 +222,65 @@ api/src/
 1. **Single Responsibility**: Un fichier = une responsabilité
 2. **Max 300 lignes** par fichier (idéal: 150-200)
 3. **DRY**: Factoriser le code dupliqué
-4. **Type-safe**: TypeScript strict mode
+4. **Type-safe**: TypeScript strict mode + Prisma + GraphQL
 5. **Tests d'abord**: TDD quand possible
-6. **Documentation**: JSDoc pour toutes les fonctions publiques
+6. **Documentation**: JSDoc + GraphQL schema descriptions
+7. **GraphQL Best Practices**:
+   - Queries pour lecture
+   - Mutations pour écriture
+   - Subscriptions pour temps réel
+   - DataLoader pour optimisation N+1
 
 ## 🚀 Quick Wins
 
-1. Migrer uploads vers S3 (impact immédiat)
-2. Découper paiements2.ts (maintenabilité)
+1. Setup Prisma (type-safety immédiate)
+2. Migrer une route simple vers GraphQL (POC)
 3. Setup tests automatisés (qualité)
-4. Évaluer Aurora Serverless (économies)
+4. Migrer uploads vers S3 (impact immédiat)
+5. Évaluer Aurora Serverless (économies)
+
+## 🛠️ Stack Technique Cible
+
+### Backend
+- **Runtime**: Node.js + TypeScript
+- **API**: GraphQL (Apollo Server / Yoga)
+- **ORM**: Prisma
+- **Database**: MySQL/PostgreSQL (Aurora Serverless)
+- **Storage**: AWS S3
+- **Email**: SendGrid
+- **Payments**: Stripe
+- **Testing**: Jest + Supertest
+- **Validation**: Zod
+
+### Frontend (à adapter)
+- **GraphQL Client**: Apollo Client
+- **Cache**: Apollo InMemory Cache
+- **Real-time**: GraphQL Subscriptions (WebSocket)
+
+## 📦 Dépendances à Ajouter
+
+```bash
+# Prisma
+npm install @prisma/client
+npm install -D prisma
+
+# GraphQL
+npm install graphql @apollo/server
+npm install graphql-scalars graphql-upload-minimal
+npm install -D @graphql-codegen/cli @graphql-codegen/typescript
+
+# DataLoader (optimisation)
+npm install dataloader
+
+# AWS S3
+npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+```
+
+## 🔄 Stratégie de Migration Progressive
+
+1. **Coexistence REST + GraphQL** pendant la transition
+2. **Prisma + anciennes queries SQL** en parallèle
+3. **Migration par module** (non big-bang)
+4. **Feature flags** pour basculer progressivement
+5. **Monitoring double** (REST + GraphQL)
+6. **Rollback facile** à chaque étape
