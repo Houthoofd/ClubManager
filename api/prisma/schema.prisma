@@ -1,0 +1,495 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model alertes_actions {
+  id                   Int                  @id @default(autoincrement())
+  alerte_id            Int
+  action_type          String               @db.VarChar(50)
+  description          String?              @db.Text
+  effectue_par         Int?
+  date_action          DateTime             @default(now())
+  alertes_utilisateurs alertes_utilisateurs @relation(fields: [alerte_id], references: [id], onDelete: Cascade)
+  users                users?               @relation(fields: [effectue_par], references: [id])
+
+  @@index([alerte_id, date_action])
+  @@index([effectue_par], map: "alertes_actions_effectue_par_fkey")
+}
+
+model alertes_types {
+  id                   Int                    @id @default(autoincrement())
+  code                 String                 @unique @db.VarChar(50)
+  nom                  String                 @db.VarChar(100)
+  description          String?                @db.Text
+  priorite             String                 @default("normale") @db.VarChar(20)
+  actif                Boolean                @default(true)
+  created_at           DateTime               @default(now())
+  alertes_utilisateurs alertes_utilisateurs[]
+}
+
+model alertes_utilisateurs {
+  id               Int               @id @default(autoincrement())
+  utilisateur_id   Int
+  alerte_type_id   Int
+  statut           String            @default("active") @db.VarChar(20)
+  donnees_contexte Json?
+  date_detection   DateTime          @default(now())
+  date_resolution  DateTime?
+  notes            String?           @db.Text
+  tenant_id        String
+  alertes_actions  alertes_actions[]
+  alertes_types    alertes_types     @relation(fields: [alerte_type_id], references: [id], onDelete: Cascade)
+  tenants          tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  users            users             @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@index([alerte_type_id, statut])
+  @@index([tenant_id])
+  @@index([tenant_id, statut])
+  @@index([tenant_id, utilisateur_id])
+  @@index([utilisateur_id, statut])
+}
+
+model articles {
+  id                 Int                  @id @default(autoincrement())
+  nom                String               @db.VarChar(100)
+  description        String?              @db.Text
+  prix               Decimal              @db.Decimal(10, 2)
+  taille_id          Int?
+  image_url          String?              @db.VarChar(255)
+  actif              Boolean              @default(true)
+  created_at         DateTime             @default(now())
+  updated_at         DateTime
+  tenant_id          String
+  tailles            tailles?             @relation(fields: [taille_id], references: [id])
+  tenants            tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  commandes_articles commandes_articles[]
+  stock              stock?
+
+  @@index([actif])
+  @@index([taille_id])
+  @@index([tenant_id, actif])
+  @@index([tenant_id])
+}
+
+model audit_logs {
+  id          String   @id
+  tenant_id   String
+  user_id     Int?
+  action      String   @db.VarChar(100)
+  resource    String   @db.VarChar(100)
+  resource_id String?
+  changes     Json?
+  ip_address  String   @db.VarChar(45)
+  user_agent  String?  @db.Text
+  timestamp   DateTime @default(now())
+  tenants     tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  users       users?   @relation(fields: [user_id], references: [id])
+
+  @@index([action, timestamp])
+  @@index([tenant_id, timestamp])
+  @@index([user_id, timestamp])
+}
+
+model commandes {
+  id                 Int                  @id @default(autoincrement())
+  utilisateur_id     Int
+  date_commande      DateTime             @default(now())
+  statut             String               @default("en attente") @db.VarChar(50)
+  montant_total      Decimal              @db.Decimal(10, 2)
+  adresse_livraison  String?              @db.Text
+  notes              String?              @db.Text
+  tenant_id          String
+  tenants            tenants              @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  users              users                @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  commandes_articles commandes_articles[]
+
+  @@index([date_commande])
+  @@index([statut])
+  @@index([tenant_id, date_commande])
+  @@index([tenant_id])
+  @@index([tenant_id, statut])
+  @@index([tenant_id, utilisateur_id])
+  @@index([utilisateur_id])
+}
+
+model commandes_articles {
+  id            Int       @id @default(autoincrement())
+  commande_id   Int
+  article_id    Int
+  quantite      Int       @default(1)
+  prix_unitaire Decimal   @db.Decimal(10, 2)
+  articles      articles  @relation(fields: [article_id], references: [id])
+  commandes     commandes @relation(fields: [commande_id], references: [id], onDelete: Cascade)
+
+  @@unique([commande_id, article_id])
+  @@index([article_id])
+}
+
+model cours {
+  id           Int            @id @default(autoincrement())
+  date_cours   DateTime       @db.Date
+  type_cours   String         @db.VarChar(50)
+  heure_debut  DateTime       @db.Time(0)
+  heure_fin    DateTime       @db.Time(0)
+  capacite_max Int?
+  description  String?        @db.Text
+  actif        Boolean        @default(true)
+  created_at   DateTime       @default(now())
+  tenant_id    String
+  tenants      tenants        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  inscriptions inscriptions[]
+  reservations reservations[]
+
+  @@index([date_cours])
+  @@index([tenant_id, date_cours])
+  @@index([tenant_id])
+  @@index([tenant_id, type_cours])
+  @@index([type_cours])
+}
+
+model echeances_paiements {
+  id             Int      @id @default(autoincrement())
+  utilisateur_id Int
+  montant        Decimal  @db.Decimal(10, 2)
+  date_echeance  DateTime @db.Date
+  statut         String   @default("en attente") @db.VarChar(50)
+  rappel_envoye  Boolean  @default(false)
+  created_at     DateTime @default(now())
+  tenant_id      String
+  tenants        tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([date_echeance])
+  @@index([statut])
+  @@index([tenant_id, date_echeance])
+  @@index([tenant_id])
+  @@index([tenant_id, statut])
+  @@index([tenant_id, utilisateur_id])
+  @@index([utilisateur_id])
+}
+
+model genres {
+  id         Int     @id @default(autoincrement())
+  genre_name String  @db.VarChar(50)
+  users      users[]
+}
+
+model grades {
+  id    Int     @id @default(autoincrement())
+  nom   String  @db.VarChar(50)
+  ordre Int?
+  users users[]
+}
+
+model groupes {
+  id                   Int                    @id @default(autoincrement())
+  nom                  String                 @db.VarChar(100)
+  description          String?                @db.Text
+  actif                Boolean                @default(true)
+  created_at           DateTime               @default(now())
+  tenant_id            String
+  tenants              tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  groupes_utilisateurs groupes_utilisateurs[]
+
+  @@index([tenant_id, actif])
+  @@index([tenant_id])
+}
+
+model groupes_utilisateurs {
+  id             Int      @id @default(autoincrement())
+  groupe_id      Int
+  utilisateur_id Int
+  role           String?  @default("membre") @db.VarChar(50)
+  date_ajout     DateTime @default(now())
+  groupes        groupes  @relation(fields: [groupe_id], references: [id], onDelete: Cascade)
+  users          users    @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@unique([groupe_id, utilisateur_id])
+  @@index([utilisateur_id])
+}
+
+model inscriptions {
+  id               Int      @id @default(autoincrement())
+  utilisateur_id   Int
+  cours_id         Int
+  status_id        Int      @default(1)
+  date_inscription DateTime @default(now())
+  present          Boolean  @default(false)
+  notes            String?  @db.Text
+  cours            cours    @relation(fields: [cours_id], references: [id], onDelete: Cascade)
+  users            users    @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@unique([utilisateur_id, cours_id])
+  @@index([cours_id])
+  @@index([status_id])
+}
+
+model messages {
+  id                                    Int       @id @default(autoincrement())
+  expediteur_id                         Int
+  destinataire_id                       Int?
+  sujet                                 String    @db.VarChar(200)
+  contenu                               String    @db.Text
+  lu                                    Boolean   @default(false)
+  type                                  String    @default("prive") @db.VarChar(50)
+  created_at                            DateTime  @default(now())
+  priority                              String    @default("NORMAL") @db.VarChar(50)
+  read_at                               DateTime?
+  scheduled_for                         DateTime?
+  sent_at                               DateTime?
+  status                                String    @default("DRAFT") @db.VarChar(50)
+  tenant_id                             String
+  updated_at                            DateTime
+  delivered_at                          DateTime?
+  users_messages_destinataire_idTousers users?    @relation("messages_destinataire_idTousers", fields: [destinataire_id], references: [id], onDelete: Cascade)
+  users_messages_expediteur_idTousers   users     @relation("messages_expediteur_idTousers", fields: [expediteur_id], references: [id], onDelete: Cascade)
+  tenants                               tenants   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at])
+  @@index([delivered_at])
+  @@index([destinataire_id])
+  @@index([expediteur_id])
+  @@index([lu])
+  @@index([priority])
+  @@index([read_at])
+  @@index([scheduled_for])
+  @@index([sent_at])
+  @@index([status])
+  @@index([tenant_id, destinataire_id])
+  @@index([tenant_id, expediteur_id])
+  @@index([tenant_id])
+  @@index([tenant_id, status])
+}
+
+model messages_personnalises {
+  id         Int      @id @default(autoincrement())
+  titre      String   @db.VarChar(200)
+  contenu    String   @db.Text
+  type       String   @db.VarChar(50)
+  actif      Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime
+}
+
+model notifications {
+  id             Int      @id @default(autoincrement())
+  utilisateur_id Int
+  titre          String   @db.VarChar(200)
+  message        String   @db.Text
+  type           String   @db.VarChar(50)
+  lu             Boolean  @default(false)
+  lien           String?  @db.VarChar(255)
+  created_at     DateTime @default(now())
+  tenant_id      String
+  tenants        tenants  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  users          users    @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at])
+  @@index([lu])
+  @@index([tenant_id])
+  @@index([tenant_id, lu])
+  @@index([tenant_id, utilisateur_id])
+  @@index([utilisateur_id])
+}
+
+model paiements {
+  id               Int               @id @default(autoincrement())
+  utilisateur_id   Int
+  montant          Decimal           @db.Decimal(10, 2)
+  date_paiement    DateTime          @db.Date
+  statut           String            @default("en attente") @db.VarChar(50)
+  abonnement_id    Int?
+  periode_debut    DateTime?         @db.Date
+  periode_fin      DateTime?         @db.Date
+  methode          String?           @db.VarChar(50)
+  transaction_id   String?           @db.VarChar(100)
+  created_at       DateTime          @default(now())
+  tenant_id        String
+  plans_tarifaires plans_tarifaires? @relation(fields: [abonnement_id], references: [id])
+  tenants          tenants           @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  users            users             @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, utilisateur_id, periode_debut])
+  @@index([abonnement_id], map: "paiements_abonnement_id_fkey")
+  @@index([date_paiement])
+  @@index([statut])
+  @@index([tenant_id, date_paiement])
+  @@index([tenant_id])
+  @@index([tenant_id, statut])
+  @@index([tenant_id, utilisateur_id])
+  @@index([utilisateur_id])
+}
+
+model password_reset_tokens {
+  id         Int      @id @default(autoincrement())
+  user_id    Int      @unique
+  token      String   @db.VarChar(255)
+  expires_at DateTime
+  used       Boolean  @default(false)
+  created_at DateTime @default(now())
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, expires_at])
+}
+
+model plans_tarifaires {
+  id                   Int                    @id @default(autoincrement())
+  nom                  String                 @db.VarChar(100)
+  description          String?                @db.Text
+  prix                 Decimal                @db.Decimal(10, 2)
+  duree                Int?
+  actif                Boolean                @default(true)
+  maxUsers             Int                    @default(10)
+  maxStorage           Int                    @default(1000)
+  features             Json?
+  created_at           DateTime               @default(now())
+  stripe_price_id      String?                @db.VarChar(255)
+  paiements            paiements[]
+  tenant_subscriptions tenant_subscriptions[]
+  users                users[]
+}
+
+model reservations {
+  id               Int      @id @default(autoincrement())
+  utilisateur_id   Int
+  cours_id         Int
+  date_reservation DateTime @default(now())
+  statut           String   @default("confirmée") @db.VarChar(50)
+  notes            String?  @db.Text
+  cours            cours    @relation(fields: [cours_id], references: [id], onDelete: Cascade)
+  users            users    @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@unique([utilisateur_id, cours_id])
+  @@index([cours_id])
+}
+
+model status {
+  id          Int     @id @default(autoincrement())
+  nom_role    String  @db.VarChar(50)
+  description String? @db.Text
+  users       users[]
+}
+
+model stock {
+  id         Int      @id @default(autoincrement())
+  article_id Int      @unique
+  quantite   Int      @default(0)
+  seuil_min  Int?     @default(5)
+  updated_at DateTime
+  articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade)
+}
+
+model tailles {
+  id       Int        @id @default(autoincrement())
+  nom      String     @unique @db.VarChar(10)
+  articles articles[]
+}
+
+model tenant_subscriptions {
+  id                     String                      @id
+  tenant_id              String
+  plan_id                Int
+  status                 tenant_subscriptions_status @default(ACTIVE)
+  start_date             DateTime
+  end_date               DateTime?
+  price                  Decimal                     @db.Decimal(10, 2)
+  currency               String                      @default("EUR") @db.VarChar(3)
+  created_at             DateTime                    @default(now())
+  stripe_subscription_id String?                     @db.VarChar(255)
+  plans_tarifaires       plans_tarifaires            @relation(fields: [plan_id], references: [id])
+  tenants                tenants                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@index([plan_id], map: "tenant_subscriptions_plan_id_fkey")
+  @@index([status])
+  @@index([tenant_id])
+}
+
+model tenants {
+  id                   String                 @id
+  name                 String                 @db.VarChar(100)
+  slug                 String                 @unique @db.VarChar(50)
+  domain               String?                @unique @db.VarChar(100)
+  status               tenants_status         @default(ACTIVE)
+  plan                 String                 @db.VarChar(50)
+  maxUsers             Int                    @default(10)
+  maxStorage           Int                    @default(1000)
+  settings             Json?
+  created_at           DateTime               @default(now())
+  updated_at           DateTime
+  stripe_customer_id   String?                @db.VarChar(255)
+  alertes_utilisateurs alertes_utilisateurs[]
+  articles             articles[]
+  audit_logs           audit_logs[]
+  commandes            commandes[]
+  cours                cours[]
+  echeances_paiements  echeances_paiements[]
+  groupes              groupes[]
+  messages             messages[]
+  notifications        notifications[]
+  paiements            paiements[]
+  tenant_subscriptions tenant_subscriptions[]
+  users                users[]
+}
+
+model users {
+  id                                       Int                    @id @default(autoincrement())
+  tenant_id                                String
+  first_name                               String                 @db.VarChar(50)
+  last_name                                String                 @db.VarChar(50)
+  email                                    String                 @db.VarChar(100)
+  password                                 String?                @db.VarChar(255)
+  gender                                   Int?
+  date_of_birth                            DateTime               @db.Date
+  status_id                                Int                    @default(1)
+  grade                                    Int                    @default(1)
+  abonnement                               Int?
+  user_id                                  String?                @db.VarChar(50)
+  actif                                    Boolean                @default(true)
+  created_at                               DateTime               @default(now())
+  updated_at                               DateTime
+  alertes_actions                          alertes_actions[]
+  alertes_utilisateurs                     alertes_utilisateurs[]
+  audit_logs                               audit_logs[]
+  commandes                                commandes[]
+  groupes_utilisateurs                     groupes_utilisateurs[]
+  inscriptions                             inscriptions[]
+  messages_messages_destinataire_idTousers messages[]             @relation("messages_destinataire_idTousers")
+  messages_messages_expediteur_idTousers   messages[]             @relation("messages_expediteur_idTousers")
+  notifications                            notifications[]
+  paiements                                paiements[]
+  password_reset_tokens                    password_reset_tokens?
+  reservations                             reservations[]
+  plans_tarifaires                         plans_tarifaires?      @relation(fields: [abonnement], references: [id])
+  genres                                   genres?                @relation(fields: [gender], references: [id])
+  grades                                   grades                 @relation(fields: [grade], references: [id])
+  status                                   status                 @relation(fields: [status_id], references: [id])
+  tenants                                  tenants                @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+
+  @@unique([email, tenant_id])
+  @@index([abonnement], map: "users_abonnement_fkey")
+  @@index([gender], map: "users_gender_fkey")
+  @@index([grade], map: "users_grade_fkey")
+  @@index([status_id], map: "users_status_id_fkey")
+  @@index([tenant_id, actif])
+  @@index([tenant_id, email])
+  @@index([tenant_id])
+}
+
+enum tenant_subscriptions_status {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  TRIAL
+  PENDING
+}
+
+enum tenants_status {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+  TRIAL
+}
