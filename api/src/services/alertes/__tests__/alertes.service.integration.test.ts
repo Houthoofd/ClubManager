@@ -1,6 +1,9 @@
 /**
  * Tests d'intégration du service Alertes
  * Vérifie les comportements métier, les scénarios complexes et la cohérence des données
+ *
+ * Note: Les données mock sont documentées dans alertes.mock.ts
+ * Le mock Prisma global est utilisé via jest.config.cjs
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
@@ -13,6 +16,7 @@ describe('AlertesService - Tests d\'Intégration', () => {
     const module = await import('../alertes.service.js');
     alertesService = module.alertesService;
   });
+
 
   describe('Dashboard - Agrégation et statistiques', () => {
     it('devrait retourner un dashboard avec structure et données correctes', async () => {

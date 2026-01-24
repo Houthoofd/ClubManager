@@ -1,11 +1,19 @@
 /**
  * Tests d'intégration pour le service Cours
+ *
+ * Note: Les données mock sont documentées dans cours.mock.ts
+ * Le mock Prisma global est utilisé via jest.config.cjs
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { coursService } from '../cours.service.js';
 
 describe('CoursService - Tests d\'intégration', () => {
+  let coursService: any;
+
+  beforeEach(async () => {
+    const module = await import('../cours.service.js');
+    coursService = module.coursService;
+  });
   describe('Queries - Cours', () => {
     it('devrait obtenir les cours pour un participant', async () => {
       const cours = await coursService.obtenirCoursPourParticipant(1);
@@ -28,7 +36,7 @@ describe('CoursService - Tests d\'intégration', () => {
       const cours = await coursService.obtenirCoursParSemaine(2, 5);
       
       expect(Array.isArray(cours)).toBe(true);
-      cours.forEach(c => {
+      cours.forEach((c: any) => {
         expect(c).toHaveProperty('date_cours');
         expect(c).toHaveProperty('type_cours');
       });
@@ -142,7 +150,7 @@ describe('CoursService - Tests d\'intégration', () => {
       const semaines = await coursService.obtenirSemainesAvecCours(1);
       
       expect(Array.isArray(semaines)).toBe(true);
-      semaines.forEach(s => {
+      semaines.forEach((s: any) => {
         expect(typeof s).toBe('number');
         expect(s).toBeGreaterThan(0);
         expect(s).toBeLessThanOrEqual(53);

@@ -2,12 +2,20 @@
  * Tests d'intégration du service Compte
  * 
  * Ces tests vérifient la logique métier complète avec mock Prisma
+ *
+ * Note: Les données mock sont documentées dans compte.mock.ts
+ * Le mock Prisma global est utilisé via jest.config.cjs
  */
 
-import { describe, it, expect } from '@jest/globals';
-import { compteService } from '../compte.service.js';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 
 describe('Service Compte - Tests d\'intégration', () => {
+  let compteService: any;
+
+  beforeEach(async () => {
+    const module = await import('../compte.service.js');
+    compteService = module.compteService;
+  });
   describe('Queries - Récupération des comptes', () => {
     it('devrait récupérer un compte par ID', async () => {
       const compte = await compteService.obtenirCompteParId(1);

@@ -2,11 +2,20 @@
  * Tests pour EmailClient - Version simplifiée sans mocks complexes
  */
 
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { EmailClient } from '../email-client';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+// Mock du emailTemplateService pour éviter l'erreur MysqlConnector
+await jest.unstable_mockModule('../../../services/emailTemplateService.js', () => ({
+  emailTemplateService: {
+    getTemplateByTitle: jest.fn(),
+    getTemplateById: jest.fn(),
+  },
+}));
+
+const { EmailClient } = await import('../email-client.js');
 
 describe('EmailClient', () => {
-  let emailClient: EmailClient;
+  let emailClient: InstanceType<typeof EmailClient>;
 
   beforeEach(() => {
     emailClient = new EmailClient();

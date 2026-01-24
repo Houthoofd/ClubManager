@@ -2,12 +2,20 @@
  * Tests d'intégration du service Commandes
  * 
  * Ces tests vérifient la logique métier complète avec mock Prisma
+ *
+ * Note: Les données mock sont documentées dans commandes.mock.ts
+ * Le mock Prisma global est utilisé via jest.config.cjs
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { commandesService } from '../commandes.service.js';
 
 describe('Service Commandes - Tests d\'intégration', () => {
+  let commandesService: any;
+
+  beforeEach(async () => {
+    const module = await import('../commandes.service.js');
+    commandesService = module.commandesService;
+  });
   describe('Queries - Récupération des commandes', () => {
     it('devrait récupérer toutes les commandes', async () => {
       const commandes = await commandesService.obtenirToutesCommandes();
@@ -49,7 +57,7 @@ describe('Service Commandes - Tests d\'intégration', () => {
       expect(commandes.length).toBeGreaterThan(0);
       
       // Vérifier que toutes les commandes appartiennent à l'utilisateur
-      commandes.forEach(c => {
+      commandes.forEach((c: any) => {
         expect(c.utilisateur_id).toBe(1);
       });
     });
@@ -61,7 +69,7 @@ describe('Service Commandes - Tests d\'intégration', () => {
       expect(commandes.length).toBeGreaterThan(0);
       
       // Vérifier que toutes les commandes ont le bon statut
-      commandes.forEach(c => {
+      commandes.forEach((c: any) => {
         expect(c.statut).toBe('en_attente');
       });
     });
@@ -160,7 +168,7 @@ describe('Service Commandes - Tests d\'intégration', () => {
       expect(comptes.length).toBeGreaterThan(0);
       
       // Vérifier structure
-      comptes.forEach(c => {
+      comptes.forEach((c: any) => {
         expect(c).toHaveProperty('statut');
         expect(c).toHaveProperty('count');
         expect(typeof c.count).toBe('number');

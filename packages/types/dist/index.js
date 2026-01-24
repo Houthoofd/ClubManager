@@ -9,6 +9,7 @@ export * from './auth.js';
 export * from './commandes-service.js';
 export * from './compte-service.js';
 export * from './cours-service.js';
+export * from './informations-service.js';
 // Export du magasin
 export * from './magasin.js';
 export { userDataLoginByUserIdSchema, userSearchByEmailSchema } from './utilisateurs.js';

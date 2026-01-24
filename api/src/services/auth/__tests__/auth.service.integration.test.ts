@@ -1,6 +1,9 @@
 /**
  * Tests d'intégration du service Auth
  * Vérifie les comportements métier, les scénarios d'authentification et la sécurité
+ *
+ * Note: Les données mock sont documentées dans auth.mock.ts
+ * Le mock Prisma global est utilisé via jest.config.cjs
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
