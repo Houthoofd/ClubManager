@@ -120,6 +120,63 @@ const mockPasswordResetAttempts = [
   { id: 1, email: 'jean@test.com', success: true, attempted_at: new Date() },
 ];
 
+// Données de test - COMMANDES
+const mockCommandes = [
+  {
+    commande_id: 'cmd-001',
+    utilisateur_id: 1,
+    statut: 'en_attente',
+    total: 89.99,
+    articles: JSON.stringify([
+      { produit_id: 1, nom: 'Abonnement mensuel', quantite: 1, prix_unitaire: 49.99, total: 49.99 },
+      { produit_id: 2, nom: 'Cours particulier', quantite: 2, prix_unitaire: 20, total: 40 },
+    ]),
+    date_commande: new Date('2026-01-15T10:30:00'),
+    updated_at: new Date('2026-01-15T10:30:00'),
+    payment_intent_id: 'pi_test_123',
+    utilisateurs: mockUtilisateurs[0],
+  },
+  {
+    commande_id: 'cmd-002',
+    utilisateur_id: 2,
+    statut: 'confirmee',
+    total: 150,
+    articles: JSON.stringify([
+      { produit_id: 3, nom: 'Pack Premium', quantite: 1, prix_unitaire: 150, total: 150 },
+    ]),
+    date_commande: new Date('2026-01-10T14:00:00'),
+    updated_at: new Date('2026-01-10T15:00:00'),
+    payment_intent_id: 'pi_test_456',
+    utilisateurs: mockUtilisateurs[1],
+  },
+  {
+    commande_id: 'cmd-003',
+    utilisateur_id: 1,
+    statut: 'livree',
+    total: 75.50,
+    articles: JSON.stringify([
+      { produit_id: 4, nom: 'Équipement', quantite: 1, prix_unitaire: 75.50, total: 75.50 },
+    ]),
+    date_commande: new Date('2026-01-05T09:15:00'),
+    updated_at: new Date('2026-01-08T16:30:00'),
+    payment_intent_id: 'pi_test_789',
+    utilisateurs: mockUtilisateurs[0],
+  },
+  {
+    commande_id: 'cmd-004',
+    utilisateur_id: 2,
+    statut: 'annulee',
+    total: 30,
+    articles: JSON.stringify([
+      { produit_id: 5, nom: 'Cours essai', quantite: 1, prix_unitaire: 30, total: 30 },
+    ]),
+    date_commande: new Date('2026-01-20T11:00:00'),
+    updated_at: new Date('2026-01-20T12:00:00'),
+    payment_intent_id: null,
+    utilisateurs: mockUtilisateurs[1],
+  },
+];
+
 // Mock des méthodes Prisma
 export class PrismaClient {
   constructor() {
@@ -426,12 +483,202 @@ export class PrismaClient {
       },
     };
     
+    this.commandes = {
+      findMany: (args) => {
+        let results = [...mockCommandes];
+        
+        // Filtre par statut
+        if (args?.where?.statut) {
+          results = results.filter(c => c.statut === args.where.statut);
+        }
+        
+        // Filtre par utilisateur
+        if (args?.where?.utilisateur_id) {
+          results = results.filter(c => c.utilisateur_id === args.where.utilisateur_id);
+        }
+        
+        // Filtre par date
+        if (args?.where?.date_commande?.gte) {
+          results = results.filter(c => c.date_commande >= args.where.date_commande.gte);
+        }
+        if (args?.where?.date_commande?.lte) {
+          results = results.filter(c => c.date_commande <= args.where.date_commande.lte);
+        }
+        
+        // Recherche texte dans utilisateurs
+        if (args?.where?.utilisateurs) {
+          const searchOr = args.where.utilisateurs.OR;
+          if (searchOr && Array.isArray(searchOr)) {
+            results = results.filter(c => {
+              const user = c.utilisateurs;
+              return searchOr.some(condition => {
+                if (condition.first_name?.contains) {
+                  return user.first_name.toLowerCase().includes(condition.first_name.contains.toLowerCase());
+                }
+                if (condition.last_name?.contains) {
+                  return user.last_name.toLowerCase().includes(condition.last_name.contains.toLowerCase());
+                }
+                if (condition.email?.contains) {
+                  return user.email.toLowerCase().includes(condition.email.contains.toLowerCase());
+                }
+                return false;
+              });
+            });
+          }
+        }
+        
+        // Pagination
+        if (args?.skip) {
+          results = results.slice(args.skip);
+        }
+        if (args?.take) {
+          results = results.slice(0, args.take);
+        }
+        
+        // Include utilisateurs
+        if (args?.include?.utilisateurs) {
+          results = results.map(c => ({
+            ...c,
+            utilisateurs: c.utilisateurs,
+          }));
+        }
+        
+        return Promise.resolve(results);
+      },
+      
+      findUnique: (args) => {
+        const commande = mockCommandes.find(c => c.commande_id === args.where.commande_id);
+        if (!commande) return Promise.resolve(null);
+        
+        // Include utilisateurs
+        if (args?.include?.utilisateurs) {
+          return Promise.resolve({
+            ...commande,
+            utilisateurs: commande.utilisateurs,
+          });
+        }
+        
+        return Promise.resolve(commande);
+      },
+      
+      create: (args) => {
+        const newCommande = {
+          commande_id: `cmd-${Date.now()}`,
+          ...args.data,
+          date_commande: args.data.date_commande || new Date(),
+          updated_at: new Date(),
+          utilisateurs: mockUtilisateurs.find(u => u.id === args.data.utilisateur_id),
+        };
+        mockCommandes.push(newCommande);
+        
+        // Include utilisateurs
+        if (args?.include?.utilisateurs) {
+          return Promise.resolve({
+            ...newCommande,
+            utilisateurs: newCommande.utilisateurs,
+          });
+        }
+        
+        return Promise.resolve(newCommande);
+      },
+      
+      update: (args) => {
+        const index = mockCommandes.findIndex(c => c.commande_id === args.where.commande_id);
+        if (index === -1) {
+          return Promise.reject(new Error('Commande not found'));
+        }
+        
+        mockCommandes[index] = {
+          ...mockCommandes[index],
+          ...args.data,
+          updated_at: new Date(),
+        };
+        
+        // Include utilisateurs
+        if (args?.include?.utilisateurs) {
+          return Promise.resolve({
+            ...mockCommandes[index],
+            utilisateurs: mockCommandes[index].utilisateurs,
+          });
+        }
+        
+        return Promise.resolve(mockCommandes[index]);
+      },
+      
+      delete: (args) => {
+        const index = mockCommandes.findIndex(c => c.commande_id === args.where.commande_id);
+        if (index === -1) {
+          return Promise.reject(new Error('Commande not found'));
+        }
+        
+        const deleted = mockCommandes[index];
+        mockCommandes.splice(index, 1);
+        return Promise.resolve(deleted);
+      },
+      
+      count: (args) => {
+        let results = [...mockCommandes];
+        
+        // Filtre par statut
+        if (args?.where?.statut) {
+          results = results.filter(c => c.statut === args.where.statut);
+        }
+        
+        // Filtre par utilisateur
+        if (args?.where?.utilisateur_id) {
+          results = results.filter(c => c.utilisateur_id === args.where.utilisateur_id);
+        }
+        
+        // Filtre par date
+        if (args?.where?.date_commande?.gte) {
+          results = results.filter(c => c.date_commande >= args.where.date_commande.gte);
+        }
+        if (args?.where?.date_commande?.lte) {
+          results = results.filter(c => c.date_commande <= args.where.date_commande.lte);
+        }
+        
+        return Promise.resolve(results.length);
+      },
+      
+      groupBy: (args) => {
+        if (args.by.includes('statut')) {
+          const groups = {};
+          mockCommandes.forEach(c => {
+            if (!groups[c.statut]) {
+              groups[c.statut] = { statut: c.statut, _count: 0 };
+            }
+            groups[c.statut]._count++;
+          });
+          return Promise.resolve(Object.values(groups));
+        }
+        return Promise.resolve([]);
+      },
+      
+      aggregate: (args) => {
+        let results = [...mockCommandes];
+        
+        // Filtre par date
+        if (args?.where?.date_commande?.gte) {
+          results = results.filter(c => c.date_commande >= args.where.date_commande.gte);
+        }
+        
+        // Calcul somme
+        if (args?._sum?.total) {
+          const sum = results.reduce((acc, c) => acc + Number(c.total), 0);
+          return Promise.resolve({ _sum: { total: sum } });
+        }
+        
+        return Promise.resolve({ _sum: { total: 0 } });
+      },
+    };
+    
     this.$transaction = async (cb) => {
       return cb({
         alertes_utilisateurs: this.alertes_utilisateurs,
         alertes_actions: this.alertes_actions,
         utilisateurs: this.utilisateurs,
         password_reset_tokens: this.password_reset_tokens,
+        commandes: this.commandes,
       });
     };
   }

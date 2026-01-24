@@ -6,6 +6,7 @@ export * from './email.js';
 export * from './s3.js';
 export * from './alertes.js';
 export * from './auth.js';
+export * from './commandes-service.js';
 // Export du magasin
 export * from './magasin.js';
 export { userDataLoginByUserIdSchema, userSearchByEmailSchema } from './utilisateurs.js';
