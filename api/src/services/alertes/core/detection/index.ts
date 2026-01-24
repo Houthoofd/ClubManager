@@ -2,7 +2,7 @@
  * Détection automatique des alertes
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { AlerteResult } from '@clubmanager/types';
 
 /**

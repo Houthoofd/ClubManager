@@ -13,11 +13,8 @@ import type {
   AlerteResult,
 } from '@clubmanager/types';
 
-// Import des modules spécialisés
-import { obtenirDashboardAlertes, obtenirStatistiquesAlertes } from './core/stats.js';
-import { obtenirAlertesActives, obtenirAlertesUtilisateur } from './core/queries.js';
-import { resoudreAlerte, ignorerAlerte, creerAlerte } from './core/mutations.js';
-import { detecterAlertes } from './core/detection.js';
+// Import depuis l'index core qui réexporte tout
+import * as core from './core/index.js';
 
 /**
  * Service principal de gestion des alertes
@@ -26,38 +23,38 @@ import { detecterAlertes } from './core/detection.js';
 export class AlertesService {
   // Dashboard et statistiques
   async obtenirDashboardAlertes(): Promise<AlerteDashboard> {
-    return obtenirDashboardAlertes();
+    return core.obtenirDashboardAlertes();
   }
 
   async obtenirStatistiquesAlertes(): Promise<AlerteStats> {
-    return obtenirStatistiquesAlertes();
+    return core.obtenirStatistiquesAlertes();
   }
 
   // Requêtes
   async obtenirAlertesActives(): Promise<AlerteUtilisateur[]> {
-    return obtenirAlertesActives();
+    return core.obtenirAlertesActives();
   }
 
   async obtenirAlertesUtilisateur(utilisateurId: number): Promise<AlerteUtilisateur[]> {
-    return obtenirAlertesUtilisateur(utilisateurId);
+    return core.obtenirAlertesUtilisateur(utilisateurId);
   }
 
   // Mutations
   async resoudreAlerte(input: ResoudreAlerteInput): Promise<AlerteResult> {
-    return resoudreAlerte(input);
+    return core.resoudreAlerte(input);
   }
 
   async ignorerAlerte(input: IgnorerAlerteInput): Promise<AlerteResult> {
-    return ignorerAlerte(input);
+    return core.ignorerAlerte(input);
   }
 
   async creerAlerte(input: CreateAlerteInput): Promise<AlerteUtilisateur> {
-    return creerAlerte(input);
+    return core.creerAlerte(input);
   }
 
   // Détection automatique
   async detecterAlertes(): Promise<AlerteResult> {
-    return detecterAlertes();
+    return core.detecterAlertes();
   }
 }
 

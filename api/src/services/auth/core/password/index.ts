@@ -2,7 +2,7 @@
  * Module de gestion des mots de passe
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import bcrypt from 'bcrypt';
 import type { AuthResult, PasswordValidation } from '@clubmanager/types';
 

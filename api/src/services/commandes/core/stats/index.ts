@@ -2,7 +2,7 @@
  * Module de statistiques - Calcul des métriques des commandes
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { CommandeStats, CommandeCountByStatut } from '@clubmanager/types';
 
 /**

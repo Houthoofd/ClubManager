@@ -44,21 +44,21 @@ describe('Service Compte - Tests unitaires', () => {
 
   describe('Modules core', () => {
     it('devrait pouvoir importer le module queries', async () => {
-      const queriesModule = await import('../core/queries.js');
+      const queriesModule = await import('../core/queries/index.js');
       expect(queriesModule.obtenirCompteParId).toBeDefined();
       expect(queriesModule.obtenirCompteParNomPrenom).toBeDefined();
       expect(queriesModule.obtenirInformationsCompte).toBeDefined();
     });
 
     it('devrait pouvoir importer le module mutations', async () => {
-      const mutationsModule = await import('../core/mutations.js');
+      const mutationsModule = await import('../core/mutations/index.js');
       expect(mutationsModule.modifierCompte).toBeDefined();
       expect(mutationsModule.supprimerCompte).toBeDefined();
       expect(mutationsModule.mettreAJourMotDePasse).toBeDefined();
     });
 
     it('devrait pouvoir importer le module conversions', async () => {
-      const conversionsModule = await import('../core/conversions.js');
+      const conversionsModule = await import('../core/conversions/index.js');
       expect(conversionsModule.obtenirIdGenreParNom).toBeDefined();
       expect(conversionsModule.obtenirIdGradeParNom).toBeDefined();
       expect(conversionsModule.obtenirIdStatusParNom).toBeDefined();

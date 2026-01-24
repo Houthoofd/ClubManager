@@ -46,7 +46,7 @@ describe('Service Commandes - Tests unitaires', () => {
 
   describe('Modules core', () => {
     it('devrait pouvoir importer le module queries', async () => {
-      const queriesModule = await import('../core/queries.js');
+      const queriesModule = await import('../core/queries/index.js');
       expect(queriesModule.obtenirToutesCommandes).toBeDefined();
       expect(queriesModule.obtenirCommandeParId).toBeDefined();
       expect(queriesModule.obtenirCommandesUtilisateur).toBeDefined();
@@ -55,7 +55,7 @@ describe('Service Commandes - Tests unitaires', () => {
     });
 
     it('devrait pouvoir importer le module mutations', async () => {
-      const mutationsModule = await import('../core/mutations.js');
+      const mutationsModule = await import('../core/mutations/index.js');
       expect(mutationsModule.creerCommande).toBeDefined();
       expect(mutationsModule.modifierCommande).toBeDefined();
       expect(mutationsModule.modifierStatutCommande).toBeDefined();
@@ -63,13 +63,13 @@ describe('Service Commandes - Tests unitaires', () => {
     });
 
     it('devrait pouvoir importer le module stats', async () => {
-      const statsModule = await import('../core/stats.js');
+      const statsModule = await import('../core/stats/index.js');
       expect(statsModule.obtenirStatistiquesCommandes).toBeDefined();
       expect(statsModule.obtenirComptesParStatut).toBeDefined();
     });
 
     it('devrait pouvoir importer le module search', async () => {
-      const searchModule = await import('../core/search.js');
+      const searchModule = await import('../core/search/index.js');
       expect(searchModule.rechercherCommandes).toBeDefined();
     });
   });

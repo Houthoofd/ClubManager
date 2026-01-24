@@ -2,7 +2,7 @@
  * Requêtes de récupération des alertes
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { AlerteUtilisateur } from '@clubmanager/types';
 
 /**

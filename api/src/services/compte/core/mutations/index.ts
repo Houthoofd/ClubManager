@@ -2,7 +2,7 @@
  * Module de mutations - Modification et suppression de compte
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { CompteInfo, CompteUpdateInput } from '@clubmanager/types';
 
 /**

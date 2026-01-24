@@ -36,26 +36,26 @@ describe('AlertesService - Tests Unitaires', () => {
 
   describe('Core modules - Exports individuels', () => {
     it('devrait exporter les fonctions du module stats', async () => {
-      const stats = await import('../core/stats.js');
+      const stats = await import('../core/stats/index.js');
       expect(typeof stats.obtenirDashboardAlertes).toBe('function');
       expect(typeof stats.obtenirStatistiquesAlertes).toBe('function');
     });
 
     it('devrait exporter les fonctions du module queries', async () => {
-      const queries = await import('../core/queries.js');
+      const queries = await import('../core/queries/index.js');
       expect(typeof queries.obtenirAlertesActives).toBe('function');
       expect(typeof queries.obtenirAlertesUtilisateur).toBe('function');
     });
 
     it('devrait exporter les fonctions du module mutations', async () => {
-      const mutations = await import('../core/mutations.js');
+      const mutations = await import('../core/mutations/index.js');
       expect(typeof mutations.resoudreAlerte).toBe('function');
       expect(typeof mutations.ignorerAlerte).toBe('function');
       expect(typeof mutations.creerAlerte).toBe('function');
     });
 
     it('devrait exporter les fonctions du module detection', async () => {
-      const detection = await import('../core/detection.js');
+      const detection = await import('../core/detection/index.js');
       expect(typeof detection.detecterAlertes).toBe('function');
     });
   });
@@ -99,10 +99,10 @@ describe('AlertesService - Tests Unitaires', () => {
   describe('Isolation et indépendance', () => {
     it('devrait pouvoir importer chaque module core indépendamment', async () => {
       const [stats, queries, mutations, detection] = await Promise.all([
-        import('../core/stats.js'),
-        import('../core/queries.js'),
-        import('../core/mutations.js'),
-        import('../core/detection.js'),
+        import('../core/stats/index.js'),
+        import('../core/queries/index.js'),
+        import('../core/mutations/index.js'),
+        import('../core/detection/index.js'),
       ]);
       
       expect(stats).toBeDefined();

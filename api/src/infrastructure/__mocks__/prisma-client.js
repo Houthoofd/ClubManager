@@ -210,6 +210,129 @@ const mockCommandes = [
   },
 ];
 
+// Données de test - COURS
+const mockProfesseurs = [
+  {
+    id: 1,
+    nom: 'Sensei',
+    prenom: 'Karate',
+    email: 'karate.sensei@test.com',
+    phone: '0611111111',
+    date_embauche: new Date('2020-01-01'),
+    specialite: 'Karaté',
+    status_id: 5,
+  },
+  {
+    id: 2,
+    nom: 'Master',
+    prenom: 'Judo',
+    email: 'judo.master@test.com',
+    phone: '0622222222',
+    date_embauche: new Date('2019-06-15'),
+    specialite: 'Judo',
+    status_id: 5,
+  },
+  {
+    id: 3,
+    nom: 'Coach',
+    prenom: 'Taekwondo',
+    email: 'taekwondo.coach@test.com',
+    phone: '0633333333',
+    date_embauche: new Date('2021-03-10'),
+    specialite: 'Taekwondo',
+    status_id: 5,
+  },
+];
+
+const mockCoursRecurrent = [
+  {
+    id: 1,
+    type_cours: 'Karaté Débutant',
+    jour_semaine: 2, // Mardi
+    heure_debut: '18:00',
+    heure_fin: '19:30',
+  },
+  {
+    id: 2,
+    type_cours: 'Judo Avancé',
+    jour_semaine: 4, // Jeudi
+    heure_debut: '19:00',
+    heure_fin: '20:30',
+  },
+  {
+    id: 3,
+    type_cours: 'Taekwondo Enfants',
+    jour_semaine: 3, // Mercredi
+    heure_debut: '14:00',
+    heure_fin: '15:00',
+  },
+];
+
+const mockCoursRecurrentProfesseur = [
+  { id: 1, cours_recurrent_id: 1, professeur_id: 1 },
+  { id: 2, cours_recurrent_id: 2, professeur_id: 2 },
+  { id: 3, cours_recurrent_id: 3, professeur_id: 3 },
+];
+
+const mockCours = [
+  {
+    id: 1,
+    date_cours: new Date('2026-01-28'), // Mardi prochain
+    type_cours: 'Karaté Débutant',
+    heure_debut: '18:00',
+    heure_fin: '19:30',
+    cours_recurrent_id: 1,
+  },
+  {
+    id: 2,
+    date_cours: new Date('2026-01-30'), // Jeudi prochain
+    type_cours: 'Judo Avancé',
+    heure_debut: '19:00',
+    heure_fin: '20:30',
+    cours_recurrent_id: 2,
+  },
+  {
+    id: 3,
+    date_cours: new Date('2026-01-29'), // Mercredi prochain
+    type_cours: 'Taekwondo Enfants',
+    heure_debut: '14:00',
+    heure_fin: '15:00',
+    cours_recurrent_id: 3,
+  },
+  {
+    id: 4,
+    date_cours: new Date('2026-02-04'), // Mardi suivant
+    type_cours: 'Karaté Débutant',
+    heure_debut: '18:00',
+    heure_fin: '19:30',
+    cours_recurrent_id: 1,
+  },
+];
+
+const mockInscriptions = [
+  {
+    id: 1,
+    cours_id: 1,
+    utilisateur_id: 1,
+    is_present: null,
+    is_validate: null,
+  },
+  {
+    id: 2,
+    cours_id: 1,
+    utilisateur_id: 2,
+    is_present: true,
+    is_validate: true,
+  },
+  {
+    id: 3,
+    cours_id: 2,
+    utilisateur_id: 2,
+    is_present: false,
+    is_validate: false,
+  },
+];
+
 // Mock des méthodes Prisma
 export class PrismaClient {
   constructor() {
@@ -837,6 +960,401 @@ export class PrismaClient {
       },
     };
     
+    // COURS
+    this.professeurs = {
+      findMany: (args) => {
+        let results = [...mockProfesseurs];
+        
+        if (args?.where?.status_id) {
+          results = results.filter(p => p.status_id === args.where.status_id);
+        }
+        
+        if (args?.where?.OR) {
+          const orResults = [];
+          args.where.OR.forEach(condition => {
+            const found = mockProfesseurs.filter(p => {
+              if (condition.AND) {
+                return condition.AND.every(c => {
+                  if (c.prenom) return p.prenom === c.prenom;
+                  if (c.nom) return p.nom === c.nom;
+                  return true;
+                });
+              }
+              if (condition.nom) return p.nom === condition.nom;
+              return false;
+            });
+            orResults.push(...found);
+          });
+          results = orResults;
+        }
+        
+        return Promise.resolve(results);
+      },
+      
+      findFirst: (args) => {
+        let result = null;
+        
+        if (args?.where?.AND) {
+          result = mockProfesseurs.find(p => {
+            return args.where.AND.every(c => {
+              if (c.prenom) return p.prenom === c.prenom;
+              if (c.nom) return p.nom === c.nom;
+              return true;
+            });
+          });
+        }
+        
+        if (!result && args?.where?.nom) {
+          result = mockProfesseurs.find(p => p.nom === args.where.nom);
+        }
+        
+        if (args?.include?.cours_recurrent_professeur && result) {
+          const associations = mockCoursRecurrentProfesseur.filter(
+            crp => crp.professeur_id === result.id
+          );
+          result = {
+            ...result,
+            cours_recurrent_professeur: associations.map(assoc => ({
+              ...assoc,
+              cours_recurrent: mockCoursRecurrent.find(cr => cr.id === assoc.cours_recurrent_id)
+            }))
+          };
+        }
+        
+        return Promise.resolve(result || null);
+      },
+    };
+    
+    this.cours_recurrent = {
+      findMany: (args) => {
+        let results = [...mockCoursRecurrent];
+        
+        if (args?.where?.jour_semaine) {
+          results = results.filter(cr => cr.jour_semaine === args.where.jour_semaine);
+        }
+        
+        if (args?.include?.cours_recurrent_professeur) {
+          results = results.map(cr => ({
+            ...cr,
+            cours_recurrent_professeur: mockCoursRecurrentProfesseur
+              .filter(crp => crp.cours_recurrent_id === cr.id)
+              .map(crp => ({
+                ...crp,
+                professeurs: mockProfesseurs.find(p => p.id === crp.professeur_id)
+              }))
+          }));
+        }
+        
+        return Promise.resolve(results);
+      },
+      
+      findFirst: (args) => {
+        const result = mockCoursRecurrent.find(cr => {
+          if (args?.where?.jour_semaine && cr.jour_semaine !== args.where.jour_semaine) {
+            return false;
+          }
+          if (args?.where?.type_cours && cr.type_cours !== args.where.type_cours) {
+            return false;
+          }
+          if (args?.where?.heure_debut && cr.heure_debut !== args.where.heure_debut) {
+            return false;
+          }
+          if (args?.where?.heure_fin && cr.heure_fin !== args.where.heure_fin) {
+            return false;
+          }
+          return true;
+        });
+        return Promise.resolve(result || null);
+      },
+      
+      findUnique: (args) => {
+        const result = mockCoursRecurrent.find(cr => cr.id === args.where.id);
+        
+        if (result && args?.include?.cours_recurrent_professeur) {
+          return Promise.resolve({
+            ...result,
+            cours_recurrent_professeur: mockCoursRecurrentProfesseur
+              .filter(crp => crp.cours_recurrent_id === result.id)
+              .map(crp => ({
+                ...crp,
+                professeurs: mockProfesseurs.find(p => p.id === crp.professeur_id)
+              }))
+          });
+        }
+        
+        return Promise.resolve(result || null);
+      },
+      
+      create: (args) => {
+        const newCoursRecurrent = {
+          id: mockCoursRecurrent.length + 1,
+          ...args.data,
+        };
+        mockCoursRecurrent.push(newCoursRecurrent);
+        return Promise.resolve(newCoursRecurrent);
+      },
+      
+      update: (args) => {
+        const index = mockCoursRecurrent.findIndex(cr => cr.id === args.where.id);
+        if (index >= 0) {
+          mockCoursRecurrent[index] = { ...mockCoursRecurrent[index], ...args.data };
+          return Promise.resolve(mockCoursRecurrent[index]);
+        }
+        return Promise.reject(new Error('Cours récurrent non trouvé'));
+      },
+      
+      delete: (args) => {
+        const index = mockCoursRecurrent.findIndex(cr => cr.id === args.where.id);
+        if (index >= 0) {
+          const deleted = mockCoursRecurrent.splice(index, 1)[0];
+          return Promise.resolve(deleted);
+        }
+        return Promise.reject(new Error('Cours récurrent non trouvé'));
+      },
+    };
+    
+    this.cours_recurrent_professeur = {
+      createMany: (args) => {
+        const created = args.data.map((item, idx) => ({
+          id: mockCoursRecurrentProfesseur.length + idx + 1,
+          ...item,
+        }));
+        mockCoursRecurrentProfesseur.push(...created);
+        return Promise.resolve({ count: created.length });
+      },
+      
+      deleteMany: (args) => {
+        let count = 0;
+        
+        if (args?.where?.cours_recurrent_id && args?.where?.professeur_id?.in) {
+          const toDelete = mockCoursRecurrentProfesseur.filter(
+            crp => crp.cours_recurrent_id === args.where.cours_recurrent_id &&
+                   args.where.professeur_id.in.includes(crp.professeur_id)
+          );
+          count = toDelete.length;
+          toDelete.forEach(item => {
+            const index = mockCoursRecurrentProfesseur.indexOf(item);
+            if (index >= 0) mockCoursRecurrentProfesseur.splice(index, 1);
+          });
+        } else if (args?.where?.cours_recurrent_id) {
+          const toDelete = mockCoursRecurrentProfesseur.filter(
+            crp => crp.cours_recurrent_id === args.where.cours_recurrent_id
+          );
+          count = toDelete.length;
+          toDelete.forEach(item => {
+            const index = mockCoursRecurrentProfesseur.indexOf(item);
+            if (index >= 0) mockCoursRecurrentProfesseur.splice(index, 1);
+          });
+        }
+        
+        return Promise.resolve({ count });
+      },
+    };
+    
+    this.cours = {
+      findMany: (args) => {
+        let results = [...mockCours];
+        
+        // Filtres where
+        if (args?.where?.date_cours?.gte) {
+          results = results.filter(c => c.date_cours >= args.where.date_cours.gte);
+        }
+        if (args?.where?.date_cours?.lte) {
+          results = results.filter(c => c.date_cours <= args.where.date_cours.lte);
+        }
+        if (args?.where?.cours_recurrent_id) {
+          results = results.filter(c => c.cours_recurrent_id === args.where.cours_recurrent_id);
+        }
+        if (args?.where?.inscriptions?.some) {
+          const userId = args.where.inscriptions.some.utilisateur_id;
+          const coursIdsWithUser = mockInscriptions
+            .filter(i => i.utilisateur_id === userId)
+            .map(i => i.cours_id);
+          results = results.filter(c => coursIdsWithUser.includes(c.id));
+        }
+        
+        // Includes
+        if (args?.include?.inscriptions) {
+          results = results.map(c => ({
+            ...c,
+            inscriptions: mockInscriptions.filter(i => i.cours_id === c.id).map(i => ({
+              ...i,
+              utilisateurs: mockUtilisateurs.find(u => u.id === i.utilisateur_id)
+            }))
+          }));
+        }
+        
+        // Take
+        if (args?.take) {
+          results = results.slice(0, args.take);
+        }
+        
+        return Promise.resolve(results);
+      },
+      
+      createMany: (args) => {
+        const created = args.data.map((item, idx) => ({
+          id: mockCours.length + idx + 1,
+          ...item,
+        }));
+        mockCours.push(...created);
+        return Promise.resolve({ count: created.length });
+      },
+      
+      updateMany: (args) => {
+        let count = 0;
+        mockCours.forEach(c => {
+          let matches = true;
+          if (args?.where?.cours_recurrent_id && c.cours_recurrent_id !== args.where.cours_recurrent_id) {
+            matches = false;
+          }
+          if (args?.where?.date_cours?.gte && c.date_cours < args.where.date_cours.gte) {
+            matches = false;
+          }
+          
+          if (matches) {
+            Object.assign(c, args.data);
+            count++;
+          }
+        });
+        return Promise.resolve({ count });
+      },
+      
+      deleteMany: (args) => {
+        let count = 0;
+        const toDelete = mockCours.filter(c => {
+          if (args?.where?.cours_recurrent_id && c.cours_recurrent_id !== args.where.cours_recurrent_id) {
+            return false;
+          }
+          if (args?.where?.date_cours?.gte && c.date_cours < args.where.date_cours.gte) {
+            return false;
+          }
+          return true;
+        });
+        count = toDelete.length;
+        toDelete.forEach(item => {
+          const index = mockCours.indexOf(item);
+          if (index >= 0) mockCours.splice(index, 1);
+        });
+        return Promise.resolve({ count });
+      },
+    };
+    
+    this.inscriptions = {
+      findMany: (args) => {
+        let results = [...mockInscriptions];
+        
+        if (args?.where?.cours_id) {
+          results = results.filter(i => i.cours_id === args.where.cours_id);
+        }
+        if (args?.where?.utilisateur_id) {
+          results = results.filter(i => i.utilisateur_id === args.where.utilisateur_id);
+        }
+        if (args?.where?.cours?.date_cours?.lte) {
+          const coursIds = mockCours
+            .filter(c => c.date_cours <= args.where.cours.date_cours.lte)
+            .map(c => c.id);
+          results = results.filter(i => coursIds.includes(i.cours_id));
+        }
+        
+        if (args?.include?.utilisateurs) {
+          results = results.map(i => ({
+            ...i,
+            utilisateurs: mockUtilisateurs.find(u => u.id === i.utilisateur_id)
+          }));
+        }
+        
+        if (args?.include?.cours) {
+          results = results.map(i => ({
+            ...i,
+            cours: mockCours.find(c => c.id === i.cours_id)
+          }));
+        }
+        
+        return Promise.resolve(results);
+      },
+      
+      findFirst: (args) => {
+        const result = mockInscriptions.find(i => {
+          if (args?.where?.cours_id && i.cours_id !== args.where.cours_id) return false;
+          if (args?.where?.utilisateur_id && i.utilisateur_id !== args.where.utilisateur_id) return false;
+          return true;
+        });
+        
+        if (result && args?.include?.cours) {
+          return Promise.resolve({
+            ...result,
+            cours: mockCours.find(c => c.id === result.cours_id)
+          });
+        }
+        
+        return Promise.resolve(result || null);
+      },
+      
+      create: (args) => {
+        const newInscription = {
+          id: mockInscriptions.length + 1,
+          ...args.data,
+        };
+        mockInscriptions.push(newInscription);
+        
+        if (args?.include) {
+          let result = { ...newInscription };
+          if (args.include.cours) {
+            result.cours = mockCours.find(c => c.id === newInscription.cours_id);
+          }
+          if (args.include.utilisateurs) {
+            result.utilisateurs = mockUtilisateurs.find(u => u.id === newInscription.utilisateur_id);
+          }
+          return Promise.resolve(result);
+        }
+        
+        return Promise.resolve(newInscription);
+      },
+      
+      updateMany: (args) => {
+        let count = 0;
+        mockInscriptions.forEach(i => {
+          let matches = true;
+          if (args?.where?.cours_id && i.cours_id !== args.where.cours_id) {
+            matches = false;
+          }
+          if (args?.where?.utilisateur_id && i.utilisateur_id !== args.where.utilisateur_id) {
+            matches = false;
+          }
+          
+          if (matches) {
+            Object.assign(i, args.data);
+            count++;
+          }
+        });
+        return Promise.resolve({ count });
+      },
+      
+      deleteMany: (args) => {
+        let toDelete = [];
+        
+        if (args?.where?.cours_id && args?.where?.utilisateur_id) {
+          toDelete = mockInscriptions.filter(
+            i => i.cours_id === args.where.cours_id && i.utilisateur_id === args.where.utilisateur_id
+          );
+        } else if (args?.where?.cours?.cours_recurrent_id && args?.where?.cours?.date_cours?.gte) {
+          const coursIds = mockCours
+            .filter(c => c.cours_recurrent_id === args.where.cours.cours_recurrent_id &&
+                        c.date_cours >= args.where.cours.date_cours.gte)
+            .map(c => c.id);
+          toDelete = mockInscriptions.filter(i => coursIds.includes(i.cours_id));
+        }
+        
+        toDelete.forEach(item => {
+          const index = mockInscriptions.indexOf(item);
+          if (index >= 0) mockInscriptions.splice(index, 1);
+        });
+        
+        return Promise.resolve({ count: toDelete.length });
+      },
+    };
+    
     this.$transaction = async (cb) => {
       return cb({
         alertes_utilisateurs: this.alertes_utilisateurs,
@@ -848,6 +1366,11 @@ export class PrismaClient {
         grades: this.grades,
         status: this.status,
         plans_tarifaires: this.plans_tarifaires,
+        professeurs: this.professeurs,
+        cours_recurrent: this.cours_recurrent,
+        cours_recurrent_professeur: this.cours_recurrent_professeur,
+        cours: this.cours,
+        inscriptions: this.inscriptions,
       });
     };
   }

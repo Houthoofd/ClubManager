@@ -13,26 +13,8 @@ import type {
   ConversionResult,
 } from '@clubmanager/types';
 
-// Import des modules core
-import {
-  obtenirCompteParId,
-  obtenirCompteParNomPrenom,
-  obtenirInformationsCompte,
-} from './core/queries.js';
-
-import {
-  modifierCompte,
-  supprimerCompte,
-  mettreAJourMotDePasse,
-} from './core/mutations.js';
-
-import {
-  obtenirIdGenreParNom,
-  obtenirIdGradeParNom,
-  obtenirIdStatusParNom,
-  obtenirIdAbonnementParNom,
-  convertirNomsEnIds,
-} from './core/conversions.js';
+// Import depuis l'index core qui réexporte tout
+import * as core from './core/index.js';
 
 /**
  * Service principal pour la gestion des comptes
@@ -46,21 +28,21 @@ export class CompteService {
    * Récupère un compte par ID
    */
   async obtenirCompteParId(utilisateurId: number): Promise<CompteInfo | null> {
-    return obtenirCompteParId(utilisateurId);
+    return core.obtenirCompteParId(utilisateurId);
   }
 
   /**
    * Récupère un compte par prénom et nom
    */
   async obtenirCompteParNomPrenom(prenom: string, nom: string): Promise<CompteInfo[]> {
-    return obtenirCompteParNomPrenom(prenom, nom);
+    return core.obtenirCompteParNomPrenom(prenom, nom);
   }
 
   /**
    * Récupère les informations complètes d'un compte
    */
   async obtenirInformationsCompte(prenom: string, nom: string): Promise<CompteInfo | null> {
-    return obtenirInformationsCompte(prenom, nom);
+    return core.obtenirInformationsCompte(prenom, nom);
   }
 
   // ============================================
@@ -71,7 +53,7 @@ export class CompteService {
    * Modifie un compte
    */
   async modifierCompte(utilisateurId: number, updates: CompteUpdateInput): Promise<CompteInfo | null> {
-    return modifierCompte(utilisateurId, updates);
+    return core.modifierCompte(utilisateurId, updates);
   }
 
   /**
@@ -81,7 +63,7 @@ export class CompteService {
     console.log(`🔄 [CompteService] Modification avec conversion pour utilisateur ${utilisateurId}`);
 
     // Convertir les noms en IDs
-    const conversions = await convertirNomsEnIds(updates);
+    const conversions = await core.convertirNomsEnIds(updates);
 
     // Fusionner les conversions avec les updates
     const finalUpdates: CompteUpdateInput = {
@@ -92,21 +74,21 @@ export class CompteService {
       abonnement_id: conversions.abonnement_id,
     };
 
-    return modifierCompte(utilisateurId, finalUpdates);
+    return core.modifierCompte(utilisateurId, finalUpdates);
   }
 
   /**
    * Supprime un compte (soft delete)
    */
   async supprimerCompte(utilisateurId: number): Promise<boolean> {
-    return supprimerCompte(utilisateurId);
+    return core.supprimerCompte(utilisateurId);
   }
 
   /**
    * Met à jour le mot de passe d'un utilisateur
    */
   async mettreAJourMotDePasse(data: ComptePasswordUpdate): Promise<boolean> {
-    return mettreAJourMotDePasse(data.utilisateur_id, data.new_password, data.is_creation);
+    return core.mettreAJourMotDePasse(data.utilisateur_id, data.new_password, data.is_creation);
   }
 
   // ============================================
@@ -117,35 +99,35 @@ export class CompteService {
    * Obtient l'ID d'un genre par son nom
    */
   async obtenirIdGenre(genreName: string): Promise<number> {
-    return obtenirIdGenreParNom(genreName);
+    return core.obtenirIdGenreParNom(genreName);
   }
 
   /**
    * Obtient l'ID d'un grade par son nom
    */
   async obtenirIdGrade(gradeName: string): Promise<number> {
-    return obtenirIdGradeParNom(gradeName);
+    return core.obtenirIdGradeParNom(gradeName);
   }
 
   /**
    * Obtient l'ID d'un status par son nom
    */
   async obtenirIdStatus(statusName: string): Promise<number> {
-    return obtenirIdStatusParNom(statusName);
+    return core.obtenirIdStatusParNom(statusName);
   }
 
   /**
    * Obtient l'ID d'un abonnement par son nom
    */
   async obtenirIdAbonnement(abonnementName: string): Promise<number> {
-    return obtenirIdAbonnementParNom(abonnementName);
+    return core.obtenirIdAbonnementParNom(abonnementName);
   }
 
   /**
    * Convertit automatiquement les noms en IDs
    */
   async convertirNomsEnIds(input: ConversionInput): Promise<ConversionResult> {
-    return convertirNomsEnIds(input);
+    return core.convertirNomsEnIds(input);
   }
 }
 

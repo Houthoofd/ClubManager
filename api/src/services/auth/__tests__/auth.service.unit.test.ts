@@ -56,14 +56,14 @@ describe('AuthService - Tests Unitaires', () => {
 
   describe('Core modules - Exports individuels', () => {
     it('devrait exporter les fonctions du module authentication', async () => {
-      const auth = await import('../core/authentication.js');
+      const auth = await import('../core/authentication/index.js');
       expect(typeof auth.authentifierUtilisateur).toBe('function');
       expect(typeof auth.creerCompteUtilisateur).toBe('function');
       expect(typeof auth.emailExiste).toBe('function');
     });
 
     it('devrait exporter les fonctions du module password', async () => {
-      const password = await import('../core/password.js');
+      const password = await import('../core/password/index.js');
       expect(typeof password.modifierMotDePasse).toBe('function');
       expect(typeof password.validerMotDePasse).toBe('function');
       expect(typeof password.hasherMotDePasse).toBe('function');
@@ -72,7 +72,7 @@ describe('AuthService - Tests Unitaires', () => {
     });
 
     it('devrait exporter les fonctions du module tokens', async () => {
-      const tokens = await import('../core/tokens.js');
+      const tokens = await import('../core/tokens/index.js');
       expect(typeof tokens.creerTokenRecuperation).toBe('function');
       expect(typeof tokens.verifierTokenRecuperation).toBe('function');
       expect(typeof tokens.reinitialiserMotDePasseAvecToken).toBe('function');
@@ -81,7 +81,7 @@ describe('AuthService - Tests Unitaires', () => {
     });
 
     it('devrait exporter les fonctions du module security', async () => {
-      const security = await import('../core/security.js');
+      const security = await import('../core/security/index.js');
       expect(typeof security.rechercherUtilisateurParEmail).toBe('function');
       expect(typeof security.obtenirInformationsSecurite).toBe('function');
       expect(typeof security.obtenirStatistiquesAuth).toBe('function');
@@ -128,10 +128,10 @@ describe('AuthService - Tests Unitaires', () => {
   describe('Isolation et indépendance', () => {
     it('devrait pouvoir importer chaque module core indépendamment', async () => {
       const [auth, password, tokens, security] = await Promise.all([
-        import('../core/authentication.js'),
-        import('../core/password.js'),
-        import('../core/tokens.js'),
-        import('../core/security.js'),
+        import('../core/authentication/index.js'),
+        import('../core/password/index.js'),
+        import('../core/tokens/index.js'),
+        import('../core/security/index.js'),
       ]);
       
       expect(auth).toBeDefined();
@@ -150,7 +150,7 @@ describe('AuthService - Tests Unitaires', () => {
 
   describe('Validation des helpers', () => {
     it('devrait valider les emails correctement', async () => {
-      const { validerEmail } = await import('../core/password.js');
+      const { validerEmail } = await import('../core/password/index.js');
       
       expect(validerEmail('test@example.com')).toBe(true);
       expect(validerEmail('invalid-email')).toBe(false);
@@ -159,7 +159,7 @@ describe('AuthService - Tests Unitaires', () => {
     });
 
     it('devrait valider les mots de passe selon les règles', async () => {
-      const { validerMotDePasse } = await import('../core/password.js');
+      const { validerMotDePasse } = await import('../core/password/index.js');
       
       const weak = validerMotDePasse('weak');
       expect(weak.valid).toBe(false);
@@ -171,7 +171,7 @@ describe('AuthService - Tests Unitaires', () => {
     });
 
     it('devrait générer des tokens sécurisés', async () => {
-      const { genererTokenSecurise } = await import('../core/tokens.js');
+      const { genererTokenSecurise } = await import('../core/tokens/index.js');
       
       const token1 = genererTokenSecurise();
       const token2 = genererTokenSecurise();

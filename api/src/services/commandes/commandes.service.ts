@@ -15,30 +15,8 @@ import type {
   CommandeSearchResult
 } from '@clubmanager/types';
 
-// Import des modules core
-import {
-  obtenirToutesCommandes,
-  obtenirCommandeParId,
-  obtenirCommandesUtilisateur,
-  obtenirCommandesParStatut,
-  compterCommandesParStatut,
-} from './core/queries.js';
-
-import {
-  creerCommande,
-  modifierCommande,
-  modifierStatutCommande,
-  supprimerCommande,
-} from './core/mutations.js';
-
-import {
-  obtenirStatistiquesCommandes,
-  obtenirComptesParStatut,
-} from './core/stats.js';
-
-import {
-  rechercherCommandes,
-} from './core/search.js';
+// Import depuis l'index core qui réexporte tout
+import * as core from './core/index.js';
 
 /**
  * Service principal pour la gestion des commandes
@@ -52,28 +30,28 @@ export class CommandesService {
    * Récupère toutes les commandes
    */
   async obtenirToutesCommandes(): Promise<Commande[]> {
-    return obtenirToutesCommandes();
+    return core.obtenirToutesCommandes();
   }
 
   /**
    * Récupère une commande par son ID
    */
   async obtenirCommandeParId(commandeId: string): Promise<Commande | null> {
-    return obtenirCommandeParId(commandeId);
+    return core.obtenirCommandeParId(commandeId);
   }
 
   /**
    * Récupère les commandes d'un utilisateur
    */
   async obtenirCommandesUtilisateur(utilisateurId: number): Promise<Commande[]> {
-    return obtenirCommandesUtilisateur(utilisateurId);
+    return core.obtenirCommandesUtilisateur(utilisateurId);
   }
 
   /**
    * Récupère les commandes par statut
    */
   async obtenirCommandesParStatut(statut: string): Promise<Commande[]> {
-    return obtenirCommandesParStatut(statut);
+    return core.obtenirCommandesParStatut(statut);
   }
 
   // ============================================
@@ -84,28 +62,28 @@ export class CommandesService {
    * Crée une nouvelle commande
    */
   async creerCommande(input: CreateCommandeInput): Promise<Commande> {
-    return creerCommande(input);
+    return core.creerCommande(input);
   }
 
   /**
    * Modifie une commande
    */
   async modifierCommande(commandeId: string, updates: UpdateCommandeInput): Promise<Commande | null> {
-    return modifierCommande(commandeId, updates);
+    return core.modifierCommande(commandeId, updates);
   }
 
   /**
    * Modifie le statut d'une commande
    */
   async modifierStatutCommande(commandeId: string, nouveauStatut: string): Promise<Commande | null> {
-    return modifierStatutCommande(commandeId, nouveauStatut);
+    return core.modifierStatutCommande(commandeId, nouveauStatut);
   }
 
   /**
    * Supprime une commande
    */
   async supprimerCommande(commandeId: string): Promise<boolean> {
-    return supprimerCommande(commandeId);
+    return core.supprimerCommande(commandeId);
   }
 
   // ============================================
@@ -116,14 +94,14 @@ export class CommandesService {
    * Récupère les statistiques des commandes
    */
   async obtenirStatistiques(): Promise<CommandeStats> {
-    return obtenirStatistiquesCommandes();
+    return core.obtenirStatistiquesCommandes();
   }
 
   /**
    * Compte les commandes par statut
    */
   async compterParStatut(): Promise<CommandeCountByStatut[]> {
-    return obtenirComptesParStatut();
+    return core.obtenirComptesParStatut();
   }
 
   // ============================================
@@ -134,7 +112,7 @@ export class CommandesService {
    * Recherche des commandes avec filtres
    */
   async rechercherCommandes(filters: CommandeSearchFilters): Promise<CommandeSearchResult> {
-    return rechercherCommandes(filters);
+    return core.rechercherCommandes(filters);
   }
 }
 

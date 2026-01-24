@@ -2,7 +2,7 @@
  * Module de mutations - Création et modification des commandes
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { Commande, CreateCommandeInput, UpdateCommandeInput } from '@clubmanager/types';
 
 /**

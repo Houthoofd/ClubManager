@@ -2,7 +2,7 @@
  * Statistiques et dashboard des alertes
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { AlerteDashboard, AlerteStats } from '@clubmanager/types';
 
 /**

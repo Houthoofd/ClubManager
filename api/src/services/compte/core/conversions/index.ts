@@ -2,7 +2,7 @@
  * Module de conversions - Convertit les noms en IDs pour les références
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { ConversionResult } from '@clubmanager/types';
 
 /**

@@ -2,7 +2,7 @@
  * Module de requêtes - Récupération des informations de compte
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { CompteInfo } from '@clubmanager/types';
 
 /**

@@ -2,7 +2,7 @@
  * Module de sécurité et audit
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { SecurityInfo, AuthStats } from '@clubmanager/types';
 
 /**

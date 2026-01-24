@@ -2,7 +2,7 @@
  * Module de recherche - Recherche de commandes avec filtres
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { Commande, CommandeSearchFilters, CommandeSearchResult } from '@clubmanager/types';
 
 /**

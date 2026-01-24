@@ -2,7 +2,7 @@
  * Module de gestion des tokens de récupération de mot de passe
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import crypto from 'crypto';
 import type { AuthResult, PasswordResetToken } from '@clubmanager/types';
 

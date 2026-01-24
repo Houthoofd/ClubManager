@@ -13,6 +13,7 @@ module.exports = {
     '^@clubmanager/types$': '<rootDir>/../packages/types/dist/index.js',
     "^\\.\\./generated/prisma/index\\.js$": "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
     "^\\.\\./(\\.\\./)*/generated/prisma/index\\.js$": "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
+    "^@prisma/client$": "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   transform: {

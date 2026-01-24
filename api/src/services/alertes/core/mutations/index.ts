@@ -2,7 +2,7 @@
  * Mutations des alertes (créer, résoudre, ignorer)
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type {
   AlerteUtilisateur,
   CreateAlerteInput,

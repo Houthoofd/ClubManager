@@ -2,7 +2,7 @@
  * Module de requêtes - Récupération des commandes
  */
 
-import { prisma } from '../../../infrastructure/database/prisma-client.js';
+import { prisma } from '../../../../infrastructure/database/prisma-client.js';
 import type { Commande } from '@clubmanager/types';
 
 /**
