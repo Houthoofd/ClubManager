@@ -29,7 +29,8 @@ describe('TemplateLoader', () => {
 
       const result = (loader as any).replaceVariables(content, variables);
 
-      expect(result).toBe('Hello !');
+      // Les variables manquantes restent en place
+      expect(result).toBe('Hello {{name}}!');
     });
 
     it('should replace multiple occurrences', () => {

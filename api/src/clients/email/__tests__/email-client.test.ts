@@ -1,66 +1,61 @@
 /**
- * Tests pour EmailClient
+ * Tests pour EmailClient - Version simplifiée sans mocks complexes
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
+import { EmailClient } from '../email-client';
 
 describe('EmailClient', () => {
-  describe('sendEmail', () => {
-    it('should send simple email successfully', async () => {
-      // Mock du SendGridSender
-      const mockSend = jest.fn().mockResolvedValue({
-        success: true,
-        messageId: 'test-message-id',
-      });
+  let emailClient: EmailClient;
 
-      // TODO: Implémenter le test complet avec mocks
-      expect(mockSend).toBeDefined();
+  beforeEach(() => {
+    emailClient = new EmailClient();
+  });
+
+  describe('Structure', () => {
+    it('should create EmailClient instance', () => {
+      expect(emailClient).toBeInstanceOf(EmailClient);
     });
 
-    it('should handle template email', async () => {
-      // TODO: Test avec template
-      expect(true).toBe(true);
+    it('should have sendEmail method', () => {
+      expect(typeof emailClient.sendEmail).toBe('function');
     });
 
-    it('should handle errors gracefully', async () => {
-      // TODO: Test gestion d'erreurs
-      expect(true).toBe(true);
+    it('should have sendPromotionEmail method', () => {
+      expect(typeof emailClient.sendPromotionEmail).toBe('function');
+    });
+
+    it('should have sendWelcomeEmail method', () => {
+      expect(typeof emailClient.sendWelcomeEmail).toBe('function');
+    });
+
+    it('should have sendOrderConfirmationEmail method', () => {
+      expect(typeof emailClient.sendOrderConfirmationEmail).toBe('function');
     });
   });
 
-  describe('sendPromotionEmail', () => {
-    it('should send promotion email with correct variables', async () => {
-      // TODO: Test email de promotion
-      expect(true).toBe(true);
-    });
-
-    it('should use default template name', async () => {
-      // TODO: Test template par défaut
-      expect(true).toBe(true);
+  // TODO: Ajouter tests avec mocks une fois les dépendances résolues
+  describe.skip('sendEmail', () => {
+    it('should send simple email', async () => {
+      // Test à implémenter avec mocks
     });
   });
 
-  describe('sendWelcomeEmail', () => {
+  describe.skip('sendPromotionEmail', () => {
+    it('should send promotion email', async () => {
+      // Test à implémenter avec mocks
+    });
+  });
+
+  describe.skip('sendWelcomeEmail', () => {
     it('should send welcome email', async () => {
-      // TODO: Test email de bienvenue
-      expect(true).toBe(true);
-    });
-
-    it('should fallback on error', async () => {
-      // TODO: Test fallback
-      expect(true).toBe(true);
+      // Test à implémenter avec mocks
     });
   });
 
-  describe('sendOrderConfirmationEmail', () => {
-    it('should send order confirmation with all details', async () => {
-      // TODO: Test confirmation commande
-      expect(true).toBe(true);
-    });
-
-    it('should use fallback HTML on template error', async () => {
-      // TODO: Test fallback HTML
-      expect(true).toBe(true);
+  describe.skip('sendOrderConfirmationEmail', () => {
+    it('should send order confirmation', async () => {
+      // Test à implémenter avec mocks
     });
   });
 });
