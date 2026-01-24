@@ -7,6 +7,7 @@ export * from './s3.js';
 export * from './alertes.js';
 export * from './auth.js';
 export * from './commandes-service.js';
+export * from './compte-service.js';
 export * from './magasin.js';
 export type { Commande as CommandeStore, CreateCommandeData, UpdateCommandeData, CommandeComplete } from './commandes.js';
 export type { UserDataLoginByUserId, UserSearchByEmail } from './utilisateurs.js';

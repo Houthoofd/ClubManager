@@ -58,8 +58,11 @@ const mockUtilisateurs = [
     password: '$2b$12$/CLuvALRTiMm.h0.k2dBM.vbyriSZ.4llhqtCvT7/OkL9RLW58Wce', // hash de "password123"
     first_name: 'Jean',
     last_name: 'Dupont',
+    nom_utilisateur: 'jdupont',
+    phone: '0612345678',
     date_of_birth: new Date('1990-01-01'),
     genre_id: 1,
+    grade_id: 2,
     abonnement_id: null,
     status_id: 1,
     date_inscription: new Date('2025-01-01'),
@@ -73,8 +76,11 @@ const mockUtilisateurs = [
     password: '$2b$12$/CLuvALRTiMm.h0.k2dBM.vbyriSZ.4llhqtCvT7/OkL9RLW58Wce',
     first_name: 'Marie',
     last_name: 'Martin',
+    nom_utilisateur: 'mmartin',
+    phone: '0698765432',
     date_of_birth: new Date('1985-05-15'),
     genre_id: 2,
+    grade_id: 3,
     abonnement_id: 1,
     status_id: 1,
     date_inscription: new Date('2024-06-15'),
@@ -118,6 +124,33 @@ const mockAuthAttempts = [
 
 const mockPasswordResetAttempts = [
   { id: 1, email: 'jean@test.com', success: true, attempted_at: new Date() },
+];
+
+// Données de test - COMPTE (genres, grades, status, plans)
+const mockGenres = [
+  { id: 1, genre_name: 'Homme' },
+  { id: 2, genre_name: 'Femme' },
+  { id: 3, genre_name: 'Autre' },
+];
+
+const mockGrades = [
+  { id: 1, grade_id: 'BLANC', nom_grade: 'Ceinture Blanche' },
+  { id: 2, grade_id: 'JAUNE', nom_grade: 'Ceinture Jaune' },
+  { id: 3, grade_id: 'ORANGE', nom_grade: 'Ceinture Orange' },
+  { id: 4, grade_id: 'VERTE', nom_grade: 'Ceinture Verte' },
+];
+
+const mockStatus = [
+  { id: 0, nom_role: 'Inactif' },
+  { id: 1, nom_role: 'Actif' },
+  { id: 2, nom_role: 'Admin' },
+  { id: 3, nom_role: 'Professeur' },
+];
+
+const mockPlansTarifaires = [
+  { id: 1, nom_plan: 'Mensuel', prix: 49.99 },
+  { id: 2, nom_plan: 'Trimestriel', prix: 135 },
+  { id: 3, nom_plan: 'Annuel', prix: 480 },
 ];
 
 // Données de test - COMMANDES
@@ -255,41 +288,58 @@ export class PrismaClient {
     this.utilisateurs = {
       findMany: (args) => {
         let results = [...mockUtilisateurs];
-        if (args?.where?.status_id) {
+        
+        // Filtres
+        if (args?.where?.status_id !== undefined) {
           results = results.filter(u => u.status_id === args.where.status_id);
         }
+        if (args?.where?.first_name) {
+          results = results.filter(u => u.first_name === args.where.first_name);
+        }
+        if (args?.where?.last_name) {
+          results = results.filter(u => u.last_name === args.where.last_name);
+        }
+        
+        // Inclure les relations
+        if (args?.include) {
+          results = results.map(u => {
+            const enriched = { ...u };
+            if (args.include.genres) enriched.genres = mockGenres.find(g => g.id === u.genre_id) || null;
+            if (args.include.grades) enriched.grades = mockGrades.find(g => g.id === u.grade_id) || null;
+            if (args.include.status) enriched.status = mockStatus.find(s => s.id === u.status_id) || null;
+            if (args.include.plans_tarifaires) enriched.plans_tarifaires = mockPlansTarifaires.find(p => p.id === u.abonnement_id) || null;
+            return enriched;
+          });
+        }
+        
         return Promise.resolve(results);
       },
       
       findFirst: (args) => {
         let result = mockUtilisateurs.find(u => {
-          if (args?.where?.email) return u.email === args.where.email;
-          if (args?.where?.id) return u.id === args.where.id;
-          if (args?.where?.email && args?.where?.status_id) {
-            return u.email === args.where.email && u.status_id === args.where.status_id;
-          }
-          return false;
+          let match = true;
+          if (args?.where?.email) match = match && u.email === args.where.email;
+          if (args?.where?.id) match = match && u.id === args.where.id;
+          if (args?.where?.first_name) match = match && u.first_name === args.where.first_name;
+          if (args?.where?.last_name) match = match && u.last_name === args.where.last_name;
+          if (args?.where?.status_id !== undefined) match = match && u.status_id === args.where.status_id;
+          return match;
         });
         
-        // Appliquer le select si présent
-        if (result && args?.select) {
-          const selected = {};
-          Object.keys(args.select).forEach(key => {
-            if (args.select[key] === true) {
-              selected[key] = result[key];
-            }
-          });
-          result = selected;
+        if (!result) return Promise.resolve(null);
+        
+        // Inclure les relations
+        if (args?.include) {
+          const enriched = { ...result };
+          if (args.include.genres) enriched.genres = mockGenres.find(g => g.id === result.genre_id) || null;
+          if (args.include.grades) enriched.grades = mockGrades.find(g => g.id === result.grade_id) || null;
+          if (args.include.status) enriched.status = mockStatus.find(s => s.id === result.status_id) || null;
+          if (args.include.plans_tarifaires) enriched.plans_tarifaires = mockPlansTarifaires.find(p => p.id === result.abonnement_id) || null;
+          result = enriched;
         }
         
-        return Promise.resolve(result || null);
-      },
-      
-      findUnique: (args) => {
-        let result = mockUtilisateurs.find(u => u.id === args.where.id);
-        
-        // Appliquer le select/include si présent
-        if (result && args?.select) {
+        // Appliquer le select si présent
+        if (args?.select) {
           const selected = {};
           Object.keys(args.select).forEach(key => {
             if (args.select[key] === true || typeof args.select[key] === 'object') {
@@ -299,7 +349,42 @@ export class PrismaClient {
           result = selected;
         }
         
-        return Promise.resolve(result || null);
+        return Promise.resolve(result);
+      },
+      
+      findUnique: (args) => {
+        let result = mockUtilisateurs.find(u => {
+          let match = true;
+          if (args.where.id) match = match && u.id === args.where.id;
+          if (args.where.email) match = match && u.email === args.where.email;
+          if (args.where.status_id !== undefined) match = match && u.status_id === args.where.status_id;
+          return match;
+        });
+        
+        if (!result) return Promise.resolve(null);
+        
+        // Inclure les relations
+        if (args?.include) {
+          const enriched = { ...result };
+          if (args.include.genres) enriched.genres = mockGenres.find(g => g.id === result.genre_id) || null;
+          if (args.include.grades) enriched.grades = mockGrades.find(g => g.id === result.grade_id) || null;
+          if (args.include.status) enriched.status = mockStatus.find(s => s.id === result.status_id) || null;
+          if (args.include.plans_tarifaires) enriched.plans_tarifaires = mockPlansTarifaires.find(p => p.id === result.abonnement_id) || null;
+          result = enriched;
+        }
+        
+        // Appliquer le select si présent
+        if (args?.select) {
+          const selected = {};
+          Object.keys(args.select).forEach(key => {
+            if (args.select[key] === true || typeof args.select[key] === 'object') {
+              selected[key] = result[key];
+            }
+          });
+          result = selected;
+        }
+        
+        return Promise.resolve(result);
       },
       
       create: (args) => {
@@ -334,7 +419,23 @@ export class PrismaClient {
       
       update: (args) => {
         const user = mockUtilisateurs.find(u => u.id === args.where.id);
-        return Promise.resolve({ ...user, ...args.data });
+        if (!user) {
+          return Promise.reject(new Error('User not found'));
+        }
+        
+        const updated = { ...user, ...args.data };
+        
+        // Inclure les relations
+        if (args?.include) {
+          const enriched = { ...updated };
+          if (args.include.genres) enriched.genres = mockGenres.find(g => g.id === updated.genre_id) || null;
+          if (args.include.grades) enriched.grades = mockGrades.find(g => g.id === updated.grade_id) || null;
+          if (args.include.status) enriched.status = mockStatus.find(s => s.id === updated.status_id) || null;
+          if (args.include.plans_tarifaires) enriched.plans_tarifaires = mockPlansTarifaires.find(p => p.id === updated.abonnement_id) || null;
+          return Promise.resolve(enriched);
+        }
+        
+        return Promise.resolve(updated);
       },
       
       updateMany: (args) => {
@@ -672,6 +773,70 @@ export class PrismaClient {
       },
     };
     
+    this.genres = {
+      findFirst: (args) => {
+        const genre = mockGenres.find(g => {
+          if (args?.where?.genre_name) {
+            return g.genre_name === args.where.genre_name;
+          }
+          return false;
+        });
+        return Promise.resolve(genre || null);
+      },
+      
+      findMany: () => {
+        return Promise.resolve(mockGenres);
+      },
+    };
+    
+    this.grades = {
+      findFirst: (args) => {
+        const grade = mockGrades.find(g => {
+          if (args?.where?.grade_id) {
+            return g.grade_id === args.where.grade_id;
+          }
+          return false;
+        });
+        return Promise.resolve(grade || null);
+      },
+      
+      findMany: () => {
+        return Promise.resolve(mockGrades);
+      },
+    };
+    
+    this.status = {
+      findFirst: (args) => {
+        const status = mockStatus.find(s => {
+          if (args?.where?.nom_role) {
+            return s.nom_role === args.where.nom_role;
+          }
+          return false;
+        });
+        return Promise.resolve(status || null);
+      },
+      
+      findMany: () => {
+        return Promise.resolve(mockStatus);
+      },
+    };
+    
+    this.plans_tarifaires = {
+      findFirst: (args) => {
+        const plan = mockPlansTarifaires.find(p => {
+          if (args?.where?.nom_plan) {
+            return p.nom_plan === args.where.nom_plan;
+          }
+          return false;
+        });
+        return Promise.resolve(plan || null);
+      },
+      
+      findMany: () => {
+        return Promise.resolve(mockPlansTarifaires);
+      },
+    };
+    
     this.$transaction = async (cb) => {
       return cb({
         alertes_utilisateurs: this.alertes_utilisateurs,
@@ -679,6 +844,10 @@ export class PrismaClient {
         utilisateurs: this.utilisateurs,
         password_reset_tokens: this.password_reset_tokens,
         commandes: this.commandes,
+        genres: this.genres,
+        grades: this.grades,
+        status: this.status,
+        plans_tarifaires: this.plans_tarifaires,
       });
     };
   }
