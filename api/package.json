@@ -8,17 +8,23 @@
     "prebuild": "npm run clean",
     "build": "tsc",
     "build:force": "npm run clean && tsc --force",
+    "dev": "tsx watch src/graphql-server.ts",
+    "start:graphql": "tsx src/graphql-server.ts",
     "test:windows": "set NODE_ENV=test&& set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.js",
     "test:db:windows": "set NODE_ENV=test&& set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.js src/__tests__/db/clients",
     "test:routes:windows": "set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.js src/__tests__/routes",
     "db-setup:windows": "set DB_HOST=localhost&& set DB_USER=root&& set DB_PASSWORD=PtW143kjkS3F&&  set DB_NAME=clubmanager&& node scripts/db-setup-all-in-one.js",
     "mysql-diagnostic": "node scripts/mysql-diagnostic.js",
     "cleanup": "node scripts/cleanup.js",
-    "fix-tests": "node scripts/fix-jest-config.js"
+    "fix-tests": "node scripts/fix-jest-config.js",
+    "prisma:generate": "prisma generate",
+    "prisma:pull": "prisma db pull",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@clubmanager/types": "file:../packages/types",
     "@clubmanager/utils": "file:../packages/utils",
+    "@graphql-tools/schema": "^10.0.31",
     "@prisma/client": "^7.3.0",
     "@sendgrid/mail": "^8.1.6",
     "bcrypt": "^5.1.1",
@@ -29,6 +35,9 @@
     "dotenv": "^17.2.0",
     "express": "~4.16.1",
     "glob": "^11.0.3",
+    "graphql": "^16.12.0",
+    "graphql-scalars": "^1.25.0",
+    "graphql-yoga": "^5.18.0",
     "http-errors": "~1.6.3",
     "iconv-lite": "^0.6.3",
     "jade": "~1.11.0",
@@ -67,6 +76,7 @@
     "prisma": "^7.3.0",
     "supertest": "^6.3.0",
     "ts-jest": "^29.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   }
 }
