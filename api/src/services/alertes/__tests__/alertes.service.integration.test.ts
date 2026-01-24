@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import type { AlerteUtilisateur, AlerteDashboard, AlerteStats } from '@clubmanager/types/src/alertes.js';
+import type { AlerteUtilisateur, AlerteDashboard, AlerteStats } from '@clubmanager/types';
 
 describe('AlertesService - Tests d\'Intégration', () => {
   let alertesService: any;
