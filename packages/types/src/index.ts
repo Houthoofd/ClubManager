@@ -12,8 +12,42 @@ export * from './cours-service.js';
 export * from './informations-service.js';
 export * from './inscriptions-service.js';
 
-// Export du magasin
-export * from './magasin.js';
+// Export du magasin avec renommage pour éviter les conflits
+export type { 
+  Article,
+  ArticleCreationData,
+  ArticleCommande,
+  ArticlesParCategorie,
+  Commande as MagasinCommande,
+  CommandeDetails,
+  NouvelleCommande,
+  Categorie as MagasinCategorie,
+  Stock,
+  FiltresArticles,
+  OptionsPagination,
+  OptionsTri,
+  ConfirmationResult,
+  MagasinConfirmationResult,
+  MagasinResponse,
+  ArticlesResponse,
+  CommandeResponse,
+  CommandesResponse,
+  CategoriesResponse,
+  IdMagasin,
+  IdArticle,
+  IdCommande,
+  IdCategorie,
+  IdUtilisateur,
+  MappingTaille
+} from './magasin.js';
+
+// Export des valeurs nécessaires (classes, enums, constantes)
+export { 
+  StatutCommande,
+  MagasinError,
+  TAILLES_MAPPING,
+  TAILLES_REVERSE_MAPPING
+} from './magasin.js';
 
 // Export des commandes avec renommage pour éviter les conflits
 export type { 

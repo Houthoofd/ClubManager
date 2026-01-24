@@ -11,6 +11,6 @@ export * from './compte-service.js';
 export * from './cours-service.js';
 export * from './informations-service.js';
 export * from './inscriptions-service.js';
-// Export du magasin
-export * from './magasin.js';
+// Export des valeurs nécessaires (classes, enums, constantes)
+export { StatutCommande, MagasinError, TAILLES_MAPPING, TAILLES_REVERSE_MAPPING } from './magasin.js';
 export { userDataLoginByUserIdSchema, userSearchByEmailSchema } from './utilisateurs.js';

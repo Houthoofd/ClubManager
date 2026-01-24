@@ -1,5 +1,5 @@
 /**
- * Mock local pour les tests du service Auth
+ * Mock du Prisma Client pour les tests
  */
 
 import bcrypt from 'bcrypt';
@@ -65,14 +65,14 @@ export const mockPasswordResetTokens = [
 
 // Factory pour créer un mock Prisma
 export const createMockPrisma = () => {
-  // Copie des données pour permettre la réinitialisation
-  let utilisateurs = [...mockUtilisateurs];
-  let passwordResetTokens = [...mockPasswordResetTokens];
+  // Variables locales pour les données mock (reset à chaque appel)
+  let utilisateurs = JSON.parse(JSON.stringify(mockUtilisateurs));
+  let passwordResetTokens = JSON.parse(JSON.stringify(mockPasswordResetTokens));
   let authAttempts: any[] = [];
   let passwordResetAttempts: any[] = [];
   let manualRecoveryRequests: any[] = [];
 
-  return {
+  const mockPrismaClient = {
     utilisateurs: {
       findFirst: createMockFn(async (args?: any) => {
         let results = [...utilisateurs];
@@ -91,7 +91,7 @@ export const createMockPrisma = () => {
       }),
 
       findUnique: createMockFn(async (args: any) => {
-        const user = utilisateurs.find(u => u.id === args.where.id);
+        const user = utilisateurs.find((u: any) => u.id === args.where.id);
         if (!user) return null;
         
         // Simuler les relations si demandées
@@ -114,7 +114,7 @@ export const createMockPrisma = () => {
         };
         
         // Vérifier doublon email (erreur P2002)
-        if (utilisateurs.find(u => u.email === args.data.email)) {
+        if (utilisateurs.find((u: any) => u.email === args.data.email)) {
           const error: any = new Error('Unique constraint failed');
           error.code = 'P2002';
           throw error;
@@ -125,7 +125,7 @@ export const createMockPrisma = () => {
       }),
 
       update: createMockFn(async (args: any) => {
-        const index = utilisateurs.findIndex(u => u.id === args.where.id);
+        const index = utilisateurs.findIndex((u: any) => u.id === args.where.id);
         if (index === -1) return null;
         
         utilisateurs[index] = { ...utilisateurs[index], ...args.data };
@@ -134,7 +134,7 @@ export const createMockPrisma = () => {
 
       updateMany: createMockFn(async (args: any) => {
         let count = 0;
-        utilisateurs = utilisateurs.map(u => {
+        utilisateurs = utilisateurs.map((u: any) => {
           const matches = (!args.where.id || u.id === args.where.id) &&
                          (!args.where.status_id || u.status_id === args.where.status_id);
           if (matches) {
@@ -167,11 +167,20 @@ export const createMockPrisma = () => {
         if (args?.where?.token) {
           results = results.filter(t => t.token === args.where.token);
         }
+        if (args?.where?.user_id) {
+          results = results.filter(t => t.user_id === args.where.user_id);
+        }
         if (args?.where?.expires_at?.gt) {
-          results = results.filter(t => t.expires_at > args.where.expires_at.gt);
+          results = results.filter(t => new Date(t.expires_at) > new Date(args.where.expires_at.gt));
         }
         
-        return results[0] || null;
+        const token = results[0] || null;
+        if (token && (args?.include?.utilisateurs || args?.select?.utilisateurs)) {
+          const user = utilisateurs.find((u: any) => u.id === token.user_id);
+          token.utilisateurs = user || null;
+        }
+        
+        return token;
       }),
 
       create: createMockFn(async (args: any) => {
@@ -188,13 +197,13 @@ export const createMockPrisma = () => {
         const before = passwordResetTokens.length;
         
         if (args?.where?.user_id) {
-          passwordResetTokens = passwordResetTokens.filter(t => t.user_id !== args.where.user_id);
+          passwordResetTokens = passwordResetTokens.filter((t: any) => t.user_id !== args.where.user_id);
         }
         if (args?.where?.token) {
-          passwordResetTokens = passwordResetTokens.filter(t => t.token !== args.where.token);
+          passwordResetTokens = passwordResetTokens.filter((t: any) => t.token !== args.where.token);
         }
         if (args?.where?.expires_at?.lt) {
-          passwordResetTokens = passwordResetTokens.filter(t => t.expires_at >= args.where.expires_at.lt);
+          passwordResetTokens = passwordResetTokens.filter((t: any) => t.expires_at >= args.where.expires_at.lt);
         }
         
         return { count: before - passwordResetTokens.length };
@@ -259,8 +268,31 @@ export const createMockPrisma = () => {
         if (args?.where?.attempted_at?.gte) {
           results = results.filter(a => a.attempted_at >= args.where.attempted_at.gte);
         }
+        if (args?.where?.success !== undefined) {
+          results = results.filter(a => a.success === args.where.success);
+        }
         
         return results.length;
+      }),
+
+      findMany: createMockFn(async (args?: any) => {
+        let results = [...authAttempts];
+        
+        if (args?.where?.attempted_at?.gte) {
+          results = results.filter(a => a.attempted_at >= args.where.attempted_at.gte);
+        }
+        if (args?.orderBy?.attempted_at) {
+          results.sort((a, b) => {
+            const aDate = new Date(a.attempted_at).getTime();
+            const bDate = new Date(b.attempted_at).getTime();
+            return args.orderBy.attempted_at === 'desc' ? bDate - aDate : aDate - bDate;
+          });
+        }
+        if (args?.take) {
+          results = results.slice(0, args.take);
+        }
+        
+        return results;
       }),
     },
 
@@ -281,7 +313,7 @@ export const createMockPrisma = () => {
       const tx = {
         utilisateurs: {
           update: createMockFn(async (args: any) => {
-            const index = utilisateurs.findIndex(u => u.id === args.where.id);
+            const index = utilisateurs.findIndex((u: any) => u.id === args.where.id);
             if (index === -1) return null;
             
             utilisateurs[index] = { ...utilisateurs[index], ...args.data };
@@ -291,7 +323,7 @@ export const createMockPrisma = () => {
         password_reset_tokens: {
           deleteMany: createMockFn(async (args: any) => {
             const before = passwordResetTokens.length;
-            passwordResetTokens = passwordResetTokens.filter(t => t.user_id !== args.where.user_id);
+            passwordResetTokens = passwordResetTokens.filter((t: any) => t.user_id !== args.where.user_id);
             return { count: before - passwordResetTokens.length };
           }),
         },
@@ -309,4 +341,22 @@ export const createMockPrisma = () => {
       manualRecoveryRequests = [];
     },
   };
+
+  return mockPrismaClient;
+};
+
+/**
+ * Fonction pour initialiser les hashs de mots de passe
+ * À appeler avant les tests pour générer les vrais hashs bcrypt
+ */
+export const initializePasswordHashes = async () => {
+  const saltRounds = 12;
+  PASSWORD_HASH = await bcrypt.hash('password123', saltRounds);
+  
+  // Mettre à jour les mots de passe dans les données mock originales
+  mockUtilisateurs.forEach(user => {
+    user.password = PASSWORD_HASH;
+  });
+  
+  return PASSWORD_HASH;
 };

@@ -54,7 +54,7 @@ export declare const articleCreationSchema: z.ZodObject<{
     nom: z.ZodString;
     description: z.ZodString;
     prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
+    images: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
     categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
     stocks: z.ZodArray<z.ZodObject<{
         taille: z.ZodString;
@@ -91,7 +91,7 @@ export declare const articleDataValidationSchema: z.ZodObject<{
     nom: z.ZodString;
     description: z.ZodString;
     prix: z.ZodEffects<z.ZodNumber, number, unknown>;
-    images: z.ZodDefault<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
+    images: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
     categorie_id: z.ZodEffects<z.ZodNumber, number, unknown>;
     stocks: z.ZodArray<z.ZodObject<{
         taille: z.ZodString;
@@ -191,4 +191,101 @@ export declare const articleCommandeSchema: z.ZodObject<{
 export type ArticleCreationData = z.infer<typeof articleCreationSchema>;
 export type ArticleData = z.infer<typeof articleDataValidationSchema>;
 export type NouvelleCommande = z.infer<typeof nouvelleCommandeSchema>;
+export type Commande = {
+    id: number;
+    utilisateur_id: number;
+    statut: string;
+    date: string;
+    total: number;
+    articles: ArticleCommande[];
+};
+export type CommandeDetails = {
+    id: number;
+    utilisateur_id: number;
+    utilisateur_nom?: string;
+    statut: string;
+    date: string;
+    total: number;
+    articles: ArticleCommandeDetails[];
+};
+export type ArticleCommandeDetails = {
+    article_id: number;
+    article_nom: string;
+    taille?: string;
+    quantite: number;
+    prix: number;
+};
+export type UtilisateurMagasin = {
+    id: number;
+    nom: string;
+    email: string;
+};
+export type MagasinResponse<T = any> = {
+    success: boolean;
+    data?: T;
+    message?: string;
+    errors?: string[];
+};
+export type ArticlesResponse = MagasinResponse<{
+    articles: Article[];
+    total?: number;
+}>;
+export type CommandeResponse = MagasinResponse<{
+    commande: Commande;
+}>;
+export type CommandesResponse = MagasinResponse<{
+    commandes: CommandeDetails[];
+    total?: number;
+}>;
+export type CategoriesResponse = MagasinResponse<{
+    categories: Categorie[];
+}>;
+export declare enum StatutCommande {
+    EN_ATTENTE = "en_attente",
+    CONFIRMEE = "confirmee",
+    EXPEDIEE = "expediee",
+    LIVREE = "livree",
+    ANNULEE = "annulee"
+}
+export type FiltresArticles = {
+    categorie_id?: number;
+    prix_min?: number;
+    prix_max?: number;
+    disponible?: boolean;
+    recherche?: string;
+};
+export type OptionsTri = {
+    colonne: 'nom' | 'prix' | 'date_creation' | 'categorie';
+    direction: 'asc' | 'desc';
+};
+export type OptionsPagination = {
+    page: number;
+    limit: number;
+};
+export declare class MagasinError extends Error {
+    readonly code: string;
+    readonly details?: any | undefined;
+    constructor(message: string, code: string, details?: any | undefined);
+}
+export type IdMagasin = {
+    id: number;
+};
+export type IdArticle = IdMagasin;
+export type IdCommande = IdMagasin;
+export type IdCategorie = IdMagasin;
+export type IdUtilisateur = IdMagasin;
+export type MappingTaille = {
+    [taille: string]: number;
+};
+export declare const TAILLES_MAPPING: MappingTaille;
+export declare const TAILLES_REVERSE_MAPPING: {
+    [id: number]: string;
+};
+export type ConfirmationResult = {
+    success: boolean;
+    isConfirm: boolean;
+    message?: string;
+    data?: any;
+};
+export type MagasinConfirmationResult = ConfirmationResult;
 //# sourceMappingURL=magasin.d.ts.map
