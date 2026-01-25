@@ -63,6 +63,11 @@ export async function obtenirAlertesActives(prisma = defaultPrisma): Promise<Ale
 export async function obtenirAlertesUtilisateur(utilisateurId: number, prisma = defaultPrisma): Promise<AlerteUtilisateur[]> {
   console.log(`👤 [AlertesQueries] Récupération alertes utilisateur ${utilisateurId}`);
 
+  // Validation
+  if (!utilisateurId || utilisateurId <= 0) {
+    throw new Error('L\'ID utilisateur est requis et doit être positif');
+  }
+
   const alertes = await prisma.alertes_utilisateurs.findMany({
     where: {
       utilisateur_id: utilisateurId,

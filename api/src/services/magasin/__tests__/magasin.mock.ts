@@ -383,6 +383,19 @@ export function createMockPrisma(): any {
     return Promise.resolve();
   });
 
+  // Fonction de reset pour les tests
+  mockPrisma._reset = () => {
+    // Reset tous les mocks
+    jest.clearAllMocks();
+    
+    // Reconfigurer les mocks par défaut
+    mockPrisma.articles.findMany.mockResolvedValue(mockArticles);
+    mockPrisma.categories.findMany.mockResolvedValue(mockCategories);
+    mockPrisma.commandes.findMany.mockResolvedValue(mockCommandes);
+    mockPrisma.stocks.findMany.mockResolvedValue(mockStocks);
+    mockPrisma.tailles.findMany.mockResolvedValue(mockTailles);
+  };
+
   return mockPrisma;
 }
 

@@ -123,6 +123,19 @@ export async function obtenirArticlesParCategories(prisma = defaultPrisma): Prom
 export async function creerArticle(data: ArticleCreationData, prisma = defaultPrisma): Promise<ConfirmationResult> {
   console.log('➕ [MagasinArticles] Création article:', data.nom);
 
+  // Validations
+  if (!data.nom || data.nom.trim() === '') {
+    throw new MagasinError('Le nom de l\'article est requis', 'INVALID_NAME');
+  }
+
+  if (data.prix === undefined || data.prix < 0) {
+    throw new MagasinError('Le prix est requis et ne peut pas être négatif', 'INVALID_PRICE');
+  }
+
+  if (!data.categorie_id || data.categorie_id <= 0) {
+    throw new MagasinError('L\'ID de la catégorie est requis et doit être positif', 'INVALID_CATEGORY_ID');
+  }
+
   try {
     const result = await prisma.$transaction(async (tx: any) => {
       // 1. Créer l'article

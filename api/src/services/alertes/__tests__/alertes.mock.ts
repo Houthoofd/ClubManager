@@ -116,7 +116,12 @@ export const createMockPrisma = () => {
 
       update: createMockFn((args: any) => {
         const index = alertesUtilisateurs.findIndex(a => a.id === args.where.id);
-        if (index === -1) return Promise.resolve(null);
+        if (index === -1) {
+          // Simuler une erreur Prisma pour enregistrement non trouvé
+          const error: any = new Error('Record to update not found.');
+          error.code = 'P2025';
+          return Promise.reject(error);
+        }
         
         alertesUtilisateurs[index] = { ...alertesUtilisateurs[index], ...args.data };
         return Promise.resolve(alertesUtilisateurs[index]);

@@ -85,6 +85,11 @@ export async function creerCategorie(
 ): Promise<ConfirmationResult> {
   console.log(`➕ [MagasinCategories] Création catégorie: ${nom}`);
 
+  // Validation
+  if (!nom || nom.trim() === '') {
+    throw new MagasinError('Le nom de la catégorie est requis', 'INVALID_NAME');
+  }
+
   try {
     // Nettoyer le nom en supprimant les espaces
     const nomNettoye = nom.trim();
@@ -143,6 +148,15 @@ export async function modifierCategorie(
   prisma = defaultPrisma
 ): Promise<ConfirmationResult> {
   console.log(`🔄 [MagasinCategories] Modification catégorie ${categorieId} -> ${nouveauNom}`);
+
+  // Validations
+  if (!categorieId || categorieId <= 0) {
+    throw new MagasinError('L\'ID de la catégorie est requis et doit être positif', 'INVALID_CATEGORY_ID');
+  }
+
+  if (!nouveauNom || nouveauNom.trim() === '') {
+    throw new MagasinError('Le nouveau nom de la catégorie est requis', 'INVALID_NAME');
+  }
 
   try {
     // Vérifier si la catégorie existe

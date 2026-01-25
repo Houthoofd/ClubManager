@@ -16,6 +16,14 @@ export async function modifierMotDePasse(
 ): Promise<AuthResult> {
   console.log(`🔑 [AuthPassword] Modification mot de passe pour utilisateur ${userId}`);
 
+  // Valider l'ID utilisateur
+  if (!userId || userId <= 0) {
+    return {
+      success: false,
+      message: 'ID utilisateur invalide',
+    };
+  }
+
   const passwordHash = await bcrypt.hash(newPassword, 12);
 
   const updated = await prisma.utilisateurs.updateMany({
@@ -50,6 +58,15 @@ export async function modifierMotDePasse(
 export function validerMotDePasse(password: string): PasswordValidation {
   const errors: string[] = [];
 
+  // Vérifier si le mot de passe est null ou undefined
+  if (!password) {
+    errors.push('Le mot de passe est requis');
+    return {
+      valid: false,
+      errors,
+    };
+  }
+
   if (password.length < 8) {
     errors.push('Le mot de passe doit contenir au moins 8 caractères');
   }
@@ -64,6 +81,10 @@ export function validerMotDePasse(password: string): PasswordValidation {
 
   if (!/[0-9]/.test(password)) {
     errors.push('Le mot de passe doit contenir au moins un chiffre');
+  }
+
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push('Le mot de passe doit contenir au moins un caractère spécial');
   }
 
   return {

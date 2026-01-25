@@ -131,6 +131,30 @@ export async function obtenirCommandesUtilisateur(
 export async function ajouterCommande(data: NouvelleCommande, prisma = defaultPrisma): Promise<ConfirmationResult> {
   console.log(`➕ [MagasinCommandes] Création commande pour utilisateur ${data.utilisateur_id}`);
 
+  // Validations
+  if (!data.utilisateur_id || data.utilisateur_id <= 0) {
+    throw new MagasinError('L\'ID utilisateur est requis et doit être positif', 'INVALID_USER_ID');
+  }
+
+  if (!data.articles || data.articles.length === 0) {
+    throw new MagasinError('La commande doit contenir au moins un article', 'EMPTY_ORDER');
+  }
+
+  // Valider chaque article
+  for (const article of data.articles) {
+    if (!article.article_id || article.article_id <= 0) {
+      throw new MagasinError('L\'ID de l\'article est requis et doit être positif', 'INVALID_ARTICLE_ID');
+    }
+    
+    if (!article.quantite || article.quantite <= 0) {
+      throw new MagasinError('La quantité doit être supérieure à 0', 'INVALID_QUANTITY');
+    }
+
+    if (article.prix !== undefined && article.prix < 0) {
+      throw new MagasinError('Le prix ne peut pas être négatif', 'INVALID_PRICE');
+    }
+  }
+
   try {
     const result = await prisma.$transaction(async (tx: any) => {
       // 1. Vérifier et réserver les stocks

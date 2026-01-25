@@ -118,6 +118,7 @@ export async function obtenirStatistiquesAuth(prisma = defaultPrisma): Promise<A
   const successRate = attemptsToday > 0 ? (successfulToday / attemptsToday) * 100 : 0;
 
   return {
+    total_utilisateurs: totalUsers,
     totalUsers,
     activeUsers,
     authAttemptsToday: attemptsToday,

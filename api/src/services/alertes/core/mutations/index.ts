@@ -17,6 +17,24 @@ import type {
 export async function resoudreAlerte(input: ResoudreAlerteInput, prisma = defaultPrisma): Promise<AlerteResult> {
   console.log(`✅ [AlertesMutations] Résolution alerte ${input.alerteId}`);
 
+  // Validations
+  if (!input.alerteId || input.alerteId <= 0) {
+    throw new Error('L\'ID de l\'alerte est requis et doit être positif');
+  }
+
+  if (!input.effectuePar || input.effectuePar <= 0) {
+    throw new Error('L\'ID de l\'utilisateur effectuant la résolution est requis');
+  }
+
+  // Vérifier que l'alerte existe
+  const alerteExiste = await prisma.alertes_utilisateurs.findUnique({
+    where: { id: input.alerteId },
+  });
+
+  if (!alerteExiste) {
+    throw new Error('Alerte inexistante');
+  }
+
   await prisma.$transaction(async (tx: any) => {
     // Mettre à jour l'alerte
     await tx.alertes_utilisateurs.update({
@@ -52,6 +70,20 @@ export async function resoudreAlerte(input: ResoudreAlerteInput, prisma = defaul
 export async function ignorerAlerte(input: IgnorerAlerteInput, prisma = defaultPrisma): Promise<AlerteResult> {
   console.log(`🚫 [AlertesMutations] Ignore alerte ${input.alerteId}`);
 
+  // Validations
+  if (!input.alerteId || input.alerteId <= 0) {
+    throw new Error('L\'ID de l\'alerte est requis et doit être positif');
+  }
+
+  // Vérifier que l'alerte existe
+  const alerteExiste = await prisma.alertes_utilisateurs.findUnique({
+    where: { id: input.alerteId },
+  });
+
+  if (!alerteExiste) {
+    throw new Error('Alerte inexistante');
+  }
+
   await prisma.alertes_utilisateurs.update({
     where: { id: input.alerteId },
     data: {
@@ -72,6 +104,14 @@ export async function ignorerAlerte(input: IgnorerAlerteInput, prisma = defaultP
  */
 export async function creerAlerte(input: CreateAlerteInput, prisma = defaultPrisma): Promise<AlerteUtilisateur> {
   console.log(`➕ [AlertesMutations] Création alerte utilisateur ${input.utilisateurId}`);
+  // Validations
+  if (!input.utilisateurId || input.utilisateurId <= 0) {
+    throw new Error('L\'ID utilisateur est requis et doit être positif');
+  }
+
+  if (!input.typeAlerteId || input.typeAlerteId <= 0) {
+    throw new Error('Le type d\'alerte est requis');
+  }
 
   const alerte = await prisma.alertes_utilisateurs.create({
     data: {

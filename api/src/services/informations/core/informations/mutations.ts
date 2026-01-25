@@ -11,6 +11,28 @@ import type { InformationInput, InformationResult } from '@clubmanager/types';
  */
 export async function ajouterInformation(data: InformationInput): Promise<InformationResult> {
   try {
+    // Validations
+    if (!data.titre || data.titre.trim() === '') {
+      return {
+        success: false,
+        message: 'Le titre est requis'
+      };
+    }
+
+    if (data.titre.length > 255) {
+      return {
+        success: false,
+        message: 'Le titre ne peut pas dépasser 255 caractères'
+      };
+    }
+
+    if (!data.contenu || data.contenu.trim() === '') {
+      return {
+        success: false,
+        message: 'Le contenu est requis'
+      };
+    }
+
     const information = await prisma.informations.create({
       data: {
         titre: data.titre,
@@ -39,6 +61,28 @@ export async function ajouterInformation(data: InformationInput): Promise<Inform
  */
 export async function modifierInformation(id: number, data: InformationInput): Promise<InformationResult> {
   try {
+    // Validations
+    if (!id || id <= 0) {
+      return {
+        success: false,
+        message: 'ID invalide'
+      };
+    }
+
+    if (!data.titre || data.titre.trim() === '') {
+      return {
+        success: false,
+        message: 'Le titre est requis'
+      };
+    }
+
+    if (!data.contenu || data.contenu.trim() === '') {
+      return {
+        success: false,
+        message: 'Le contenu est requis'
+      };
+    }
+
     const information = await prisma.informations.findFirst({
       where: {
         id,
@@ -80,6 +124,14 @@ export async function modifierInformation(id: number, data: InformationInput): P
  */
 export async function supprimerInformation(id: number): Promise<InformationResult> {
   try {
+    // Validation
+    if (!id || id <= 0) {
+      return {
+        success: false,
+        message: 'ID invalide'
+      };
+    }
+
     const information = await prisma.informations.findUnique({
       where: { id }
     });

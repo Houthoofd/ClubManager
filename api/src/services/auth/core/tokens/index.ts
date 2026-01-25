@@ -67,6 +67,12 @@ export async function verifierTokenRecuperation(
 ): Promise<PasswordResetToken | null> {
   console.log('🔍 [AuthTokens] Vérification token récupération');
 
+  // Valider que le token n'est pas vide
+  if (!token || token.trim() === '') {
+    console.log('❌ [AuthTokens] Token vide');
+    return null;
+  }
+
   const resetToken = await prisma.password_reset_tokens.findFirst({
     where: {
       token,

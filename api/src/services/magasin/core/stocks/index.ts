@@ -60,6 +60,19 @@ export async function mettreAJourStock(
 ): Promise<ConfirmationResult> {
   console.log(`🔄 [MagasinStocks] Mise à jour stock article ${articleId} taille ${taille} -> ${nouvelleQuantite}`);
 
+  // Validations
+  if (!articleId || articleId <= 0) {
+    throw new MagasinError('L\'ID de l\'article est requis et doit être positif', 'INVALID_ARTICLE_ID');
+  }
+
+  if (!taille || taille.trim() === '') {
+    throw new MagasinError('La taille est requise', 'INVALID_SIZE');
+  }
+
+  if (nouvelleQuantite === undefined || nouvelleQuantite < 0) {
+    throw new MagasinError('La quantité ne peut pas être négative', 'INVALID_QUANTITY');
+  }
+
   try {
     const tailleId = TAILLES_MAPPING[taille];
     if (!tailleId) {

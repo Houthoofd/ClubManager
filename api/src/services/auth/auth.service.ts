@@ -16,6 +16,8 @@ import type {
 
 // Import depuis l'index core qui réexporte tout
 import * as core from './core/index.js';
+import { prisma } from '../../infrastructure/database/prisma-client.js';
+import bcrypt from 'bcrypt';
 
 /**
  * Service principal d'authentification
@@ -63,6 +65,39 @@ export class AuthService {
         success: false,
         message: validation.errors.join(', '),
       };
+    }
+
+    // Si un currentPassword est fourni, le vérifier
+    if (input.currentPassword) {
+      const utilisateur = await prisma.utilisateurs.findUnique({
+        where: { id: input.userId },
+        select: { password: true }
+      });
+
+      if (!utilisateur) {
+        return {
+          success: false,
+          message: 'Utilisateur non trouvé',
+        };
+      }
+
+      const passwordMatches = await bcrypt.compare(input.currentPassword, utilisateur.password);
+      
+      if (!passwordMatches) {
+        return {
+          success: false,
+          message: 'Ancien mot de passe incorrect',
+        };
+      }
+
+      // Vérifier si l'ancien et le nouveau sont identiques
+      const samePassword = await bcrypt.compare(input.newPassword, utilisateur.password);
+      if (samePassword) {
+        return {
+          success: false,
+          message: 'Le nouveau mot de passe doit être différent de l\'ancien',
+        };
+      }
     }
 
     return core.modifierMotDePasse(input.userId, input.newPassword);

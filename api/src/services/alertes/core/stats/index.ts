@@ -42,7 +42,27 @@ export async function obtenirDashboardAlertes(prisma = defaultPrisma): Promise<A
     where: { statut: 'resolue' },
   });
 
+  // Alertes récentes
+  const alertesRecentes = await prisma.alertes_utilisateurs.findMany({
+    where: { statut: 'active' },
+    take: 10,
+    orderBy: { date_detection: 'desc' },
+    include: {
+      alertes_types: true,
+      utilisateurs: {
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
   return {
+    total: total,
+    alertes_recentes: alertesRecentes,
     totalAlertes: total,
     alertesActives: total,
     alertesCritiques: critiques,
@@ -98,6 +118,9 @@ export async function obtenirStatistiquesAlertes(prisma = defaultPrisma): Promis
   ]);
 
   return {
+    total: total,
+    actives: actives,
+    resolues: resolues,
     totalAlertes: total,
     alertesActives: actives,
     alertesResolues: resolues,
