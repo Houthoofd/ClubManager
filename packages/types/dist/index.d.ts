@@ -11,6 +11,7 @@ export * from './compte-service.js';
 export * from './cours-service.js';
 export * from './informations-service.js';
 export * from './inscriptions-service.js';
+export * from './messagerie.js';
 export type { Article, ArticleCreationData, ArticleCommande, ArticlesParCategorie, Commande as MagasinCommande, CommandeDetails, NouvelleCommande, Categorie as MagasinCategorie, Stock, FiltresArticles, OptionsPagination, OptionsTri, ConfirmationResult, MagasinConfirmationResult, MagasinResponse, ArticlesResponse, CommandeResponse, CommandesResponse, CategoriesResponse, IdMagasin, IdArticle, IdCommande, IdCategorie, IdUtilisateur, MappingTaille } from './magasin.js';
 export { StatutCommande, MagasinError, TAILLES_MAPPING, TAILLES_REVERSE_MAPPING } from './magasin.js';
 export type { Commande as CommandeStore, CreateCommandeData, UpdateCommandeData, CommandeComplete } from './commandes.js';
