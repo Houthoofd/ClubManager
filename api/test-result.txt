@@ -1,0 +1,629 @@
+﻿
+> api@0.0.0 test:windows
+> set NODE_ENV=test&& set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.cjs commandes.service.exceptions.test.ts --verbose
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur undefined
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 0
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur -1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    ­ƒöä [CommandesMutations] Modification statut commande test-id ÔåÆ statut_invalide
+
+      at Module.modifierStatutCommande (src/services/commandes/core/mutations/index.ts:61:11)
+
+  console.warn
+    ÔÜá´©Å Commande test-id introuvable
+
+    [0m [90m 67 |[39m
+     [90m 68 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 69 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 70 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 71 |[39m   }
+     [90m 72 |[39m[0m
+
+      at Module.modifierStatutCommande (src/services/commandes/core/mutations/index.ts:69:13)
+
+  console.log
+    ­ƒöä [CommandesMutations] Modification statut commande  ÔåÆ validee
+
+      at Module.modifierStatutCommande (src/services/commandes/core/mutations/index.ts:61:11)
+
+  console.warn
+    ÔÜá´©Å Commande  introuvable
+
+    [0m [90m 67 |[39m
+     [90m 68 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 69 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 70 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 71 |[39m   }
+     [90m 72 |[39m[0m
+
+      at Module.modifierStatutCommande (src/services/commandes/core/mutations/index.ts:69:13)
+
+  console.log
+    ­ƒöä [CommandesMutations] Modification statut commande 00000000-0000-0000-0000-000000000000 ÔåÆ validee
+
+      at Module.modifierStatutCommande (src/services/commandes/core/mutations/index.ts:61:11)
+
+  console.warn
+    ÔÜá´©Å Commande 00000000-0000-0000-0000-000000000000 introuvable
+
+    [0m [90m 67 |[39m
+     [90m 68 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 69 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 70 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 71 |[39m   }
+     [90m 72 |[39m[0m
+
+      at Module.modifierStatutCommande (src/services/commandes/core/mutations/index.ts:69:13)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    ­ƒöì [CommandesQueries] Recherche commande 00000000-0000-0000-0000-000000000000
+
+      at Module.obtenirCommandeParId (src/services/commandes/core/queries/index.ts:37:11)
+
+  console.log
+    ­ƒæñ [CommandesQueries] R├®cup├®ration commandes utilisateur 999999
+
+      at Module.obtenirCommandesUtilisateur (src/services/commandes/core/queries/index.ts:64:11)
+
+  console.log
+    ­ƒôè [CommandesQueries] R├®cup├®ration commandes statut inexistant
+
+      at Module.obtenirCommandesParStatut (src/services/commandes/core/queries/index.ts:90:11)
+
+  console.log
+    ­ƒöì [CommandesQueries] Recherche commande null
+
+      at Module.obtenirCommandeParId (src/services/commandes/core/queries/index.ts:37:11)
+
+  console.log
+    ­ƒöì [CommandesQueries] Recherche commande
+
+      at Module.obtenirCommandeParId (src/services/commandes/core/queries/index.ts:37:11)
+
+  console.log
+    ­ƒæñ [CommandesQueries] R├®cup├®ration commandes utilisateur 0
+
+      at Module.obtenirCommandesUtilisateur (src/services/commandes/core/queries/index.ts:64:11)
+
+  console.log
+    ­ƒæñ [CommandesQueries] R├®cup├®ration commandes utilisateur -1
+
+      at Module.obtenirCommandesUtilisateur (src/services/commandes/core/queries/index.ts:64:11)
+
+  console.log
+    ­ƒôè [CommandesQueries] R├®cup├®ration commandes statut null
+
+      at Module.obtenirCommandesParStatut (src/services/commandes/core/queries/index.ts:90:11)
+
+  console.log
+    ­ƒôè [CommandesQueries] R├®cup├®ration commandes statut
+
+      at Module.obtenirCommandesParStatut (src/services/commandes/core/queries/index.ts:90:11)
+
+  console.log
+    Ô£Å´©Å [CommandesMutations] Modification commande 00000000-0000-0000-0000-000000000000
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:114:11)
+
+  console.warn
+    ÔÜá´©Å Commande 00000000-0000-0000-0000-000000000000 introuvable
+
+    [0m [90m 120 |[39m
+     [90m 121 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 122 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 123 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 124 |[39m   }
+     [90m 125 |[39m[0m
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:122:13)
+
+  console.log
+    Ô£Å´©Å [CommandesMutations] Modification commande
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:114:11)
+
+  console.warn
+    ÔÜá´©Å Commande  introuvable
+
+    [0m [90m 120 |[39m
+     [90m 121 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 122 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 123 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 124 |[39m   }
+     [90m 125 |[39m[0m
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:122:13)
+
+  console.log
+    Ô£Å´©Å [CommandesMutations] Modification commande null
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:114:11)
+
+  console.warn
+    ÔÜá´©Å Commande null introuvable
+
+    [0m [90m 120 |[39m
+     [90m 121 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 122 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 123 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 124 |[39m   }
+     [90m 125 |[39m[0m
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:122:13)
+
+  console.log
+    Ô£Å´©Å [CommandesMutations] Modification commande test-id
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:114:11)
+
+  console.warn
+    ÔÜá´©Å Commande test-id introuvable
+
+    [0m [90m 120 |[39m
+     [90m 121 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 122 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 123 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 124 |[39m   }
+     [90m 125 |[39m[0m
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:122:13)
+
+  console.log
+    Ô£Å´©Å [CommandesMutations] Modification commande test-id
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:114:11)
+
+  console.warn
+    ÔÜá´©Å Commande test-id introuvable
+
+    [0m [90m 120 |[39m
+     [90m 121 |[39m   [36mif[39m ([33m![39mcommandeExiste) {
+    [31m[1m>[22m[39m[90m 122 |[39m     console[33m.[39mwarn([32m`ÔÜá´©Å Commande ${commandeId} introuvable`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 123 |[39m     [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 124 |[39m   }
+     [90m 125 |[39m[0m
+
+      at Module.modifierCommande (src/services/commandes/core/mutations/index.ts:122:13)
+
+  console.log
+    ­ƒùæ´©Å [CommandesMutations] Suppression commande 00000000-0000-0000-0000-000000000000
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:169:11)
+
+  console.error
+    ÔØî Erreur suppression: Error: Record not found
+        at Object.delete (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.mock.ts:103:30)
+        at Module.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\core\mutations\index.ts:172:34)
+        at CommandesService.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\commandes.service.ts:86:17)
+        at Object.<anonymous> (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.service.exceptions.test.ts:414:45)
+        at Promise.then.completed (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:298:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:231:10)
+        at _callCircusTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:316:40)
+        at _runTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:252:3)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:126:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at run (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:71:3)
+        at runAndTransformResultsToJestFormat (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+        at jestAdapter (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+        at runTestInternal (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:367:16)
+        at runTest (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:444:34) {
+      code: 'P2025'
+    }
+
+    [0m [90m 175 |[39m     [36mreturn[39m [36mtrue[39m[33m;[39m
+     [90m 176 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 177 |[39m     console[33m.[39merror([32m'ÔØî Erreur suppression:'[39m[33m,[39m error)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 178 |[39m     [36mreturn[39m [36mfalse[39m[33m;[39m
+     [90m 179 |[39m   }
+     [90m 180 |[39m }[0m
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:177:13)
+
+  console.log
+    ­ƒùæ´©Å [CommandesMutations] Suppression commande
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:169:11)
+
+  console.error
+    ÔØî Erreur suppression: Error: Record not found
+        at Object.delete (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.mock.ts:103:30)
+        at Module.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\core\mutations\index.ts:172:34)
+        at CommandesService.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\commandes.service.ts:86:17)
+        at Object.<anonymous> (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.service.exceptions.test.ts:422:45)
+        at Promise.then.completed (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:298:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:231:10)
+        at _callCircusTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:316:40)
+        at _runTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:252:3)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:126:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at run (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:71:3)
+        at runAndTransformResultsToJestFormat (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+        at jestAdapter (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+        at runTestInternal (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:367:16)
+        at runTest (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:444:34) {
+      code: 'P2025'
+    }
+
+    [0m [90m 175 |[39m     [36mreturn[39m [36mtrue[39m[33m;[39m
+     [90m 176 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 177 |[39m     console[33m.[39merror([32m'ÔØî Erreur suppression:'[39m[33m,[39m error)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 178 |[39m     [36mreturn[39m [36mfalse[39m[33m;[39m
+     [90m 179 |[39m   }
+     [90m 180 |[39m }[0m
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:177:13)
+
+  console.log
+    ­ƒùæ´©Å [CommandesMutations] Suppression commande null
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:169:11)
+
+  console.error
+    ÔØî Erreur suppression: Error: Record not found
+        at Object.delete (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.mock.ts:103:30)
+        at Module.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\core\mutations\index.ts:172:34)
+        at CommandesService.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\commandes.service.ts:86:17)
+        at Object.<anonymous> (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.service.exceptions.test.ts:428:45)
+        at Promise.then.completed (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:298:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:231:10)
+        at _callCircusTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:316:40)
+        at _runTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:252:3)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:126:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at run (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:71:3)
+        at runAndTransformResultsToJestFormat (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+        at jestAdapter (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+        at runTestInternal (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:367:16)
+        at runTest (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:444:34) {
+      code: 'P2025'
+    }
+
+    [0m [90m 175 |[39m     [36mreturn[39m [36mtrue[39m[33m;[39m
+     [90m 176 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 177 |[39m     console[33m.[39merror([32m'ÔØî Erreur suppression:'[39m[33m,[39m error)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 178 |[39m     [36mreturn[39m [36mfalse[39m[33m;[39m
+     [90m 179 |[39m   }
+     [90m 180 |[39m }[0m
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:177:13)
+
+  console.log
+    ­ƒùæ´©Å [CommandesMutations] Suppression commande 00000000-0000-0000-0000-000000000001
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:169:11)
+
+  console.error
+    ÔØî Erreur suppression: Error: Record not found
+        at Object.delete (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.mock.ts:103:30)
+        at Module.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\core\mutations\index.ts:172:34)
+        at CommandesService.supprimerCommande (E:\Developpement\ClubManager\api\src\services\commandes\commandes.service.ts:86:17)
+        at Object.<anonymous> (E:\Developpement\ClubManager\api\src\services\commandes\__tests__\commandes.service.exceptions.test.ts:443:32)
+        at Promise.then.completed (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:298:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\utils.js:231:10)
+        at _callCircusTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:316:40)
+        at _runTest (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:252:3)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:126:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at _runTestsForDescribeBlock (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:121:9)
+        at run (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\run.js:71:3)
+        at runAndTransformResultsToJestFormat (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapterInit.js:122:21)
+        at jestAdapter (E:\Developpement\ClubManager\api\node_modules\jest-circus\build\legacy-code-todo-rewrite\jestAdapter.js:79:19)
+        at runTestInternal (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:367:16)
+        at runTest (E:\Developpement\ClubManager\api\node_modules\jest-runner\build\runTest.js:444:34) {
+      code: 'P2025'
+    }
+
+    [0m [90m 175 |[39m     [36mreturn[39m [36mtrue[39m[33m;[39m
+     [90m 176 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 177 |[39m     console[33m.[39merror([32m'ÔØî Erreur suppression:'[39m[33m,[39m error)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 178 |[39m     [36mreturn[39m [36mfalse[39m[33m;[39m
+     [90m 179 |[39m   }
+     [90m 180 |[39m }[0m
+
+      at Module.supprimerCommande (src/services/commandes/core/mutations/index.ts:177:13)
+
+  console.log
+    ­ƒôè [CommandesStats] Calcul statistiques commandes
+
+      at Module.obtenirStatistiquesCommandes (src/services/commandes/core/stats/index.ts:12:11)
+
+  console.log
+    ­ƒôè [CommandesStats] Comptage par statut
+
+      at Module.obtenirComptesParStatut (src/services/commandes/core/stats/index.ts:72:11)
+
+  console.log
+    ­ƒôè [CommandesStats] Comptage par statut
+
+      at Module.obtenirComptesParStatut (src/services/commandes/core/stats/index.ts:72:11)
+
+  console.log
+    ­ƒôè [CommandesStats] Comptage par statut
+
+      at Module.obtenirComptesParStatut (src/services/commandes/core/stats/index.ts:72:11)
+
+  console.log
+    ­ƒôè [CommandesStats] Calcul statistiques commandes
+
+      at Module.obtenirStatistiquesCommandes (src/services/commandes/core/stats/index.ts:12:11)
+
+  console.log
+    ­ƒöì [CommandesSearch] Recherche avec filtres: { terme: 'INEXISTANT_XYZ_123' }
+
+      at Module.rechercherCommandes (src/services/commandes/core/search/index.ts:15:11)
+
+  console.log
+    ­ƒöì [CommandesSearch] Recherche avec filtres: { terme: null }
+
+      at Module.rechercherCommandes (src/services/commandes/core/search/index.ts:15:11)
+
+  console.log
+    ­ƒöì [CommandesSearch] Recherche avec filtres: { terme: '' }
+
+      at Module.rechercherCommandes (src/services/commandes/core/search/index.ts:15:11)
+
+  console.log
+    ­ƒöì [CommandesSearch] Recherche avec filtres: { terme: `%_\\'"` }
+
+      at Module.rechercherCommandes (src/services/commandes/core/search/index.ts:15:11)
+
+  console.log
+    ­ƒöì [CommandesSearch] Recherche avec filtres: {
+      terme: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    }
+
+      at Module.rechercherCommandes (src/services/commandes/core/search/index.ts:15:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur abc
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+  console.log
+    Ô×ò [CommandesMutations] Cr├®ation commande pour utilisateur 1
+
+      at Module.creerCommande (src/services/commandes/core/mutations/index.ts:12:11)
+
+node.exe : (node:7792) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+Au caractère Ligne:1 : 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:7792) Exp...nge at any time:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL src/services/commandes/__tests__/commandes.service.exceptions.test.ts
+  CommandesService - Tests d'Exceptions
+    Cr├®ation - Validations d'entr├®e
+      ÔêÜ devrait rejeter une commande sans utilisateur_id (32 ms)
+      ÔêÜ devrait rejeter une commande avec utilisateur_id invalide (0) (2 ms)
+      ÔêÜ devrait rejeter une commande avec utilisateur_id n├®gatif (2 ms)
+      ÔêÜ devrait rejeter une commande avec total n├®gatif (1 ms)
+      ÔêÜ devrait rejeter une commande avec total = 0 (1 ms)
+      ÔêÜ devrait rejeter une commande sans articles (1 ms)
+      ÔêÜ devrait rejeter une commande avec articles null (1 ms)
+    Cr├®ation - Validations articles
+      ÔêÜ devrait rejeter un article avec quantit├® n├®gative (1 ms)
+      ÔêÜ devrait rejeter un article avec quantit├® = 0 (2 ms)
+      ÔêÜ devrait rejeter un article avec prix n├®gatif (1 ms)
+      ÔêÜ devrait rejeter un article sans ID (2 ms)
+      ÔêÜ devrait rejeter un article avec ID invalide (0) (1 ms)
+      ÔêÜ devrait valider la coh├®rence total vs somme articles (1 ms)
+    Statuts - Validations et transitions
+      ÔêÜ devrait rejeter un statut invalide (9 ms)
+      ÔêÜ devrait rejeter la modification de statut avec ID invalide (3 ms)
+      ÔêÜ devrait rejeter la modification de statut d'une commande inexistante (3 ms)
+      ÔêÜ devrait accepter les statuts valides (3 ms)
+      ÔêÜ devrait rejeter un statut null (1 ms)
+      ÔêÜ devrait rejeter un statut vide (2 ms)
+    Queries - Ressources non trouv├®es
+      ÔêÜ devrait retourner null pour une commande inexistante (2 ms)
+      ÔêÜ devrait retourner tableau vide pour utilisateur sans commandes (1 ms)
+      ÔêÜ devrait retourner tableau vide pour statut sans commandes (1 ms)
+      ÔêÜ devrait g├®rer l'obtention de commande avec ID null (1 ms)
+      ÔêÜ devrait g├®rer l'obtention de commande avec ID vide (1 ms)
+    Queries - Validations d'entr├®e
+      ÔêÜ devrait rejeter obtenirCommandesUtilisateur avec ID invalide (0) (1 ms)
+      ÔêÜ devrait rejeter obtenirCommandesUtilisateur avec ID n├®gatif (1 ms)
+      ÔêÜ devrait g├®rer obtenirCommandesParStatut avec statut null (1 ms)
+      ÔêÜ devrait g├®rer obtenirCommandesParStatut avec statut vide (1 ms)
+    Modifications - Validations
+      ÔêÜ devrait rejeter la modification d'une commande inexistante (3 ms)
+      ÔêÜ devrait rejeter la modification avec ID vide (3 ms)
+      ÔêÜ devrait rejeter la modification avec ID null (2 ms)
+      ÔêÜ devrait rejeter la modification avec donn├®es vides (2 ms)
+      ÔêÜ devrait rejeter la modification avec total n├®gatif (2 ms)
+    Suppressions - Validations
+      ÔêÜ devrait rejeter la suppression d'une commande inexistante (19 ms)
+      ÔêÜ devrait rejeter la suppression avec ID vide (4 ms)
+      ÔêÜ devrait rejeter la suppression avec ID null (3 ms)
+      ÔêÜ devrait emp├¬cher la suppression d'une commande valid├®e (3 ms)
+    Statistiques - Validations et calculs
+      ÔêÜ devrait retourner des statistiques coh├®rentes m├¬me sans donn├®es (3 ms)
+      ÔêÜ devrait compter 0 pour un statut sans commandes (1 ms)
+      ÔêÜ devrait g├®rer compterParStatut avec statut null (1 ms)
+      ÔêÜ devrait g├®rer compterParStatut avec statut vide (1 ms)
+      ÔêÜ devrait calculer correctement les totaux de commandes (1 ms)
+    Recherche - Validations et filtres
+      ├ù devrait retourner tableau vide pour recherche sans r├®sultats (4 ms)
+      ÔêÜ devrait g├®rer une recherche avec terme null (1 ms)
+      ÔêÜ devrait g├®rer recherche avec terme vide (1 ms)
+      ÔêÜ devrait g├®rer recherche avec caract├¿res sp├®ciaux (1 ms)
+      ÔêÜ devrait g├®rer recherche avec terme tr├¿s long (1 ms)
+    Validations - Types de donn├®es
+      ÔêÜ devrait rejeter un utilisateur_id non num├®rique (1 ms)
+      ÔêÜ devrait rejeter un total non num├®rique (1 ms)
+      ÔêÜ devrait rejeter une date_commande invalide (1 ms)
+      ÔêÜ devrait accepter une date_commande valide (1 ms)
+    Payment Intent - Validations
+      ÔêÜ devrait accepter un payment_intent_id valide (1 ms)
+      ÔêÜ devrait accepter une commande sans payment_intent_id (1 ms)
+      ÔêÜ devrait g├®rer payment_intent_id vide (1 ms)
+
+  ÔùÅ CommandesService - Tests d'Exceptions ÔÇ║ Recherche - Validations et filtres ÔÇ║ devrait retourner tableau vide 
+pour recherche sans r├®sultats
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    [0m [90m 501 |[39m         terme[33m:[39m [32m'INEXISTANT_XYZ_123'[39m
+     [90m 502 |[39m       } [36mas[39m any)[33m;[39m
+    [31m[1m>[22m[39m[90m 503 |[39m       expect(result [33m===[39m [36mnull[39m [33m||[39m 
+[33mArray[39m[33m.[39misArray(result))[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m     |[39m                                                        [31m[1m^[22m[39m
+     [90m 504 |[39m     })[33m;[39m
+     [90m 505 |[39m
+     [90m 506 |[39m     it([32m'devrait g├®rer une recherche avec terme null'[39m[33m,[39m [36masync[39m () 
+[33m=>[39m {[0m
+
+      at Object.<anonymous> (src/services/commandes/__tests__/commandes.service.exceptions.test.ts:503:56)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 53 passed, 54 total
+Snapshots:   0 total
+Time:        0.839 s, estimated 1 s
+Ran all test suites matching /commandes.service.exceptions.test.ts/i.
