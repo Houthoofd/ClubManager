@@ -1,0 +1,142 @@
+═══════════════════════════════════════════════════════════════════════════════
+  PROMPT DE CRÉATION DE SERVICE AVEC STRATÉGIE DE TESTS COMPLÈTE
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 STRUCTURE GÉNÉRALE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Créer un service avec la même structure que 'messagerie' :
+- Types dans 'packages/types'
+- GraphQL + Prisma
+- Core avec dossiers par domaine métier
+- Fichiers séparés par opération
+- Tests exhaustifs dans '__tests__'
+
+
+🧪 STRATÉGIE DE TESTS COMPLÈTE (7 FICHIERS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣  [service].service.unit.test.ts (26+ tests)
+   • Tester chaque méthode du service avec mocks
+   • Vérifier retours et appels aux modules core
+   • Couverture : toutes les méthodes publiques
+
+2️⃣  [service].service.exceptions.test.ts (55+ tests)
+   ✓ Validations entrées : IDs invalides (0, négatifs, null)
+   ✓ Validations contenu : vide, trim, longueur, caractères spéciaux
+   ✓ Sécurité : accès non autorisés
+   ✓ Erreurs Prisma : P2025, P2003, erreurs génériques
+   ✓ Edge cases : doublons, valeurs limites, listes vides
+   ✓ Règles métier : expéditeur = destinataire, etc.
+
+3️⃣  [service].service.integration.test.ts (11+ tests)
+   • Cycles complets : créer → récupérer → modifier → supprimer
+   • Scénarios multi-étapes : envoi multiple, échecs partiels
+   • Flux métier réalistes avec plusieurs opérations
+
+4️⃣  [service].resolvers.test.ts (15+ tests) ⭐ NOUVEAU
+   • Tous les resolvers Query et Mutation
+   • Transformation [Service]Error → GraphQL Error
+   • Validation paramètres manquants/incorrects
+   • Vérifier appels service corrects
+
+5️⃣  [service].security.test.ts (8+ tests) ⭐ NOUVEAU
+   • Injection SQL via contenu
+   • Permissions : accès données autres utilisateurs
+   • Validation IDs extrêmes (MAX_SAFE_INTEGER)
+   • XSS : scripts malveillants
+   • Autorisation avant modification/suppression
+
+6️⃣  [service].advanced.test.ts (10+ tests) ⭐ NOUVEAU
+   CAS LIMITES :
+   • Valeur exacte limite (5000 chars)
+   • Valeur au-dessus (5001 chars)
+   • Caractères spéciaux, émojis, Unicode
+   • Envoi à 100+ destinataires
+   
+   CONCURRENCE :
+   • Modifications simultanées
+   • Race conditions sur upsert
+   
+   ASSERTIONS PRISMA :
+   • Paramètres exacts (data, where, include)
+   • Structure requêtes
+   • Ordre opérations
+   
+   NETTOYAGE :
+   • Pas de requêtes inutiles en erreur
+   • Calcul dates correct
+
+7️⃣  [service].mock.ts
+   • createMockFn() : mockResolvedValue, mockRejectedValue, mockResolvedValueOnce
+   • createMockPrisma() : tous modèles
+   • setupDefaultMocks() et resetAllMocks()
+   • Données test réutilisables
+
+
+🎯 OBJECTIFS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Couverture : 75-80% minimum
+Focus : Qualité > Quantité
+Total : ~125 tests minimum
+
+
+✅ CHECKLIST QUALITÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Tester TOUS les codes erreur métier
+□ Vérifier permissions/autorisations
+□ Valider requêtes Prisma (pas juste résultat)
+□ Tests sécurité (accès non autorisés)
+□ Cas limites (valeurs extrêmes)
+□ Resolvers GraphQL (transformation erreurs)
+□ Mock system personnalisé fonctionnel
+
+
+📊 STRUCTURE TEST TYPE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+describe('Nom du test', () => {
+  // 1. Setup mocks
+  beforeEach(() => {
+    mockPrisma = createMockPrisma();
+    service = new Service(mockPrisma);
+  });
+
+  // 2. Test
+  it('devrait [comportement attendu]', async () => {
+    // Setup données
+    mockPrisma.model.method.mockResolvedValue(data);
+    
+    // Action
+    const result = await service.method(params);
+    
+    // Assertions résultat
+    expect(result.success).toBe(true);
+    
+    // Assertions appels Prisma
+    expect(mockPrisma.model.method.mock.calls.length).toBe(1);
+    const callArgs = mockPrisma.model.method.mock.calls[0][0];
+    expect(callArgs.where).toEqual({ id: 1 });
+  });
+
+  // 3. Cleanup
+  afterEach(() => resetAllMocks(mockPrisma));
+});
+
+
+🏆 BÉNÉFICES POUR TFE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Couverture professionnelle (75-80%)
+✓ Tests full-stack (GraphQL + Service)
+✓ Sécurité démontrée
+✓ Approche industrielle
+✓ Réponses préparées pour jury
+✓ Note visée : 16-18/20
+
+
+═══════════════════════════════════════════════════════════════════════════════
+  FIN DU DOCUMENT - Version 1.0 - Janvier 2026
+═══════════════════════════════════════════════════════════════════════════════
