@@ -12,6 +12,7 @@ export * from './cours-service.js';
 export * from './informations-service.js';
 export * from './inscriptions-service.js';
 export * from './messagerie.js';
+export * from './paiements.js';
 
 // Export du magasin avec renommage pour éviter les conflits
 export type { 
