@@ -4,7 +4,6 @@
  */
 
 import { prisma as defaultPrisma } from '../../infrastructure/database/prisma-client.js';
-import type { PrismaClient } from '../../infrastructure/generated/prisma/index.js';
 import type {
   PaiementAvecDetails,
   EcheanceAvecDetails,
@@ -33,9 +32,9 @@ import * as statsUtilisateur from './core/statistiques/statistiquesUtilisateur.j
 import * as statsParPeriode from './core/statistiques/statistiquesParPeriode.js';
 
 export class PaiementsService {
-  private prisma: PrismaClient;
+  private prisma: typeof defaultPrisma;
 
-  constructor(prisma: PrismaClient) {
+  constructor(prisma: typeof defaultPrisma) {
     this.prisma = prisma;
   }
 
@@ -355,7 +354,7 @@ export class PaiementsService {
 // Export d'une instance par défaut (sera initialisée par l'application)
 let paiementsServiceInstance: PaiementsService | null = null;
 
-export function initPaiementsService(prisma: PrismaClient): PaiementsService {
+export function initPaiementsService(prisma: typeof defaultPrisma): PaiementsService {
   paiementsServiceInstance = new PaiementsService(prisma);
   return paiementsServiceInstance;
 }

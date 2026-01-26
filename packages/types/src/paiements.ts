@@ -238,15 +238,3 @@ export interface TraitementPaiementResult {
   referenceTransaction?: string;
   montant?: number;
 }
-
-/**
- * Échéance de paiement à venir
- */
-export interface EcheancePaiement {
-  id: number;
-  utilisateurId: number;
-  montant: number;
-  dateEcheance: Date;
-  abonnementId: number;
-  estEnRetard: boolean;
-}

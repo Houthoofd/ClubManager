@@ -68,8 +68,8 @@ export declare const articleCreationSchema: z.ZodObject<{
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     nom: string;
-    categorie_id: number;
     description: string;
+    categorie_id: number;
     prix: number;
     images: string[];
     stocks: {
@@ -108,8 +108,8 @@ export declare const articleDataValidationSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     id: number;
     nom: string;
-    categorie_id: number;
     description: string;
+    categorie_id: number;
     prix: number;
     images: string[];
     stocks: {
@@ -264,8 +264,8 @@ export type OptionsPagination = {
 };
 export declare class MagasinError extends Error {
     readonly code: string;
-    readonly details?: any | undefined;
-    constructor(message: string, code: string, details?: any | undefined);
+    readonly details?: any;
+    constructor(message: string, code: string, details?: any);
 }
 export type IdMagasin = {
     id: number;

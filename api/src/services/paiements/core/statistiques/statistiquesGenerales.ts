@@ -84,7 +84,7 @@ export async function statistiquesGenerales(prisma: any, args: StatistiquesGener
       count: data.count
     })),
     repartitionMethodes: Array.from(repartitionMethodes.entries()).map(([methode, data]) => ({
-      methode,
+      methode: methode as any, // Cast to match MethodePaiement enum
       count: data.count,
       montantTotal: data.montantTotal
     }))

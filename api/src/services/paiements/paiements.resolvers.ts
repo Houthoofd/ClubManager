@@ -2,12 +2,12 @@
  * Resolvers GraphQL pour le service Paiements
  */
 
-import type { PrismaClient } from '../../infrastructure/generated/prisma/index.js';
 import { prisma as defaultPrisma } from '../../infrastructure/database/prisma-client.js';
+import { GraphQLError } from 'graphql';
 import { PaiementsService } from './paiements.service.js';
 import { PaiementsError } from '@clubmanager/types';
 
-export const paiementsResolvers = (prisma: PrismaClient) => {
+export const paiementsResolvers = (prisma: typeof defaultPrisma) => {
   const paiementsService = new PaiementsService(prisma);
 
   return {
@@ -50,7 +50,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           });
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -68,7 +68,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return paiement;
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -100,7 +100,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           });
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -141,7 +141,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           });
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -158,7 +158,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.obtenirEcheancesUtilisateur(utilisateurId, limit);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -172,7 +172,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.obtenirEcheancesEchues();
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -189,7 +189,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.statistiquesGenerales(dateDebut, dateFin);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -206,7 +206,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.statistiquesUtilisateur(utilisateurId);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -231,7 +231,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.statistiquesParPeriode(dateDebut, dateFin, groupBy);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -245,7 +245,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.paiementExiste(id);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -259,7 +259,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.aDesPaiementsEnAttente(utilisateurId);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -273,7 +273,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.obtenirMontantTotalUtilisateur(utilisateurId);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -287,7 +287,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.compterPaiementsValides(utilisateurId);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -301,7 +301,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.obtenirDernierPaiement(utilisateurId);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -320,7 +320,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.creerPaiement(input);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -337,7 +337,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.validerPaiement(input);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -354,7 +354,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.refuserPaiement(paiementId, motif);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -371,7 +371,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.annulerPaiement(paiementId, motif);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
@@ -388,7 +388,7 @@ export const paiementsResolvers = (prisma: PrismaClient) => {
           return await paiementsService.rembourserPaiement(paiementId, motif);
         } catch (error: unknown) {
           if (error instanceof PaiementsError) {
-            throw new Error(error.message);
+            throw new Error((error as Error).message);
           }
           throw error;
         }
