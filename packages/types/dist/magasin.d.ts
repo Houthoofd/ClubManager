@@ -264,8 +264,8 @@ export type OptionsPagination = {
 };
 export declare class MagasinError extends Error {
     readonly code: string;
-    readonly details?: any;
-    constructor(message: string, code: string, details?: any);
+    readonly details?: any | undefined;
+    constructor(message: string, code: string, details?: any | undefined);
 }
 export type IdMagasin = {
     id: number;
