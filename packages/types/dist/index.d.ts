@@ -1,7 +1,9 @@
 export * from "./utilisateurs.js";
 export * from "./query.js";
 export * from "./cours.js";
-export * from "./statistiques.js";
+export type { StatistiquesFrequentation } from "./statistiques.js";
+export { frequentationParCoursSchema, frequentationParMoisSchema, statistiquesFrequentationSchema, progressionParCoursSchema, statistiquesProgressionUtilisateurSchema } from "./statistiques.js";
+export * from "./statistiques-service.js";
 export * from "./email.js";
 export * from "./s3.js";
 export * from "./alertes.js";
