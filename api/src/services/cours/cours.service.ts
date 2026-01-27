@@ -16,11 +16,11 @@ import type {
   ValidationPresence,
   VerificationInscriptionResult,
   CoursOperationResult,
-  SuppressionProfesseurs
-} from '@clubmanager/types';
+  SuppressionProfesseurs,
+} from "@clubmanager/types";
 
 // Import depuis l'index core qui réexporte tout
-import * as core from './core/index.js';
+import * as core from "./core/index.js";
 
 /**
  * Service principal pour la gestion des cours
@@ -31,14 +31,19 @@ export class CoursService {
   /**
    * Obtenir les 12 prochains cours pour un participant
    */
-  async obtenirCoursPourParticipant(participantId: number): Promise<CoursInfo[]> {
+  async obtenirCoursPourParticipant(
+    participantId: number,
+  ): Promise<CoursInfo[]> {
     return await core.obtenirCoursPourParticipant(participantId);
   }
 
   /**
    * Obtenir cours par semaine pour un participant
    */
-  async obtenirCoursParSemaine(participantId: number, semaine: number): Promise<CoursInfo[]> {
+  async obtenirCoursParSemaine(
+    participantId: number,
+    semaine: number,
+  ): Promise<CoursInfo[]> {
     return await core.obtenirCoursParSemaine(participantId, semaine);
   }
 
@@ -52,7 +57,9 @@ export class CoursService {
   /**
    * Obtenir cours inscrits pour un utilisateur
    */
-  async obtenirCoursInscritsParUtilisateur(userId: number): Promise<CoursInfo[]> {
+  async obtenirCoursInscritsParUtilisateur(
+    userId: number,
+  ): Promise<CoursInfo[]> {
     return await core.obtenirCoursInscritsParUtilisateur(userId);
   }
 
@@ -61,21 +68,27 @@ export class CoursService {
   /**
    * Obtenir les utilisateurs inscrits à un cours
    */
-  async obtenirUtilisateursParCours(coursId: number): Promise<UtilisateursParCoursResult> {
+  async obtenirUtilisateursParCours(
+    coursId: number,
+  ): Promise<UtilisateursParCoursResult> {
     return await core.obtenirUtilisateursParCours(coursId);
   }
 
   /**
    * Obtenir cours avec leurs utilisateurs
    */
-  async obtenirCoursAvecUtilisateurs(participantId: number): Promise<CoursAvecUtilisateurs[]> {
+  async obtenirCoursAvecUtilisateurs(
+    participantId: number,
+  ): Promise<CoursAvecUtilisateurs[]> {
     return await core.obtenirCoursAvecUtilisateurs(participantId);
   }
 
   /**
    * Obtenir utilisateurs participants pour un cours
    */
-  async obtenirUtilisateursParticipantsParCours(coursId: number): Promise<UtilisateursParCoursResult> {
+  async obtenirUtilisateursParticipantsParCours(
+    coursId: number,
+  ): Promise<UtilisateursParCoursResult> {
     return await core.obtenirUtilisateursParticipantsParCours(coursId);
   }
 
@@ -91,7 +104,9 @@ export class CoursService {
   /**
    * Obtenir jours de cours par semaine
    */
-  async obtenirJoursDeCoursParSemaine(semaine: number): Promise<JourCoursRecurrent[]> {
+  async obtenirJoursDeCoursParSemaine(
+    semaine: number,
+  ): Promise<JourCoursRecurrent[]> {
     return await core.obtenirJoursDeCoursParSemaine(semaine);
   }
 
@@ -109,9 +124,14 @@ export class CoursService {
     jour: string,
     type_cours: string,
     heure_debut: string,
-    heure_fin: string
+    heure_fin: string,
   ): Promise<number | null> {
-    return await core.trouverCoursRecurrent(jour, type_cours, heure_debut, heure_fin);
+    return await core.trouverCoursRecurrent(
+      jour,
+      type_cours,
+      heure_debut,
+      heure_fin,
+    );
   }
 
   // ========== QUERIES STATISTIQUES ==========
@@ -126,14 +146,18 @@ export class CoursService {
   /**
    * Obtenir statistiques de présence pour un cours
    */
-  async obtenirStatistiquesPresenceCours(coursId: number): Promise<StatistiquesPresenceCours> {
+  async obtenirStatistiquesPresenceCours(
+    coursId: number,
+  ): Promise<StatistiquesPresenceCours> {
     return await core.obtenirStatistiquesPresenceCours(coursId);
   }
 
   /**
    * Obtenir statistiques de présence pour un utilisateur
    */
-  async obtenirStatistiquesPresenceUtilisateur(utilisateurId: number): Promise<StatistiquesPresenceUtilisateur> {
+  async obtenirStatistiquesPresenceUtilisateur(
+    utilisateurId: number,
+  ): Promise<StatistiquesPresenceUtilisateur> {
     return await core.obtenirStatistiquesPresenceUtilisateur(utilisateurId);
   }
 
@@ -144,7 +168,7 @@ export class CoursService {
    */
   async verifierInscriptionUtilisateur(
     coursId: number,
-    utilisateurId: number
+    utilisateurId: number,
   ): Promise<VerificationInscriptionResult> {
     return await core.verifierInscriptionUtilisateur(coursId, utilisateurId);
   }
@@ -152,28 +176,36 @@ export class CoursService {
   /**
    * Inscrire un utilisateur à un cours
    */
-  async inscrireUtilisateurAuCours(data: InscriptionUtilisateur): Promise<CoursOperationResult> {
+  async inscrireUtilisateurAuCours(
+    data: InscriptionUtilisateur,
+  ): Promise<CoursOperationResult> {
     return await core.inscrireUtilisateurAuCours(data);
   }
 
   /**
    * Désinscrire un utilisateur d'un cours
    */
-  async desinscrireUtilisateurDuCours(data: InscriptionUtilisateur): Promise<CoursOperationResult> {
+  async desinscrireUtilisateurDuCours(
+    data: InscriptionUtilisateur,
+  ): Promise<CoursOperationResult> {
     return await core.desinscrireUtilisateurDuCours(data);
   }
 
   /**
    * Valider la présence d'un utilisateur
    */
-  async validerPresenceUtilisateur(data: ValidationPresence): Promise<CoursOperationResult> {
+  async validerPresenceUtilisateur(
+    data: ValidationPresence,
+  ): Promise<CoursOperationResult> {
     return await core.validerPresenceUtilisateur(data);
   }
 
   /**
    * Annuler/Marquer absent un utilisateur
    */
-  async annulerPresenceUtilisateur(data: ValidationPresence): Promise<CoursOperationResult> {
+  async annulerPresenceUtilisateur(
+    data: ValidationPresence,
+  ): Promise<CoursOperationResult> {
     return await core.annulerPresenceUtilisateur(data);
   }
 
@@ -182,28 +214,36 @@ export class CoursService {
   /**
    * Ajouter un cours récurrent avec professeurs
    */
-  async ajouterCoursRecurrent(data: AjoutCoursRecurrent): Promise<CoursOperationResult> {
+  async ajouterCoursRecurrent(
+    data: AjoutCoursRecurrent,
+  ): Promise<CoursOperationResult> {
     return await core.ajouterCoursRecurrent(data);
   }
 
   /**
    * Modifier un cours récurrent
    */
-  async modifierCoursRecurrent(data: ModificationCoursRecurrent): Promise<CoursOperationResult> {
+  async modifierCoursRecurrent(
+    data: ModificationCoursRecurrent,
+  ): Promise<CoursOperationResult> {
     return await core.modifierCoursRecurrent(data);
   }
 
   /**
    * Supprimer un cours récurrent et ses occurrences futures
    */
-  async supprimerCoursRecurrent(coursRecurrentId: number): Promise<CoursOperationResult> {
+  async supprimerCoursRecurrent(
+    coursRecurrentId: number,
+  ): Promise<CoursOperationResult> {
     return await core.supprimerCoursRecurrent(coursRecurrentId);
   }
 
   /**
    * Supprimer un cours récurrent par jour
    */
-  async supprimerCoursRecurrentParJour(jour: string): Promise<CoursOperationResult> {
+  async supprimerCoursRecurrentParJour(
+    jour: string,
+  ): Promise<CoursOperationResult> {
     return await core.supprimerCoursRecurrentParJour(jour);
   }
 
@@ -214,15 +254,20 @@ export class CoursService {
    */
   async associerProfesseursAuCoursRecurrent(
     coursRecurrentId: number,
-    professeursNoms: string[]
+    professeursNoms: string[],
   ): Promise<CoursOperationResult> {
-    return await core.associerProfesseursAuCoursRecurrent(coursRecurrentId, professeursNoms);
+    return await core.associerProfesseursAuCoursRecurrent(
+      coursRecurrentId,
+      professeursNoms,
+    );
   }
 
   /**
    * Supprimer des professeurs d'un cours récurrent
    */
-  async supprimerProfesseursParNomEtJour(data: SuppressionProfesseurs): Promise<CoursOperationResult> {
+  async supprimerProfesseursParNomEtJour(
+    data: SuppressionProfesseurs,
+  ): Promise<CoursOperationResult> {
     return await core.supprimerProfesseursParNomEtJour(data);
   }
 
@@ -239,9 +284,77 @@ export class CoursService {
   async supprimerProfesseursAvecResolution(
     professeursNoms: string[],
     jour: string,
-    coursContext?: { type_cours?: string; heure_debut?: string; heure_fin?: string }
+    coursContext?: {
+      type_cours?: string;
+      heure_debut?: string;
+      heure_fin?: string;
+    },
   ): Promise<CoursOperationResult> {
-    return await core.supprimerProfesseursAvecResolution(professeursNoms, jour, coursContext);
+    return await core.supprimerProfesseursAvecResolution(
+      professeursNoms,
+      jour,
+      coursContext,
+    );
+  }
+
+  // ========== VÉRIFICATIONS ==========
+
+  /**
+   * Vérifie s'il existe un conflit horaire pour un cours
+   */
+  async verifierConflitHoraire(params: {
+    jour: string;
+    heureDebut: string;
+    heureFin: string;
+    typeCours?: string;
+    excludeOriginal?: {
+      jour: string;
+      type: string;
+      heureDebut: string;
+      heureFin: string;
+    };
+  }): Promise<{ exists: boolean; message: string; coursConflict?: any }> {
+    return await core.verifierConflitHoraire(params);
+  }
+
+  /**
+   * Vérifie la capacité d'un cours (nombre d'inscrits vs capacité max)
+   */
+  async verifierCapaciteCours(
+    coursId: number,
+  ): Promise<{
+    capaciteAtteinte: boolean;
+    nombreInscrits: number;
+    capaciteMax?: number;
+  }> {
+    return await core.verifierCapaciteCours(coursId);
+  }
+
+  /**
+   * Vérifie si un cours récurrent existe avec les critères donnés
+   */
+  async verifierCoursRecurrentExiste(params: {
+    jour: string;
+    typeCours: string;
+    heureDebut: string;
+    heureFin: string;
+  }): Promise<{ existe: boolean; coursId?: number; message: string }> {
+    return await core.verifierCoursRecurrentExiste(params);
+  }
+
+  /**
+   * Vérifie si un utilisateur peut s'inscrire à un cours
+   */
+  async verifierInscriptionPossible(params: {
+    coursId: number;
+    utilisateurId: number;
+  }): Promise<{
+    possible: boolean;
+    raison?: string;
+    dejaInscrit?: boolean;
+    capaciteAtteinte?: boolean;
+  }> {
+    return await core.verifierInscriptionPossible(params);
   }
 }
 
