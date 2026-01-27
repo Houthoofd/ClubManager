@@ -1,4 +1,4 @@
-export * from "./utilisateurs.js";
+export { abonnementSchema, gradeSchema, genresSchema, userDataLoginSchema, userInscriptionSchema, } from "./utilisateurs.js";
 export * from "./query.js";
 export * from "./cours.js";
 export { frequentationParCoursSchema, frequentationParMoisSchema, statistiquesFrequentationSchema, progressionParCoursSchema, statistiquesProgressionUtilisateurSchema, } from "./statistiques.js";
@@ -17,6 +17,7 @@ export * from "./messagerie.js";
 export * from "./paiements.js";
 export * from "./stock.js";
 export { StatutProfesseur, ProfesseurSchema, PlanningCoursProfSchema, AjouterProfesseurInputSchema, ModifierStatutProfesseurInputSchema, ProfesseursError, } from "./professeurs.js";
+export { StatutUtilisateur, UtilisateurSchema, CreerUtilisateurInputSchema, ModifierUtilisateurInputSchema, InscrireUtilisateurInputSchema, ConnexionInputSchema, ConnexionParUserIdInputSchema, DesactiverUtilisateurInputSchema, ReactiverUtilisateurInputSchema, RechercherParEmailInputSchema, UtilisateursError, UtilisateursErrorCode, } from "./utilisateurs-service.js";
 // Export des valeurs nécessaires (classes, enums, constantes)
 export { StatutCommande, MagasinError, TAILLES_MAPPING, TAILLES_REVERSE_MAPPING, } from "./magasin.js";
 export { userDataLoginByUserIdSchema, userSearchByEmailSchema, } from "./utilisateurs.js";

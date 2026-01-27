@@ -1,4 +1,25 @@
-export * from "./utilisateurs.js";
+// Export sélectif pour éviter les conflits avec utilisateurs-service
+export type {
+  UserDataSession,
+  Professeur,
+  UserDataLogin,
+  Abonnement,
+  Grade,
+  Genres,
+  Status,
+  UserDataInscription,
+  UserDataAjout,
+  UtilisateurInscriptionPayload,
+  UserData,
+} from "./utilisateurs.js";
+
+export {
+  abonnementSchema,
+  gradeSchema,
+  genresSchema,
+  userDataLoginSchema,
+  userInscriptionSchema,
+} from "./utilisateurs.js";
 export * from "./query.js";
 export * from "./cours.js";
 // Export ancien fichier statistiques (types de base seulement)
@@ -50,6 +71,50 @@ export {
   ModifierStatutProfesseurInputSchema,
   ProfesseursError,
 } from "./professeurs.js";
+
+// Export des types du service utilisateurs
+export type {
+  Utilisateur,
+  UtilisateurAvecDetails,
+  UtilisateurRecherche,
+  CreerUtilisateurInput,
+  ModifierUtilisateurInput,
+  InscrireUtilisateurInput,
+  ConnexionInput,
+  ConnexionParUserIdInput,
+  ConnexionResult,
+  StatistiquesUtilisateurs,
+  StatistiquesUtilisateur,
+  UtilisateursFiltres,
+  UtilisateursPaginatedResponse,
+  DesactiverUtilisateurInput,
+  ReactiverUtilisateurInput,
+  VerificationEmailResult,
+  VerificationUtilisateurResult,
+  UtilisateursResponse,
+  CreerUtilisateurResult,
+  ModifierUtilisateurResult,
+  ActivationResult,
+  UtilisateursTriOptions,
+  UtilisateurInformationsCompletes,
+  RechercherParEmailInput,
+  GenererUserIdResult,
+} from "./utilisateurs-service.js";
+
+export {
+  StatutUtilisateur,
+  UtilisateurSchema,
+  CreerUtilisateurInputSchema,
+  ModifierUtilisateurInputSchema,
+  InscrireUtilisateurInputSchema,
+  ConnexionInputSchema,
+  ConnexionParUserIdInputSchema,
+  DesactiverUtilisateurInputSchema,
+  ReactiverUtilisateurInputSchema,
+  RechercherParEmailInputSchema,
+  UtilisateursError,
+  UtilisateursErrorCode,
+} from "./utilisateurs-service.js";
 
 // Export du magasin avec renommage pour éviter les conflits
 export type {

@@ -1,4 +1,5 @@
-export * from "./utilisateurs.js";
+export type { UserDataSession, Professeur, UserDataLogin, Abonnement, Grade, Genres, Status, UserDataInscription, UserDataAjout, UtilisateurInscriptionPayload, UserData, } from "./utilisateurs.js";
+export { abonnementSchema, gradeSchema, genresSchema, userDataLoginSchema, userInscriptionSchema, } from "./utilisateurs.js";
 export * from "./query.js";
 export * from "./cours.js";
 export type { StatistiquesFrequentation } from "./statistiques.js";
@@ -18,6 +19,8 @@ export * from "./paiements.js";
 export * from "./stock.js";
 export type { ProfesseurAvecDetails, PlanningCoursProf, AjouterProfesseurInput, ModifierStatutProfesseurInput, StatistiquesProfesseurs, StatistiquesProfesseur, ProfesseursResponse, ProfesseursFiltres, TraitementProfesseurResult, ProfesseursPaginatedResponse, PlanningProfesseurResponse, RetirerPromotionInput, AjouterProfesseurResult, } from "./professeurs.js";
 export { StatutProfesseur, ProfesseurSchema, PlanningCoursProfSchema, AjouterProfesseurInputSchema, ModifierStatutProfesseurInputSchema, ProfesseursError, } from "./professeurs.js";
+export type { Utilisateur, UtilisateurAvecDetails, UtilisateurRecherche, CreerUtilisateurInput, ModifierUtilisateurInput, InscrireUtilisateurInput, ConnexionInput, ConnexionParUserIdInput, ConnexionResult, StatistiquesUtilisateurs, StatistiquesUtilisateur, UtilisateursFiltres, UtilisateursPaginatedResponse, DesactiverUtilisateurInput, ReactiverUtilisateurInput, VerificationEmailResult, VerificationUtilisateurResult, UtilisateursResponse, CreerUtilisateurResult, ModifierUtilisateurResult, ActivationResult, UtilisateursTriOptions, UtilisateurInformationsCompletes, RechercherParEmailInput, GenererUserIdResult, } from "./utilisateurs-service.js";
+export { StatutUtilisateur, UtilisateurSchema, CreerUtilisateurInputSchema, ModifierUtilisateurInputSchema, InscrireUtilisateurInputSchema, ConnexionInputSchema, ConnexionParUserIdInputSchema, DesactiverUtilisateurInputSchema, ReactiverUtilisateurInputSchema, RechercherParEmailInputSchema, UtilisateursError, UtilisateursErrorCode, } from "./utilisateurs-service.js";
 export type { Article, ArticleCreationData, ArticleCommande, ArticlesParCategorie, Commande as MagasinCommande, CommandeDetails, NouvelleCommande, Categorie as MagasinCategorie, Stock, FiltresArticles, OptionsPagination, OptionsTri, ConfirmationResult, MagasinConfirmationResult, MagasinResponse, ArticlesResponse, CommandeResponse, CommandesResponse, CategoriesResponse, IdMagasin, IdArticle, IdCommande, IdCategorie, IdUtilisateur, MappingTaille, } from "./magasin.js";
 export { StatutCommande, MagasinError, TAILLES_MAPPING, TAILLES_REVERSE_MAPPING, } from "./magasin.js";
 export type { Commande as CommandeStore, CreateCommandeData, UpdateCommandeData, CommandeComplete, } from "./commandes.js";
