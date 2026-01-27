@@ -3,7 +3,13 @@ export * from "./query.js";
 export * from "./cours.js";
 // Export ancien fichier statistiques (types de base seulement)
 export type { StatistiquesFrequentation } from "./statistiques.js";
-export { frequentationParCoursSchema, frequentationParMoisSchema, statistiquesFrequentationSchema, progressionParCoursSchema, statistiquesProgressionUtilisateurSchema } from "./statistiques.js";
+export {
+  frequentationParCoursSchema,
+  frequentationParMoisSchema,
+  statistiquesFrequentationSchema,
+  progressionParCoursSchema,
+  statistiquesProgressionUtilisateurSchema,
+} from "./statistiques.js";
 // Export nouveau fichier statistiques-service (types complets)
 export * from "./statistiques-service.js";
 export * from "./email.js";
@@ -17,6 +23,7 @@ export * from "./informations-service.js";
 export * from "./inscriptions-service.js";
 export * from "./messagerie.js";
 export * from "./paiements.js";
+export * from "./stock.js";
 
 // Export sélectif pour professeurs pour éviter conflit avec Professeur de utilisateurs
 export type {
