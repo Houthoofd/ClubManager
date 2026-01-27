@@ -27,7 +27,7 @@ export async function resoudreAlerte(input: ResoudreAlerteInput, prisma = defaul
   }
 
   // Vérifier que l'alerte existe
-  const alerteExiste = await prisma.alertes_utilisateurs.findUnique({
+  const alerteExiste = await prisma.alertes_utilisateurs.findFirst({
     where: { id: input.alerteId },
   });
 
@@ -76,7 +76,7 @@ export async function ignorerAlerte(input: IgnorerAlerteInput, prisma = defaultP
   }
 
   // Vérifier que l'alerte existe
-  const alerteExiste = await prisma.alertes_utilisateurs.findUnique({
+  const alerteExiste = await prisma.alertes_utilisateurs.findFirst({
     where: { id: input.alerteId },
   });
 

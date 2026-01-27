@@ -10,6 +10,7 @@
     "build:force": "npm run clean && tsc --force",
     "dev": "tsx watch src/graphql-server.ts",
     "start:graphql": "tsx src/graphql-server.ts",
+    "test": "set NODE_ENV=test&& set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.cjs",
     "test:windows": "set NODE_ENV=test&& set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.cjs",
     "test:db:windows": "set NODE_ENV=test&& set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.cjs src/__tests__/db/clients",
     "test:routes:windows": "set NODE_OPTIONS=--experimental-vm-modules&& jest --config jest.config.cjs src/__tests__/routes",

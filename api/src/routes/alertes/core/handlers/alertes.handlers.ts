@@ -1,15 +1,10 @@
-import express from 'express';
-import { verifyToken, requireRole } from '../middleware/auth.js';
-import { Alerte } from '../db/clients/alertes/alertes.js';
+import { Request, Response } from 'express';
+import { Alerte } from '../../../../db/clients/alertes/alertes.js';
 
-const router = express.Router();
-
-// Middleware pour vérifier que l'utilisateur est super-admin
-router.use(verifyToken);
-router.use(requireRole(['super-administrateur']));
-
-// Obtenir le dashboard des alertes
-router.get('/dashboard', async (req: any, res: any) => {
+/**
+ * Récupère le dashboard des alertes
+ */
+export async function getDashboard(req: Request, res: Response): Promise<void> {
   try {
     const client = new Alerte();
     const dashboard = await client.obtenirDashboardAlertes();
@@ -22,10 +17,12 @@ router.get('/dashboard', async (req: any, res: any) => {
     console.error('Erreur lors de la récupération du dashboard:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur.' });
   }
-});
+}
 
-// Obtenir toutes les alertes actives
-router.get('/actives', async (req: any, res: any) => {
+/**
+ * Récupère toutes les alertes actives
+ */
+export async function getAlertesActives(req: Request, res: Response): Promise<void> {
   try {
     const client = new Alerte();
     const alertes = await client.obtenirAlertesActives();
@@ -38,14 +35,17 @@ router.get('/actives', async (req: any, res: any) => {
     console.error('Erreur lors de la récupération des alertes:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur.' });
   }
-});
+}
 
-// Obtenir les alertes d'un utilisateur spécifique
-router.get('/utilisateur/:userId', async (req: any, res: any) => {
+/**
+ * Récupère les alertes d'un utilisateur spécifique
+ */
+export async function getAlertesUtilisateur(req: Request, res: Response): Promise<void> {
   const { userId } = req.params;
 
   if (!userId || isNaN(parseInt(userId))) {
-    return res.status(400).json({ success: false, error: 'ID utilisateur invalide.' });
+    res.status(400).json({ success: false, error: 'ID utilisateur invalide.' });
+    return;
   }
 
   try {
@@ -60,10 +60,12 @@ router.get('/utilisateur/:userId', async (req: any, res: any) => {
     console.error('Erreur lors de la récupération des alertes utilisateur:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur.' });
   }
-});
+}
 
-// Déclencher manuellement la détection des alertes
-router.post('/detecter', async (req: any, res: any) => {
+/**
+ * Déclenche manuellement la détection des alertes
+ */
+export async function detecterAlertes(req: Request, res: Response): Promise<void> {
   try {
     const client = new Alerte();
     await client.detecterAlertes();
@@ -76,16 +78,19 @@ router.post('/detecter', async (req: any, res: any) => {
     console.error('Erreur lors de la détection des alertes:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur.' });
   }
-});
+}
 
-// Résoudre une alerte
-router.put('/:alerteId/resoudre', async (req: any, res: any) => {
+/**
+ * Résout une alerte
+ */
+export async function resoudreAlerte(req: any, res: Response): Promise<void> {
   const { alerteId } = req.params;
   const { notes } = req.body;
   const userId = req.user?.id;
 
   if (!alerteId || isNaN(parseInt(alerteId))) {
-    return res.status(400).json({ success: false, error: 'ID alerte invalide.' });
+    res.status(400).json({ success: false, error: 'ID alerte invalide.' });
+    return;
   }
 
   try {
@@ -100,15 +105,18 @@ router.put('/:alerteId/resoudre', async (req: any, res: any) => {
     console.error('Erreur lors de la résolution de l\'alerte:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur.' });
   }
-});
+}
 
-// Ignorer une alerte
-router.put('/:alerteId/ignorer', async (req: any, res: any) => {
+/**
+ * Ignore une alerte
+ */
+export async function ignorerAlerte(req: Request, res: Response): Promise<void> {
   const { alerteId } = req.params;
   const { notes } = req.body;
 
   if (!alerteId || isNaN(parseInt(alerteId))) {
-    return res.status(400).json({ success: false, error: 'ID alerte invalide.' });
+    res.status(400).json({ success: false, error: 'ID alerte invalide.' });
+    return;
   }
 
   try {
@@ -123,6 +131,4 @@ router.put('/:alerteId/ignorer', async (req: any, res: any) => {
     console.error('Erreur lors de l\'ignorement de l\'alerte:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur.' });
   }
-});
-
-export default router;
+}

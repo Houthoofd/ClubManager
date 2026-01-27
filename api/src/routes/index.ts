@@ -1,5 +1,6 @@
 // src/routes/index.ts
 import express from 'express';
+import { alertesRouter } from './alertes/index.js';
 import utilisateursRouter from './utilisateurs.js';
 import informationsRouter from './informations.js';
 import coursRouter from './cours.js';
@@ -14,8 +15,7 @@ const router = express.Router();
 
 // Correction : montez statistiquesRouter sur /statistiques AVANT les autres routes
 router.use('/statistiques', statistiquesRouter);
-
-router.use('/utilisateurs', utilisateursRouter);
+router.use('/alertes', alertesRouter);router.use('/utilisateurs', utilisateursRouter);
 router.use('/informations', informationsRouter);
 router.use('/cours', coursRouter);
 router.use('/paiements', paiementRouter);
