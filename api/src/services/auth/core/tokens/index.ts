@@ -2,15 +2,15 @@
  * Module de gestion des tokens de récupération de mot de passe
  */
 
-import { prisma as defaultPrisma } from '../../../../infrastructure/database/prisma-client.js';
-import crypto from 'crypto';
-import type { AuthResult, PasswordResetToken } from '@clubmanager/types';
+import { prisma as defaultPrisma } from "../../../../infrastructure/database/prisma-client.js";
+import crypto from "crypto";
+import type { AuthResult, PasswordResetToken } from "@clubmanager/types";
 
 /**
  * Génère un token sécurisé
  */
 export function genererTokenSecurise(length: number = 32): string {
-  return crypto.randomBytes(length).toString('hex');
+  return crypto.randomBytes(length).toString("hex");
 }
 
 /**
@@ -19,9 +19,11 @@ export function genererTokenSecurise(length: number = 32): string {
 export async function creerTokenRecuperation(
   userId: number,
   expirationHours: number = 1,
-  prisma = defaultPrisma
+  prisma = defaultPrisma,
 ): Promise<{ success: boolean; token?: string; message: string }> {
-  console.log(`🎫 [AuthTokens] Création token récupération pour utilisateur ${userId}`);
+  console.log(
+    `🎫 [AuthTokens] Création token récupération pour utilisateur ${userId}`,
+  );
 
   const token = genererTokenSecurise();
   const expiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
@@ -29,31 +31,33 @@ export async function creerTokenRecuperation(
   try {
     // Supprimer les anciens tokens de cet utilisateur
     await prisma.password_reset_tokens.deleteMany({
-      where: { user_id: userId },
+      where: { utilisateur_id: userId },
     });
 
     // Créer le nouveau token
     await prisma.password_reset_tokens.create({
       data: {
-        user_id: userId,
+        utilisateur_id: userId,
         token,
         expires_at: expiresAt,
         created_at: new Date(),
       },
     });
 
-    console.log(`✅ [AuthTokens] Token créé avec succès, expire à ${expiresAt.toISOString()}`);
+    console.log(
+      `✅ [AuthTokens] Token créé avec succès, expire à ${expiresAt.toISOString()}`,
+    );
 
     return {
       success: true,
       token,
-      message: 'Token de récupération créé',
+      message: "Token de récupération créé",
     };
   } catch (error) {
-    console.error('❌ [AuthTokens] Erreur création token:', error);
+    console.error("❌ [AuthTokens] Erreur création token:", error);
     return {
       success: false,
-      message: 'Erreur lors de la création du token',
+      message: "Erreur lors de la création du token",
     };
   }
 }
@@ -63,13 +67,13 @@ export async function creerTokenRecuperation(
  */
 export async function verifierTokenRecuperation(
   token: string,
-  prisma = defaultPrisma
+  prisma = defaultPrisma,
 ): Promise<PasswordResetToken | null> {
-  console.log('🔍 [AuthTokens] Vérification token récupération');
+  console.log("🔍 [AuthTokens] Vérification token récupération");
 
   // Valider que le token n'est pas vide
-  if (!token || token.trim() === '') {
-    console.log('❌ [AuthTokens] Token vide');
+  if (!token || token.trim() === "") {
+    console.log("❌ [AuthTokens] Token vide");
     return null;
   }
 
@@ -93,15 +97,17 @@ export async function verifierTokenRecuperation(
   });
 
   if (!resetToken) {
-    console.log('❌ [AuthTokens] Token invalide ou expiré');
+    console.log("❌ [AuthTokens] Token invalide ou expiré");
     return null;
   }
 
-  console.log(`✅ [AuthTokens] Token valide pour utilisateur ${resetToken.user_id}`);
+  console.log(
+    `✅ [AuthTokens] Token valide pour utilisateur ${resetToken.utilisateur_id}`,
+  );
 
   return {
     id: resetToken.id,
-    userId: resetToken.user_id,
+    userId: resetToken.utilisateur_id,
     token: resetToken.token,
     expiresAt: resetToken.expires_at,
     createdAt: resetToken.created_at,
@@ -117,8 +123,11 @@ export async function verifierTokenRecuperation(
 /**
  * Supprime un token après utilisation
  */
-export async function marquerTokenUtilise(token: string, prisma = defaultPrisma): Promise<AuthResult> {
-  console.log('🗑️ [AuthTokens] Suppression token utilisé');
+export async function marquerTokenUtilise(
+  token: string,
+  prisma = defaultPrisma,
+): Promise<AuthResult> {
+  console.log("🗑️ [AuthTokens] Suppression token utilisé");
 
   const deleted = await prisma.password_reset_tokens.deleteMany({
     where: { token },
@@ -127,13 +136,13 @@ export async function marquerTokenUtilise(token: string, prisma = defaultPrisma)
   if (deleted.count === 0) {
     return {
       success: false,
-      message: 'Token non trouvé',
+      message: "Token non trouvé",
     };
   }
 
   return {
     success: true,
-    message: 'Token supprimé',
+    message: "Token supprimé",
   };
 }
 
@@ -143,9 +152,9 @@ export async function marquerTokenUtilise(token: string, prisma = defaultPrisma)
 export async function reinitialiserMotDePasseAvecToken(
   token: string,
   newPasswordHash: string,
-  prisma = defaultPrisma
+  prisma = defaultPrisma,
 ): Promise<AuthResult> {
-  console.log('🔄 [AuthTokens] Réinitialisation mot de passe avec token');
+  console.log("🔄 [AuthTokens] Réinitialisation mot de passe avec token");
 
   // Vérifier le token
   const tokenData = await verifierTokenRecuperation(token, prisma);
@@ -153,7 +162,7 @@ export async function reinitialiserMotDePasseAvecToken(
   if (!tokenData) {
     return {
       success: false,
-      message: 'Token invalide ou expiré',
+      message: "Token invalide ou expiré",
     };
   }
 
@@ -168,21 +177,23 @@ export async function reinitialiserMotDePasseAvecToken(
 
       // Supprimer tous les tokens de cet utilisateur
       await tx.password_reset_tokens.deleteMany({
-        where: { user_id: tokenData.userId },
+        where: { utilisateur_id: tokenData.userId },
       });
     });
 
-    console.log(`✅ [AuthTokens] Mot de passe réinitialisé pour utilisateur ${tokenData.userId}`);
+    console.log(
+      `✅ [AuthTokens] Mot de passe réinitialisé pour utilisateur ${tokenData.userId}`,
+    );
 
     return {
       success: true,
-      message: 'Mot de passe réinitialisé avec succès',
+      message: "Mot de passe réinitialisé avec succès",
     };
   } catch (error) {
-    console.error('❌ [AuthTokens] Erreur réinitialisation:', error);
+    console.error("❌ [AuthTokens] Erreur réinitialisation:", error);
     return {
       success: false,
-      message: 'Erreur lors de la réinitialisation',
+      message: "Erreur lors de la réinitialisation",
     };
   }
 }
@@ -190,8 +201,10 @@ export async function reinitialiserMotDePasseAvecToken(
 /**
  * Nettoie les tokens expirés
  */
-export async function nettoyerTokensExpires(prisma = defaultPrisma): Promise<{ count: number }> {
-  console.log('🧹 [AuthTokens] Nettoyage tokens expirés');
+export async function nettoyerTokensExpires(
+  prisma = defaultPrisma,
+): Promise<{ count: number }> {
+  console.log("🧹 [AuthTokens] Nettoyage tokens expirés");
 
   const deleted = await prisma.password_reset_tokens.deleteMany({
     where: {
@@ -212,7 +225,7 @@ export async function nettoyerTokensExpires(prisma = defaultPrisma): Promise<{ c
 export async function enregistrerTentativeRecuperation(
   email: string,
   success: boolean,
-  prisma = defaultPrisma
+  prisma = defaultPrisma,
 ): Promise<void> {
   try {
     await prisma.password_reset_attempts.create({
@@ -223,7 +236,7 @@ export async function enregistrerTentativeRecuperation(
       },
     });
   } catch (error) {
-    console.error('⚠️ [AuthTokens] Erreur enregistrement tentative:', error);
+    console.error("⚠️ [AuthTokens] Erreur enregistrement tentative:", error);
     // Ne pas bloquer le processus
   }
 }
@@ -234,7 +247,7 @@ export async function enregistrerTentativeRecuperation(
 export async function verifierTentativesRecuperationRecentes(
   email: string,
   minutes: number = 15,
-  prisma = defaultPrisma
+  prisma = defaultPrisma,
 ): Promise<number> {
   const timeAgo = new Date(Date.now() - minutes * 60 * 1000);
 

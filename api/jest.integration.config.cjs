@@ -1,6 +1,7 @@
-// Correction : pour Jest en mode ESM, renommez ce fichier en jest.config.cjs et utilisez module.exports
-// Pour corriger l'erreur, modifiez votre script/package.json pour utiliser jest.config.cjs au lieu de jest.config.js :
-// Exemple : jest --config jest.config.cjs
+// Jest configuration for INTEGRATION tests
+// This config does NOT mock Prisma - it uses the real Prisma client
+// connected to the test database (clubmanager_test)
+
 module.exports = {
   preset: "ts-jest/presets/js-with-ts-esm",
   testEnvironment: "node",
@@ -22,12 +23,13 @@ module.exports = {
     "ipaddr.js": "<rootDir>/node_modules/ipaddr.js/lib/ipaddr.js",
     "@clubmanager/(.*)": "<rootDir>/../packages/$1/src",
     "^@clubmanager/types$": "<rootDir>/../packages/types/dist/index.js",
+    // Map generated Prisma client path to the actual generated location
     "^\\.\\./generated/prisma/index\\.js$":
-      "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
+      "<rootDir>/src/generated/prisma/index.js",
     "^\\.\\./(\\.\\./)*/generated/prisma/index\\.js$":
-      "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
-    "^@prisma/client$":
-      "<rootDir>/src/infrastructure/__mocks__/prisma-client.js",
+      "<rootDir>/src/generated/prisma/index.js",
+    // NOTE: For integration tests, we DO NOT mock @prisma/client
+    // We use the real Prisma client connected to clubmanager_test
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   transform: {
@@ -38,18 +40,20 @@ module.exports = {
       },
     ],
   },
-  transformIgnorePatterns: ["node_modules/(?!(zod|pg|ipaddr.js|bignumber.js))"],
-  testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
+  transformIgnorePatterns: [
+    "node_modules/(?!(zod|pg|ipaddr.js|bignumber.js|@prisma|.prisma))",
+  ],
+  // Only run integration tests
+  testMatch: ["**/__tests__/**/*.integration.test.ts"],
   moduleFileExtensions: ["ts", "js", "json", "node"],
   moduleDirectories: ["node_modules", "src"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
   rootDir: ".",
   verbose: true,
-  // setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest-setup-improved.ts'],
   injectGlobals: true,
   testTimeout: 30000,
   clearMocks: true,
   // Load .env.test BEFORE any modules are imported
-  // This ensures Prisma connects to the test database
+  // This is CRITICAL for integration tests to connect to the right database
   setupFiles: ["<rootDir>/tests/jest.setup.mjs"],
 };

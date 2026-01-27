@@ -1,10 +1,10 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model articles {
@@ -373,6 +373,18 @@ model message_status {
   @@index([utilisateur_id], map: "utilisateur_id")
 }
 
+model auth_attempts {
+  id           Int      @id @default(autoincrement())
+  email        String   @db.VarChar(255)
+  ip_address   String?  @db.VarChar(45)
+  user_agent   String?  @db.Text
+  success      Boolean  @default(false)
+  attempted_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([email, attempted_at], map: "idx_auth_email_time")
+  @@index([ip_address, attempted_at], map: "idx_auth_ip_time")
+}
+
 model password_reset_attempts {
   id           Int      @id @default(autoincrement())
   email        String   @db.VarChar(255)
@@ -469,6 +481,7 @@ model utilisateurs {
   email_verified_at                                                              DateTime?                  @db.Timestamp(0)
   alertes_actions                                                                alertes_actions[]
   alertes_utilisateurs                                                           alertes_utilisateurs[]
+  alertes_utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs            alertes_utilisateurs[]     @relation("alertes_utilisateurs_resolu_parToutilisateurs")
   commandes                                                                      commandes[]
   echeances_paiements                                                            echeances_paiements[]
   email_validation_tokens                                                        email_validation_tokens[]
@@ -548,19 +561,22 @@ model alertes_types {
 }
 
 model alertes_utilisateurs {
-  id               Int                          @id @default(autoincrement())
-  utilisateur_id   Int
-  alerte_type_id   Int
-  statut           alertes_utilisateurs_statut? @default(active)
-  donnees_contexte Json?
-  date_detection   DateTime?                    @default(now()) @db.Timestamp(0)
-  date_resolution  DateTime?                    @db.Timestamp(0)
-  notes            String?                      @db.Text
-  alertes_actions  alertes_actions[]
-  utilisateurs     utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_1")
-  alertes_types    alertes_types                @relation(fields: [alerte_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_2")
+  id                                    Int                          @id @default(autoincrement())
+  utilisateur_id                        Int
+  alerte_type_id                        Int
+  statut                                alertes_utilisateurs_statut? @default(active)
+  donnees_contexte                      Json?
+  date_detection                        DateTime?                    @default(now()) @db.Timestamp(0)
+  date_resolution                       DateTime?                    @db.Timestamp(0)
+  resolu_par                            Int?
+  notes                                 String?                      @db.Text
+  alertes_actions                       alertes_actions[]
+  utilisateurs                          utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_1")
+  alertes_types                         alertes_types                @relation(fields: [alerte_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_2")
+  utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs utilisateurs? @relation("alertes_utilisateurs_resolu_parToutilisateurs", fields: [resolu_par], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_3")
 
   @@index([alerte_type_id, statut], map: "idx_type_statut")
+  @@index([resolu_par], map: "resolu_par")
   @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
 }
 

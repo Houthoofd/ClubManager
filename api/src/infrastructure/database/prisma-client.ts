@@ -3,7 +3,7 @@
  * Gère l'instance unique du client Prisma pour éviter les problèmes de connexions multiples
  */
 
-import { PrismaClient } from '../generated/prisma/index.js';
+import { PrismaClient } from "@prisma/client";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -14,16 +14,12 @@ declare global {
  * Instance globale du client Prisma
  */
 const prismaClientSingleton = () => {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn']
-      : ['error'],
-  });
+  return new PrismaClient();
 };
 
 export const prisma = global.prisma || prismaClientSingleton();
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   global.prisma = prisma;
 }
 
