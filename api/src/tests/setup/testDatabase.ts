@@ -238,88 +238,116 @@ export async function seedTestAlertes() {
 
   console.log("🌱 Seed des données de test pour les alertes...");
 
-  // Créer des types d'alertes
-  await prismaInstance.alertes_types.createMany({
-    data: [
-      {
-        id: 1,
-        code: "COMPTE_INCOMPLET",
-        nom: "Compte incomplet",
-        description: "Profil utilisateur incomplet",
-        priorite: "haute",
-        actif: true,
-      },
-      {
-        id: 2,
-        code: "PAIEMENT_RETARD",
-        nom: "Paiement en retard",
-        description: "Paiement en retard",
-        priorite: "normale",
-        actif: true,
-      },
-      {
-        id: 3,
-        code: "PAIEMENT_CRITIQUE",
-        nom: "Paiement critique",
-        description: "Paiement très en retard",
-        priorite: "critique",
-        actif: true,
-      },
-    ],
-    skipDuplicates: true,
-  });
+  // Nettoyer les alertes_utilisateurs avant de seed (pour éviter les doublons)
+  try {
+    await prismaInstance.alertes_utilisateurs.deleteMany({});
+  } catch (error) {
+    console.warn("⚠️ Impossible de nettoyer alertes_utilisateurs:", error);
+  }
 
-  // Créer des utilisateurs de test
-  await prismaInstance.utilisateurs.createMany({
-    data: [
-      {
-        id: 1,
-        userId: "TEST001",
-        first_name: "Jean",
-        last_name: "Test",
-        email: "jean.test@test.com",
-        password: "hashed_password",
-        status_id: null,
-        grade_id: null,
-        nom_utilisateur: "jean_test",
-        date_of_birth: new Date("1990-01-01"),
-      },
-      {
-        id: 2,
-        userId: "TEST002",
-        first_name: "Marie",
-        last_name: "Test",
-        email: "marie.test@test.com",
-        password: "hashed_password",
-        status_id: null,
-        grade_id: null,
-        nom_utilisateur: "marie_test",
-        date_of_birth: new Date("1992-05-15"),
-      },
-    ],
-    skipDuplicates: true,
-  });
+  // Créer des types d'alertes (individuellement pour compatibilité MySQL)
+  const alertTypes = [
+    {
+      id: 1,
+      code: "COMPTE_INCOMPLET",
+      nom: "Compte incomplet",
+      description: "Profil utilisateur incomplet",
+      priorite: "haute",
+      actif: true,
+    },
+    {
+      id: 2,
+      code: "PAIEMENT_RETARD",
+      nom: "Paiement en retard",
+      description: "Paiement en retard",
+      priorite: "normale",
+      actif: true,
+    },
+    {
+      id: 3,
+      code: "PAIEMENT_CRITIQUE",
+      nom: "Paiement critique",
+      description: "Paiement très en retard",
+      priorite: "critique",
+      actif: true,
+    },
+  ];
 
-  // Créer des alertes de test
-  await prismaInstance.alertes_utilisateurs.createMany({
-    data: [
-      {
-        utilisateur_id: 1,
-        alerte_type_id: 1,
-        statut: "active",
-        date_detection: new Date("2026-01-20"),
-        donnees_contexte: { champsManquants: ["email"] },
-      },
-      {
-        utilisateur_id: 2,
-        alerte_type_id: 3,
-        statut: "active",
-        date_detection: new Date("2026-01-15"),
-        donnees_contexte: { joursRetard: 45, montantTotal: "150.00" },
-      },
-    ],
-    skipDuplicates: true,
-  });
+  for (const alertType of alertTypes) {
+    try {
+      await prismaInstance.alertes_types.create({
+        data: alertType,
+      });
+    } catch (error) {
+      // Ignorer les erreurs de doublons (données déjà existantes)
+    }
+  }
+
+  // Créer des utilisateurs de test (individuellement pour compatibilité MySQL)
+  const testUsers = [
+    {
+      id: 1,
+      userId: "TEST001",
+      first_name: "Jean",
+      last_name: "Test",
+      email: "jean.test@test.com",
+      password: "hashed_password",
+      status_id: null,
+      grade_id: null,
+      nom_utilisateur: "jean_test",
+      date_of_birth: new Date("1990-01-01"),
+    },
+    {
+      id: 2,
+      userId: "TEST002",
+      first_name: "Marie",
+      last_name: "Test",
+      email: "marie.test@test.com",
+      password: "hashed_password",
+      status_id: null,
+      grade_id: null,
+      nom_utilisateur: "marie_test",
+      date_of_birth: new Date("1992-05-15"),
+    },
+  ];
+
+  for (const user of testUsers) {
+    try {
+      await prismaInstance.utilisateurs.create({
+        data: user,
+      });
+    } catch (error) {
+      // Ignorer les erreurs de doublons (données déjà existantes)
+    }
+  }
+
+  // Créer des alertes de test (individuellement pour compatibilité MySQL)
+  const testAlertes = [
+    {
+      utilisateur_id: 1,
+      alerte_type_id: 1,
+      statut: "active",
+      date_detection: new Date("2026-01-20"),
+      donnees_contexte: { champsManquants: ["email"] },
+    },
+    {
+      utilisateur_id: 2,
+      alerte_type_id: 3,
+      statut: "active",
+      date_detection: new Date("2026-01-15"),
+      donnees_contexte: { joursRetard: 45, montantTotal: "150.00" },
+    },
+  ];
+
+  for (const alerte of testAlertes) {
+    try {
+      await prismaInstance.alertes_utilisateurs.create({
+        data: alerte,
+      });
+    } catch (error) {
+      // Ignorer les erreurs de doublons (données déjà existantes)
+    }
+  }
 
   console.log("✅ Seed terminé");
 }

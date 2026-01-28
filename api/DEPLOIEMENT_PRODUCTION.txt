@@ -1,0 +1,726 @@
+================================================================================
+GUIDE DE DÉPLOIEMENT EN PRODUCTION - ClubManager API
+================================================================================
+
+Date: Janvier 2025
+Version: 1.0.0
+Statut: Auth & Alertes - Système de tokens & Rate Limiting implémenté
+
+================================================================================
+📋 TABLE DES MATIÈRES
+================================================================================
+
+1. PRÉREQUIS
+2. CONFIGURATION JWT & SECRETS
+3. MIGRATIONS BASE DE DONNÉES
+4. CONFIGURATION RATE LIMITING
+5. REFRESH TOKENS
+6. VARIABLES D'ENVIRONNEMENT
+7. VÉRIFICATIONS DE SÉCURITÉ
+8. DÉPLOIEMENT
+9. MONITORING & MAINTENANCE
+10. ROLLBACK
+
+================================================================================
+1. PRÉREQUIS
+================================================================================
+
+✅ Serveur avec Node.js >= 18.x
+✅ MySQL 8.0+ installé et configuré
+✅ Accès SSH au serveur
+✅ Domaine configuré avec HTTPS (obligatoire)
+✅ Git installé
+✅ PM2 ou équivalent pour la gestion des processus
+
+================================================================================
+2. CONFIGURATION JWT & SECRETS (CRITIQUE)
+================================================================================
+
+2.1 Générer un JWT_SECRET sécurisé
+-----------------------------------
+
+Sur votre machine locale ou le serveur:
+
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+Exemple de sortie:
+a7f5c8d9e2b4f6a1c3e5d7b9f1a3c5e7d9b1f3a5c7e9d1b3f5a7c9e1d3b5f7a9c1e3d5b7f9a1c3e5d7b9f1a3c5e7d9
+
+⚠️ IMPORTANT:
+- Minimum 32 caractères
+- Ne JAMAIS utiliser "your-secret-key" en production
+- Ne JAMAIS commiter cette valeur dans Git
+- Stocker dans un gestionnaire de secrets (AWS Secrets Manager, HashiCorp Vault, etc.)
+
+2.2 Configuration recommandée
+------------------------------
+
+JWT_SECRET=<votre-clé-générée-ci-dessus>
+JWT_EXPIRES_IN=900  # 15 minutes (en secondes)
+REFRESH_TOKEN_EXPIRES_DAYS=7  # 7 jours
+
+================================================================================
+3. MIGRATIONS BASE DE DONNÉES
+================================================================================
+
+3.1 Vérifier la connexion DB
+-----------------------------
+
+mysql -u username -p -h hostname clubmanager_production
+
+3.2 Appliquer les migrations Auth
+----------------------------------
+
+Migration 1: Table auth_attempts (audit des connexions)
+--------------------------------------------------------
+
+mysql -u username -p clubmanager_production < \
+  api/prisma/migrations/20250101000000_add_auth_attempts_table/migration.sql
+
+Vérification:
+DESCRIBE auth_attempts;
+
+Résultat attendu:
++-------------+--------------+------+-----+-------------------+
+| Field       | Type         | Null | Key | Default           |
++-------------+--------------+------+-----+-------------------+
+| id          | int          | NO   | PRI | NULL              |
+| email       | varchar(255) | NO   | MUL | NULL              |
+| ip_address  | varchar(45)  | YES  | MUL | NULL              |
+| user_agent  | text         | YES  |     | NULL              |
+| success     | tinyint(1)   | NO   |     | 0                 |
+| attempted_at| timestamp    | NO   | MUL | CURRENT_TIMESTAMP |
++-------------+--------------+------+-----+-------------------+
+
+
+Migration 2: Table refresh_tokens (gestion des sessions)
+---------------------------------------------------------
+
+mysql -u username -p clubmanager_production < \
+  api/prisma/migrations/20250101000001_add_refresh_tokens/migration.sql
+
+Vérification:
+DESCRIBE refresh_tokens;
+
+Résultat attendu:
++----------------+--------------+------+-----+-------------------+
+| Field          | Type         | Null | Key | Default           |
++----------------+--------------+------+-----+-------------------+
+| id             | int          | NO   | PRI | NULL              |
+| utilisateur_id | int          | NO   | MUL | NULL              |
+| token          | varchar(255) | NO   | UNI | NULL              |
+| expires_at     | timestamp    | NO   | MUL | NULL              |
+| created_at     | timestamp    | NO   |     | CURRENT_TIMESTAMP |
+| revoked_at     | timestamp    | YES  |     | NULL              |
+| replaced_by    | varchar(255) | YES  |     | NULL              |
+| ip_address     | varchar(45)  | YES  |     | NULL              |
+| user_agent     | text         | YES  |     | NULL              |
++----------------+--------------+------+-----+-------------------+
+
+
+3.3 Vérifier les index
+-----------------------
+
+SHOW INDEX FROM auth_attempts;
+SHOW INDEX FROM refresh_tokens;
+
+Les index suivants doivent exister:
+- auth_attempts: idx_auth_email_time, idx_auth_ip_time
+- refresh_tokens: idx_refresh_user_id, idx_refresh_token, idx_refresh_expires
+
+
+3.4 Régénérer le client Prisma
+-------------------------------
+
+cd api
+npx prisma generate
+
+================================================================================
+4. CONFIGURATION RATE LIMITING
+================================================================================
+
+4.1 Variables d'environnement
+------------------------------
+
+# Tentatives d'authentification
+RATE_LIMIT_MAX_ATTEMPTS=5                    # 5 tentatives max
+RATE_LIMIT_WINDOW_MINUTES=15                 # Dans une fenêtre de 15 min
+RATE_LIMIT_BLOCK_DURATION_MINUTES=30         # Blocage de 30 min
+
+# Rate limit global
+GLOBAL_RATE_LIMIT_REQUESTS=100               # 100 req/IP
+GLOBAL_RATE_LIMIT_WINDOW_MINUTES=15          # Par 15 minutes
+
+# Inscriptions
+REGISTER_RATE_LIMIT_REQUESTS=3               # 3 inscriptions/IP
+REGISTER_RATE_LIMIT_WINDOW_MINUTES=60        # Par heure
+
+# Récupération mot de passe
+PASSWORD_RESET_RATE_LIMIT_REQUESTS=3         # 3 demandes
+PASSWORD_RESET_RATE_LIMIT_WINDOW_MINUTES=15  # Par 15 minutes
+
+
+4.2 Ajuster selon votre trafic
+-------------------------------
+
+Pour un site à fort trafic:
+- Augmenter GLOBAL_RATE_LIMIT_REQUESTS (200-500)
+- Garder les limites auth strictes pour la sécurité
+
+Pour un site à faible trafic:
+- Les valeurs par défaut sont appropriées
+- Monitorer les faux positifs
+
+
+4.3 Tester le rate limiting
+----------------------------
+
+Après déploiement:
+
+# Test 1: Tentatives échouées multiples
+curl -X POST https://api.votredomaine.com/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"wrong"}'
+
+# Répéter 6 fois
+
+# Résultat attendu à la 6ème tentative:
+# Status: 429 Too Many Requests
+# Body: {"success":false,"message":"Trop de tentatives..."}
+
+
+# Test 2: Vérifier le reset automatique
+# Attendre RATE_LIMIT_BLOCK_DURATION_MINUTES
+# Tenter à nouveau -> doit être autorisé
+
+================================================================================
+5. REFRESH TOKENS
+================================================================================
+
+5.1 Comprendre le système
+--------------------------
+
+Access Token (JWT):
+- Durée de vie courte (15 min recommandé)
+- Contient les infos utilisateur
+- Stocké côté client (mémoire, pas localStorage)
+- Utilisé pour chaque requête API
+
+Refresh Token:
+- Durée de vie longue (7 jours recommandé)
+- Stocké de manière sécurisée (httpOnly cookie)
+- Utilisé uniquement pour renouveler l'access token
+- Rotation automatique (un seul usage)
+
+
+5.2 Flow de refresh
+-------------------
+
+1. Access token expire (15 min)
+2. Client appelle /auth/refresh avec refresh token
+3. API valide le refresh token
+4. API révoque l'ancien refresh token
+5. API génère nouveau access token + nouveau refresh token
+6. Client utilise les nouveaux tokens
+
+
+5.3 Sécurité des refresh tokens
+--------------------------------
+
+✅ Rotation automatique (implémentée)
+✅ Révocation à la déconnexion
+✅ Révocation au changement de mot de passe
+✅ Tracking IP + User-Agent
+✅ Expiration après 7 jours
+✅ Nettoyage automatique des tokens expirés
+
+
+5.4 Configuration recommandée
+------------------------------
+
+# Production
+REFRESH_TOKEN_EXPIRES_DAYS=7
+
+# Développement (plus court pour tester)
+REFRESH_TOKEN_EXPIRES_DAYS=1
+
+================================================================================
+6. VARIABLES D'ENVIRONNEMENT
+================================================================================
+
+6.1 Copier le fichier exemple
+------------------------------
+
+cp api/env.production.example api/.env.production
+
+6.2 Éditer et configurer TOUTES les valeurs
+--------------------------------------------
+
+nano api/.env.production
+
+6.3 Variables OBLIGATOIRES
+---------------------------
+
+✅ DATABASE_URL              - Connexion MySQL production
+✅ JWT_SECRET                - Secret JWT (64+ chars)
+✅ NODE_ENV=production       - Mode production
+✅ PORT                      - Port du serveur (3000)
+✅ API_URL                   - URL publique de l'API
+✅ FRONTEND_URL              - URL du frontend
+✅ CORS_ORIGINS              - Origines autorisées
+
+
+6.4 Variables RECOMMANDÉES
+---------------------------
+
+✅ JWT_EXPIRES_IN            - Expiration access token (900)
+✅ REFRESH_TOKEN_EXPIRES_DAYS - Expiration refresh token (7)
+✅ RATE_LIMIT_*              - Configuration rate limiting
+✅ BCRYPT_ROUNDS             - Rounds bcrypt (12)
+✅ LOG_LEVEL                 - Niveau de log (info)
+
+
+6.5 Variables OPTIONNELLES (selon fonctionnalités)
+---------------------------------------------------
+
+⚪ SENDGRID_API_KEY         - Envoi d'emails
+⚪ AWS_*                    - Stockage S3
+⚪ STRIPE_*                 - Paiements Stripe
+⚪ PAYPAL_*                 - Paiements PayPal
+
+
+6.6 Sécuriser le fichier .env
+------------------------------
+
+chmod 600 api/.env.production
+chown appuser:appuser api/.env.production
+
+Vérifier:
+ls -la api/.env.production
+# Résultat attendu: -rw------- 1 appuser appuser
+
+================================================================================
+7. VÉRIFICATIONS DE SÉCURITÉ
+================================================================================
+
+7.1 Checklist pré-déploiement
+------------------------------
+
+[ ] JWT_SECRET généré et sécurisé (64+ chars)
+[ ] Base de données en production distincte
+[ ] HTTPS configuré et forcé
+[ ] CORS configuré avec origines spécifiques
+[ ] Rate limiting activé
+[ ] Logs configurés (pas de données sensibles)
+[ ] Backups automatiques de la DB
+[ ] Monitoring configuré
+[ ] Alertes configurées
+[ ] Documentation à jour
+
+
+7.2 Test de sécurité JWT
+-------------------------
+
+# Test 1: Vérifier que le JWT par défaut est rejeté
+curl -X GET https://api.votredomaine.com/auth/me \
+  -H "Authorization: Bearer invalid-token"
+
+# Résultat attendu: 403 Forbidden
+
+
+# Test 2: Vérifier l'expiration des tokens
+# Attendre JWT_EXPIRES_IN secondes après login
+# Tenter une requête protégée
+
+# Résultat attendu: 401 Token expiré
+
+
+7.3 Audit npm
+-------------
+
+cd api
+npm audit
+
+# Si des vulnérabilités critiques:
+npm audit fix
+
+# Si des vulnérabilités persistent:
+# Évaluer le risque et mettre à jour manuellement
+
+
+7.4 Vérifier les dépendances critiques
+---------------------------------------
+
+npm list bcrypt jsonwebtoken @prisma/client
+
+Versions recommandées:
+- bcrypt: ^5.1.1
+- jsonwebtoken: ^9.0.2
+- @prisma/client: ^5.22.0
+
+================================================================================
+8. DÉPLOIEMENT
+================================================================================
+
+8.1 Installation sur le serveur
+--------------------------------
+
+# 1. Cloner le repo
+git clone https://github.com/votre-repo/clubmanager.git
+cd clubmanager/api
+
+# 2. Installer les dépendances
+npm ci --production
+
+# 3. Copier et configurer .env.production
+cp env.production.example .env.production
+nano .env.production
+
+# 4. Générer le client Prisma
+npx prisma generate
+
+# 5. Appliquer les migrations
+npm run migrate:production  # Ou manuellement avec mysql
+
+# 6. Build TypeScript
+npm run build
+
+# 7. Tester le démarrage
+NODE_ENV=production node dist/graphql-server.js
+
+
+8.2 Configuration PM2
+---------------------
+
+# Créer ecosystem.config.cjs
+cat > ecosystem.config.cjs << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'clubmanager-api',
+    script: './dist/graphql-server.js',
+    instances: 2,
+    exec_mode: 'cluster',
+    env_production: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    },
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    max_memory_restart: '500M',
+    watch: false,
+    autorestart: true,
+    max_restarts: 10,
+    min_uptime: '10s'
+  }]
+};
+EOF
+
+# Démarrer avec PM2
+pm2 start ecosystem.config.cjs --env production
+pm2 save
+pm2 startup
+
+
+8.3 Configuration Nginx (reverse proxy)
+----------------------------------------
+
+# /etc/nginx/sites-available/clubmanager-api
+server {
+    listen 443 ssl http2;
+    server_name api.votredomaine.com;
+
+    ssl_certificate /path/to/fullchain.pem;
+    ssl_certificate_key /path/to/privkey.pem;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Rate limiting global
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/m;
+    limit_req zone=api_limit burst=20 nodelay;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Auth endpoints - rate limiting strict
+    location /auth/login {
+        limit_req_zone $binary_remote_addr zone=login_limit:10m rate=5r/m;
+        limit_req zone=login_limit burst=3 nodelay;
+        proxy_pass http://localhost:3000;
+    }
+
+    location /auth/register {
+        limit_req_zone $binary_remote_addr zone=register_limit:10m rate=3r/h;
+        limit_req zone=register_limit burst=1 nodelay;
+        proxy_pass http://localhost:3000;
+    }
+}
+
+# Activer la config
+ln -s /etc/nginx/sites-available/clubmanager-api /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+
+
+8.4 Vérification post-déploiement
+----------------------------------
+
+# Health check
+curl https://api.votredomaine.com/health
+
+# Test login
+curl -X POST https://api.votredomaine.com/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@votredomaine.com","password":"VotreMotDePasse"}'
+
+# Résultat attendu:
+{
+  "success": true,
+  "token": "eyJhbGc...",
+  "refreshToken": "a7f5c8d9...",
+  "user": {...}
+}
+
+
+# Test refresh token
+curl -X POST https://api.votredomaine.com/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken":"<token-from-login>"}'
+
+# Résultat attendu:
+{
+  "success": true,
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "b8g6d0e1...",
+  "expiresIn": 900
+}
+
+================================================================================
+9. MONITORING & MAINTENANCE
+================================================================================
+
+9.1 Logs à surveiller
+----------------------
+
+# Logs PM2
+pm2 logs clubmanager-api --lines 100
+
+# Logs d'erreur
+tail -f api/logs/err.log
+
+# Logs système
+journalctl -u nginx -f
+
+
+9.2 Métriques importantes
+--------------------------
+
+✅ Taux de réussite des authentifications
+✅ Nombre de comptes bloqués par rate limiting
+✅ Nombre de refresh tokens actifs
+✅ Temps de réponse des endpoints auth
+✅ Nombre d'erreurs JWT invalides
+
+
+9.3 Tâches de maintenance automatiques
+---------------------------------------
+
+# Créer un cron job pour le nettoyage
+crontab -e
+
+# Ajouter:
+# Nettoyage quotidien à 3h du matin
+0 3 * * * cd /path/to/clubmanager/api && node scripts/cleanup-tokens.js
+
+
+9.4 Script de nettoyage (scripts/cleanup-tokens.js)
+----------------------------------------------------
+
+import { authService } from '../src/services/auth/auth.service.js';
+import { nettoyerAnciennesTentatives } from '../src/middleware/rate-limit.js';
+
+async function cleanup() {
+  console.log('[Cleanup] Démarrage...');
+
+  // Nettoyer les password reset tokens expirés
+  const passwordTokens = await authService.nettoyerTokensExpires();
+  console.log(`[Cleanup] ${passwordTokens.count} password tokens supprimés`);
+
+  // Nettoyer les refresh tokens expirés/révoqués
+  const refreshTokens = await authService.nettoyerRefreshTokens(30);
+  console.log(`[Cleanup] ${refreshTokens} refresh tokens supprimés`);
+
+  // Nettoyer les anciennes tentatives d'auth
+  const authAttempts = await nettoyerAnciennesTentatives(30);
+  console.log(`[Cleanup] ${authAttempts} auth attempts supprimés`);
+
+  console.log('[Cleanup] Terminé');
+  process.exit(0);
+}
+
+cleanup().catch(console.error);
+
+
+9.5 Monitoring des comptes bloqués
+-----------------------------------
+
+# Script pour lister les comptes bloqués
+import { obtenirEmailsBloques } from '../src/middleware/rate-limit.js';
+
+const bloques = await obtenirEmailsBloques(20, 60);
+console.table(bloques);
+
+
+9.6 Alertes recommandées
+-------------------------
+
+✅ Alerte si > 100 tentatives échouées/heure
+✅ Alerte si > 50 comptes bloqués simultanément
+✅ Alerte si temps de réponse > 1 seconde
+✅ Alerte si erreur DB
+✅ Alerte si utilisation mémoire > 80%
+✅ Alerte si CPU > 90% pendant 5 min
+
+================================================================================
+10. ROLLBACK
+================================================================================
+
+10.1 Procédure de rollback rapide
+----------------------------------
+
+# 1. Arrêter l'application
+pm2 stop clubmanager-api
+
+# 2. Revenir à la version précédente
+cd /path/to/clubmanager
+git checkout <previous-commit-hash>
+
+# 3. Réinstaller les dépendances
+cd api
+npm ci --production
+
+# 4. Rebuild
+npm run build
+
+# 5. Redémarrer
+pm2 restart clubmanager-api
+
+
+10.2 Rollback des migrations
+-----------------------------
+
+# Si les nouvelles tables causent des problèmes:
+
+# Option 1: Supprimer les tables
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS auth_attempts;
+
+# Option 2: Garder les tables mais désactiver les features
+# Dans .env.production:
+ENABLE_REFRESH_TOKENS=false
+ENABLE_RATE_LIMITING=false
+
+
+10.3 Vérification post-rollback
+--------------------------------
+
+# Tester les fonctionnalités critiques
+curl https://api.votredomaine.com/health
+curl -X POST https://api.votredomaine.com/auth/login ...
+
+# Vérifier les logs
+pm2 logs clubmanager-api --lines 50
+
+================================================================================
+📞 SUPPORT & DÉPANNAGE
+================================================================================
+
+Problème: "Cannot connect to database"
+Solution: Vérifier DATABASE_URL, firewall, et que MySQL est démarré
+
+Problème: "JWT malformed" ou "invalid signature"
+Solution: Vérifier que JWT_SECRET est identique partout, régénérer si changé
+
+Problème: Trop de blocages rate limiting
+Solution: Augmenter RATE_LIMIT_MAX_ATTEMPTS ou RATE_LIMIT_WINDOW_MINUTES
+
+Problème: Refresh tokens ne marchent pas
+Solution: Vérifier que la table existe, que REFRESH_TOKEN_EXPIRES_DAYS est set
+
+Problème: Performance dégradée
+Solution: Vérifier les index DB, augmenter instances PM2, activer cache
+
+================================================================================
+✅ CHECKLIST FINALE DE DÉPLOIEMENT
+================================================================================
+
+Configuration:
+[ ] JWT_SECRET généré (64+ chars)
+[ ] .env.production configuré et sécurisé (chmod 600)
+[ ] CORS configuré avec origines spécifiques
+[ ] HTTPS forcé
+[ ] Rate limiting configuré
+
+Base de données:
+[ ] Migration auth_attempts appliquée
+[ ] Migration refresh_tokens appliquée
+[ ] Index créés et vérifiés
+[ ] Backups configurés
+
+Serveur:
+[ ] Node.js 18+ installé
+[ ] PM2 configuré et démarré
+[ ] Nginx configuré avec SSL
+[ ] Firewall configuré
+[ ] Logs rotatés
+
+Tests:
+[ ] Health check fonctionne
+[ ] Login fonctionne
+[ ] Refresh token fonctionne
+[ ] Rate limiting fonctionne
+[ ] HTTPS redirige correctement
+
+Monitoring:
+[ ] Logs accessibles
+[ ] Métriques configurées
+[ ] Alertes configurées
+[ ] Cron de nettoyage configuré
+
+Documentation:
+[ ] Accès serveur documentés
+[ ] Procédure rollback testée
+[ ] Contact support défini
+
+================================================================================
+🎉 DÉPLOIEMENT TERMINÉ
+================================================================================
+
+Votre API ClubManager est maintenant en production avec:
+✅ Authentification JWT sécurisée
+✅ Refresh tokens avec rotation automatique
+✅ Rate limiting anti-force-brute
+✅ Audit complet des tentatives de connexion
+✅ Nettoyage automatique des tokens expirés
+
+Prochaines étapes:
+1. Monitorer les logs pendant 24-48h
+2. Ajuster le rate limiting si nécessaire
+3. Vérifier les métriques de performance
+4. Planifier les tests de charge
+5. Documenter les procédures d'exploitation
+
+================================================================================

@@ -56,4 +56,6 @@ module.exports = {
   // Load .env.test BEFORE any modules are imported
   // This is CRITICAL for integration tests to connect to the right database
   setupFiles: ["<rootDir>/tests/jest.setup.mjs"],
+  // Exécuter les tests séquentiellement pour éviter les conflits de base de données
+  maxWorkers: 1,
 };

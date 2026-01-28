@@ -5,6 +5,7 @@
 import { prisma as defaultPrisma } from "../../../../infrastructure/database/prisma-client.js";
 import bcrypt from "bcrypt";
 import type { AuthResult } from "@clubmanager/types";
+import { generateToken } from "../../../../middleware/auth.js";
 
 /**
  * Authentifie un utilisateur avec email et mot de passe
@@ -60,9 +61,19 @@ export async function authentifierUtilisateur(
 
   console.log(`✅ [AuthAuthentication] Authentification réussie pour ${email}`);
 
+  // Générer le token JWT
+  const token = generateToken({
+    id: user.id,
+    email: user.email,
+    first_name: user.first_name,
+    last_name: user.last_name,
+    status_id: user.status_id,
+  });
+
   return {
     success: true,
     message: "Authentification réussie",
+    token,
     user: {
       id: user.id,
       email: user.email,
@@ -142,9 +153,19 @@ export async function creerCompteUtilisateur(
 
     console.log(`✅ [AuthAuthentication] Compte créé avec succès: ${user.id}`);
 
+    // Générer le token JWT pour le nouvel utilisateur
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      status_id: user.status_id,
+    });
+
     return {
       success: true,
       message: "Compte créé avec succès",
+      token,
       user: {
         id: user.id,
         email: user.email,

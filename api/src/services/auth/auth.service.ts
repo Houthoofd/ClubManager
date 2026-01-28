@@ -16,7 +16,13 @@ import type {
 
 // Import depuis l'index core qui réexporte tout
 import * as core from "./core/index.js";
+import * as refreshTokens from "./core/refresh-tokens/index.js";
 import { prisma as defaultPrisma } from "../../infrastructure/database/prisma-client.js";
+import {
+  verifierRateLimit,
+  enregistrerTentative,
+  reinitialiserTentatives,
+} from "../../middleware/rate-limit.js";
 import bcrypt from "bcrypt";
 
 /**
@@ -31,21 +37,58 @@ export class AuthService {
   }
 
   // Authentification
-  async authentifier(email: string, password: string): Promise<AuthResult> {
+  async authentifier(
+    email: string,
+    password: string,
+    metadata?: { ipAddress?: string; userAgent?: string },
+  ): Promise<AuthResult & { refreshToken?: string }> {
+    // Vérifier le rate limit AVANT d'authentifier
+    const rateLimitCheck = await verifierRateLimit(email);
+
+    if (!rateLimitCheck.allowed) {
+      // Enregistrer la tentative bloquée
+      await enregistrerTentative(email, false, metadata);
+
+      return {
+        success: false,
+        message: rateLimitCheck.message || "Trop de tentatives échouées",
+      };
+    }
+
     const result = await core.authentifierUtilisateur(
       email,
       password,
       this.prisma,
     );
+
+    // Enregistrer la tentative
+    await enregistrerTentative(email, result.success, metadata);
+
     await core.enregistrerTentativeConnexion(
       email,
       result.success,
       this.prisma,
     );
+
+    // Si l'authentification réussit, créer un refresh token et réinitialiser les tentatives
+    if (result.success && result.user?.id) {
+      await reinitialiserTentatives(email);
+
+      const refreshToken = await refreshTokens.creerRefreshToken(
+        result.user.id,
+        metadata,
+        this.prisma,
+      );
+      return { ...result, refreshToken };
+    }
+
     return result;
   }
 
-  async creerCompte(input: CreateUserInput): Promise<AuthResult> {
+  async creerCompte(
+    input: CreateUserInput,
+    metadata?: { ipAddress?: string; userAgent?: string },
+  ): Promise<AuthResult & { refreshToken?: string }> {
     // Valider l'email
     if (!core.validerEmail(input.email)) {
       return {
@@ -63,7 +106,19 @@ export class AuthService {
       };
     }
 
-    return core.creerCompteUtilisateur(input, this.prisma);
+    const result = await core.creerCompteUtilisateur(input, this.prisma);
+
+    // Si la création réussit, créer un refresh token
+    if (result.success && result.user?.id) {
+      const refreshToken = await refreshTokens.creerRefreshToken(
+        result.user.id,
+        metadata,
+        this.prisma,
+      );
+      return { ...result, refreshToken };
+    }
+
+    return result;
   }
 
   async verifierEmail(email: string): Promise<EmailCheckResult> {
@@ -232,9 +287,56 @@ export class AuthService {
     );
   }
 
+  // Refresh Tokens
+  async renouvellerTokens(
+    refreshToken: string,
+    metadata?: { ipAddress?: string; userAgent?: string },
+  ): Promise<{
+    success: boolean;
+    message: string;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+  }> {
+    return refreshTokens.renouvellerTokens(refreshToken, metadata, this.prisma);
+  }
+
+  async revoquerRefreshToken(token: string): Promise<void> {
+    return refreshTokens.revoquerRefreshToken(token, undefined, this.prisma);
+  }
+
+  async revoquerTousLesTokensUtilisateur(userId: number): Promise<number> {
+    return refreshTokens.revoquerTousLesTokens(userId, this.prisma);
+  }
+
+  async obtenirTokensActifsUtilisateur(userId: number): Promise<
+    Array<{
+      id: number;
+      createdAt: Date;
+      expiresAt: Date;
+      ipAddress: string | null;
+      userAgent: string | null;
+    }>
+  > {
+    return refreshTokens.obtenirTokensActifs(userId, this.prisma);
+  }
+
+  async obtenirStatistiquesRefreshTokens(userId: number): Promise<{
+    total: number;
+    actifs: number;
+    revoques: number;
+    expires: number;
+  }> {
+    return refreshTokens.obtenirStatistiquesTokens(userId, this.prisma);
+  }
+
   // Maintenance
   async nettoyerTokensExpires(): Promise<{ count: number }> {
     return core.nettoyerTokensExpires(this.prisma);
+  }
+
+  async nettoyerRefreshTokens(joursRetention: number = 30): Promise<number> {
+    return refreshTokens.nettoyerRefreshTokens(joursRetention, this.prisma);
   }
 
   // Helpers statiques

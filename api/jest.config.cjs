@@ -42,7 +42,12 @@ module.exports = {
   testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
   moduleFileExtensions: ["ts", "js", "json", "node"],
   moduleDirectories: ["node_modules", "src"],
-  testPathIgnorePatterns: ["/node_modules/", "/dist/"],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/dist/",
+    ".integration.test.ts",
+    ".integration.test.tsx",
+  ],
   rootDir: ".",
   verbose: true,
   // setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest-setup-improved.ts'],

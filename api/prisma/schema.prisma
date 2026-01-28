@@ -385,6 +385,23 @@ model auth_attempts {
   @@index([ip_address, attempted_at], map: "idx_auth_ip_time")
 }
 
+model refresh_tokens {
+  id             Int          @id @default(autoincrement())
+  utilisateur_id Int
+  token          String       @unique(map: "refresh_token") @db.VarChar(255)
+  expires_at     DateTime     @db.Timestamp(0)
+  created_at     DateTime     @default(now()) @db.Timestamp(0)
+  revoked_at     DateTime?    @db.Timestamp(0)
+  replaced_by    String?      @db.VarChar(255)
+  ip_address     String?      @db.VarChar(45)
+  user_agent     String?      @db.Text
+  utilisateurs   utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "refresh_tokens_ibfk_1")
+
+  @@index([utilisateur_id], map: "idx_refresh_user_id")
+  @@index([token], map: "idx_refresh_token")
+  @@index([expires_at], map: "idx_refresh_expires")
+}
+
 model password_reset_attempts {
   id           Int      @id @default(autoincrement())
   email        String   @db.VarChar(255)
@@ -497,6 +514,7 @@ model utilisateurs {
   notifications                                                                  notifications[]
   paiements                                                                      paiements[]
   password_reset_tokens                                                          password_reset_tokens[]
+  refresh_tokens                                                                 refresh_tokens[]
   reservations                                                                   reservations[]
   sms_recovery_codes                                                             sms_recovery_codes[]
   genres                                                                         genres?                    @relation(fields: [genre_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_1")

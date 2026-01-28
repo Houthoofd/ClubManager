@@ -8,6 +8,7 @@
 export interface AuthResult {
   success: boolean;
   message: string;
+  token?: string;
   user?: {
     id: number;
     email: string;
@@ -109,7 +110,7 @@ export interface ManualRecoveryRequest {
   userId: number;
   reason: string;
   verificationData: any;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   createdAt: Date;
   expiresAt: Date;
   processedBy?: number;
