@@ -279,6 +279,7 @@ export type ReactiverUtilisateurInput = z.infer<typeof ReactiverUtilisateurInput
  */
 export interface VerificationEmailResult {
   existe: boolean;
+  message: string;
   utilisateurId?: number;
   actif?: boolean;
 }
@@ -338,6 +339,8 @@ export enum UtilisateursErrorCode {
   INVALID_EMAIL = 'INVALID_EMAIL',
   INVALID_PASSWORD = 'INVALID_PASSWORD',
   INVALID_INPUT = 'INVALID_INPUT',
+  INVALID_ID = 'INVALID_ID',
+  DATABASE_ERROR = 'DATABASE_ERROR',
   OPERATION_FAILED = 'OPERATION_FAILED',
   PERMISSION_DENIED = 'PERMISSION_DENIED'
 }

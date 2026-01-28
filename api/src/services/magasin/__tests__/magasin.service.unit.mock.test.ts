@@ -273,6 +273,30 @@ describe('MagasinService - Tests Unitaires avec Mocks Locaux', () => {
     });
   });
 
+  // === TESTS VÉRIFICATIONS ARTICLES ===
+
+  describe('Vérifications - Articles', () => {
+    test('verifierArticleExiste devrait avoir la signature correcte', () => {
+      expect(typeof magasinService.verifierArticleExiste).toBe('function');
+      expect(magasinService.verifierArticleExiste.length).toBe(1);
+    });
+
+    test('verifierArticleExisteParCategorie devrait avoir la signature correcte', () => {
+      expect(typeof magasinService.verifierArticleExisteParCategorie).toBe('function');
+      expect(magasinService.verifierArticleExisteParCategorie.length).toBe(2);
+    });
+
+    test('verifierCreationArticlePossible devrait avoir la signature correcte', () => {
+      expect(typeof magasinService.verifierCreationArticlePossible).toBe('function');
+      expect(magasinService.verifierCreationArticlePossible.length).toBe(2);
+    });
+
+    test('verifierModificationArticlePossible devrait avoir la signature correcte', () => {
+      expect(typeof magasinService.verifierModificationArticlePossible).toBe('function');
+      expect(magasinService.verifierModificationArticlePossible.length).toBe(1);
+    });
+  });
+
   // === TESTS GESTION D'ERREURS ===
 
   describe('Gestion des erreurs', () => {

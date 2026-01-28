@@ -35,6 +35,7 @@ import * as queries from "./core/queries/obtenirUtilisateurs.js";
 import * as utilisateurQuery from "./core/queries/obtenirUtilisateurParId.js";
 import * as emailQuery from "./core/queries/obtenirUtilisateurParEmail.js";
 import * as rechercheQuery from "./core/queries/rechercherUtilisateursParEmail.js";
+import * as verifications from "./core/queries/verifications.js";
 
 import * as creerMutation from "./core/mutations/creerUtilisateur.js";
 import * as modifierMutation from "./core/mutations/modifierUtilisateur.js";
@@ -354,35 +355,14 @@ export class UtilisateursService {
    * Vérifie si un utilisateur existe par son ID
    */
   async utilisateurExiste(id: number): Promise<boolean> {
-    const count = await this.prisma.utilisateurs.count({
-      where: { id },
-    });
-    return count > 0;
+    return verifications.utilisateurExiste(this.prisma, id);
   }
 
   /**
    * Vérifie si un email existe déjà
    */
   async verifierEmailExiste(email: string): Promise<VerificationEmailResult> {
-    const utilisateur = await this.prisma.utilisateurs.findFirst({
-      where: {
-        email: email.toLowerCase().trim(),
-      },
-      select: {
-        id: true,
-        active: true,
-      },
-    });
-
-    if (!utilisateur) {
-      return { existe: false };
-    }
-
-    return {
-      existe: true,
-      utilisateurId: utilisateur.id,
-      actif: utilisateur.active,
-    };
+    return verifications.verifierEmailExiste(this.prisma, email);
   }
 
   /**
@@ -391,59 +371,7 @@ export class UtilisateursService {
   async verifierUtilisateurExiste(
     email: string,
   ): Promise<VerificationUtilisateurResult> {
-    const utilisateur = await this.prisma.utilisateurs.findFirst({
-      where: {
-        email: email.toLowerCase().trim(),
-      },
-      select: {
-        id: true,
-        userId: true,
-        first_name: true,
-        last_name: true,
-        email: true,
-        date_of_birth: true,
-        active: true,
-        status_id: true,
-      },
-    });
-
-    if (!utilisateur) {
-      return {
-        existe: false,
-        canRegister: true,
-        message: "Aucun utilisateur trouvé avec cet email",
-      };
-    }
-
-    if (!utilisateur.active) {
-      return {
-        existe: true,
-        canRegister: false,
-        message: "Un compte existe déjà avec cet email mais il est désactivé",
-        utilisateur: {
-          id: utilisateur.id,
-          userId: utilisateur.userId || undefined,
-          nom: utilisateur.last_name,
-          prenom: utilisateur.first_name,
-          email: utilisateur.email,
-          date_naissance: utilisateur.date_of_birth,
-        },
-      };
-    }
-
-    return {
-      existe: true,
-      canRegister: false,
-      message: "Un compte actif existe déjà avec cet email",
-      utilisateur: {
-        id: utilisateur.id,
-        userId: utilisateur.userId || undefined,
-        nom: utilisateur.last_name,
-        prenom: utilisateur.first_name,
-        email: utilisateur.email,
-        date_naissance: utilisateur.date_of_birth,
-      },
-    };
+    return verifications.verifierUtilisateurExiste(this.prisma, email);
   }
 
   /**

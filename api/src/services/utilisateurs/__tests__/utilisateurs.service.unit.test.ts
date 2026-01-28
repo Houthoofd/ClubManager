@@ -638,47 +638,6 @@ describe("UtilisateursService - Tests unitaires", () => {
   });
 
   describe("Méthodes utilitaires", () => {
-    it("utilisateurExiste - devrait vérifier l'existence d'un utilisateur", async () => {
-      mockPrisma.utilisateurs.count.mockResolvedValue(1);
-
-      const result = await service.utilisateurExiste(1);
-
-      expect(result).toBe(true);
-      expect(mockPrisma.utilisateurs.count).toHaveBeenCalledWith({
-        where: { id: 1 },
-      });
-    });
-
-    it("utilisateurExiste - devrait retourner false si inexistant", async () => {
-      mockPrisma.utilisateurs.count.mockResolvedValue(0);
-
-      const result = await service.utilisateurExiste(999);
-
-      expect(result).toBe(false);
-    });
-
-    it("verifierEmailExiste - devrait vérifier si un email existe", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(mockUtilisateur1);
-
-      const result = await service.verifierEmailExiste(
-        "jean.dupont@example.com",
-      );
-
-      expect(result.existe).toBe(true);
-      expect(result.utilisateurId).toBe(1);
-      expect(result.actif).toBe(true);
-    });
-
-    it("verifierEmailExiste - devrait retourner false si email inexistant", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
-
-      const result = await service.verifierEmailExiste(
-        "inexistant@example.com",
-      );
-
-      expect(result.existe).toBe(false);
-    });
-
     it("compterUtilisateurs - devrait compter tous les utilisateurs", async () => {
       mockPrisma.utilisateurs.count.mockResolvedValue(100);
 
@@ -697,21 +656,193 @@ describe("UtilisateursService - Tests unitaires", () => {
         where: { active: true, status_id: 1 },
       });
     });
+  });
 
-    it("estProfesseur - devrait vérifier si un utilisateur est professeur", async () => {
-      mockPrisma.utilisateurs.findUnique.mockResolvedValue({ status_id: 5 });
+  describe("Vérifications - utilisateurExiste", () => {
+    it("devrait vérifier l'existence d'un utilisateur", async () => {
+      mockPrisma.utilisateurs.count.mockResolvedValue(1);
 
-      const result = await service.estProfesseur(6);
+      const result = await service.utilisateurExiste(1);
 
       expect(result).toBe(true);
+      expect(mockPrisma.utilisateurs.count).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
     });
 
-    it("estProfesseur - devrait retourner false pour un non-professeur", async () => {
-      mockPrisma.utilisateurs.findUnique.mockResolvedValue({ status_id: 1 });
+    it("devrait retourner false si inexistant", async () => {
+      mockPrisma.utilisateurs.count.mockResolvedValue(0);
 
-      const result = await service.estProfesseur(1);
+      const result = await service.utilisateurExiste(999);
 
       expect(result).toBe(false);
+    });
+
+    it("devrait lever une erreur pour un ID négatif", async () => {
+      await expect(service.utilisateurExiste(-1)).rejects.toThrow(
+        UtilisateursError,
+      );
+    });
+
+    it("devrait lever une erreur pour un ID zéro", async () => {
+      await expect(service.utilisateurExiste(0)).rejects.toThrow(
+        UtilisateursError,
+      );
+    });
+
+    it("devrait lever une erreur pour un ID non entier", async () => {
+      await expect(service.utilisateurExiste(1.5)).rejects.toThrow(
+        UtilisateursError,
+      );
+    });
+  });
+
+  describe("Vérifications - verifierEmailExiste", () => {
+    it("devrait vérifier si un email existe", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue({
+        ...mockUtilisateur1,
+        active: true,
+      });
+
+      const result = await service.verifierEmailExiste(
+        "jean.dupont@example.com",
+      );
+
+      expect(result.existe).toBe(true);
+      expect(result.message).toContain("déjà utilisé");
+      expect(result.utilisateurId).toBe(1);
+      expect(result.actif).toBe(true);
+    });
+
+    it("devrait retourner false si email inexistant", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
+
+      const result = await service.verifierEmailExiste(
+        "inexistant@example.com",
+      );
+
+      expect(result.existe).toBe(false);
+      expect(result.message).toContain("disponible");
+    });
+
+    it("devrait normaliser l'email en minuscules", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue({
+        ...mockUtilisateur1,
+        active: true,
+      });
+
+      await service.verifierEmailExiste("JEAN.DUPONT@EXAMPLE.COM");
+
+      expect(mockPrisma.utilisateurs.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: "jean.dupont@example.com" },
+        }),
+      );
+    });
+
+    it("devrait lever une erreur pour un email invalide", async () => {
+      await expect(service.verifierEmailExiste("not-an-email")).rejects.toThrow(
+        UtilisateursError,
+      );
+    });
+
+    it("devrait lever une erreur pour un email vide", async () => {
+      await expect(service.verifierEmailExiste("")).rejects.toThrow(
+        UtilisateursError,
+      );
+    });
+
+    it("devrait retourner actif=false pour un utilisateur désactivé", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue({
+        ...mockUtilisateurInactif,
+        active: false,
+      });
+
+      const result = await service.verifierEmailExiste(
+        "inactif@example.com",
+      );
+
+      expect(result.existe).toBe(true);
+      expect(result.actif).toBe(false);
+    });
+  });
+
+  describe("Vérifications - verifierUtilisateurExiste", () => {
+    it("devrait retourner existe=true et canRegister=false pour un utilisateur actif", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue({
+        ...mockUtilisateur1,
+        active: true,
+        status_id: 1,
+      });
+
+      const result = await service.verifierUtilisateurExiste(
+        "jean.dupont@example.com",
+      );
+
+      expect(result.existe).toBe(true);
+      expect(result.canRegister).toBe(false);
+      expect(result.message).toContain("actif");
+      expect(result.utilisateur).toBeDefined();
+      expect(result.utilisateur?.email).toBe("jean.dupont@example.com");
+    });
+
+    it("devrait retourner existe=false et canRegister=true pour un email inexistant", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
+
+      const result = await service.verifierUtilisateurExiste(
+        "inexistant@example.com",
+      );
+
+      expect(result.existe).toBe(false);
+      expect(result.canRegister).toBe(true);
+      expect(result.message).toContain("disponible");
+      expect(result.utilisateur).toBeUndefined();
+    });
+
+    it("devrait retourner canRegister=true pour un utilisateur inactif", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue({
+        ...mockUtilisateurInactif,
+        active: false,
+        status_id: 2,
+      });
+
+      const result = await service.verifierUtilisateurExiste(
+        "inactif@example.com",
+      );
+
+      expect(result.existe).toBe(true);
+      expect(result.canRegister).toBe(true);
+      expect(result.message).toContain("inactif");
+    });
+
+    it("devrait retourner les détails complets de l'utilisateur", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateur1);
+
+      const result = await service.verifierUtilisateurExiste(
+        "jean.dupont@example.com",
+      );
+
+      expect(result.utilisateur).toBeDefined();
+      expect(result.utilisateur?.nom).toBe("Dupont");
+      expect(result.utilisateur?.prenom).toBe("Jean");
+    });
+
+    it("devrait lever une erreur pour un email invalide", async () => {
+      await expect(
+        service.verifierUtilisateurExiste("invalid"),
+      ).rejects.toThrow(UtilisateursError);
+    });
+
+    it("devrait normaliser l'email", async () => {
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateur1);
+
+      await service.verifierUtilisateurExiste("JEAN.DUPONT@EXAMPLE.COM");
+
+      expect(mockPrisma.utilisateurs.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { email: "jean.dupont@example.com" },
+        }),
+      );
     });
   });
 });

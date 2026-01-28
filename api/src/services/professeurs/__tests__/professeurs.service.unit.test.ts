@@ -393,17 +393,31 @@ describe('ProfesseursService - Tests Unitaires', () => {
     });
   });
 
+  // ============================================
+  // VÉRIFICATIONS
+  // ============================================
+
   describe('estProfesseur', () => {
     it('devrait retourner true si l\'utilisateur est professeur', async () => {
-      mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockProfesseur);
+      mockPrisma.professeurs.findFirst.mockResolvedValue({
+        id: 1,
+        utilisateur_id: 1,
+        active: true,
+      });
 
       const result = await professeursService.estProfesseur(1);
 
       expect(result).toBe(true);
+      expect(mockPrisma.professeurs.findFirst).toHaveBeenCalledWith({
+        where: {
+          utilisateur_id: 1,
+          active: true,
+        },
+      });
     });
 
     it('devrait retourner false si l\'utilisateur n\'est pas professeur', async () => {
-      mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateurNormal);
+      mockPrisma.professeurs.findFirst.mockResolvedValue(null);
 
       const result = await professeursService.estProfesseur(3);
 
@@ -411,9 +425,35 @@ describe('ProfesseursService - Tests Unitaires', () => {
     });
 
     it('devrait retourner false si l\'utilisateur n\'existe pas', async () => {
-      mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
+      mockPrisma.professeurs.findFirst.mockResolvedValue(null);
 
       const result = await professeursService.estProfesseur(999);
+
+      expect(result).toBe(false);
+    });
+
+    it('devrait lever une erreur pour un ID négatif', async () => {
+      await expect(professeursService.estProfesseur(-1)).rejects.toThrow(
+        ProfesseursError,
+      );
+    });
+
+    it('devrait lever une erreur pour un ID zéro', async () => {
+      await expect(professeursService.estProfesseur(0)).rejects.toThrow(
+        ProfesseursError,
+      );
+    });
+
+    it('devrait lever une erreur pour un ID non entier', async () => {
+      await expect(professeursService.estProfesseur(1.5)).rejects.toThrow(
+        ProfesseursError,
+      );
+    });
+
+    it('devrait retourner false pour un professeur inactif', async () => {
+      mockPrisma.professeurs.findFirst.mockResolvedValue(null);
+
+      const result = await professeursService.estProfesseur(1);
 
       expect(result).toBe(false);
     });

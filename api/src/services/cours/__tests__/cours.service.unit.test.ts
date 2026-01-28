@@ -64,6 +64,41 @@ describe('CoursService - Tests unitaires', () => {
       expect(typeof coursService.trouverCoursAvecProfesseur).toBe('function');
       expect(typeof coursService.supprimerProfesseursAvecResolution).toBe('function');
     });
+
+    it('devrait avoir toutes les méthodes de vérifications', () => {
+      expect(typeof coursService.verifierConflitHoraire).toBe('function');
+      expect(typeof coursService.verifierCapaciteCours).toBe('function');
+      expect(typeof coursService.verifierCoursRecurrentExiste).toBe('function');
+      expect(typeof coursService.verifierInscriptionPossible).toBe('function');
+    });
+  });
+
+  describe('Vérifications - verifierConflitHoraire', () => {
+    it('devrait avoir la signature correcte', () => {
+      expect(typeof coursService.verifierConflitHoraire).toBe('function');
+      expect(coursService.verifierConflitHoraire.length).toBe(1);
+    });
+  });
+
+  describe('Vérifications - verifierCapaciteCours', () => {
+    it('devrait avoir la signature correcte', () => {
+      expect(typeof coursService.verifierCapaciteCours).toBe('function');
+      expect(coursService.verifierCapaciteCours.length).toBe(1);
+    });
+  });
+
+  describe('Vérifications - verifierCoursRecurrentExiste', () => {
+    it('devrait avoir la signature correcte', () => {
+      expect(typeof coursService.verifierCoursRecurrentExiste).toBe('function');
+      expect(coursService.verifierCoursRecurrentExiste.length).toBe(1);
+    });
+  });
+
+  describe('Vérifications - verifierInscriptionPossible', () => {
+    it('devrait avoir la signature correcte', () => {
+      expect(typeof coursService.verifierInscriptionPossible).toBe('function');
+      expect(coursService.verifierInscriptionPossible.length).toBe(1);
+    });
   });
 
   describe('Isolation des modules', () => {

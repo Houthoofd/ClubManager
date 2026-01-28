@@ -18,6 +18,7 @@ import { ProfesseursError } from '@clubmanager/types';
 import * as queries from './core/queries/obtenirProfesseurs.js';
 import * as professeurQuery from './core/queries/obtenirProfesseurParId.js';
 import * as planningQuery from './core/queries/obtenirPlanningProfesseur.js';
+import * as verifications from './core/queries/verifications.js';
 
 import * as ajouterMutation from './core/mutations/ajouterProfesseur.js';
 import * as modifierStatutMutation from './core/mutations/modifierStatutProfesseur.js';
@@ -135,11 +136,7 @@ export class ProfesseursService {
    * Vérifie si un utilisateur est professeur
    */
   async estProfesseur(utilisateurId: number): Promise<boolean> {
-    const utilisateur = await this.prisma.utilisateurs.findUnique({
-      where: { id: utilisateurId },
-      select: { status_id: true }
-    });
-    return utilisateur?.status_id === 5;
+    return verifications.estProfesseur(this.prisma, utilisateurId);
   }
 
   /**
