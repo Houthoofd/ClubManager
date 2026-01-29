@@ -117,11 +117,25 @@ function Start-MySQLService {
 
         if ($service.Status -eq "Running") {
             Write-Success "MySQL deja demarre"
-            if (Test-MySQLConnection) {
+            # Essayer localhost puis 127.0.0.1
+            if (Test-MySQLConnection -HostAddress "localhost") {
+                Write-Success "Connexion MySQL OK"
+                return $true
+            } elseif (Test-MySQLConnection -HostAddress "127.0.0.1") {
                 Write-Success "Connexion MySQL OK"
                 return $true
             } else {
                 Write-Warning-Custom "Service demarre mais connexion impossible"
+                Write-Host "    Tentative de correction des permissions..." -ForegroundColor $Yellow
+                if (Fix-MySQLPermissions) {
+                    if (Test-MySQLConnection -HostAddress "localhost") {
+                        Write-Success "Connexion MySQL OK apres correction"
+                        return $true
+                    } elseif (Test-MySQLConnection -HostAddress "127.0.0.1") {
+                        Write-Success "Connexion MySQL OK apres correction"
+                        return $true
+                    }
+                }
             }
         } else {
             Write-Host "    Tentative de demarrage du service..." -ForegroundColor $Gray
@@ -133,7 +147,11 @@ function Start-MySQLService {
                 $service.Refresh()
                 Write-Host "    Nouveau statut: $($service.Status)" -ForegroundColor $Gray
 
-                if (Test-MySQLConnection) {
+                # Essayer localhost puis 127.0.0.1
+                if (Test-MySQLConnection -HostAddress "localhost") {
+                    Write-Success "Service MySQL demarre et connexion OK"
+                    return $true
+                } elseif (Test-MySQLConnection -HostAddress "127.0.0.1") {
                     Write-Success "Service MySQL demarre et connexion OK"
                     return $true
                 } else {
@@ -168,7 +186,15 @@ function Start-MySQLService {
             for ($i = 1; $i -le 15; $i++) {
                 Start-Sleep -Seconds 1
                 Write-Host "    Tentative $i/15..." -ForegroundColor $Gray
-                if (Test-MySQLConnection) {
+
+                # Essayer d'abord localhost
+                if (Test-MySQLConnection -HostAddress "localhost") {
+                    Write-Success "MySQL demarre avec succes!"
+                    return $true
+                }
+
+                # Essayer aussi 127.0.0.1
+                if (Test-MySQLConnection -HostAddress "127.0.0.1") {
                     Write-Success "MySQL demarre avec succes!"
                     return $true
                 }
@@ -180,7 +206,11 @@ function Start-MySQLService {
 
     # Tester la connexion une derniere fois
     Write-Host "    Test final de connexion..." -ForegroundColor $Gray
-    if (Test-MySQLConnection) {
+    if (Test-MySQLConnection -HostAddress "localhost") {
+        Write-Success "MySQL est accessible!"
+        return $true
+    }
+    if (Test-MySQLConnection -HostAddress "127.0.0.1") {
         Write-Success "MySQL est accessible!"
         return $true
     }
@@ -189,12 +219,9 @@ function Start-MySQLService {
     Write-Host "    ============================================" -ForegroundColor $Red
     Write-Host "    MYSQL N'EST PAS ACCESSIBLE" -ForegroundColor $Red
     Write-Host "    ============================================" -ForegroundColor $Red
-    Write-Host "    Actions possibles:" -ForegroundColor $Yellow
-    Write-Host "      1. Ouvrez XAMPP Control Panel" -ForegroundColor $White
-    Write-Host "      2. Cliquez sur 'Start' pour MySQL" -ForegroundColor $White
-    Write-Host "      3. Attendez le voyant vert" -ForegroundColor $White
-    Write-Host "      4. Relancez ce script" -ForegroundColor $White
-    Write-Host ""
+
+    # Afficher le guide de correction
+    Fix-MySQLPermissions
     return $false
 }
 
@@ -213,6 +240,19 @@ function Stop-MySQLService {
         }
     }
 
+    # Tuer tous les processus mysqld
+    Write-Host "    Recherche de processus mysqld..." -ForegroundColor $Gray
+    $mysqldProcesses = Get-Process -Name "mysqld" -ErrorAction SilentlyContinue
+    if ($mysqldProcesses) {
+        foreach ($proc in $mysqldProcesses) {
+            Write-Host "    Arret du processus mysqld (PID: $($proc.Id))..." -ForegroundColor $Gray
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+        }
+        Start-Sleep -Seconds 2
+        Write-Success "Processus mysqld arretes"
+        return $true
+    }
+
     # Essayer via XAMPP
     if (Test-Path "C:\xampp\mysql_stop.bat") {
         Start-Process -FilePath "C:\xampp\mysql_stop.bat" -WindowStyle Hidden -Wait
@@ -225,6 +265,8 @@ function Stop-MySQLService {
 }
 
 function Test-MySQLConnection {
+    param([string]$HostAddress = $DBHost)
+
     try {
         # Construire le chemin complet vers mysql.exe
         $mysqlCmd = if ($script:mysqlPath) {
@@ -233,23 +275,97 @@ function Test-MySQLConnection {
             "mysql"
         }
 
-        $result = & $mysqlCmd -h $DBHost -u $User $(if($Password){"-p$Password"}) -e "SELECT 1;" 2>&1
+        # Essayer d'abord avec l'hôte fourni
+        $result = & $mysqlCmd -h $HostAddress -u $User $(if($Password){"-p$Password"}) -e "SELECT 1;" 2>&1
         $success = $LASTEXITCODE -eq 0
 
         if ($success) {
-            Write-Host "    -> Connexion MySQL reussie" -ForegroundColor $Green
-        } else {
-            Write-Host "    -> Connexion MySQL echouee (code: $LASTEXITCODE)" -ForegroundColor $Red
-            if ($result) {
-                Write-Host "    -> Erreur: $result" -ForegroundColor $Red
+            Write-Host "    -> Connexion MySQL reussie sur $HostAddress" -ForegroundColor $Green
+            # Mettre à jour $DBHost si une alternative a fonctionné
+            if ($HostAddress -ne $DBHost) {
+                $script:DBHost = $HostAddress
+                Write-Host "    -> Utilisation de $HostAddress pour les connexions" -ForegroundColor $Yellow
+            }
+            return $true
+        }
+
+        # Si échec et que c'est "localhost", essayer 127.0.0.1
+        if (-not $success -and $HostAddress -eq "localhost") {
+            Write-Host "    -> Tentative avec 127.0.0.1..." -ForegroundColor $Gray
+            $result = & $mysqlCmd -h "127.0.0.1" -u $User $(if($Password){"-p$Password"}) -e "SELECT 1;" 2>&1
+            $success = $LASTEXITCODE -eq 0
+
+            if ($success) {
+                Write-Host "    -> Connexion MySQL reussie sur 127.0.0.1" -ForegroundColor $Green
+                $script:DBHost = "127.0.0.1"
+                Write-Host "    -> Utilisation de 127.0.0.1 pour les connexions" -ForegroundColor $Yellow
+                return $true
             }
         }
 
-        return $success
+        Write-Host "    -> Connexion MySQL echouee (code: $LASTEXITCODE)" -ForegroundColor $Red
+        if ($result) {
+            Write-Host "    -> Erreur: $result" -ForegroundColor $Red
+        }
+
+        return $false
     } catch {
         Write-Host "    -> Exception lors du test de connexion: $_" -ForegroundColor $Red
         return $false
     }
+}
+
+function Fix-MySQLPermissions {
+    Write-Step "Guide de correction des permissions MySQL..."
+
+    Write-Host ""
+    Write-Host "    MySQL est demarre mais refuse les connexions." -ForegroundColor $Yellow
+    Write-Host "    Utilisez phpMyAdmin pour corriger les permissions:" -ForegroundColor $Yellow
+    Write-Host ""
+    Write-Host "    METHODE 1 - Via phpMyAdmin (RECOMMANDE):" -ForegroundColor $Cyan
+    Write-Host "    =========================================" -ForegroundColor $Cyan
+    Write-Host "    1. Ouvrez XAMPP Control Panel" -ForegroundColor $White
+    Write-Host "    2. Cliquez sur 'Admin' a cote de MySQL" -ForegroundColor $White
+    Write-Host "       (Cela ouvre phpMyAdmin dans votre navigateur)" -ForegroundColor $Gray
+    Write-Host "    3. Cliquez sur l'onglet 'SQL' en haut" -ForegroundColor $White
+    Write-Host "    4. Copiez-collez ces commandes:" -ForegroundColor $White
+    Write-Host ""
+    Write-Host "       GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" -ForegroundColor $Green
+    Write-Host "       GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;" -ForegroundColor $Green
+    Write-Host "       FLUSH PRIVILEGES;" -ForegroundColor $Green
+    Write-Host ""
+    Write-Host "    5. Cliquez sur 'Executer'" -ForegroundColor $White
+    Write-Host "    6. Fermez phpMyAdmin" -ForegroundColor $White
+    Write-Host "    7. Dans XAMPP: Stop puis Start MySQL" -ForegroundColor $White
+    Write-Host "    8. Relancez ce script" -ForegroundColor $White
+    Write-Host ""
+    Write-Host "    METHODE 2 - Via Shell XAMPP:" -ForegroundColor $Cyan
+    Write-Host "    ============================" -ForegroundColor $Cyan
+    Write-Host "    1. Ouvrez XAMPP Control Panel" -ForegroundColor $White
+    Write-Host "    2. Cliquez sur 'Shell' en bas" -ForegroundColor $White
+    Write-Host "    3. Tapez: mysql -u root" -ForegroundColor $White
+    Write-Host "    4. Si ca marche, tapez:" -ForegroundColor $White
+    Write-Host "       GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;" -ForegroundColor $Green
+    Write-Host "       GRANT ALL ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;" -ForegroundColor $Green
+    Write-Host "       FLUSH PRIVILEGES;" -ForegroundColor $Green
+    Write-Host "       exit;" -ForegroundColor $Green
+    Write-Host ""
+    Write-Host "    METHODE 3 - Reinstaller XAMPP (derniere option):" -ForegroundColor $Cyan
+    Write-Host "    ===============================================" -ForegroundColor $Cyan
+    Write-Host "    Si rien ne fonctionne, sauvegardez vos bases et reinstallez XAMPP" -ForegroundColor $White
+    Write-Host ""
+
+    # Ouvrir phpMyAdmin automatiquement
+    Write-Host "    Voulez-vous ouvrir phpMyAdmin maintenant? (O/n): " -ForegroundColor $Yellow -NoNewline
+    $response = Read-Host
+
+    if ($response -ne "n" -and $response -ne "N") {
+        Write-Host "    Ouverture de phpMyAdmin..." -ForegroundColor $Gray
+        Start-Process "http://localhost/phpmyadmin"
+        Start-Sleep -Seconds 2
+    }
+
+    return $false
 }
 
 # ========================================
@@ -259,8 +375,15 @@ function Test-MySQLConnection {
 function Setup-TestDatabase {
     Write-Step "Configuration de la base de donnees de test..."
 
-    # Verifier la connexion
-    if (-not (Test-MySQLConnection)) {
+    # Verifier la connexion avec localhost puis 127.0.0.1
+    $connected = $false
+    if (Test-MySQLConnection -HostAddress "localhost") {
+        $connected = $true
+    } elseif (Test-MySQLConnection -HostAddress "127.0.0.1") {
+        $connected = $true
+    }
+
+    if (-not $connected) {
         Write-Error-Custom "Impossible de se connecter a MySQL"
         return $false
     }
@@ -364,26 +487,30 @@ switch ($Action) {
         Stop-MySQLService
     }
     "setup" {
-        if (-not (Test-MySQLConnection)) {
+        $connected = (Test-MySQLConnection -HostAddress "localhost") -or (Test-MySQLConnection -HostAddress "127.0.0.1")
+        if (-not $connected) {
             Start-MySQLService
         }
         Setup-TestDatabase
     }
     "reset" {
-        if (-not (Test-MySQLConnection)) {
+        $connected = (Test-MySQLConnection -HostAddress "localhost") -or (Test-MySQLConnection -HostAddress "127.0.0.1")
+        if (-not $connected) {
             Start-MySQLService
         }
         Setup-TestDatabase
     }
     "run-tests" {
-        if (-not (Test-MySQLConnection)) {
+        $connected = (Test-MySQLConnection -HostAddress "localhost") -or (Test-MySQLConnection -HostAddress "127.0.0.1")
+        if (-not $connected) {
             Start-MySQLService
         }
         Run-IntegrationTests
     }
     "all" {
         # Workflow complet
-        if (-not (Test-MySQLConnection)) {
+        $connected = (Test-MySQLConnection -HostAddress "localhost") -or (Test-MySQLConnection -HostAddress "127.0.0.1")
+        if (-not $connected) {
             if (-not (Start-MySQLService)) {
                 Write-Host "`nMySQL n'a pas pu etre demarre automatiquement." -ForegroundColor $Yellow
                 Write-Host "Veuillez demarrer MySQL manuellement et relancer ce script." -ForegroundColor $Yellow

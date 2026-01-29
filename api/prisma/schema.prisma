@@ -8,41 +8,55 @@ datasource db {
 }
 
 model articles {
-  id                Int                 @id @default(autoincrement())
-  nom               String              @db.VarChar(100)
-  description       String?             @db.Text
-  prix              Decimal             @db.Decimal(10, 2)
-  image_url         String?             @db.VarChar(255)
-  categorie_id      Int?
-  categories        categories?         @relation(fields: [categorie_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "articles_ibfk_1")
-  commande_articles commande_articles[]
-  images            images[]
-  stocks            stocks[]
+  id                 Int                  @id @default(autoincrement())
+  nom                String               @db.VarChar(100)
+  description        String?              @db.Text
+  prix               Decimal              @db.Decimal(10, 2)
+  image_url          String?              @db.VarChar(255)
+  categorie_id       Int?
+  categories         categories?          @relation(fields: [categorie_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "articles_ibfk_1")
+  commande_articles  commande_articles[]
+  images             images[]
+  stocks             stocks[]
+  articles_tailles   articles_tailles[]   @relation("articles_tailles_article")
 
   @@index([categorie_id], map: "categorie_id")
   @@index([nom], map: "idx_nom")
 }
 
 model commandes {
-  id                Int                 @id @default(autoincrement())
-  unique_id         String?             @db.VarChar(255)
-  numero_commande   String?             @db.VarChar(100)
-  utilisateur_id    Int
-  total             Decimal             @default(0.00) @db.Decimal(10, 2)
-  date_commande     DateTime            @default(now()) @db.Timestamp(0)
-  statut            commandes_statut?   @default(en_attente)
-  ip_address        String?             @db.VarChar(45)
-  user_agent        String?             @db.Text
-  created_at        DateTime            @default(now()) @db.Timestamp(0)
-  commande_articles commande_articles[]
-  users             utilisateurs        @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commandes_ibfk_1")
-  paiements         paiements[]
+  id                          Int                           @id @default(autoincrement())
+  unique_id                   String?                       @db.VarChar(255)
+  numero_commande             String?                       @db.VarChar(100)
+  utilisateur_id              Int
+  total                       Decimal                       @default(0.00) @db.Decimal(10, 2)
+  date_commande               DateTime                      @default(now()) @db.Timestamp(0)
+  statut                      commandes_statut?             @default(en_attente)
+  ip_address                  String?                       @db.VarChar(45)
+  user_agent                  String?                       @db.Text
+  created_at                  DateTime                      @default(now()) @db.Timestamp(0)
+  commande_articles           commande_articles[]
+  historique_statuts_commande historique_statuts_commande[]
+  users                       utilisateurs                  @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commandes_ibfk_1")
+  paiements                   paiements[]
 
   @@index([created_at], map: "idx_created_at")
   @@index([numero_commande], map: "idx_numero_commande")
   @@index([total], map: "idx_total")
   @@index([unique_id], map: "idx_unique_id")
   @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
+}
+
+model historique_statuts_commande {
+  id             Int              @id @default(autoincrement())
+  commande_id    Int
+  ancien_statut  commandes_statut
+  nouveau_statut commandes_statut
+  date_changement DateTime         @default(now()) @db.Timestamp(0)
+  commandes      commandes        @relation(fields: [commande_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "historique_statuts_commande_ibfk_1")
+
+  @@index([commande_id], map: "idx_commande_id")
+  @@index([date_changement], map: "idx_date_changement")
 }
 
 model cours {
@@ -265,12 +279,14 @@ model tailles {
   nom               String              @unique(map: "nom") @db.VarChar(20)
   commande_articles commande_articles[]
   stocks            stocks[]
+  articles_tailles  articles_tailles[]  @relation("articles_tailles_taille")
 }
 
 model categories {
-  id       Int        @id @default(autoincrement())
-  nom      String     @unique(map: "nom") @db.VarChar(100)
-  articles articles[]
+  id          Int        @id @default(autoincrement())
+  nom         String     @unique(map: "nom") @db.VarChar(100)
+  description String?    @db.Text
+  articles    articles[]
 }
 
 model commande_articles {
@@ -459,16 +475,32 @@ model statistiques {
 }
 
 model stocks {
-  id         Int      @id @default(autoincrement())
-  article_id Int
-  taille_id  Int
-  quantite   Int      @default(0)
-  articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_1")
-  tailles    tailles  @relation(fields: [taille_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_2")
+  id               Int      @id @default(autoincrement())
+  article_id       Int
+  taille_id        Int
+  quantite         Int      @default(0)
+  stock_disponible Int      @default(0)
+  articles         articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_1")
+  tailles          tailles  @relation(fields: [taille_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_2")
 
   @@unique([article_id, taille_id], map: "uk_article_taille")
+  @@unique([article_id, taille_id], map: "article_id_taille_id")
   @@index([article_id], map: "idx_article")
   @@index([taille_id], map: "taille_id")
+}
+
+// Alias pour articles_tailles (pour compatibilité avec les tests)
+model articles_tailles {
+  id               Int      @id @default(autoincrement()) @map("id")
+  article_id       Int
+  taille_id        Int
+  stock_disponible Int      @default(0)
+  articles         articles @relation("articles_tailles_article", fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "articles_tailles_ibfk_1")
+  tailles          tailles  @relation("articles_tailles_taille", fields: [taille_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "articles_tailles_ibfk_2")
+
+  @@unique([article_id, taille_id], map: "article_id_taille_id")
+  @@index([article_id], map: "idx_article_taille")
+  @@index([taille_id], map: "idx_taille")
 }
 
 model types_messages_personnalises {

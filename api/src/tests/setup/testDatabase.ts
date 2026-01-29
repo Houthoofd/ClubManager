@@ -143,7 +143,8 @@ export async function setupTestDatabase() {
     // Copier la structure de la DB principale
     await copyDatabaseStructure();
 
-    // Utiliser l'instance prisma par défaut qui lit .env.test
+    // Utiliser l'instance Prisma globale qui pointe déjà vers .env.test
+    // car .env.test a été chargé AVANT l'import de prisma-client dans jest.setup.mjs
     testPrisma = prisma;
 
     console.log("✅ Base de données de test prête");
@@ -210,6 +211,7 @@ export async function teardownTestDatabase() {
   if (!testPrisma) return;
 
   try {
+    // Ne pas déconnecter Prisma ici car c'est l'instance globale
     // Prisma gère automatiquement la déconnexion
     console.log("✅ Connexion à la DB de test fermée");
   } catch (error) {
@@ -350,4 +352,268 @@ export async function seedTestAlertes() {
   }
 
   console.log("✅ Seed terminé");
+}
+
+/**
+ * Seed de données de test pour les commandes
+ */
+export async function seedTestCommandes() {
+  const prismaInstance = getTestPrisma();
+
+  console.log("🌱 Seed des données de test pour les commandes...");
+
+  // Nettoyer les tables dans le bon ordre (contraintes FK)
+  try {
+    await prismaInstance.commandes_articles.deleteMany({});
+    await prismaInstance.historique_statuts_commande.deleteMany({});
+    await prismaInstance.commandes.deleteMany({});
+    await prismaInstance.articles_tailles.deleteMany({});
+    await prismaInstance.articles.deleteMany({});
+    await prismaInstance.tailles.deleteMany({});
+    await prismaInstance.categories.deleteMany({});
+  } catch (error) {
+    console.warn("⚠️ Erreur lors du nettoyage des tables:", error);
+  }
+
+  // Créer des utilisateurs de test si nécessaire
+  let testUser1, testUser2;
+  try {
+    testUser1 = await prismaInstance.utilisateurs.findFirst({
+      where: { email: "jean.test@test.com" },
+    });
+    if (!testUser1) {
+      testUser1 = await prismaInstance.utilisateurs.create({
+        data: {
+          userId: "TEST001",
+          first_name: "Jean",
+          last_name: "Test",
+          email: "jean.test@test.com",
+          password: "hashed_password",
+          status_id: null,
+          grade_id: null,
+          nom_utilisateur: "jean_test",
+          date_of_birth: new Date("1990-01-01"),
+        },
+      });
+    }
+
+    testUser2 = await prismaInstance.utilisateurs.findFirst({
+      where: { email: "marie.test@test.com" },
+    });
+    if (!testUser2) {
+      testUser2 = await prismaInstance.utilisateurs.create({
+        data: {
+          userId: "TEST002",
+          first_name: "Marie",
+          last_name: "Test",
+          email: "marie.test@test.com",
+          password: "hashed_password",
+          status_id: null,
+          grade_id: null,
+          nom_utilisateur: "marie_test",
+          date_of_birth: new Date("1992-05-15"),
+        },
+      });
+    }
+  } catch (error) {
+    console.error("❌ Erreur lors de la création des utilisateurs:", error);
+    throw error;
+  }
+
+  // Créer des catégories
+  const categorie1 = await prismaInstance.categories.create({
+    data: {
+      id: 1,
+      nom: "Vêtements",
+      description: "Articles vestimentaires du club",
+    },
+  });
+
+  const categorie2 = await prismaInstance.categories.create({
+    data: {
+      id: 2,
+      nom: "Équipement",
+      description: "Équipement sportif",
+    },
+  });
+
+  // Créer des articles
+  const article1 = await prismaInstance.articles.create({
+    data: {
+      id: 1,
+      nom: "Maillot Home",
+      description: "Maillot domicile officiel",
+      prix: 49.99,
+      categorie_id: categorie1.id,
+      image_url: "https://example.com/maillot-home.jpg",
+    },
+  });
+
+  const article2 = await prismaInstance.articles.create({
+    data: {
+      id: 2,
+      nom: "Short",
+      description: "Short officiel",
+      prix: 29.99,
+      categorie_id: categorie1.id,
+      image_url: "https://example.com/short.jpg",
+    },
+  });
+
+  const article3 = await prismaInstance.articles.create({
+    data: {
+      id: 3,
+      nom: "Ballon",
+      description: "Ballon d'entraînement",
+      prix: 19.99,
+      categorie_id: categorie2.id,
+      image_url: "https://example.com/ballon.jpg",
+    },
+  });
+
+  // Créer des tailles
+  const tailleS = await prismaInstance.tailles.create({
+    data: {
+      id: 1,
+      nom: "S",
+      code: "S",
+    },
+  });
+
+  const tailleM = await prismaInstance.tailles.create({
+    data: {
+      id: 2,
+      nom: "M",
+      code: "M",
+    },
+  });
+
+  const tailleL = await prismaInstance.tailles.create({
+    data: {
+      id: 3,
+      nom: "L",
+      code: "L",
+    },
+  });
+
+  // Créer les stocks pour les articles
+  await prismaInstance.articles_tailles.createMany({
+    data: [
+      { article_id: article1.id, taille_id: tailleS.id, stock_disponible: 50 },
+      { article_id: article1.id, taille_id: tailleM.id, stock_disponible: 100 },
+      { article_id: article1.id, taille_id: tailleL.id, stock_disponible: 75 },
+      { article_id: article2.id, taille_id: tailleS.id, stock_disponible: 30 },
+      { article_id: article2.id, taille_id: tailleM.id, stock_disponible: 60 },
+      { article_id: article2.id, taille_id: tailleL.id, stock_disponible: 40 },
+      { article_id: article3.id, taille_id: tailleM.id, stock_disponible: 200 },
+    ],
+  });
+
+  // Créer des commandes de test
+  const commande1 = await prismaInstance.commandes.create({
+    data: {
+      id: 1,
+      utilisateur_id: testUser1.id,
+      numero_commande: "CMD-TEST-001",
+      statut: "en attente",
+      total: 99.98,
+      date_commande: new Date("2024-01-15"),
+    },
+  });
+
+  await prismaInstance.commandes_articles.createMany({
+    data: [
+      {
+        commande_id: commande1.id,
+        article_id: article1.id,
+        taille_id: tailleM.id,
+        quantite: 2,
+        prix_unitaire: 49.99,
+      },
+    ],
+  });
+
+  const commande2 = await prismaInstance.commandes.create({
+    data: {
+      id: 2,
+      utilisateur_id: testUser2.id,
+      numero_commande: "CMD-TEST-002",
+      statut: "payée",
+      total: 79.98,
+      date_commande: new Date("2024-01-20"),
+    },
+  });
+
+  await prismaInstance.commandes_articles.createMany({
+    data: [
+      {
+        commande_id: commande2.id,
+        article_id: article1.id,
+        taille_id: tailleL.id,
+        quantite: 1,
+        prix_unitaire: 49.99,
+      },
+      {
+        commande_id: commande2.id,
+        article_id: article2.id,
+        taille_id: tailleM.id,
+        quantite: 1,
+        prix_unitaire: 29.99,
+      },
+    ],
+  });
+
+  const commande3 = await prismaInstance.commandes.create({
+    data: {
+      id: 3,
+      utilisateur_id: testUser1.id,
+      numero_commande: "CMD-TEST-003",
+      statut: "expédiée",
+      total: 49.99,
+      date_commande: new Date("2024-01-10"),
+      date_expedition: new Date("2024-01-12"),
+    },
+  });
+
+  await prismaInstance.commandes_articles.createMany({
+    data: [
+      {
+        commande_id: commande3.id,
+        article_id: article1.id,
+        taille_id: tailleS.id,
+        quantite: 1,
+        prix_unitaire: 49.99,
+      },
+    ],
+  });
+
+  // Créer l'historique des statuts
+  await prismaInstance.historique_statuts_commande.createMany({
+    data: [
+      {
+        commande_id: commande2.id,
+        ancien_statut: "en attente",
+        nouveau_statut: "payée",
+        date_changement: new Date("2024-01-21"),
+      },
+      {
+        commande_id: commande3.id,
+        ancien_statut: "en attente",
+        nouveau_statut: "payée",
+        date_changement: new Date("2024-01-11"),
+      },
+      {
+        commande_id: commande3.id,
+        ancien_statut: "payée",
+        nouveau_statut: "expédiée",
+        date_changement: new Date("2024-01-12"),
+      },
+    ],
+  });
+
+  console.log("✅ Seed des commandes terminé");
+  console.log(`   - ${3} commandes créées`);
+  console.log(`   - ${3} articles créés`);
+  console.log(`   - ${3} tailles créées`);
+  console.log(`   - ${7} stocks créés`);
 }

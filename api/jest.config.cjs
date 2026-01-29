@@ -17,7 +17,8 @@ module.exports = {
     },
   },
   moduleNameMapper: {
-    ".*mysqlconnector.js$": "<rootDir>/src/db/connector/mysqlconnector.js",
+    "^.*/db/connector/mysqlconnector\\.js$":
+      "<rootDir>/src/db/connector/__mocks__/mysqlconnector.ts",
     "bignumber.js": "<rootDir>/node_modules/bignumber.js/bignumber.js",
     "ipaddr.js": "<rootDir>/node_modules/ipaddr.js/lib/ipaddr.js",
     "@clubmanager/(.*)": "<rootDir>/../packages/$1/src",
