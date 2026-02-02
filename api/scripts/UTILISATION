@@ -1,0 +1,115 @@
+=====================================================
+SCRIPTS DE RECRÉATION DE LA BASE DE DONNÉES
+=====================================================
+
+Ce dossier contient 3 fichiers pour recréer la base de données ClubManager:
+
+1. recreate-database.sql
+   - Fichier SQL pur (626 lignes, 41 tables)
+   - Utilisable avec n'importe quel client MySQL
+
+2. recreate-db.sh
+   - Script shell pour Linux/Mac/Git Bash
+   - Interface interactive avec couleurs
+
+3. recreate-db.bat
+   - Script batch pour Windows/CMD
+   - Interface interactive
+
+
+=====================================================
+UTILISATION
+=====================================================
+
+--- MÉTHODE 1: SQL direct (le plus simple) ---
+
+Pour créer 'clubmanager':
+  mysql -u root < recreate-database.sql
+
+Pour créer 'clubmanager_test':
+  sed 's/clubmanager/clubmanager_test/g' recreate-database.sql | mysql -u root
+
+
+--- MÉTHODE 2: Script shell (Git Bash/Linux) ---
+
+  ./recreate-db.sh                    # Crée clubmanager
+  ./recreate-db.sh clubmanager_test   # Crée clubmanager_test
+
+
+--- MÉTHODE 3: Script batch (Windows CMD) ---
+
+  recreate-db.bat                     # Crée clubmanager
+  recreate-db.bat clubmanager_test    # Crée clubmanager_test
+
+
+--- MÉTHODE 4: Prisma (recommandée pour développement) ---
+
+  DATABASE_URL="mysql://root@localhost:3306/clubmanager" npx prisma db push --force-reset
+  DATABASE_URL="mysql://root@localhost:3306/clubmanager_test" npx prisma db push --force-reset
+
+
+=====================================================
+CONTENU DU SCRIPT SQL
+=====================================================
+
+Le fichier recreate-database.sql contient:
+
+✓ DROP DATABASE IF EXISTS clubmanager
+✓ CREATE DATABASE clubmanager
+✓ 41 tables complètes avec:
+  - Toutes les contraintes de clés étrangères
+  - Tous les index nécessaires
+  - Types de colonnes corrects (ENUM, JSON, etc.)
+  - Encodage UTF8MB4
+
+Tables créées (par ordre):
+  - Tables de référence: status, genres, grades, plans_tarifaires, categories, tailles
+  - Tables principales: utilisateurs, professeurs, articles, commandes, paiements
+  - Tables de liaison: inscriptions, reservations, groupes_utilisateurs, etc.
+  - Tables de sécurité: auth_attempts, refresh_tokens, password_reset_tokens, etc.
+
+
+=====================================================
+VÉRIFICATION
+=====================================================
+
+Après création, vérifier avec:
+
+  mysql -u root clubmanager -e "SHOW TABLES;"
+
+Devrait afficher 41 tables.
+
+
+=====================================================
+DÉPANNAGE
+=====================================================
+
+Si MySQL n'est pas démarré:
+  1. Ouvrir XAMPP Control Panel
+  2. Cliquer sur "Start" pour MySQL
+  3. Attendre que le statut passe au vert
+
+Si erreur "Access denied":
+  mysql -u root -p < recreate-database.sql
+  (entrer le mot de passe si configuré)
+
+Si erreur de syntaxe:
+  Vérifier que vous utilisez MySQL/MariaDB 10.4+
+
+
+=====================================================
+MAINTENANCE
+=====================================================
+
+Pour mettre à jour le script SQL:
+  1. Modifier le schéma Prisma (api/prisma/schema.prisma)
+  2. Lancer: npx prisma db push
+  3. Exporter: mysqldump -u root --no-data clubmanager > recreate-database.sql
+  4. Ajouter les en-têtes et instructions DROP/CREATE
+
+
+=====================================================
+AUTEUR: Assistant IA
+DATE: 2026-02-01
+VERSION: 1.0
+=====================================================
