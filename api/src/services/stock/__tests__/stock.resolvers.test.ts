@@ -3,6 +3,7 @@
  * Teste les queries et mutations GraphQL
  */
 
+import { jest } from "@jest/globals";
 import { stockResolvers } from "../stock.resolvers.js";
 import { StockError } from "@clubmanager/types";
 import {
