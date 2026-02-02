@@ -4,7 +4,7 @@ import { alertesRouter } from "./alertes/index.js";
 import { commandesRouter } from "./commandes/index.js";
 import utilisateursRouter from "./utilisateurs.js";
 import informationsRouter from "./informations.js";
-import coursRouter from "./cours.js";
+import { coursRouter } from "./cours/index.js";
 import paiementRouter from "./paiements.js";
 import statistiquesRouter from "./statistiques.js";
 import magasinRouter from "./magasin.js";
