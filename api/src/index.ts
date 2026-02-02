@@ -455,7 +455,7 @@ async function startServer() {
       await import("./routes/utilisateurs.js");
     const { default: informationsRouter } =
       await import("./routes/informations.js");
-    const { coursRouter } = await import("./routes/cours/index.js");
+    const { default: coursRouter } = await import("./routes/cours.js");
     const { compteRouter } = await import("./routes/compte/index.js");
 
     // SIMPLIFIÉ: Charger seulement le module paiements principal sans modules individuels

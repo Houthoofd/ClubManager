@@ -2,7 +2,7 @@
  * Mock Prisma pour les tests du service Professeurs
  */
 
-import { jest } from "@jest/globals";
+import { jest } from '@jest/globals';
 
 export const createMockPrisma = () => {
   return {
