@@ -1,0 +1,78 @@
+GET http://localhost:3000/utilisateurs/verification?nom=Houthoofd&prenom=Benoit&email=houthoofd.benoit48@gmail.com@&date_de_naissance=1993-08-12
+
+###
+
+## Exemple pour s'inscrire 
+POST http://localhost:3000/utilisateurs/inscription?prenom=Benoit&nom=Houthoofd&nom_utilisateur=benoit.houthoofd&email=houthoofd.benoit48@gmail.com&genre_id=1&date_naissance=1993-08-12&password=12345678&status_id=1&grade_id=10&nom_plan=2
+Content-Type: application/json
+
+{
+  "prenom" : "Benoit",
+}
+###
+
+## Obtenir les utilisateur
+GET http://localhost:3000/utilisateurs
+
+###
+
+## Obtenir un utilisateur par son id
+GET http://localhost:3000/utilisateurs/2
+
+### Utilisateurs endpoints
+
+# Récupérer tous les utilisateurs
+GET http://localhost:3000/utilisateurs
+
+### Récupérer un utilisateur par ID
+GET http://localhost:3000/utilisateurs/1
+
+### Ajouter un nouvel utilisateur
+POST http://localhost:3000/utilisateurs/ajouter
+Content-Type: application/json
+
+{
+  "nom_utilisateur": "jdupont",
+  "first_name": "Jean",
+  "last_name": "Dupont",
+  "email": "jean.dupont@email.com",
+  "mot_de_passe": "motdepasse123",
+  "status_id": 1
+}
+
+### Modifier un utilisateur
+PUT http://localhost:3000/utilisateurs/modifier
+Content-Type: application/json
+
+{
+  "id": 1,
+  "nom_utilisateur": "jdupont_updated",
+  "first_name": "Jean",
+  "last_name": "Dupont",
+  "email": "jean.dupont.new@email.com",
+  "status_id": 1
+}
+
+### Supprimer un utilisateur
+DELETE http://localhost:3000/utilisateurs/1
+
+### Connexion utilisateur
+POST http://localhost:3000/utilisateurs/connexion
+Content-Type: application/json
+
+{
+  "email": "jean.dupont@email.com",
+  "mot_de_passe": "motdepasse123"
+}
+
+### Inscription d'un utilisateur
+POST http://localhost:3000/utilisateurs/inscription
+Content-Type: application/json
+
+{
+  "nom_utilisateur": "nouveauuser",
+  "first_name": "Nouveau",
+  "last_name": "Utilisateur",
+  "email": "nouveau@email.com",
+  "mot_de_passe": "motdepasse123"
+}

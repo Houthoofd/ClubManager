@@ -1,0 +1,683 @@
+/* Masquer les barres de défilement */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+.main-content-scrollable {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.main-content-scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+/* Styles généraux pour les cartes */
+.modern-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.modern-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+/* Styles pour les gradients */
+.gradient-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+  margin-bottom: 2rem;
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+/* Classes pour les headers avec gradient */
+.gradient-header-title {
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
+.gradient-header-subtitle {
+  color: #6c757d;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Classes pour les titres de toolbar */
+.gradient-toolbar .gradient-header-title {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.gradient-toolbar .gradient-header-subtitle {
+  color: rgba(255,255,255,0.9);
+  font-size: 1.1rem;
+  margin: 0.5rem 0 0 0;
+}
+
+/* Classes pour les containers flexibles */
+.flex-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.flex-buttons-end {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Classes pour le spacing */
+.mb-1 {
+  margin-bottom: 1rem;
+}
+
+.mb-2 {
+  margin-bottom: 2rem;
+}
+
+.p-1 {
+  padding: 1rem;
+}
+
+.p-2 {
+  padding: 2rem;
+}
+
+/* Classe pour les onglets modernisés */
+.modern-tabs {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Styles globaux pour les headers arrondis */
+.page-section-header {
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.card-header-rounded {
+  border-radius: 12px 12px 0 0;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Assurer que tous les containers principaux ont des borders arrondis */
+.main-container,
+.content-wrapper,
+.page-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Classes spécifiques pour les headers de pages uniquement */
+.page-main-header {
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e5e7eb;
+  box-shadow: none; /* Supprimer complètement l'ombre */
+  margin: 0;
+  padding: 1.5rem;
+}
+
+.page-main-header--gradient {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+  color: white;
+  border: none;
+  box-shadow: none; /* Supprimer complètement l'ombre */
+}
+
+/* Supprimer les anciennes classes génériques */
+.header-rounded,
+.header-gradient,
+.header-interactive {
+  /* Ces classes ne sont plus utilisées */
+}
+
+/* Espacements cohérents */
+.section-spacing {
+  margin-bottom: 2rem;
+}
+
+.header-spacing {
+  margin-bottom: 1.5rem;
+}
+
+/* Reset général pour les marges et paddings */
+.pf-c-page__main-section {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.pf-c-page__main {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Override PatternFly pour utiliser toute la largeur */
+.pf-c-page__main {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.pf-c-page__main-section {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Layout global avec flex */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  gap: 0;
+  background: white; /* Fond blanc */
+}
+
+.content-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  background: white; /* Fond blanc */
+}
+
+.section-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Grilles responsive */
+.grid-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.grid-2-cols {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.grid-3-cols {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.grid-4-cols {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+/* Flex utilities */
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.gap-sm {
+  gap: 0.5rem;
+}
+
+.gap-md {
+  gap: 1rem;
+}
+
+.gap-lg {
+  gap: 1.5rem;
+}
+
+.gap-xl {
+  gap: 2rem;
+}
+
+/* Body global */
+body {
+  background: white !important; /* Forcer le fond blanc */
+}
+
+#root {
+  background: white !important; /* Forcer le fond blanc */
+}
+
+.pf-c-page {
+  background: white !important; /* Forcer le fond blanc PatternFly */
+}
+
+.pf-c-page__main {
+  background: white !important; /* Forcer le fond blanc PatternFly */
+}
+
+/* Headers de pages avec variantes de couleurs - FORCE les styles */
+.page-header {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  color: white !important;
+  border: none !important;
+  padding: 2rem !important;
+  min-height: 100px !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.page-header .pf-c-page__main-section {
+  padding: 2rem !important;
+}
+
+.page-header__content {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.page-header__main {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 1rem !important;
+}
+
+.page-header__text {
+  flex: 1 !important;
+}
+
+.page-header__title {
+  margin-bottom: 0.5rem !important;
+  font-weight: 700 !important;
+  color: white !important;
+  font-size: 2rem !important;
+}
+
+.page-header__subtitle {
+  font-size: 1.1rem !important;
+  margin: 0 !important;
+  opacity: 0.9 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Variables CSS pour chaque variante de page - couleurs uniques finalisées */
+:root {
+  --dashboard-primary: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  --dashboard-hover: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --dashboard-shadow: rgba(30, 41, 59, 0.2);
+
+  --users-primary: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  --users-hover: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  --users-shadow: rgba(37, 99, 235, 0.2);
+
+  --courses-primary: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+  --courses-hover: linear-gradient(135deg, #166534 0%, #15803d 100%);
+  --courses-shadow: rgba(22, 163, 74, 0.2);
+
+  --payments-primary: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  --payments-hover: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+  --payments-shadow: rgba(239, 68, 68, 0.2);
+
+  --store-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --store-hover: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  --store-shadow: rgba(139, 92, 246, 0.2);
+
+  --teachers-primary: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  --teachers-hover: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+  --teachers-shadow: rgba(249, 115, 22, 0.2);
+
+  --messages-primary: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+  --messages-hover: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
+  --messages-shadow: rgba(6, 182, 212, 0.2);
+
+  --stats-primary: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
+  --stats-hover: linear-gradient(135deg, #9f1239 0%, #be123c 100%);
+  --stats-shadow: rgba(225, 29, 72, 0.2);
+
+  --commandes-primary: linear-gradient(135deg, #92400e 0%, #d97706 100%);
+  --commandes-hover: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  --commandes-shadow: rgba(217, 119, 6, 0.2);
+
+  --compte-primary: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+  --compte-hover: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+  --compte-shadow: rgba(139, 92, 246, 0.2);
+
+  --settings-primary: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+  --settings-hover: linear-gradient(135deg, #0d9488 0%, #10b981 100%);
+  --settings-shadow: rgba(20, 184, 166, 0.2);
+
+  --inscription-primary: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --inscription-hover: linear-gradient(135deg, #047857 0%, #059669 100%);
+  --inscription-shadow: rgba(16, 185, 129, 0.2);
+
+  --planning-primary: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  --planning-hover: linear-gradient(135deg, #075985 0%, #0369a1 100%);
+  --planning-shadow: rgba(2, 132, 199, 0.2);
+
+  --membres-primary: linear-gradient(135deg, #a21caf 0%, #c026d3 100%);
+  --membres-hover: linear-gradient(135deg, #86198f 0%, #a21caf 100%);
+  --membres-shadow: rgba(192, 38, 211, 0.2);
+}
+
+/* Headers avec couleurs uniques - chaque page a sa couleur distinctive */
+.page-header--dashboard {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important; /* Slate anthracite */
+}
+
+.page-header--users {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important; /* Bleu royal */
+}
+
+.page-header--courses {
+  background: linear-gradient(135deg, #15803d 0%, #16a34a 100%) !important; /* Vert nature */
+}
+
+.page-header--payments {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important; /* Rouge passion */
+}
+
+.page-header--store {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important; /* Indigo moderne */
+}
+
+.page-header--teachers {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%) !important; /* Orange chaleureux */
+}
+
+.page-header--messages {
+  background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%) !important; /* Cyan communication */
+}
+
+.page-header--stats {
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 100%) !important; /* Rose analytique */
+}
+
+.page-header--commandes {
+  background: linear-gradient(135deg, #92400e 0%, #d97706 100%) !important; /* Ambre commercial */
+}
+
+.page-header--compte {
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%) !important; /* Violet personnel */
+}
+
+.page-header--settings {
+  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%) !important; /* Teal technique */
+}
+
+.page-header--inscription {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important; /* Émeraude inscription */
+}
+
+.page-header--planning {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%) !important; /* Bleu ciel planning */
+}
+
+.page-header--membres {
+  background: linear-gradient(135deg, #a21caf 0%, #c026d3 100%) !important; /* Magenta communauté */
+}
+
+.page-header--default {
+  background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%) !important; /* Gris neutre */
+}
+
+/* Application automatique des couleurs aux boutons de chaque page */
+.dashboard-page .btn-primary,
+.dashboard-page .modern-submit-button,
+.dashboard-page .pf-c-button.pf-m-primary,
+.dashboard-page .settings-save-button {
+  background: var(--dashboard-primary) !important;
+  box-shadow: 0 2px 4px var(--dashboard-shadow) !important;
+  border: none !important;
+}
+
+.dashboard-page .btn-primary:hover,
+.dashboard-page .modern-submit-button:hover,
+.dashboard-page .pf-c-button.pf-m-primary:hover,
+.dashboard-page .settings-save-button:hover {
+  background: var(--dashboard-hover) !important;
+  box-shadow: 0 4px 8px var(--dashboard-shadow) !important;
+}
+
+.users-page .btn-primary,
+.users-page .modern-submit-button,
+.users-page .pf-c-button.pf-m-primary {
+  background: var(--users-primary) !important;
+  box-shadow: 0 2px 4px var(--users-shadow) !important;
+  border: none !important;
+}
+
+.users-page .btn-primary:hover,
+.users-page .modern-submit-button:hover,
+.users-page .pf-c-button.pf-m-primary:hover {
+  background: var(--users-hover) !important;
+  box-shadow: 0 4px 8px var(--users-shadow) !important;
+}
+
+.courses-page .btn-primary,
+.courses-page .modern-submit-button,
+.courses-page .pf-c-button.pf-m-primary {
+  background: var(--courses-primary) !important;
+  box-shadow: 0 2px 4px var(--courses-shadow) !important;
+  border: none !important;
+}
+
+.courses-page .btn-primary:hover,
+.courses-page .modern-submit-button:hover,
+.courses-page .pf-c-button.pf-m-primary:hover {
+  background: var(--courses-hover) !important;
+  box-shadow: 0 4px 8px var(--courses-shadow) !important;
+}
+
+.payments-page .btn-primary,
+.payments-page .modern-submit-button,
+.payments-page .pf-c-button.pf-m-primary {
+  background: var(--payments-primary) !important;
+  box-shadow: 0 2px 4px var(--payments-shadow) !important;
+  border: none !important;
+}
+
+.payments-page .btn-primary:hover,
+.payments-page .modern-submit-button:hover,
+.payments-page .pf-c-button.pf-m-primary:hover {
+  background: var(--payments-hover) !important;
+  box-shadow: 0 4px 8px var(--payments-shadow) !important;
+}
+
+.store-page .btn-primary,
+.store-page .modern-submit-button,
+.store-page .pf-c-button.pf-m-primary {
+  background: var(--store-primary) !important;
+  box-shadow: 0 2px 4px var(--store-shadow) !important;
+  border: none !important;
+}
+
+.store-page .btn-primary:hover,
+.store-page .modern-submit-button:hover,
+.store-page .pf-c-button.pf-m-primary:hover {
+  background: var(--store-hover) !important;
+  box-shadow: 0 4px 8px var(--store-shadow) !important;
+}
+
+.teachers-page .btn-primary,
+.teachers-page .modern-submit-button,
+.teachers-page .pf-c-button.pf-m-primary {
+  background: var(--teachers-primary) !important;
+  box-shadow: 0 2px 4px var(--teachers-shadow) !important;
+  border: none !important;
+}
+
+.teachers-page .btn-primary:hover,
+.teachers-page .modern-submit-button:hover,
+.teachers-page .pf-c-button.pf-m-primary:hover {
+  background: var(--teachers-hover) !important;
+  box-shadow: 0 4px 8px var(--teachers-shadow) !important;
+}
+
+.messages-page .btn-primary,
+.messages-page .modern-submit-button,
+.messages-page .pf-c-button.pf-m-primary {
+  background: var(--messages-primary) !important;
+  box-shadow: 0 2px 4px var(--messages-shadow) !important;
+  border: none !important;
+}
+
+.messages-page .btn-primary:hover,
+.messages-page .modern-submit-button:hover,
+.messages-page .pf-c-button.pf-m-primary:hover {
+  background: var(--messages-hover) !important;
+  box-shadow: 0 4px 8px var(--messages-shadow) !important;
+}
+
+.stats-page .btn-primary,
+.stats-page .modern-submit-button,
+.stats-page .pf-c-button.pf-m-primary {
+  background: var(--stats-primary) !important;
+  box-shadow: 0 2px 4px var(--stats-shadow) !important;
+  border: none !important;
+}
+
+.stats-page .btn-primary:hover,
+.stats-page .modern-submit-button:hover,
+.stats-page .pf-c-button.pf-m-primary:hover {
+  background: var(--stats-hover) !important;
+  box-shadow: 0 4px 8px var(--stats-shadow) !important;
+}
+
+.commandes-page .btn-primary,
+.commandes-page .modern-submit-button,
+.commandes-page .pf-c-button.pf-m-primary {
+  background: var(--commandes-primary) !important;
+  box-shadow: 0 2px 4px var(--commandes-shadow) !important;
+  border: none !important;
+}
+
+.commandes-page .btn-primary:hover,
+.commandes-page .modern-submit-button:hover,
+.commandes-page .pf-c-button.pf-m-primary:hover {
+  background: var(--commandes-hover) !important;
+  box-shadow: 0 4px 8px var(--commandes-shadow) !important;
+}
+
+.compte-page .btn-primary,
+.compte-page .modern-submit-button,
+.compte-page .pf-c-button.pf-m-primary {
+  background: var(--compte-primary) !important;
+  box-shadow: 0 2px 4px var(--compte-shadow) !important;
+  border: none !important;
+}
+
+.compte-page .btn-primary:hover,
+.compte-page .modern-submit-button:hover,
+.compte-page .pf-c-button.pf-m-primary:hover {
+  background: var(--compte-hover) !important;
+  box-shadow: 0 4px 8px var(--compte-shadow) !important;
+}
+
+.settings-page .btn-primary,
+.settings-page .modern-submit-button,
+.settings-page .pf-c-button.pf-m-primary,
+.settings-page .settings-save-button {
+  background: var(--settings-primary) !important;
+  box-shadow: 0 2px 4px var(--settings-shadow) !important;
+  border: none !important;
+}
+
+.settings-page .btn-primary:hover,
+.settings-page .modern-submit-button:hover,
+.settings-page .pf-c-button.pf-m-primary:hover,
+.settings-page .settings-save-button:hover {
+  background: var(--settings-hover) !important;
+  box-shadow: 0 4px 8px var(--settings-shadow) !important;
+}
+
+.inscription-page .btn-primary,
+.inscription-page .modern-submit-button,
+.inscription-page .pf-c-button.pf-m-primary {
+  background: var(--inscription-primary) !important;
+  box-shadow: 0 2px 4px var(--inscription-shadow) !important;
+  border: none !important;
+}
+
+.inscription-page .btn-primary:hover,
+.inscription-page .modern-submit-button:hover,
+.inscription-page .pf-c-button.pf-m-primary:hover {
+  background: var(--inscription-hover) !important;
+  box-shadow: 0 4px 8px var(--inscription-shadow) !important;
+}
+
+/* Focus states avec les couleurs correspondantes */
+.users-page .modern-text-input:focus,
+.users-page .modern-select-toggle:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+.courses-page .modern-text-input:focus,
+.courses-page .modern-select-toggle:focus {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1) !important;
+}
+
+.payments-page .modern-text-input:focus,
+.payments-page .modern-select-toggle:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.store-page .modern-text-input:focus,
+.store-page .modern-select-toggle:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1) !important;
+}
+
+.teachers-page .modern-text-input:focus,
+.teachers-page .modern-select-toggle:focus {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1) !important;
+}
+
+.messages-page .modern-text-input:focus,
+.messages-page .modern-select-toggle:focus {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1) !important;
+}
+
+.settings-page .modern-text-input:focus,
+.settings-page .modern-select-toggle:focus,
+.settings-page .settings-select:focus {
+  border-color: #14b8a6 !important;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1) !important;
+}
+
+.compte-page .modern-text-input:focus,
+.compte-page .modern-select-toggle:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1) !important;
+}
+
+.inscription-page .modern-text-input:focus,
+.inscription-page .modern-select-toggle:focus {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}

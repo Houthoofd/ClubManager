@@ -1,0 +1,47 @@
+### Magasin endpoints
+
+# Récupérer tous les articles du magasin
+GET https://clubmanagment.com/api/magasin/articles
+
+### Récupérer toutes les catégories d'articles
+GET https://clubmanagment.com/api/magasin/categories
+
+### Ajouter un nouvel article
+POST https://clubmanagment.com/api/magasin/articles/ajouter
+Content-Type: application/json
+
+{
+  "nom": "Kimono Judo",
+  "description": "Kimono blanc traditionnel pour judo",
+  "prix": 45.99,
+  "stock": 10,
+  "categorie_id": 1,
+  "image_url": "https://example.com/kimono.jpg"
+}
+
+### Modifier un article
+PUT https://clubmanagment.com/api/magasin/articles/1
+Content-Type: application/json
+
+{
+  "nom": "Kimono Judo Premium",
+  "description": "Kimono blanc premium pour judo",
+  "prix": 65.99,
+  "stock": 5,
+  "categorie_id": 1
+}
+
+### Supprimer un article
+DELETE https://clubmanagment.com/api/magasin/articles/1
+
+### Récupérer les articles par catégorie
+GET https://clubmanagment.com/api/magasin/articles/categorie/1
+
+### Ajouter une nouvelle catégorie
+POST https://clubmanagment.com/api/magasin/categories/ajouter
+Content-Type: application/json
+
+{
+  "nom": "Équipements",
+  "description": "Équipements pour arts martiaux"
+}

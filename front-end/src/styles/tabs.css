@@ -1,0 +1,151 @@
+/* Styles pour les onglets avec ligne bleue */
+.pf-v5-c-tabs__list {
+  border-bottom: 1px solid #dee2e6;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  padding: 0.5rem 1rem 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.pf-v5-c-tabs__item {
+  position: relative;
+  margin: 0 0.25rem;
+}
+
+.pf-v5-c-tabs__item.pf-m-current::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.pf-v5-c-tabs__button {
+  color: #6c757d;
+  font-weight: 500;
+  padding: 1rem 1.5rem;
+  border: none;
+  background: transparent;
+  transition: all 0.3s ease;
+  border-radius: 8px 8px 0 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.pf-v5-c-tabs__button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 123, 255, 0.05) 0%, rgba(0, 86, 179, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pf-v5-c-tabs__button:hover {
+  color: #007bff;
+  background-color: rgba(0, 123, 255, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.pf-v5-c-tabs__button:hover::before {
+  opacity: 1;
+}
+
+.pf-v5-c-tabs__item.pf-m-current .pf-v5-c-tabs__button {
+  color: #007bff;
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.9) 100%);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.15);
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  border-bottom: none;
+}
+
+.pf-v5-c-tabs__item.pf-m-current .pf-v5-c-tabs__button::before {
+  opacity: 1;
+}
+
+/* Contenu des onglets */
+.pf-v5-c-tabs__content {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation pour le changement d'onglet */
+.pf-v5-c-tabs__content > div {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Styles pour les badges sur les onglets */
+.tab-badge {
+  background: #007bff;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  margin-left: 0.5rem;
+  font-weight: bold;
+}
+
+.pf-v5-c-tabs__item.pf-m-current .tab-badge {
+  background: #0056b3;
+  box-shadow: 0 1px 3px rgba(0, 86, 179, 0.4);
+}
+
+/* Styles pour les onglets avec icônes PatternFly */
+.tab-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab-icon {
+  font-size: 1rem;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.pf-v5-c-tabs__item.pf-m-current .tab-icon {
+  opacity: 1;
+}
+
+.pf-v5-c-tabs__button:hover .tab-icon {
+  opacity: 1;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .pf-v5-c-tabs__list {
+    padding: 0.25rem 0.5rem 0;
+  }
+  
+  .pf-v5-c-tabs__button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .pf-v5-c-tabs__content {
+    padding: 1.5rem;
+  }
+}

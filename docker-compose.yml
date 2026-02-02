@@ -1,0 +1,38 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: web/Dockerfile  # Dockerfile pour la construction du frontend
+    ports:
+      - "8081:8081"
+    networks:
+      - clubmanager
+
+  backend:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - clubmanager
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile  # Dockerfile pour la construction de Nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - clubmanager
+
+networks:
+  clubmanager:
+    driver: bridge

@@ -1,0 +1,48 @@
+### Paiements endpoints
+
+# Récupérer toutes les commandes
+GET https://clubmanagment.com/api/paiements/commandes
+
+### Récupérer les commandes d'un utilisateur
+GET https://clubmanagment.com/api/paiements/commandes/utilisateur/1
+
+### Créer une nouvelle commande
+POST https://clubmanagment.com/api/paiements/commandes/creer
+Content-Type: application/json
+
+{
+  "utilisateur_id": 1,
+  "articles": [
+    {
+      "article_id": 1,
+      "quantite": 2
+    },
+    {
+      "article_id": 3,
+      "quantite": 1
+    }
+  ],
+  "total": 156.97
+}
+
+### Traiter un paiement
+POST https://clubmanagment.com/api/paiements/traiter
+Content-Type: application/json
+
+{
+  "commande_id": 1,
+  "montant": 156.97,
+  "methode_paiement": "carte",
+  "token_paiement": "tok_1234567890"
+}
+
+### Confirmer un paiement
+PATCH https://clubmanagment.com/api/paiements/confirmer/1
+Content-Type: application/json
+
+{
+  "statut": "confirme"
+}
+
+### Récupérer l'historique des paiements
+GET https://clubmanagment.com/api/paiements/historique/1

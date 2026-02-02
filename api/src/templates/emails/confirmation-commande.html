@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation de commande {{numeroCommande}}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+        
+        <!-- Header -->
+        <div style="text-align: center; padding: 20px 0; border-bottom: 3px solid #007bff;">
+            <h1 style="color: #007bff; margin: 0; font-size: 28px;">🛒 ClubManager</h1>
+            <p style="color: #666; margin: 5px 0 0 0; font-size: 16px;">Magasin du club</p>
+        </div>
+        
+        <!-- Titre principal -->
+        <div style="text-align: center; padding: 30px 0 20px 0;">
+            <h2 style="color: #333; margin: 0; font-size: 24px;">✅ Commande confirmée !</h2>
+            <p style="color: #666; margin: 10px 0 0 0; font-size: 16px;">
+                Bonjour <strong>{{userName}}</strong>, votre commande a été enregistrée avec succès.
+            </p>
+        </div>
+        
+        <!-- Informations de la commande -->
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #333; margin: 0 0 15px 0; font-size: 18px;">📋 Détails de la commande</h3>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span><strong>Numéro de commande :</strong></span>
+                <span style="color: #007bff; font-weight: bold;">{{numeroCommande}}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span><strong>ID unique :</strong></span>
+                <span style="font-family: monospace; font-size: 12px;">{{uniqueId}}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span><strong>Date :</strong></span>
+                <span>{{dateCommande}}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span><strong>Statut :</strong></span>
+                <span style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    {{statutCommande}}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span><strong>Nombre d'articles :</strong></span>
+                <span style="font-weight: bold;">{{nbArticles}} article(s)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span><strong>Total :</strong></span>
+                <span style="font-size: 18px; font-weight: bold; color: #007bff;">{{totalCommande}} €</span>
+            </div>
+        </div>
+
+        <!-- AJOUTÉ: Section détails des articles -->
+        <div style="background-color: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #dee2e6;">
+            <h3 style="color: #333; margin: 0 0 15px 0; font-size: 18px;">📦 Articles commandés</h3>
+            
+            <!-- Placeholder pour les articles - sera remplacé dynamiquement -->
+            <div style="margin-bottom: 15px;">
+                {{articlesDetails}}
+            </div>
+            
+            <!-- Récapitulatif -->
+            <div style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">
+                    <span>Total de la commande :</span>
+                    <span style="color: #007bff;">{{totalCommande}} €</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Prochaines étapes -->
+        <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #007bff;">
+            <h3 style="color: #333; margin: 0 0 15px 0; font-size: 18px;">📦 Prochaines étapes</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #555;">
+                <li style="margin-bottom: 8px;">🏪 Votre commande sera préparée par notre équipe</li>
+                <li style="margin-bottom: 8px;">📧 Vous recevrez un email quand votre commande sera prête</li>
+                <li style="margin-bottom: 8px;">🏃‍♂️ Vous pourrez venir retirer votre commande au club</li>
+                <li style="margin-bottom: 8px;">💳 Le paiement se fera lors du retrait</li>
+            </ul>
+        </div>
+        
+        <!-- Informations pratiques -->
+        <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <h3 style="color: #856404; margin: 0 0 15px 0; font-size: 18px;">ℹ️ Informations importantes</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #856404;">
+                <li style="margin-bottom: 8px;"><strong>Délai de préparation :</strong> {{delaiPreparation}}</li>
+                <li style="margin-bottom: 8px;"><strong>Lieu de retrait :</strong> {{lieuRetrait}}</li>
+                <li style="margin-bottom: 8px;"><strong>Horaires :</strong> {{horaires}}</li>
+                <li style="margin-bottom: 8px;"><strong>Conservation :</strong> {{conservation}}</li>
+            </ul>
+        </div>
+        
+        <!-- Support -->
+        <div style="text-align: center; padding: 20px 0; border-top: 1px solid #eee; margin-top: 30px;">
+            <p style="color: #666; margin: 0 0 10px 0;">
+                Une question ? Contactez-nous :
+            </p>
+            <p style="color: #007bff; margin: 0; font-weight: bold;">
+                📧 {{emailContact}} | 📞 {{telephoneContact}}
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <div style="text-align: center; padding: 20px 0; color: #999; font-size: 12px; border-top: 1px solid #eee;">
+            <p style="margin: 0;">© {{anneeActuelle}} ClubManager - Tous droits réservés</p>
+            <p style="margin: 5px 0 0 0;">
+                Cet email a été envoyé automatiquement, merci de ne pas y répondre directement.
+            </p>
+        </div>
+        
+    </div>
+</body>
+</html>

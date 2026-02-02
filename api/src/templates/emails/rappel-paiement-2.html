@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rappel urgent - Paiement en retard - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-payment-urgent">
+            <h1>⚠️ Rappel urgent</h1>
+            <p class="mb-0">Paiement en retard</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Bonjour <strong>{{userName}}</strong>,
+            </div>
+            
+            <div class="alert-box">
+                <p class="mb-0">
+                    ⚠️ <strong>URGENT :</strong> Votre paiement est maintenant en retard.
+                </p>
+            </div>
+            
+            <div class="payment-details">
+                <h3>💰 Détails du paiement en retard :</h3>
+                <ul>
+                    {{#if amount}}<li><strong>Montant :</strong> {{amount}}€</li>{{/if}}
+                    {{#if dueDate}}<li><strong>Échéance dépassée :</strong> {{dueDate}}</li>{{/if}}
+                </ul>
+            </div>
+            
+            <p><strong>Votre accès aux services pourrait être suspendu si le paiement n'est pas effectué rapidement.</strong></p>
+            
+            <div class="cta-container">
+                <a href="{{dashboardUrl}}" class="cta-button cta-button-urgent">
+                    🚨 Régler immédiatement
+                </a>
+            </div>
+            
+            <p>Si vous rencontrez des difficultés, contactez-nous au plus vite pour trouver une solution.</p>
+            
+            <p>Cordialement,<br><strong>L'équipe {{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p>Support urgent : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

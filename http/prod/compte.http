@@ -1,0 +1,27 @@
+### Comptes endpoints
+
+# Récupérer les informations du compte utilisateur connecté
+GET https://clubmanagment.com/api/compte
+Authorization: Bearer TOKEN_JWT_ICI
+
+### Modifier le profil utilisateur
+PUT https://clubmanagment.com/api/compte/modifier
+Content-Type: application/json
+Authorization: Bearer TOKEN_JWT_ICI
+
+{
+  "nom_utilisateur": "nouveau_nom",
+  "first_name": "Nouveau",
+  "last_name": "Nom",
+  "email": "nouveau.email@example.com"
+}
+
+### Changer le mot de passe
+PUT https://clubmanagment.com/api/compte/mot-de-passe
+Content-Type: application/json
+Authorization: Bearer TOKEN_JWT_ICI
+
+{
+  "ancien_mot_de_passe": "ancien123",
+  "nouveau_mot_de_passe": "nouveau123"
+}

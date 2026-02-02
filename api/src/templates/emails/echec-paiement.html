@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Échec de paiement - {{clubName}}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f4f4f4; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .content { 
+            background-color: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .error-box { 
+            background-color: #f8d7da; 
+            border: 1px solid #f5c6cb; 
+            color: #721c24; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+        }
+        .retry-button { 
+            text-align: center; 
+            margin: 30px 0; 
+        }
+        .btn-retry { 
+            background-color: #28a745; 
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-size: 18px; 
+            font-weight: bold; 
+            display: inline-block;
+        }
+        .footer { 
+            border-top: 1px solid #bdc3c7; 
+            padding-top: 20px; 
+            margin-top: 30px; 
+            color: #7f8c8d; 
+            font-size: 14px; 
+            text-align: center; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="header">
+                <h1>🥋 {{clubName}}</h1>
+                <h2>❌ Échec de paiement</h2>
+            </div>
+            
+            <div class="error-box">
+                <h3 style="margin: 0 0 10px 0; color: #721c24;">Bonjour <strong>{{userName}}</strong>,</h3>
+                <p style="margin: 0;">
+                    ⚠️ <strong>Votre paiement n'a pas pu être traité.</strong>
+                </p>
+            </div>
+
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 15px 0; color: #495057;">📋 Détails de la tentative :</h4>
+                <p style="margin: 5px 0;"><strong>Montant :</strong> {{amount}} {{currency}}</p>
+                <p style="margin: 5px 0;"><strong>Date :</strong> {{dateEchec}}</p>
+                <p style="margin: 5px 0;"><strong>Échéance :</strong> #{{echeanceId}}</p>
+                <p style="margin: 5px 0;"><strong>Raison :</strong> {{errorMessage}}</p>
+            </div>
+
+            <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0; color: #856404;">💡 Que faire maintenant ?</h4>
+                <ul style="margin: 5px 0; padding-left: 20px; color: #856404;">
+                    <li>Vérifiez les informations de votre carte bancaire</li>
+                    <li>Assurez-vous d'avoir suffisamment de fonds</li>
+                    <li>Contactez votre banque si le problème persiste</li>
+                    <li>Essayez avec une autre méthode de paiement</li>
+                </ul>
+            </div>
+
+            <div class="retry-button">
+                <a href="{{retryUrl}}" class="btn-retry">
+                    🔄 Réessayer le paiement
+                </a>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <p style="font-size: 14px; color: #6c757d;">
+                    Ou contactez notre support pour obtenir de l'aide :<br>
+                    <a href="mailto:{{supportEmail}}" style="color: #007bff;">{{supportEmail}}</a>
+                </p>
+            </div>
+
+            <p style="margin-top: 30px;">
+                Cordialement,<br>
+                <strong>L'équipe {{clubName}}</strong>
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p style="margin: 0;">© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p style="margin: 5px 0 0 0;">Support : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

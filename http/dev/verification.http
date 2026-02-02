@@ -1,0 +1,86 @@
+### Vérifications endpoints
+
+# Vérifier si un email existe
+POST http://localhost:3000/verification/verifier-email
+Content-Type: application/json
+
+{
+  "email": "test@email.com"
+}
+
+### Vérifier si un nom d'utilisateur existe
+POST http://localhost:3000/verification/verifier-nom-utilisateur
+Content-Type: application/json
+
+{
+  "nom_utilisateur": "testuser"
+}
+
+### Vérifier si un prénom existe
+POST http://localhost:3000/verification/verifier-prenom
+Content-Type: application/json
+
+{
+  "prenom": "Jean"
+}
+
+### Vérifier si un nom existe
+POST http://localhost:3000/verification/verifier-nom
+Content-Type: application/json
+
+{
+  "nom": "Dupont"
+}
+
+### Vérifier la combinaison prénom + nom
+POST http://localhost:3000/verification/verifier-prenom-nom
+Content-Type: application/json
+
+{
+  "prenom": "Jean",
+  "nom": "Dupont"
+}
+
+### Vérifier via email, prénom et nom
+POST http://localhost:3000/verification/verifier-email-prenom-nom
+Content-Type: application/json
+
+{
+  "email": "jean.dupont@email.com",
+  "prenom": "Jean",
+  "nom": "Dupont"
+}
+
+### Vérifier un créneau de cours dans le planning
+POST http://localhost:3000/verification/planning
+Content-Type: application/json
+
+{
+  "jour": "lundi",
+  "heure_debut": "18:00",
+  "heure_fin": "19:30",
+  "type_cours": "Judo"
+}
+
+### Vérifier si un article magasin existe par nom
+GET http://localhost:3000/verification/magasin/article?nom=Kimono
+
+### Vérifier si un article magasin existe par nom et catégorie
+GET http://localhost:3000/verification/magasin/article/categorie?nom=Kimono&categorie_id=1
+
+### Vérifier si des utilisateurs sont déjà professeurs
+POST http://localhost:3000/verification/verifier-professeurs
+Content-Type: application/json
+
+{
+  "utilisateurs": [
+    {
+      "nom": "Dupont",
+      "prenom": "Jean"
+    },
+    {
+      "nom": "Martin",
+      "prenom": "Marie"
+    }
+  ]
+}

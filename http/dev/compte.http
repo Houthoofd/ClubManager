@@ -1,0 +1,37 @@
+## Obtenir les informations d'un utilisateur via son nom et prenom
+POST http://localhost:3000/compte/informations
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+
+{
+  "prenom": "Benoit",
+  "nom": "Houthoofd"
+}
+
+### Comptes endpoints
+
+# Récupérer les informations du compte utilisateur connecté
+GET http://localhost:3000/compte
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+
+### Modifier le profil utilisateur
+PUT http://localhost:3000/compte/modifier
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+
+{
+  "nom_utilisateur": "nouveau_nom",
+  "first_name": "Nouveau",
+  "last_name": "Nom",
+  "email": "nouveau.email@example.com"
+}
+
+### Changer le mot de passe
+PUT http://localhost:3000/compte/mot-de-passe
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+
+{
+  "ancien_mot_de_passe": "ancien123",
+  "nouveau_mot_de_passe": "nouveau123"
+}

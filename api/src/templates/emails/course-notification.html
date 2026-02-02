@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{subject}}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 0;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🥋 Club Manager</h1>
+            <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">{{action}}</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+            <h2 style="color: #333; margin: 0 0 20px 0;">Bonjour {{userName}} !</h2>
+            
+            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+                Nous vous confirmons votre inscription au cours suivant :
+            </p>
+
+            <!-- Détails du cours -->
+            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #495057; margin: 0 0 15px 0; font-size: 18px;">📅 Détails du cours</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-weight: bold;">Type de cours :</td>
+                        <td style="padding: 8px 0; color: #333;">{{courseType}}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-weight: bold;">Date :</td>
+                        <td style="padding: 8px 0; color: #333;">{{courseDate}}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-weight: bold;">Heure :</td>
+                        <td style="padding: 8px 0; color: #333;">{{courseTime}}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-weight: bold;">Instructeur :</td>
+                        <td style="padding: 8px 0; color: #333;">{{instructor}}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Instructions -->
+            <div style="background: #e8f5e8; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h4 style="color: #155724; margin: 0 0 10px 0;">📋 Informations importantes :</h4>
+                <ul style="color: #155724; margin: 0; padding-left: 20px;">
+                    <li style="margin: 5px 0;">Arrivez 10 minutes avant le début du cours</li>
+                    <li style="margin: 5px 0;">Apportez une serviette et une bouteille d'eau</li>
+                    <li style="margin: 5px 0;">Portez des vêtements de sport appropriés</li>
+                    <li style="margin: 5px 0;">En cas d'absence, prévenez à l'avance</li>
+                </ul>
+            </div>
+
+            <p style="color: #666; line-height: 1.6; margin-top: 30px;">
+                Nous vous souhaitons un excellent cours ! Pour toute question, n'hésitez pas à nous contacter.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+            <p style="color: #6c757d; margin: 0; font-size: 14px;">
+                © 2024 Club Manager - Tous droits réservés
+            </p>
+            <p style="color: #6c757d; margin: 5px 0 0 0; font-size: 12px;">
+                Email envoyé automatiquement via SendGrid
+            </p>
+        </div>
+    </div>
+</body>
+</html>

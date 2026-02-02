@@ -1,0 +1,27 @@
+### Login pour obtenir un token avec userId
+
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "userId": "USR202570da10",
+  "password": "password123"
+}
+
+### Alternative avec mot de passe différent
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "userId": 165,
+  "password": "password"
+}
+
+### Alternative avec mot de passe vide ou simple
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "userId": 165,
+  "password": ""
+}

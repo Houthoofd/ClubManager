@@ -1,0 +1,79 @@
+### Cours endpoints
+
+# Récupérer tous les cours
+GET http://localhost:3000/cours
+
+### Ajouter un cours récurrent avec professeurs
+POST http://localhost:3000/cours/ajouterrs endpoints
+
+### Récupérer tous les cours
+GET http://localhost:3000/cours
+
+### Ajouter un cours récurrent avec professeurs
+POST http://localhost:3000/api/cours/ajouter
+Content-Type: application/json
+
+{
+  "nom": "Judo débutants",
+  "type_cours": "Judo",
+  "jour": "Lundi",
+  "heure_debut": "18:00",
+  "heure_fin": "19:30",
+  "professeurs": ["Jean Dupont", "Marie Martin"]
+}
+
+### Supprimer un cours par jour
+DELETE http://localhost:3000/cours/supprimer
+Content-Type: application/json
+
+{
+  "jourSemaine": "lundi"
+}
+
+### Modifier un cours récurrent
+PATCH http://localhost:3000/cours/modifier
+Content-Type: application/json
+
+{
+  "nom": "Judo avancés",
+  "type_cours": "Judo",
+  "jour": "Mardi",
+  "heure_debut": "19:00",
+  "heure_fin": "20:30",
+  "professeurs": ["Jean Dupont"]
+}
+
+### Retirer un professeur d'un cours
+POST http://localhost:3000/cours/retirer-professeur
+Content-Type: application/json
+
+{
+  "professeursNoms": ["Marie Martin"],
+  "jour": "Lundi"
+}
+
+### Récupérer les informations de planning des cours
+GET http://localhost:3000/cours/informations/planning
+
+### Récupérer les cours d'un utilisateur
+GET http://localhost:3000/cours/inscriptions/utilisateur/1
+
+### Valider la présence d'un utilisateur à un cours
+PATCH http://localhost:3000/cours/inscription/validation
+Content-Type: application/json
+
+{
+  "cours_id": 1,
+  "utilisateur_nom": "Dupont",
+  "utilisateur_prenom": "Jean"
+}
+
+### Annuler la présence d'un utilisateur à un cours
+PATCH http://localhost:3000/cours/inscription/annulation
+Content-Type: application/json
+
+{
+  "cours_id": 1,
+  "utilisateur_nom": "Dupont",
+  "utilisateur_prenom": "Jean"
+}

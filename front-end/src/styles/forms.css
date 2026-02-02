@@ -1,0 +1,738 @@
+/* Modern Form Layout - Left Aligned */
+.modern-form {
+  width: 100%;
+  max-width: 100%; /* Utiliser toute la largeur */
+  margin: 0;
+}
+
+.modern-form-container {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  width: 100%;
+}
+
+/* Form Sections */
+.form-section {
+  margin: 0; /* Supprimer margin */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-section-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb; /* Juste une bordure en bas */
+  border-radius: 0; /* Pas d'arrondi */
+  background: transparent; /* Pas de fond spécial */
+  box-shadow: none; /* Pas d'ombre */
+  border: none; /* Pas de bordure complète */
+}
+
+.form-section-title {
+  color: #1f2937;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+}
+
+.form-section-description {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.form-section-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.form-section-divider {
+  margin: 2rem 0;
+  border-color: #e5e7eb;
+}
+
+/* Form Fields */
+.modern-form-field {
+  position: relative;
+}
+
+.modern-form-group {
+  margin-bottom: 0;
+}
+
+.modern-form-group .pf-c-form__label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  text-transform: none;
+  letter-spacing: 0.025em;
+}
+
+.modern-form-group .pf-c-form__label-required::after {
+  color: #ef4444;
+  margin-left: 0.25rem;
+}
+
+/* Text Input Styles - Alignement vertical parfait */
+.modern-text-input {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0 1rem; /* Suppression du padding vertical pour un contrôle total */
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  width: 100% !important;
+  min-height: 48px;
+  height: 48px;
+  line-height: 48px; /* Line-height égale à la hauteur pour centrage parfait */
+  display: block;
+  box-sizing: border-box;
+  margin: 0;
+  vertical-align: middle;
+}
+
+/* Override des styles PatternFly pour les inputs */
+.modern-text-input.pf-c-form-control {
+  padding: 0 1rem !important; /* Padding horizontal uniquement */
+  height: 48px !important;
+  line-height: 48px !important; /* Centrage vertical parfait */
+  width: 100% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  vertical-align: middle !important;
+}
+
+.modern-text-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  outline: none;
+}
+
+.modern-text-input:hover:not(:focus) {
+  border-color: #d1d5db;
+}
+
+.modern-text-input.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.modern-text-input::placeholder {
+  color: #9ca3af;
+  font-style: italic;
+  line-height: 48px; /* Même line-height pour le placeholder */
+}
+
+/* Correction spécifique pour les inputs PatternFly */
+.modern-form-group .pf-c-form-control {
+  border: 2px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 0 1rem !important; /* Padding horizontal uniquement */
+  font-size: 0.9rem !important;
+  transition: all 0.2s ease !important;
+  background: white !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  height: 48px !important;
+  line-height: 48px !important; /* Centrage vertical parfait */
+  box-sizing: border-box !important;
+  display: block !important;
+  margin: 0 !important;
+  vertical-align: middle !important;
+}
+
+.modern-form-group .pf-c-form-control:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  outline: none !important;
+}
+
+.modern-form-group .pf-c-form-control:hover:not(:focus) {
+  border-color: #d1d5db !important;
+}
+
+/* Assurer l'alignement du texte pour tous les types d'input */
+.modern-form-group input[type="text"],
+.modern-form-group input[type="email"],
+.modern-form-group input[type="password"],
+.modern-form-group input[type="date"],
+.modern-form-group input[type="tel"],
+.modern-form-group input[type="number"] {
+  padding: 0 1rem !important; /* Padding horizontal uniquement */
+  height: 48px !important;
+  line-height: 48px !important; /* Centrage vertical parfait */
+  box-sizing: border-box !important;
+  font-size: 0.9rem !important;
+  width: 100% !important;
+  display: block !important;
+  margin: 0 !important;
+  vertical-align: middle !important;
+}
+
+/* Select Styles - Alignement avec les inputs */
+.modern-select-toggle {
+  border: 2px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  padding: 0 1rem !important; /* Padding horizontal pour cohérence */
+  background: white !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  min-height: 48px !important;
+  height: 48px !important;
+  font-size: 0.9rem !important;
+  color: #374151 !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  line-height: 1.2 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.modern-select .pf-c-select__toggle {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  min-height: 48px; /* Hauteur minimale uniforme */
+  height: 48px; /* Hauteur fixe */
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.modern-select-toggle:hover {
+  border-color: #d1d5db !important;
+}
+
+.modern-select-toggle:focus,
+.modern-select-toggle[aria-expanded="true"] {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* Assurer que le texte dans le toggle est bien aligné */
+.modern-select-toggle .pf-c-menu-toggle__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+
+/* Assurer que l'icône reste à sa place */
+.modern-select-toggle .pf-c-menu-toggle__controls {
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.modern-select-option {
+  padding: 0.75rem 1rem;
+  transition: all 0.15s ease;
+  color: #374151;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.modern-select-option:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.modern-select-option:focus,
+.modern-select-option.pf-m-selected {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Styles pour les options dans la liste déroulante */
+.modern-select .pf-c-select__menu {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+  min-width: 100%;
+}
+
+.modern-select .pf-c-select__menu-item {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.modern-select .pf-c-select__menu-item:hover {
+  background-color: #f3f4f6;
+}
+
+.modern-select .pf-c-select__menu-item:focus,
+.modern-select .pf-c-select__menu-item.pf-m-selected {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Assurer une hauteur cohérente pour tous les form groups */
+.modern-form-group {
+  margin-bottom: 0;
+  min-height: auto;
+}
+
+.modern-form-group .pf-c-form__label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  text-transform: none;
+  letter-spacing: 0.025em;
+  line-height: 1.3;
+}
+
+.modern-form-group .pf-c-form__label-required::after {
+  color: #ef4444;
+  margin-left: 0.25rem;
+}
+
+/* Assurer que les champs ont la même hauteur et alignement sur mobile */
+@media (max-width: 768px) {
+  .modern-text-input,
+  .modern-form-group .pf-c-form-control,
+  .modern-form-group input[type="text"],
+  .modern-form-group input[type="email"],
+  .modern-form-group input[type="password"],
+  .modern-form-group input[type="date"],
+  .modern-form-group input[type="tel"],
+  .modern-form-group input[type="number"] {
+    min-height: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important; /* Ajusté pour mobile */
+    padding: 0 0.875rem !important;
+    font-size: 0.875rem !important;
+    margin: 0 !important;
+  }
+  
+  .modern-select-toggle {
+    min-height: 44px !important;
+    height: 44px !important;
+    padding: 0 0.875rem !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Form Actions */
+.modern-form-actions {
+  padding-top: 2rem;
+  border-top: 2px solid #e5e7eb;
+  margin: 0;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Application des couleurs aux éléments de formulaire par page */
+
+/* Modern Submit Button - suppression du style fixe */
+.modern-submit-button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem 2rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.025em;
+  transition: all 0.2s ease;
+  min-width: 160px;
+  /* Les couleurs sont maintenant gérées par les classes de page */
+}
+
+.modern-submit-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  /* Les couleurs sont maintenant gérées par les classes de page */
+}
+
+.modern-submit-button:disabled {
+  background: #9ca3af !important;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none !important;
+}
+
+/* Focus states avec couleurs dynamiques */
+.users-page .modern-text-input:focus,
+.users-page .modern-select-toggle:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+}
+
+.courses-page .modern-text-input:focus,
+.courses-page .modern-select-toggle:focus {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+.payments-page .modern-text-input:focus,
+.payments-page .modern-select-toggle:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.store-page .modern-text-input:focus,
+.store-page .modern-select-toggle:focus {
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1) !important;
+}
+
+.teachers-page .modern-text-input:focus,
+.teachers-page .modern-select-toggle:focus {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1) !important;
+}
+
+.settings-page .modern-text-input:focus,
+.settings-page .modern-select-toggle:focus,
+.settings-page .settings-select:focus {
+  border-color: #14b8a6 !important;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1) !important;
+}
+
+.compte-page .modern-text-input:focus,
+.compte-page .modern-select-toggle:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1) !important;
+}
+
+/* Add User Container - Left Aligned */
+.add-user-page {
+  max-width: 100%;
+  margin: 0;
+}
+
+.add-user-header {
+  text-align: left;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.add-user-title {
+  color: #1f2937;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  font-size: 1.75rem;
+}
+
+.add-user-subtitle {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+.add-user-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.add-user-form-wrapper {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Success Notification */
+.success-notification {
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+  border: 2px solid #10b981;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  animation: slideInUp 0.4s ease-out;
+}
+
+.success-notification__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.success-notification__icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.3));
+}
+
+.success-notification__title {
+  color: #065f46;
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.success-notification__content {
+  background: white;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.success-notification__label {
+  font-weight: 600;
+  color: #065f46;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.success-notification__data {
+  margin: 0;
+  color: #374151;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Modal With Help Styles */
+.modal-with-help {
+  max-width: 600px;
+}
+
+.modal-help-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0; /* Pas d'arrondi pour les headers de modal */
+  background: transparent; /* Pas de fond spécial */
+  box-shadow: none; /* Pas d'ombre */
+  margin: 0 0 1.5rem 0; /* Revenir aux marges normales */
+}
+
+.modal-help-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.modal-help-description {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.modal-help-summary {
+  background: #f9fafb;
+  border: 1px solid #e7f1ff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.modal-help-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-help-item:last-child {
+  border-bottom: none;
+}
+
+.modal-help-label {
+  font-weight: 600;
+  color: #374151;
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
+.modal-help-value {
+  color: #1f2937;
+  text-align: right;
+  word-break: break-word;
+  max-width: 250px;
+}
+
+.modal-help-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.modal-help-success {
+  padding: 0;
+}
+
+.modal-help-error {
+  padding: 0;
+}
+
+.modal-help-data {
+  margin-top: 1.5rem;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+  .modal-with-help {
+    max-width: 90vw;
+  }
+  
+  .modal-help-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .modal-help-label {
+    min-width: auto;
+  }
+  
+  .modal-help-value {
+    text-align: left;
+    max-width: 100%;
+  }
+  
+  .modal-help-summary {
+    padding: 1rem;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .form-section-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .add-user-form-wrapper {
+    padding: 1.5rem;
+  }
+  
+  .form-section-fields {
+    gap: 1.25rem;
+  }
+  
+  .modern-submit-button {
+    width: 100%;
+  }
+  
+  .add-user-title {
+    font-size: 1.5rem;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Chart Card - styles normaux pour les composants */
+.chart-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1.5rem 1.5rem 1rem;
+  margin: 0;
+  border-radius: 0; /* Pas d'arrondi pour les titres de composants */
+  background: transparent; /* Pas de fond spécial */
+  box-shadow: none; /* Pas d'ombre */
+}
+
+.chart-card__body {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+}
+
+/* Data Table Card - styles normaux */
+.data-table-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.data-table-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1.5rem 1.5rem 1rem;
+  margin: 0;
+  border-radius: 0; /* Pas d'arrondi pour les headers de composants */
+  background: transparent; /* Pas de fond spécial */
+  box-shadow: none; /* Pas d'ombre */
+}
+
+.data-table-card__body {
+  padding: 0; /* Revenir au padding original */
+}
+
+/* Modal - style normal */
+.modal-with-help .pf-c-modal-box {
+  border-radius: 12px;
+  overflow: hidden; /* Revenir à hidden */
+}
+
+.modal-help-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0; /* Pas d'arrondi pour les headers de modal */
+  background: transparent; /* Pas de fond spécial */
+  box-shadow: none; /* Pas d'ombre */
+  margin: 0 0 1.5rem 0; /* Revenir aux marges normales */
+}

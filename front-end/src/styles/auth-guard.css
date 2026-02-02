@@ -1,0 +1,134 @@
+/* Styles pour le composant AuthGuard */
+.auth-guard-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-guard-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23ffffff" stroke-width="0.5" opacity="0.3"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+  pointer-events: none;
+}
+
+.auth-guard-content {
+  position: relative;
+  z-index: 1;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+}
+
+.auth-guard-spinner {
+  margin: 2rem 0;
+}
+
+.auth-guard-loading-text {
+  margin-top: 1rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.auth-guard-error {
+  margin-bottom: 1rem;
+}
+
+.auth-guard-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.auth-guard-retry-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #ffc107;
+  text-align: left;
+}
+
+/* Animation de pulsation pour le spinner */
+@keyframes auth-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.auth-guard-spinner .pf-c-spinner {
+  animation: auth-pulse 2s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .auth-guard-content {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .auth-guard-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .auth-guard-buttons .pf-c-button {
+    width: 100%;
+  }
+}
+
+/* Thème sombre (optionnel) */
+@media (prefers-color-scheme: dark) {
+  .auth-guard-container {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  }
+  
+  .auth-guard-content {
+    background: #34495e;
+    color: #ecf0f1;
+  }
+  
+  .auth-guard-loading-text {
+    color: #bdc3c7;
+  }
+  
+  .auth-guard-retry-info {
+    background: #2c3e50;
+    border-left-color: #f39c12;
+    color: #ecf0f1;
+  }
+}
+
+/* Animation d'entrée */
+.auth-guard-content {
+  animation: authGuardFadeIn 0.5s ease-out;
+}
+
+@keyframes authGuardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

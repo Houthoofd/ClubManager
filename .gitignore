@@ -1,0 +1,88 @@
+# Node modules (racine + sous-dossiers)
+**/node_modules/
+
+# ============================================
+# FICHIERS D'ENVIRONNEMENT - SECRETS SENSIBLES
+# ============================================
+
+# Variables d'environnement avec clés API et mots de passe
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Fichiers de configuration spécifiques
+api/.env
+api/.env.local
+api/.env.development
+api/.env.production
+api/.env.test
+
+front-end/.env
+front-end/.env.local
+front-end/.env.development
+front-end/.env.production
+front-end/.env.test
+
+# Sauvegardes des fichiers .env
+*.env.backup
+*.env.bak
+
+# ============================================
+# CLÉS ET CERTIFICATS
+# ============================================
+
+# Clés privées et certificats
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+
+# Fichiers de configuration SSH
+ssh/
+.ssh/
+
+# ============================================
+# BASE DE DONNÉES
+# ============================================
+
+# Dumps de base de données
+*.sql
+*.dump
+*.db
+
+# Logs de base de données
+*.log
+
+# ============================================
+# FICHIERS TEMPORAIRES ET CACHE
+# ============================================
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cache
+.cache/
+*.tmp
+*.temp
+
+# ============================================
+# FICHIERS DE DÉVELOPPEMENT
+# ============================================
+
+# Tests et coverage
+coverage/
+.nyc_output
+
+# Documentation temporaire
+docs/temp/
+
+# Fichiers de build temporaires
+dist/
+build/
