@@ -3,6 +3,7 @@
  * Ces tests maximisent la couverture de code
  */
 
+import { jest } from "@jest/globals";
 import { StockService } from "../stock.service.js";
 import { StockError, StockErrorType } from "@clubmanager/types";
 import {
@@ -65,7 +66,7 @@ describe("StockService - Tests de Couverture", () => {
 
       // Cas 2: Plus de résultats disponibles
       mockPrisma.stocks.findMany.mockResolvedValue(
-        Array(11).fill(mockStockData.stock1)
+        Array(11).fill(mockStockData.stock1),
       );
       mockPrisma.stocks.count.mockResolvedValue(20);
       result = await stockService.obtenirStocks({ limit: 10 });
@@ -287,7 +288,7 @@ describe("StockService - Tests de Couverture", () => {
         stockService.reserverStock({
           articles: [],
           commande_id: "CMD-001",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Validation: commande_id vide
@@ -295,7 +296,7 @@ describe("StockService - Tests de Couverture", () => {
         stockService.reserverStock({
           articles: [{ article_id: 1, taille: "M", quantite: 5 }],
           commande_id: "",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Validation: quantité négative
@@ -303,7 +304,7 @@ describe("StockService - Tests de Couverture", () => {
         stockService.reserverStock({
           articles: [{ article_id: 1, taille: "M", quantite: -5 }],
           commande_id: "CMD-001",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Validation: quantité zéro
@@ -311,7 +312,7 @@ describe("StockService - Tests de Couverture", () => {
         stockService.reserverStock({
           articles: [{ article_id: 1, taille: "M", quantite: 0 }],
           commande_id: "CMD-001",
-        })
+        }),
       ).rejects.toThrow(StockError);
     });
 
@@ -331,7 +332,7 @@ describe("StockService - Tests de Couverture", () => {
         stockService.reserverStock({
           articles: [{ article_id: 999, taille: "XL", quantite: 5 }],
           commande_id: "CMD-001",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Stock insuffisant
@@ -352,7 +353,7 @@ describe("StockService - Tests de Couverture", () => {
         stockService.reserverStock({
           articles: [{ article_id: 1, taille: "M", quantite: 10 }],
           commande_id: "CMD-001",
-        })
+        }),
       ).rejects.toThrow(StockError);
     });
 
@@ -386,7 +387,7 @@ describe("StockService - Tests de Couverture", () => {
     it("devrait couvrir toutes les validations", async () => {
       // Validation: commande_id vide
       await expect(
-        stockService.confirmerLivraison({ commande_id: "" })
+        stockService.confirmerLivraison({ commande_id: "" }),
       ).rejects.toThrow(StockError);
     });
 
@@ -403,7 +404,7 @@ describe("StockService - Tests de Couverture", () => {
       mockPrisma.$transaction = mockTransaction;
 
       await expect(
-        stockService.confirmerLivraison({ commande_id: "CMD-999" })
+        stockService.confirmerLivraison({ commande_id: "CMD-999" }),
       ).rejects.toThrow(StockError);
 
       // Commande déjà livrée
@@ -421,7 +422,7 @@ describe("StockService - Tests de Couverture", () => {
       mockPrisma.$transaction = mockTransaction;
 
       await expect(
-        stockService.confirmerLivraison({ commande_id: "CMD-002" })
+        stockService.confirmerLivraison({ commande_id: "CMD-002" }),
       ).rejects.toThrow(StockError);
 
       // Commande annulée
@@ -439,7 +440,7 @@ describe("StockService - Tests de Couverture", () => {
       mockPrisma.$transaction = mockTransaction;
 
       await expect(
-        stockService.confirmerLivraison({ commande_id: "CMD-003" })
+        stockService.confirmerLivraison({ commande_id: "CMD-003" }),
       ).rejects.toThrow(StockError);
     });
 
@@ -485,7 +486,7 @@ describe("StockService - Tests de Couverture", () => {
           quantite: 10,
           type_ajustement: "ajout",
           motif: "Test",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Validation: quantité négative
@@ -496,7 +497,7 @@ describe("StockService - Tests de Couverture", () => {
           quantite: -10,
           type_ajustement: "ajout",
           motif: "Test",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Validation: quantité zéro
@@ -507,7 +508,7 @@ describe("StockService - Tests de Couverture", () => {
           quantite: 0,
           type_ajustement: "ajout",
           motif: "Test",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Validation: motif vide
@@ -518,7 +519,7 @@ describe("StockService - Tests de Couverture", () => {
           quantite: 10,
           type_ajustement: "ajout",
           motif: "",
-        })
+        }),
       ).rejects.toThrow(StockError);
 
       // Validation: type_ajustement invalide
@@ -529,7 +530,7 @@ describe("StockService - Tests de Couverture", () => {
           quantite: 10,
           type_ajustement: "invalid" as any,
           motif: "Test",
-        })
+        }),
       ).rejects.toThrow(StockError);
     });
 
@@ -739,7 +740,7 @@ describe("StockService - Tests de Couverture", () => {
       expect(mockPrisma.stocks.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { seuil_alerte: 10 },
-        })
+        }),
       );
     });
 
@@ -808,12 +809,8 @@ describe("StockService - Tests de Couverture", () => {
           { quantite_mouvement: -10 },
         ])
         .mockResolvedValueOnce([{ quantite_mouvement: 50 }])
-        .mockResolvedValueOnce([
-          { created_at: new Date("2024-01-20") },
-        ])
-        .mockResolvedValueOnce([
-          { created_at: new Date("2024-01-10") },
-        ]);
+        .mockResolvedValueOnce([{ created_at: new Date("2024-01-20") }])
+        .mockResolvedValueOnce([{ created_at: new Date("2024-01-10") }]);
 
       const stats = await stockService.statistiquesArticle(1);
 
@@ -827,7 +824,7 @@ describe("StockService - Tests de Couverture", () => {
       mockPrisma.articles.findUnique.mockResolvedValue(null);
 
       await expect(stockService.statistiquesArticle(999)).rejects.toThrow(
-        StockError
+        StockError,
       );
     });
   });
@@ -890,7 +887,7 @@ describe("StockService - Tests de Couverture", () => {
       const stock = await stockService.obtenirStockParId(1, "M");
       expect(stock?.stock_disponible).toBe(70);
       expect(
-        stock!.stock_physique - stock!.stock_reserve
+        stock!.stock_physique - stock!.stock_reserve,
       ).toBeGreaterThanOrEqual(stock!.stock_disponible);
     });
   });
