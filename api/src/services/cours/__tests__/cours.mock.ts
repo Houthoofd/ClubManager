@@ -96,10 +96,24 @@ export const mockCoursRecurrentProfesseur = [
 ];
 
 // Données mock - Cours
+// Créer des dates dynamiques dans le futur
+const today = new Date();
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+
+const in2Days = new Date(today);
+in2Days.setDate(today.getDate() + 2);
+
+const in3Days = new Date(today);
+in3Days.setDate(today.getDate() + 3);
+
+const in7Days = new Date(today);
+in7Days.setDate(today.getDate() + 7);
+
 export const mockCours = [
   {
     id: 1,
-    date_cours: new Date("2026-01-28"), // Mardi prochain
+    date_cours: tomorrow, // Demain
     type_cours: "Karaté Débutant",
     heure_debut: "18:00",
     heure_fin: "19:30",
@@ -107,7 +121,7 @@ export const mockCours = [
   },
   {
     id: 2,
-    date_cours: new Date("2026-01-30"), // Jeudi prochain
+    date_cours: in3Days, // Dans 3 jours
     type_cours: "Judo Avancé",
     heure_debut: "19:00",
     heure_fin: "20:30",
@@ -115,7 +129,7 @@ export const mockCours = [
   },
   {
     id: 3,
-    date_cours: new Date("2026-01-29"), // Mercredi prochain
+    date_cours: in2Days, // Dans 2 jours
     type_cours: "Taekwondo Enfants",
     heure_debut: "14:00",
     heure_fin: "15:00",
@@ -123,7 +137,7 @@ export const mockCours = [
   },
   {
     id: 4,
-    date_cours: new Date("2026-02-04"), // Mardi suivant
+    date_cours: in7Days, // Dans 7 jours
     type_cours: "Karaté Débutant",
     heure_debut: "18:00",
     heure_fin: "19:30",
