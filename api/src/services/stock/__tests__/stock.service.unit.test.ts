@@ -3,8 +3,9 @@
  * Ces tests vérifient le comportement des méthodes du service avec des mocks Prisma
  */
 
-import { StockService } from '../stock.service.js';
-import { StockError, StockErrorType } from '@clubmanager/types';
+import { jest } from "@jest/globals";
+import { StockService } from "../stock.service.js";
+import { StockError, StockErrorType } from "@clubmanager/types";
 import {
   createMockPrisma,
   mockStockData,
@@ -15,9 +16,9 @@ import {
   createMockResumeStock,
   createMockStatistiquesStocks,
   createMockStatistiquesArticle,
-} from './stock.mock.js';
+} from "./stock.mock.js";
 
-describe('StockService - Tests Unitaires', () => {
+describe("StockService - Tests Unitaires", () => {
   let stockService: StockService;
   let mockPrisma: any;
 
@@ -34,8 +35,8 @@ describe('StockService - Tests Unitaires', () => {
   // TESTS DES QUERIES
   // ============================================
 
-  describe('obtenirStocks', () => {
-    it('devrait retourner tous les stocks avec pagination', async () => {
+  describe("obtenirStocks", () => {
+    it("devrait retourner tous les stocks avec pagination", async () => {
       const mockStocks = [mockStockData.stock1, mockStockData.stock2];
       mockPrisma.stocks.findMany.mockResolvedValue(mockStocks);
       mockPrisma.stocks.count.mockResolvedValue(2);
@@ -49,11 +50,11 @@ describe('StockService - Tests Unitaires', () => {
         expect.objectContaining({
           skip: 0,
           take: 51,
-        })
+        }),
       );
     });
 
-    it('devrait filtrer les stocks par article_id', async () => {
+    it("devrait filtrer les stocks par article_id", async () => {
       const mockStocks = [mockStockData.stock1, mockStockData.stock2];
       mockPrisma.stocks.findMany.mockResolvedValue(mockStocks);
       mockPrisma.stocks.count.mockResolvedValue(2);
@@ -65,37 +66,37 @@ describe('StockService - Tests Unitaires', () => {
           where: expect.objectContaining({
             article_id: 1,
           }),
-        })
+        }),
       );
     });
 
-    it('devrait filtrer les stocks par taille', async () => {
+    it("devrait filtrer les stocks par taille", async () => {
       const mockStocks = [mockStockData.stock1];
       mockPrisma.stocks.findMany.mockResolvedValue(mockStocks);
       mockPrisma.stocks.count.mockResolvedValue(1);
 
-      await stockService.obtenirStocks({ taille: 'M' });
+      await stockService.obtenirStocks({ taille: "M" });
 
       expect(mockPrisma.stocks.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            taille: 'M',
+            taille: "M",
           }),
-        })
+        }),
       );
     });
 
-    it('devrait rechercher les stocks par nom d\'article', async () => {
+    it("devrait rechercher les stocks par nom d'article", async () => {
       const mockStocks = [mockStockData.stock1];
       mockPrisma.stocks.findMany.mockResolvedValue(mockStocks);
       mockPrisma.stocks.count.mockResolvedValue(1);
 
-      await stockService.obtenirStocks({ recherche: 'Kimono' });
+      await stockService.obtenirStocks({ recherche: "Kimono" });
 
       expect(mockPrisma.stocks.findMany).toHaveBeenCalled();
     });
 
-    it('devrait indiquer hasMore = true quand il y a plus de résultats', async () => {
+    it("devrait indiquer hasMore = true quand il y a plus de résultats", async () => {
       const mockStocks = Array(51).fill(mockStockData.stock1);
       mockPrisma.stocks.findMany.mockResolvedValue(mockStocks);
       mockPrisma.stocks.count.mockResolvedValue(100);
@@ -107,20 +108,20 @@ describe('StockService - Tests Unitaires', () => {
     });
   });
 
-  describe('obtenirStockParId', () => {
-    it('devrait retourner un stock existant', async () => {
+  describe("obtenirStockParId", () => {
+    it("devrait retourner un stock existant", async () => {
       mockPrisma.stocks.findUnique.mockResolvedValue(mockStockData.stock1);
 
-      const result = await stockService.obtenirStockParId(1, 'M');
+      const result = await stockService.obtenirStockParId(1, "M");
 
       expect(result).toBeDefined();
       expect(result?.article_id).toBe(1);
-      expect(result?.taille).toBe('M');
+      expect(result?.taille).toBe("M");
       expect(mockPrisma.stocks.findUnique).toHaveBeenCalledWith({
         where: {
           article_id_taille: {
             article_id: 1,
-            taille: 'M',
+            taille: "M",
           },
         },
         include: {
@@ -129,40 +130,46 @@ describe('StockService - Tests Unitaires', () => {
       });
     });
 
-    it('devrait retourner null si le stock n\'existe pas', async () => {
+    it("devrait retourner null si le stock n'existe pas", async () => {
       mockPrisma.stocks.findUnique.mockResolvedValue(null);
 
-      const result = await stockService.obtenirStockParId(999, 'XL');
+      const result = await stockService.obtenirStockParId(999, "XL");
 
       expect(result).toBeNull();
     });
 
-    it('devrait retourner null si l\'article n\'existe pas', async () => {
+    it("devrait retourner null si l'article n'existe pas", async () => {
       mockPrisma.stocks.findUnique.mockResolvedValue({
         ...mockStockData.stock1,
         articles: null,
       });
 
-      const result = await stockService.obtenirStockParId(1, 'M');
+      const result = await stockService.obtenirStockParId(1, "M");
 
       expect(result).toBeNull();
     });
   });
 
-  describe('obtenirMouvements', () => {
-    it('devrait retourner tous les mouvements avec pagination', async () => {
-      const mockMouvements = [mockMouvementData.mouvement1, mockMouvementData.mouvement2];
+  describe("obtenirMouvements", () => {
+    it("devrait retourner tous les mouvements avec pagination", async () => {
+      const mockMouvements = [
+        mockMouvementData.mouvement1,
+        mockMouvementData.mouvement2,
+      ];
       mockPrisma.mouvements_stock.findMany.mockResolvedValue(mockMouvements);
       mockPrisma.mouvements_stock.count.mockResolvedValue(2);
 
-      const result = await stockService.obtenirMouvements({ limit: 100, offset: 0 });
+      const result = await stockService.obtenirMouvements({
+        limit: 100,
+        offset: 0,
+      });
 
       expect(result.mouvements).toHaveLength(2);
       expect(result.total).toBe(2);
       expect(result.hasMore).toBe(false);
     });
 
-    it('devrait filtrer les mouvements par article_id', async () => {
+    it("devrait filtrer les mouvements par article_id", async () => {
       const mockMouvements = [mockMouvementData.mouvement1];
       mockPrisma.mouvements_stock.findMany.mockResolvedValue(mockMouvements);
       mockPrisma.mouvements_stock.count.mockResolvedValue(1);
@@ -174,45 +181,45 @@ describe('StockService - Tests Unitaires', () => {
           where: expect.objectContaining({
             article_id: 1,
           }),
-        })
+        }),
       );
     });
 
-    it('devrait filtrer les mouvements par type', async () => {
+    it("devrait filtrer les mouvements par type", async () => {
       const mockMouvements = [mockMouvementData.mouvement2];
       mockPrisma.mouvements_stock.findMany.mockResolvedValue(mockMouvements);
       mockPrisma.mouvements_stock.count.mockResolvedValue(1);
 
-      await stockService.obtenirMouvements({ type_mouvement: 'livraison' });
+      await stockService.obtenirMouvements({ type_mouvement: "livraison" });
 
       expect(mockPrisma.mouvements_stock.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            type_mouvement: 'livraison',
+            type_mouvement: "livraison",
           }),
-        })
+        }),
       );
     });
 
-    it('devrait filtrer les mouvements par commande_id', async () => {
+    it("devrait filtrer les mouvements par commande_id", async () => {
       const mockMouvements = [mockMouvementData.mouvement1];
       mockPrisma.mouvements_stock.findMany.mockResolvedValue(mockMouvements);
       mockPrisma.mouvements_stock.count.mockResolvedValue(1);
 
-      await stockService.obtenirMouvements({ commande_id: 'CMD-001' });
+      await stockService.obtenirMouvements({ commande_id: "CMD-001" });
 
       expect(mockPrisma.mouvements_stock.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            commande_id: 'CMD-001',
+            commande_id: "CMD-001",
           }),
-        })
+        }),
       );
     });
 
-    it('devrait filtrer les mouvements par période', async () => {
-      const dateDebut = new Date('2024-01-01');
-      const dateFin = new Date('2024-01-31');
+    it("devrait filtrer les mouvements par période", async () => {
+      const dateDebut = new Date("2024-01-01");
+      const dateFin = new Date("2024-01-31");
       mockPrisma.mouvements_stock.findMany.mockResolvedValue([]);
       mockPrisma.mouvements_stock.count.mockResolvedValue(0);
 
@@ -229,18 +236,18 @@ describe('StockService - Tests Unitaires', () => {
               lte: dateFin,
             },
           }),
-        })
+        }),
       );
     });
   });
 
-  describe('obtenirResumesStocks', () => {
-    it('devrait retourner les résumés consolidés des stocks', async () => {
+  describe("obtenirResumesStocks", () => {
+    it("devrait retourner les résumés consolidés des stocks", async () => {
       const mockArticles = [
         {
           id: 1,
-          nom: 'Kimono Blanc',
-          code: 'KIM-BLANC-001',
+          nom: "Kimono Blanc",
+          code: "KIM-BLANC-001",
           prix: 49.99,
           active: 1,
           stocks: [mockStockData.stock1, mockStockData.stock2],
@@ -256,12 +263,12 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.resumes[0].tailles).toHaveLength(2);
     });
 
-    it('devrait calculer correctement les totaux', async () => {
+    it("devrait calculer correctement les totaux", async () => {
       const mockArticles = [
         {
           id: 1,
-          nom: 'Kimono Blanc',
-          code: 'KIM-BLANC-001',
+          nom: "Kimono Blanc",
+          code: "KIM-BLANC-001",
           prix: 49.99,
           active: 1,
           stocks: [mockStockData.stock1, mockStockData.stock2],
@@ -281,8 +288,8 @@ describe('StockService - Tests Unitaires', () => {
   // TESTS DES MUTATIONS
   // ============================================
 
-  describe('reserverStock', () => {
-    it('devrait réserver du stock avec succès', async () => {
+  describe("reserverStock", () => {
+    it("devrait réserver du stock avec succès", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
@@ -298,46 +305,52 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        articles: [{ article_id: 1, taille: 'M', quantite: 5 }],
-        commande_id: 'CMD-001',
+        articles: [{ article_id: 1, taille: "M", quantite: 5 }],
+        commande_id: "CMD-001",
         utilisateur_id: 1,
       };
 
       const result = await stockService.reserverStock(input);
 
       expect(result.success).toBe(true);
-      expect(result.commande_id).toBe('CMD-001');
+      expect(result.commande_id).toBe("CMD-001");
       expect(result.articles_reserves).toHaveLength(1);
     });
 
-    it('devrait échouer si aucun article fourni', async () => {
+    it("devrait échouer si aucun article fourni", async () => {
       const input = {
         articles: [],
-        commande_id: 'CMD-001',
+        commande_id: "CMD-001",
       };
 
-      await expect(stockService.reserverStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.reserverStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si commande_id manquant', async () => {
+    it("devrait échouer si commande_id manquant", async () => {
       const input = {
-        articles: [{ article_id: 1, taille: 'M', quantite: 5 }],
-        commande_id: '',
+        articles: [{ article_id: 1, taille: "M", quantite: 5 }],
+        commande_id: "",
       };
 
-      await expect(stockService.reserverStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.reserverStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si quantité invalide', async () => {
+    it("devrait échouer si quantité invalide", async () => {
       const input = {
-        articles: [{ article_id: 1, taille: 'M', quantite: -5 }],
-        commande_id: 'CMD-001',
+        articles: [{ article_id: 1, taille: "M", quantite: -5 }],
+        commande_id: "CMD-001",
       };
 
-      await expect(stockService.reserverStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.reserverStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si stock insuffisant', async () => {
+    it("devrait échouer si stock insuffisant", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
@@ -349,14 +362,16 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        articles: [{ article_id: 1, taille: 'M', quantite: 1000 }],
-        commande_id: 'CMD-001',
+        articles: [{ article_id: 1, taille: "M", quantite: 1000 }],
+        commande_id: "CMD-001",
       };
 
-      await expect(stockService.reserverStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.reserverStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si stock non trouvé', async () => {
+    it("devrait échouer si stock non trouvé", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
@@ -368,23 +383,25 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        articles: [{ article_id: 999, taille: 'XL', quantite: 5 }],
-        commande_id: 'CMD-001',
+        articles: [{ article_id: 999, taille: "XL", quantite: 5 }],
+        commande_id: "CMD-001",
       };
 
-      await expect(stockService.reserverStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.reserverStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
   });
 
-  describe('confirmerLivraison', () => {
-    it('devrait confirmer une livraison avec succès', async () => {
+  describe("confirmerLivraison", () => {
+    it("devrait confirmer une livraison avec succès", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           commandes: {
             findUnique: jest.fn().mockResolvedValue(mockCommandeData.commande1),
             update: jest.fn().mockResolvedValue({
               ...mockCommandeData.commande1,
-              statut: 'livre',
+              statut: "livre",
             }),
           },
           stocks: {
@@ -400,25 +417,27 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        commande_id: 'CMD-001',
+        commande_id: "CMD-001",
         utilisateur_id: 1,
       };
 
       const result = await stockService.confirmerLivraison(input);
 
       expect(result.success).toBe(true);
-      expect(result.commande_id).toBe('CMD-001');
+      expect(result.commande_id).toBe("CMD-001");
     });
 
-    it('devrait échouer si commande_id manquant', async () => {
+    it("devrait échouer si commande_id manquant", async () => {
       const input = {
-        commande_id: '',
+        commande_id: "",
       };
 
-      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(StockError);
+      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si commande non trouvée', async () => {
+    it("devrait échouer si commande non trouvée", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           commandes: {
@@ -430,13 +449,15 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        commande_id: 'CMD-999',
+        commande_id: "CMD-999",
       };
 
-      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(StockError);
+      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si commande déjà livrée', async () => {
+    it("devrait échouer si commande déjà livrée", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           commandes: {
@@ -448,13 +469,15 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        commande_id: 'CMD-002',
+        commande_id: "CMD-002",
       };
 
-      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(StockError);
+      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si commande annulée', async () => {
+    it("devrait échouer si commande annulée", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           commandes: {
@@ -466,22 +489,24 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        commande_id: 'CMD-003',
+        commande_id: "CMD-003",
       };
 
-      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(StockError);
+      await expect(stockService.confirmerLivraison(input)).rejects.toThrow(
+        StockError,
+      );
     });
   });
 
-  describe('annulerCommande', () => {
-    it('devrait annuler une commande avec succès', async () => {
+  describe("annulerCommande", () => {
+    it("devrait annuler une commande avec succès", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           commandes: {
             findUnique: jest.fn().mockResolvedValue(mockCommandeData.commande1),
             update: jest.fn().mockResolvedValue({
               ...mockCommandeData.commande1,
-              statut: 'annule',
+              statut: "annule",
             }),
           },
           stocks: {
@@ -497,17 +522,17 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        commande_id: 'CMD-001',
-        motif: 'Client a annulé',
+        commande_id: "CMD-001",
+        motif: "Client a annulé",
       };
 
       const result = await stockService.annulerCommande(input);
 
       expect(result.success).toBe(true);
-      expect(result.commande_id).toBe('CMD-001');
+      expect(result.commande_id).toBe("CMD-001");
     });
 
-    it('devrait échouer si commande déjà annulée', async () => {
+    it("devrait échouer si commande déjà annulée", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           commandes: {
@@ -519,13 +544,15 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        commande_id: 'CMD-003',
+        commande_id: "CMD-003",
       };
 
-      await expect(stockService.annulerCommande(input)).rejects.toThrow(StockError);
+      await expect(stockService.annulerCommande(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si commande déjà livrée', async () => {
+    it("devrait échouer si commande déjà livrée", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           commandes: {
@@ -537,15 +564,17 @@ describe('StockService - Tests Unitaires', () => {
       mockPrisma.$transaction = mockTransaction;
 
       const input = {
-        commande_id: 'CMD-002',
+        commande_id: "CMD-002",
       };
 
-      await expect(stockService.annulerCommande(input)).rejects.toThrow(StockError);
+      await expect(stockService.annulerCommande(input)).rejects.toThrow(
+        StockError,
+      );
     });
   });
 
-  describe('ajusterStock', () => {
-    it('devrait ajuster le stock en ajout avec succès', async () => {
+  describe("ajusterStock", () => {
+    it("devrait ajuster le stock en ajout avec succès", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
@@ -553,7 +582,9 @@ describe('StockService - Tests Unitaires', () => {
             update: jest.fn().mockResolvedValue(mockStockData.stock1),
           },
           articles: {
-            findUnique: jest.fn().mockResolvedValue(mockStockData.stock1.articles),
+            findUnique: jest
+              .fn()
+              .mockResolvedValue(mockStockData.stock1.articles),
           },
           mouvements_stock: {
             create: jest.fn().mockResolvedValue(mockMouvementData.mouvement1),
@@ -565,10 +596,10 @@ describe('StockService - Tests Unitaires', () => {
 
       const input = {
         article_id: 1,
-        taille: 'M',
+        taille: "M",
         quantite: 10,
-        type_ajustement: 'ajout' as const,
-        motif: 'Correction inventaire',
+        type_ajustement: "ajout" as const,
+        motif: "Correction inventaire",
       };
 
       const result = await stockService.ajusterStock(input);
@@ -577,7 +608,7 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.quantite_mouvement).toBe(10);
     });
 
-    it('devrait ajuster le stock en retrait avec succès', async () => {
+    it("devrait ajuster le stock en retrait avec succès", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
@@ -585,7 +616,9 @@ describe('StockService - Tests Unitaires', () => {
             update: jest.fn().mockResolvedValue(mockStockData.stock1),
           },
           articles: {
-            findUnique: jest.fn().mockResolvedValue(mockStockData.stock1.articles),
+            findUnique: jest
+              .fn()
+              .mockResolvedValue(mockStockData.stock1.articles),
           },
           mouvements_stock: {
             create: jest.fn().mockResolvedValue(mockMouvementData.mouvement1),
@@ -597,10 +630,10 @@ describe('StockService - Tests Unitaires', () => {
 
       const input = {
         article_id: 1,
-        taille: 'M',
+        taille: "M",
         quantite: 5,
-        type_ajustement: 'retrait' as const,
-        motif: 'Stock abîmé',
+        type_ajustement: "retrait" as const,
+        motif: "Stock abîmé",
       };
 
       const result = await stockService.ajusterStock(input);
@@ -609,33 +642,37 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.quantite_mouvement).toBe(-5);
     });
 
-    it('devrait échouer si motif manquant', async () => {
+    it("devrait échouer si motif manquant", async () => {
       const input = {
         article_id: 1,
-        taille: 'M',
+        taille: "M",
         quantite: 10,
-        type_ajustement: 'ajout' as const,
-        motif: '',
+        type_ajustement: "ajout" as const,
+        motif: "",
       };
 
-      await expect(stockService.ajusterStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.ajusterStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
 
-    it('devrait échouer si quantité négative', async () => {
+    it("devrait échouer si quantité négative", async () => {
       const input = {
         article_id: 1,
-        taille: 'M',
+        taille: "M",
         quantite: -10,
-        type_ajustement: 'ajout' as const,
-        motif: 'Test',
+        type_ajustement: "ajout" as const,
+        motif: "Test",
       };
 
-      await expect(stockService.ajusterStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.ajusterStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
   });
 
-  describe('reapprovisionnerStock', () => {
-    it('devrait réapprovisionner un stock existant', async () => {
+  describe("reapprovisionnerStock", () => {
+    it("devrait réapprovisionner un stock existant", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
@@ -652,9 +689,9 @@ describe('StockService - Tests Unitaires', () => {
 
       const input = {
         article_id: 1,
-        taille: 'M',
+        taille: "M",
         quantite: 50,
-        motif: 'Réception fournisseur',
+        motif: "Réception fournisseur",
       };
 
       const result = await stockService.reapprovisionnerStock(input);
@@ -663,14 +700,14 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.quantite_mouvement).toBe(50);
     });
 
-    it('devrait créer un stock s\'il n\'existe pas', async () => {
+    it("devrait créer un stock s'il n'existe pas", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
             findUnique: jest.fn().mockResolvedValue(null),
             create: jest.fn().mockResolvedValue({
               article_id: 1,
-              taille: 'XL',
+              taille: "XL",
               stock_physique: 50,
               stock_reserve: 0,
               stock_disponible: 50,
@@ -678,7 +715,9 @@ describe('StockService - Tests Unitaires', () => {
             }),
           },
           articles: {
-            findUnique: jest.fn().mockResolvedValue(mockStockData.stock1.articles),
+            findUnique: jest
+              .fn()
+              .mockResolvedValue(mockStockData.stock1.articles),
           },
           mouvements_stock: {
             create: jest.fn().mockResolvedValue(mockMouvementData.mouvement3),
@@ -690,7 +729,7 @@ describe('StockService - Tests Unitaires', () => {
 
       const input = {
         article_id: 1,
-        taille: 'XL',
+        taille: "XL",
         quantite: 50,
       };
 
@@ -701,7 +740,7 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.stock_apres).toBe(50);
     });
 
-    it('devrait échouer si article non trouvé', async () => {
+    it("devrait échouer si article non trouvé", async () => {
       const mockTransaction = jest.fn(async (callback) => {
         const tx = {
           stocks: {
@@ -717,11 +756,13 @@ describe('StockService - Tests Unitaires', () => {
 
       const input = {
         article_id: 999,
-        taille: 'M',
+        taille: "M",
         quantite: 50,
       };
 
-      await expect(stockService.reapprovisionnerStock(input)).rejects.toThrow(StockError);
+      await expect(stockService.reapprovisionnerStock(input)).rejects.toThrow(
+        StockError,
+      );
     });
   });
 
@@ -729,16 +770,16 @@ describe('StockService - Tests Unitaires', () => {
   // TESTS DES VÉRIFICATIONS
   // ============================================
 
-  describe('verifierDisponibilite', () => {
-    it('devrait vérifier la disponibilité de plusieurs articles', async () => {
+  describe("verifierDisponibilite", () => {
+    it("devrait vérifier la disponibilité de plusieurs articles", async () => {
       mockPrisma.stocks.findUnique
         .mockResolvedValueOnce(mockStockData.stock1)
         .mockResolvedValueOnce(mockStockData.stock2);
 
       const input = {
         articles: [
-          { article_id: 1, taille: 'M', quantite: 5 },
-          { article_id: 1, taille: 'L', quantite: 10 },
+          { article_id: 1, taille: "M", quantite: 5 },
+          { article_id: 1, taille: "L", quantite: 10 },
         ],
       };
 
@@ -750,11 +791,11 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.details[1].disponible).toBe(true);
     });
 
-    it('devrait retourner false si stock insuffisant', async () => {
+    it("devrait retourner false si stock insuffisant", async () => {
       mockPrisma.stocks.findUnique.mockResolvedValue(mockStockData.stock3);
 
       const input = {
-        articles: [{ article_id: 2, taille: 'M', quantite: 10 }],
+        articles: [{ article_id: 2, taille: "M", quantite: 10 }],
       };
 
       const result = await stockService.verifierDisponibilite(input);
@@ -763,11 +804,11 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.details[0].disponible).toBe(false);
     });
 
-    it('devrait gérer les articles sans stock', async () => {
+    it("devrait gérer les articles sans stock", async () => {
       mockPrisma.stocks.findUnique.mockResolvedValue(null);
 
       const input = {
-        articles: [{ article_id: 999, taille: 'XL', quantite: 1 }],
+        articles: [{ article_id: 999, taille: "XL", quantite: 1 }],
       };
 
       const result = await stockService.verifierDisponibilite(input);
@@ -776,7 +817,7 @@ describe('StockService - Tests Unitaires', () => {
       expect(result.details[0].stock_disponible).toBe(0);
     });
 
-    it('devrait retourner true pour une liste vide', async () => {
+    it("devrait retourner true pour une liste vide", async () => {
       const input = { articles: [] };
 
       const result = await stockService.verifierDisponibilite(input);
@@ -786,19 +827,19 @@ describe('StockService - Tests Unitaires', () => {
     });
   });
 
-  describe('stockExiste', () => {
-    it('devrait retourner true si le stock existe', async () => {
+  describe("stockExiste", () => {
+    it("devrait retourner true si le stock existe", async () => {
       mockPrisma.stocks.count.mockResolvedValue(1);
 
-      const result = await stockService.stockExiste(1, 'M');
+      const result = await stockService.stockExiste(1, "M");
 
       expect(result).toBe(true);
     });
 
-    it('devrait retourner false si le stock n\'existe pas', async () => {
+    it("devrait retourner false si le stock n'existe pas", async () => {
       mockPrisma.stocks.count.mockResolvedValue(0);
 
-      const result = await stockService.stockExiste(999, 'XL');
+      const result = await stockService.stockExiste(999, "XL");
 
       expect(result).toBe(false);
     });
@@ -808,28 +849,28 @@ describe('StockService - Tests Unitaires', () => {
   // TESTS DES MÉTHODES UTILITAIRES
   // ============================================
 
-  describe('obtenirStockDisponible', () => {
-    it('devrait retourner le stock disponible', async () => {
+  describe("obtenirStockDisponible", () => {
+    it("devrait retourner le stock disponible", async () => {
       mockPrisma.stocks.findUnique.mockResolvedValue({
         stock_disponible: 40,
       });
 
-      const result = await stockService.obtenirStockDisponible(1, 'M');
+      const result = await stockService.obtenirStockDisponible(1, "M");
 
       expect(result).toBe(40);
     });
 
-    it('devrait retourner 0 si stock non trouvé', async () => {
+    it("devrait retourner 0 si stock non trouvé", async () => {
       mockPrisma.stocks.findUnique.mockResolvedValue(null);
 
-      const result = await stockService.obtenirStockDisponible(999, 'XL');
+      const result = await stockService.obtenirStockDisponible(999, "XL");
 
       expect(result).toBe(0);
     });
   });
 
-  describe('compterMouvementsArticle', () => {
-    it('devrait compter le nombre de mouvements', async () => {
+  describe("compterMouvementsArticle", () => {
+    it("devrait compter le nombre de mouvements", async () => {
       mockPrisma.mouvements_stock.count.mockResolvedValue(25);
 
       const result = await stockService.compterMouvementsArticle(1);
@@ -841,17 +882,17 @@ describe('StockService - Tests Unitaires', () => {
     });
   });
 
-  describe('definirSeuilAlerte', () => {
-    it('devrait définir un seuil d\'alerte', async () => {
+  describe("definirSeuilAlerte", () => {
+    it("devrait définir un seuil d'alerte", async () => {
       mockPrisma.stocks.update.mockResolvedValue(mockStockData.stock1);
 
-      await stockService.definirSeuilAlerte(1, 'M', 10);
+      await stockService.definirSeuilAlerte(1, "M", 10);
 
       expect(mockPrisma.stocks.update).toHaveBeenCalledWith({
         where: {
           article_id_taille: {
             article_id: 1,
-            taille: 'M',
+            taille: "M",
           },
         },
         data: {
@@ -861,16 +902,16 @@ describe('StockService - Tests Unitaires', () => {
     });
   });
 
-  describe('rechercherStocks', () => {
-    it('devrait rechercher des stocks', async () => {
+  describe("rechercherStocks", () => {
+    it("devrait rechercher des stocks", async () => {
       const mockStocks = [mockStockData.stock1];
       mockPrisma.stocks.findMany.mockResolvedValue(mockStocks);
       mockPrisma.stocks.count.mockResolvedValue(1);
 
-      const result = await stockService.rechercherStocks('Kimono');
+      const result = await stockService.rechercherStocks("Kimono");
 
       expect(result).toHaveLength(1);
-      expect(result[0].article_nom).toContain('Kimono');
+      expect(result[0].article_nom).toContain("Kimono");
     });
   });
 });

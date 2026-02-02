@@ -3,6 +3,7 @@
  * Ces tests vérifient les scénarios complexes et cas limites
  */
 
+import { jest } from "@jest/globals";
 import { StockService } from "../stock.service.js";
 import { StockError, StockErrorType } from "@clubmanager/types";
 import {

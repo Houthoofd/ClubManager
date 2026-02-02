@@ -2,6 +2,8 @@
  * Mock local pour les tests du service Alertes
  */
 
+import { jest } from "@jest/globals";
+
 // Helper pour créer des fonctions mock sans dépendance à jest
 const createMockFn = <T extends (...args: any[]) => any>(implementation: T) => {
   return implementation;
