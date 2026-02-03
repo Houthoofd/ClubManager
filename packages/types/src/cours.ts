@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import type { Professeur } from './utilisateurs.js';
+import { z } from "zod";
+import type { Professeur } from "./utilisateurs.js";
 
 // === Types principaux ===
 
@@ -83,53 +83,130 @@ export const coursdataSchema = z.object({
   date_cours: z.string().min(1, "La date du cours doit être requis"),
   type_cours: z.string().min(1, "Le type de cours doit être requis"),
   heure_debut: z.string().min(1, "L'heure de début du cours doit être requis"),
-  heure_fin: z.string().min(1, "L'heure de fin du cours doit être requis")
+  heure_fin: z.string().min(1, "L'heure de fin du cours doit être requis"),
 });
 
 export const datareservationSchema = z.object({
   cours_id: z.preprocess(
-    (val) => Number(val),
-    z.number().positive("L'ID du cours doit être un nombre positif")
+    (val) => {
+      if (val === null || val === undefined || val === "") {
+        return undefined;
+      }
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z
+      .number({
+        required_error: "cours_id est requis",
+        invalid_type_error: "cours_id doit être un nombre",
+      })
+      .positive("L'ID du cours doit être un nombre positif"),
   ),
-  utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
-  utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
+  utilisateur_nom: z
+    .string({
+      required_error: "Le nom de l'utilisateur est requis",
+      invalid_type_error:
+        "Le nom de l'utilisateur doit être une chaîne de caractères",
+    })
+    .min(1, "Le nom de l'utilisateur est requis"),
+  utilisateur_prenom: z
+    .string({
+      required_error: "Le prenom de l'utilisateur est requis",
+      invalid_type_error:
+        "Le prenom de l'utilisateur doit être une chaîne de caractères",
+    })
+    .min(1, "Le prenom de l'utilisateur est requis"),
 });
 
 export const datannulationSchema = z.object({
   cours_id: z.preprocess(
-    (val) => Number(val),
-    z.number().positive("L'ID du cours doit être un nombre positif")
+    (val) => {
+      if (val === null || val === undefined || val === "") {
+        return undefined;
+      }
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z
+      .number({
+        required_error: "cours_id est requis",
+        invalid_type_error: "cours_id doit être un nombre",
+      })
+      .positive("L'ID du cours doit être un nombre positif"),
   ),
-  utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
-  utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
+  utilisateur_nom: z
+    .string({
+      required_error: "Le nom de l'utilisateur est requis",
+      invalid_type_error:
+        "Le nom de l'utilisateur doit être une chaîne de caractères",
+    })
+    .min(1, "Le nom de l'utilisateur est requis"),
+  utilisateur_prenom: z
+    .string({
+      required_error: "Le prenom de l'utilisateur est requis",
+      invalid_type_error:
+        "Le prenom de l'utilisateur doit être une chaîne de caractères",
+    })
+    .min(1, "Le prenom de l'utilisateur est requis"),
 });
 
 export const datavalidationSchema = z.object({
   cours_id: z.preprocess(
-    (val) => Number(val),
-    z.number().positive("L'ID du cours doit être un nombre positif")
+    (val) => {
+      if (val === null || val === undefined || val === "") {
+        return undefined;
+      }
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z
+      .number({
+        required_error: "cours_id est requis",
+        invalid_type_error: "cours_id doit être un nombre",
+      })
+      .positive("L'ID du cours doit être un nombre positif"),
   ),
-  utilisateur_nom: z.string().min(1, "Le nom de l'utilisateur est requis"),
-  utilisateur_prenom: z.string().min(1, "Le prenom de l'utilisateur est requis")
+  utilisateur_nom: z
+    .string({
+      required_error: "Le nom de l'utilisateur est requis",
+      invalid_type_error:
+        "Le nom de l'utilisateur doit être une chaîne de caractères",
+    })
+    .min(1, "Le nom de l'utilisateur est requis"),
+  utilisateur_prenom: z
+    .string({
+      required_error: "Le prenom de l'utilisateur est requis",
+      invalid_type_error:
+        "Le prenom de l'utilisateur doit être une chaîne de caractères",
+    })
+    .min(1, "Le prenom de l'utilisateur est requis"),
 });
 
 // Nouveau schéma Zod pour la validation du planning professeur
 export const planningCoursProfesseurSchema = z.object({
-  cours_recurrent_id: z.number().positive("L'ID du cours récurrent doit être un nombre positif"),
+  cours_recurrent_id: z
+    .number()
+    .positive("L'ID du cours récurrent doit être un nombre positif"),
   type_cours: z.string().min(1, "Le type de cours est requis"),
-  jour_semaine: z.union([
-    z.number().min(1).max(7),
-    z.string().min(1)
-  ]),
-  heure_debut: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, "L'heure de début doit être au format HH:MM:SS"),
-  heure_fin: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, "L'heure de fin doit être au format HH:MM:SS"),
-  est_recurrent_actif: z.union([
-    z.boolean(),
-    z.number().min(0).max(1)
-  ]),
-  professeur_id: z.number().positive("L'ID du professeur doit être un nombre positif"),
+  jour_semaine: z.union([z.number().min(1).max(7), z.string().min(1)]),
+  heure_debut: z
+    .string()
+    .regex(
+      /^\d{2}:\d{2}:\d{2}$/,
+      "L'heure de début doit être au format HH:MM:SS",
+    ),
+  heure_fin: z
+    .string()
+    .regex(
+      /^\d{2}:\d{2}:\d{2}$/,
+      "L'heure de fin doit être au format HH:MM:SS",
+    ),
+  est_recurrent_actif: z.union([z.boolean(), z.number().min(0).max(1)]),
+  professeur_id: z
+    .number()
+    .positive("L'ID du professeur doit être un nombre positif"),
   professeur_nom: z.string().min(1, "Le nom du professeur est requis"),
-  professeur_prenom: z.string().min(1, "Le prénom du professeur est requis")
+  professeur_prenom: z.string().min(1, "Le prénom du professeur est requis"),
 });
 
 // === Types inférés depuis les schémas ===
@@ -138,6 +215,6 @@ export type CoursDataValidated = z.infer<typeof coursdataSchema>;
 export type DataReservationValidated = z.infer<typeof datareservationSchema>;
 export type DataAnnulationValidated = z.infer<typeof datannulationSchema>;
 export type DataValidationValidated = z.infer<typeof datavalidationSchema>;
-export type PlanningCoursProfesseurValidated = z.infer<typeof planningCoursProfesseurSchema>;
-
-
+export type PlanningCoursProfesseurValidated = z.infer<
+  typeof planningCoursProfesseurSchema
+>;

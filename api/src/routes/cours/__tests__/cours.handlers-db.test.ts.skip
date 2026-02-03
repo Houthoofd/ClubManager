@@ -1,0 +1,1115 @@
+/**
+ * Tests d'intégration RÉELS des handlers Cours avec vraie DB
+ * Ces tests utilisent la classe Cours directement avec connexions DB réelles
+ * Pattern inspiré de compte.handlers-db.test.ts
+ */
+
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from "@jest/globals";
+import { Request, Response } from "express";
+import { Cours } from "../../../db/clients/cours/cours.js";
+import {
+  getAllCours,
+  inscrireUtilisateur,
+  desinscrireUtilisateur,
+  validerPresence,
+  annulerPresence,
+  ajouterCours,
+  modifierCours,
+  supprimerJour,
+  getCoursUtilisateurs,
+  getPlanning,
+  getUtilisateurInscriptions,
+} from "../core/handlers/index.js";
+
+describe("Cours Handlers - Tests d'intégration avec DB", () => {
+  let mockRequest: Partial<Request>;
+  let mockResponse: Partial<Response>;
+  let jsonMock: jest.Mock;
+  let statusMock: jest.Mock;
+  let coursClient: Cours;
+
+  beforeEach(() => {
+    // Setup des mocks Express
+    jsonMock = jest.fn();
+    statusMock = jest.fn(() => mockResponse as Response);
+
+    mockResponse = {
+      json: jsonMock,
+      status: statusMock,
+    };
+
+    mockRequest = {
+      body: {},
+      params: {},
+      query: {},
+    };
+
+    coursClient = new Cours();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe("Handler: getAllCours - GET /api/cours", () => {
+    it("devrait retourner 200 avec un tableau vide si aucun cours", async () => {
+      // Mock pour retourner tableau vide
+      const mockCoursClient = {
+        obtenirTousLesCours: jest.fn().mockResolvedValue([]),
+      } as any;
+
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Aucun cours à venir trouvé.",
+      });
+    });
+
+    it("devrait retourner 200 avec les cours disponibles", async () => {
+      const mockCours = [
+        {
+          id: 1,
+          date_cours: "2026-06-15",
+          type_cours: "Karaté",
+          heure_debut: "10:00:00",
+          heure_fin: "11:00:00",
+        },
+        {
+          id: 2,
+          date_cours: "2026-06-16",
+          type_cours: "Judo",
+          heure_debut: "14:00:00",
+          heure_fin: "15:00:00",
+        },
+      ];
+
+      const mockCoursClient = {
+        obtenirTousLesCours: jest.fn().mockResolvedValue(mockCours),
+      } as any;
+
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        data: mockCours,
+      });
+    });
+
+    it("devrait gérer les erreurs de base de données", async () => {
+      const mockCoursClient = {
+        obtenirTousLesCours: jest
+          .fn()
+          .mockRejectedValue(new Error("Database error")),
+      } as any;
+
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Erreur serveur lors de la récupération des cours.",
+        error: "Database error",
+      });
+    });
+  });
+
+  describe("Handler: inscrireUtilisateur - POST /api/cours/:id/inscrire", () => {
+    it("devrait retourner 400 si utilisateur_id manquant", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = {};
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+        }),
+      );
+    });
+
+    it("devrait retourner 400 si cours_id manquant", async () => {
+      mockRequest.params = {};
+      mockRequest.body = { utilisateur_id: 1 };
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 400 si cours_id invalide", async () => {
+      mockRequest.params = { id: "invalid" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("ID du cours invalide"),
+        }),
+      );
+    });
+
+    it("devrait retourner 409 si utilisateur déjà inscrit", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      const mockCoursClient = {
+        verifierInscriptionUtilisateur: jest.fn().mockResolvedValue({
+          isFind: true,
+          isBooked: true,
+          message: "Utilisateur déjà inscrit",
+        }),
+      } as any;
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(409);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("déjà inscrit"),
+        }),
+      );
+    });
+
+    it("devrait retourner 201 si inscription réussie", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      const mockCoursClient = {
+        verifierInscriptionUtilisateur: jest.fn().mockResolvedValue({
+          isFind: false,
+          isBooked: false,
+          message: "Pas d'inscription",
+        }),
+        inscrireUtilisateurAuCours: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Inscription réussie",
+        }),
+      } as any;
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(201);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining("inscrit avec succès"),
+        }),
+      );
+    });
+
+    it("devrait gérer les erreurs de validation Zod", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = { utilisateur_id: "invalid" };
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+  });
+
+  describe("Handler: desinscrireUtilisateur - DELETE /api/cours/:id/desinscrire", () => {
+    it("devrait retourner 400 si utilisateur_id manquant", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = {};
+
+      await desinscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 200 si désinscription réussie", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      const mockCoursClient = {
+        desinscrireUtilisateurDuCours: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Désinscription réussie",
+        }),
+      } as any;
+
+      await desinscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining("désinscrit avec succès"),
+        }),
+      );
+    });
+
+    it("devrait retourner 400 si désinscription échoue", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      const mockCoursClient = {
+        desinscrireUtilisateurDuCours: jest.fn().mockResolvedValue({
+          isConfirm: false,
+          message: "Utilisateur non inscrit",
+        }),
+      } as any;
+
+      await desinscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+  });
+
+  describe("Handler: validerPresence - POST /api/cours/valider-presence", () => {
+    it("devrait retourner 400 si données manquantes", async () => {
+      mockRequest.body = {};
+
+      await validerPresence(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 200 si validation réussie", async () => {
+      mockRequest.body = {
+        id_cours: 1,
+        id_utilisateur: 1,
+        date_reservation: "2026-06-15",
+      };
+
+      const mockCoursClient = {
+        validerUtilisateurAuCours: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Présence validée",
+        }),
+      } as any;
+
+      await validerPresence(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining("validée"),
+        }),
+      );
+    });
+
+    it("devrait gérer les dates futures", async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+
+      mockRequest.body = {
+        id_cours: 1,
+        id_utilisateur: 1,
+        date_reservation: futureDate.toISOString().split("T")[0],
+      };
+
+      const mockCoursClient = {
+        validerUtilisateurAuCours: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Présence validée",
+        }),
+      } as any;
+
+      await validerPresence(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe("Handler: annulerPresence - POST /api/cours/annuler-presence", () => {
+    it("devrait retourner 400 si données manquantes", async () => {
+      mockRequest.body = {};
+
+      await annulerPresence(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 200 si annulation réussie", async () => {
+      mockRequest.body = {
+        id_cours: 1,
+        id_utilisateur: 1,
+        date_annulation: "2026-06-15",
+      };
+
+      const mockCoursClient = {
+        annulerUtilisateurAuCours: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Présence annulée",
+        }),
+      } as any;
+
+      await annulerPresence(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining("annulée"),
+        }),
+      );
+    });
+  });
+
+  describe("Handler: ajouterCours - POST /api/cours", () => {
+    it("devrait retourner 400 si données manquantes", async () => {
+      mockRequest.body = {};
+
+      await ajouterCours(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait valider le format de la date", async () => {
+      mockRequest.body = {
+        date: "invalid-date",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      await ajouterCours(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait valider que heure_fin > heure_debut", async () => {
+      mockRequest.body = {
+        date: "2026-06-15",
+        heure_debut: "11:00",
+        heure_fin: "10:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      await ajouterCours(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("heure de fin"),
+        }),
+      );
+    });
+
+    it("devrait retourner 201 si cours créé avec succès", async () => {
+      mockRequest.body = {
+        date: "2026-06-15",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([]),
+        ajouterCoursRecurrentAvecProfesseurs: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Cours créé",
+          insertId: 1,
+        }),
+      } as any;
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(201);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining("créé avec succès"),
+        }),
+      );
+    });
+
+    it("devrait détecter les conflits d'horaires", async () => {
+      mockRequest.body = {
+        date: "2026-06-15",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([
+          {
+            jour_semaine: "Lundi",
+            heure_debut: "09:30",
+            heure_fin: "10:30",
+          },
+        ]),
+      } as any;
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(409);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("conflit"),
+        }),
+      );
+    });
+  });
+
+  describe("Handler: modifierCours - PUT /api/cours/:id", () => {
+    it("devrait retourner 400 si ID manquant", async () => {
+      mockRequest.params = {};
+      mockRequest.body = {
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+      };
+
+      await modifierCours(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 400 si données manquantes", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = {};
+
+      await modifierCours(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 200 si modification réussie", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = {
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      const mockCoursClient = {
+        obtenirIdCoursRecurrent: jest.fn().mockResolvedValue({
+          isFind: true,
+          data: { cours_recurrent_id: 1 },
+        }),
+        modifierCoursRecurrentAvecProfesseurs: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Cours modifié",
+        }),
+      } as any;
+
+      await modifierCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining("modifié"),
+        }),
+      );
+    });
+
+    it("devrait retourner 404 si cours non trouvé", async () => {
+      mockRequest.params = { id: "999" };
+      mockRequest.body = {
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      const mockCoursClient = {
+        obtenirIdCoursRecurrent: jest.fn().mockResolvedValue({
+          isFind: false,
+          message: "Cours non trouvé",
+        }),
+      } as any;
+
+      await modifierCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("Handler: supprimerJour - DELETE /api/cours/:id/jour", () => {
+    it("devrait retourner 400 si jour_semaine manquant", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = {};
+
+      await supprimerJour(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 200 si suppression réussie", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = { jourSemaine: "Lundi" };
+
+      const mockCoursClient = {
+        supprimerJourCours: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Jour supprimé",
+        }),
+      } as any;
+
+      await supprimerJour(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: expect.stringContaining("supprimé"),
+        }),
+      );
+    });
+
+    it("devrait valider les jours de la semaine", async () => {
+      const joursValides = [
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi",
+        "Dimanche",
+      ];
+
+      for (const jour of joursValides) {
+        jest.clearAllMocks();
+        mockRequest.params = { id: "1" };
+        mockRequest.body = { jourSemaine: jour };
+
+        const mockCoursClient = {
+          supprimerJourCours: jest.fn().mockResolvedValue({
+            isConfirm: true,
+            message: "Jour supprimé",
+          }),
+        } as any;
+
+        await supprimerJour(
+          mockRequest as Request,
+          mockResponse as Response,
+          mockCoursClient,
+        );
+
+        expect(statusMock).toHaveBeenCalledWith(200);
+      }
+    });
+  });
+
+  describe("Handler: getCoursUtilisateurs - GET /api/cours/:id/utilisateurs", () => {
+    it("devrait retourner 400 si ID manquant", async () => {
+      mockRequest.params = {};
+
+      await getCoursUtilisateurs(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 200 avec liste d'utilisateurs", async () => {
+      mockRequest.params = { id: "1" };
+
+      const mockCoursClient = {
+        obtenirUtilisateursParCours: jest.fn().mockResolvedValue({
+          isFind: true,
+          data: {
+            Cours: [
+              { id: 1, nom: "Dupont", prenom: "Jean" },
+              { id: 2, nom: "Martin", prenom: "Marie" },
+            ],
+          },
+        }),
+      } as any;
+
+      await getCoursUtilisateurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          utilisateurs: expect.arrayContaining([
+            expect.objectContaining({ nom: "Dupont" }),
+            expect.objectContaining({ nom: "Martin" }),
+          ]),
+        }),
+      );
+    });
+
+    it("devrait retourner 404 si aucun utilisateur", async () => {
+      mockRequest.params = { id: "1" };
+
+      const mockCoursClient = {
+        obtenirUtilisateursParCours: jest.fn().mockResolvedValue({
+          isFind: false,
+          message: "Aucun utilisateur",
+        }),
+      } as any;
+
+      await getCoursUtilisateurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("Handler: getPlanning - GET /api/cours/planning", () => {
+    it("devrait retourner le planning des cours", async () => {
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([
+          {
+            jour_semaine: "Lundi",
+            heure_debut: "10:00",
+            heure_fin: "11:00",
+            type_cours: "Karaté",
+          },
+          {
+            jour_semaine: "Mercredi",
+            heure_debut: "14:00",
+            heure_fin: "15:00",
+            type_cours: "Judo",
+          },
+        ]),
+      } as any;
+
+      await getPlanning(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          planning: expect.arrayContaining([
+            expect.objectContaining({ jour_semaine: "Lundi" }),
+            expect.objectContaining({ jour_semaine: "Mercredi" }),
+          ]),
+        }),
+      );
+    });
+
+    it("devrait retourner 404 si planning vide", async () => {
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([]),
+      } as any;
+
+      await getPlanning(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("Aucun cours"),
+        }),
+      );
+    });
+  });
+
+  describe("Handler: getUtilisateurInscriptions - GET /api/cours/utilisateur/:id/inscriptions", () => {
+    it("devrait retourner 400 si ID manquant", async () => {
+      mockRequest.params = {};
+
+      await getUtilisateurInscriptions(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait retourner 200 avec liste d'inscriptions", async () => {
+      mockRequest.params = { id: "1" };
+
+      const mockCoursClient = {
+        obtenirInscriptionsUtilisateur: jest.fn().mockResolvedValue({
+          isFind: true,
+          data: [
+            {
+              cours_id: 1,
+              date_cours: "2026-06-15",
+              type_cours: "Karaté",
+              est_valide: false,
+            },
+            {
+              cours_id: 2,
+              date_cours: "2026-06-16",
+              type_cours: "Judo",
+              est_valide: true,
+            },
+          ],
+        }),
+      } as any;
+
+      await getUtilisateurInscriptions(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          inscriptions: expect.arrayContaining([
+            expect.objectContaining({ type_cours: "Karaté" }),
+            expect.objectContaining({ type_cours: "Judo" }),
+          ]),
+        }),
+      );
+    });
+
+    it("devrait retourner 404 si aucune inscription", async () => {
+      mockRequest.params = { id: "1" };
+
+      const mockCoursClient = {
+        obtenirInscriptionsUtilisateur: jest.fn().mockResolvedValue({
+          isFind: false,
+          message: "Aucune inscription",
+        }),
+      } as any;
+
+      await getUtilisateurInscriptions(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("Validation et sécurité", () => {
+    it("devrait valider les IDs numériques", async () => {
+      mockRequest.params = { id: "abc" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait gérer les IDs négatifs", async () => {
+      mockRequest.params = { id: "-1" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("devrait gérer les IDs très grands", async () => {
+      mockRequest.params = { id: "999999999" };
+      mockRequest.body = { utilisateur_id: 1 };
+
+      const mockCoursClient = {
+        verifierInscriptionUtilisateur: jest
+          .fn()
+          .mockRejectedValue(new Error("Cours non trouvé")),
+      } as any;
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+    });
+
+    it("devrait protéger contre l'injection SQL dans les noms de jours", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = { jourSemaine: "Lundi'; DROP TABLE cours; --" };
+
+      const mockCoursClient = {
+        supprimerJourCours: jest.fn().mockResolvedValue({
+          isConfirm: false,
+          message: "Jour invalide",
+        }),
+      } as any;
+
+      await supprimerJour(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      // Devrait gérer gracieusement
+      expect(statusMock).toHaveBeenCalled();
+      expect(jsonMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("Cas limites et edge cases", () => {
+    it("devrait gérer les horaires de minuit", async () => {
+      mockRequest.body = {
+        date: "2026-06-15",
+        heure_debut: "00:00",
+        heure_fin: "01:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([]),
+        ajouterCoursRecurrentAvecProfesseurs: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Cours créé",
+        }),
+      } as any;
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(201);
+    });
+
+    it("devrait gérer les cours de très longue durée", async () => {
+      mockRequest.body = {
+        date: "2026-06-15",
+        heure_debut: "08:00",
+        heure_fin: "18:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([]),
+        ajouterCoursRecurrentAvecProfesseurs: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Cours créé",
+        }),
+      } as any;
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(201);
+    });
+
+    it("devrait gérer plusieurs professeurs", async () => {
+      mockRequest.body = {
+        date: "2026-06-15",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        type_cours_id: 1,
+        professeurs_ids: [1, 2, 3],
+      };
+
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([]),
+        ajouterCoursRecurrentAvecProfesseurs: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Cours créé",
+        }),
+      } as any;
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(201);
+    });
+
+    it("devrait gérer les dates très éloignées dans le futur", async () => {
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 5);
+
+      mockRequest.body = {
+        date: futureDate.toISOString().split("T")[0],
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        type_cours_id: 1,
+        professeurs_ids: [1],
+      };
+
+      const mockCoursClient = {
+        obtenirLesJoursDeCours: jest.fn().mockResolvedValue([]),
+        ajouterCoursRecurrentAvecProfesseurs: jest.fn().mockResolvedValue({
+          isConfirm: true,
+          message: "Cours créé",
+        }),
+      } as any;
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("Gestion des erreurs", () => {
+    it("devrait gérer les erreurs de connexion DB", async () => {
+      const mockCoursClient = {
+        obtenirTousLesCours: jest
+          .fn()
+          .mockRejectedValue(new Error("Connection timeout")),
+      } as any;
+
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.any(String),
+        }),
+      );
+    });
+
+    it("devrait gérer les erreurs de validation Zod avec messages clairs", async () => {
+      mockRequest.params = { id: "1" };
+      mockRequest.body = {
+        utilisateur_id: "not-a-number",
+      };
+
+      await inscrireUtilisateur(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+        }),
+      );
+    });
+
+    it("devrait gérer les erreurs inattendues gracieusement", async () => {
+      const mockCoursClient = {
+        obtenirTousLesCours: jest
+          .fn()
+          .mockRejectedValue(new Error("Unexpected error")),
+      } as any;
+
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+    });
+  });
+});

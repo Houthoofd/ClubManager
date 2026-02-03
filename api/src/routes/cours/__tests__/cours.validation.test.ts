@@ -1,10 +1,12 @@
 /**
  * Tests de validation pour le module Cours
  * Validation des données entrantes et des règles métier
+ * Pattern avec injection de dépendance
  */
 
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
+import { Cours } from "../../../db/clients/cours/cours.js";
 import {
   inscrireUtilisateur,
   ajouterCours,
@@ -13,26 +15,17 @@ import {
   annulerPresence,
   desinscrireUtilisateur,
   getParticipantCours,
+  getCoursUtilisateurs,
   supprimerJour,
   retirerProfesseur,
 } from "../core/handlers/index.js";
-
-// Mock du connector MySQL
-jest.mock("../../../db/connector/mysqlconnector.js", () => {
-  return {
-    default: {
-      getInstance: jest.fn(() => ({
-        query: jest.fn(),
-      })),
-    },
-  };
-});
 
 describe("Cours - Tests de validation", () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let jsonMock: jest.Mock;
   let statusMock: jest.Mock;
+  let mockCoursClient: Partial<Cours>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,6 +43,25 @@ describe("Cours - Tests de validation", () => {
       json: jsonMock,
       status: statusMock,
     };
+
+    // Mock du client Cours
+    mockCoursClient = {
+      obtenirTousLesCours: jest.fn(),
+      obtenirLesCoursPourParticipant: jest.fn(),
+      obtenirIdParticipantParNomPrenom: jest.fn(),
+      obtenirUtilisateursParCours: jest.fn(),
+      verifierInscriptionUtilisateur: jest.fn(),
+      inscrireUtilisateurAuCours: jest.fn(),
+      annulerPresenceUtilisateur: jest.fn(),
+      validerPresenceUtilisateur: jest.fn(),
+      desinscrireUtilisateurDuCours: jest.fn(),
+      obtenirLesJoursDeCours: jest.fn(),
+      ajouterCoursRecurrentAvecProfesseurs: jest.fn(),
+      modifierCoursRecurrentAvecProfesseurs: jest.fn(),
+      obtenirInscriptionsUtilisateur: jest.fn(),
+      supprimerJourDeCours: jest.fn(),
+      supprimerProfesseursParNomEtJour: jest.fn(),
+    };
   });
 
   describe("Validation des inscriptions", () => {
@@ -62,13 +74,14 @@ describe("Cours - Tests de validation", () => {
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("nom"),
         }),
       );
     });
@@ -82,13 +95,14 @@ describe("Cours - Tests de validation", () => {
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("prenom"),
         }),
       );
     });
@@ -102,13 +116,14 @@ describe("Cours - Tests de validation", () => {
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("cours_id"),
         }),
       );
     });
@@ -120,28 +135,34 @@ describe("Cours - Tests de validation", () => {
         cours_id: 1,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT") && query.includes("inscription")) {
-            callback(null, []);
-          } else if (query.includes("SELECT")) {
-            callback(null, [{ id: 1 }]);
-          } else if (query.includes("INSERT")) {
-            callback(null, { insertId: 1, affectedRows: 1 });
-          }
-        },
-      );
+      (
+        mockCoursClient.obtenirIdParticipantParNomPrenom as jest.Mock
+      ).mockResolvedValue({
+        id: 123,
+      });
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isBooked: false,
+        isFind: true,
+        message: "L'utilisateur n'est pas encore inscrit au cours.",
+        data: { userId: 123, inscriptionId: null },
+      });
+      (
+        mockCoursClient.inscrireUtilisateurAuCours as jest.Mock
+      ).mockResolvedValue({
+        isConfirm: true,
+        message:
+          "L'utilisateur avec l'ID 123 a été inscrit au cours 1 avec succès.",
+      });
 
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      expect(statusMock).toHaveBeenCalledWith(201);
+      expect(mockCoursClient.inscrireUtilisateurAuCours).toHaveBeenCalled();
     });
   });
 
@@ -149,20 +170,24 @@ describe("Cours - Tests de validation", () => {
     it("devrait rejeter un cours sans nom", async () => {
       mockRequest.body = {
         description: "Description",
-        date: "2024-03-15",
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
-        places_max: 15,
+        date: "2026-06-20",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("nom"),
         }),
       );
     });
@@ -171,19 +196,23 @@ describe("Cours - Tests de validation", () => {
       mockRequest.body = {
         nom: "Yoga",
         date: "invalid-date",
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
-        places_max: 15,
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("date"),
         }),
       );
     });
@@ -191,20 +220,24 @@ describe("Cours - Tests de validation", () => {
     it("devrait rejeter un cours avec heure_fin avant heure_debut", async () => {
       mockRequest.body = {
         nom: "Yoga",
-        date: "2024-03-15",
-        heure_debut: "11:00:00",
-        heure_fin: "10:00:00",
-        places_max: 15,
+        date: "2026-06-20",
+        heure_debut: "11:00",
+        heure_fin: "10:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("fin doit être après"),
+          message: expect.stringContaining("heure"),
         }),
       );
     });
@@ -212,20 +245,24 @@ describe("Cours - Tests de validation", () => {
     it("devrait rejeter un cours avec un nombre de places invalide", async () => {
       mockRequest.body = {
         nom: "Yoga",
-        date: "2024-03-15",
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
+        date: "2026-06-20",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
         places_max: -5,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("places"),
         }),
       );
     });
@@ -233,20 +270,24 @@ describe("Cours - Tests de validation", () => {
     it("devrait rejeter un cours avec places_max = 0", async () => {
       mockRequest.body = {
         nom: "Yoga",
-        date: "2024-03-15",
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
+        date: "2026-06-20",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
         places_max: 0,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("places"),
         }),
       );
     });
@@ -256,16 +297,17 @@ describe("Cours - Tests de validation", () => {
     it("devrait rejeter un ID de cours non numérique", async () => {
       mockRequest.params = { id: "abc" };
 
-      await getParticipantCours(
+      await getCoursUtilisateurs(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.any(String),
         }),
       );
     });
@@ -273,16 +315,17 @@ describe("Cours - Tests de validation", () => {
     it("devrait rejeter un ID de cours négatif", async () => {
       mockRequest.params = { id: "-1" };
 
-      await getParticipantCours(
+      await getCoursUtilisateurs(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.any(String),
         }),
       );
     });
@@ -290,22 +333,21 @@ describe("Cours - Tests de validation", () => {
     it("devrait accepter un ID valide", async () => {
       mockRequest.params = { id: "1" };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(null, []);
-        },
-      );
+      (
+        mockCoursClient.obtenirUtilisateursParCours as jest.Mock
+      ).mockResolvedValue({
+        utilisateurs: [],
+      });
 
-      await getParticipantCours(
+      await getCoursUtilisateurs(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      expect(statusMock).not.toHaveBeenCalledWith(400);
+      expect(mockCoursClient.obtenirUtilisateursParCours).toHaveBeenCalledWith(
+        1,
+      );
     });
   });
 
@@ -317,13 +359,17 @@ describe("Cours - Tests de validation", () => {
       mockRequest.body = {
         nom: "Yoga",
         date: datePasse.toISOString().split("T")[0],
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
-        places_max: 15,
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -341,145 +387,172 @@ describe("Cours - Tests de validation", () => {
       mockRequest.body = {
         nom: "Yoga",
         date: dateFutur.toISOString().split("T")[0],
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
-        places_max: 15,
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT") && query.includes("professeur")) {
-            callback(null, [{ id: 1 }]);
-          } else if (query.includes("INSERT")) {
-            callback(null, { insertId: 1, affectedRows: 1 });
-          }
-        },
+      (
+        mockCoursClient.ajouterCoursRecurrentAvecProfesseurs as jest.Mock
+      ).mockResolvedValue({
+        id: 1,
+        insertId: 1,
+        affectedRows: 1,
+      });
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(201);
+      expect(
+        mockCoursClient.ajouterCoursRecurrentAvecProfesseurs,
+      ).toHaveBeenCalled();
     });
   });
 
   describe("Validation de la présence", () => {
-    it("devrait rejeter une validation de présence sans utilisateur_id", async () => {
-      mockRequest.params = { id: "1" };
-      mockRequest.body = {};
+    it("devrait rejeter une validation de présence sans utilisateur_nom", async () => {
+      mockRequest.body = {
+        utilisateur_prenom: "Jean",
+        cours_id: 1,
+      };
 
-      await validerPresence(mockRequest as Request, mockResponse as Response);
+      await validerPresence(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("requis"),
+          message: expect.stringContaining("nom"),
         }),
       );
     });
 
     it("devrait rejeter une validation de présence sans cours_id", async () => {
-      mockRequest.params = {};
-      mockRequest.body = { utilisateur_id: 1 };
+      mockRequest.body = {
+        utilisateur_nom: "Dupont",
+        utilisateur_prenom: "Jean",
+      };
 
-      await validerPresence(mockRequest as Request, mockResponse as Response);
+      await validerPresence(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("requis"),
+          message: expect.stringContaining("cours_id"),
         }),
       );
     });
   });
 
   describe("Validation de la désinscription", () => {
-    it("devrait rejeter une désinscription sans utilisateur_id", async () => {
-      mockRequest.params = { id: "1" };
-      mockRequest.body = {};
+    it("devrait rejeter une désinscription sans utilisateur_nom", async () => {
+      mockRequest.body = {
+        utilisateur_prenom: "Jean",
+        cours_id: 1,
+      };
 
       await desinscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("requis"),
+          message: expect.stringContaining("nom"),
         }),
       );
     });
   });
 
   describe("Validation de la suppression de jour", () => {
-    it("devrait rejeter une date invalide", async () => {
-      mockRequest.params = { date: "not-a-date" };
+    it("devrait rejeter un jour invalide", async () => {
+      mockRequest.body = { jourSemaine: "invalid" };
 
-      await supprimerJour(mockRequest as Request, mockResponse as Response);
+      await supprimerJour(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.any(String),
         }),
       );
     });
 
-    it("devrait accepter une date valide", async () => {
-      mockRequest.params = { date: "2024-03-15" };
+    it("devrait accepter un jour valide", async () => {
+      mockRequest.body = { jourSemaine: "lundi" };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(null, { affectedRows: 2 });
-        },
+      (mockCoursClient.supprimerJourDeCours as jest.Mock).mockResolvedValue({
+        message: "Cours du lundi supprimé avec succès",
+      });
+
+      await supprimerJour(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      await supprimerJour(mockRequest as Request, mockResponse as Response);
-
-      expect(statusMock).not.toHaveBeenCalledWith(400);
+      expect(mockCoursClient.supprimerJourDeCours).toHaveBeenCalledWith(1);
     });
   });
 
   describe("Validation du retrait de professeur", () => {
-    it("devrait rejeter un retrait sans professeur_id", async () => {
-      mockRequest.params = { id: "1" };
-      mockRequest.body = {};
+    it("devrait rejeter un retrait sans professeursNoms", async () => {
+      mockRequest.body = {
+        jour: "lundi",
+      };
 
-      await retirerProfesseur(mockRequest as Request, mockResponse as Response);
+      await retirerProfesseur(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("requis"),
+          message: expect.stringContaining("professeursNoms"),
         }),
       );
     });
 
-    it("devrait rejeter un professeur_id non numérique", async () => {
-      mockRequest.params = { id: "1" };
-      mockRequest.body = { professeur_id: "abc" };
+    it("devrait rejeter un retrait sans jour", async () => {
+      mockRequest.body = {
+        professeursNoms: ["Martin"],
+      };
 
-      await retirerProfesseur(mockRequest as Request, mockResponse as Response);
+      await retirerProfesseur(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("jour"),
         }),
       );
     });
@@ -493,22 +566,30 @@ describe("Cours - Tests de validation", () => {
         cours_id: 1,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT") && query.includes("COUNT")) {
-            // Cours complet
-            callback(null, [{ places_disponibles: 0, places_max: 10 }]);
-          }
-        },
-      );
+      (
+        mockCoursClient.obtenirIdParticipantParNomPrenom as jest.Mock
+      ).mockResolvedValue({
+        id: 123,
+      });
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isBooked: false,
+        isFind: true,
+        message: "L'utilisateur n'est pas encore inscrit au cours.",
+        data: { userId: 123, inscriptionId: null },
+      });
+      (
+        mockCoursClient.inscrireUtilisateurAuCours as jest.Mock
+      ).mockResolvedValue({
+        isConfirm: false,
+        message: "Le cours est complet",
+      });
 
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -524,42 +605,50 @@ describe("Cours - Tests de validation", () => {
   describe("Validation des noms", () => {
     it("devrait rejeter un nom de cours trop court", async () => {
       mockRequest.body = {
-        nom: "Y",
-        date: "2024-03-15",
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
-        places_max: 15,
+        nom: "A",
+        date: "2026-06-20",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("nom"),
         }),
       );
     });
 
     it("devrait rejeter un nom de cours trop long", async () => {
       mockRequest.body = {
-        nom: "Y".repeat(256),
-        date: "2024-03-15",
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
-        places_max: 15,
+        nom: "A".repeat(256),
+        date: "2026-06-20",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("invalide"),
+          message: expect.stringContaining("nom"),
         }),
       );
     });

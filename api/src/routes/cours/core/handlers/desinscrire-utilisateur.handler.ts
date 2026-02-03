@@ -1,65 +1,75 @@
-import { Request, Response } from 'express';
-import { Cours } from '../../../../db/clients/cours/cours.js';
-import { z } from 'zod';
-import {
-  DataAnnulation,
-  datannulationSchema
-} from '@clubmanager/types';
+import { Request, Response } from "express";
+import { Cours } from "../../../../db/clients/cours/cours.js";
+import { z } from "zod";
+import { DataAnnulation, datannulationSchema } from "@clubmanager/types";
 
 /**
- * Handler pour désinscrire complètement un utilisateur d'un cours
+ * Handler pour désinscrire un utilisateur d'un cours
  */
-export async function desinscrireUtilisateur(req: Request, res: Response): Promise<void> {
+export async function desinscrireUtilisateur(
+  req: Request,
+  res: Response,
+  coursClient?: Cours,
+): Promise<void> {
   try {
-    console.log('Désinscription utilisateur:', req.body);
+    console.log("Désinscription utilisateur:", req.body);
 
-    // Validation avec vérification explicite de cours_id
+    // Validation avec Zod - lance automatiquement ZodError si invalide
     const parsedData = datannulationSchema.parse(req.body);
-
-    if (!parsedData.cours_id) {
-      res.status(400).json({
-        success: false,
-        message: 'cours_id est requis'
-      });
-      return;
-    }
 
     const validatedData: DataAnnulation = {
       utilisateur_nom: parsedData.utilisateur_nom,
       utilisateur_prenom: parsedData.utilisateur_prenom,
-      cours_id: parsedData.cours_id
+      cours_id: parsedData.cours_id,
     };
 
-    console.log('Données validées :', validatedData);
+    console.log("Données validées :", validatedData);
 
-    const client = new Cours();
-    const annulationReussie = await client.desinscrireUtilisateurDuCours(validatedData);
+    const client = coursClient || new Cours();
+    const result = await client.desinscrireUtilisateurDuCours(validatedData);
 
-    if (annulationReussie) {
+    if (result && result.isConfirm) {
       res.status(200).json({
         success: true,
-        message: 'Réservation annulée avec succès.'
+        message: "Utilisateur désinscrit avec succès.",
       });
     } else {
       res.status(404).json({
         success: false,
-        message: 'Réservation non trouvée ou déjà annulée.'
+        message: "Inscription non trouvée.",
       });
     }
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('❌ [Désinscrire Utilisateur] Erreur de validation:', error);
+    // Vérifier si c'est une erreur Zod (via instanceof ou nom de classe)
+    const isZodError =
+      error instanceof z.ZodError ||
+      (error && typeof error === "object" && "issues" in error) ||
+      (error &&
+        typeof error === "object" &&
+        error.constructor?.name === "ZodError");
+
+    if (isZodError && error && typeof error === "object" && "errors" in error) {
+      console.error(
+        "❌ [Désinscrire Utilisateur] Erreur de validation:",
+        error,
+      );
+
+      // Extraire le premier message d'erreur pour plus de clarté
+      const errors = (error as any).errors || (error as any).issues || [];
+      const firstError = errors[0];
+      const message = firstError?.message || "Données invalides";
+
       res.status(400).json({
         success: false,
-        message: 'Données invalides.',
-        errors: error.errors
+        message: message,
+        errors: errors,
       });
     } else {
-      console.error('❌ [Désinscrire Utilisateur] Erreur:', error);
+      console.error("❌ [Désinscrire Utilisateur] Erreur:", error);
       res.status(500).json({
         success: false,
-        message: 'Erreur serveur lors de l\'annulation de la réservation.',
-        error: error instanceof Error ? error.message : 'Erreur inconnue'
+        message: "Erreur serveur lors de la désinscription de l'utilisateur.",
+        error: error instanceof Error ? error.message : "Erreur inconnue",
       });
     }
   }

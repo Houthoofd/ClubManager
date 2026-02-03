@@ -1,27 +1,39 @@
-import { Request, Response } from 'express';
-import { Cours } from '../../../../db/clients/cours/cours.js';
+import { Request, Response } from "express";
+import { Cours } from "../../../../db/clients/cours/cours.js";
 
 /**
  * Handler pour modifier un cours récurrent
  */
-export async function modifierCours(req: Request, res: Response): Promise<void> {
+export async function modifierCours(
+  req: Request,
+  res: Response,
+  coursClient?: Cours,
+): Promise<void> {
   try {
-    console.log('Données reçues pour modification :', req.body);
+    console.log("Données reçues pour modification :", req.body);
 
     const {
-      nom, type_cours, jour, heure_debut, heure_fin, professeurs,
-      jour_original, type_cours_original, heure_debut_original, heure_fin_original
+      nom,
+      type_cours,
+      jour,
+      heure_debut,
+      heure_fin,
+      professeurs,
+      jour_original,
+      type_cours_original,
+      heure_debut_original,
+      heure_fin_original,
     } = req.body;
 
     if (!type_cours || !jour || !heure_debut || !heure_fin || !professeurs) {
       res.status(400).json({
         success: false,
-        error: 'Paramètres manquants pour la modification'
+        error: "Paramètres manquants pour la modification",
       });
       return;
     }
 
-    const client = new Cours();
+    const client = coursClient || new Cours();
 
     try {
       // Obtenir l'ID du cours récurrent basé sur les données originales
@@ -29,20 +41,20 @@ export async function modifierCours(req: Request, res: Response): Promise<void> 
         jour_original || jour,
         type_cours_original || type_cours,
         heure_debut_original || heure_debut,
-        heure_fin_original || heure_fin
+        heure_fin_original || heure_fin,
       );
 
-      console.log('ID du cours récurrent trouvé:', coursRecurrentId);
+      console.log("ID du cours récurrent trouvé:", coursRecurrentId);
 
       // Mapping des jours
       const joursDeSemaine: { [key: string]: string } = {
-        'Lundi': 'lundi',
-        'Mardi': 'mardi',
-        'Mercredi': 'mercredi',
-        'Jeudi': 'jeudi',
-        'Vendredi': 'vendredi',
-        'Samedi': 'samedi',
-        'Dimanche': 'dimanche'
+        Lundi: "lundi",
+        Mardi: "mardi",
+        Mercredi: "mercredi",
+        Jeudi: "jeudi",
+        Vendredi: "vendredi",
+        Samedi: "samedi",
+        Dimanche: "dimanche",
       };
 
       const jourNormalise = joursDeSemaine[jour] || jour.toLowerCase();
@@ -54,30 +66,36 @@ export async function modifierCours(req: Request, res: Response): Promise<void> 
         jour_semaine: jourNormalise,
         heure_debut,
         heure_fin,
-        professeurs
+        professeurs,
       });
 
-      console.log('Résultat modification cours:', result);
+      console.log("Résultat modification cours:", result);
 
       res.status(200).json({
         success: true,
-        message: result.message || 'Cours modifié avec succès',
-        data: result
+        message: result.message || "Cours récurrent modifié avec succès",
+        data: result,
       });
     } catch (error: any) {
-      console.error('❌ [Modifier Cours] Erreur lors de la modification du cours :', error);
+      console.error(
+        "❌ [Modifier Cours] Erreur lors de la modification du cours :",
+        error,
+      );
       res.status(500).json({
         success: false,
-        error: 'Erreur lors de la modification du cours',
-        details: error.message
+        error: "Erreur lors de la modification du cours",
+        details: error.message,
       });
     }
   } catch (error: any) {
-    console.error('❌ [Modifier Cours] Erreur générale lors de la modification :', error);
+    console.error(
+      "❌ [Modifier Cours] Erreur générale lors de la modification :",
+      error,
+    );
     res.status(500).json({
       success: false,
-      error: 'Erreur générale lors de la modification',
-      details: error.message
+      error: "Erreur générale lors de la modification",
+      details: error.message,
     });
   }
 }

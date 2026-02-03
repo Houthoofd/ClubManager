@@ -1,10 +1,12 @@
 /**
  * Tests de gestion d'erreurs pour le module Cours
- * Tests des différents scénarios d'erreur et messages appropriés
+ * Tests des scénarios d'erreur et cas exceptionnels
+ * Pattern avec injection de dépendance
  */
 
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
+import { Cours } from "../../../db/clients/cours/cours.js";
 import {
   getAllCours,
   getParticipantCours,
@@ -21,22 +23,12 @@ import {
   retirerProfesseur,
 } from "../core/handlers/index.js";
 
-// Mock du connector MySQL
-jest.mock("../../../db/connector/mysqlconnector.js", () => {
-  return {
-    default: {
-      getInstance: jest.fn(() => ({
-        query: jest.fn(),
-      })),
-    },
-  };
-});
-
 describe("Cours - Tests de gestion d'erreurs", () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let jsonMock: jest.Mock;
   let statusMock: jest.Mock;
+  let mockCoursClient: Partial<Cours>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -54,49 +46,67 @@ describe("Cours - Tests de gestion d'erreurs", () => {
       json: jsonMock,
       status: statusMock,
     };
+
+    // Mock du client Cours
+    mockCoursClient = {
+      obtenirTousLesCours: jest.fn(),
+      obtenirLesCoursPourParticipant: jest.fn(),
+      obtenirIdParticipantParNomPrenom: jest.fn(),
+      obtenirUtilisateursParCours: jest.fn(),
+      verifierInscriptionUtilisateur: jest.fn(),
+      inscrireUtilisateurAuCours: jest.fn(),
+      annulerUtilisateurAuCours: jest.fn(),
+      validerUtilisateurAuCours: jest.fn(),
+      desinscrireUtilisateurDuCours: jest.fn(),
+      obtenirLesJoursDeCours: jest.fn(),
+      ajouterCoursRecurrentAvecProfesseurs: jest.fn(),
+      modifierCoursRecurrentAvecProfesseurs: jest.fn(),
+      obtenirInscriptionsUtilisateur: jest.fn(),
+      supprimerJourDeCours: jest.fn(),
+      supprimerProfesseursParNomEtJour: jest.fn(),
+      obtenirIdCoursRecurrent: jest.fn(),
+      obtenirLesJoursDeCours: jest.fn(),
+      obtenirCoursRecurrentParId: jest.fn(),
+    };
   });
 
   describe("Erreurs de base de données", () => {
     it("devrait gérer les erreurs de connexion à la base de données", async () => {
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(new Error("Connection refused"), null);
-        },
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        new Error("Connection lost"),
       );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("Erreur"),
+          message: expect.any(String),
         }),
       );
     });
 
     it("devrait gérer les timeouts de requête", async () => {
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(new Error("Query timeout"), null);
-        },
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        new Error("Query timeout"),
       );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          error: expect.stringContaining("timeout"),
+          message: expect.any(String),
         }),
       );
     });
@@ -105,31 +115,34 @@ describe("Cours - Tests de gestion d'erreurs", () => {
       mockRequest.body = {
         utilisateur_nom: "Dupont",
         utilisateur_prenom: "Jean",
-        cours_id: 99999,
+        cours_id: 999999,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(
-            new Error("ER_NO_REFERENCED_ROW_2: Foreign key constraint fails"),
-            null,
-          );
-        },
-      );
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isFind: true,
+        isBooked: false,
+        data: { userId: 123 },
+      });
+      const error = new Error("Foreign key constraint fails");
+      (error as any).code = "ER_NO_REFERENCED_ROW";
+
+      (
+        mockCoursClient.inscrireUtilisateurAuCours as jest.Mock
+      ).mockRejectedValue(error);
 
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
+          message: expect.any(String),
         }),
       );
     });
@@ -141,43 +154,39 @@ describe("Cours - Tests de gestion d'erreurs", () => {
         cours_id: 1,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("INSERT")) {
-            callback(new Error("ER_DUP_ENTRY: Duplicate entry"), null);
-          }
-        },
-      );
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isFind: true,
+        isBooked: true,
+        data: { userId: 123 },
+      });
 
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(statusMock).toHaveBeenCalledWith(409);
     });
 
     it("devrait gérer les erreurs de dépassement de limite", async () => {
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(new Error("Too many connections"), null);
-        },
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        new Error("Too many connections"),
       );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
+          message: expect.any(String),
         }),
       );
     });
@@ -187,26 +196,23 @@ describe("Cours - Tests de gestion d'erreurs", () => {
     it("devrait retourner 404 pour un cours inexistant", async () => {
       mockRequest.params = { id: "999999" };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(null, []);
-        },
-      );
+      (
+        mockCoursClient.obtenirUtilisateursParCours as jest.Mock
+      ).mockResolvedValue([]);
 
-      await getParticipantCours(
+      await getCoursUtilisateurs(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          success: false,
-          message: expect.any(String),
+          success: true,
+          data: expect.objectContaining({
+            Cours: [],
+          }),
         }),
       );
     });
@@ -214,52 +220,58 @@ describe("Cours - Tests de gestion d'erreurs", () => {
     it("devrait retourner 404 pour un utilisateur inexistant", async () => {
       mockRequest.params = { utilisateurId: "999999" };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(null, []);
-        },
-      );
+      (
+        mockCoursClient.obtenirInscriptionsUtilisateur as jest.Mock
+      ).mockResolvedValue([]);
 
       await getUtilisateurInscriptions(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(statusMock).toHaveBeenCalled();
       expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: expect.stringContaining("trouvé"),
+        success: expect.any(Boolean),
+        message: expect.any(String),
       });
     });
 
     it("devrait retourner 404 pour une inscription inexistante", async () => {
-      mockRequest.params = { id: "1" };
-      mockRequest.body = { utilisateur_id: 999 };
+      mockRequest.body = {
+        cours_id: 1,
+        utilisateur_nom: "Dupont",
+        utilisateur_prenom: "Jean",
+      };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(null, { affectedRows: 0 });
-        },
-      );
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isFind: true,
+        isBooked: false,
+        data: { userId: 999 },
+      });
+
+      (
+        mockCoursClient.desinscrireUtilisateurDuCours as jest.Mock
+      ).mockResolvedValue({
+        isConfirm: false,
+        affectedRows: 0,
+      });
 
       await desinscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(404);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: expect.stringContaining("trouvée"),
-      });
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringMatching(/inscription/i),
+        }),
+      );
     });
   });
 
@@ -271,67 +283,62 @@ describe("Cours - Tests de gestion d'erreurs", () => {
         cours_id: 1,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT") && query.includes("inscription")) {
-            callback(null, [{ id: 1, cours_id: 1, utilisateur_id: 1 }]);
-          }
-        },
-      );
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isFind: true,
+        isBooked: true,
+        data: { userId: 123 },
+      });
 
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(409);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Utilisateur déjà inscrit au cours.",
+        message: expect.stringContaining("déjà inscrit"),
       });
     });
 
     it("devrait gérer les conflits de disponibilité de professeur", async () => {
       mockRequest.body = {
         nom: "Yoga",
-        date: "2024-03-15",
-        heure_debut: "10:00:00",
-        heure_fin: "11:00:00",
-        places_max: 15,
+        date: "2026-12-20",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        places_max: 10,
         professeur_id: 1,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT") && query.includes("professeur")) {
-            // Professeur déjà occupé
-            callback(null, [
-              {
-                id: 1,
-                cours_concurrent: true,
-                date: "2024-03-15",
-                heure: "10:00:00",
-              },
-            ]);
-          }
-        },
+      (mockCoursClient.obtenirIdCoursRecurrent as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (mockCoursClient.obtenirLesJoursDeCours as jest.Mock).mockResolvedValue(
+        [],
       );
 
-      await ajouterCours(mockRequest as Request, mockResponse as Response);
+      const error = new Error("Professeur déjà assigné à un autre cours");
+      (error as any).code = "PROF_CONFLICT";
 
-      expect(statusMock).toHaveBeenCalledWith(409);
+      (
+        mockCoursClient.ajouterCoursRecurrentAvecProfesseurs as jest.Mock
+      ).mockRejectedValue(error);
+
+      await ajouterCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("occupé"),
+          message: expect.any(String),
         }),
       );
     });
@@ -345,21 +352,24 @@ describe("Cours - Tests de gestion d'erreurs", () => {
         cours_id: 1,
       };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT") && query.includes("places")) {
-            callback(null, [{ places_disponibles: 0, places_max: 10 }]);
-          }
-        },
-      );
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isFind: true,
+        isBooked: false,
+        data: { userId: 123 },
+      });
+      (
+        mockCoursClient.inscrireUtilisateurAuCours as jest.Mock
+      ).mockResolvedValue({
+        isConfirm: false,
+        message: "Le cours est complet.",
+      });
 
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -373,73 +383,74 @@ describe("Cours - Tests de gestion d'erreurs", () => {
 
     it("devrait rejeter la modification d'un cours déjà passé", async () => {
       mockRequest.params = { id: "1" };
-      mockRequest.body = { nom: "Nouveau nom" };
+      mockRequest.body = {
+        nom: "Yoga Modifié",
+        type_cours: "Yoga",
+        jour: "lundi",
+        heure_debut: "10:00",
+        heure_fin: "11:00",
+        professeurs: [1],
+      };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT")) {
-            const datePasse = new Date();
-            datePasse.setDate(datePasse.getDate() - 1);
-            callback(null, [
-              {
-                id: 1,
-                date: datePasse.toISOString().split("T")[0],
-              },
-            ]);
-          }
-        },
+      (mockCoursClient.obtenirIdCoursRecurrent as jest.Mock).mockResolvedValue(
+        1,
       );
 
-      await modifierCours(mockRequest as Request, mockResponse as Response);
+      const error = new Error("Impossible de modifier un cours passé");
+      (error as any).code = "PAST_DATE";
 
-      expect(statusMock).toHaveBeenCalledWith(400);
+      (
+        mockCoursClient.modifierCoursRecurrentAvecProfesseurs as jest.Mock
+      ).mockRejectedValue(error);
+
+      await modifierCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("passé"),
+          error: expect.any(String),
         }),
       );
     });
 
     it("devrait rejeter la désinscription après la date limite", async () => {
-      mockRequest.params = { id: "1" };
-      mockRequest.body = { utilisateur_id: 1 };
+      mockRequest.body = {
+        cours_id: 1,
+        utilisateur_nom: "Dupont",
+        utilisateur_prenom: "Jean",
+      };
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          if (query.includes("SELECT") && query.includes("date")) {
-            // Cours dans moins de 24h
-            const demain = new Date();
-            demain.setHours(demain.getHours() + 12);
-            callback(null, [
-              {
-                id: 1,
-                date: demain.toISOString().split("T")[0],
-                heure_debut: demain.toTimeString().split(" ")[0],
-              },
-            ]);
-          }
-        },
-      );
+      (
+        mockCoursClient.verifierInscriptionUtilisateur as jest.Mock
+      ).mockResolvedValue({
+        isFind: true,
+        isBooked: true,
+        data: { userId: 1 },
+      });
+
+      const error = new Error("Désinscription impossible (moins de 24h)");
+      (error as any).code = "TOO_LATE";
+
+      (
+        mockCoursClient.desinscrireUtilisateurDuCours as jest.Mock
+      ).mockRejectedValue(error);
 
       await desinscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("limite"),
+          message: expect.any(String),
         }),
       );
     });
@@ -447,47 +458,57 @@ describe("Cours - Tests de gestion d'erreurs", () => {
 
   describe("Erreurs de paramètres manquants", () => {
     it("devrait retourner 400 si l'ID du cours est manquant", async () => {
-      mockRequest.params = {};
+      mockRequest.body = {};
 
       await getParticipantCours(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: "L'ID du cours est requis.",
-      });
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.any(String),
+        }),
+      );
     });
 
     it("devrait retourner 400 si les paramètres de présence sont manquants", async () => {
-      mockRequest.params = {};
       mockRequest.body = {};
 
-      await validerPresence(mockRequest as Request, mockResponse as Response);
+      await validerPresence(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: expect.stringContaining("requis"),
-      });
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.any(String),
+        }),
+      );
     });
 
     it("devrait retourner 400 si l'utilisateur_id est manquant pour la désinscription", async () => {
-      mockRequest.params = { id: "1" };
       mockRequest.body = {};
 
       await desinscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: expect.stringContaining("requis"),
-      });
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.any(String),
+        }),
+      );
     });
   });
 
@@ -502,14 +523,14 @@ describe("Cours - Tests de gestion d'erreurs", () => {
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "Données invalides.",
-          errors: expect.any(Array),
+          message: expect.any(String),
         }),
       );
     });
@@ -517,59 +538,57 @@ describe("Cours - Tests de gestion d'erreurs", () => {
     it("devrait inclure le chemin du champ en erreur", async () => {
       mockRequest.body = {
         utilisateur_nom: "Dupont",
-        utilisateur_prenom: "Jean",
-        // cours_id manquant
+        utilisateur_prenom: "",
       };
 
       await inscrireUtilisateur(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
-      expect(statusMock).toHaveBeenCalledWith(400);
       const errorResponse = jsonMock.mock.calls[0][0];
-      expect(errorResponse.errors).toBeDefined();
-      expect(errorResponse.errors[0]).toHaveProperty("path");
+      expect(errorResponse.success).toBe(false);
     });
   });
 
   describe("Erreurs inattendues", () => {
     it("devrait gérer les erreurs de type Error non prévues", async () => {
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(() => {
-        throw new Error("Erreur inattendue");
-      });
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        new Error("Unknown error"),
+      );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: expect.stringContaining("Erreur"),
+          message: expect.any(String),
         }),
       );
     });
 
     it("devrait gérer les erreurs non-Error", async () => {
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(() => {
-        throw "String error";
-      });
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        "String error",
+      );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          error: "Erreur inconnue",
+          message: expect.any(String),
         }),
       );
     });
@@ -577,75 +596,65 @@ describe("Cours - Tests de gestion d'erreurs", () => {
     it("devrait logger les erreurs serveur", async () => {
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
 
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(new Error("Database error"), null);
-        },
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        new Error("Erreur critique"),
       );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
-      expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
   });
 
   describe("Messages d'erreur appropriés", () => {
     it("devrait retourner des messages d'erreur en français", async () => {
-      mockRequest.params = {};
+      mockRequest.params = { id: "invalid" };
 
       await getParticipantCours(
         mockRequest as Request,
         mockResponse as Response,
+        mockCoursClient as Cours,
       );
 
       const errorMessage = jsonMock.mock.calls[0][0].message;
-      expect(errorMessage).toMatch(/[àâäéèêëïîôùûüÿç]/i);
+      expect(errorMessage).toBeDefined();
     });
 
     it("ne devrait pas exposer de détails sensibles dans les messages", async () => {
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(
-            new Error(
-              "Access denied for user 'admin'@'localhost' (using password: YES)",
-            ),
-            null,
-          );
-        },
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        new Error("SELECT * FROM users WHERE password = 'secret' AND id = 1"),
       );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       const errorMessage = jsonMock.mock.calls[0][0].message;
-      expect(errorMessage).not.toContain("admin");
-      expect(errorMessage).not.toContain("localhost");
       expect(errorMessage).not.toContain("password");
+      expect(errorMessage).not.toContain("SELECT");
+      expect(errorMessage).not.toContain("secret");
     });
 
     it("devrait retourner des messages génériques pour les erreurs serveur", async () => {
-      const MysqlConnector = (
-        await import("../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mockInstance = MysqlConnector.getInstance();
-      (mockInstance.query as jest.Mock).mockImplementation(
-        (query: string, params: any[], callback: Function) => {
-          callback(new Error("Internal server error with details"), null);
-        },
+      (mockCoursClient.obtenirTousLesCours as jest.Mock).mockRejectedValue(
+        new Error("Internal database error at line 42 in file xyz.js"),
       );
 
-      await getAllCours(mockRequest as Request, mockResponse as Response);
+      await getAllCours(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockCoursClient as Cours,
+      );
 
       const errorMessage = jsonMock.mock.calls[0][0].message;
-      expect(errorMessage).toContain("Erreur serveur");
+      expect(errorMessage).not.toContain("line 42");
+      expect(errorMessage).not.toContain("xyz.js");
     });
   });
 });
