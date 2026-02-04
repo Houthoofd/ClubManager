@@ -1,0 +1,233 @@
+================================================================================
+STATUT DES TESTS DU MODULE MAGASIN
+================================================================================
+Date: 2026-02-04
+Module: api/src/routes/magasin
+================================================================================
+
+RÉSUMÉ GÉNÉRAL
+--------------
+Architecture: ✅ Refactorisée selon le modèle écheances (handlers/services/validators)
+Injection de dépendances: ✅ Implémentée dans tous les handlers
+Scripts npm: ✅ Ajoutés (test:magasin, test:magasin:unit, etc.)
+Schémas Zod: ✅ Corrigés (validation URL stricte, dates ISO)
+
+================================================================================
+TESTS UNITAIRES - STATUT PAR FICHIER
+================================================================================
+
+✅ magasin.validation.test.ts
+   - Tests passés: 55/55 (100%)
+   - Statut: TOUS LES TESTS PASSENT
+   - Durée: ~3s
+   - Catégories:
+     * Validation des schémas d'articles: ✅
+     * Validation des schémas de commandes: ✅
+     * Validation des schémas de requêtes: ✅
+     * Cas limites et valeurs extrêmes: ✅
+
+✅ magasin.schema.test.ts
+   - Tests passés: 47/47 (100%)
+   - Statut: TOUS LES TESTS PASSENT
+   - Durée: ~3s
+   - Catégories:
+     * createArticleSchema: ✅
+     * updateArticleSchema: ✅
+     * createCommandeSchema: ✅
+     * articleCommandeSchema: ✅
+     * Schémas de requêtes: ✅
+
+✅ magasin.validators-advanced.test.ts
+   - Tests passés: 40/40 (100%)
+   - Statut: TOUS LES TESTS PASSENT
+   - Durée: ~3s
+   - Catégories:
+     * Transformation et coercition: ✅
+     * Valeurs par défaut: ✅
+     * Formats complexes: ✅
+     * Validation d'URL: ✅
+     * Validation de tableaux: ✅
+     * Validation d'énumérations: ✅
+     * Validation de dates: ✅
+     * Limites numériques: ✅
+     * Longueurs de chaînes: ✅
+     * Messages d'erreur: ✅
+
+⚠️  magasin.security.test.ts
+   - Tests passés: 18/23 (78%)
+   - Statut: ÉCHECS PARTIELS
+   - Tests échoués: 5
+   - Problèmes identifiés:
+     * Injection SQL via URL: attente 400, reçoit 500
+     * Protection IDOR: messages d'erreur non conformes
+     * Protection énumération: attente 404, reçoit 400
+   - Action requise: Ajuster les handlers pour retourner les bons codes HTTP
+
+⏳ magasin.test.ts
+   - Statut: EN COURS DE VALIDATION
+   - Note: Tests de base avec injection de dépendances
+   - Nécessite: Validation complète avec mocks
+
+⏳ magasin.errors.test.ts
+   - Statut: EN COURS DE VALIDATION
+   - Tests: Gestion d'erreurs de base de données
+   - Observation: Les mocks sont correctement passés aux handlers
+
+⏳ magasin.edge-cases.test.ts
+   - Statut: NON TESTÉ
+   - Tests: Cas limites et edge cases
+
+⏳ magasin.service-branches.test.ts
+   - Statut: EN COURS
+   - Tests: Couverture des branches du service
+
+⏳ magasin.performance.test.ts
+   - Statut: TIMEOUT FRÉQUENTS
+   - Note: Tests de performance nécessitent optimisation
+
+⏳ magasin.health-advanced.test.ts
+   - Statut: NON TESTÉ
+   - Tests: Health check avancés
+
+⏳ magasin.stats-advanced.test.ts
+   - Statut: NON TESTÉ
+   - Tests: Statistiques avancées
+
+⏳ magasin.integration.test.ts
+   - Statut: NON TESTÉ
+   - Tests: Intégration mockée
+
+⏳ magasin.real-integration.test.ts
+   - Statut: NON TESTÉ
+   - Tests: Intégration réelle (requiert DB test)
+
+================================================================================
+MODIFICATIONS APPORTÉES
+================================================================================
+
+1. ARCHITECTURE
+   ✅ Ajout injection de dépendances dans 12 handlers:
+      - get-articles.handler.ts
+      - get-categories.handler.ts
+      - create-article.handler.ts
+      - update-article.handler.ts
+      - delete-article.handler.ts
+      - create-commande.handler.ts
+      - get-commandes.handler.ts
+      - verify-commande.handler.ts
+      - get-tailles.handler.ts
+      - get-payment-intent.handler.ts
+      - health.handler.ts
+
+2. VALIDATION ZOD
+   ✅ Schéma createArticleSchema:
+      - Ajout validation protocole HTTP/HTTPS pour image_url
+   ✅ Schéma getStatistiquesMagasinSchema:
+      - Ajout regex stricte pour format ISO date (YYYY-MM-DD)
+
+3. CORRECTIONS D'IMPORTS
+   ✅ get-payment-intent.handler: obtenirPaymentIntent → obtenirPaymentIntentCommande
+   ✅ get-tailles.handler: obtenirLesTailles → obtenirTailles
+   ✅ get-tailles.handler: Paramètre magasinClient → paiementsClient
+
+4. SCRIPTS NPM (package.json)
+   ✅ test:magasin
+   ✅ test:magasin:unit
+   ✅ test:magasin:integration
+   ✅ test:magasin:integration:real
+   ✅ test:magasin:watch
+   ✅ test:magasin:coverage
+   ✅ test:magasin:all
+
+================================================================================
+ACTIONS REQUISES
+================================================================================
+
+PRIORITÉ HAUTE
+--------------
+1. Corriger les 5 échecs dans magasin.security.test.ts
+   - Ajuster les codes HTTP de retour dans les handlers
+   - Uniformiser les messages d'erreur
+
+2. Valider magasin.test.ts complètement
+   - Vérifier que tous les mocks fonctionnent correctement
+   - S'assurer que l'injection de dépendances est correcte
+
+3. Tester magasin.errors.test.ts
+   - Valider la gestion d'erreurs DB
+   - Vérifier les codes HTTP d'erreur
+
+PRIORITÉ MOYENNE
+-----------------
+4. Exécuter magasin.edge-cases.test.ts
+   - Valider les cas limites
+   - Tester les valeurs extrêmes
+
+5. Exécuter magasin.service-branches.test.ts
+   - Vérifier la couverture des branches du service
+   - S'assurer que tous les chemins sont testés
+
+6. Optimiser magasin.performance.test.ts
+   - Réduire les timeouts
+   - Optimiser les tests de charge
+
+PRIORITÉ BASSE
+---------------
+7. Tests avancés (health, stats)
+   - magasin.health-advanced.test.ts
+   - magasin.stats-advanced.test.ts
+
+8. Tests d'intégration
+   - magasin.integration.test.ts (avec mocks)
+   - magasin.real-integration.test.ts (requiert DB test configurée)
+
+================================================================================
+COMMANDES UTILES
+================================================================================
+
+# Tous les tests unitaires
+npm --prefix ./api run test:magasin:unit
+
+# Test spécifique
+npm --prefix ./api test -- routes/magasin/__tests__/magasin.validation.test.ts
+
+# Avec couverture
+npm --prefix ./api run test:magasin:coverage
+
+# Watch mode
+npm --prefix ./api run test:magasin:watch
+
+# Tests d'intégration mockés
+npm --prefix ./api run test:magasin:integration
+
+# Tests d'intégration réels (requiert DB)
+npm --prefix ./api run test:magasin:integration:real
+
+# Tous les tests (unit + integration + real)
+npm --prefix ./api run test:magasin:all
+
+================================================================================
+STATISTIQUES
+================================================================================
+
+Tests validés:       142/~400+ (estimation)
+Fichiers passant:    3/13 fichiers (100%)
+Fichiers partiels:   1/13 fichiers (78%)
+Fichiers en attente: 9/13 fichiers
+
+Taux de réussite confirmé: 100% pour validation/schema/validators-advanced
+Estimation globale:        ~35-40% (nécessite validation complète)
+
+================================================================================
+NOTES TECHNIQUES
+================================================================================
+
+- Les handlers acceptent désormais des clients mockables en paramètres optionnels
+- Les services utilisent le client fourni ou créent une instance par défaut
+- Les schémas Zod sont plus stricts (URL HTTPS, dates ISO)
+- Tous les tests de validation passent à 100%
+- Architecture alignée sur le module écheances
+
+PROCHAINE ÉTAPE: Corriger les 5 tests de sécurité qui échouent
+
+================================================================================
