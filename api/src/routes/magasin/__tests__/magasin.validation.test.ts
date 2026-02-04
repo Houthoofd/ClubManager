@@ -28,10 +28,15 @@ describe("Magasin Module - Tests de validation", () => {
           nom: "Kimono Blanc",
           description: "Kimono de qualité supérieure",
           prix: 45.99,
-          stock: 10,
           categorie_id: 1,
           actif: true,
-          tailles_disponibles: ["S", "M", "L", "XL"],
+          stocks: [
+            { taille: "S", quantite: 10 },
+            { taille: "M", quantite: 15 },
+            { taille: "L", quantite: 8 },
+            { taille: "XL", quantite: 5 },
+          ],
+          images: ["https://example.com/kimono.jpg"],
         };
 
         const result = createArticleSchema.safeParse(validArticle);
@@ -41,7 +46,6 @@ describe("Magasin Module - Tests de validation", () => {
       it("devrait rejeter un article sans nom", () => {
         const invalidArticle = {
           prix: 45.99,
-          stock: 10,
           categorie_id: 1,
         };
 
@@ -53,7 +57,7 @@ describe("Magasin Module - Tests de validation", () => {
               expect.objectContaining({
                 path: ["nom"],
               }),
-            ])
+            ]),
           );
         }
       });
@@ -62,7 +66,6 @@ describe("Magasin Module - Tests de validation", () => {
         const invalidArticle = {
           nom: "Test",
           prix: -10,
-          stock: 5,
           categorie_id: 1,
         };
 
@@ -74,7 +77,7 @@ describe("Magasin Module - Tests de validation", () => {
               expect.objectContaining({
                 path: ["prix"],
               }),
-            ])
+            ]),
           );
         }
       });
@@ -83,7 +86,6 @@ describe("Magasin Module - Tests de validation", () => {
         const invalidArticle = {
           nom: "Test",
           prix: 10000,
-          stock: 5,
           categorie_id: 1,
         };
 
@@ -95,8 +97,8 @@ describe("Magasin Module - Tests de validation", () => {
         const invalidArticle = {
           nom: "Test",
           prix: 25.99,
-          stock: -5,
           categorie_id: 1,
+          stocks: [{ taille: "M", quantite: -5 }],
         };
 
         const result = createArticleSchema.safeParse(invalidArticle);
@@ -105,9 +107,9 @@ describe("Magasin Module - Tests de validation", () => {
           expect(result.error.errors).toEqual(
             expect.arrayContaining([
               expect.objectContaining({
-                path: ["stock"],
+                path: ["stocks", 0, "quantite"],
               }),
-            ])
+            ]),
           );
         }
       });
@@ -116,8 +118,8 @@ describe("Magasin Module - Tests de validation", () => {
         const invalidArticle = {
           nom: "Test",
           prix: 25.99,
-          stock: 5.5,
           categorie_id: 1,
+          stocks: [{ taille: "M", quantite: 5.5 }],
         };
 
         const result = createArticleSchema.safeParse(invalidArticle);
@@ -128,9 +130,8 @@ describe("Magasin Module - Tests de validation", () => {
         const invalidArticle = {
           nom: "Test",
           prix: 25.99,
-          stock: 5,
           categorie_id: 1,
-          image_url: "not-a-valid-url",
+          images: ["not-a-valid-url"],
         };
 
         const result = createArticleSchema.safeParse(invalidArticle);
@@ -141,9 +142,8 @@ describe("Magasin Module - Tests de validation", () => {
         const validArticle = {
           nom: "Test",
           prix: 25.99,
-          stock: 5,
           categorie_id: 1,
-          image_url: "https://example.com/image.jpg",
+          images: ["https://example.com/image.jpg"],
         };
 
         const result = createArticleSchema.safeParse(validArticle);
@@ -211,31 +211,31 @@ describe("Magasin Module - Tests de validation", () => {
 
     describe("deleteArticleSchema", () => {
       it("devrait valider un ID valide", () => {
-        const validParams = { articleId: "123" };
+        const validParams = { id: "123" };
 
         const result = deleteArticleSchema.safeParse(validParams);
         expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.data.articleId).toBe(123);
+          expect(result.data.id).toBe(123);
         }
       });
 
       it("devrait rejeter un ID invalide", () => {
-        const invalidParams = { articleId: "abc" };
+        const invalidParams = { id: "abc" };
 
         const result = deleteArticleSchema.safeParse(invalidParams);
         expect(result.success).toBe(false);
       });
 
       it("devrait rejeter un ID négatif", () => {
-        const invalidParams = { articleId: "-5" };
+        const invalidParams = { id: "-5" };
 
         const result = deleteArticleSchema.safeParse(invalidParams);
         expect(result.success).toBe(false);
       });
 
       it("devrait rejeter un ID égal à zéro", () => {
-        const invalidParams = { articleId: "0" };
+        const invalidParams = { id: "0" };
 
         const result = deleteArticleSchema.safeParse(invalidParams);
         expect(result.success).toBe(false);
@@ -642,38 +642,36 @@ describe("Magasin Module - Tests de validation", () => {
 
   describe("Cas limites et valeurs extrêmes", () => {
     it("devrait accepter le prix minimum valide", () => {
-      const article = {
+      const validArticle = {
         nom: "Test",
         prix: 0.01,
-        stock: 1,
         categorie_id: 1,
       };
 
-      const result = createArticleSchema.safeParse(article);
+      const result = createArticleSchema.safeParse(validArticle);
       expect(result.success).toBe(true);
     });
 
     it("devrait accepter le prix maximum valide", () => {
-      const article = {
+      const validArticle = {
         nom: "Test",
         prix: 9999.99,
-        stock: 1,
         categorie_id: 1,
       };
 
-      const result = createArticleSchema.safeParse(article);
+      const result = createArticleSchema.safeParse(validArticle);
       expect(result.success).toBe(true);
     });
 
     it("devrait accepter un stock de zéro", () => {
-      const article = {
+      const validArticle = {
         nom: "Test",
         prix: 25.99,
-        stock: 0,
         categorie_id: 1,
+        stocks: [{ taille: "M", quantite: 0 }],
       };
 
-      const result = createArticleSchema.safeParse(article);
+      const result = createArticleSchema.safeParse(validArticle);
       expect(result.success).toBe(true);
     });
 

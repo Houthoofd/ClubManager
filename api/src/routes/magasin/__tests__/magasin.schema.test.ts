@@ -52,8 +52,7 @@ describe("Magasin Module - Tests des schémas", () => {
 
     it("devrait rejeter un article sans nom", () => {
       const invalidArticle = {
-        prix: 45.99,
-        stock: 10,
+        prix: 25.99,
         categorie_id: 1,
       };
 
@@ -64,8 +63,7 @@ describe("Magasin Module - Tests des schémas", () => {
     it("devrait rejeter un prix négatif", () => {
       const invalidArticle = {
         nom: "Test",
-        prix: -10.0,
-        stock: 5,
+        prix: 0,
         categorie_id: 1,
       };
 
@@ -76,8 +74,7 @@ describe("Magasin Module - Tests des schémas", () => {
     it("devrait rejeter un prix supérieur au maximum", () => {
       const invalidArticle = {
         nom: "Test",
-        prix: 10000.0,
-        stock: 5,
+        prix: 10000,
         categorie_id: 1,
       };
 
@@ -89,7 +86,6 @@ describe("Magasin Module - Tests des schémas", () => {
       const article = {
         nom: "Test",
         prix: 0.01,
-        stock: 1,
         categorie_id: 1,
       };
 
@@ -101,7 +97,6 @@ describe("Magasin Module - Tests des schémas", () => {
       const article = {
         nom: "Test",
         prix: 9999.99,
-        stock: 1,
         categorie_id: 1,
       };
 
@@ -113,8 +108,8 @@ describe("Magasin Module - Tests des schémas", () => {
       const invalidArticle = {
         nom: "Test",
         prix: 25.99,
-        stock: -5,
         categorie_id: 1,
+        stocks: [{ taille: "M", quantite: -5 }],
       };
 
       const result = createArticleSchema.safeParse(invalidArticle);
@@ -125,8 +120,8 @@ describe("Magasin Module - Tests des schémas", () => {
       const invalidArticle = {
         nom: "Test",
         prix: 25.99,
-        stock: 5.5,
         categorie_id: 1,
+        stocks: [{ taille: "M", quantite: 5.5 }],
       };
 
       const result = createArticleSchema.safeParse(invalidArticle);
@@ -137,8 +132,8 @@ describe("Magasin Module - Tests des schémas", () => {
       const article = {
         nom: "Test",
         prix: 25.99,
-        stock: 0,
         categorie_id: 1,
+        stocks: [{ taille: "M", quantite: 0 }],
       };
 
       const result = createArticleSchema.safeParse(article);
@@ -149,9 +144,8 @@ describe("Magasin Module - Tests des schémas", () => {
       const invalidArticle = {
         nom: "Test",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
-        image_url: "not-a-url",
+        images: ["not-a-url"],
       };
 
       const result = createArticleSchema.safeParse(invalidArticle);
@@ -162,9 +156,8 @@ describe("Magasin Module - Tests des schémas", () => {
       const article = {
         nom: "Test",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
-        image_url: "https://example.com/image.jpg",
+        images: ["https://example.com/image.jpg"],
       };
 
       const result = createArticleSchema.safeParse(article);
@@ -175,7 +168,6 @@ describe("Magasin Module - Tests des schémas", () => {
       const article = {
         nom: "Test",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 

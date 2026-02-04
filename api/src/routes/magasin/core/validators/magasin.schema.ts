@@ -49,14 +49,6 @@ export const createArticleSchema = z.object({
     .min(0.01, "Le prix minimum est 0.01€")
     .max(9999.99, "Le prix maximum est 9999.99€"),
 
-  stock: z
-    .number({
-      required_error: "Le stock est requis",
-      invalid_type_error: "Le stock doit être un nombre",
-    })
-    .int("Le stock doit être un entier")
-    .min(0, "Le stock ne peut pas être négatif"),
-
   categorie_id: z
     .number({
       required_error: "L'ID de la catégorie est requis",
@@ -65,19 +57,33 @@ export const createArticleSchema = z.object({
     .int("L'ID doit être un entier")
     .positive("L'ID doit être positif"),
 
-  image_url: z
-    .string()
-    .url("L'URL de l'image doit être valide")
-    .refine(
-      (val) => !val || val.startsWith("http://") || val.startsWith("https://"),
-      "L'URL doit commencer par http:// ou https://",
+  images: z
+    .array(
+      z
+        .string()
+        .url("L'URL de l'image doit être valide")
+        .refine(
+          (url) => url.startsWith("http://") || url.startsWith("https://"),
+          "L'URL doit commencer par http:// ou https://",
+        ),
     )
     .optional()
-    .nullable(),
+    .default([]),
+
+  stocks: z
+    .array(
+      z.object({
+        taille: z.string().min(1, "La taille est requise"),
+        quantite: z
+          .number()
+          .int("La quantité doit être un entier")
+          .nonnegative("La quantité ne peut pas être négative"),
+      }),
+    )
+    .optional()
+    .default([]),
 
   actif: z.boolean().optional().default(true),
-
-  tailles_disponibles: z.array(z.string()).optional().nullable(),
 });
 
 /**
@@ -111,31 +117,37 @@ export const updateArticleSchema = z.object({
     .max(9999.99, "Le prix maximum est 9999.99€")
     .optional(),
 
-  stock: z
-    .number()
-    .int("Le stock doit être un entier")
-    .min(0, "Le stock ne peut pas être négatif")
-    .optional(),
-
   categorie_id: z
     .number()
     .int("L'ID doit être un entier")
     .positive("L'ID doit être positif")
     .optional(),
 
-  image_url: z
-    .string()
-    .url("L'URL de l'image doit être valide")
-    .refine(
-      (val) => !val || val.startsWith("http://") || val.startsWith("https://"),
-      "L'URL doit commencer par http:// ou https://",
+  images: z
+    .array(
+      z
+        .string()
+        .url("L'URL de l'image doit être valide")
+        .refine(
+          (url) => url.startsWith("http://") || url.startsWith("https://"),
+          "L'URL doit commencer par http:// ou https://",
+        ),
     )
-    .optional()
-    .nullable(),
+    .optional(),
+
+  stocks: z
+    .array(
+      z.object({
+        taille: z.string().min(1, "La taille est requise"),
+        quantite: z
+          .number()
+          .int("La quantité doit être un entier")
+          .nonnegative("La quantité ne peut pas être négative"),
+      }),
+    )
+    .optional(),
 
   actif: z.boolean().optional(),
-
-  tailles_disponibles: z.array(z.string()).optional().nullable(),
 });
 
 /**

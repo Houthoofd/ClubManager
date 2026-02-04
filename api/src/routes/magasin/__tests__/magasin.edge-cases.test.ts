@@ -77,12 +77,12 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(mockMagasinClient.ajouterArticle).toHaveBeenCalledWith(
-        expect.objectContaining({ prix: 0.01 })
+        expect.objectContaining({ prix: 0.01 }),
       );
     });
 
@@ -102,7 +102,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -119,7 +119,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -141,7 +141,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -153,44 +153,52 @@ describe("Magasin Module - Tests de cas limites", () => {
       mockRequest.body = {
         nom: "Article Stock Zéro",
         prix: 25.99,
-        stock: 0,
+        stocks: [{ taille: "M", quantite: 0 }],
         categorie_id: 1,
+        images: [],
       };
 
       (mockMagasinClient.ajouterArticle as jest.Mock).mockResolvedValue({
         isConfirm: true,
         message: "Article ajouté",
+        id: 1,
       });
 
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(mockMagasinClient.ajouterArticle).toHaveBeenCalledWith(
-        expect.objectContaining({ stock: 0 })
+        expect.objectContaining({
+          stocks: expect.arrayContaining([
+            expect.objectContaining({ quantite: 0 }),
+          ]),
+        }),
       );
     });
 
     it("devrait accepter un très grand stock", async () => {
       mockRequest.body = {
-        nom: "Article Grand Stock",
+        nom: "Article Stock Max",
         prix: 25.99,
-        stock: 999999,
+        stocks: [{ taille: "L", quantite: 999999 }],
         categorie_id: 1,
+        images: [],
       };
 
       (mockMagasinClient.ajouterArticle as jest.Mock).mockResolvedValue({
         isConfirm: true,
         message: "Article ajouté",
+        id: 1,
       });
 
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -214,7 +222,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -236,7 +244,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -253,7 +261,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -276,7 +284,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -298,7 +306,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -320,7 +328,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -352,7 +360,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -384,7 +392,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -409,7 +417,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -438,7 +446,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -468,7 +476,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -491,7 +499,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -521,7 +529,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -550,7 +558,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -579,7 +587,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -599,12 +607,12 @@ describe("Magasin Module - Tests de cas limites", () => {
       await updateArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(mockMagasinClient.modifierArticle).toHaveBeenCalledWith(
         2147483647,
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -631,7 +639,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -640,31 +648,33 @@ describe("Magasin Module - Tests de cas limites", () => {
 
   describe("Cas limites des tableaux", () => {
     it("devrait gérer un tableau vide de catégories", async () => {
-      (mockMagasinClient.obtenirLesCategories as jest.Mock).mockResolvedValue([]);
+      (mockMagasinClient.obtenirLesCategories as jest.Mock).mockResolvedValue(
+        [],
+      );
 
       const response = await getArticles(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalled();
     });
 
     it("devrait gérer un tableau vide d'articles dans une catégorie", async () => {
-      (mockMagasinClient.obtenirArticlesParCategories as jest.Mock).mockResolvedValue(
-        [
-          {
-            categorie: "Vêtements",
-            articles: [],
-          },
-        ]
-      );
+      (
+        mockMagasinClient.obtenirArticlesParCategories as jest.Mock
+      ).mockResolvedValue([
+        {
+          categorie: "Vêtements",
+          articles: [],
+        },
+      ]);
 
       await getArticles(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -735,7 +745,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -759,7 +769,7 @@ describe("Magasin Module - Tests de cas limites", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockMagasinClient as Magasin,
-        mockPaiementsClient as Paiements
+        mockPaiementsClient as Paiements,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -784,7 +794,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -807,7 +817,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -830,7 +840,7 @@ describe("Magasin Module - Tests de cas limites", () => {
       await createArticle(
         mockRequest as Request,
         mockResponse as Response,
-        mockMagasinClient as Magasin
+        mockMagasinClient as Magasin,
       );
 
       expect(statusMock).toHaveBeenCalledWith(201);

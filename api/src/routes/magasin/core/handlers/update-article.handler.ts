@@ -46,30 +46,10 @@ export async function updateArticle(
       magasinClient,
     );
 
-    if (result.isConfirm) {
-      console.log("✅ [Handler Articles] Article modifié avec succès");
-      res.status(200).json({
-        message: result.message || "Article modifié avec succès",
-      });
-    } else {
-      console.error(
-        "❌ [Handler Articles] Échec modification article:",
-        result.message,
-      );
-
-      // Article non trouvé ou échec de modification
-      const messageStr = String(result.message || "");
-      const isNotFound =
-        messageStr.toLowerCase().includes("non trouvé") ||
-        messageStr.toLowerCase().includes("non trouve") ||
-        messageStr.toLowerCase().includes("introuvable") ||
-        messageStr.toLowerCase().includes("not found");
-
-      res.status(isNotFound ? 404 : 500).json({
-        message:
-          result.message || "Erreur lors de la modification de l'article",
-      });
-    }
+    console.log("✅ [Handler Articles] Article modifié avec succès");
+    res.status(200).json({
+      message: result.message || "Article modifié avec succès",
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error(
@@ -84,6 +64,24 @@ export async function updateArticle(
     }
 
     console.error("❌ [Handler Articles] Erreur modification article:", error);
+
+    // Vérifier si c'est une erreur métier (article non trouvé)
+    if (error instanceof Error) {
+      const messageStr = error.message.toLowerCase();
+      const isNotFound =
+        messageStr.includes("non trouvé") ||
+        messageStr.includes("non trouve") ||
+        messageStr.includes("introuvable") ||
+        messageStr.includes("not found");
+
+      if (isNotFound) {
+        res.status(404).json({
+          message: "Article non trouvé",
+        });
+        return;
+      }
+    }
+
     res.status(500).json({
       message: "Erreur lors de la modification de l'article",
       error: error instanceof Error ? error.message : "Erreur inconnue",

@@ -59,7 +59,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "Test'; DROP TABLE articles; --",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -83,7 +82,6 @@ describe("Magasin Module - Tests de sécurité", () => {
         nom: "Test Article",
         description: "Description' OR '1'='1",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -121,7 +119,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "<script>alert('XSS')</script>",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -145,7 +142,6 @@ describe("Magasin Module - Tests de sécurité", () => {
         nom: "Test",
         description: "<img src=x onerror=alert('XSS')>",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -167,7 +163,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "Test onclick='alert(1)'",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -227,7 +222,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "Test",
         prix: 25.999999,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -263,7 +257,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "Test\x00Article\x1F",
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -377,7 +370,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "A".repeat(10000), // Nom extrêmement long
         prix: 25.99,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -445,7 +437,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "Test",
         prix: -50.0,
-        stock: 5,
         categorie_id: 1,
       };
 
@@ -479,7 +470,6 @@ describe("Magasin Module - Tests de sécurité", () => {
       mockRequest.body = {
         nom: "Test",
         prix: 999999999.99,
-        stock: 1,
         categorie_id: 1,
       };
 

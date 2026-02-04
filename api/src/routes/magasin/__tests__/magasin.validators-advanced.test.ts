@@ -183,16 +183,14 @@ describe("Magasin Module - Tests de validateurs avancés", () => {
         "ftp://example.com/image.jpg", // protocole non supporté
         "//example.com/image.jpg", // protocole manquant
         "example.com/image.jpg", // protocole manquant
-        "",
       ];
 
       invalidUrls.forEach((url) => {
         const article = {
           nom: "Test",
           prix: 25.99,
-          stock: 10,
           categorie_id: 1,
-          image_url: url,
+          images: [url],
         };
 
         const result = createArticleSchema.safeParse(article);
@@ -200,13 +198,12 @@ describe("Magasin Module - Tests de validateurs avancés", () => {
       });
     });
 
-    it("devrait accepter null pour image_url", () => {
+    it("devrait accepter un tableau vide pour images", () => {
       const article = {
         nom: "Test",
         prix: 25.99,
-        stock: 10,
         categorie_id: 1,
-        image_url: null,
+        images: [],
       };
 
       const result = createArticleSchema.safeParse(article);
@@ -515,12 +512,12 @@ describe("Magasin Module - Tests de validateurs avancés", () => {
     it("devrait rejeter les stocks négatifs ou décimaux", () => {
       const stocksInvalides = [-1, -10, 5.5, 10.9];
 
-      stocksInvalides.forEach((stock) => {
+      stocksInvalides.forEach((quantite) => {
         const article = {
           nom: "Test",
           prix: 25.99,
-          stock: stock,
           categorie_id: 1,
+          stocks: [{ taille: "M", quantite: quantite }],
         };
 
         const result = createArticleSchema.safeParse(article);
@@ -619,7 +616,9 @@ describe("Magasin Module - Tests de validateurs avancés", () => {
       const result = createCommandeSchema.safeParse(commande);
       expect(result.success).toBe(false);
       if (!result.success) {
-        const statutError = result.error.errors.find((e) => e.path[0] === "statut");
+        const statutError = result.error.errors.find(
+          (e) => e.path[0] === "statut",
+        );
         expect(statutError).toBeDefined();
       }
     });

@@ -173,7 +173,7 @@ export async function obtenirArticlesParCategories(
     return articles;
   } catch (error) {
     console.error("❌ [Service Magasin] Erreur récupération articles:", error);
-    throw error;
+    throw new Error("Impossible de récupérer les articles");
   }
 }
 
@@ -200,7 +200,7 @@ export async function obtenirLesCategories(
       "❌ [Service Magasin] Erreur récupération catégories:",
       error,
     );
-    throw error;
+    throw new Error("Impossible de récupérer les catégories");
   }
 }
 
@@ -229,12 +229,14 @@ export async function ajouterArticle(
         "❌ [Service Magasin] Erreur lors de l'ajout:",
         result.message,
       );
+      throw new Error(result.message || "Erreur lors de l'ajout de l'article");
     }
-
-    return result;
   } catch (error) {
     console.error("❌ [Service Magasin] Erreur ajout article:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Erreur lors de l'ajout de l'article");
   }
 }
 
@@ -255,17 +257,22 @@ export async function modifierArticle(
 
     if (result.isConfirm) {
       console.log("✅ [Service Magasin] Article modifié avec succès");
+      return result;
     } else {
       console.error(
         "❌ [Service Magasin] Erreur lors de la modification:",
         result.message,
       );
+      throw new Error(
+        result.message || "Erreur lors de la modification de l'article",
+      );
     }
-
-    return result;
   } catch (error) {
     console.error("❌ [Service Magasin] Erreur modification article:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Erreur lors de la modification de l'article");
   }
 }
 
@@ -288,7 +295,21 @@ export async function supprimerArticle(
     return result;
   } catch (error) {
     console.error("❌ [Service Magasin] Erreur suppression article:", error);
-    throw error;
+
+    // Propager l'erreur originale si elle contient un message métier important
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const messageStr = errorMessage.toLowerCase();
+
+    if (
+      messageStr.includes("non trouvé") ||
+      messageStr.includes("non trouve") ||
+      messageStr.includes("introuvable") ||
+      messageStr.includes("not found")
+    ) {
+      throw error; // Propager l'erreur 404 originale
+    }
+
+    throw new Error("Impossible de supprimer l'article");
   }
 }
 
@@ -455,7 +476,7 @@ export async function obtenirLesCommandes(
     return commandes;
   } catch (error) {
     console.error("❌ [Service Magasin] Erreur récupération commandes:", error);
-    throw error;
+    throw new Error("Impossible de récupérer les commandes");
   }
 }
 
@@ -504,7 +525,7 @@ export async function verifierUniciteCommande(
     };
   } catch (error) {
     console.error("❌ [Service Magasin] Erreur vérification unicité:", error);
-    throw error;
+    throw new Error("Erreur lors de la vérification de l'unicité");
   }
 }
 
@@ -545,7 +566,7 @@ export async function obtenirTailles(
     return tailles as any[];
   } catch (error) {
     console.error("❌ [Service Magasin] Erreur récupération tailles:", error);
-    throw error;
+    throw new Error("Impossible de récupérer les tailles");
   }
 }
 
@@ -650,7 +671,17 @@ export async function obtenirPaymentIntentCommande(
       "❌ [Service Magasin] Erreur récupération PaymentIntent:",
       error,
     );
-    throw error;
+    // Préserver les messages d'erreur métier spécifiques
+    if (
+      error instanceof Error &&
+      (error.message.includes("non trouvée") ||
+        error.message.includes("appartient pas") ||
+        error.message.includes("Aucun paiement") ||
+        error.message.includes("Clé Stripe"))
+    ) {
+      throw error;
+    }
+    throw new Error("Erreur lors de la récupération du PaymentIntent");
   }
 }
 
