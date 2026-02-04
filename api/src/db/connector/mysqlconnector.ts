@@ -1,28 +1,16 @@
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import mysql from "mysql";
 
 // Pour __dirname dans ES modules (compatible avec Jest)
-let __filename: string;
-let __dirname: string;
+// Utiliser les variables globales si disponibles (CommonJS/Jest), sinon fallback
+const _dirname =
+  typeof __dirname !== "undefined"
+    ? __dirname
+    : path.resolve(process.cwd(), "api/src/db/connector");
 
-try {
-  // Mode ESM runtime
-  __filename = fileURLToPath(import.meta.url);
-  __dirname = path.dirname(__filename);
-} catch {
-  // Mode Jest/Test (CommonJS) - utilise les variables globales injectées ou fallback
-  __filename =
-    typeof globalThis.__filename !== "undefined" ? globalThis.__filename : "";
-  __dirname =
-    typeof globalThis.__dirname !== "undefined"
-      ? globalThis.__dirname
-      : path.resolve(process.cwd(), "api/src/db/connector");
-}
-
-console.log(path.resolve(__dirname, "../../../"));
+console.log(path.resolve(_dirname, "../../../"));
 
 // En mode test, les variables sont déjà chargées par jest.setup
 // Ne pas recharger dotenv si DATABASE_URL ou DB_NAME sont déjà définis
@@ -34,7 +22,7 @@ if (!process.env.DATABASE_URL && !process.env.DB_NAME) {
       : ".env.development";
 
   // Chemin racine du projet (remonte depuis api/src/db/connector)
-  const rootDir = path.resolve(__dirname, "../../../");
+  const rootDir = path.resolve(_dirname, "../../../");
   const envPath = path.resolve(rootDir, envFile);
 
   // Vérifie si le fichier env existe

@@ -10,9 +10,8 @@ export default async function globalTeardown() {
 
   try {
     // Import MySQL connector to close the connection pool
-    const { mysqlConnector } = await import(
-      "../src/db/connector/mysqlconnector.js"
-    );
+    const { mysqlConnector } =
+      await import("../src/db/connector/mysqlconnector.ts");
 
     if (mysqlConnector && mysqlConnector.pool) {
       console.log("🔌 Closing MySQL connection pool...");

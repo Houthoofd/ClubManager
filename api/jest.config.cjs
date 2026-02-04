@@ -57,7 +57,7 @@ module.exports = {
   clearMocks: true,
   // Load .env.test BEFORE any modules are imported
   // This ensures Prisma connects to the test database
-  setupFiles: ["<rootDir>/tests/jest.setup.mjs"],
+  setupFiles: ["<rootDir>/tests/jest.setup.cjs"],
   // Global teardown to close MySQL connections and prevent open handles
   globalTeardown: "<rootDir>/tests/jest.teardown.mjs",
 };
