@@ -12,6 +12,7 @@ import magasinRouter from "./magasin.js";
 import inscriptionRouter from "./inscription.js";
 import verificationRouter from "./verification.js";
 import { authRouter } from "./auth/index.js";
+import messagesRouter from "./messages/index.js";
 
 const router = express.Router();
 
@@ -28,5 +29,6 @@ router.use("/magasin", magasinRouter);
 router.use("/inscription", inscriptionRouter);
 router.use("/verification", verificationRouter);
 router.use("/auth", authRouter);
+router.use("/messages", messagesRouter);
 
 export default router;
