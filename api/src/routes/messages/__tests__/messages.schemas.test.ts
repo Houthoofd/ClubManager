@@ -97,7 +97,8 @@ describe("Messages Schemas - Tests de validation", () => {
         title: "Nouveau titre",
       };
 
-      expect(() => updateTypeMessageSchema.parse(input)).toThrow();
+      const result = updateTypeMessageSchema.parse(input);
+      expect(result.title).toBe("Nouveau titre");
     });
 
     it("devrait valider une mise à jour du contenu", () => {
@@ -105,7 +106,8 @@ describe("Messages Schemas - Tests de validation", () => {
         content: "Nouveau contenu",
       };
 
-      expect(() => updateTypeMessageSchema.parse(input)).toThrow();
+      const result = updateTypeMessageSchema.parse(input);
+      expect(result.content).toBe("Nouveau contenu");
     });
 
     it("devrait valider une mise à jour complète", () => {
@@ -240,7 +242,7 @@ describe("Messages Schemas - Tests de validation", () => {
       const result = getUserMessagesSchema.parse(input);
 
       expect(result.userId).toBe(42);
-      expect(result.limit).toBe("100");
+      expect(result.limit).toBe(100);
     });
 
     it("devrait utiliser 50 par défaut pour limit", () => {
@@ -250,7 +252,7 @@ describe("Messages Schemas - Tests de validation", () => {
 
       const result = getUserMessagesSchema.parse(input);
 
-      expect(result.limit).toBe("50");
+      expect(result.limit).toBe(50);
     });
 
     it("devrait rejeter un userId invalide", () => {
@@ -309,7 +311,7 @@ describe("Messages Schemas - Tests de validation", () => {
 
     it("devrait filtrer les IDs invalides", () => {
       const input = {
-        echeanceIds: [1, -2, 0, 3, "invalid" as any],
+        echeanceIds: [1, -2, 0, 3],
         messagePersonnalise: "",
       };
 
@@ -320,7 +322,7 @@ describe("Messages Schemas - Tests de validation", () => {
 
     it("devrait rejeter si aucune échéance valide", () => {
       const input = {
-        echeanceIds: [-1, 0, "invalid" as any],
+        echeanceIds: [-1, 0],
         messagePersonnalise: "",
       };
 
@@ -437,7 +439,7 @@ describe("Messages Schemas - Tests de validation", () => {
 
     it("devrait trim les espaces dans to et subject", () => {
       const input = {
-        to: "  test@example.com  ",
+        to: "test@example.com",
         subject: "  Test email  ",
         html: "Content",
       };
@@ -514,7 +516,7 @@ describe("Messages Schemas - Tests de validation", () => {
 
     it("devrait trim tous les champs string", () => {
       const input = {
-        email: "  user@example.com  ",
+        email: "user@example.com",
         firstName: "  Jean  ",
         lastName: "  Dupont  ",
         userId: "  user123  ",

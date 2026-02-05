@@ -1,4 +1,4 @@
-import { Message } from '../../../../db/clients/messages/messages.js';
+import { Message } from "../../../../db/clients/messages/messages.js";
 
 /**
  * Service pour la gestion des types de messages personnalisés
@@ -6,13 +6,18 @@ import { Message } from '../../../../db/clients/messages/messages.js';
  * Ce service encapsule la logique métier pour les opérations CRUD
  * sur les types de messages personnalisés.
  *
+ * Architecture avec injection de dépendances pour faciliter les tests
+ *
  * @class TypesMessagesService
  */
 export class TypesMessagesService {
   private messageClient: Message;
 
-  constructor() {
-    this.messageClient = new Message();
+  /**
+   * @param {Message} messageClient - Client de base de données (optionnel, pour injection de dépendances)
+   */
+  constructor(messageClient?: Message) {
+    this.messageClient = messageClient || new Message();
   }
 
   /**
@@ -27,20 +32,25 @@ export class TypesMessagesService {
       if (!result.isFind) {
         return {
           success: false,
-          message: result.message || 'Aucun type de message trouvé',
+          message: result.message || "Aucun type de message trouvé",
           data: [],
         };
       }
 
       return {
         success: true,
-        message: 'Types de messages récupérés avec succès',
+        message: "Types de messages récupérés avec succès",
         data: result.data,
         count: result.data?.length || 0,
       };
     } catch (error: any) {
-      console.error('❌ [TypesMessagesService] Erreur getAllTypesMessages:', error);
-      throw new Error(`Erreur lors de la récupération des types de messages: ${error.message}`);
+      console.error(
+        "❌ [TypesMessagesService] Erreur getAllTypesMessages:",
+        error,
+      );
+      throw new Error(
+        `Erreur lors de la récupération des types de messages: ${error.message}`,
+      );
     }
   }
 
@@ -57,14 +67,14 @@ export class TypesMessagesService {
       if (!title || title.trim().length === 0) {
         return {
           success: false,
-          message: 'Le titre ne peut pas être vide',
+          message: "Le titre ne peut pas être vide",
         };
       }
 
       if (!content || content.trim().length === 0) {
         return {
           success: false,
-          message: 'Le contenu ne peut pas être vide',
+          message: "Le contenu ne peut pas être vide",
         };
       }
 
@@ -72,32 +82,41 @@ export class TypesMessagesService {
       const existing = await this.messageClient.obtenirTousLesTypesDeMessages();
       if (existing.isFind && existing.data) {
         const duplicate = existing.data.find(
-          (type: any) => type.title.toLowerCase() === title.toLowerCase()
+          (type: any) => type.title.toLowerCase() === title.toLowerCase(),
         );
         if (duplicate) {
           return {
             success: false,
-            message: 'Un type de message avec ce titre existe déjà',
+            message: "Un type de message avec ce titre existe déjà",
           };
         }
       }
 
-      const result = await this.messageClient.creerTypeMessage(title.trim(), content.trim());
+      const result = await this.messageClient.creerTypeMessage(
+        title.trim(),
+        content.trim(),
+      );
 
       if (!result.isConfirm) {
         return {
           success: false,
-          message: result.message || 'Erreur lors de la création du type de message',
+          message:
+            result.message || "Erreur lors de la création du type de message",
         };
       }
 
       return {
         success: true,
-        message: result.message || 'Type de message créé avec succès',
+        message: result.message || "Type de message créé avec succès",
       };
     } catch (error: any) {
-      console.error('❌ [TypesMessagesService] Erreur createTypeMessage:', error);
-      throw new Error(`Erreur lors de la création du type de message: ${error.message}`);
+      console.error(
+        "❌ [TypesMessagesService] Erreur createTypeMessage:",
+        error,
+      );
+      throw new Error(
+        `Erreur lors de la création du type de message: ${error.message}`,
+      );
     }
   }
 
@@ -115,21 +134,21 @@ export class TypesMessagesService {
       if (id <= 0) {
         return {
           success: false,
-          message: 'ID invalide',
+          message: "ID invalide",
         };
       }
 
       if (!title || title.trim().length === 0) {
         return {
           success: false,
-          message: 'Le titre ne peut pas être vide',
+          message: "Le titre ne peut pas être vide",
         };
       }
 
       if (!content || content.trim().length === 0) {
         return {
           success: false,
-          message: 'Le contenu ne peut pas être vide',
+          message: "Le contenu ne peut pas être vide",
         };
       }
 
@@ -140,38 +159,50 @@ export class TypesMessagesService {
         if (!exists) {
           return {
             success: false,
-            message: 'Type de message non trouvé',
+            message: "Type de message non trouvé",
           };
         }
 
         // Vérifier les doublons de titre (sauf pour le type actuel)
         const duplicate = allTypes.data.find(
-          (type: any) => type.id !== id && type.title.toLowerCase() === title.toLowerCase()
+          (type: any) =>
+            type.id !== id && type.title.toLowerCase() === title.toLowerCase(),
         );
         if (duplicate) {
           return {
             success: false,
-            message: 'Un autre type de message avec ce titre existe déjà',
+            message: "Un autre type de message avec ce titre existe déjà",
           };
         }
       }
 
-      const result = await this.messageClient.modifierTypeMessage(id, title.trim(), content.trim());
+      const result = await this.messageClient.modifierTypeMessage(
+        id,
+        title.trim(),
+        content.trim(),
+      );
 
       if (!result.isConfirm) {
         return {
           success: false,
-          message: result.message || 'Erreur lors de la modification du type de message',
+          message:
+            result.message ||
+            "Erreur lors de la modification du type de message",
         };
       }
 
       return {
         success: true,
-        message: result.message || 'Type de message modifié avec succès',
+        message: result.message || "Type de message modifié avec succès",
       };
     } catch (error: any) {
-      console.error('❌ [TypesMessagesService] Erreur updateTypeMessage:', error);
-      throw new Error(`Erreur lors de la modification du type de message: ${error.message}`);
+      console.error(
+        "❌ [TypesMessagesService] Erreur updateTypeMessage:",
+        error,
+      );
+      throw new Error(
+        `Erreur lors de la modification du type de message: ${error.message}`,
+      );
     }
   }
 
@@ -187,7 +218,7 @@ export class TypesMessagesService {
       if (id <= 0) {
         return {
           success: false,
-          message: 'ID invalide',
+          message: "ID invalide",
         };
       }
 
@@ -198,7 +229,7 @@ export class TypesMessagesService {
         if (!exists) {
           return {
             success: false,
-            message: 'Type de message non trouvé',
+            message: "Type de message non trouvé",
           };
         }
       }
@@ -208,17 +239,24 @@ export class TypesMessagesService {
       if (!result.isConfirm) {
         return {
           success: false,
-          message: result.message || 'Erreur lors de la suppression du type de message',
+          message:
+            result.message ||
+            "Erreur lors de la suppression du type de message",
         };
       }
 
       return {
         success: true,
-        message: result.message || 'Type de message supprimé avec succès',
+        message: result.message || "Type de message supprimé avec succès",
       };
     } catch (error: any) {
-      console.error('❌ [TypesMessagesService] Erreur deleteTypeMessage:', error);
-      throw new Error(`Erreur lors de la suppression du type de message: ${error.message}`);
+      console.error(
+        "❌ [TypesMessagesService] Erreur deleteTypeMessage:",
+        error,
+      );
+      throw new Error(
+        `Erreur lors de la suppression du type de message: ${error.message}`,
+      );
     }
   }
 
@@ -233,7 +271,7 @@ export class TypesMessagesService {
       if (id <= 0) {
         return {
           success: false,
-          message: 'ID invalide',
+          message: "ID invalide",
           data: null,
         };
       }
@@ -243,7 +281,7 @@ export class TypesMessagesService {
       if (!allTypes.isFind || !allTypes.data) {
         return {
           success: false,
-          message: 'Aucun type de message trouvé',
+          message: "Aucun type de message trouvé",
           data: null,
         };
       }
@@ -253,22 +291,30 @@ export class TypesMessagesService {
       if (!typeMessage) {
         return {
           success: false,
-          message: 'Type de message non trouvé',
+          message: "Type de message non trouvé",
           data: null,
         };
       }
 
       return {
         success: true,
-        message: 'Type de message trouvé',
+        message: "Type de message trouvé",
         data: typeMessage,
       };
     } catch (error: any) {
-      console.error('❌ [TypesMessagesService] Erreur getTypeMessageById:', error);
-      throw new Error(`Erreur lors de la récupération du type de message: ${error.message}`);
+      console.error(
+        "❌ [TypesMessagesService] Erreur getTypeMessageById:",
+        error,
+      );
+      throw new Error(
+        `Erreur lors de la récupération du type de message: ${error.message}`,
+      );
     }
   }
 }
 
-// Export d'une instance singleton
+// Export d'une instance singleton par défaut
 export const typesMessagesService = new TypesMessagesService();
+
+// Export de la classe pour permettre l'injection de dépendances dans les tests
+export { TypesMessagesService };
