@@ -5,11 +5,15 @@ import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
  * Handler pour le health check du module professeurs
  * GET /api/professeurs/health
  */
-export async function healthCheck(req: Request, res: Response) {
+export async function healthCheck(
+  req: Request,
+  res: Response,
+  professeursClient?: Professeurs,
+) {
   console.log("🏥 [Handler] GET /api/professeurs/health - Health check");
 
   try {
-    const client = new Professeurs();
+    const client = professeursClient || new Professeurs();
 
     // Vérifier la connexion à la base de données
     let databaseConnected = false;
@@ -67,7 +71,6 @@ export async function healthCheck(req: Request, res: Response) {
       status: "unhealthy",
       module: "professeurs",
       timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 }
@@ -76,11 +79,15 @@ export async function healthCheck(req: Request, res: Response) {
  * Handler pour le diagnostic du module professeurs
  * GET /api/professeurs/diagnostic
  */
-export async function getDiagnostic(req: Request, res: Response) {
+export async function getDiagnostic(
+  req: Request,
+  res: Response,
+  professeursClient?: Professeurs,
+) {
   console.log("🔍 [Handler] GET /api/professeurs/diagnostic - Diagnostic");
 
   try {
-    const client = new Professeurs();
+    const client = professeursClient || new Professeurs();
 
     // Récupérer des informations de base
     let databaseAccessible = false;
@@ -130,7 +137,6 @@ export async function getDiagnostic(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: "Erreur lors du diagnostic",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 }

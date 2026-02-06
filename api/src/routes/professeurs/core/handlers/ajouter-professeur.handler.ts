@@ -1,15 +1,26 @@
 import { Request, Response } from "express";
-import { ajouterProfesseur, extraireIdsUtilisateurs } from "../services/index.js";
+import {
+  ajouterProfesseur,
+  extraireIdsUtilisateurs,
+} from "../services/index.js";
 import { ajouterProfesseurSchema } from "../validators/index.js";
 import { emailClient } from "../../../../clients/emailClient.js";
 import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
+import type { EmailClient } from "../../../../clients/emailClient.js";
 
 /**
  * Handler pour ajouter/promouvoir un ou plusieurs professeurs
  * POST /api/professeurs/ajouter
  */
-export async function ajouterProfesseurHandler(req: Request, res: Response) {
-  console.log("📝 [Handler] POST /api/professeurs/ajouter - Promotion de professeur(s)");
+export async function ajouterProfesseurHandler(
+  req: Request,
+  res: Response,
+  professeursClient?: Professeurs,
+  emailClientInstance?: EmailClient,
+) {
+  console.log(
+    "📝 [Handler] POST /api/professeurs/ajouter - Promotion de professeur(s)",
+  );
 
   try {
     const data = req.body;
@@ -29,7 +40,7 @@ export async function ajouterProfesseurHandler(req: Request, res: Response) {
     }
 
     // Ajouter/promouvoir le(s) professeur(s)
-    const result = await ajouterProfesseur(data);
+    const result = await ajouterProfesseur(data, professeursClient);
 
     console.log("📊 [Handler] Résultat promotion:", result);
 
@@ -41,47 +52,73 @@ export async function ajouterProfesseurHandler(req: Request, res: Response) {
         // Extraire les IDs des utilisateurs
         const userIds = extraireIdsUtilisateurs(data);
 
-        console.log(`📝 [Handler] ${userIds.length} IDs utilisateurs extraits pour l'envoi d'emails:`, userIds);
+        console.log(
+          `📝 [Handler] ${userIds.length} IDs utilisateurs extraits pour l'envoi d'emails:`,
+          userIds,
+        );
 
-        const client = new Professeurs();
+        const client = professeursClient || new Professeurs();
+        const emailClientToUse = emailClientInstance || emailClient;
 
         // Envoyer un email à chaque utilisateur promu
         for (const userId of userIds) {
           try {
-            console.log(`🔍 [Handler] Traitement de l'utilisateur ID: ${userId}`);
+            console.log(
+              `🔍 [Handler] Traitement de l'utilisateur ID: ${userId}`,
+            );
 
             // Récupérer les données complètes de l'utilisateur depuis la base
-            const utilisateurComplet = await client.obtenirUtilisateurParId(userId);
+            const utilisateurComplet =
+              await client.obtenirUtilisateurParId(userId);
 
             if (utilisateurComplet) {
-              console.log(`📧 [Handler] Envoi email de promotion à ${utilisateurComplet.email} (ID: ${userId})`);
+              console.log(
+                `📧 [Handler] Envoi email de promotion à ${utilisateurComplet.email} (ID: ${userId})`,
+              );
 
               // Utiliser EmailClient pour envoyer l'email
-              const emailResult = await emailClient.sendPromotionEmail(utilisateurComplet, {
-                templateName: "promotion-professeur",
-                variables: {
-                  customMessage: "Bienvenue dans l'équipe des professeurs !",
-                  supportEmail: process.env.SUPPORT_EMAIL || "support@clubmanager.com",
+              const emailResult = await emailClientToUse.sendPromotionEmail(
+                utilisateurComplet,
+                {
+                  templateName: "promotion-professeur",
+                  variables: {
+                    customMessage: "Bienvenue dans l'équipe des professeurs !",
+                    supportEmail:
+                      process.env.SUPPORT_EMAIL || "support@clubmanager.com",
+                  },
                 },
-              });
+              );
 
               if (emailResult.success) {
-                console.log(`✅ [Handler] Email de promotion envoyé avec succès à ${utilisateurComplet.email}`);
+                console.log(
+                  `✅ [Handler] Email de promotion envoyé avec succès à ${utilisateurComplet.email}`,
+                );
               } else {
-                console.error(`❌ [Handler] Erreur envoi email à ${utilisateurComplet.email}:`, emailResult.error);
+                console.error(
+                  `❌ [Handler] Erreur envoi email à ${utilisateurComplet.email}:`,
+                  emailResult.error,
+                );
               }
             } else {
-              console.warn(`⚠️ [Handler] Utilisateur avec ID ${userId} non trouvé pour l'envoi d'email`);
+              console.warn(
+                `⚠️ [Handler] Utilisateur avec ID ${userId} non trouvé pour l'envoi d'email`,
+              );
             }
           } catch (emailError) {
-            console.error(`❌ [Handler] Erreur envoi email pour utilisateur ID ${userId}:`, emailError);
+            console.error(
+              `❌ [Handler] Erreur envoi email pour utilisateur ID ${userId}:`,
+              emailError,
+            );
             // On ne fait pas échouer la promotion pour une erreur d'email
           }
         }
 
         console.log("📧 [Handler] Processus d'envoi des emails terminé");
       } catch (emailError) {
-        console.error("❌ [Handler] Erreur générale lors de l'envoi des emails:", emailError);
+        console.error(
+          "❌ [Handler] Erreur générale lors de l'envoi des emails:",
+          emailError,
+        );
         // On ne fait pas échouer la promotion pour une erreur d'email
       }
     }
@@ -97,7 +134,6 @@ export async function ajouterProfesseurHandler(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: "Erreur serveur lors de la promotion des professeurs",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 }

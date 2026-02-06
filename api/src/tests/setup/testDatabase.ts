@@ -37,6 +37,9 @@ let testPrisma: typeof prisma;
  */
 function findMySQLPath(): string {
   const possiblePaths = [
+    "C:\\laragon\\bin\\mysql\\mysql-8.0.30-winx64\\bin",
+    "C:\\laragon\\bin\\mysql\\mysql-8.1.0-winx64\\bin",
+    "C:\\laragon\\bin\\mysql\\mysql-5.7.33-winx64\\bin",
     "C:\\xampp\\mysql\\bin",
     "C:\\wamp64\\bin\\mysql\\mysql8.0.31\\bin",
     "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin",

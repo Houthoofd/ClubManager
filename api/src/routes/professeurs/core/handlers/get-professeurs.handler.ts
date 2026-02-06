@@ -6,11 +6,17 @@ import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
  * Handler pour récupérer tous les professeurs
  * GET /api/professeurs
  */
-export async function getProfesseurs(req: Request, res: Response) {
-  console.log("📋 [Handler] GET /api/professeurs - Récupération de tous les professeurs");
+export async function getProfesseurs(
+  req: Request,
+  res: Response,
+  professeursClient?: Professeurs,
+) {
+  console.log(
+    "📋 [Handler] GET /api/professeurs - Récupération de tous les professeurs",
+  );
 
   try {
-    const professeurs = await obtenirTousLesProfesseurs();
+    const professeurs = await obtenirTousLesProfesseurs(professeursClient);
 
     console.log(`✅ [Handler] ${professeurs.length} professeurs récupérés`);
 
@@ -26,7 +32,6 @@ export async function getProfesseurs(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: "Erreur serveur lors de la récupération des professeurs",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 }
@@ -35,10 +40,16 @@ export async function getProfesseurs(req: Request, res: Response) {
  * Handler pour récupérer un professeur par son ID
  * GET /api/professeurs/:id
  */
-export async function getProfesseurById(req: Request, res: Response) {
+export async function getProfesseurById(
+  req: Request,
+  res: Response,
+  professeursClient?: Professeurs,
+) {
   const { id } = req.params;
 
-  console.log(`📋 [Handler] GET /api/professeurs/${id} - Récupération professeur`);
+  console.log(
+    `📋 [Handler] GET /api/professeurs/${id} - Récupération professeur`,
+  );
 
   try {
     // Validation de l'ID
@@ -52,7 +63,7 @@ export async function getProfesseurById(req: Request, res: Response) {
       });
     }
 
-    const client = new Professeurs();
+    const client = professeursClient || new Professeurs();
     const professeur = await client.obtenirUtilisateurParId(professeurId);
 
     if (!professeur) {
@@ -77,7 +88,6 @@ export async function getProfesseurById(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: "Erreur serveur lors de la récupération du professeur",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 }

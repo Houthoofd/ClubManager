@@ -1,21 +1,35 @@
 import { Request, Response } from "express";
 import { modifierStatutProfesseur } from "../services/index.js";
 import { modifierStatutProfesseurSchema } from "../validators/index.js";
+import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
 
 /**
  * Handler pour modifier le statut d'un professeur
  * POST /api/professeurs/modifier
  */
-export async function modifierStatutProfesseurHandler(req: Request, res: Response) {
-  console.log("📝 [Handler] POST /api/professeurs/modifier - Modification statut professeur");
+export async function modifierStatutProfesseurHandler(
+  req: Request,
+  res: Response,
+  professeursClient?: Professeurs,
+) {
+  console.log(
+    "📝 [Handler] POST /api/professeurs/modifier - Modification statut professeur",
+  );
 
   try {
     const { id, status_id } = req.body;
 
-    console.log(`📋 [Handler] Données reçues: id=${id}, status_id=${status_id}`);
+    console.log(
+      `📋 [Handler] Données reçues: id=${id}, status_id=${status_id}`,
+    );
 
-    // Validation des données requises
-    if (!id || !status_id) {
+    // Validation des données requises (accepte 0 comme valeur valide)
+    if (
+      id === undefined ||
+      id === null ||
+      status_id === undefined ||
+      status_id === null
+    ) {
       console.log("⚠️ [Handler] Données manquantes");
       return res.status(400).json({
         success: false,
@@ -37,7 +51,11 @@ export async function modifierStatutProfesseurHandler(req: Request, res: Respons
     }
 
     // Modifier le statut
-    const result = await modifierStatutProfesseur(id, status_id);
+    const result = await modifierStatutProfesseur(
+      id,
+      status_id,
+      professeursClient,
+    );
 
     console.log("📊 [Handler] Résultat modification:", result);
 
@@ -56,12 +74,14 @@ export async function modifierStatutProfesseurHandler(req: Request, res: Respons
       data: result.data || { id, status_id },
     });
   } catch (error) {
-    console.error("❌ [Handler] Erreur lors de la modification du statut:", error);
+    console.error(
+      "❌ [Handler] Erreur lors de la modification du statut:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
       message: "Erreur serveur lors de la modification du statut",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 }

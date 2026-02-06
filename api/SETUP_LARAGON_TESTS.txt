@@ -1,0 +1,156 @@
+================================================================================
+  GUIDE DE CONFIGURATION LARAGON POUR LES TESTS - MODULE PROFESSEURS
+================================================================================
+
+📋 ÉTAPE 1 : DÉMARRER LARAGON ET MYSQL
+---------------------------------------
+1. Ouvrir Laragon
+2. Cliquer sur "Start All" ou démarrer uniquement MySQL
+3. Vérifier que MySQL est bien démarré (icône verte)
+
+📋 ÉTAPE 2 : VÉRIFIER LA CONNEXION
+-----------------------------------
+Dans le dossier api, exécuter :
+   node test-db-connection.cjs
+
+Si la connexion échoue, vérifier :
+   - MySQL est bien démarré dans Laragon
+   - Le port est 3306 (par défaut)
+   - L'utilisateur root n'a pas de mot de passe (ou vérifier .env.test)
+
+📋 ÉTAPE 3 : CRÉER LA BASE DE DONNÉES DE TEST
+----------------------------------------------
+Ouvrir HeidiSQL (fourni avec Laragon) ou un autre client MySQL et :
+
+Option A - Via HeidiSQL :
+   1. Se connecter à localhost (root / sans mot de passe)
+   2. Créer une nouvelle base de données : clubmanager_test
+   3. Charset: utf8mb4
+   4. Collation: utf8mb4_unicode_ci
+
+Option B - Via ligne de commande :
+   cd api
+   node -e "const mysql = require('mysql'); const conn = mysql.createConnection({host:'localhost',user:'root',password:''}); conn.query('CREATE DATABASE IF NOT EXISTS clubmanager_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', (err) => {if(err) console.error(err); else console.log('✅ DB créée'); conn.end();});"
+
+📋 ÉTAPE 4 : CONFIGURER .env.test
+----------------------------------
+Vérifier que le fichier api/.env.test contient :
+
+   NODE_ENV=test
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=
+   DB_NAME=clubmanager_test
+
+   DATABASE_URL=mysql://root@localhost:3306/clubmanager_test
+
+📋 ÉTAPE 5 : LANCER LES TESTS UNITAIRES (SANS DB)
+--------------------------------------------------
+Ces tests ne nécessitent PAS de connexion DB réelle (ils utilisent des mocks) :
+
+   cd api
+   npm run test:professeurs:unit
+
+Fichiers testés (devraient tous passer) :
+   ✅ professeurs.schema.test.ts           - 59 tests
+   ✅ professeurs.validators-advanced.test.ts - 89 tests
+   ✅ professeurs.service-branches.test.ts    - 43 tests
+   ✅ professeurs.stats-advanced.test.ts      - 24 tests
+   ✅ professeurs.performance.test.ts         - 17 tests
+   ✅ professeurs.health-advanced.test.ts     - 24 tests
+
+   TOTAL : ~256 tests unitaires
+
+📋 ÉTAPE 6 : SETUP LA STRUCTURE DE LA DB DE TEST
+-------------------------------------------------
+Avant de lancer les tests d'intégration, il faut copier la structure
+de la DB principale vers la DB de test.
+
+Option A - Si vous avez déjà une DB clubmanager :
+   Le script testDatabase.ts va automatiquement copier la structure
+
+Option B - Si vous n'avez pas de DB clubmanager :
+   1. Créer d'abord la DB principale : clubmanager
+   2. Importer le schéma depuis un dump SQL
+   3. Puis lancer le setup de test
+
+📋 ÉTAPE 7 : LANCER LES TESTS D'INTÉGRATION
+--------------------------------------------
+Ces tests nécessitent une connexion DB réelle :
+
+   cd api
+   npm run test:professeurs:integration
+
+Ou pour les tests d'intégration réels :
+   npm run test:professeurs:integration:real
+
+📋 ÉTAPE 8 : LANCER TOUS LES TESTS
+-----------------------------------
+   cd api
+   npm run test:professeurs:all
+
+================================================================================
+  RÉSUMÉ DES COMMANDES RAPIDES
+================================================================================
+
+✅ Tests unitaires seulement (pas de DB nécessaire) :
+   npm run test:professeurs:unit
+
+✅ Tests d'intégration (DB nécessaire) :
+   npm run test:professeurs:integration
+
+✅ Tests d'intégration réels (DB nécessaire) :
+   npm run test:professeurs:integration:real
+
+✅ Tous les tests :
+   npm run test:professeurs:all
+
+✅ Tests en mode watch :
+   npm run test:professeurs:watch
+
+✅ Coverage :
+   npm run test:professeurs:coverage
+
+================================================================================
+  DÉPANNAGE
+================================================================================
+
+❌ Erreur "ECONNREFUSED" :
+   → MySQL n'est pas démarré dans Laragon
+
+❌ Erreur "Access denied" :
+   → Vérifier DB_USER et DB_PASSWORD dans .env.test
+
+❌ Erreur "Unknown database 'clubmanager_test'" :
+   → Créer la base de données (voir ÉTAPE 3)
+
+❌ Erreur "Table doesn't exist" :
+   → Copier la structure depuis clubmanager (voir ÉTAPE 6)
+
+❌ Tests échouent avec timeout :
+   → Vérifier que MySQL répond rapidement (pas de surcharge)
+   → Augmenter le timeout dans jest.config.cjs si nécessaire
+
+================================================================================
+  STATUT ACTUEL DES TESTS
+================================================================================
+
+✅ PASSENT (256 tests unitaires) :
+   - professeurs.schema.test.ts
+   - professeurs.validators-advanced.test.ts
+   - professeurs.service-branches.test.ts
+   - professeurs.stats-advanced.test.ts
+   - professeurs.performance.test.ts
+   - professeurs.health-advanced.test.ts
+
+⚠️  NÉCESSITENT DB (tests d'intégration) :
+   - professeurs.test.ts
+   - professeurs.errors.test.ts
+   - professeurs.validation.test.ts
+   - professeurs.edge-cases.test.ts
+   - professeurs.security.test.ts
+   - professeurs.integration.test.ts
+   - professeurs.real-integration.test.ts
+
+================================================================================

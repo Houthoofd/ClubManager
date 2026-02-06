@@ -56,6 +56,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getProfesseurById(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -73,6 +74,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getProfesseurById(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -90,6 +92,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getProfesseurById(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -120,6 +123,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getProfesseurById(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -139,6 +143,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -176,6 +181,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -211,6 +217,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -246,6 +253,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -281,6 +289,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -316,6 +325,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -351,6 +361,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -371,6 +382,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -390,6 +402,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -410,6 +423,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -430,6 +444,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -450,6 +465,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -473,6 +489,7 @@ describe("Professeurs Module - Tests de validation", () => {
         };
 
         const mockResult = {
+        isConfirm: true,
           success: true,
           message: "Statut modifié avec succès",
           data: { id: 1, status_id },
@@ -485,7 +502,8 @@ describe("Professeurs Module - Tests de validation", () => {
         await modifierStatutProfesseurHandler(
           mockRequest as Request,
           mockResponse as Response,
-        );
+        mockProfesseursClient as Professeurs,
+      );
 
         expect(statusMock).toHaveBeenCalledWith(200);
         expect(jsonMock).toHaveBeenCalledWith(
@@ -505,6 +523,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -525,6 +544,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -544,6 +564,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -562,6 +583,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -580,6 +602,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -617,6 +640,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -638,6 +662,7 @@ describe("Professeurs Module - Tests de validation", () => {
       };
 
       const mockResult = {
+        isConfirm: true,
         success: true,
         message: "Statut modifié avec succès",
       };
@@ -649,6 +674,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -667,6 +693,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -686,6 +713,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -722,6 +750,7 @@ describe("Professeurs Module - Tests de validation", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);

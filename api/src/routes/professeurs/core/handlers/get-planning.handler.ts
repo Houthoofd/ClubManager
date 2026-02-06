@@ -1,15 +1,22 @@
 import { Request, Response } from "express";
 import { obtenirPlanningProfesseur } from "../services/index.js";
 import { getPlanningProfesseurSchema } from "../validators/index.js";
+import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
 
 /**
  * Handler pour récupérer le planning d'un professeur
  * GET /api/professeurs/:id/planning
  */
-export async function getPlanningProfesseur(req: Request, res: Response) {
+export async function getPlanningProfesseur(
+  req: Request,
+  res: Response,
+  professeursClient?: Professeurs,
+) {
   const { id } = req.params;
 
-  console.log(`📅 [Handler] GET /api/professeurs/${id}/planning - Récupération du planning`);
+  console.log(
+    `📅 [Handler] GET /api/professeurs/${id}/planning - Récupération du planning`,
+  );
 
   try {
     // Validation de l'ID
@@ -29,14 +36,21 @@ export async function getPlanningProfesseur(req: Request, res: Response) {
 
     const professeurId = validatedData.id;
 
-    console.log(`🔍 [Handler] Récupération planning pour professeur ID: ${professeurId}`);
+    console.log(
+      `🔍 [Handler] Récupération planning pour professeur ID: ${professeurId}`,
+    );
 
     // Récupérer le planning
-    const planningResult = await obtenirPlanningProfesseur(professeurId);
+    const planningResult = await obtenirPlanningProfesseur(
+      professeurId,
+      professeursClient,
+    );
 
     console.log(
       `✅ [Handler] Planning récupéré:`,
-      planningResult.isFind ? `${planningResult.data.length} cours` : "aucun cours"
+      planningResult.isFind
+        ? `${planningResult.data.length} cours`
+        : "aucun cours",
     );
 
     return res.status(200).json({
@@ -48,13 +62,15 @@ export async function getPlanningProfesseur(req: Request, res: Response) {
       professeur_id: professeurId,
     });
   } catch (error) {
-    console.error(`❌ [Handler] Erreur récupération planning professeur ${id}:`, error);
+    console.error(
+      `❌ [Handler] Erreur récupération planning professeur ${id}:`,
+      error,
+    );
 
     return res.status(500).json({
       success: false,
       isFind: false,
       message: "Erreur serveur lors de la récupération du planning",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
       data: [],
     });
   }

@@ -6,6 +6,13 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
 import { Professeurs } from "../../../db/clients/professeurs/professeurs.js";
+import {
+  getProfesseurs,
+  getProfesseurById,
+  ajouterProfesseurHandler,
+  modifierStatutProfesseurHandler,
+  getPlanningProfesseur,
+} from "../core/handlers/index.js";
 
 describe("Professeurs Module - Performance Tests", () => {
   let mockRequest: Partial<Request>;
@@ -14,7 +21,7 @@ describe("Professeurs Module - Performance Tests", () => {
   let statusMock: jest.Mock;
   let mockProfesseursClient: Partial<Professeurs>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     jsonMock = jest.fn();
@@ -38,6 +45,7 @@ describe("Professeurs Module - Performance Tests", () => {
       ajouterUnProfesseur: jest.fn(),
       modifierStatutProfesseur: jest.fn(),
       obtenirPlanningCoursProfesseur: jest.fn(),
+      queryAsync: jest.fn(),
     };
   });
 
@@ -52,20 +60,19 @@ describe("Professeurs Module - Performance Tests", () => {
         status_id: 1,
       }));
 
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({
         isFind: true,
         data: mockProfesseurs,
       });
 
       const startTime = Date.now();
 
-      const { getProfesseurs } = await import(
-        "../core/handlers/get-professeurs.handler.js"
-      );
       await getProfesseurs(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
@@ -86,19 +93,16 @@ describe("Professeurs Module - Performance Tests", () => {
 
       mockRequest.params = { id: "1" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
       const startTime = Date.now();
 
-      const { getProfesseurById } = await import(
-        "../core/handlers/get-professeurs.handler.js"
-      );
       await getProfesseurById(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
@@ -114,21 +118,30 @@ describe("Professeurs Module - Performance Tests", () => {
 
       mockRequest.body = mockData;
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue({
         isConfirm: true,
         message: "Professeurs promus avec succès",
         data: { promoted: [1, 2, 3] },
       });
 
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        email: "john.doe@test.com",
+        role_id: 2,
+      });
+
       const startTime = Date.now();
 
-      const { ajouterProfesseur } = await import(
-        "../core/handlers/ajouter-professeur.handler.js"
-      );
-      await ajouterProfesseur(
+      await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
@@ -143,7 +156,9 @@ describe("Professeurs Module - Performance Tests", () => {
         status_id: 2,
       };
 
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockResolvedValue({
         isConfirm: true,
         message: "Statut modifié",
         data: { id: 1, status_id: 2 },
@@ -151,13 +166,10 @@ describe("Professeurs Module - Performance Tests", () => {
 
       const startTime = Date.now();
 
-      const { modifierStatut } = await import(
-        "../core/handlers/modifier-statut.handler.js"
-      );
-      await modifierStatut(
+      await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
@@ -174,27 +186,24 @@ describe("Professeurs Module - Performance Tests", () => {
           id: i + 1,
           nom_cours: `Cours ${i + 1}`,
           jour_semaine: "Lundi",
-          heure_debut: "18:00",
-          heure_fin: "19:00",
+          heure_debut: "09:00",
+          heure_fin: "10:00",
           professeur_id: 1,
         })),
       };
 
       mockRequest.params = { id: "1" };
 
-      (mockProfesseursClient.obtenirPlanningCoursProfesseur as jest.Mock).mockResolvedValue(
-        mockPlanning
-      );
+      (
+        mockProfesseursClient.obtenirPlanningCoursProfesseur as jest.Mock
+      ).mockResolvedValue(mockPlanning);
 
       const startTime = Date.now();
 
-      const { getPlanningProfesseur } = await import(
-        "../core/handlers/get-planning.handler.js"
-      );
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
@@ -212,60 +221,80 @@ describe("Professeurs Module - Performance Tests", () => {
         last_name: `Test${i + 1}`,
         email: `prof${i + 1}@test.com`,
         role_id: 2,
+        status_id: 1,
       }));
 
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({
         isFind: true,
         data: mockProfesseurs,
       });
 
       const startTime = Date.now();
 
-      const promises = Array.from({ length: 100 }, async () => {
-        const { getProfesseurs } = await import(
-          "../core/handlers/get-professeurs.handler.js"
-        );
-        return getProfesseurs(
-          mockRequest as Request,
-          mockResponse as Response,
-          mockProfesseursClient as Professeurs
-        );
+      const promises = Array.from({ length: 100 }, () => {
+        const req = { ...mockRequest } as Request;
+        const res = {
+          json: jest.fn(),
+          status: jest.fn(() => res),
+        } as unknown as Response;
+        return getProfesseurs(req, res, mockProfesseursClient as Professeurs);
       });
 
       await Promise.all(promises);
+
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeLessThan(5000); // 5 secondes pour 100 requêtes
+      expect(duration).toBeLessThan(2000);
     });
 
     it("devrait gérer 50 promotions simultanées", async () => {
       mockRequest.body = {
-        utilisateurs: [1, 2, 3],
+        utilisateurs: [1],
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue({
         isConfirm: true,
-        message: "Promotion réussie",
-        data: {},
+        message: "Professeur promu",
+        data: { promoted: [1] },
+      });
+
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        email: "john.doe@test.com",
+        role_id: 2,
       });
 
       const startTime = Date.now();
 
-      const promises = Array.from({ length: 50 }, async () => {
-        const { ajouterProfesseur } = await import(
-          "../core/handlers/ajouter-professeur.handler.js"
-        );
-        return ajouterProfesseur(
-          mockRequest as Request,
-          mockResponse as Response,
-          mockProfesseursClient as Professeurs
+      const promises = Array.from({ length: 50 }, () => {
+        const req = {
+          ...mockRequest,
+          body: { utilisateurs: [1] },
+        } as Request;
+        const res = {
+          json: jest.fn(),
+          status: jest.fn(() => res),
+        } as unknown as Response;
+        return ajouterProfesseurHandler(
+          req,
+          res,
+          mockProfesseursClient as Professeurs,
         );
       });
 
       await Promise.all(promises);
+
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeLessThan(10000); // 10 secondes pour 50 promotions
+      expect(duration).toBeLessThan(5000);
     });
 
     it("devrait gérer 200 requêtes de consultation d'un professeur simultanées", async () => {
@@ -273,39 +302,43 @@ describe("Professeurs Module - Performance Tests", () => {
         id: 1,
         first_name: "John",
         last_name: "Doe",
-        email: "john@test.com",
+        email: "john.doe@test.com",
         role_id: 2,
+        status_id: 1,
       };
 
       mockRequest.params = { id: "1" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
       const startTime = Date.now();
 
-      const promises = Array.from({ length: 200 }, async () => {
-        const { getProfesseurById } = await import(
-          "../core/handlers/get-professeurs.handler.js"
-        );
+      const promises = Array.from({ length: 200 }, () => {
+        const req = { params: { id: "1" } } as unknown as Request;
+        const res = {
+          json: jest.fn(),
+          status: jest.fn(() => res),
+        } as unknown as Response;
         return getProfesseurById(
-          mockRequest as Request,
-          mockResponse as Response,
-          mockProfesseursClient as Professeurs
+          req,
+          res,
+          mockProfesseursClient as Professeurs,
         );
       });
 
       await Promise.all(promises);
+
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeLessThan(3000); // 3 secondes pour 200 requêtes
+      expect(duration).toBeLessThan(2000);
     });
   });
 
   describe("Performance avec gros volumes de données", () => {
     it("devrait gérer efficacement 500 professeurs", async () => {
-      const largeProfesseurs = Array.from({ length: 500 }, (_, i) => ({
+      const mockProfesseurs = Array.from({ length: 500 }, (_, i) => ({
         id: i + 1,
         first_name: `Professeur${i + 1}`,
         last_name: `Test${i + 1}`,
@@ -314,67 +347,66 @@ describe("Professeurs Module - Performance Tests", () => {
         status_id: 1,
       }));
 
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({
         isFind: true,
-        data: largeProfesseurs,
+        data: mockProfesseurs,
       });
 
       const startTime = Date.now();
 
-      const { getProfesseurs } = await import(
-        "../core/handlers/get-professeurs.handler.js"
-      );
       await getProfesseurs(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
 
       expect(statusMock).toHaveBeenCalledWith(200);
-      expect(duration).toBeLessThan(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          data: expect.arrayContaining([expect.any(Object)]),
           count: 500,
-        })
+        }),
       );
+      expect(duration).toBeLessThan(500);
     });
 
     it("devrait gérer efficacement un planning avec 100 cours", async () => {
-      const largePlanning = {
+      const mockPlanning = {
         isFind: true,
         message: "Planning trouvé",
         data: Array.from({ length: 100 }, (_, i) => ({
           id: i + 1,
           nom_cours: `Cours ${i + 1}`,
-          jour_semaine: ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"][i % 5],
-          heure_debut: `${8 + (i % 12)}:00`,
-          heure_fin: `${9 + (i % 12)}:00`,
-          professeur_id: 1,
-          salle: `Dojo ${(i % 3) + 1}`,
+          description: `Description du cours ${i + 1}`,
+          jour_semaine: ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"][
+            i % 5
+          ],
+          heure_debut: "18:00",
+          heure_fin: "19:00",
+          salle: `Salle ${(i % 10) + 1}`,
           niveau: ["Débutant", "Intermédiaire", "Avancé"][i % 3],
-          capacite_max: 20,
+          capacite_max: 15,
+          professeur_id: 1,
+          nombre_inscrits: Math.floor(Math.random() * 15),
         })),
       };
 
       mockRequest.params = { id: "1" };
 
-      (mockProfesseursClient.obtenirPlanningCoursProfesseur as jest.Mock).mockResolvedValue(
-        largePlanning
-      );
+      (
+        mockProfesseursClient.obtenirPlanningCoursProfesseur as jest.Mock
+      ).mockResolvedValue(mockPlanning);
 
       const startTime = Date.now();
 
-      const { getPlanningProfesseur } = await import(
-        "../core/handlers/get-planning.handler.js"
-      );
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
@@ -384,53 +416,66 @@ describe("Professeurs Module - Performance Tests", () => {
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          data: expect.arrayContaining([expect.any(Object)]),
-        })
+          isFind: true,
+          count: 100,
+        }),
       );
     });
 
     it("devrait gérer efficacement la promotion de 50 utilisateurs", async () => {
-      const largeUserList = Array.from({ length: 50 }, (_, i) => i + 1);
+      const userIds = Array.from({ length: 50 }, (_, i) => i + 1);
 
       mockRequest.body = {
-        utilisateurs: largeUserList,
+        utilisateurs: userIds,
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue({
         isConfirm: true,
         message: "50 professeurs promus",
-        data: { promoted: largeUserList },
+        data: { promoted: userIds },
+      });
+
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        email: "john.doe@test.com",
+        role_id: 2,
       });
 
       const startTime = Date.now();
 
-      const { ajouterProfesseur } = await import(
-        "../core/handlers/ajouter-professeur.handler.js"
-      );
-      await ajouterProfesseur(
+      await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
 
       expect(statusMock).toHaveBeenCalledWith(200);
-      expect(duration).toBeLessThan(800);
+      expect(duration).toBeLessThan(1000);
     });
   });
 
   describe("Benchmarks moyens", () => {
     it("devrait maintenir une moyenne < 100ms pour getProfesseurs sur 100 appels", async () => {
-      const mockProfesseurs = Array.from({ length: 30 }, (_, i) => ({
+      const mockProfesseurs = Array.from({ length: 10 }, (_, i) => ({
         id: i + 1,
         first_name: `Prof${i + 1}`,
         last_name: `Test${i + 1}`,
         email: `prof${i + 1}@test.com`,
         role_id: 2,
+        status_id: 1,
       }));
 
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({
         isFind: true,
         data: mockProfesseurs,
       });
@@ -439,53 +484,72 @@ describe("Professeurs Module - Performance Tests", () => {
 
       for (let i = 0; i < 100; i++) {
         const startTime = Date.now();
+        const req = { ...mockRequest } as Request;
+        const res = {
+          json: jest.fn(),
+          status: jest.fn(() => res),
+        } as unknown as Response;
 
-        const { getProfesseurs } = await import(
-          "../core/handlers/get-professeurs.handler.js"
-        );
-        await getProfesseurs(
-          mockRequest as Request,
-          mockResponse as Response,
-          mockProfesseursClient as Professeurs
-        );
+        await getProfesseurs(req, res, mockProfesseursClient as Professeurs);
 
         durations.push(Date.now() - startTime);
       }
 
-      const average = durations.reduce((a, b) => a + b, 0) / durations.length;
+      const average =
+        durations.reduce((sum, duration) => sum + duration, 0) /
+        durations.length;
 
       expect(average).toBeLessThan(100);
     });
 
     it("devrait maintenir une moyenne < 150ms pour ajouterProfesseur sur 50 appels", async () => {
       mockRequest.body = {
-        utilisateurs: [1, 2],
+        utilisateurs: [1],
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue({
         isConfirm: true,
-        message: "Promotion réussie",
-        data: {},
+        message: "Professeur promu",
+        data: { promoted: [1] },
+      });
+
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
+        id: 1,
+        first_name: "John",
+        last_name: "Doe",
+        email: "john.doe@test.com",
+        role_id: 2,
       });
 
       const durations: number[] = [];
 
       for (let i = 0; i < 50; i++) {
         const startTime = Date.now();
+        const req = {
+          ...mockRequest,
+          body: { utilisateurs: [1] },
+        } as Request;
+        const res = {
+          json: jest.fn(),
+          status: jest.fn(() => res),
+        } as unknown as Response;
 
-        const { ajouterProfesseur } = await import(
-          "../core/handlers/ajouter-professeur.handler.js"
-        );
-        await ajouterProfesseur(
-          mockRequest as Request,
-          mockResponse as Response,
-          mockProfesseursClient as Professeurs
+        await ajouterProfesseurHandler(
+          req,
+          res,
+          mockProfesseursClient as Professeurs,
         );
 
         durations.push(Date.now() - startTime);
       }
 
-      const average = durations.reduce((a, b) => a + b, 0) / durations.length;
+      const average =
+        durations.reduce((sum, duration) => sum + duration, 0) /
+        durations.length;
 
       expect(average).toBeLessThan(150);
     });
@@ -493,7 +557,9 @@ describe("Professeurs Module - Performance Tests", () => {
 
   describe("Gestion des timeouts", () => {
     it("devrait gérer un client DB lent sans crash", async () => {
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockImplementation(
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockImplementation(
         () =>
           new Promise((resolve) => {
             setTimeout(() => {
@@ -502,67 +568,71 @@ describe("Professeurs Module - Performance Tests", () => {
                 data: [
                   {
                     id: 1,
-                    first_name: "Slow",
-                    last_name: "Response",
-                    email: "slow@test.com",
+                    first_name: "John",
+                    last_name: "Doe",
+                    email: "john.doe@test.com",
+                    role_id: 2,
+                    status_id: 1,
                   },
                 ],
               });
-            }, 2000); // 2 secondes de délai
-          })
+            }, 200);
+          }),
       );
 
       const startTime = Date.now();
 
-      const { getProfesseurs } = await import(
-        "../core/handlers/get-professeurs.handler.js"
-      );
       await getProfesseurs(
         mockRequest as Request,
         mockResponse as Response,
-        mockProfesseursClient as Professeurs
+        mockProfesseursClient as Professeurs,
       );
 
       const duration = Date.now() - startTime;
 
       expect(statusMock).toHaveBeenCalledWith(200);
-      expect(duration).toBeGreaterThanOrEqual(2000);
+      expect(duration).toBeGreaterThanOrEqual(200);
+      expect(duration).toBeLessThan(1000);
     });
   });
 
   describe("Performance en environnement multi-utilisateurs", () => {
     it("devrait gérer des requêtes de différents professeurs simultanément", async () => {
-      const professeurIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      const professeurIds = [1, 2, 3, 4, 5];
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockImplementation(
-        (id: number) =>
-          Promise.resolve({
-            id,
-            first_name: `Professeur${id}`,
-            last_name: `Test${id}`,
-            email: `prof${id}@test.com`,
-            role_id: 2,
-          })
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockImplementation((id: number) =>
+        Promise.resolve({
+          id,
+          first_name: "Professor",
+          last_name: `${id}`,
+          email: `prof${id}@test.com`,
+          role_id: 2,
+          status_id: 1,
+        }),
       );
 
       const startTime = Date.now();
 
-      const promises = professeurIds.map(async (id) => {
-        const req = { ...mockRequest, params: { id: id.toString() } };
-        const { getProfesseurById } = await import(
-          "../core/handlers/get-professeurs.handler.js"
-        );
+      const promises = professeurIds.map((id) => {
+        const req = { params: { id: id.toString() } } as unknown as Request;
+        const res = {
+          json: jest.fn(),
+          status: jest.fn(() => res),
+        } as unknown as Response;
         return getProfesseurById(
-          req as Request,
-          mockResponse as Response,
-          mockProfesseursClient as Professeurs
+          req,
+          res,
+          mockProfesseursClient as Professeurs,
         );
       });
 
       await Promise.all(promises);
+
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeLessThan(1000);
+      expect(duration).toBeLessThan(500);
     });
   });
 
@@ -570,8 +640,8 @@ describe("Professeurs Module - Performance Tests", () => {
     it("devrait trier rapidement 200 professeurs par nom", async () => {
       const mockProfesseurs = Array.from({ length: 200 }, (_, i) => ({
         id: i + 1,
-        first_name: `Professeur${Math.random().toString(36).substring(7)}`,
-        last_name: `Test${Math.random().toString(36).substring(7)}`,
+        first_name: `Professeur${i + 1}`,
+        last_name: `Test${i + 1}`,
         email: `prof${i + 1}@test.com`,
         role_id: 2,
       }));
@@ -579,32 +649,32 @@ describe("Professeurs Module - Performance Tests", () => {
       const startTime = Date.now();
 
       const sortedProfs = [...mockProfesseurs].sort((a, b) =>
-        a.last_name.localeCompare(b.last_name)
+        a.last_name.localeCompare(b.last_name),
       );
 
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(50);
-      expect(sortedProfs.length).toBe(200);
+      expect(sortedProfs).toHaveLength(200);
     });
 
     it("devrait filtrer rapidement 300 professeurs par statut", async () => {
       const mockProfesseurs = Array.from({ length: 300 }, (_, i) => ({
         id: i + 1,
-        first_name: `Prof${i + 1}`,
+        first_name: `Professeur${i + 1}`,
         last_name: `Test${i + 1}`,
         email: `prof${i + 1}@test.com`,
         role_id: 2,
-        status_id: (i % 3) + 1, // Statuts 1, 2, 3
+        status_id: (i % 3) + 1,
       }));
 
       const startTime = Date.now();
 
-      const filteredProfs = mockProfesseurs.filter((prof) => prof.status_id === 1);
+      const filteredProfs = mockProfesseurs.filter((p) => p.status_id === 1);
 
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeLessThan(30);
+      expect(duration).toBeLessThan(50);
       expect(filteredProfs.length).toBeGreaterThan(0);
     });
   });

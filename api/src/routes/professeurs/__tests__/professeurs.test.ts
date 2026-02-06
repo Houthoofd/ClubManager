@@ -81,7 +81,11 @@ describe("Professeurs Module - Tests de base", () => {
         data: mockProfesseurs,
       });
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -102,7 +106,11 @@ describe("Professeurs Module - Tests de base", () => {
         data: [],
       });
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -119,7 +127,11 @@ describe("Professeurs Module - Tests de base", () => {
         mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
       ).mockRejectedValue(new Error("Erreur DB"));
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -150,7 +162,11 @@ describe("Professeurs Module - Tests de base", () => {
         mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
       ).mockResolvedValue(mockProfesseur);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -168,7 +184,11 @@ describe("Professeurs Module - Tests de base", () => {
         mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
       ).mockResolvedValue(null);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(404);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -182,7 +202,11 @@ describe("Professeurs Module - Tests de base", () => {
     it("devrait retourner 400 si l'ID est invalide", async () => {
       mockRequest.params = { id: "abc" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -222,6 +246,7 @@ describe("Professeurs Module - Tests de base", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -260,6 +285,7 @@ describe("Professeurs Module - Tests de base", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -276,6 +302,7 @@ describe("Professeurs Module - Tests de base", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -299,6 +326,7 @@ describe("Professeurs Module - Tests de base", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -331,6 +359,7 @@ describe("Professeurs Module - Tests de base", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -350,6 +379,7 @@ describe("Professeurs Module - Tests de base", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -369,6 +399,7 @@ describe("Professeurs Module - Tests de base", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -389,6 +420,7 @@ describe("Professeurs Module - Tests de base", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -413,6 +445,7 @@ describe("Professeurs Module - Tests de base", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -465,6 +498,7 @@ describe("Professeurs Module - Tests de base", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -495,6 +529,7 @@ describe("Professeurs Module - Tests de base", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -514,6 +549,7 @@ describe("Professeurs Module - Tests de base", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -536,6 +572,7 @@ describe("Professeurs Module - Tests de base", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -559,7 +596,11 @@ describe("Professeurs Module - Tests de base", () => {
         data: Array(5).fill({ id: 1, first_name: "Test" }),
       });
 
-      await healthCheck(mockRequest as Request, mockResponse as Response);
+      await healthCheck(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -579,7 +620,11 @@ describe("Professeurs Module - Tests de base", () => {
         mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
       ).mockRejectedValue(new Error("Erreur connexion DB"));
 
-      await healthCheck(mockRequest as Request, mockResponse as Response);
+      await healthCheck(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(503);
       expect(jsonMock).toHaveBeenCalledWith(

@@ -62,11 +62,11 @@ describe("Professeurs Module - Tests des cas limites", () => {
         status_id: 1,
       };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -89,11 +89,11 @@ describe("Professeurs Module - Tests des cas limites", () => {
         status_id: 1,
       };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -116,11 +116,11 @@ describe("Professeurs Module - Tests des cas limites", () => {
         status_id: 1,
       };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -133,13 +133,21 @@ describe("Professeurs Module - Tests des cas limites", () => {
     it("devrait rejeter un ID avec des espaces", async () => {
       mockRequest.params = { id: " 1 " };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(null);
 
-      expect(statusMock).toHaveBeenCalledWith(400);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "ID professeur invalide",
+          message: "Professeur non trouvé",
         }),
       );
     });
@@ -158,11 +166,13 @@ describe("Professeurs Module - Tests des cas limites", () => {
         data: { promoted_users: [1] },
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
         id: 1,
         first_name: "Test",
         last_name: "User",
@@ -172,6 +182,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -194,11 +205,13 @@ describe("Professeurs Module - Tests des cas limites", () => {
         data: { promoted_users: [1] },
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
         id: 1,
         first_name: "Test",
         last_name: "User",
@@ -208,6 +221,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -226,6 +240,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -253,6 +268,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -272,7 +288,9 @@ describe("Professeurs Module - Tests des cas limites", () => {
       const manyCourses = Array.from({ length: 100 }, (_, i) => ({
         id: i + 1,
         nom_cours: `Cours ${i + 1}`,
-        jour_semaine: ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"][i % 5],
+        jour_semaine: ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"][
+          i % 5
+        ],
         heure_debut: `${8 + (i % 10)}:00`,
         heure_fin: `${9 + (i % 10)}:00`,
         professeur_id: 1,
@@ -291,6 +309,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -312,18 +331,20 @@ describe("Professeurs Module - Tests des cas limites", () => {
       };
 
       const mockResult = {
+        isConfirm: true,
         success: true,
         message: "Statut modifié avec succès",
         data: { id: 1, status_id: 1 },
       };
 
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -341,18 +362,20 @@ describe("Professeurs Module - Tests des cas limites", () => {
       };
 
       const mockResult = {
+        isConfirm: true,
         success: true,
         message: "Statut modifié avec succès",
         data: { id: 1, status_id: 10 },
       };
 
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -372,6 +395,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -395,18 +419,20 @@ describe("Professeurs Module - Tests des cas limites", () => {
         };
 
         const mockResult = {
+          isConfirm: true,
           success: true,
           message: "Statut modifié avec succès",
           data: { id: professeurId, status_id },
         };
 
-        (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockResolvedValue(
-          mockResult,
-        );
+        (
+          mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+        ).mockResolvedValue(mockResult);
 
         await modifierStatutProfesseurHandler(
           mockRequest as Request,
           mockResponse as Response,
+          mockProfesseursClient as Professeurs,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -426,11 +452,13 @@ describe("Professeurs Module - Tests des cas limites", () => {
         message: "Professeurs promus avec succès",
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
         id: 1,
         first_name: "Test",
         last_name: "User",
@@ -440,6 +468,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -461,11 +490,13 @@ describe("Professeurs Module - Tests des cas limites", () => {
         message: "Professeurs promus avec succès",
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
         id: 1,
         first_name: "Test",
         last_name: "User",
@@ -475,6 +506,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -486,11 +518,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
     });
 
     it("devrait gérer différentes propriétés pour l'ID utilisateur", async () => {
-      const variations = [
-        { id: 1 },
-        { userId: 2 },
-        { user_id: 3 },
-      ];
+      const variations = [{ id: 1 }, { userId: 2 }, { user_id: 3 }];
 
       for (const variation of variations) {
         jest.clearAllMocks();
@@ -502,11 +530,13 @@ describe("Professeurs Module - Tests des cas limites", () => {
           message: "Professeur promu avec succès",
         };
 
-        (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-          mockResult,
-        );
+        (
+          mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+        ).mockResolvedValue(mockResult);
 
-        (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue({
+        (
+          mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+        ).mockResolvedValue({
           id: 1,
           first_name: "Test",
           last_name: "User",
@@ -516,6 +546,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
         await ajouterProfesseurHandler(
           mockRequest as Request,
           mockResponse as Response,
+          mockProfesseursClient as Professeurs,
         );
 
         expect(statusMock).toHaveBeenCalledWith(200);
@@ -525,9 +556,11 @@ describe("Professeurs Module - Tests des cas limites", () => {
 
   describe("Cas limites de la base de données", () => {
     it("devrait gérer une liste vide de professeurs", async () => {
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue([]);
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({isFind: true, data: []});
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -551,11 +584,11 @@ describe("Professeurs Module - Tests des cas limites", () => {
         },
       ];
 
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue(
-        mockProfesseurs,
-      );
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({isFind: true, data: mockProfesseurs});
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -577,11 +610,11 @@ describe("Professeurs Module - Tests des cas limites", () => {
         status_id: 1,
       }));
 
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue(
-        largeProfesseursList,
-      );
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({isFind: true, data: largeProfesseursList});
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -605,9 +638,9 @@ describe("Professeurs Module - Tests des cas limites", () => {
         status_id: 1,
       };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
       mockRequest.params = { id: "1" };
 
@@ -615,13 +648,15 @@ describe("Professeurs Module - Tests des cas limites", () => {
       const requests = Array(10)
         .fill(null)
         .map(() =>
-          getProfesseurById(mockRequest as Request, mockResponse as Response)
+          getProfesseurById(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs),
         );
 
       await Promise.all(requests);
 
       expect(statusMock).toHaveBeenCalledTimes(10);
-      expect(mockProfesseursClient.obtenirUtilisateurParId).toHaveBeenCalledTimes(10);
+      expect(
+        mockProfesseursClient.obtenirUtilisateurParId,
+      ).toHaveBeenCalledTimes(10);
     });
 
     it("devrait gérer des modifications de statut concurrentes", async () => {
@@ -631,14 +666,15 @@ describe("Professeurs Module - Tests des cas limites", () => {
       };
 
       const mockResult = {
+        isConfirm: true,
         success: true,
         message: "Statut modifié avec succès",
         data: { id: 1, status_id: 2 },
       };
 
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       // Simuler plusieurs modifications concurrentes
       const requests = Array(5)
@@ -646,14 +682,16 @@ describe("Professeurs Module - Tests des cas limites", () => {
         .map(() =>
           modifierStatutProfesseurHandler(
             mockRequest as Request,
-            mockResponse as Response
-          )
+            mockResponse as Response, mockProfesseursClient as Professeurs,
+          ),
         );
 
       await Promise.all(requests);
 
       expect(statusMock).toHaveBeenCalledTimes(5);
-      expect(mockProfesseursClient.modifierStatutProfesseur).toHaveBeenCalledTimes(5);
+      expect(
+        mockProfesseursClient.modifierStatutProfesseur,
+      ).toHaveBeenCalledTimes(5);
     });
   });
 
@@ -691,6 +729,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -738,6 +777,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -759,18 +799,20 @@ describe("Professeurs Module - Tests des cas limites", () => {
       };
 
       const mockResult = {
+        isConfirm: true,
         success: true,
         message: "Statut inchangé",
         data: { id: 1, status_id: 1 },
       };
 
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -794,11 +836,13 @@ describe("Professeurs Module - Tests des cas limites", () => {
         data: { promoted_users: [50] },
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockPromotionResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockPromotionResult);
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue({
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue({
         id: 50,
         first_name: "Nouveau",
         last_name: "Prof",
@@ -808,6 +852,7 @@ describe("Professeurs Module - Tests des cas limites", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -825,11 +870,11 @@ describe("Professeurs Module - Tests des cas limites", () => {
         status_id: 1,
       };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(mockRequest as Request, mockResponse as Response, mockProfesseursClient as Professeurs);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(

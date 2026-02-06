@@ -11,9 +11,9 @@ import {
   DataAnnulation,
   DataValidation,
   CoursData,
-} from '@clubmanager/types';
-import MysqlConnector from '../../connector/mysqlconnector.js';
-import mysql from 'mysql';
+} from "@clubmanager/types";
+import MysqlConnector from "../../connector/mysqlconnector.js";
+import mysql from "mysql2";
 
 export class Cours {
   private mysqlConnector: MysqlConnector;
@@ -34,27 +34,36 @@ export class Cours {
         ORDER BY c.date_cours ASC
         LIMIT 12;
       `;
-      this.mysqlConnector.query(sql, [participantId], (error: mysql.MysqlError | null, results: any[]) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des cours du participant:', error.message);
-          reject(error);
-        } else {
-          const cours: CoursData[] = results.map((row: any) => ({
-            id: row.id,
-            date_cours: row.date_cours,
-            type_cours: row.type_cours,
-            heure_debut: row.heure_debut,
-            heure_fin: row.heure_fin,
-          }));
-          console.log('Cours du participant récupérés avec succès :', cours);
-          resolve(cours);
-        }
-      });
+      this.mysqlConnector.query(
+        sql,
+        [participantId],
+        (error: mysql.MysqlError | null, results: any[]) => {
+          if (error) {
+            console.error(
+              "Erreur lors de la récupération des cours du participant:",
+              error.message,
+            );
+            reject(error);
+          } else {
+            const cours: CoursData[] = results.map((row: any) => ({
+              id: row.id,
+              date_cours: row.date_cours,
+              type_cours: row.type_cours,
+              heure_debut: row.heure_debut,
+              heure_fin: row.heure_fin,
+            }));
+            console.log("Cours du participant récupérés avec succès :", cours);
+            resolve(cours);
+          }
+        },
+      );
     });
   }
 
   // Récupérer les utilisateurs par cours
-  obtenirUtilisateursParCours(coursId: number): Promise<{ utilisateurs: Utilisateur[] }> {
+  obtenirUtilisateursParCours(
+    coursId: number,
+  ): Promise<{ utilisateurs: Utilisateur[] }> {
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT u.first_name, u.last_name, i.status_id as presence
@@ -64,13 +73,16 @@ export class Cours {
       `;
       this.mysqlConnector.query(sql, [coursId], (error, results: any[]) => {
         if (error) {
-          console.error('Erreur lors de la récupération des utilisateurs pour le cours:', error.message);
+          console.error(
+            "Erreur lors de la récupération des utilisateurs pour le cours:",
+            error.message,
+          );
           reject(error);
         } else {
-          const utilisateurs: Utilisateur[] = results.map(row => ({
+          const utilisateurs: Utilisateur[] = results.map((row) => ({
             nom: row.last_name,
             prenom: row.first_name,
-            presence: row.presence
+            presence: row.presence,
           }));
           resolve({ utilisateurs });
         }
@@ -79,13 +91,17 @@ export class Cours {
   }
 
   // Obtenir les cours avec utilisateurs
-  async obtenirCoursAvecUtilisateurs(participantId: number): Promise<(CoursData & { utilisateurs: Utilisateur[] })[]> {
+  async obtenirCoursAvecUtilisateurs(
+    participantId: number,
+  ): Promise<(CoursData & { utilisateurs: Utilisateur[] })[]> {
     const cours = await this.obtenirLesCoursPourParticipant(participantId);
     const coursAvecUtilisateurs = await Promise.all(
       cours.map(async (cour) => {
-        const { utilisateurs } = await this.obtenirUtilisateursParCours(cour.id);
+        const { utilisateurs } = await this.obtenirUtilisateursParCours(
+          cour.id,
+        );
         return { ...cour, utilisateurs };
-      })
+      }),
     );
     return coursAvecUtilisateurs;
   }
@@ -118,21 +134,27 @@ export class Cours {
       `;
       this.mysqlConnector.query(sql, [], (error, results) => {
         if (error) {
-          console.error('Erreur lors de la récupération des jours de cours:', error);
+          console.error(
+            "Erreur lors de la récupération des jours de cours:",
+            error,
+          );
           reject(error);
         } else {
-          console.log('Résultats bruts de la DB:', results); // Log ajouté pour debug
+          console.log("Résultats bruts de la DB:", results); // Log ajouté pour debug
           const joursDeCours: JourCours[] = results.map((result: any) => {
             const professeursArray: string[] = result.professeurs
-              ? result.professeurs.split(',').map((p: string) => p.trim())
+              ? result.professeurs.split(",").map((p: string) => p.trim())
               : [];
-            console.log(`Cours ${result.type_cours} ${result.jour} - Professeurs trouvés:`, professeursArray); // Log ajouté
+            console.log(
+              `Cours ${result.type_cours} ${result.jour} - Professeurs trouvés:`,
+              professeursArray,
+            ); // Log ajouté
             return {
               jour: result.jour,
               type_cours: result.type_cours,
               heure_debut: result.heure_debut,
               heure_fin: result.heure_fin,
-              professeurs: Array.from(new Set(professeursArray))
+              professeurs: Array.from(new Set(professeursArray)),
             };
           });
           resolve(joursDeCours);
@@ -142,15 +164,21 @@ export class Cours {
   }
 
   // Obtenir l'ID d'un participant par nom et prénom
-  obtenirIdParticipantParNomPrenom(nom: string, prenom: string): Promise<number> {
+  obtenirIdParticipantParNomPrenom(
+    nom: string,
+    prenom: string,
+  ): Promise<number> {
     return new Promise((resolve, reject) => {
       const sql = `SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? LIMIT 1`;
       this.mysqlConnector.query(sql, [nom, prenom], (error, results) => {
         if (error) {
-          console.error('Erreur lors de la récupération de l\'ID de l\'utilisateur:', error.message);
+          console.error(
+            "Erreur lors de la récupération de l'ID de l'utilisateur:",
+            error.message,
+          );
           reject(error);
         } else if (results.length === 0) {
-          reject(new Error('Aucun utilisateur trouvé avec ce nom et prénom'));
+          reject(new Error("Aucun utilisateur trouvé avec ce nom et prénom"));
         } else {
           resolve(results[0].id);
         }
@@ -159,24 +187,34 @@ export class Cours {
   }
 
   // Vérifier un participant
-  async verifierParticipant(data: { nom: string; prenom: string }): Promise<Array<CoursData>> {
+  async verifierParticipant(data: {
+    nom: string;
+    prenom: string;
+  }): Promise<Array<CoursData>> {
     try {
-      const participantId = await this.obtenirIdParticipantParNomPrenom(data.nom, data.prenom);
+      const participantId = await this.obtenirIdParticipantParNomPrenom(
+        data.nom,
+        data.prenom,
+      );
       return this.obtenirLesCoursPourParticipant(participantId);
     } catch (error) {
-      console.error('Erreur dans verifierParticipant:', error);
+      console.error("Erreur dans verifierParticipant:", error);
       throw error;
     }
   }
 
   // Ajouter un cours récurrent avec professeurs
-  ajouterCoursRecurrentAvecProfesseurs(data: AjoutCours): Promise<ConfirmationResult> {
+  ajouterCoursRecurrentAvecProfesseurs(
+    data: AjoutCours,
+  ): Promise<ConfirmationResult> {
     return new Promise<ConfirmationResult>(async (resolve, reject) => {
       try {
         console.log("Données reçues:", data);
 
         if (!data.jour_semaine) {
-          throw new Error(`jour_semaine manquant ou invalide: ${data.jour_semaine}`);
+          throw new Error(
+            `jour_semaine manquant ou invalide: ${data.jour_semaine}`,
+          );
         }
 
         const result = await new Promise<any>((res, rej) => {
@@ -185,13 +223,13 @@ export class Cours {
             data.jour_semaine,
             data.heure_debut,
             data.heure_fin,
-            JSON.stringify(data.professeurs || [])
+            JSON.stringify(data.professeurs || []),
           ];
 
           console.log("Paramètres envoyés à la procédure:", params);
 
           this.mysqlConnector.query(
-            'CALL ajouter_cours_recurrent_avec_professeurs(?, ?, ?, ?, ?)',
+            "CALL ajouter_cours_recurrent_avec_professeurs(?, ?, ?, ?, ?)",
             params,
             (error, results) => {
               if (error) {
@@ -200,23 +238,23 @@ export class Cours {
               } else {
                 res(results);
               }
-            }
+            },
           );
         });
 
         if (result && result.length > 0 && result[0].length > 0) {
           resolve({
             isConfirm: true,
-            message: result[0][0].message
+            message: result[0][0].message,
           });
         } else {
           resolve({
             isConfirm: true,
-            message: "Cours récurrent ajouté avec succès"
+            message: "Cours récurrent ajouté avec succès",
           });
         }
       } catch (error) {
-        console.error('Erreur lors de l\'ajout du cours récurrent:', error);
+        console.error("Erreur lors de l'ajout du cours récurrent:", error);
         reject(error);
       }
     });
@@ -238,23 +276,26 @@ export class Cours {
 
         // Debug: Vérifier ce qui existe en base
         const debugSql = `
-          SELECT CONCAT(prenom, ' ', nom) as nom_complet, prenom, nom, id 
-          FROM professeurs 
+          SELECT CONCAT(prenom, ' ', nom) as nom_complet, prenom, nom, id
+          FROM professeurs
           WHERE status_id = 5
         `;
-        
+
         this.mysqlConnector.query(debugSql, [], (debugError, debugResults) => {
           if (!debugError) {
             console.log("Professeurs disponibles en base:", debugResults);
             console.log("Comparaison avec les noms reçus:");
-            data.professeurs.forEach(nomRecu => {
-              const found = debugResults.find((prof: any) => 
-                prof.nom_complet === nomRecu ||
-                `${prof.nom} ${prof.prenom}` === nomRecu ||
-                prof.prenom === nomRecu.split(' ')[0] ||
-                prof.nom === nomRecu.split(' ')[1]
+            data.professeurs.forEach((nomRecu) => {
+              const found = debugResults.find(
+                (prof: any) =>
+                  prof.nom_complet === nomRecu ||
+                  `${prof.nom} ${prof.prenom}` === nomRecu ||
+                  prof.prenom === nomRecu.split(" ")[0] ||
+                  prof.nom === nomRecu.split(" ")[1],
               );
-              console.log(`- "${nomRecu}" -> ${found ? `Trouvé: ${found.nom_complet} (ID: ${found.id})` : 'NON TROUVÉ'}`);
+              console.log(
+                `- "${nomRecu}" -> ${found ? `Trouvé: ${found.nom_complet} (ID: ${found.id})` : "NON TROUVÉ"}`,
+              );
             });
           }
         });
@@ -266,13 +307,16 @@ export class Cours {
             data.jour_semaine,
             data.heure_debut,
             data.heure_fin,
-            JSON.stringify(data.professeurs || [])
+            JSON.stringify(data.professeurs || []),
           ];
 
-          console.log("Paramètres envoyés à la procédure de modification:", params);
+          console.log(
+            "Paramètres envoyés à la procédure de modification:",
+            params,
+          );
 
           this.mysqlConnector.query(
-            'CALL modifier_cours_recurrent_avec_professeurs(?, ?, ?, ?, ?, ?)',
+            "CALL modifier_cours_recurrent_avec_professeurs(?, ?, ?, ?, ?, ?)",
             params,
             (error, results) => {
               if (error) {
@@ -281,60 +325,81 @@ export class Cours {
               } else {
                 res(results);
               }
-            }
+            },
           );
         });
 
         if (result && result.length > 0 && result[0].length > 0) {
           resolve({
             isConfirm: true,
-            message: result[0][0].message
+            message: result[0][0].message,
           });
         } else {
           resolve({
             isConfirm: true,
-            message: "Cours récurrent modifié avec succès"
+            message: "Cours récurrent modifié avec succès",
           });
         }
       } catch (error) {
-        console.error('Erreur lors de la modification du cours récurrent:', error);
+        console.error(
+          "Erreur lors de la modification du cours récurrent:",
+          error,
+        );
         reject(error);
       }
     });
   }
 
   // Méthode pour obtenir l'ID d'un cours récurrent (helper pour la modification)
-  obtenirIdCoursRecurrent(jour: string, type_cours: string, heure_debut: string, heure_fin: string): Promise<number> {
+  obtenirIdCoursRecurrent(
+    jour: string,
+    type_cours: string,
+    heure_debut: string,
+    heure_fin: string,
+  ): Promise<number> {
     return new Promise((resolve, reject) => {
       const joursDeSemaine: Record<string, number> = {
-        lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6, dimanche: 7
+        lundi: 1,
+        mardi: 2,
+        mercredi: 3,
+        jeudi: 4,
+        vendredi: 5,
+        samedi: 6,
+        dimanche: 7,
       };
 
       const jourNum = joursDeSemaine[jour.toLowerCase()];
       if (!jourNum) {
-        reject(new Error('Jour invalide'));
+        reject(new Error("Jour invalide"));
         return;
       }
 
       const sql = `
-        SELECT id FROM cours_recurrent 
-        WHERE jour_semaine = ? 
-        AND type_cours = ? 
-        AND TIME_FORMAT(heure_debut, '%H:%i') = ? 
+        SELECT id FROM cours_recurrent
+        WHERE jour_semaine = ?
+        AND type_cours = ?
+        AND TIME_FORMAT(heure_debut, '%H:%i') = ?
         AND TIME_FORMAT(heure_fin, '%H:%i') = ?
         LIMIT 1
       `;
 
-      this.mysqlConnector.query(sql, [jourNum, type_cours, heure_debut, heure_fin], (error, results) => {
-        if (error) {
-          console.error('Erreur lors de la recherche du cours récurrent:', error);
-          reject(error);
-        } else if (results.length === 0) {
-          reject(new Error('Cours récurrent non trouvé'));
-        } else {
-          resolve(results[0].id);
-        }
-      });
+      this.mysqlConnector.query(
+        sql,
+        [jourNum, type_cours, heure_debut, heure_fin],
+        (error, results) => {
+          if (error) {
+            console.error(
+              "Erreur lors de la recherche du cours récurrent:",
+              error,
+            );
+            reject(error);
+          } else if (results.length === 0) {
+            reject(new Error("Cours récurrent non trouvé"));
+          } else {
+            resolve(results[0].id);
+          }
+        },
+      );
     });
   }
 
@@ -371,19 +436,22 @@ export class Cours {
       `;
       this.mysqlConnector.query(sql, [semaine], (error, results) => {
         if (error) {
-          console.error('Erreur lors de la récupération des jours de cours par semaine:', error);
+          console.error(
+            "Erreur lors de la récupération des jours de cours par semaine:",
+            error,
+          );
           reject(error);
         } else {
           const joursDeCours: JourCours[] = results.map((result: any) => {
             const professeursArray: string[] = result.professeurs
-              ? result.professeurs.split(',').map((p: string) => p.trim())
+              ? result.professeurs.split(",").map((p: string) => p.trim())
               : [];
             return {
               jour: result.jour,
               type_cours: result.type_cours,
               heure_debut: result.heure_debut,
               heure_fin: result.heure_fin,
-              professeurs: Array.from(new Set(professeursArray))
+              professeurs: Array.from(new Set(professeursArray)),
             };
           });
           resolve(joursDeCours);
@@ -393,7 +461,10 @@ export class Cours {
   }
 
   // Récupérer les cours d'une certaine semaine
-  obtenirCoursParSemaine(participantId: number, semaine: number): Promise<CoursData[]> {
+  obtenirCoursParSemaine(
+    participantId: number,
+    semaine: number,
+  ): Promise<CoursData[]> {
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT c.*
@@ -404,21 +475,28 @@ export class Cours {
         ORDER BY c.date_cours ASC
         LIMIT 12;
       `;
-      this.mysqlConnector.query(sql, [participantId, semaine], (error: mysql.MysqlError | null, results: any[]) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des cours de la semaine:', error.message);
-          reject(error);
-        } else {
-          const cours: CoursData[] = results.map((row: any) => ({
-            id: row.id,
-            date_cours: row.date_cours,
-            type_cours: row.type_cours,
-            heure_debut: row.heure_debut,
-            heure_fin: row.heure_fin,
-          }));
-          resolve(cours);
-        }
-      });
+      this.mysqlConnector.query(
+        sql,
+        [participantId, semaine],
+        (error: mysql.MysqlError | null, results: any[]) => {
+          if (error) {
+            console.error(
+              "Erreur lors de la récupération des cours de la semaine:",
+              error.message,
+            );
+            reject(error);
+          } else {
+            const cours: CoursData[] = results.map((row: any) => ({
+              id: row.id,
+              date_cours: row.date_cours,
+              type_cours: row.type_cours,
+              heure_debut: row.heure_debut,
+              heure_fin: row.heure_fin,
+            }));
+            resolve(cours);
+          }
+        },
+      );
     });
   }
 
@@ -433,15 +511,22 @@ export class Cours {
           AND c.date_cours >= CURRENT_DATE
         ORDER BY semaine ASC;
       `;
-      this.mysqlConnector.query(sql, [participantId], (error: mysql.MysqlError | null, results: any[]) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des semaines avec cours:', error.message);
-          reject(error);
-        } else {
-          const semaines: number[] = results.map((row: any) => row.semaine);
-          resolve(semaines);
-        }
-      });
+      this.mysqlConnector.query(
+        sql,
+        [participantId],
+        (error: mysql.MysqlError | null, results: any[]) => {
+          if (error) {
+            console.error(
+              "Erreur lors de la récupération des semaines avec cours:",
+              error.message,
+            );
+            reject(error);
+          } else {
+            const semaines: number[] = results.map((row: any) => row.semaine);
+            resolve(semaines);
+          }
+        },
+      );
     });
   }
 
@@ -467,7 +552,10 @@ export class Cours {
       `;
       this.mysqlConnector.query(sql, [coursId], (error, results: any[]) => {
         if (error) {
-          console.error('Erreur lors de la récupération des statistiques de présence:', error.message);
+          console.error(
+            "Erreur lors de la récupération des statistiques de présence:",
+            error.message,
+          );
           reject(error);
         } else {
           resolve(results);
@@ -477,7 +565,9 @@ export class Cours {
   }
 
   // Obtenir les statistiques de présence par utilisateur
-  obtenirStatistiquesPresenceParUtilisateur(utilisateurId: number): Promise<any> {
+  obtenirStatistiquesPresenceParUtilisateur(
+    utilisateurId: number,
+  ): Promise<any> {
     return new Promise((resolve, reject) => {
       const sql = `
         SELECT
@@ -498,14 +588,21 @@ export class Cours {
         WHERE i.utilisateur_id = ?
         ORDER BY c.date_cours DESC;
       `;
-      this.mysqlConnector.query(sql, [utilisateurId], (error, results: any[]) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des statistiques de présence par utilisateur:', error.message);
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      });
+      this.mysqlConnector.query(
+        sql,
+        [utilisateurId],
+        (error, results: any[]) => {
+          if (error) {
+            console.error(
+              "Erreur lors de la récupération des statistiques de présence par utilisateur:",
+              error.message,
+            );
+            reject(error);
+          } else {
+            resolve(results);
+          }
+        },
+      );
     });
   }
 
@@ -524,11 +621,18 @@ export class Cours {
         WHERE
           u.last_name = ? AND u.first_name = ?;
       `;
-      const values = [data.cours_id, data.utilisateur_nom, data.utilisateur_prenom];
+      const values = [
+        data.cours_id,
+        data.utilisateur_nom,
+        data.utilisateur_prenom,
+      ];
 
       this.mysqlConnector.query(sql, values, (error, results) => {
         if (error) {
-          console.error('Erreur lors de la vérification de l\'inscription:', error.message);
+          console.error(
+            "Erreur lors de la vérification de l'inscription:",
+            error.message,
+          );
           reject(error);
         } else {
           const isFind = results.length > 0;
@@ -566,7 +670,9 @@ export class Cours {
   }
 
   // Inscrire un utilisateur à un cours
-  inscrireUtilisateurAuCours(data: DataInscription): Promise<ConfirmationResult> {
+  inscrireUtilisateurAuCours(
+    data: DataInscription,
+  ): Promise<ConfirmationResult> {
     return new Promise((resolve, reject) => {
       const sql = `
         INSERT INTO inscriptions (cours_id, utilisateur_id, date_inscription, status_id)
@@ -576,12 +682,18 @@ export class Cours {
 
       this.mysqlConnector.query(sql, values, (error, results) => {
         if (error) {
-          console.error('Erreur lors de l\'inscription de l\'utilisateur au cours:', error.message);
-          reject({ message: 'Erreur lors de l\'inscription de l\'utilisateur au cours.', error: error.message });
+          console.error(
+            "Erreur lors de l'inscription de l'utilisateur au cours:",
+            error.message,
+          );
+          reject({
+            message: "Erreur lors de l'inscription de l'utilisateur au cours.",
+            error: error.message,
+          });
         } else {
           resolve({
             isConfirm: true,
-            message: `L'utilisateur avec l'ID ${data.utilisateur_id} a été inscrit au cours ${data.cours_id} avec succès.`
+            message: `L'utilisateur avec l'ID ${data.utilisateur_id} a été inscrit au cours ${data.cours_id} avec succès.`,
           });
         }
       });
@@ -589,25 +701,38 @@ export class Cours {
   }
 
   // Désinscrire un utilisateur d'un cours
-  desinscrireUtilisateurDuCours(data: DataAnnulation): Promise<ConfirmationResult> {
+  desinscrireUtilisateurDuCours(
+    data: DataAnnulation,
+  ): Promise<ConfirmationResult> {
     return new Promise((resolve, reject) => {
       const sql = `
         DELETE FROM inscriptions
         WHERE cours_id = ?
         AND utilisateur_id = (SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? LIMIT 1);
       `;
-      const values = [data.cours_id, data.utilisateur_nom, data.utilisateur_prenom];
+      const values = [
+        data.cours_id,
+        data.utilisateur_nom,
+        data.utilisateur_prenom,
+      ];
 
       this.mysqlConnector.query(sql, values, (error, results) => {
         if (error) {
           console.error("Erreur lors de la désinscription:", error.message);
-          reject({ message: "Erreur lors de la désinscription.", error: error.message });
+          reject({
+            message: "Erreur lors de la désinscription.",
+            error: error.message,
+          });
         } else if (results.affectedRows === 0) {
-          resolve({ isConfirm: false, message: "Aucune inscription trouvée pour cet utilisateur et ce cours." });
+          resolve({
+            isConfirm: false,
+            message:
+              "Aucune inscription trouvée pour cet utilisateur et ce cours.",
+          });
         } else {
           resolve({
             isConfirm: true,
-            message: `L'utilisateur ${data.utilisateur_nom} ${data.utilisateur_prenom} a été désinscrit du cours ${data.cours_id}.`
+            message: `L'utilisateur ${data.utilisateur_nom} ${data.utilisateur_prenom} a été désinscrit du cours ${data.cours_id}.`,
           });
         }
       });
@@ -623,18 +748,29 @@ export class Cours {
         WHERE cours_id = ?
         AND utilisateur_id = (SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? LIMIT 1);
       `;
-      const values = [data.cours_id, data.utilisateur_nom, data.utilisateur_prenom];
+      const values = [
+        data.cours_id,
+        data.utilisateur_nom,
+        data.utilisateur_prenom,
+      ];
 
       this.mysqlConnector.query(sql, values, (error, results) => {
         if (error) {
           console.error("Erreur lors de la validation:", error.message);
-          reject({ message: "Erreur lors de la validation.", error: error.message });
+          reject({
+            message: "Erreur lors de la validation.",
+            error: error.message,
+          });
         } else if (results.affectedRows === 0) {
-          resolve({ isConfirm: false, message: "Aucune inscription trouvée pour cet utilisateur et ce cours." });
+          resolve({
+            isConfirm: false,
+            message:
+              "Aucune inscription trouvée pour cet utilisateur et ce cours.",
+          });
         } else {
           resolve({
             isConfirm: true,
-            message: `L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été validée.`
+            message: `L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été validée.`,
           });
         }
       });
@@ -650,18 +786,29 @@ export class Cours {
         WHERE cours_id = ?
         AND utilisateur_id = (SELECT id FROM utilisateurs WHERE last_name = ? AND first_name = ? LIMIT 1);
       `;
-      const values = [data.cours_id, data.utilisateur_nom, data.utilisateur_prenom];
+      const values = [
+        data.cours_id,
+        data.utilisateur_nom,
+        data.utilisateur_prenom,
+      ];
 
       this.mysqlConnector.query(sql, values, (error, results) => {
         if (error) {
           console.error("Erreur lors de l'annulation:", error.message);
-          reject({ message: "Erreur lors de l'annulation.", error: error.message });
+          reject({
+            message: "Erreur lors de l'annulation.",
+            error: error.message,
+          });
         } else if (results.affectedRows === 0) {
-          resolve({ isConfirm: false, message: "Aucune inscription trouvée pour cet utilisateur et ce cours." });
+          resolve({
+            isConfirm: false,
+            message:
+              "Aucune inscription trouvée pour cet utilisateur et ce cours.",
+          });
         } else {
           resolve({
             isConfirm: true,
-            message: `L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été annulée.`
+            message: `L'inscription de ${data.utilisateur_nom} ${data.utilisateur_prenom} a été annulée.`,
           });
         }
       });
@@ -706,20 +853,29 @@ export class Cours {
       `;
       this.mysqlConnector.query(sql, [], (error, results: any[]) => {
         if (error) {
-          console.error('Erreur lors de la récupération des cours:', error.message);
+          console.error(
+            "Erreur lors de la récupération des cours:",
+            error.message,
+          );
           reject(error);
         } else {
-          const cours: CoursData[] = results.map(row => {
-            let professeurs: Array<{ id: number; nom: string; prenom: string }> = [];
+          const cours: CoursData[] = results.map((row) => {
+            let professeurs: Array<{
+              id: number;
+              nom: string;
+              prenom: string;
+            }> = [];
             if (row.professeurs) {
-              professeurs = row.professeurs.split(',').map((profStr: string) => {
-                const [id, nom, prenom] = profStr.split(':');
-                return {
-                  id: parseInt(id),
-                  nom: nom || '',
-                  prenom: prenom || ''
-                };
-              });
+              professeurs = row.professeurs
+                .split(",")
+                .map((profStr: string) => {
+                  const [id, nom, prenom] = profStr.split(":");
+                  return {
+                    id: parseInt(id),
+                    nom: nom || "",
+                    prenom: prenom || "",
+                  };
+                });
             }
             return {
               id: row.id,
@@ -729,7 +885,7 @@ export class Cours {
               type_cours: row.type_cours,
               heure_debut: row.heure_debut,
               heure_fin: row.heure_fin,
-              professeurs
+              professeurs,
             };
           });
           resolve(cours);
@@ -739,7 +895,9 @@ export class Cours {
   }
 
   // Obtenir les utilisateurs participants par cours
-  obtenirUtilisateursParticipantsParCours(coursId: number): Promise<UtilisateursParCours> {
+  obtenirUtilisateursParticipantsParCours(
+    coursId: number,
+  ): Promise<UtilisateursParCours> {
     return new Promise<UtilisateursParCours>((resolve, reject) => {
       const sql = `
         SELECT
@@ -758,32 +916,39 @@ export class Cours {
         WHERE c.id = ?;
       `;
 
-      this.mysqlConnector.query(sql, [coursId], (error: mysql.MysqlError | null, results: any[]) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des utilisateurs par cours:', error.message);
-          reject(error);
-        } else {
-          const utilisateurs: Utilisateur[] = results
-            .filter((row: any) => row.utilisateurId !== null)
-            .map((row: any) => ({
-              id: row.utilisateurId,
-              nom: row.nom,
-              prenom: row.prenom,
-              presence: row.status_id
-            }));
+      this.mysqlConnector.query(
+        sql,
+        [coursId],
+        (error: mysql.MysqlError | null, results: any[]) => {
+          if (error) {
+            console.error(
+              "Erreur lors de la récupération des utilisateurs par cours:",
+              error.message,
+            );
+            reject(error);
+          } else {
+            const utilisateurs: Utilisateur[] = results
+              .filter((row: any) => row.utilisateurId !== null)
+              .map((row: any) => ({
+                id: row.utilisateurId,
+                nom: row.nom,
+                prenom: row.prenom,
+                presence: row.status_id,
+              }));
 
-          const coursAvecUtilisateurs: UtilisateursParCours = {
-            id: coursId,
-            date_cours: results.length > 0 ? results[0].date_cours : '',
-            type_cours: results.length > 0 ? results[0].type_cours : '',
-            heure_debut: results.length > 0 ? results[0].heure_debut : '',
-            heure_fin: results.length > 0 ? results[0].heure_fin : '',
-            utilisateurs: utilisateurs
-          };
+            const coursAvecUtilisateurs: UtilisateursParCours = {
+              id: coursId,
+              date_cours: results.length > 0 ? results[0].date_cours : "",
+              type_cours: results.length > 0 ? results[0].type_cours : "",
+              heure_debut: results.length > 0 ? results[0].heure_debut : "",
+              heure_fin: results.length > 0 ? results[0].heure_fin : "",
+              utilisateurs: utilisateurs,
+            };
 
-          resolve(coursAvecUtilisateurs);
-        }
-      });
+            resolve(coursAvecUtilisateurs);
+          }
+        },
+      );
     });
   }
 
@@ -808,26 +973,33 @@ export class Cours {
         ORDER BY c.date_cours ASC, c.heure_debut ASC
         LIMIT 12;
       `;
-      this.mysqlConnector.query(sql, [userId], (error: mysql.MysqlError | null, results: any[]) => {
-        if (error) {
-          console.error('Erreur lors de la récupération des cours inscrits:', error.message);
-          reject(error);
-        } else {
-          const cours = results.map((row: any) => ({
-            id: row.id,
-            date_cours: row.date_cours,
-            type_cours: row.type_cours,
-            heure_debut: row.heure_debut,
-            heure_fin: row.heure_fin,
-            utilisateur: {
-              id: row.utilisateurId,
-              nom: row.utilisateurNom,
-              prenom: row.utilisateurPrenom
-            }
-          }));
-          resolve(cours);
-        }
-      });
+      this.mysqlConnector.query(
+        sql,
+        [userId],
+        (error: mysql.MysqlError | null, results: any[]) => {
+          if (error) {
+            console.error(
+              "Erreur lors de la récupération des cours inscrits:",
+              error.message,
+            );
+            reject(error);
+          } else {
+            const cours = results.map((row: any) => ({
+              id: row.id,
+              date_cours: row.date_cours,
+              type_cours: row.type_cours,
+              heure_debut: row.heure_debut,
+              heure_fin: row.heure_fin,
+              utilisateur: {
+                id: row.utilisateurId,
+                nom: row.utilisateurNom,
+                prenom: row.utilisateurPrenom,
+              },
+            }));
+            resolve(cours);
+          }
+        },
+      );
     });
   }
 
@@ -835,7 +1007,13 @@ export class Cours {
   ajouterCoursRecurrent(data: AjoutCours): Promise<ConfirmationResult> {
     return new Promise<ConfirmationResult>((resolve, reject) => {
       const joursDeSemaine: { [key: string]: number } = {
-        lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6, dimanche: 7
+        lundi: 1,
+        mardi: 2,
+        mercredi: 3,
+        jeudi: 4,
+        vendredi: 5,
+        samedi: 6,
+        dimanche: 7,
       };
 
       const jourSemaine = joursDeSemaine[data.jour_semaine.toLowerCase()];
@@ -844,7 +1022,7 @@ export class Cours {
         return;
       }
 
-      const start_date = new Date('2024-01-01');
+      const start_date = new Date("2024-01-01");
       const dayOfWeek = start_date.getDay();
       const daysUntilTargetDay = (jourSemaine - dayOfWeek + 7) % 7;
       start_date.setDate(start_date.getDate() + daysUntilTargetDay);
@@ -853,7 +1031,7 @@ export class Cours {
       end_date.setFullYear(start_date.getFullYear() + 1);
       end_date.setDate(31);
 
-      const formattedEndDate = end_date.toISOString().split('T')[0];
+      const formattedEndDate = end_date.toISOString().split("T")[0];
 
       const insertRecurrentSql = `
         INSERT INTO cours_recurrent (type_cours, jour_semaine, heure_debut, heure_fin)
@@ -865,17 +1043,26 @@ export class Cours {
         [data.type_cours, jourSemaine, data.heure_debut, data.heure_fin],
         (error: mysql.MysqlError | null, results: any) => {
           if (error) {
-            console.error("Erreur lors de l'ajout du cours récurrent:", error.message);
+            console.error(
+              "Erreur lors de l'ajout du cours récurrent:",
+              error.message,
+            );
             reject(error);
           } else {
             const coursRecurrentId = results.insertId;
 
-            this.mysqlConnector.query(`SET @row := -1`, [], (setVarError: mysql.MysqlError | null) => {
-              if (setVarError) {
-                console.error("Erreur lors de l'initialisation de la variable @row:", setVarError.message);
-                reject(setVarError);
-              } else {
-                const insertCoursSql = `
+            this.mysqlConnector.query(
+              `SET @row := -1`,
+              [],
+              (setVarError: mysql.MysqlError | null) => {
+                if (setVarError) {
+                  console.error(
+                    "Erreur lors de l'initialisation de la variable @row:",
+                    setVarError.message,
+                  );
+                  reject(setVarError);
+                } else {
+                  const insertCoursSql = `
                   INSERT INTO cours (date_cours, type_cours, heure_debut, heure_fin, cours_recurrent_id)
                   SELECT
                     DATE_ADD(?, INTERVAL (7 * n) DAY) AS date_cours,
@@ -886,41 +1073,64 @@ export class Cours {
                     DATE_ADD(?, INTERVAL (7 * n) DAY) BETWEEN ? AND ?
                 `;
 
-                const params = [
-                  start_date.toISOString().split('T')[0],
-                  data.type_cours,
-                  data.heure_debut,
-                  data.heure_fin,
-                  coursRecurrentId,
-                  start_date.toISOString().split('T')[0],
-                  start_date.toISOString().split('T')[0],
-                  formattedEndDate
-                ];
+                  const params = [
+                    start_date.toISOString().split("T")[0],
+                    data.type_cours,
+                    data.heure_debut,
+                    data.heure_fin,
+                    coursRecurrentId,
+                    start_date.toISOString().split("T")[0],
+                    start_date.toISOString().split("T")[0],
+                    formattedEndDate,
+                  ];
 
-                this.mysqlConnector.query(insertCoursSql, params, (insertError, insertResults) => {
-                  if (insertError) {
-                    console.error('Erreur lors de la génération des cours:', insertError.message);
-                    reject(insertError);
-                  } else {
-                    if (data.professeurs && data.professeurs.length > 0) {
-                      this.associerProfesseursAuCoursRecurrent(coursRecurrentId, data.professeurs)
-                        .then(() => resolve({ isConfirm: true, message: 'Cours récurrent ajouté avec succès avec professeurs.' }))
-                        .catch(reject);
-                    } else {
-                      resolve({ isConfirm: true, message: 'Cours récurrent ajouté avec succès.' });
-                    }
-                  }
-                });
-              }
-            });
+                  this.mysqlConnector.query(
+                    insertCoursSql,
+                    params,
+                    (insertError, insertResults) => {
+                      if (insertError) {
+                        console.error(
+                          "Erreur lors de la génération des cours:",
+                          insertError.message,
+                        );
+                        reject(insertError);
+                      } else {
+                        if (data.professeurs && data.professeurs.length > 0) {
+                          this.associerProfesseursAuCoursRecurrent(
+                            coursRecurrentId,
+                            data.professeurs,
+                          )
+                            .then(() =>
+                              resolve({
+                                isConfirm: true,
+                                message:
+                                  "Cours récurrent ajouté avec succès avec professeurs.",
+                              }),
+                            )
+                            .catch(reject);
+                        } else {
+                          resolve({
+                            isConfirm: true,
+                            message: "Cours récurrent ajouté avec succès.",
+                          });
+                        }
+                      }
+                    },
+                  );
+                }
+              },
+            );
           }
-        }
+        },
       );
     });
   }
 
   // Associer des professeurs à un cours récurrent
-  associerProfesseursAuCoursRecurrent(coursRecurrentId: number, professeursNoms: string[]): Promise<void> {
+  associerProfesseursAuCoursRecurrent(
+    coursRecurrentId: number,
+    professeursNoms: string[],
+  ): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
       if (professeursNoms.length === 0) {
         resolve();
@@ -928,17 +1138,21 @@ export class Cours {
       }
 
       try {
-        const placeholders = professeursNoms.map(() => '?').join(',');
+        const placeholders = professeursNoms.map(() => "?").join(",");
         const getProfIdsSql = `
           SELECT id FROM professeurs
           WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) IN (${placeholders})
         `;
 
         const profRows = await new Promise<any[]>((res, rej) => {
-          this.mysqlConnector.query(getProfIdsSql, professeursNoms, (error: mysql.MysqlError | null, results: any) => {
-            if (error) return rej(error);
-            res(results);
-          });
+          this.mysqlConnector.query(
+            getProfIdsSql,
+            professeursNoms,
+            (error: mysql.MysqlError | null, results: any) => {
+              if (error) return rej(error);
+              res(results);
+            },
+          );
         });
 
         const professeurIds = profRows.map((row: any) => row.id);
@@ -947,7 +1161,7 @@ export class Cours {
           return;
         }
 
-        const values = professeurIds.map(() => '(?, ?)').join(', ');
+        const values = professeurIds.map(() => "(?, ?)").join(", ");
         const profParams: any[] = [];
         professeurIds.forEach((profId: number) => {
           profParams.push(coursRecurrentId, profId);
@@ -958,14 +1172,21 @@ export class Cours {
           VALUES ${values}
         `;
 
-        this.mysqlConnector.query(insertProfSql, profParams, (error: mysql.MysqlError | null) => {
-          if (error) {
-            console.error("Erreur lors de l'association des professeurs:", error.message);
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
+        this.mysqlConnector.query(
+          insertProfSql,
+          profParams,
+          (error: mysql.MysqlError | null) => {
+            if (error) {
+              console.error(
+                "Erreur lors de l'association des professeurs:",
+                error.message,
+              );
+              reject(error);
+            } else {
+              resolve();
+            }
+          },
+        );
       } catch (error) {
         reject(error);
       }
@@ -977,19 +1198,19 @@ export class Cours {
     return new Promise<ConfirmationResult>((resolve, reject) => {
       // Récupérer l'ID du cours récurrent
       this.mysqlConnector.query(
-        'SELECT id FROM cours_recurrent WHERE jour_semaine = ? LIMIT 1',
+        "SELECT id FROM cours_recurrent WHERE jour_semaine = ? LIMIT 1",
         [jourNum],
         (error, results) => {
           if (error) {
             reject(error);
           } else if (results.length === 0) {
-            reject(new Error('Cours récurrent non trouvé'));
+            reject(new Error("Cours récurrent non trouvé"));
           } else {
             const coursRecurrentId = results[0].id;
-            
+
             // Supprimer les associations professeurs
             this.mysqlConnector.query(
-              'DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ?',
+              "DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ?",
               [coursRecurrentId],
               (deleteAssocError) => {
                 if (deleteAssocError) {
@@ -997,7 +1218,7 @@ export class Cours {
                 } else {
                   // Supprimer les cours individuels
                   this.mysqlConnector.query(
-                    'DELETE FROM cours WHERE cours_recurrent_id = ?',
+                    "DELETE FROM cours WHERE cours_recurrent_id = ?",
                     [coursRecurrentId],
                     (deleteCoursError) => {
                       if (deleteCoursError) {
@@ -1005,7 +1226,7 @@ export class Cours {
                       } else {
                         // Supprimer le cours récurrent
                         this.mysqlConnector.query(
-                          'DELETE FROM cours_recurrent WHERE id = ?',
+                          "DELETE FROM cours_recurrent WHERE id = ?",
                           [coursRecurrentId],
                           (deleteRecurrentError) => {
                             if (deleteRecurrentError) {
@@ -1013,46 +1234,63 @@ export class Cours {
                             } else {
                               resolve({
                                 isConfirm: true,
-                                message: 'Cours supprimé avec succès'
+                                message: "Cours supprimé avec succès",
                               });
                             }
-                          }
+                          },
                         );
                       }
-                    }
+                    },
                   );
                 }
-              }
+              },
             );
           }
-        }
+        },
       );
     });
   }
 
   // Supprimer des professeurs par nom et jour avec plus de spécificité
-  supprimerProfesseursParNomEtJour(professeursNoms: string[], jour: string, coursContext?: {type_cours?: string, heure_debut?: string, heure_fin?: string}): Promise<ConfirmationResult> {
+  supprimerProfesseursParNomEtJour(
+    professeursNoms: string[],
+    jour: string,
+    coursContext?: {
+      type_cours?: string;
+      heure_debut?: string;
+      heure_fin?: string;
+    },
+  ): Promise<ConfirmationResult> {
     return new Promise<ConfirmationResult>((resolve, reject) => {
       const joursDeSemaine: Record<string, number> = {
-        lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, 
-        vendredi: 5, samedi: 6, dimanche: 7
+        lundi: 1,
+        mardi: 2,
+        mercredi: 3,
+        jeudi: 4,
+        vendredi: 5,
+        samedi: 6,
+        dimanche: 7,
       };
 
       const jourNum = joursDeSemaine[jour.toLowerCase()];
       if (!jourNum) {
-        reject(new Error('Jour invalide'));
+        reject(new Error("Jour invalide"));
         return;
       }
 
-      console.log(`🔍 Debug suppression - Jour: ${jour} (${jourNum}), Professeurs à retirer:`, professeursNoms);
+      console.log(
+        `🔍 Debug suppression - Jour: ${jour} (${jourNum}), Professeurs à retirer:`,
+        professeursNoms,
+      );
       console.log(`🔍 Contexte cours:`, coursContext);
 
       // Construire la requête pour trouver le bon cours récurrent
-      let coursQuery = 'SELECT id, type_cours, heure_debut, heure_fin FROM cours_recurrent WHERE jour_semaine = ?';
+      let coursQuery =
+        "SELECT id, type_cours, heure_debut, heure_fin FROM cours_recurrent WHERE jour_semaine = ?";
       let coursParams: any[] = [jourNum];
 
       if (coursContext?.type_cours) {
-        coursQuery += ' AND type_cours = ?';
+        coursQuery += " AND type_cours = ?";
         coursParams.push(coursContext.type_cours);
       }
       if (coursContext?.heure_debut) {
@@ -1070,13 +1308,15 @@ export class Cours {
         if (error) {
           reject(error);
         } else if (results.length === 0) {
-          reject(new Error('Cours récurrent non trouvé avec les critères fournis'));
+          reject(
+            new Error("Cours récurrent non trouvé avec les critères fournis"),
+          );
         } else if (results.length > 1) {
-          console.log('🔍 Plusieurs cours trouvés:', results);
+          console.log("🔍 Plusieurs cours trouvés:", results);
           // Si plusieurs cours, prendre le premier ou demander plus de précision
           resolve({
             isConfirm: false,
-            message: `Plusieurs cours trouvés pour ${jour}. Veuillez être plus spécifique.`
+            message: `Plusieurs cours trouvés pour ${jour}. Veuillez être plus spécifique.`,
           });
           return;
         } else {
@@ -1086,42 +1326,48 @@ export class Cours {
           // DEBUG: Vérifier les associations existantes pour ce cours spécifique
           this.mysqlConnector.query(
             `SELECT crp.professeur_id, p.prenom, p.nom, CONCAT(TRIM(p.prenom), ' ', TRIM(p.nom)) as nom_complet
-             FROM cours_recurrent_professeur crp 
-             JOIN professeurs p ON crp.professeur_id = p.id 
+             FROM cours_recurrent_professeur crp
+             JOIN professeurs p ON crp.professeur_id = p.id
              WHERE crp.cours_recurrent_id = ?`,
             [coursRecurrent.id],
             (assocError, assocResults) => {
               if (!assocError) {
-                console.log(`🔍 Professeurs actuellement associés au cours ${coursRecurrent.type_cours} ${coursRecurrent.heure_debut}-${coursRecurrent.heure_fin}:`);
+                console.log(
+                  `🔍 Professeurs actuellement associés au cours ${coursRecurrent.type_cours} ${coursRecurrent.heure_debut}-${coursRecurrent.heure_fin}:`,
+                );
                 if (assocResults.length === 0) {
                   console.log("  ❌ Aucun professeur associé à ce cours !");
                 } else {
                   assocResults.forEach((assoc: any) => {
-                    console.log(`  - ID: ${assoc.professeur_id}, Nom: "${assoc.nom_complet}"`);
+                    console.log(
+                      `  - ID: ${assoc.professeur_id}, Nom: "${assoc.nom_complet}"`,
+                    );
                   });
                 }
               }
 
               // Continuer avec la suppression
               const searchQueries = [
-                `SELECT id FROM professeurs WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) IN (${professeursNoms.map(() => '?').join(',')}) AND status_id = 5`,
-                `SELECT id FROM professeurs WHERE CONCAT(TRIM(nom), ' ', TRIM(prenom)) IN (${professeursNoms.map(() => '?').join(',')}) AND status_id = 5`
+                `SELECT id FROM professeurs WHERE CONCAT(TRIM(prenom), ' ', TRIM(nom)) IN (${professeursNoms.map(() => "?").join(",")}) AND status_id = 5`,
+                `SELECT id FROM professeurs WHERE CONCAT(TRIM(nom), ' ', TRIM(prenom)) IN (${professeursNoms.map(() => "?").join(",")}) AND status_id = 5`,
               ];
-              
+
               let professeurIds: number[] = [];
               let strategyUsed = 0;
-              
+
               const tryNextStrategy = (strategyIndex: number) => {
                 if (strategyIndex >= searchQueries.length) {
                   // Aucune stratégie n'a fonctionné
-                  console.log('❌ Aucun professeur trouvé avec toutes les stratégies');
+                  console.log(
+                    "❌ Aucun professeur trouvé avec toutes les stratégies",
+                  );
                   resolve({
                     isConfirm: false,
-                    message: `Aucun professeur trouvé parmi: ${professeursNoms.join(', ')}`
+                    message: `Aucun professeur trouvé parmi: ${professeursNoms.join(", ")}`,
                   });
                   return;
                 }
-                
+
                 console.log(`🔍 Essai stratégie ${strategyIndex + 1}`);
                 this.mysqlConnector.query(
                   searchQueries[strategyIndex],
@@ -1133,10 +1379,15 @@ export class Cours {
                       // Stratégie réussie
                       professeurIds = profResults.map((row: any) => row.id);
                       strategyUsed = strategyIndex + 1;
-                      console.log(`✅ Stratégie ${strategyUsed} réussie - Professeurs trouvés:`, professeurIds);
-                      
+                      console.log(
+                        `✅ Stratégie ${strategyUsed} réussie - Professeurs trouvés:`,
+                        professeurIds,
+                      );
+
                       // Supprimer les associations du cours spécifique
-                      const deletePlaceholders = professeurIds.map(() => '?').join(',');
+                      const deletePlaceholders = professeurIds
+                        .map(() => "?")
+                        .join(",");
                       this.mysqlConnector.query(
                         `DELETE FROM cours_recurrent_professeur WHERE cours_recurrent_id = ? AND professeur_id IN (${deletePlaceholders})`,
                         [coursRecurrent.id, ...professeurIds],
@@ -1144,24 +1395,26 @@ export class Cours {
                           if (deleteError) {
                             reject(deleteError);
                           } else {
-                            console.log(`✅ Suppression réussie - ${deleteResults.affectedRows} association(s) supprimée(s)`);
+                            console.log(
+                              `✅ Suppression réussie - ${deleteResults.affectedRows} association(s) supprimée(s)`,
+                            );
                             resolve({
                               isConfirm: true,
-                              message: `${deleteResults.affectedRows} professeur(s) retiré(s) avec succès du cours ${coursRecurrent.type_cours} ${coursRecurrent.heure_debut}-${coursRecurrent.heure_fin}`
+                              message: `${deleteResults.affectedRows} professeur(s) retiré(s) avec succès du cours ${coursRecurrent.type_cours} ${coursRecurrent.heure_debut}-${coursRecurrent.heure_fin}`,
                             });
                           }
-                        }
+                        },
                       );
                     } else {
                       // Essayer la stratégie suivante
                       tryNextStrategy(strategyIndex + 1);
                     }
-                  }
+                  },
                 );
               };
-              
+
               tryNextStrategy(0);
-            }
+            },
           );
         }
       });
@@ -1169,42 +1422,79 @@ export class Cours {
   }
 
   // Supprimer des professeurs par nom et jour avec résolution automatique
-  async supprimerProfesseursParNomEtJourAvecResolution(professeursNoms: string[], jour: string, coursContext?: {type_cours?: string, heure_debut?: string, heure_fin?: string}): Promise<ConfirmationResult> {
+  async supprimerProfesseursParNomEtJourAvecResolution(
+    professeursNoms: string[],
+    jour: string,
+    coursContext?: {
+      type_cours?: string;
+      heure_debut?: string;
+      heure_fin?: string;
+    },
+  ): Promise<ConfirmationResult> {
     // Si le contexte n'est pas fourni, essayer de le résoudre automatiquement
-    if (!coursContext?.type_cours && !coursContext?.heure_debut && !coursContext?.heure_fin) {
-      console.log('⚠️ Contexte manquant - tentative de résolution automatique...');
-      
+    if (
+      !coursContext?.type_cours &&
+      !coursContext?.heure_debut &&
+      !coursContext?.heure_fin
+    ) {
+      console.log(
+        "⚠️ Contexte manquant - tentative de résolution automatique...",
+      );
+
       try {
-        const coursAuto = await this.trouverCoursAvecProfesseur(professeursNoms, jour);
+        const coursAuto = await this.trouverCoursAvecProfesseur(
+          professeursNoms,
+          jour,
+        );
         if (coursAuto) {
-          console.log('✅ Contexte résolu automatiquement:', coursAuto);
-          return this.supprimerProfesseursParNomEtJour(professeursNoms, jour, coursAuto);
+          console.log("✅ Contexte résolu automatiquement:", coursAuto);
+          return this.supprimerProfesseursParNomEtJour(
+            professeursNoms,
+            jour,
+            coursAuto,
+          );
         } else {
           return {
             isConfirm: false,
-            message: `Le professeur ${professeursNoms[0]} n'est associé à aucun cours du ${jour}`
+            message: `Le professeur ${professeursNoms[0]} n'est associé à aucun cours du ${jour}`,
           };
         }
       } catch (error) {
-        console.error('Erreur lors de la résolution automatique:', error);
+        console.error("Erreur lors de la résolution automatique:", error);
         // Continuer avec la logique normale sans contexte
       }
     }
-    
+
     // Utiliser la méthode normale si le contexte est fourni ou si la résolution automatique a échoué
-    return this.supprimerProfesseursParNomEtJour(professeursNoms, jour, coursContext);
+    return this.supprimerProfesseursParNomEtJour(
+      professeursNoms,
+      jour,
+      coursContext,
+    );
   }
 
   // Nouvelle méthode pour trouver automatiquement le cours contenant un professeur
-  private async trouverCoursAvecProfesseur(professeursNoms: string[], jour: string): Promise<{type_cours: string, heure_debut: string, heure_fin: string} | null> {
+  private async trouverCoursAvecProfesseur(
+    professeursNoms: string[],
+    jour: string,
+  ): Promise<{
+    type_cours: string;
+    heure_debut: string;
+    heure_fin: string;
+  } | null> {
     const joursDeSemaine: Record<string, number> = {
-      lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, 
-      vendredi: 5, samedi: 6, dimanche: 7
+      lundi: 1,
+      mardi: 2,
+      mercredi: 3,
+      jeudi: 4,
+      vendredi: 5,
+      samedi: 6,
+      dimanche: 7,
     };
     const jourNum = joursDeSemaine[jour.toLowerCase()];
-    
+
     if (!jourNum) return null;
-    
+
     const coursQuery = `
       SELECT cr.id, cr.type_cours, cr.heure_debut, cr.heure_fin,
              GROUP_CONCAT(CONCAT(p.prenom, ' ', p.nom) SEPARATOR ', ') as professeurs
@@ -1214,28 +1504,32 @@ export class Cours {
       WHERE cr.jour_semaine = ?
       GROUP BY cr.id, cr.type_cours, cr.heure_debut, cr.heure_fin
     `;
-    
+
     return new Promise((resolve, reject) => {
       this.mysqlConnector.query(coursQuery, [jourNum], (error, results) => {
         if (error) {
           reject(error);
         } else {
-          console.log('📋 Cours trouvés pour ce jour:', results);
-          
+          console.log("📋 Cours trouvés pour ce jour:", results);
+
           // Trouver le cours qui contient le professeur à retirer
-          const coursAvecProfesseur = results.find((c: any) => 
-            c.professeurs && c.professeurs.includes(professeursNoms[0])
+          const coursAvecProfesseur = results.find(
+            (c: any) =>
+              c.professeurs && c.professeurs.includes(professeursNoms[0]),
           );
-          
+
           if (coursAvecProfesseur) {
-            console.log('✅ Cours trouvé automatiquement:', coursAvecProfesseur);
+            console.log(
+              "✅ Cours trouvé automatiquement:",
+              coursAvecProfesseur,
+            );
             resolve({
               type_cours: coursAvecProfesseur.type_cours,
               heure_debut: coursAvecProfesseur.heure_debut.substring(0, 5), // Format HH:MM
-              heure_fin: coursAvecProfesseur.heure_fin.substring(0, 5)
+              heure_fin: coursAvecProfesseur.heure_fin.substring(0, 5),
             });
           } else {
-            console.log('❌ Aucun cours trouvé contenant ce professeur');
+            console.log("❌ Aucun cours trouvé contenant ce professeur");
             resolve(null);
           }
         }

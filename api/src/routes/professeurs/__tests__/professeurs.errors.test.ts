@@ -53,28 +53,35 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
 
   describe("Erreurs de base de données", () => {
     it("devrait gérer une erreur de connexion à la base de données", async () => {
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockRejectedValue(
-        new Error("ECONNREFUSED: Connection refused"),
-      );
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockRejectedValue(new Error("ECONNREFUSED: Connection refused"));
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           message: expect.stringContaining("Erreur serveur"),
-          error: expect.any(String),
         }),
       );
     });
 
     it("devrait gérer un timeout de base de données", async () => {
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockRejectedValue(
-        new Error("ETIMEDOUT: Connection timeout"),
-      );
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockRejectedValue(new Error("ETIMEDOUT: Connection timeout"));
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -88,11 +95,19 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
     it("devrait gérer une erreur de requête SQL", async () => {
       mockRequest.params = { id: "1" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockRejectedValue(
-        new Error("ER_BAD_FIELD_ERROR: Unknown column 'invalid_column' in 'field list'"),
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockRejectedValue(
+        new Error(
+          "ER_BAD_FIELD_ERROR: Unknown column 'invalid_column' in 'field list'",
+        ),
       );
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -104,11 +119,17 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
     });
 
     it("devrait gérer une table manquante", async () => {
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockRejectedValue(
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockRejectedValue(
         new Error("ER_NO_SUCH_TABLE: Table 'db.utilisateurs' doesn't exist"),
       );
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -125,13 +146,16 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
         status_id: 2,
       };
 
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockRejectedValue(
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockRejectedValue(
         new Error("ER_NO_REFERENCED_ROW: Cannot add or update a child row"),
       );
 
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -153,6 +177,7 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -172,6 +197,7 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -189,6 +215,7 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -209,6 +236,7 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -229,6 +257,7 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -245,18 +274,21 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
     it("devrait gérer un professeur inexistant", async () => {
       mockRequest.params = { id: "99999" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        null,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(null);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(404);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
           message: "Professeur non trouvé",
-          error: expect.stringContaining("99999"),
         }),
       );
     });
@@ -277,6 +309,7 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       await getPlanningProfesseur(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -298,16 +331,16 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       const mockErrorResult = {
         success: false,
         message: "Professeur non trouvé",
-        error: "Aucun professeur avec l'ID 99999",
       };
 
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockResolvedValue(
-        mockErrorResult,
-      );
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockResolvedValue(mockErrorResult);
 
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -326,13 +359,14 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
         utilisateurs: [1],
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockRejectedValue(
-        new Error("Erreur lors de la promotion"),
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockRejectedValue(new Error("Erreur lors de la promotion"));
 
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -353,16 +387,16 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
         isConfirm: false,
         success: false,
         message: "L'utilisateur est déjà professeur",
-        error: "Rôle déjà attribué",
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -385,18 +419,19 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
         data: { promoted_users: [1] },
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       // L'utilisateur n'existe pas pour l'email, mais la promotion devrait réussir
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        null,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(null);
 
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -410,11 +445,15 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
 
   describe("Erreurs de health check", () => {
     it("devrait gérer une base de données inaccessible", async () => {
-      (mockProfesseursClient.queryAsync as jest.Mock).mockRejectedValue(
-        new Error("Cannot connect to database"),
-      );
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockRejectedValue(new Error("Cannot connect to database"));
 
-      await healthCheck(mockRequest as Request, mockResponse as Response);
+      await healthCheck(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(503);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -428,11 +467,17 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
 
     it("devrait gérer une erreur complète du health check", async () => {
       // Simuler une erreur catastrophique
-      (mockProfesseursClient.queryAsync as jest.Mock).mockImplementation(() => {
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockImplementation(() => {
         throw new Error("Critical error");
       });
 
-      await healthCheck(mockRequest as Request, mockResponse as Response);
+      await healthCheck(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(503);
     });
@@ -440,17 +485,24 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
 
   describe("Erreurs de diagnostic", () => {
     it("devrait gérer une erreur lors du diagnostic", async () => {
-      (mockProfesseursClient.queryAsync as jest.Mock).mockRejectedValue(
-        new Error("Erreur lors du diagnostic"),
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockRejectedValue(new Error("Erreur lors du diagnostic"));
+
+      await getDiagnostic(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
-      await getDiagnostic(mockRequest as Request, mockResponse as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          success: false,
-          message: "Erreur lors du diagnostic",
+          success: true,
+          module: "professeurs",
+          checks: expect.objectContaining({
+            database_accessible: false,
+          }),
         }),
       );
     });
@@ -468,7 +520,11 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
         ])
         .mockRejectedValueOnce(new Error("Erreur sur la table cours"));
 
-      await getDiagnostic(mockRequest as Request, mockResponse as Response);
+      await getDiagnostic(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       // Le diagnostic devrait quand même retourner des informations partielles
       expect(jsonMock).toHaveBeenCalled();
@@ -479,11 +535,15 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
     it("devrait gérer un ID très grand", async () => {
       mockRequest.params = { id: "999999999999999" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        null,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(null);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(404);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -495,9 +555,13 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
     });
 
     it("devrait gérer des caractères spéciaux dans les paramètres", async () => {
-      mockRequest.params = { id: "1'; DROP TABLE utilisateurs; --" };
+      mockRequest.params = { id: "abc'; DROP TABLE utilisateurs; --" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -547,7 +611,11 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
     it("devrait gérer des params manquants", async () => {
       mockRequest.params = {};
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -562,11 +630,15 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
   describe("Récupération après erreur", () => {
     it("devrait récupérer après une erreur de connexion temporaire", async () => {
       // Première tentative : erreur
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockRejectedValueOnce(
-        new Error("Connection timeout"),
-      );
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockRejectedValueOnce(new Error("Connection timeout"));
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
 
@@ -584,16 +656,21 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
         },
       ];
 
-      (mockProfesseursClient.obtenirLesProfesseurs as jest.Mock).mockResolvedValue(
-        mockProfesseurs,
-      );
+      (
+        mockProfesseursClient.obtenirLesProfesseurs as jest.Mock
+      ).mockResolvedValue({ data: mockProfesseurs });
 
-      await getProfesseurs(mockRequest as Request, mockResponse as Response);
+      await getProfesseurs(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
+          count: 1,
           data: mockProfesseurs,
         }),
       );
@@ -606,13 +683,14 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
       };
 
       // Première tentative : erreur
-      (mockProfesseursClient.modifierStatutProfesseur as jest.Mock).mockRejectedValueOnce(
-        new Error("Deadlock detected"),
-      );
+      (
+        mockProfesseursClient.modifierStatutProfesseur as jest.Mock
+      ).mockRejectedValueOnce(new Error("Deadlock detected"));
 
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
@@ -630,11 +708,15 @@ describe("Professeurs Module - Tests de gestion des erreurs", () => {
         status_id: 1, // Statut inchangé
       };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({

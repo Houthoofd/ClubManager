@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
-import mysql from "mysql";
+import mysql from "mysql2";
 
 // Pour __dirname dans ES modules (compatible avec Jest)
 // Utiliser les variables globales si disponibles (CommonJS/Jest), sinon fallback
@@ -55,35 +55,40 @@ if (missingVars.length > 0) {
 }
 
 // Configuration du pool MySQL améliorée
+// En mode test, utiliser un pool plus petit et des timeouts plus courts
+const isTestMode = process.env.NODE_ENV === "test";
 const poolConfig = {
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  connectionLimit: Number(process.env.DB_POOL_LIMIT) || 15,
-  acquireTimeout: Number(process.env.DB_ACQUIRE_TIMEOUT) || 60000,
-  timeout: Number(process.env.DB_TIMEOUT) || 60000,
-  reconnect: true,
+  connectionLimit: isTestMode ? 5 : Number(process.env.DB_POOL_LIMIT) || 15,
+  waitForConnections: true,
+  queueLimit: isTestMode ? 0 : 10,
+  enableKeepAlive: !isTestMode,
+  keepAliveInitialDelay: isTestMode ? 0 : 10000,
   multipleStatements: false,
 };
 
 // Crée un pool MySQL avec configuration robuste
 const pool = mysql.createPool(poolConfig);
 
-// Test de connexion initial et monitoring
-pool.on("connection", (connection) => {
-  console.log(
-    `✅ Nouvelle connexion MySQL établie (ID: ${connection.threadId})`,
-  );
-});
+// Test de connexion initial et monitoring (désactivé en mode test pour éviter les logs)
+if (!isTestMode) {
+  pool.on("connection", (connection) => {
+    console.log(
+      `✅ Nouvelle connexion MySQL établie (ID: ${connection.threadId})`,
+    );
+  });
 
-pool.on("error", (err) => {
-  console.error("❌ Erreur du pool MySQL :", err);
-  if (err.code === "PROTOCOL_CONNECTION_LOST") {
-    console.log("🔄 Reconnexion automatique en cours...");
-  }
-});
+  pool.on("error", (err) => {
+    console.error("❌ Erreur du pool MySQL :", err);
+    if (err.code === "PROTOCOL_CONNECTION_LOST") {
+      console.log("🔄 Reconnexion automatique en cours...");
+    }
+  });
+}
 
 // Monitoring du pool - Désactivé en mode test pour éviter les fuites de ressources
 let lastPoolStats = { total: 0, free: 0, used: 0 };
@@ -165,16 +170,25 @@ export default class MysqlConnector {
 
   // Méthode pour fermer le pool proprement (pour les tests)
   public async closePool(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      pool.end((err) => {
-        if (err) {
-          console.error("❌ Erreur lors de la fermeture du pool MySQL:", err);
-          reject(err);
-        } else {
-          console.log("✅ Pool MySQL fermé proprement");
+    return new Promise((resolve) => {
+      // En mode test, forcer la fermeture même en cas d'erreur
+      const timeout = setTimeout(() => {
+        if (process.env.NODE_ENV === "test") {
+          console.log("⚠️  Timeout fermeture pool - force résolution");
           this.isPoolHealthy = false;
           resolve();
         }
+      }, 2000);
+
+      pool.end((err) => {
+        clearTimeout(timeout);
+        if (err && process.env.NODE_ENV !== "test") {
+          console.error("❌ Erreur lors de la fermeture du pool MySQL:", err);
+        } else if (!err) {
+          console.log("✅ Pool MySQL fermé proprement");
+        }
+        this.isPoolHealthy = false;
+        resolve();
       });
     });
   }

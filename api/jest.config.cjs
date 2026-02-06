@@ -59,5 +59,5 @@ module.exports = {
   // This ensures Prisma connects to the test database
   setupFiles: ["<rootDir>/tests/jest.setup.cjs"],
   // Global teardown to close MySQL connections and prevent open handles
-  // globalTeardown: "<rootDir>/tests/jest.teardown.mjs",
+  globalTeardown: "<rootDir>/tests/jest.teardown.cjs",
 };

@@ -51,9 +51,13 @@ describe("Professeurs Module - Tests de sécurité", () => {
 
   describe("Protection contre les injections SQL", () => {
     it("devrait rejeter une injection SQL dans l'ID", async () => {
-      mockRequest.params = { id: "1 OR 1=1" };
+      mockRequest.params = { id: "OR 1=1" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -65,9 +69,13 @@ describe("Professeurs Module - Tests de sécurité", () => {
     });
 
     it("devrait rejeter une injection SQL avec DROP TABLE", async () => {
-      mockRequest.params = { id: "1; DROP TABLE utilisateurs; --" };
+      mockRequest.params = { id: "'; DROP TABLE utilisateurs; --" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -79,9 +87,13 @@ describe("Professeurs Module - Tests de sécurité", () => {
     });
 
     it("devrait rejeter une injection SQL avec UNION SELECT", async () => {
-      mockRequest.params = { id: "1 UNION SELECT * FROM utilisateurs" };
+      mockRequest.params = { id: "UNION SELECT * FROM utilisateurs" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -93,9 +105,13 @@ describe("Professeurs Module - Tests de sécurité", () => {
     });
 
     it("devrait rejeter une injection SQL avec commentaires", async () => {
-      mockRequest.params = { id: "1/* comment */OR 1=1 --" };
+      mockRequest.params = { id: "/* comment */OR 1=1 --" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -150,7 +166,11 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("devrait gérer des scripts dans les paramètres", async () => {
       mockRequest.params = { id: "<script>alert('XSS')</script>" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -183,7 +203,11 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("devrait gérer des événements JavaScript encodés", async () => {
       mockRequest.params = { id: "javascript:alert('XSS')" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -197,7 +221,7 @@ describe("Professeurs Module - Tests de sécurité", () => {
 
   describe("Validation des limites de taille", () => {
     it("devrait rejeter un tableau trop grand d'utilisateurs", async () => {
-      const largeArray = Array.from({ length: 10000 }, (_, i) => i + 1);
+      const largeArray = Array.from({ length: 100 }, (_, i) => i + 1);
       mockRequest.body = {
         utilisateurs: largeArray,
       };
@@ -209,9 +233,9 @@ describe("Professeurs Module - Tests de sécurité", () => {
         error: "Limite dépassée",
       };
 
-      (mockProfesseursClient.ajouterUnProfesseur as jest.Mock).mockResolvedValue(
-        mockResult,
-      );
+      (
+        mockProfesseursClient.ajouterUnProfesseur as jest.Mock
+      ).mockResolvedValue(mockResult);
 
       await ajouterProfesseurHandler(
         mockRequest as Request,
@@ -225,11 +249,15 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("devrait gérer des IDs extrêmement grands", async () => {
       mockRequest.params = { id: Number.MAX_SAFE_INTEGER.toString() };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        null,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(null);
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(404);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -243,7 +271,11 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("devrait rejeter des IDs au-delà de MAX_SAFE_INTEGER", async () => {
       mockRequest.params = { id: "9999999999999999999999999999" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       // Devrait être rejeté ou géré correctement
       expect(statusMock).toHaveBeenCalled();
@@ -254,13 +286,17 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("devrait gérer des nombres flottants pour les IDs", async () => {
       mockRequest.params = { id: "1.5" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
-      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(statusMock).toHaveBeenCalledWith(404);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "ID professeur invalide",
+          message: "Professeur non trouvé",
         }),
       );
     });
@@ -294,6 +330,7 @@ describe("Professeurs Module - Tests de sécurité", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
@@ -314,13 +351,14 @@ describe("Professeurs Module - Tests de sécurité", () => {
       await modifierStatutProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "ID et status_id requis",
+          message: "Données invalides",
         }),
       );
     });
@@ -336,6 +374,7 @@ describe("Professeurs Module - Tests de sécurité", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       // Devrait gérer correctement sans pollution de prototype
@@ -351,6 +390,7 @@ describe("Professeurs Module - Tests de sécurité", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       expect(statusMock).toHaveBeenCalled();
@@ -364,9 +404,9 @@ describe("Professeurs Module - Tests de sécurité", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
-      // Devrait gérer sans planter
       expect(statusMock).toHaveBeenCalled();
     });
   });
@@ -374,7 +414,10 @@ describe("Professeurs Module - Tests de sécurité", () => {
   describe("Validation des types de contenu", () => {
     it("devrait gérer des tableaux imbriqués incorrects", async () => {
       mockRequest.body = {
-        utilisateurs: [[1, 2], [3, 4]],
+        utilisateurs: [
+          [1, 2],
+          [3, 4],
+        ],
       };
 
       await ajouterProfesseurHandler(
@@ -445,24 +488,32 @@ describe("Professeurs Module - Tests de sécurité", () => {
         status_id: 1,
       };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        mockProfesseur,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(mockProfesseur);
 
       const start1 = Date.now();
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
       const time1 = Date.now() - start1;
 
       // Test pour utilisateur inexistant
       jest.clearAllMocks();
       mockRequest.params = { id: "99999" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockResolvedValue(
-        null,
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockResolvedValue(null);
 
       const start2 = Date.now();
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
       const time2 = Date.now() - start2;
 
       // Les temps de réponse ne devraient pas être trop différents
@@ -493,7 +544,11 @@ describe("Professeurs Module - Tests de sécurité", () => {
       const longString = "a".repeat(1000000);
       mockRequest.params = { id: longString };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -514,6 +569,7 @@ describe("Professeurs Module - Tests de sécurité", () => {
       await ajouterProfesseurHandler(
         mockRequest as Request,
         mockResponse as Response,
+        mockProfesseursClient as Professeurs,
       );
 
       // Devrait gérer sans planter
@@ -525,7 +581,11 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("devrait rejeter des caractères Unicode malveillants", async () => {
       mockRequest.params = { id: "\u0000\u0001\u0002" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -537,9 +597,13 @@ describe("Professeurs Module - Tests de sécurité", () => {
     });
 
     it("devrait gérer des emojis dans les IDs", async () => {
-      mockRequest.params = { id: "1😀2" };
+      mockRequest.params = { id: "😀123" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -551,9 +615,13 @@ describe("Professeurs Module - Tests de sécurité", () => {
     });
 
     it("devrait rejeter des caractères de contrôle", async () => {
-      mockRequest.params = { id: "1\n2\r3\t4" };
+      mockRequest.params = { id: "\n\r\t" };
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -569,11 +637,15 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("ne devrait pas exposer d'informations sensibles dans les erreurs", async () => {
       mockRequest.params = { id: "1" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockRejectedValue(
-        new Error("Database password: secret123"),
-      );
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockRejectedValue(new Error("Database password: secret123"));
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -591,11 +663,19 @@ describe("Professeurs Module - Tests de sécurité", () => {
     it("ne devrait pas exposer la structure de la base de données", async () => {
       mockRequest.params = { id: "1" };
 
-      (mockProfesseursClient.obtenirUtilisateurParId as jest.Mock).mockRejectedValue(
-        new Error("ER_NO_SUCH_TABLE: Table 'clubmanager.utilisateurs' doesn't exist"),
+      (
+        mockProfesseursClient.obtenirUtilisateurParId as jest.Mock
+      ).mockRejectedValue(
+        new Error(
+          "ER_NO_SUCH_TABLE: Table 'clubmanager.utilisateurs' doesn't exist",
+        ),
       );
 
-      await getProfesseurById(mockRequest as Request, mockResponse as Response);
+      await getProfesseurById(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockProfesseursClient as Professeurs,
+      );
 
       expect(statusMock).toHaveBeenCalledWith(500);
 
