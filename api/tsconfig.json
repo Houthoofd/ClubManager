@@ -17,18 +17,16 @@
     "paths": {
       "@clubmanager/types": ["../packages/types/src"],
       "@clubmanager/types/*": ["../packages/types/src/*"],
-      "*": ["*"]
+      "*": ["*"],
     },
-    "typeRoots": ["./src/types", "./node_modules/@types"]
+    "typeRoots": ["./src/types", "./node_modules/@types"],
   },
-  "include": [
-    "src/**/*",
-    "src/types/**/*"
-  ],
+  "include": ["src/**/*", "src/types/**/*"],
   "exclude": [
     "node_modules",
     "dist",
     "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+    "**/*.spec.ts",
+    "**/__tests__/**",
+  ],
 }
