@@ -512,6 +512,7 @@ async function startServer() {
     // CORRIGÉ: Import conditionnel pour les autres modules
     let commandesRouter = null;
     let stocksRouter = null;
+    let stripeRouter = null;
     // SUPPRIMÉ: Variables echeancesRouter et webhooksRouter car intégrés dans le module paiements
 
     try {
@@ -528,6 +529,14 @@ async function startServer() {
       console.log("✅ [Server] Module stocks chargé");
     } catch (error) {
       console.warn("⚠️ [Server] Module stocks non disponible:", error);
+    }
+
+    try {
+      const stripeModule = await import("./routes/stripe/index.js");
+      stripeRouter = stripeModule.default;
+      console.log("✅ [Server] Module Stripe chargé");
+    } catch (error) {
+      console.warn("⚠️ [Server] Module Stripe non disponible:", error);
     }
 
     // SUPPRIMÉ: Import des modules echeances et webhooks standalone car intégrés dans paiements
@@ -605,6 +614,29 @@ async function startServer() {
         });
       });
       console.log("⚠️ [Server] Route stocks en mode fallback");
+    }
+
+    if (stripeRouter) {
+      app.use("/stripe", stripeRouter);
+      console.log("✅ [Server] Route Stripe montée → /stripe/");
+      console.log("  → /stripe/health (Health check)");
+      console.log("  → /stripe/config (Configuration publique)");
+      console.log("  → /stripe/create-payment-intent (Création PI échéance)");
+      console.log(
+        "  → /stripe/create-payment-intent-commande (Création PI commande)",
+      );
+      console.log("  → /stripe/confirm-payment (Confirmation paiement)");
+      console.log("  → /stripe/bancontact (Paiement Bancontact)");
+      console.log("  → /stripe/paypal (Paiement PayPal)");
+      console.log("  → /stripe/bitcoin (Paiement Bitcoin)");
+    } else {
+      app.use("/stripe", (req, res) => {
+        res.status(503).json({
+          error: "Service Stripe temporairement indisponible",
+          message: "Le module Stripe n'est pas disponible",
+        });
+      });
+      console.log("⚠️ [Server] Route Stripe en mode fallback");
     }
 
     // MODIFIÉ: Servir le build React en production ET développement si les fichiers existent

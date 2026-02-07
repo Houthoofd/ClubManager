@@ -69,8 +69,10 @@ const poolConfig = {
   enableKeepAlive: !isTestMode,
   keepAliveInitialDelay: isTestMode ? 0 : 10000,
   multipleStatements: false,
-  timeout: isTestMode ? 10000 : 30000, // 10s en test, 30s en prod
 };
+
+// Timeout pour les requêtes (utilisé dans la méthode query)
+const QUERY_TIMEOUT_MS = isTestMode ? 10000 : 30000; // 10s en test, 30s en prod
 
 // Crée un pool MySQL avec configuration robuste
 const pool = mysql.createPool(poolConfig);
@@ -218,13 +220,13 @@ export default class MysqlConnector {
         return callback(err);
       }
 
-      const queryTimeout = setTimeout(() => {
+      const queryTimeoutTimer = setTimeout(() => {
         connection.destroy();
         callback(new Error("Timeout de requête SQL") as mysql.MysqlError);
-      }, poolConfig.timeout);
+      }, QUERY_TIMEOUT_MS);
 
       connection.query(sql, values, (error, results, fields) => {
-        clearTimeout(queryTimeout);
+        clearTimeout(queryTimeoutTimer);
         connection.release();
 
         if (error) {

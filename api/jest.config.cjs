@@ -5,17 +5,6 @@ module.exports = {
   preset: "ts-jest/presets/js-with-ts-esm",
   testEnvironment: "node",
   extensionsToTreatAsEsm: [".ts"],
-  globals: {
-    "ts-jest": {
-      useESM: true,
-      tsconfig: {
-        module: "ESNext",
-        moduleResolution: "NodeNext",
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
-    },
-  },
   moduleNameMapper: {
     "^.*/db/connector/mysqlconnector\\.js$":
       "<rootDir>/src/db/connector/__mocks__/mysqlconnector.ts",

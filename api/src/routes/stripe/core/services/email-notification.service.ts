@@ -1,0 +1,182 @@
+/**
+ * Service pour gérer les notifications email de paiement
+ * Utilise le EmailClient existant
+ */
+
+export interface EmailResult {
+  sent: boolean;
+  message: string;
+  error?: string;
+}
+
+export class EmailNotificationServiceClass {
+  constructor() {
+    console.log("✅ [Service Email Notification] Service initialisé");
+  }
+
+  /**
+   * Envoyer une confirmation de paiement par email
+   */
+  async envoyerConfirmationPaiement(data: {
+    email: string;
+    userId: number;
+    userName: string;
+    amount: number;
+    paymentIntentId: string;
+    premierPaiement: boolean;
+    statusUpgrade?: {
+      upgraded: boolean;
+      ancien_statut?: string;
+      nouveau_statut?: string;
+    };
+  }): Promise<EmailResult> {
+    console.log(
+      `📧 [Service Email Notification] Envoi confirmation à ${data.email}`,
+    );
+
+    try {
+      // Import dynamique du EmailClient (comme dans le code original)
+      const { EmailClient } =
+        await import("../../../../clients/emailClient.js");
+      const emailClient = new EmailClient();
+
+      // Préparer les variables du template
+      const emailVariables = {
+        userName: data.userName,
+        amount: {
+          style: "currency",
+          currency: "EUR",
+          value: data.amount,
+        },
+        paymentDate: new Date().toLocaleDateString("fr-FR"),
+        currency: "EUR",
+        datePaiement: new Date().toLocaleDateString("fr-FR"),
+        paymentIntentId: data.paymentIntentId,
+        premierPaiement: data.premierPaiement,
+      };
+
+      // Déterminer le type de template
+      let templateType = "paiement";
+      const templateVariables: any = {
+        ...emailVariables,
+        statusUpgrade: data.statusUpgrade?.upgraded || false,
+        newStatus: data.statusUpgrade?.nouveau_statut || null,
+        oldStatus: data.statusUpgrade?.ancien_statut || null,
+        welcomeMessage: data.premierPaiement
+          ? "Bienvenue ! Ceci est votre premier paiement."
+          : null,
+      };
+
+      // Si c'est le premier paiement et qu'il y a un upgrade, ajouter des infos
+      if (data.premierPaiement && data.statusUpgrade?.upgraded) {
+        templateVariables.transactionId = data.paymentIntentId;
+        templateVariables.isFirstPayment = true;
+        templateVariables.premierPaiement = true;
+        templateVariables.statutAncien = data.statusUpgrade.ancien_statut;
+        templateVariables.statutNouveau = data.statusUpgrade.nouveau_statut;
+      } else {
+        templateVariables.transactionId = data.paymentIntentId;
+        templateVariables.isFirstPayment = false;
+        templateVariables.premierPaiement = false;
+      }
+
+      // Envoyer l'email
+      const emailResult = await emailClient.sendPaymentConfirmation(
+        data.email,
+        templateVariables,
+        data.userId,
+        templateType,
+      );
+
+      if (emailResult.success) {
+        console.log(`✅ [Service Email Notification] Email envoyé avec succès`);
+        return {
+          sent: true,
+          message: "Email de confirmation envoyé",
+        };
+      } else {
+        console.warn(
+          `⚠️ [Service Email Notification] Échec envoi email:`,
+          emailResult.error,
+        );
+        return {
+          sent: false,
+          message: "Échec de l'envoi de l'email",
+          error: emailResult.error,
+        };
+      }
+    } catch (error) {
+      console.error(
+        `❌ [Service Email Notification] Erreur envoi email:`,
+        error,
+      );
+
+      // Important : ne pas bloquer le paiement si l'email échoue
+      return {
+        sent: false,
+        message: "Erreur lors de l'envoi de l'email (paiement confirmé)",
+        error: error instanceof Error ? error.message : "Erreur inconnue",
+      };
+    }
+  }
+
+  /**
+   * Préparer les données utilisateur pour l'email
+   */
+  async preparerDonneesUtilisateur(userId: number): Promise<{
+    nom: string;
+    prenom: string;
+    email: string;
+  } | null> {
+    try {
+      // Import dynamique du connector
+      const MysqlConnector = (
+        await import("../../../../db/connector/mysqlconnector.js")
+      ).default;
+      const connector = MysqlConnector.getInstance();
+
+      return new Promise((resolve, reject) => {
+        const query = `
+          SELECT nom_utilisateur as nom, first_name as prenom, email
+          FROM utilisateurs
+          WHERE id = ?
+        `;
+
+        connector.query(query, [userId], (error, results) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(results[0] || null);
+          }
+        });
+      });
+    } catch (error) {
+      console.error(
+        `❌ [Service Email Notification] Erreur récupération utilisateur:`,
+        error,
+      );
+      return null;
+    }
+  }
+}
+
+// Export class et singleton
+export { EmailNotificationServiceClass as EmailNotificationService };
+
+let emailNotificationServiceInstance: EmailNotificationServiceClass | null =
+  null;
+
+export function getEmailNotificationService(): EmailNotificationServiceClass {
+  if (!emailNotificationServiceInstance) {
+    emailNotificationServiceInstance = new EmailNotificationServiceClass();
+  }
+  return emailNotificationServiceInstance;
+}
+
+// Méthode getInstance pour compatibilité
+EmailNotificationServiceClass.getInstance =
+  function (): EmailNotificationServiceClass {
+    return getEmailNotificationService();
+  };
+
+export default getEmailNotificationService;

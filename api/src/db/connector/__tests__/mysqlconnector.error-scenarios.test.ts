@@ -6,6 +6,7 @@
 
 import { jest } from "@jest/globals";
 import MysqlConnector from "../mysqlconnector.js";
+import "./setup.js"; // Import du teardown global pour fermer le pool
 
 describe("MysqlConnector - Scénarios d'erreur avancés", () => {
   let connector: MysqlConnector;
