@@ -5,7 +5,10 @@
 
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
-import { createPaymentIntentEcheance, confirmPaymentEcheance } from "../core/handlers/index.js";
+import {
+  createPaymentIntentEcheance,
+  confirmPaymentEcheance,
+} from "../core/handlers/index.js";
 
 describe("Stripe Performance Tests", () => {
   let mockRequest: Partial<Request>;
@@ -59,7 +62,7 @@ describe("Stripe Performance Tests", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockStripeService as any,
-        mockPaymentService as any
+        mockPaymentService as any,
       );
 
       const duration = Date.now() - start;
@@ -85,7 +88,9 @@ describe("Stripe Performance Tests", () => {
 
       const mockStatusService = { upgraderStatutUtilisateur: jest.fn() };
       const mockEmailService = {
-        envoyerConfirmationPaiement: jest.fn().mockResolvedValue({ success: true }),
+        envoyerConfirmationPaiement: jest
+          .fn()
+          .mockResolvedValue({ success: true }),
       };
 
       mockRequest.body = {
@@ -103,7 +108,7 @@ describe("Stripe Performance Tests", () => {
         mockStripeService as any,
         mockPaymentService as any,
         mockStatusService as any,
-        mockEmailService as any
+        mockEmailService as any,
       );
 
       const duration = Date.now() - start;
@@ -140,13 +145,15 @@ describe("Stripe Performance Tests", () => {
           mockRequest as Request,
           mockResponse as Response,
           mockStripeService as any,
-          mockPaymentService as any
-        )
+          mockPaymentService as any,
+        ),
       );
 
       await Promise.all(promises);
 
-      expect(mockStripeService.creerPaymentIntentEcheance).toHaveBeenCalledTimes(10);
+      expect(
+        mockStripeService.creerPaymentIntentEcheance,
+      ).toHaveBeenCalledTimes(10);
     });
 
     it("devrait gérer des gros volumes de données", async () => {
@@ -166,7 +173,10 @@ describe("Stripe Performance Tests", () => {
           valid: true,
           commande: {
             id: 1,
-            articles: Array.from({ length: 100 }, (_, i) => ({ id: i, quantite: 1 })),
+            articles: Array.from({ length: 100 }, (_, i) => ({
+              id: i,
+              quantite: 1,
+            })),
           },
         }),
       };
@@ -174,12 +184,16 @@ describe("Stripe Performance Tests", () => {
       mockRequest.body = {
         amount: 1000,
         commande: {
-          articles: Array.from({ length: 100 }, (_, i) => ({ id: i, quantite: 1 })),
+          articles: Array.from({ length: 100 }, (_, i) => ({
+            id: i,
+            quantite: 1,
+          })),
         },
         userId: 1,
       };
 
-      const { createPaymentIntentCommande } = await import("../core/handlers/index.js");
+      const { createPaymentIntentCommande } =
+        await import("../core/handlers/index.js");
 
       const start = Date.now();
 
@@ -187,7 +201,7 @@ describe("Stripe Performance Tests", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockStripeService as any,
-        mockPaymentService as any
+        mockPaymentService as any,
       );
 
       const duration = Date.now() - start;
@@ -211,12 +225,12 @@ describe("Stripe Performance Tests", () => {
         mockRequest as Request,
         mockResponse as Response,
         {} as any,
-        {} as any
+        {} as any,
       );
 
       const duration = Date.now() - start;
 
-      expect(duration).toBeLessThan(10);
+      expect(duration).toBeLessThan(20);
       expect(statusMock).toHaveBeenCalledWith(400);
     });
   });

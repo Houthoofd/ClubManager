@@ -438,7 +438,7 @@ describe("Stripe Module - Tests unitaires de base", () => {
 
     it("devrait retourner 404 si le PaymentIntent n'existe pas", async () => {
       mockRequest.body = {
-        paymentIntentId: "pi_invalid",
+        paymentIntentId: "pi_invalid_12345678",
         echeanceId: 1,
         userId: 1,
         amount: 50,
@@ -683,7 +683,11 @@ describe("Stripe Module - Tests unitaires de base", () => {
           success: true,
           data: expect.objectContaining({
             status: "healthy",
-            connected: true,
+            checks: expect.objectContaining({
+              secretKeyConfigured: true,
+              publishableKeyConfigured: true,
+              stripeConnectivity: true,
+            }),
           }),
         }),
       );
@@ -709,7 +713,10 @@ describe("Stripe Module - Tests unitaires de base", () => {
           success: false,
           data: expect.objectContaining({
             status: "unhealthy",
-            connected: false,
+            checks: expect.objectContaining({
+              secretKeyConfigured: false,
+              stripeConnectivity: false,
+            }),
           }),
         }),
       );

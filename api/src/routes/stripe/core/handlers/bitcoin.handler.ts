@@ -18,16 +18,21 @@ import { alternativePaymentSchema } from "../validators/stripe.schema.js";
 export async function bitcoin(
   req: Request,
   res: Response,
-  paymentService?: PaymentService
+  paymentService?: PaymentService,
 ): Promise<void> {
   try {
-    console.log("💳 [Handler Stripe] POST /bitcoin - Création paiement Bitcoin");
+    console.log(
+      "💳 [Handler Stripe] POST /bitcoin - Création paiement Bitcoin",
+    );
 
     // 1. Validation des données avec Zod
     const validation = alternativePaymentSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("⚠️ [Handler Stripe] Validation échouée:", validation.error.errors);
+      console.log(
+        "⚠️ [Handler Stripe] Validation échouée:",
+        validation.error.errors,
+      );
       res.status(400).json({
         success: false,
         message: "Données invalides",
@@ -41,12 +46,15 @@ export async function bitcoin(
     // 2. Créer la commande si nécessaire
     const payment = paymentService || PaymentService.getInstance();
 
-    const commandeResult = await payment.creerCommandeSiNecessaire(commande, userId);
+    const commandeResult = await payment.creerCommandeSiNecessaire(
+      commande,
+      userId,
+    );
 
     // 3. Enregistrer le paiement avec méthode Bitcoin
     const paiementId = await payment.enregistrerPaiement({
       userId,
-      amount,
+      montant: amount,
       methodePaiement: "bitcoin",
       statut: "en_attente",
       commandeId: commandeResult.commandeId,
@@ -64,7 +72,10 @@ export async function bitcoin(
       },
     });
   } catch (error) {
-    console.error("❌ [Handler Stripe] Erreur création paiement Bitcoin:", error);
+    console.error(
+      "❌ [Handler Stripe] Erreur création paiement Bitcoin:",
+      error,
+    );
 
     res.status(500).json({
       success: false,

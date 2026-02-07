@@ -18,16 +18,21 @@ import { alternativePaymentSchema } from "../validators/stripe.schema.js";
 export async function bancontact(
   req: Request,
   res: Response,
-  paymentService?: PaymentService
+  paymentService?: PaymentService,
 ): Promise<void> {
   try {
-    console.log("💳 [Handler Stripe] POST /bancontact - Création paiement Bancontact");
+    console.log(
+      "💳 [Handler Stripe] POST /bancontact - Création paiement Bancontact",
+    );
 
     // 1. Validation des données avec Zod
     const validation = alternativePaymentSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("⚠️ [Handler Stripe] Validation échouée:", validation.error.errors);
+      console.log(
+        "⚠️ [Handler Stripe] Validation échouée:",
+        validation.error.errors,
+      );
       res.status(400).json({
         success: false,
         message: "Données invalides",
@@ -41,18 +46,23 @@ export async function bancontact(
     // 2. Créer la commande si nécessaire
     const payment = paymentService || PaymentService.getInstance();
 
-    const commandeResult = await payment.creerCommandeSiNecessaire(commande, userId);
+    const commandeResult = await payment.creerCommandeSiNecessaire(
+      commande,
+      userId,
+    );
 
     // 3. Enregistrer le paiement avec méthode Bancontact
     const paiementId = await payment.enregistrerPaiement({
       userId,
-      amount,
+      montant: amount,
       methodePaiement: "bancontact",
       statut: "en_attente",
       commandeId: commandeResult.commandeId,
     });
 
-    console.log(`✅ [Handler Stripe] Paiement Bancontact créé: ID ${paiementId}`);
+    console.log(
+      `✅ [Handler Stripe] Paiement Bancontact créé: ID ${paiementId}`,
+    );
 
     res.status(200).json({
       success: true,
@@ -64,7 +74,10 @@ export async function bancontact(
       },
     });
   } catch (error) {
-    console.error("❌ [Handler Stripe] Erreur création paiement Bancontact:", error);
+    console.error(
+      "❌ [Handler Stripe] Erreur création paiement Bancontact:",
+      error,
+    );
 
     res.status(500).json({
       success: false,

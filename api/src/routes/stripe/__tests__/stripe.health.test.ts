@@ -45,7 +45,7 @@ describe("Stripe Health Check Tests", () => {
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -60,7 +60,7 @@ describe("Stripe Health Check Tests", () => {
               stripeConnectivity: true,
             }),
           }),
-        })
+        }),
       );
     });
   });
@@ -80,7 +80,7 @@ describe("Stripe Health Check Tests", () => {
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(503);
@@ -93,7 +93,7 @@ describe("Stripe Health Check Tests", () => {
               secretKeyConfigured: false,
             }),
           }),
-        })
+        }),
       );
     });
 
@@ -110,7 +110,7 @@ describe("Stripe Health Check Tests", () => {
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(503);
@@ -121,7 +121,7 @@ describe("Stripe Health Check Tests", () => {
               publishableKeyConfigured: false,
             }),
           }),
-        })
+        }),
       );
     });
 
@@ -138,7 +138,7 @@ describe("Stripe Health Check Tests", () => {
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(503);
@@ -151,7 +151,7 @@ describe("Stripe Health Check Tests", () => {
               publishableKeyConfigured: false,
             }),
           }),
-        })
+        }),
       );
     });
   });
@@ -171,7 +171,7 @@ describe("Stripe Health Check Tests", () => {
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(503);
@@ -184,7 +184,7 @@ describe("Stripe Health Check Tests", () => {
               stripeError: "Network error",
             }),
           }),
-        })
+        }),
       );
     });
 
@@ -202,7 +202,7 @@ describe("Stripe Health Check Tests", () => {
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       const response = jsonMock.mock.calls[0][0];
@@ -221,20 +221,21 @@ describe("Stripe Health Check Tests", () => {
         }),
       };
 
-      const beforeTime = new Date().toISOString();
+      const beforeTime = Date.now();
 
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
-      const afterTime = new Date().toISOString();
+      const afterTime = Date.now();
       const response = jsonMock.mock.calls[0][0];
 
       expect(response.data.timestamp).toBeDefined();
-      expect(response.data.timestamp).toBeGreaterThanOrEqual(beforeTime);
-      expect(response.data.timestamp).toBeLessThanOrEqual(afterTime);
+      const responseTime = new Date(response.data.timestamp).getTime();
+      expect(responseTime).toBeGreaterThanOrEqual(beforeTime);
+      expect(responseTime).toBeLessThanOrEqual(afterTime);
     });
 
     it("devrait inclure tous les checks", async () => {
@@ -250,7 +251,7 @@ describe("Stripe Health Check Tests", () => {
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       const response = jsonMock.mock.calls[0][0];
@@ -266,15 +267,15 @@ describe("Stripe Health Check Tests", () => {
       process.env.STRIPE_PUBLISHABLE_KEY = "pk_test_xxx";
 
       const mockStripeService = {
-        testerConnectivite: jest.fn().mockRejectedValue(
-          new Error("Unexpected error")
-        ),
+        testerConnectivite: jest
+          .fn()
+          .mockRejectedValue(new Error("Unexpected error")),
       };
 
       await health(
         mockRequest as Request,
         mockResponse as Response,
-        mockStripeService as any
+        mockStripeService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(503);
@@ -284,7 +285,7 @@ describe("Stripe Health Check Tests", () => {
           data: expect.objectContaining({
             status: "unhealthy",
           }),
-        })
+        }),
       );
     });
   });

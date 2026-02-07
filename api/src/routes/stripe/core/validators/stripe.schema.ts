@@ -20,11 +20,13 @@ export const createPaymentIntentEcheanceSchema = z.object({
   echeanceId: z
     .number()
     .int("L'ID échéance doit être un entier")
-    .positive("L'ID échéance doit être positif"),
+    .positive("L'ID échéance doit être positif")
+    .max(Number.MAX_SAFE_INTEGER, "L'ID échéance est trop grand"),
   userId: z
     .number()
     .int("L'ID utilisateur doit être un entier")
-    .positive("L'ID utilisateur doit être positif"),
+    .positive("L'ID utilisateur doit être positif")
+    .max(Number.MAX_SAFE_INTEGER, "L'ID utilisateur est trop grand"),
   description: z.string().optional(),
 });
 
@@ -41,7 +43,11 @@ export const createPaymentIntentCommandeSchema = z.object({
     .min(0.5, "Le montant minimum est 0.50€")
     .max(999999, "Le montant maximum est 999999€"),
   commande: z.union([
-    z.number().int().positive("L'ID commande doit être positif"),
+    z
+      .number()
+      .int()
+      .positive("L'ID commande doit être positif")
+      .max(Number.MAX_SAFE_INTEGER, "L'ID commande est trop grand"),
     z.object({
       id: z.number().int().positive().optional(),
       articles: z
@@ -65,19 +71,20 @@ export const createPaymentIntentCommandeSchema = z.object({
 export const confirmPaymentEcheanceSchema = z.object({
   paymentIntentId: z
     .string()
-    .min(10, "Le PaymentIntent ID est invalide")
     .refine(
-      (val) => val.startsWith("pi_"),
-      "Le PaymentIntent ID doit commencer par 'pi_'",
+      (val) => isValidPaymentIntentId(val),
+      "Le PaymentIntent ID est invalide (doit commencer par 'pi_' et avoir au moins 8 caractères après le préfixe)",
     ),
   echeanceId: z
     .number()
     .int("L'ID échéance doit être un entier")
-    .positive("L'ID échéance doit être positif"),
+    .positive("L'ID échéance doit être positif")
+    .max(Number.MAX_SAFE_INTEGER, "L'ID échéance est trop grand"),
   userId: z
     .number()
     .int("L'ID utilisateur doit être un entier")
-    .positive("L'ID utilisateur doit être positif"),
+    .positive("L'ID utilisateur doit être positif")
+    .max(Number.MAX_SAFE_INTEGER, "L'ID utilisateur est trop grand"),
   amount: z.number().positive("Le montant doit être positif"),
 });
 
@@ -95,11 +102,13 @@ export const confirmPaymentCommandeSchema = z.object({
   commandeId: z
     .number()
     .int("L'ID commande doit être un entier")
-    .positive("L'ID commande doit être positif"),
+    .positive("L'ID commande doit être positif")
+    .max(Number.MAX_SAFE_INTEGER, "L'ID commande est trop grand"),
   userId: z
     .number()
     .int("L'ID utilisateur doit être un entier")
-    .positive("L'ID utilisateur doit être positif"),
+    .positive("L'ID utilisateur doit être positif")
+    .max(Number.MAX_SAFE_INTEGER, "L'ID utilisateur est trop grand"),
   amount: z.number().positive("Le montant doit être positif"),
 });
 
@@ -253,7 +262,7 @@ export function fromStripeAmount(amountInCents: number): number {
  * Valide un PaymentIntent ID Stripe
  */
 export function isValidPaymentIntentId(id: string): boolean {
-  return /^pi_[a-zA-Z0-9_]+$/.test(id);
+  return /^pi_[a-zA-Z0-9_]{8,}$/.test(id);
 }
 
 /**

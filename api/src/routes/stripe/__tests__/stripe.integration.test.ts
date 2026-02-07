@@ -125,7 +125,7 @@ describe("Stripe Integration Tests - Flux complets", () => {
 
       expect(mockStripeService.recupererPaymentIntent).toHaveBeenCalledWith(
         "pi_test_123",
-      expect(mockStripeService.recupererPaymentIntent).toHaveBeenCalledWith("pi_test_123");
+      );
       expect(mockPaymentService.confirmerPaiementEcheance).toHaveBeenCalled();
       expect(mockEmailService.envoyerConfirmationPaiement).toHaveBeenCalled();
       expect(statusMock).toHaveBeenCalledWith(200);
@@ -136,7 +136,7 @@ describe("Stripe Integration Tests - Flux complets", () => {
             paiementId: 1,
             premierPaiement: false,
           }),
-        })
+        }),
       );
     });
 
@@ -218,7 +218,7 @@ describe("Stripe Integration Tests - Flux complets", () => {
               nouveauStatut: "utilisateur",
             }),
           }),
-        })
+        }),
       );
     });
   });
@@ -344,7 +344,7 @@ describe("Stripe Integration Tests - Flux complets", () => {
           statut: "en_attente",
           montant: 100,
           userId: 1,
-        })
+        }),
       );
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith(
@@ -354,7 +354,7 @@ describe("Stripe Integration Tests - Flux complets", () => {
             paiementId: 1,
             methodePaiement: "bancontact",
           }),
-        })
+        }),
       );
     });
   });

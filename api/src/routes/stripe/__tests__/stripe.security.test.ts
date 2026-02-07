@@ -5,7 +5,10 @@
 
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
-import { createPaymentIntentEcheance, confirmPaymentEcheance } from "../core/handlers/index.js";
+import {
+  createPaymentIntentEcheance,
+  confirmPaymentEcheance,
+} from "../core/handlers/index.js";
 import {
   createPaymentIntentEcheanceSchema,
   confirmPaymentEcheanceSchema,
@@ -82,7 +85,8 @@ describe("Stripe Security Tests", () => {
       };
 
       // Zod accepte les strings, la sanitization doit être faite au niveau DB/output
-      const result = createPaymentIntentEcheanceSchema.safeParse(dataWithScript);
+      const result =
+        createPaymentIntentEcheanceSchema.safeParse(dataWithScript);
       expect(result.success).toBe(true);
       // Note: La protection XSS devrait être gérée par l'échappement au niveau DB
     });
@@ -187,14 +191,14 @@ describe("Stripe Security Tests", () => {
 
     it("devrait rejeter un PaymentIntent ID modifié", () => {
       const invalidData = {
-        paymentIntentId: "pi_tampered_id",
+        paymentIntentId: "pi_short",
         echeanceId: 1,
         userId: 1,
         amount: 50,
       };
 
       const result = confirmPaymentEcheanceSchema.safeParse(invalidData);
-      expect(result.success).toBe(false); // Car trop court
+      expect(result.success).toBe(false); // Car trop court (moins de 8 caractères après pi_)
     });
 
     it("devrait accepter un PaymentIntent ID valide", () => {
@@ -293,11 +297,13 @@ describe("Stripe Security Tests", () => {
         mockRequest as Request,
         mockResponse as Response,
         mockStripeService as any,
-        mockPaymentService as any
+        mockPaymentService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(403);
-      expect(mockStripeService.creerPaymentIntentEcheance).not.toHaveBeenCalled();
+      expect(
+        mockStripeService.creerPaymentIntentEcheance,
+      ).not.toHaveBeenCalled();
     });
   });
 
