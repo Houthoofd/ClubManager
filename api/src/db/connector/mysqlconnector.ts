@@ -69,6 +69,7 @@ const poolConfig = {
   enableKeepAlive: !isTestMode,
   keepAliveInitialDelay: isTestMode ? 0 : 10000,
   multipleStatements: false,
+  timeout: isTestMode ? 10000 : 30000, // 10s en test, 30s en prod
 };
 
 // Crée un pool MySQL avec configuration robuste
