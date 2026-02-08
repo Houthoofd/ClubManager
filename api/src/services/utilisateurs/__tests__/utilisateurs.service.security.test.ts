@@ -197,12 +197,10 @@ describe("UtilisateursService - Tests de sécurité", () => {
     it("devrait gérer les caractères spéciaux dans l'email", async () => {
       const maliciousEmail = "test'; DELETE FROM utilisateurs WHERE '1'='1";
 
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
-
-      const result = await service.verifierEmailExiste(maliciousEmail);
-
-      expect(result.existe).toBe(false);
-      expect(mockPrisma.utilisateurs.findFirst).toHaveBeenCalled();
+      // L'email malicieux devrait être rejeté par la validation Zod
+      await expect(service.verifierEmailExiste(maliciousEmail)).rejects.toThrow(
+        UtilisateursError,
+      );
     });
 
     it("devrait gérer les injections dans le nom", async () => {

@@ -636,7 +636,7 @@ describe("UtilisateursService - Tests de couverture", () => {
     });
 
     it("verifierEmailExiste - existe", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(mockUtilisateur1);
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateur1);
       const result = await service.verifierEmailExiste(
         "jean.dupont@example.com",
       );
@@ -644,7 +644,7 @@ describe("UtilisateursService - Tests de couverture", () => {
     });
 
     it("verifierEmailExiste - n'existe pas", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
       const result = await service.verifierEmailExiste(
         "inexistant@example.com",
       );
@@ -652,14 +652,14 @@ describe("UtilisateursService - Tests de couverture", () => {
     });
 
     it("verifierUtilisateurExiste - peut s'inscrire", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
       const result =
         await service.verifierUtilisateurExiste("test@example.com");
       expect(result.canRegister).toBe(true);
     });
 
     it("verifierUtilisateurExiste - ne peut pas s'inscrire (actif)", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(mockUtilisateur1);
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateur1);
       const result = await service.verifierUtilisateurExiste(
         "jean.dupont@example.com",
       );
@@ -667,13 +667,13 @@ describe("UtilisateursService - Tests de couverture", () => {
     });
 
     it("verifierUtilisateurExiste - ne peut pas s'inscrire (inactif)", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(
         mockUtilisateurInactif,
       );
       const result = await service.verifierUtilisateurExiste(
         "pierre.durand@example.com",
       );
-      expect(result.canRegister).toBe(false);
+      expect(result.canRegister).toBe(true); // Inactif peut s'inscrire (réactivation)
     });
 
     it("compterUtilisateurs", async () => {

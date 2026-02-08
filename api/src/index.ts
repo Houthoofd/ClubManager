@@ -502,7 +502,7 @@ async function startServer() {
     const { default: professeursRouter } =
       await import("./routes/professeurs.js");
     const { default: messagesRouter } = await import("./routes/messages.js");
-    const { default: uploadRouter } = await import("./routes/upload.js");
+    const { default: uploadRouter } = await import("./routes/upload/index.js");
     const { default: inscriptionRouter } =
       await import("./routes/inscription.js");
     const { default: verificationRouter } =

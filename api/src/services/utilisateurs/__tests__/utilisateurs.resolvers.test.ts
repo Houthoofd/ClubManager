@@ -203,7 +203,7 @@ describe("UtilisateursResolvers - Tests", () => {
 
     describe("verifierEmailExiste", () => {
       it("devrait vérifier si un email existe", async () => {
-        mockPrisma.utilisateurs.findFirst.mockResolvedValue(mockUtilisateur1);
+        mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateur1);
 
         const result = await resolvers.Query.verifierEmailExiste(null, {
           email: "jean.dupont@example.com",
@@ -214,7 +214,7 @@ describe("UtilisateursResolvers - Tests", () => {
       });
 
       it("devrait retourner false si email n'existe pas", async () => {
-        mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
+        mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
 
         const result = await resolvers.Query.verifierEmailExiste(null, {
           email: "inexistant@example.com",
@@ -226,7 +226,7 @@ describe("UtilisateursResolvers - Tests", () => {
 
     describe("verifierUtilisateurExiste", () => {
       it("devrait vérifier si un utilisateur peut s'inscrire", async () => {
-        mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
+        mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
 
         const result = await resolvers.Query.verifierUtilisateurExiste(null, {
           email: "nouveau@example.com",
@@ -237,7 +237,7 @@ describe("UtilisateursResolvers - Tests", () => {
       });
 
       it("devrait indiquer qu'un utilisateur ne peut pas s'inscrire", async () => {
-        mockPrisma.utilisateurs.findFirst.mockResolvedValue(mockUtilisateur1);
+        mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateur1);
 
         const result = await resolvers.Query.verifierUtilisateurExiste(null, {
           email: "jean.dupont@example.com",
@@ -383,7 +383,7 @@ describe("UtilisateursResolvers - Tests", () => {
           date_of_birth: new Date("1990-01-01"),
         };
 
-        mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
+        mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
         mockPrisma.utilisateurs.count.mockResolvedValue(0);
 
         const mockTransaction = jest
@@ -409,7 +409,7 @@ describe("UtilisateursResolvers - Tests", () => {
       });
 
       it("devrait gérer les erreurs UtilisateursError", async () => {
-        mockPrisma.utilisateurs.findFirst.mockResolvedValue(mockUtilisateur1);
+        mockPrisma.utilisateurs.findUnique.mockResolvedValue(mockUtilisateur1);
 
         await expect(
           resolvers.Mutation.creerUtilisateur(null, {

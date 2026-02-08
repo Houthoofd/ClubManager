@@ -581,11 +581,11 @@ describe("UtilisateursService - Tests avancés", () => {
     });
 
     it("devrait trim les espaces des emails", async () => {
-      mockPrisma.utilisateurs.findFirst.mockResolvedValue(null);
+      mockPrisma.utilisateurs.findUnique.mockResolvedValue(null);
 
       const result = await service.verifierEmailExiste("  test@example.com  ");
 
-      expect(mockPrisma.utilisateurs.findFirst).toHaveBeenCalledWith(
+      expect(mockPrisma.utilisateurs.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             email: "test@example.com",

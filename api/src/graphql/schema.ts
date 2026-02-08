@@ -3,6 +3,7 @@ import { DateTimeResolver } from "graphql-scalars";
 import { prisma } from "../infrastructure/database/prisma-client.js";
 import { alertesResolvers } from "../services/alertes/index.js";
 import { authResolvers } from "../services/auth/index.js";
+import { uploadResolvers } from "../routes/upload/upload.resolvers.js";
 
 /**
  * Schéma GraphQL de base
@@ -40,6 +41,19 @@ export const schema = createSchema({
       securityInfo(userId: Int!): SecurityInfo
       authStats: AuthStats!
       verifyResetToken(token: String!): PasswordResetToken
+
+      # Upload
+      uploadHealth: UploadHealthStatus!
+      listUploadedFiles(
+        limit: Int
+        offset: Int
+        sortBy: String
+        sortOrder: String
+        extension: String
+      ): ListFilesResult!
+      getFileInfo(filename: String!): FileInfo!
+      uploadStats: UploadStats!
+      fileExists(filename: String!): FileExistsResult!
     }
 
     type Mutation {
@@ -66,6 +80,11 @@ export const schema = createSchema({
       resoudreAlerte(input: ResoudreAlerteInput!): AlerteResult!
       ignorerAlerte(input: IgnorerAlerteInput!): AlerteResult!
       creerAlerte(input: CreateAlerteInput!): AlerteUtilisateur!
+
+      # Upload
+      uploadFile(input: FileUploadInput!): UploadResult!
+      deleteFile(input: DeleteFileInput!): UploadResult!
+      cleanupOldFiles(daysOld: Int): CleanupResult!
     }
 
     # Types de base
@@ -298,6 +317,83 @@ export const schema = createSchema({
       currentPassword: String
       newPassword: String!
     }
+
+    # Upload types
+
+    type UploadHealthStatus {
+      status: String!
+      message: String!
+      uploadsDirectory: String!
+      isWritable: Boolean!
+      diskSpace: DiskSpace
+      timestamp: DateTime!
+    }
+
+    type DiskSpace {
+      free: Float!
+      total: Float!
+      used: Float!
+    }
+
+    type FileInfo {
+      filename: String!
+      originalName: String!
+      path: String!
+      size: Int!
+      mimetype: String!
+      extension: String!
+      uploadedAt: DateTime!
+      uploadedBy: Int
+    }
+
+    type ListFilesResult {
+      success: Boolean!
+      files: [FileInfo!]!
+      total: Int!
+      hasMore: Boolean!
+    }
+
+    type UploadResult {
+      success: Boolean!
+      message: String!
+      file: FileInfo
+    }
+
+    type UploadStats {
+      totalFiles: Int!
+      totalSize: Float!
+      averageSize: Float!
+      filesByExtension: [FilesByExtension!]!
+      recentUploads: [FileInfo!]!
+    }
+
+    type FilesByExtension {
+      extension: String!
+      count: Int!
+    }
+
+    type FileExistsResult {
+      exists: Boolean!
+      filename: String!
+    }
+
+    type CleanupResult {
+      success: Boolean!
+      message: String!
+      filesDeleted: [String!]!
+      count: Int!
+    }
+
+    input FileUploadInput {
+      filename: String!
+      mimetype: String!
+      encoding: String!
+      content: String!
+    }
+
+    input DeleteFileInput {
+      filename: String!
+    }
   `,
 
   resolvers: {
@@ -316,6 +412,9 @@ export const schema = createSchema({
 
       // Auth
       ...authResolvers.Query,
+
+      // Upload
+      ...uploadResolvers(prisma).Query,
 
       // Utilisateurs
       users: async (_parent, args) => {
@@ -409,6 +508,9 @@ export const schema = createSchema({
 
       // Alertes
       ...alertesResolvers.Mutation,
+
+      // Upload
+      ...uploadResolvers(prisma).Mutation,
     },
 
     // Field resolvers

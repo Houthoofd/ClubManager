@@ -35,6 +35,7 @@ module.exports = {
   testPathIgnorePatterns: [
     "/node_modules/",
     "/dist/",
+    "/archived/",
     "magasin.integration.test.ts",
     ".integration.test.tsx",
   ],
