@@ -1,3 +1,5 @@
+// Pour compatibilité ESM : utilisez import au lieu de require
+
 // Export sélectif pour éviter les conflits avec utilisateurs-service
 export type {
   UserDataSession,
@@ -11,6 +13,9 @@ export type {
   UserDataAjout,
   UtilisateurInscriptionPayload,
   UserData,
+  UserDataLoginByUserId,
+  UserSearchByEmail,
+  AvailableUserForLogin,
 } from "./utilisateurs.js";
 
 export {
@@ -19,9 +24,15 @@ export {
   genresSchema,
   userDataLoginSchema,
   userInscriptionSchema,
+  userDataLoginByUserIdSchema,
+  userSearchByEmailSchema,
+  utilisateurInscriptionSchema,
+  userDataAjoutSchema,
 } from "./utilisateurs.js";
+
 export * from "./query.js";
 export * from "./cours.js";
+
 // Export ancien fichier statistiques (types de base seulement)
 export type { StatistiquesFrequentation } from "./statistiques.js";
 export {
@@ -31,6 +42,7 @@ export {
   progressionParCoursSchema,
   statistiquesProgressionUtilisateurSchema,
 } from "./statistiques.js";
+
 // Export nouveau fichier statistiques-service (types complets)
 export * from "./statistiques-service.js";
 export * from "./email.js";
@@ -160,13 +172,3 @@ export type {
   UpdateCommandeData,
   CommandeComplete,
 } from "./commandes.js";
-
-// Export des nouveaux types et schémas pour la connexion multi-utilisateurs
-export type {
-  UserDataLoginByUserId,
-  UserSearchByEmail,
-} from "./utilisateurs.js";
-export {
-  userDataLoginByUserIdSchema,
-  userSearchByEmailSchema,
-} from "./utilisateurs.js";

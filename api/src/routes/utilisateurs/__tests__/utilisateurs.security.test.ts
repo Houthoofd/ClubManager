@@ -14,7 +14,7 @@ import {
   inscriptionUtilisateurSchema,
   connexionUserIdSchema,
   miseAJourUtilisateurSchema,
-} from "../core/validators/utilisateurs.schema.js";
+} from "@clubmanager/types/dist/validators.js";
 
 describe("Utilisateurs Security Tests", () => {
   let mockRequest: Partial<Request>;

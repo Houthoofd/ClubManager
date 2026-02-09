@@ -6,7 +6,10 @@
 import { Request, Response } from "express";
 import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
 import { mettreAJourUtilisateur } from "../services/utilisateurs.service.js";
-import { miseAJourUtilisateurSchema, utilisateurIdParamSchema } from "../validators/utilisateurs.schema.js";
+import {
+  miseAJourUtilisateurSchema,
+  utilisateurIdParamSchema,
+} from "@clubmanager/types/dist/validators.js";
 
 /**
  * Handler pour mettre à jour un utilisateur
@@ -34,11 +37,11 @@ import { miseAJourUtilisateurSchema, utilisateurIdParamSchema } from "../validat
 export async function updateUtilisateur(
   req: Request,
   res: Response,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<void> {
   try {
     console.log(
-      `🔄 [Handler Utilisateurs] PUT /utilisateurs/:id - Mise à jour utilisateur ID: ${req.params.id}`
+      `🔄 [Handler Utilisateurs] PUT /utilisateurs/:id - Mise à jour utilisateur ID: ${req.params.id}`,
     );
 
     // Validation de l'ID
@@ -49,7 +52,7 @@ export async function updateUtilisateur(
     if (!idValidation.success) {
       console.log(
         "⚠️ [Handler Utilisateurs] ID invalide:",
-        idValidation.error.issues
+        idValidation.error.issues,
       );
       res.status(400).json({
         message:
@@ -67,7 +70,7 @@ export async function updateUtilisateur(
     if (!validationResult.success) {
       console.log(
         "⚠️ [Handler Utilisateurs] Erreur de validation:",
-        validationResult.error.issues
+        validationResult.error.issues,
       );
       res.status(400).json({
         message:
@@ -81,19 +84,19 @@ export async function updateUtilisateur(
 
     console.log(
       `[Handler Utilisateurs] Données à mettre à jour:`,
-      dataToUpdate
+      dataToUpdate,
     );
 
     // Appeler le service de mise à jour
     const result = await mettreAJourUtilisateur(
       utilisateurId,
       dataToUpdate,
-      utilisateursClient
+      utilisateursClient,
     );
 
     if (result.success) {
       console.log(
-        `✅ [Handler Utilisateurs] Utilisateur ${utilisateurId} mis à jour avec succès`
+        `✅ [Handler Utilisateurs] Utilisateur ${utilisateurId} mis à jour avec succès`,
       );
       res.status(200).json({
         message: result.message,
@@ -101,7 +104,7 @@ export async function updateUtilisateur(
       });
     } else {
       console.log(
-        `⚠️ [Handler Utilisateurs] Échec mise à jour utilisateur ${utilisateurId}`
+        `⚠️ [Handler Utilisateurs] Échec mise à jour utilisateur ${utilisateurId}`,
       );
       res.status(404).json({
         message: result.message || "Utilisateur non trouvé",
@@ -110,7 +113,7 @@ export async function updateUtilisateur(
   } catch (error: any) {
     console.error(
       "❌ [Handler Utilisateurs] Erreur mise à jour utilisateur:",
-      error
+      error,
     );
 
     res.status(500).json({

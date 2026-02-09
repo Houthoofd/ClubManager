@@ -9,7 +9,7 @@ import {
   inscrireUtilisateur,
   envoyerEmailVerification,
 } from "../services/utilisateurs.service.js";
-import { inscriptionUtilisateurSchema } from "../validators/utilisateurs.schema.js";
+import { inscriptionUtilisateurSchema } from "@clubmanager/types/dist/validators.js";
 
 /**
  * Handler pour l'inscription d'un utilisateur
@@ -37,11 +37,11 @@ import { inscriptionUtilisateurSchema } from "../validators/utilisateurs.schema.
 export async function inscription(
   req: Request,
   res: Response,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<void> {
   try {
     console.log(
-      "📝 [Handler Utilisateurs] POST /inscription - Inscription utilisateur"
+      "📝 [Handler Utilisateurs] POST /inscription - Inscription utilisateur",
     );
     console.log("[Handler Utilisateurs] Body reçu:", req.body);
 
@@ -58,7 +58,7 @@ export async function inscription(
       req.body.nom_utilisateur = `${prenom}_${nom}_${timestamp}`;
       console.log(
         "[Handler Utilisateurs] Nom d'utilisateur généré:",
-        req.body.nom_utilisateur
+        req.body.nom_utilisateur,
       );
     }
 
@@ -68,7 +68,7 @@ export async function inscription(
     if (!validationResult.success) {
       console.log(
         "[Handler Utilisateurs] Erreur de validation Zod:",
-        validationResult.error.issues
+        validationResult.error.issues,
       );
       res.status(400).json({
         message:
@@ -107,16 +107,16 @@ export async function inscription(
     if (result.userId && result.generatedUserId) {
       try {
         console.log(
-          "📧 [Handler Utilisateurs] Démarrage envoi email de vérification..."
+          "📧 [Handler Utilisateurs] Démarrage envoi email de vérification...",
         );
         console.log(
-          `📧 [Handler Utilisateurs] Email destinataire: ${validatedData.email}`
+          `📧 [Handler Utilisateurs] Email destinataire: ${validatedData.email}`,
         );
         console.log(
-          `📧 [Handler Utilisateurs] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`
+          `📧 [Handler Utilisateurs] Utilisateur: ${validatedData.prenom} ${validatedData.nom}`,
         );
         console.log(
-          `📧 [Handler Utilisateurs] UserId généré: ${result.userId}`
+          `📧 [Handler Utilisateurs] UserId généré: ${result.userId}`,
         );
 
         const emailResult = await envoyerEmailVerification(
@@ -124,12 +124,12 @@ export async function inscription(
           validatedData.prenom,
           validatedData.nom,
           result.generatedUserId,
-          result.userId
+          result.userId,
         );
 
         if (emailResult.success) {
           console.log(
-            "✅ [Handler Utilisateurs] Email de vérification envoyé avec succès"
+            "✅ [Handler Utilisateurs] Email de vérification envoyé avec succès",
           );
 
           res.status(201).json({
@@ -147,7 +147,7 @@ export async function inscription(
           });
         } else {
           console.warn(
-            "⚠️ [Handler Utilisateurs] Échec envoi email de vérification"
+            "⚠️ [Handler Utilisateurs] Échec envoi email de vérification",
           );
 
           res.status(201).json({
@@ -169,7 +169,7 @@ export async function inscription(
       } catch (emailError: any) {
         console.error(
           "❌ [Handler Utilisateurs] Erreur critique lors de l'envoi de l'email:",
-          emailError
+          emailError,
         );
 
         res.status(201).json({
@@ -189,7 +189,7 @@ export async function inscription(
       }
     } else {
       console.warn(
-        "⚠️ [Handler Utilisateurs] Inscription sans UserId généré - pas d'email envoyé"
+        "⚠️ [Handler Utilisateurs] Inscription sans UserId généré - pas d'email envoyé",
       );
 
       res.status(201).json({
@@ -204,7 +204,7 @@ export async function inscription(
   } catch (error: any) {
     console.error(
       "❌ [Handler Utilisateurs] Erreur lors de l'inscription:",
-      error
+      error,
     );
 
     res.status(500).json({

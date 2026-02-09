@@ -17,6 +17,7 @@
     "paths": {
       "@clubmanager/types": ["../packages/types/src"],
       "@clubmanager/types/*": ["../packages/types/src/*"],
+      "@/shared/*": ["src/shared/*"],
       "*": ["*"],
     },
     "typeRoots": ["./src/types", "./node_modules/@types"],

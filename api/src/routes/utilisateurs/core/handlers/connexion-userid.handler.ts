@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
 import { connexionParUserId } from "../services/utilisateurs.service.js";
-import { connexionUserIdSchema } from "../validators/utilisateurs.schema.js";
+import { connexionUserIdSchema } from "@clubmanager/types/dist/validators.js";
 
 /**
  * Handler pour la connexion par userId
@@ -26,11 +26,11 @@ import { connexionUserIdSchema } from "../validators/utilisateurs.schema.js";
 export async function connexionUserId(
   req: Request,
   res: Response,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<void> {
   try {
     console.log(
-      "🔐 [Handler Utilisateurs] POST /connexion-userid - Connexion par userId"
+      "🔐 [Handler Utilisateurs] POST /connexion-userid - Connexion par userId",
     );
 
     // Validation avec Zod
@@ -39,7 +39,7 @@ export async function connexionUserId(
     if (!validationResult.success) {
       console.log(
         "⚠️ [Handler Utilisateurs] Erreur de validation:",
-        validationResult.error.issues
+        validationResult.error.issues,
       );
       res.status(400).json({
         success: false,
@@ -58,28 +58,29 @@ export async function connexionUserId(
     const result = await connexionParUserId(
       userId,
       password,
-      utilisateursClient
+      utilisateursClient,
     );
 
     if (result.success) {
-      console.log(`✅ [Handler Utilisateurs] Connexion réussie pour: ${userId}`);
+      console.log(
+        `✅ [Handler Utilisateurs] Connexion réussie pour: ${userId}`,
+      );
       res.status(200).json({
         success: true,
         message: result.message,
         data: result.data,
       });
     } else {
-      console.log(`⚠️ [Handler Utilisateurs] Connexion échouée pour: ${userId}`);
+      console.log(
+        `⚠️ [Handler Utilisateurs] Connexion échouée pour: ${userId}`,
+      );
       res.status(404).json({
         success: false,
         message: result.message,
       });
     }
   } catch (error: any) {
-    console.error(
-      "❌ [Handler Utilisateurs] Erreur connexion userId:",
-      error
-    );
+    console.error("❌ [Handler Utilisateurs] Erreur connexion userId:", error);
 
     res.status(500).json({
       success: false,

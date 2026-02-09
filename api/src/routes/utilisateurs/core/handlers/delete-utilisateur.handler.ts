@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
 import { supprimerUtilisateur } from "../services/utilisateurs.service.js";
-import { utilisateurIdParamSchema } from "../validators/utilisateurs.schema.js";
+import { utilisateurIdParamSchema } from "@clubmanager/types/dist/validators.js";
 
 /**
  * Handler pour la suppression définitive d'un utilisateur
@@ -26,11 +26,11 @@ import { utilisateurIdParamSchema } from "../validators/utilisateurs.schema.js";
 export async function deleteUtilisateur(
   req: Request,
   res: Response,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<void> {
   try {
     console.log(
-      `🗑️ [Handler Utilisateurs] DELETE /utilisateurs/:id - ID: ${req.params.id}`
+      `🗑️ [Handler Utilisateurs] DELETE /utilisateurs/:id - ID: ${req.params.id}`,
     );
 
     // Validation de l'ID
@@ -41,7 +41,7 @@ export async function deleteUtilisateur(
     if (!validationResult.success) {
       console.log(
         "⚠️ [Handler Utilisateurs] ID invalide:",
-        validationResult.error.issues
+        validationResult.error.issues,
       );
       res.status(400).json({
         message:
@@ -58,7 +58,7 @@ export async function deleteUtilisateur(
 
     if (!isConfirm) {
       console.log(
-        "⚠️ [Handler Utilisateurs] Confirmation de suppression requise"
+        "⚠️ [Handler Utilisateurs] Confirmation de suppression requise",
       );
       res.status(400).json({
         isConfirm: false,
@@ -74,7 +74,7 @@ export async function deleteUtilisateur(
 
     if (!utilisateurExiste) {
       console.log(
-        `⚠️ [Handler Utilisateurs] Utilisateur ${utilisateurId} non trouvé`
+        `⚠️ [Handler Utilisateurs] Utilisateur ${utilisateurId} non trouvé`,
       );
       res.status(404).json({
         isConfirm: false,
@@ -88,7 +88,7 @@ export async function deleteUtilisateur(
 
     if (result.success) {
       console.log(
-        `✅ [Handler Utilisateurs] Utilisateur ${utilisateurId} supprimé définitivement`
+        `✅ [Handler Utilisateurs] Utilisateur ${utilisateurId} supprimé définitivement`,
       );
       res.status(200).json({
         isConfirm: true,
@@ -97,7 +97,7 @@ export async function deleteUtilisateur(
       });
     } else {
       console.warn(
-        `⚠️ [Handler Utilisateurs] Échec suppression utilisateur ${utilisateurId}`
+        `⚠️ [Handler Utilisateurs] Échec suppression utilisateur ${utilisateurId}`,
       );
       res.status(400).json({
         isConfirm: false,
@@ -107,7 +107,7 @@ export async function deleteUtilisateur(
   } catch (error: any) {
     console.error(
       "❌ [Handler Utilisateurs] Erreur suppression utilisateur:",
-      error
+      error,
     );
 
     res.status(500).json({

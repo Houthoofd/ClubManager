@@ -1,8 +1,14 @@
 /**
  * Index du module Utilisateurs
- * Exporte le router principal
+ * Module migré vers GraphQL
  */
 
-import utilisateursRouter from "./utilisateurs.routes.js";
+// Export des resolvers et typeDefs GraphQL
+export {
+  utilisateursResolvers,
+  utilisateursTypeDefs,
+} from "./core/resolvers/index.js";
 
-export default utilisateursRouter;
+// Export de l'ancien router REST (à supprimer après migration complète)
+export { default } from "./utilisateurs.routes.js";
+export { default as utilisateursRouter } from "./utilisateurs.routes.js";

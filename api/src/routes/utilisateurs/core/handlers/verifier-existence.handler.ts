@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
 import { verifierExistenceUtilisateur } from "../services/utilisateurs.service.js";
-import { verifierUtilisateurSchema } from "../validators/utilisateurs.schema.js";
+import { verifierUtilisateurSchema } from "@clubmanager/types/dist/validators.js";
 
 /**
  * Handler pour vérifier l'existence d'un utilisateur

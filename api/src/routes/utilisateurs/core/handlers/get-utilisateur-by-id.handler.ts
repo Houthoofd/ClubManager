@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
 import { obtenirUtilisateurParId } from "../services/utilisateurs.service.js";
-import { utilisateurIdParamSchema } from "../validators/utilisateurs.schema.js";
+import { utilisateurIdParamSchema } from "@clubmanager/types/dist/validators.js";
 
 /**
  * Handler pour récupérer un utilisateur par ID
@@ -23,11 +23,11 @@ import { utilisateurIdParamSchema } from "../validators/utilisateurs.schema.js";
 export async function getUtilisateurById(
   req: Request,
   res: Response,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<void> {
   try {
     console.log(
-      `👤 [Handler Utilisateurs] GET /utilisateurs/:id - ID: ${req.params.id}`
+      `👤 [Handler Utilisateurs] GET /utilisateurs/:id - ID: ${req.params.id}`,
     );
 
     // Validation de l'ID
@@ -38,7 +38,7 @@ export async function getUtilisateurById(
     if (!validationResult.success) {
       console.log(
         "⚠️ [Handler Utilisateurs] ID invalide:",
-        validationResult.error.issues
+        validationResult.error.issues,
       );
       res.status(400).json({
         message:
@@ -53,12 +53,12 @@ export async function getUtilisateurById(
     // Récupérer l'utilisateur via le service
     const utilisateur = await obtenirUtilisateurParId(
       utilisateurId,
-      utilisateursClient
+      utilisateursClient,
     );
 
     if (!utilisateur) {
       console.log(
-        `⚠️ [Handler Utilisateurs] Utilisateur ${utilisateurId} non trouvé`
+        `⚠️ [Handler Utilisateurs] Utilisateur ${utilisateurId} non trouvé`,
       );
       res.status(404).json({
         message: "Utilisateur non trouvé",
@@ -68,7 +68,7 @@ export async function getUtilisateurById(
     }
 
     console.log(
-      `✅ [Handler Utilisateurs] Utilisateur ${utilisateurId} récupéré`
+      `✅ [Handler Utilisateurs] Utilisateur ${utilisateurId} récupéré`,
     );
 
     // Supprimer le mot de passe de la réponse
@@ -83,7 +83,7 @@ export async function getUtilisateurById(
   } catch (error: any) {
     console.error(
       "❌ [Handler Utilisateurs] Erreur récupération utilisateur:",
-      error
+      error,
     );
 
     res.status(500).json({

@@ -1,9 +1,8 @@
 /**
- * Tests de validation Zod pour le module Utilisateurs
- * Validation des schémas des données utilisateur
+ * Tests de validation pour le module Utilisateurs
+ * Teste les schémas Zod pour différents endpoints
  */
 
-import { describe, it, expect } from "@jest/globals";
 import {
   verifierUtilisateurSchema,
   inscriptionUtilisateurSchema,
@@ -16,11 +15,11 @@ import {
   miseAJourUtilisateurSchema,
   suppressionUtilisateurSchema,
   listeUtilisateursQuerySchema,
-  statsSchema,
   utilisateurSchema,
+  utilisateursArraySchema,
   envoyerEmailInscriptionSchema,
   verifierUtilisateurAdminSchema,
-} from "../core/validators/utilisateurs.schema.js";
+} from "@clubmanager/types/dist/validators.js";
 
 describe("Utilisateurs - Tests de validation Zod", () => {
   // ==================== VERIFIER UTILISATEUR SCHEMA ====================
