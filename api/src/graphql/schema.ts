@@ -1,11 +1,9 @@
 import { createSchema } from "graphql-yoga";
 import { DateTimeResolver } from "graphql-scalars";
 import { prisma } from "../infrastructure/database/prisma-client.js";
-import { alertesResolvers } from "../services/alertes/index.js";
-import { authResolvers } from "../services/auth/index.js";
-import { uploadResolvers } from "../routes/upload/upload.resolvers.js";
 
 // Import des resolvers et typedefs des modules migrés
+import { createAuthResolvers } from "../routes/auth/core/resolvers/index.js";
 import { messagesResolvers } from "../routes/messages/core/resolvers/index.js";
 import { alertesResolvers as alertesResolversNew } from "../routes/alertes/core/resolvers/index.js";
 import { commandesResolvers } from "../routes/commandes/core/resolvers/index.js";
@@ -19,9 +17,14 @@ import { magasinResolvers } from "../routes/magasin/core/resolvers/index.js";
 import { paiementsResolvers } from "../routes/paiements/core/resolvers/index.js";
 import { professeursResolvers } from "../routes/professeurs/core/resolvers/index.js";
 import { statistiquesResolvers } from "../routes/statistiques/core/resolvers/index.js";
+import { stocksResolvers } from "../routes/stocks/core/resolvers/index.js";
+import { utilisateursResolvers } from "../routes/utilisateurs/core/resolvers/index.js";
+import { verificationResolvers } from "../routes/verification/core/resolvers/index.js";
+import { uploadResolvers } from "../routes/upload/core/resolvers/index.js";
 
 // Import des TypeDefs centralisés depuis @clubmanager/types
 import {
+  authTypeDefs,
   messagesTypeDefs,
   alertesTypeDefs,
   commandesTypeDefs,
@@ -35,7 +38,14 @@ import {
   paiementsTypeDefs,
   professeursTypeDefs,
   statistiquesTypeDefs,
+  stocksTypeDefs,
+  utilisateursTypeDefs,
+  verificationTypeDefs,
+  uploadTypeDefs,
 } from "@clubmanager/types";
+
+// Créer les resolvers auth avec Prisma
+const authResolvers = createAuthResolvers(prisma);
 
 /**
  * Schéma GraphQL de base
@@ -50,6 +60,8 @@ export const schema = createSchema({
     # ======================================
     # TypeDefs centralisés depuis @clubmanager/types
     # ======================================
+
+    ${authTypeDefs}
 
     ${messagesTypeDefs}
 
@@ -73,6 +85,10 @@ export const schema = createSchema({
     ${paiementsTypeDefs}
     ${professeursTypeDefs}
     ${statistiquesTypeDefs}
+    ${stocksTypeDefs}
+    ${utilisateursTypeDefs}
+    ${verificationTypeDefs}
+    ${uploadTypeDefs}
 
     # ======================================
     # Types legacy (à migrer progressivement)
@@ -533,11 +549,20 @@ export const schema = createSchema({
       // Statistiques (nouveaux resolvers avec middlewares)
       ...statistiquesResolvers.Query,
 
+      // Stocks (nouveaux resolvers avec middlewares)
+      ...stocksResolvers.Query,
+
+      // Utilisateurs (nouveaux resolvers avec middlewares)
+      ...utilisateursResolvers(prisma).Query,
+
+      // Verification (nouveaux resolvers avec middlewares)
+      ...verificationResolvers(prisma).Query,
+
+      // Upload (nouveaux resolvers avec middlewares)
+      ...uploadResolvers(prisma).Query,
+
       // Auth
       ...authResolvers.Query,
-
-      // Upload
-      ...uploadResolvers(prisma).Query,
 
       // Utilisateurs
       users: async (_parent, args) => {
@@ -668,7 +693,16 @@ export const schema = createSchema({
       // Statistiques (nouveaux resolvers avec middlewares)
       ...statistiquesResolvers.Mutation,
 
-      // Upload
+      // Stocks (nouveaux resolvers avec middlewares)
+      ...stocksResolvers.Mutation,
+
+      // Utilisateurs (nouveaux resolvers avec middlewares)
+      ...utilisateursResolvers(prisma).Mutation,
+
+      // Verification (nouveaux resolvers avec middlewares)
+      ...verificationResolvers(prisma).Mutation,
+
+      // Upload (nouveaux resolvers avec middlewares)
       ...uploadResolvers(prisma).Mutation,
     },
 

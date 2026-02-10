@@ -1,6 +1,7 @@
 // Pour compatibilité ESM : utilisez import au lieu de require
 
 // Export des TypeDefs GraphQL
+export { authTypeDefs } from "./graphql/auth.typedefs.js";
 export { messagesTypeDefs } from "./graphql/messages.graphql.types.js";
 export { alertesTypeDefs } from "./graphql/alertes.graphql.types.js";
 export { commandesTypeDefs } from "./graphql/commandes.graphql.types.js";
@@ -14,6 +15,10 @@ export { magasinTypeDefs } from "./graphql/magasin.graphql.types.js";
 export { paiementsTypeDefs } from "./graphql/paiements.graphql.types.js";
 export { professeursTypeDefs } from "./graphql/professeurs.graphql.types.js";
 export { statistiquesTypeDefs } from "./graphql/statistiques.graphql.types.js";
+export { stocksTypeDefs } from "./graphql/stocks.graphql.types.js";
+export { utilisateursTypeDefs } from "./graphql/utilisateurs.typedefs.js";
+export { verificationTypeDefs } from "./graphql/verification.typedefs.js";
+export { uploadTypeDefs } from "./graphql/upload.typedefs.js";
 
 // Export sélectif pour éviter les conflits avec utilisateurs-service
 export type {
@@ -409,3 +414,25 @@ export type {
   MoisHistoriqueData,
   PeriodeData,
 } from "./validators/statistiques.validators.js";
+
+// Export des validators pour les stocks
+export {
+  stockSchema,
+  stockUpdateSchema,
+  alerteParamsSchema,
+  alerteParamsGraphQLSchema,
+  articleIdParamSchema,
+  articleIdGraphQLSchema,
+  stocksHealthCheckSchema,
+  stocksArraySchema,
+} from "./validators/stocks.validators.js";
+
+export type {
+  Stock as StockValidator,
+  StockUpdate,
+  AlerteParams,
+  AlerteParamsGraphQL,
+  ArticleIdParam,
+  ArticleIdGraphQL,
+  HealthCheck as StocksHealthCheck,
+} from "./validators/stocks.validators.js";

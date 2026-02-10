@@ -30,14 +30,21 @@ export const stockUpdateSchema = z.object({
 });
 
 /**
- * Schéma pour les paramètres d'alerte
+ * Schéma pour les paramètres d'alerte (REST - avec default)
  */
 export const alerteParamsSchema = z.object({
   seuil: z.number().int().nonnegative().default(5),
 });
 
 /**
- * Schéma pour l'ID d'article
+ * Schéma pour les paramètres d'alerte (GraphQL - optionnel)
+ */
+export const alerteParamsGraphQLSchema = z.object({
+  seuil: z.number().int().nonnegative().optional(),
+});
+
+/**
+ * Schéma pour l'ID d'article (REST - string param)
  */
 export const articleIdParamSchema = z.object({
   articleId: z.string().transform((val, ctx) => {
@@ -65,6 +72,19 @@ export const articleIdParamSchema = z.object({
 });
 
 /**
+ * Schéma pour l'ID d'article (GraphQL - number)
+ */
+export const articleIdGraphQLSchema = z.object({
+  articleId: z
+    .number({
+      required_error: "L'ID de l'article est requis",
+      invalid_type_error: "L'ID doit être un nombre",
+    })
+    .int("L'ID doit être un entier")
+    .positive("L'ID doit être positif"),
+});
+
+/**
  * Schéma pour le health check
  */
 export const stocksHealthCheckSchema = z.object({
@@ -87,5 +107,7 @@ export const stocksArraySchema = z.array(stockSchema);
 export type Stock = z.infer<typeof stockSchema>;
 export type StockUpdate = z.infer<typeof stockUpdateSchema>;
 export type AlerteParams = z.infer<typeof alerteParamsSchema>;
+export type AlerteParamsGraphQL = z.infer<typeof alerteParamsGraphQLSchema>;
 export type ArticleIdParam = z.infer<typeof articleIdParamSchema>;
+export type ArticleIdGraphQL = z.infer<typeof articleIdGraphQLSchema>;
 export type HealthCheck = z.infer<typeof stocksHealthCheckSchema>;

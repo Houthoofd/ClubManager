@@ -1,6 +1,15 @@
 /**
- * Index des resolvers et typeDefs GraphQL pour le module Utilisateurs
+ * Export centralisé des resolvers Utilisateurs
+ * ✅ MODERNISÉ : Pattern standardisé avec combineMiddlewares + withSentry
  */
 
-export { utilisateursResolvers } from './utilisateurs.resolvers.js';
-export { utilisateursTypeDefs } from './utilisateurs.typeDefs.js';
+import { PrismaClient } from "@prisma/client";
+import { utilisateursResolvers } from "./utilisateurs.resolvers.js";
+
+export { utilisateursResolvers };
+
+/**
+ * Factory function pour créer les resolvers avec Prisma
+ */
+export const createUtilisateursResolvers = (prisma: PrismaClient) =>
+  utilisateursResolvers(prisma);

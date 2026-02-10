@@ -1,10 +1,18 @@
 /**
- * Index des resolvers du module Vérification
- * Exporte les resolvers et types GraphQL pour faciliter les imports
+ * Export centralisé des resolvers Vérification
+ * ✅ MODERNISÉ : Pattern standardisé avec combineMiddlewares + withSentry
  */
 
-export { verificationResolvers } from "./verification.resolvers.js";
-export { verificationTypeDefs } from "./verification.typeDefs.js";
+import { PrismaClient } from "@prisma/client";
+import { verificationResolvers } from "./verification.resolvers.js";
+
+export { verificationResolvers };
+
+/**
+ * Factory function pour créer les resolvers avec Prisma
+ */
+export const createVerificationResolvers = (prisma: PrismaClient) =>
+  verificationResolvers(prisma);
 
 /**
  * Export des types TypeScript pour utilisation dans d'autres modules
