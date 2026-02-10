@@ -26,7 +26,7 @@ import {
   confirmEmailSchema,
   messageHistorySchema,
   emailStatsSchema,
-} from "../core/validators/index.js";
+} from "@clubmanager/types/validators";
 
 describe("Messages Schemas - Tests de validation", () => {
   describe("createTypeMessageSchema", () => {

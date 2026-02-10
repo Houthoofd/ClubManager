@@ -1,9 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { creerCommande } from "../services/index.js";
-import { createCommandeSchema } from "../validators/index.js";
+import { createCommandeSchema } from "@clubmanager/types/validators";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour créer une nouvelle commande
@@ -52,17 +57,13 @@ export async function createCommande(
         "❌ [Handler Commandes] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Données de commande invalides",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Données de commande invalides",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error("❌ [Handler Commandes] Erreur création commande:", error);
-    res.status(500).json({
-      message: "Erreur lors de la création de la commande",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError("Erreur lors de la création de la commande");
   }
 }

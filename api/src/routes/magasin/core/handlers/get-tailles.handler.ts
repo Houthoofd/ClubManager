@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { obtenirTailles } from "../services/index.js";
-import { getTaillesSchema } from "../validators/index.js";
+import { getTaillesSchema } from "@clubmanager/types/validators";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer toutes les tailles disponibles
@@ -23,9 +24,6 @@ export async function getTailles(
     res.status(200).json(tailles);
   } catch (error) {
     console.error("❌ [Handler Tailles] Erreur récupération tailles:", error);
-    res.status(500).json({
-      message: "Erreur lors de la récupération des tailles",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError("Erreur lors de la récupération des tailles");
   }
 }

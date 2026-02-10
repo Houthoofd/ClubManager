@@ -15,7 +15,7 @@ import {
   type UploadStats,
   type SanitizationOptions,
   type UploadError,
-} from "../validators/upload.schema.js";
+} from "@clubmanager/types/validators";
 
 /**
  * Nettoyer le nom de fichier

@@ -6,6 +6,11 @@ import { Request, Response } from "express";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
 import { EmailClient } from "../../../../db/clients/messagerie/emailClient.js";
 import { getStripeInstance } from "../utils/stripe-instance.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Confirme un paiement de commande
@@ -40,31 +45,22 @@ export async function confirmPaymentCommande(
         "❌ [ConfirmPaymentCommande] Champs manquants:",
         missingFields,
       );
-      res.status(400).json({
-        error: "Données manquantes pour la confirmation de paiement commande",
-        missing: missingFields,
-        received: {
-          paymentIntentId: !!paymentIntentId,
-          commandeId: !!commandeId,
-          userId: !!userId,
-          amount: !!amount,
-        },
-        debug: {
-          bodyKeys: Object.keys(req.body),
-          bodyValues: req.body,
-        },
-      });
-      return;
+      throw new ValidationError(
+        "Données manquantes pour la confirmation de paiement commande",
+        missingFields.map((field) => ({
+          field,
+          message: `${field} est requis`,
+        })),
+      );
     }
 
     const stripe = getStripeInstance();
     if (!stripe) {
       console.error("❌ [ConfirmPaymentCommande] Stripe non initialisé");
-      res.status(503).json({
-        error: "Service Stripe non disponible",
-        details: "Stripe non initialisé - vérifiez STRIPE_SECRET_KEY",
-      });
-      return;
+      throw new InternalServerError(
+        "Service Stripe non disponible",
+        new Error("Stripe non initialisé - vérifiez STRIPE_SECRET_KEY"),
+      );
     }
 
     const paiements = new Paiements();
@@ -89,12 +85,12 @@ export async function confirmPaymentCommande(
         "⚠️ [ConfirmPaymentCommande] PaymentIntent pas en statut succeeded:",
         paymentIntent.status,
       );
-      res.status(400).json({
-        error: "Le paiement n'a pas été confirmé sur Stripe",
-        stripeStatus: paymentIntent.status,
-        paymentIntentId,
-      });
-      return;
+      throw new ValidationError("Le paiement n'a pas été confirmé sur Stripe", [
+        {
+          field: "paymentIntent.status",
+          message: `Statut actuel: ${paymentIntent.status}, attendu: succeeded`,
+        },
+      ]);
     }
 
     console.log(
@@ -262,48 +258,15 @@ export async function confirmPaymentCommande(
           "commandes: id, unique_id, numero_commande, utilisateur_id, total, date_commande, statut, ip_address, user_agent, created_at",
       });
 
-      res.status(500).json({
-        error: "Erreur de requête SQL",
-        details: `Colonne inexistante: ${error.sqlMessage}`,
-        sql_error: error.code,
-        table_info: {
-          table: "commandes",
-          colonnes_disponibles: [
-            "id",
-            "unique_id",
-            "numero_commande",
-            "utilisateur_id",
-            "total",
-            "date_commande",
-            "statut",
-            "ip_address",
-            "user_agent",
-            "created_at",
-          ],
-          statut_enum: ["en attente", "payée", "expédiée", "annulée"],
-          note: "Pas de colonne date_paiement - utiliser table paiements pour la traçabilité",
-        },
-        timestamp: new Date().toISOString(),
-        debug: {
-          paymentIntentId: req.body.paymentIntentId,
-          commandeId: req.body.commandeId,
-          userId: req.body.userId,
-          sqlQuery: error.sql,
-        },
-      });
-      return;
+      throw new InternalServerError(
+        `Erreur de requête SQL - colonne inexistante: ${error.sqlMessage}`,
+        error,
+      );
     }
 
-    res.status(500).json({
-      error: "Erreur lors de la confirmation du paiement commande",
-      details: error.message,
-      errorCode: error.code,
-      timestamp: new Date().toISOString(),
-      debug: {
-        paymentIntentId: req.body.paymentIntentId,
-        commandeId: req.body.commandeId,
-        userId: req.body.userId,
-      },
-    });
+    throw new InternalServerError(
+      "Erreur lors de la confirmation du paiement commande",
+      error,
+    );
   }
 }

@@ -7,8 +7,15 @@ import {
   createTypeMessageSchema,
   updateTypeMessageSchema,
   typeMessageIdSchema,
-} from "../validators/types-messages.schemas.js";
+} from "@clubmanager/types/validators";
 import { z } from "zod";
+import {
+  ValidationError,
+  NotFoundError,
+  DatabaseError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Factory pour créer des handlers avec injection de dépendances
@@ -26,11 +33,9 @@ export const createTypesMessagesHandlers = (
       const result = await service.getAllTypesMessages();
 
       if (!result.success) {
-        return res.status(404).json({
-          success: false,
-          message: result.message,
-          data: [],
-        });
+        throw new NotFoundError(
+          result.message || "Types de messages non trouvés",
+        );
       }
 
       res.status(200).json({
@@ -44,12 +49,9 @@ export const createTypesMessagesHandlers = (
         "❌ [TypesMessagesHandler] Erreur getAllTypesMessages:",
         error,
       );
-      res.status(500).json({
-        success: false,
-        message: "Erreur serveur lors de la récupération des types de messages",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+      throw new InternalServerError(
+        "Erreur lors de la récupération des types de messages",
+      );
     }
   },
 
@@ -68,10 +70,9 @@ export const createTypesMessagesHandlers = (
       );
 
       if (!result.success) {
-        return res.status(400).json({
-          success: false,
-          message: result.message,
-        });
+        throw new DatabaseError(
+          result.message || "Erreur lors de la création du type de message",
+        );
       }
 
       res.status(201).json({
@@ -86,22 +87,15 @@ export const createTypesMessagesHandlers = (
 
       // Erreur de validation Zod
       if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: "Données invalides",
-          errors: error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          })),
-        });
+        throw new ValidationError(
+          "Données invalides",
+          formatZodErrors(error.errors),
+        );
       }
 
-      res.status(500).json({
-        success: false,
-        message: "Erreur serveur lors de la création du type de message",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+      throw new InternalServerError(
+        "Erreur lors de la création du type de message",
+      );
     }
   },
 
@@ -125,10 +119,7 @@ export const createTypesMessagesHandlers = (
       );
 
       if (!result.success) {
-        return res.status(400).json({
-          success: false,
-          message: result.message,
-        });
+        throw new NotFoundError(result.message || "Type de message non trouvé");
       }
 
       res.status(200).json({
@@ -143,22 +134,15 @@ export const createTypesMessagesHandlers = (
 
       // Erreur de validation Zod
       if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: "Données invalides",
-          errors: error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          })),
-        });
+        throw new ValidationError(
+          "Données invalides",
+          formatZodErrors(error.errors),
+        );
       }
 
-      res.status(500).json({
-        success: false,
-        message: "Erreur serveur lors de la modification du type de message",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+      throw new InternalServerError(
+        "Erreur lors de la modification du type de message",
+      );
     }
   },
 
@@ -175,10 +159,7 @@ export const createTypesMessagesHandlers = (
       const result = await service.deleteTypeMessage(id);
 
       if (!result.success) {
-        return res.status(400).json({
-          success: false,
-          message: result.message,
-        });
+        throw new NotFoundError(result.message || "Type de message non trouvé");
       }
 
       res.status(200).json({
@@ -193,22 +174,12 @@ export const createTypesMessagesHandlers = (
 
       // Erreur de validation Zod
       if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: "ID invalide",
-          errors: error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          })),
-        });
+        throw new ValidationError("ID invalide", formatZodErrors(error.errors));
       }
 
-      res.status(500).json({
-        success: false,
-        message: "Erreur serveur lors de la suppression du type de message",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+      throw new InternalServerError(
+        "Erreur lors de la suppression du type de message",
+      );
     }
   },
 
@@ -225,11 +196,7 @@ export const createTypesMessagesHandlers = (
       const result = await service.getTypeMessageById(id);
 
       if (!result.success) {
-        return res.status(404).json({
-          success: false,
-          message: result.message,
-          data: null,
-        });
+        throw new NotFoundError(result.message || "Type de message non trouvé");
       }
 
       res.status(200).json({
@@ -245,22 +212,12 @@ export const createTypesMessagesHandlers = (
 
       // Erreur de validation Zod
       if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: "ID invalide",
-          errors: error.errors.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          })),
-        });
+        throw new ValidationError("ID invalide", formatZodErrors(error.errors));
       }
 
-      res.status(500).json({
-        success: false,
-        message: "Erreur serveur lors de la récupération du type de message",
-        error:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      });
+      throw new InternalServerError(
+        "Erreur lors de la récupération du type de message",
+      );
     }
   },
 });

@@ -9,7 +9,7 @@ import {
   joursHistoriqueSchema,
   moisHistoriqueSchema,
   periodeSchema,
-} from "../core/validators/statistiques.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Statistiques Module - Tests de Validation", () => {
   // ==================== Validation ID Utilisateur ====================

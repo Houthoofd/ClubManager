@@ -4,13 +4,14 @@
 
 import { Request, Response } from "express";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Vérifie et retourne la structure de la table commandes
  */
 export async function debugTableStructure(
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> {
   try {
     const paiements = new Paiements();
@@ -21,7 +22,7 @@ export async function debugTableStructure(
 
     console.log(
       "🔍 [DebugTableStructure] Structure réelle table commandes:",
-      tableStructure
+      tableStructure,
     );
 
     res.json({
@@ -56,7 +57,7 @@ export async function debugTableStructure(
         ],
       },
       hasDatePaiement: tableStructure.some(
-        (col: any) => col.Field === "date_paiement"
+        (col: any) => col.Field === "date_paiement",
       ),
       solution_implementee: {
         pour_tracer_paiement: "Utiliser table paiements avec date_paiement",
@@ -69,11 +70,11 @@ export async function debugTableStructure(
   } catch (error: any) {
     console.error(
       "❌ [DebugTableStructure] Erreur vérification structure:",
-      error
+      error,
     );
-    res.status(500).json({
-      error: "Erreur lors de la vérification de la structure",
-      details: error.message,
-    });
+    throw new InternalServerError(
+      "Erreur lors de la vérification de la structure",
+      error,
+    );
   }
 }

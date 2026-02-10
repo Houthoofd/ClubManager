@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
-import { z } from "zod";
 import { obtenirDetailEcheance } from "../services/echeances.service.js";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer les détails d'une échéance spécifique
@@ -31,12 +35,12 @@ export async function getEcheanceDetail(
 
     // Validation de l'ID échéance
     if (!echeanceId || !/^\d+$/.test(echeanceId)) {
-      res.status(400).json({
-        success: false,
-        error: "ID échéance invalide",
-        received: echeanceId,
-      });
-      return;
+      throw new ValidationError("ID échéance invalide", [
+        {
+          field: "echeanceId",
+          message: "L'ID de l'échéance doit être un nombre positif",
+        },
+      ]);
     }
 
     const echeanceIdNum = parseInt(echeanceId, 10);
@@ -57,15 +61,11 @@ export async function getEcheanceDetail(
         },
       );
 
-      res.status(404).json({
-        success: false,
-        error: "Échéance non trouvée",
-        message: userId
+      throw new NotFoundError(
+        userId
           ? "Cette échéance n'existe pas ou ne vous appartient pas"
           : "Échéance non trouvée",
-        echeanceId: echeanceIdNum,
-      });
-      return;
+      );
     }
 
     console.log("✅ [Handler Échéances] Détail échéance récupéré:", {
@@ -85,12 +85,15 @@ export async function getEcheanceDetail(
       error,
     );
 
-    res.status(500).json({
-      success: false,
-      error: "Erreur lors de la récupération de l'échéance",
-      details: error instanceof Error ? error.message : "Erreur inconnue",
-      echeanceId: req.params.echeanceId,
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de la récupération de l'échéance",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -115,12 +118,12 @@ export async function getEcheanceCompat(
 
     // Validation de l'ID échéance
     if (!echeanceId || !/^\d+$/.test(echeanceId)) {
-      res.status(400).json({
-        success: false,
-        error: "ID échéance invalide",
-        echeanceId: echeanceId,
-      });
-      return;
+      throw new ValidationError("ID échéance invalide", [
+        {
+          field: "echeanceId",
+          message: "L'ID de l'échéance doit être un nombre positif",
+        },
+      ]);
     }
 
     const echeanceIdNum = parseInt(echeanceId, 10);
@@ -134,24 +137,21 @@ export async function getEcheanceCompat(
     );
 
     if (!echeance) {
-      res.status(404).json({
-        success: false,
-        error: "Échéance non trouvée",
-        message: userIdNum
+      throw new NotFoundError(
+        userIdNum
           ? "Cette échéance n'existe pas ou ne vous appartient pas"
           : "Échéance non trouvée",
-      });
-      return;
+      );
     }
 
     // Vérifier si l'échéance est déjà payée
     if (echeance.statut?.toLowerCase() === "payé") {
-      res.status(400).json({
-        success: false,
-        error: "Cette échéance est déjà payée",
-        data: echeance,
-      });
-      return;
+      throw new ValidationError("Cette échéance est déjà payée", [
+        {
+          field: "statut",
+          message: "L'échéance a déjà été payée",
+        },
+      ]);
     }
 
     // Enrichir la réponse avec des informations supplémentaires
@@ -178,10 +178,14 @@ export async function getEcheanceCompat(
       error,
     );
 
-    res.status(500).json({
-      success: false,
-      error: "Erreur lors de la récupération de l'échéance",
-      details: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de la récupération de l'échéance",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

@@ -12,6 +12,10 @@ import {
   getStatutsValides,
   getTransitionErrorMessage,
 } from "../utils/statut-validator.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 interface BatchUpdateItem {
   commandeId: number;
@@ -32,10 +36,9 @@ export async function batchUpdateStatuts(
     const { updates } = req.body as { updates: BatchUpdateItem[] };
 
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
-      res.status(400).json({
-        message: "Le tableau updates est requis et ne peut pas être vide",
-      });
-      return;
+      throw new ValidationError(
+        "Le tableau updates est requis et ne peut pas être vide",
+      );
     }
 
     console.log(`🔄 [API] Batch update de ${updates.length} commandes`);
@@ -192,9 +195,6 @@ export async function batchUpdateStatuts(
     });
   } catch (error: any) {
     console.error("❌ [API] Erreur lors du batch update:", error);
-    res.status(500).json({
-      message: "Erreur lors de la mise à jour en lot",
-      error: error.message,
-    });
+    throw new InternalServerError("Erreur lors de la mise à jour en lot");
   }
 }

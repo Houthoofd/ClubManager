@@ -13,8 +13,16 @@ import {
   sendPaymentReminderSchema,
   countUnreadMessagesSchema,
   toggleMessageStatusSchema,
-} from "../validators/messages.schemas.js";
+} from "@clubmanager/types/validators";
 import { z } from "zod";
+import {
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+  DatabaseError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Fonction utilitaire pour récupérer le rôle utilisateur
@@ -63,11 +71,7 @@ export const createMessagesPersonnalisesHandlers = (
         const result = await messagesService.getMessagesRecus(userId);
 
         if (!result.success) {
-          return res.status(404).json({
-            success: false,
-            message: result.message,
-            data: [],
-          });
+          throw new NotFoundError(result.message || "Messages non trouvés");
         }
 
         res.status(200).json({
@@ -83,22 +87,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID utilisateur invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID utilisateur invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la récupération des messages",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération des messages",
+        );
       }
     },
 
@@ -120,10 +117,7 @@ export const createMessagesPersonnalisesHandlers = (
         const result = await messagesService.marquerCommeLu(messageId);
 
         if (!result.success) {
-          return res.status(400).json({
-            success: false,
-            message: result.message,
-          });
+          throw new NotFoundError(result.message || "Message non trouvé");
         }
 
         res.status(200).json({
@@ -137,22 +131,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID message invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID message invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors du marquage du message",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors du marquage du message comme lu",
+        );
       }
     },
 
@@ -173,10 +160,7 @@ export const createMessagesPersonnalisesHandlers = (
         const userId = req.user?.id;
 
         if (!userId) {
-          return res.status(401).json({
-            success: false,
-            message: "Utilisateur non authentifié",
-          });
+          throw new AuthorizationError("Utilisateur non authentifié");
         }
 
         const result = await messagesService.supprimerMessage(
@@ -185,10 +169,7 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!result.success) {
-          return res.status(400).json({
-            success: false,
-            message: result.message,
-          });
+          throw new NotFoundError(result.message || "Message non trouvé");
         }
 
         res.status(200).json({
@@ -202,22 +183,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID message invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID message invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la suppression du message",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la suppression du message",
+        );
       }
     },
 
@@ -245,11 +219,9 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!result.success) {
-          return res.status(404).json({
-            success: false,
-            message: result.message,
-            data: [],
-          });
+          throw new NotFoundError(
+            result.message || "Messages supprimés non trouvés",
+          );
         }
 
         res.status(200).json({
@@ -265,22 +237,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "Paramètres invalides",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "Paramètres invalides",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la récupération de la corbeille",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la récupération des messages supprimés",
+        );
       }
     },
 
@@ -302,10 +267,7 @@ export const createMessagesPersonnalisesHandlers = (
         const result = await messagesService.restaurerMessage(messageId);
 
         if (!result.success) {
-          return res.status(400).json({
-            success: false,
-            message: result.message,
-          });
+          throw new NotFoundError(result.message || "Message non trouvé");
         }
 
         res.status(200).json({
@@ -319,22 +281,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID message invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID message invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la restauration du message",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la restauration du message",
+        );
       }
     },
 
@@ -353,10 +308,9 @@ export const createMessagesPersonnalisesHandlers = (
 
         // Vérifier les permissions admin
         if (!isAdmin(req)) {
-          return res.status(403).json({
-            success: false,
-            message: "Permissions insuffisantes",
-          });
+          throw new AuthorizationError(
+            "Accès refusé. Droits administrateur requis.",
+          );
         }
 
         const { messageId } = deleteMessageSchema.parse(req.params);
@@ -364,10 +318,7 @@ export const createMessagesPersonnalisesHandlers = (
         const result = await messagesService.supprimerDefinitivement(messageId);
 
         if (!result.success) {
-          return res.status(400).json({
-            success: false,
-            message: result.message,
-          });
+          throw new NotFoundError(result.message || "Message non trouvé");
         }
 
         res.status(200).json({
@@ -381,22 +332,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID message invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID message invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la suppression définitive",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la réactivation du message",
+        );
       }
     },
 
@@ -414,10 +358,9 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!isAdmin(req)) {
-          return res.status(403).json({
-            success: false,
-            message: "Permissions insuffisantes",
-          });
+          throw new AuthorizationError(
+            "Accès refusé. Droits administrateur requis.",
+          );
         }
 
         const { messageId } = toggleMessageStatusSchema.parse(req.params);
@@ -425,10 +368,7 @@ export const createMessagesPersonnalisesHandlers = (
         const result = await messagesService.desactiverMessage(messageId);
 
         if (!result.success) {
-          return res.status(400).json({
-            success: false,
-            message: result.message,
-          });
+          throw new NotFoundError(result.message || "Message non trouvé");
         }
 
         res.status(200).json({
@@ -442,22 +382,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID message invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID message invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la désactivation du message",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la suppression définitive du message",
+        );
       }
     },
 
@@ -475,10 +408,9 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!isAdmin(req)) {
-          return res.status(403).json({
-            success: false,
-            message: "Permissions insuffisantes",
-          });
+          throw new AuthorizationError(
+            "Accès refusé. Droits administrateur requis.",
+          );
         }
 
         const { messageId } = toggleMessageStatusSchema.parse(req.params);
@@ -486,10 +418,7 @@ export const createMessagesPersonnalisesHandlers = (
         const result = await messagesService.reactiverMessage(messageId);
 
         if (!result.success) {
-          return res.status(400).json({
-            success: false,
-            message: result.message,
-          });
+          throw new NotFoundError(result.message || "Message non trouvé");
         }
 
         res.status(200).json({
@@ -503,22 +432,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID message invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID message invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la réactivation du message",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la désactivation du message",
+        );
       }
     },
 
@@ -535,27 +457,24 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!isAdmin(req)) {
-          return res.status(403).json({
-            success: false,
-            message: "Permissions insuffisantes",
-          });
+          throw new AuthorizationError(
+            "Accès refusé. Droits administrateur requis.",
+          );
         }
 
-        const userId = req.query.userId
-          ? parseInt(req.query.userId as string)
+        const userId = req.params.userId
+          ? parseInt(req.params.userId, 10)
           : undefined;
         const limit = req.query.limit
-          ? parseInt(req.query.limit as string)
-          : 50;
+          ? parseInt(req.query.limit as string, 10)
+          : undefined;
 
         const result = await messagesService.getMessagesInactifs(userId, limit);
 
         if (!result.success) {
-          return res.status(404).json({
-            success: false,
-            message: result.message,
-            data: [],
-          });
+          throw new NotFoundError(
+            result.message || "Messages inactifs non trouvés",
+          );
         }
 
         res.status(200).json({
@@ -570,13 +489,9 @@ export const createMessagesPersonnalisesHandlers = (
           error,
         );
 
-        res.status(500).json({
-          success: false,
-          message:
-            "Erreur serveur lors de la récupération des messages inactifs",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la récupération des messages inactifs",
+        );
       }
     },
 
@@ -610,22 +525,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "ID utilisateur invalide",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "ID utilisateur invalide",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors du comptage des messages non lus",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors du comptage des messages non lus",
+        );
       }
     },
 
@@ -648,10 +556,9 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!result.success) {
-          return res.status(400).json({
-            success: false,
-            message: result.message,
-          });
+          throw new DatabaseError(
+            result.message || "Erreur lors de l'envoi du message",
+          );
         }
 
         res.status(200).json({
@@ -666,22 +573,13 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "Données invalides",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "Données invalides",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de l'envoi des messages",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError("Erreur lors de l'envoi du message");
       }
     },
 
@@ -705,11 +603,9 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!result.success) {
-          return res.status(200).json({
-            success: false,
-            message: result.message,
-            data: result.data,
-          });
+          throw new DatabaseError(
+            result.message || "Erreur lors de l'envoi du rappel de paiement",
+          );
         }
 
         res.status(200).json({
@@ -724,22 +620,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "Données invalides",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "Données invalides",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de l'envoi du rappel de paiement",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de l'envoi du rappel de paiement",
+        );
       }
     },
 
@@ -756,10 +645,9 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!isAdmin(req)) {
-          return res.status(403).json({
-            success: false,
-            message: "Permissions insuffisantes",
-          });
+          throw new AuthorizationError(
+            "Accès refusé. Droits administrateur requis.",
+          );
         }
 
         const validatedData = messageStatsSchema.parse(req.query);
@@ -769,18 +657,16 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (!result.success) {
-          return res.status(404).json({
-            success: false,
-            message: result.message,
-            data: null,
-          });
+          throw new DatabaseError(
+            result.message || "Erreur lors de la récupération des statistiques",
+          );
         }
 
         res.status(200).json({
           success: true,
           message: result.message,
           data: result.data,
-          periode: result.periode,
+          periode: validatedData.periode,
         });
       } catch (error: any) {
         console.error(
@@ -789,22 +675,15 @@ export const createMessagesPersonnalisesHandlers = (
         );
 
         if (error instanceof z.ZodError) {
-          return res.status(400).json({
-            success: false,
-            message: "Paramètres invalides",
-            errors: error.errors.map((e) => ({
-              field: e.path.join("."),
-              message: e.message,
-            })),
-          });
+          throw new ValidationError(
+            "Paramètres invalides",
+            formatZodErrors(error.errors),
+          );
         }
 
-        res.status(500).json({
-          success: false,
-          message: "Erreur serveur lors de la récupération des statistiques",
-          error:
-            process.env.NODE_ENV === "development" ? error.message : undefined,
-        });
+        throw new InternalServerError(
+          "Erreur lors de la récupération des statistiques",
+        );
       }
     },
   };

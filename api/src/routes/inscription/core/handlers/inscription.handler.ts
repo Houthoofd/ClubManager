@@ -8,7 +8,12 @@ import {
   inscriptionService,
   InscriptionService,
 } from "../services/inscription.service.js";
-import { inscriptionSchema } from "../validators/inscription.schema.js";
+import { inscriptionSchema } from "@clubmanager/types/validators";
+import {
+  ValidationError,
+  ConflictError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * POST /api/inscription/validation
@@ -63,15 +68,13 @@ export async function inscription(
         parseResult.error.issues,
       );
 
-      res.status(400).json({
-        success: false,
-        message: parseResult.error.issues[0]?.message || "Données invalides",
-        errors: parseResult.error.issues.map((issue) => ({
+      throw new ValidationError(
+        parseResult.error.issues[0]?.message || "Données invalides",
+        parseResult.error.issues.map((issue) => ({
           field: issue.path.join("."),
           message: issue.message,
         })),
-      });
-      return;
+      );
     }
 
     const inscriptionData = parseResult.data;
@@ -95,17 +98,16 @@ export async function inscription(
         userId: result.userId,
       });
     } else {
-      // Déterminer le code de statut approprié
-      const statusCode = result.message.includes("existe déjà") ? 409 : 400;
-
       console.warn(
         `⚠️ [Handler Inscription] Échec de l'inscription pour: ${inscriptionData.email} - ${result.message}`,
       );
 
-      res.status(statusCode).json({
-        success: false,
-        message: result.message,
-      });
+      // Lancer l'erreur appropriée
+      if (result.message.includes("existe déjà")) {
+        throw new ConflictError(result.message);
+      } else {
+        throw new ValidationError(result.message);
+      }
     }
   } catch (error) {
     console.error(
@@ -113,9 +115,15 @@ export async function inscription(
       error,
     );
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de l'inscription",
-    });
+    // Re-throw si c'est déjà une erreur applicative
+    if (error instanceof ValidationError || error instanceof ConflictError) {
+      throw error;
+    }
+
+    // Sinon, wrapper dans InternalServerError
+    throw new InternalServerError(
+      "Erreur serveur lors de l'inscription",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

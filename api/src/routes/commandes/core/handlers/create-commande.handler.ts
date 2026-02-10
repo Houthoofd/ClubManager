@@ -5,6 +5,12 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "../../../../infrastructure/database/prisma-client.js";
+import {
+  ValidationError,
+  NotFoundError,
+  DatabaseError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 interface CreateCommandeArticle {
   article_id: number;
@@ -48,26 +54,19 @@ export async function createCommande(
 
     // Validation de base
     if (!utilisateur_id) {
-      res.status(400).json({
-        message: "L'ID utilisateur est requis",
-      });
-      return;
+      throw new ValidationError("L'ID utilisateur est requis");
     }
 
     if (!articles || articles.length === 0) {
-      res.status(400).json({
-        message: "La commande doit contenir au moins un article",
-      });
-      return;
+      throw new ValidationError(
+        "La commande doit contenir au moins un article",
+      );
     }
 
     // Vérifier que toutes les quantités sont positives
     for (const article of articles) {
       if (article.quantite <= 0) {
-        res.status(400).json({
-          message: "Les quantités doivent être positives",
-        });
-        return;
+        throw new ValidationError("Les quantités doivent être positives");
       }
     }
 
@@ -77,10 +76,7 @@ export async function createCommande(
     });
 
     if (!utilisateur) {
-      res.status(404).json({
-        message: "Utilisateur non trouvé",
-      });
-      return;
+      throw new NotFoundError("Utilisateur non trouvé");
     }
 
     // Vérifier le stock disponible pour chaque article
@@ -95,17 +91,15 @@ export async function createCommande(
       });
 
       if (!stock) {
-        res.status(404).json({
-          message: `Stock non trouvé pour l'article ${article.article_id} et la taille ${article.taille_id}`,
-        });
-        return;
+        throw new NotFoundError(
+          `Stock non trouvé pour l'article ${article.article_id} et la taille ${article.taille_id}`,
+        );
       }
 
       if (stock.stock_disponible < article.quantite) {
-        res.status(400).json({
-          message: `Stock insuffisant pour l'article ${article.article_id}. Disponible: ${stock.stock_disponible}, Demandé: ${article.quantite}`,
-        });
-        return;
+        throw new DatabaseError(
+          `Stock insuffisant pour l'article ${article.article_id}. Disponible: ${stock.stock_disponible}, Demandé: ${article.quantite}`,
+        );
       }
     }
 
@@ -158,9 +152,6 @@ export async function createCommande(
     });
   } catch (error: any) {
     console.error("❌ [API] Erreur lors de la création de la commande:", error);
-    res.status(500).json({
-      message: "Erreur lors de la création de la commande",
-      error: error.message,
-    });
+    throw new InternalServerError("Erreur lors de la création de la commande");
   }
 }

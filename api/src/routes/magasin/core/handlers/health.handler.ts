@@ -1,9 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { calculerStatistiquesMagasin } from "../services/index.js";
-import { getStatistiquesMagasinSchema } from "../validators/index.js";
+import { getStatistiquesMagasinSchema } from "@clubmanager/types/validators";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour le health check du module magasin
@@ -39,12 +44,7 @@ export async function healthCheck(
     res.status(200).json(health);
   } catch (error) {
     console.error("❌ [Handler Health] Erreur health check:", error);
-    res.status(500).json({
-      status: "unhealthy",
-      module: "magasin",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-      timestamp: new Date().toISOString(),
-    });
+    throw new InternalServerError("Erreur lors du health check du magasin");
   }
 }
 
@@ -91,21 +91,19 @@ export async function getStatistiquesMagasin(
         "❌ [Handler Statistiques] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des paramètres",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des paramètres",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error(
       "❌ [Handler Statistiques] Erreur récupération statistiques:",
       error,
     );
-    res.status(500).json({
-      message: "Erreur lors de la récupération des statistiques",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des statistiques",
+    );
   }
 }
 
@@ -238,12 +236,6 @@ export async function getDiagnostic(
     });
   } catch (error) {
     console.error("❌ [Handler Diagnostic] Erreur diagnostic:", error);
-    res.status(500).json({
-      status: "error",
-      module: "magasin",
-      message: "Erreur lors du diagnostic",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-      timestamp: new Date().toISOString(),
-    });
+    throw new InternalServerError("Erreur lors du diagnostic du magasin");
   }
 }

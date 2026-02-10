@@ -8,7 +8,7 @@ import {
   inscriptionService,
   InscriptionService,
 } from "../services/inscription.service.js";
-import { verificationEmailSchema } from "../validators/inscription.schema.js";
+import { verificationEmailSchema } from "@clubmanager/types/validators";
 
 /**
  * POST /api/inscription/verification

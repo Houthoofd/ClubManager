@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { supprimerArticle } from "../services/index.js";
-import { deleteArticleSchema } from "../validators/index.js";
+import { deleteArticleSchema } from "@clubmanager/types/validators";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour supprimer un article
@@ -32,29 +38,28 @@ export async function deleteArticle(
         "❌ [Handler Articles] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des paramètres",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des paramètres",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error("❌ [Handler Articles] Erreur suppression article:", error);
 
-    // Déterminer le code de statut approprié
-    const errorMessage =
-      error instanceof Error ? error.message : "Erreur inconnue";
-    const messageStr = String(errorMessage).toLowerCase();
+    // Déterminer le type d'erreur approprié
+    if (error instanceof Error) {
+      const messageStr = error.message.toLowerCase();
+      const isNotFound =
+        messageStr.includes("non trouvé") ||
+        messageStr.includes("non trouve") ||
+        messageStr.includes("introuvable") ||
+        messageStr.includes("not found");
 
-    const isNotFound =
-      messageStr.includes("non trouvé") ||
-      messageStr.includes("non trouve") ||
-      messageStr.includes("introuvable") ||
-      messageStr.includes("not found");
+      if (isNotFound) {
+        throw new NotFoundError("Article non trouvé");
+      }
+    }
 
-    res.status(isNotFound ? 404 : 500).json({
-      message: "Erreur lors de la suppression de l'article",
-      error: errorMessage,
-    });
+    throw new InternalServerError("Erreur lors de la suppression de l'article");
   }
 }

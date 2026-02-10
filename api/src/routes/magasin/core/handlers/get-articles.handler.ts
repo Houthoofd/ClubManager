@@ -7,8 +7,14 @@ import {
 import {
   getArticlesSchema,
   getArticleByIdSchema,
-} from "../validators/index.js";
+} from "@clubmanager/types/validators";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer tous les articles par catégories
@@ -38,18 +44,16 @@ export async function getArticles(
         "❌ [Handler Articles] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des paramètres",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des paramètres",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error("❌ [Handler Articles] Erreur récupération articles:", error);
-    res.status(500).json({
-      message: "Erreur lors de la récupération des articles",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des articles",
+    );
   }
 }
 
@@ -83,10 +87,7 @@ export async function getArticleById(
 
     if (!article) {
       console.warn(`⚠️ [Handler Articles] Article ${articleId} non trouvé`);
-      res.status(404).json({
-        message: "Article non trouvé",
-      });
-      return;
+      throw new NotFoundError("Article non trouvé");
     }
 
     console.log("✅ [Handler Articles] Article récupéré avec succès");
@@ -98,17 +99,15 @@ export async function getArticleById(
         "❌ [Handler Articles] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des paramètres",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des paramètres",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error("❌ [Handler Articles] Erreur récupération article:", error);
-    res.status(500).json({
-      message: "Erreur lors de la récupération de l'article",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération de l'article",
+    );
   }
 }

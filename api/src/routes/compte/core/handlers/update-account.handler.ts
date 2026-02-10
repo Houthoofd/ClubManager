@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { Compte } from "../../../../db/clients/compte/compte.js";
-import bcrypt from "bcrypt";
+import {
+  hashPassword,
+  verifyPassword,
+} from "../../../../shared/utils/password.helpers.js";
 
 /**
  * Handler pour mettre à jour les informations du compte utilisateur
@@ -90,7 +93,7 @@ export async function updateAccount(
     }
 
     if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await hashPassword(password);
       updateData.password = hashedPassword;
     }
 

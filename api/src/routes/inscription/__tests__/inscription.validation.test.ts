@@ -9,7 +9,7 @@ import {
   inscriptionSchema,
   type InscriptionData,
   type VerificationEmailData,
-} from "../core/validators/inscription.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Inscription - Tests de validation Zod", () => {
   // ==================== VERIFICATION EMAIL SCHEMA ====================
@@ -508,7 +508,10 @@ describe("Inscription - Tests de validation Zod", () => {
         ];
 
         passwords.forEach((password) => {
-          const result = inscriptionSchema.safeParse({ ...validData, password });
+          const result = inscriptionSchema.safeParse({
+            ...validData,
+            password,
+          });
           expect(result.success).toBe(true);
         });
       });

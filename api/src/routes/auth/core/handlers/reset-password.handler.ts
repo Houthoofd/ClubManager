@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
 import { Auth } from "../../../../db/clients/auth/auth.js";
+import {
+  ValidationError,
+  AuthenticationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour réinitialiser le mot de passe
@@ -12,8 +17,7 @@ export async function resetPassword(
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-      res.status(400).json({ error: "Token et nouveau mot de passe requis" });
-      return;
+      throw new ValidationError("Token et nouveau mot de passe requis");
     }
 
     console.log(
@@ -27,18 +31,13 @@ export async function resetPassword(
     const tokenData = await authClient.verifierTokenRecuperation(token);
 
     if (!tokenData) {
-      res.status(400).json({ error: "Token invalide ou expiré" });
-      return;
+      throw new AuthenticationError("Token invalide ou expiré");
     }
 
     // Valider le nouveau mot de passe
     const validation = Auth.validerMotDePasse(newPassword);
     if (!validation.valid) {
-      res.status(400).json({
-        error: "Mot de passe invalide",
-        details: validation.errors,
-      });
-      return;
+      throw new ValidationError("Mot de passe invalide", validation.errors);
     }
 
     // Hasher le nouveau mot de passe
@@ -51,12 +50,9 @@ export async function resetPassword(
     );
 
     if (!result.isConfirm) {
-      res
-        .status(500)
-        .json({
-          error: result.message || "Erreur lors de la réinitialisation",
-        });
-      return;
+      throw new InternalServerError(
+        result.message || "Erreur lors de la réinitialisation",
+      );
     }
 
     console.log(
@@ -67,6 +63,20 @@ export async function resetPassword(
     res.json({ message: "Mot de passe réinitialisé avec succès" });
   } catch (error: any) {
     console.error("❌ [Auth] Erreur reset-password:", error);
-    res.status(500).json({ error: "Erreur serveur" });
+
+    // Re-throw si c'est déjà une erreur applicative
+    if (
+      error instanceof ValidationError ||
+      error instanceof AuthenticationError ||
+      error instanceof InternalServerError
+    ) {
+      throw error;
+    }
+
+    // Sinon, wrapper dans InternalServerError
+    throw new InternalServerError(
+      "Erreur serveur lors de la réinitialisation du mot de passe",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

@@ -6,6 +6,10 @@
 import { Request, Response } from "express";
 import { Stocks } from "../../../../db/clients/stocks/stocks.js";
 import { obtenirAlertesStock } from "../services/stocks.service.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer les alertes de stock
@@ -31,20 +35,22 @@ export async function getAlertes(
     // Valider le seuil
     if (isNaN(seuil)) {
       console.log("⚠️ [Handler Stocks] Seuil invalide");
-      res.status(400).json({
-        success: false,
-        message: "Le seuil doit être un nombre valide",
-      });
-      return;
+      throw new ValidationError("Le seuil doit être un nombre valide", [
+        {
+          field: "seuil",
+          message: "Le seuil doit être un nombre valide",
+        },
+      ]);
     }
 
     if (seuil < 0) {
       console.log("⚠️ [Handler Stocks] Seuil négatif");
-      res.status(400).json({
-        success: false,
-        message: "Le seuil ne peut pas être négatif",
-      });
-      return;
+      throw new ValidationError("Le seuil ne peut pas être négatif", [
+        {
+          field: "seuil",
+          message: "Le seuil ne peut pas être négatif",
+        },
+      ]);
     }
 
     console.log(
@@ -66,10 +72,14 @@ export async function getAlertes(
   } catch (error) {
     console.error("❌ [Handler Stocks] Erreur récupération alertes:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des alertes",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des alertes",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

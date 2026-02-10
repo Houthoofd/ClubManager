@@ -1,10 +1,13 @@
 import { Request, Response } from "express";
-import { z } from "zod";
 import {
   obtenirStatistiquesUtilisateur,
   diagnosticEcheance,
 } from "../services/echeances.service.js";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer les statistiques des échéances d'un utilisateur
@@ -27,23 +30,23 @@ export async function getStatistiquesUtilisateur(
 
     // Validation stricte: rejeter si contient des caractères non numériques
     if (!/^\d+$/.test(userIdParam)) {
-      res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     const userId = parseInt(userIdParam, 10);
 
     if (isNaN(userId) || userId <= 0) {
-      res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     // Récupérer les statistiques via le service
@@ -91,11 +94,15 @@ export async function getStatistiquesUtilisateur(
       error,
     );
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des statistiques",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de la récupération des statistiques",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -121,12 +128,16 @@ export async function getDiagnosticEcheance(
 
     // Validation des IDs
     if (!/^\d+$/.test(echeanceId) || !/^\d+$/.test(userId)) {
-      res.status(400).json({
-        success: false,
-        message: "IDs invalides",
-        error: "Les IDs doivent être des nombres positifs",
-      });
-      return;
+      throw new ValidationError("IDs invalides", [
+        {
+          field: "echeanceId",
+          message: "Les IDs doivent être des nombres positifs",
+        },
+        {
+          field: "userId",
+          message: "Les IDs doivent être des nombres positifs",
+        },
+      ]);
     }
 
     const echeanceIdNum = parseInt(echeanceId, 10);
@@ -138,12 +149,16 @@ export async function getDiagnosticEcheance(
       isNaN(userIdNum) ||
       userIdNum <= 0
     ) {
-      res.status(400).json({
-        success: false,
-        message: "IDs invalides",
-        error: "Les IDs doivent être des nombres positifs",
-      });
-      return;
+      throw new ValidationError("IDs invalides", [
+        {
+          field: "echeanceId",
+          message: "Les IDs doivent être des nombres positifs",
+        },
+        {
+          field: "userId",
+          message: "Les IDs doivent être des nombres positifs",
+        },
+      ]);
     }
 
     // Effectuer le diagnostic via le service
@@ -165,11 +180,15 @@ export async function getDiagnosticEcheance(
   } catch (error) {
     console.error(`❌ [Handler Échéances] Erreur diagnostic:`, error);
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors du diagnostic",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur lors du diagnostic",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -194,23 +213,23 @@ export async function getDebugEcheancesUtilisateur(
 
     // Validation stricte
     if (!/^\d+$/.test(userIdParam)) {
-      res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     const userId = parseInt(userIdParam, 10);
 
     if (isNaN(userId) || userId <= 0) {
-      res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     // Utiliser le même service que pour les statistiques
@@ -253,10 +272,14 @@ export async function getDebugEcheancesUtilisateur(
       error,
     );
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des échéances utilisateur",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de la récupération des échéances utilisateur",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

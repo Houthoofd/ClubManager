@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import { Compte } from "../../../../db/clients/compte/compte.js";
-import bcrypt from "bcrypt";
+import {
+  hashPassword,
+  verifyPassword,
+} from "../../../../shared/utils/password.helpers.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour créer un mot de passe (si le compte n'en a pas)
@@ -14,15 +21,11 @@ export async function createPassword(
     const { id, password } = req.body;
 
     if (!id || !password) {
-      res.status(400).json({
-        success: false,
-        message: "L'id et le mot de passe sont requis.",
-      });
-      return;
+      throw new ValidationError("L'id et le mot de passe sont requis.");
     }
 
     // Hash du mot de passe
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await hashPassword(password);
 
     const client = compteClient || new Compte();
     const result = await client.mettreAJourMotDePasse(id, hash, true); // true = création
@@ -33,17 +36,20 @@ export async function createPassword(
         message: "Mot de passe créé avec succès.",
       });
     } else {
-      res.status(400).json({
-        success: false,
-        message: "Échec de la création du mot de passe.",
-      });
+      throw new ValidationError("Échec de la création du mot de passe.");
     }
   } catch (error) {
     console.error("❌ [Create Password] Erreur:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+
+    // Re-throw si c'est déjà une erreur applicative
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    // Sinon, wrapper dans InternalServerError
+    throw new InternalServerError(
+      "Erreur serveur lors de la création du mot de passe",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

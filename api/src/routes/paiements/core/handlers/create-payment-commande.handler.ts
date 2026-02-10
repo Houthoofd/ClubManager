@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
-import { PaymentIntentService } from '../services/payment-intent.service.js';
-import { createPaymentIntentCommandeSchema } from '../validators/paiement.schema.js';
-import { Paiements } from '../../../../db/clients/paiements/paiements.js';
-import { z } from 'zod';
+import { Request, Response } from "express";
+import { PaymentIntentService } from "../services/payment-intent.service.js";
+import { createPaymentIntentCommandeSchema } from "@clubmanager/types/validators";
+import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import { z } from "zod";
 
 /**
  * Handler pour créer un Payment Intent Stripe pour une commande
@@ -11,11 +11,11 @@ import { z } from 'zod';
 export async function createPaymentCommande(
   req: Request,
   res: Response,
-  paiementsClient?: Paiements
+  paiementsClient?: Paiements,
 ): Promise<void> {
   try {
-    console.log('🎯 [Create Payment Commande] Début création Payment Intent');
-    console.log('📝 [Create Payment Commande] Données reçues:', {
+    console.log("🎯 [Create Payment Commande] Début création Payment Intent");
+    console.log("📝 [Create Payment Commande] Données reçues:", {
       body: req.body,
       user: (req as any).user?.id,
     });
@@ -23,7 +23,10 @@ export async function createPaymentCommande(
     // 1. Validation des données avec Zod
     const validatedData = createPaymentIntentCommandeSchema.parse(req.body);
 
-    console.log('✅ [Create Payment Commande] Données validées:', validatedData);
+    console.log(
+      "✅ [Create Payment Commande] Données validées:",
+      validatedData,
+    );
 
     // 2. Créer le payment intent via le service
     const paymentIntentService = new PaymentIntentService(paiementsClient);
@@ -35,7 +38,10 @@ export async function createPaymentCommande(
       description: validatedData.description,
     });
 
-    console.log('✅ [Create Payment Commande] Payment Intent créé:', result.payment_intent_id);
+    console.log(
+      "✅ [Create Payment Commande] Payment Intent créé:",
+      result.payment_intent_id,
+    );
 
     // 3. Retourner la réponse
     res.status(200).json({
@@ -43,7 +49,7 @@ export async function createPaymentCommande(
       ...result,
     });
   } catch (error) {
-    console.error('❌ [Create Payment Commande] Erreur:', error);
+    console.error("❌ [Create Payment Commande] Erreur:", error);
 
     // Gestion des erreurs de validation Zod
     if (error instanceof z.ZodError) {
@@ -59,7 +65,7 @@ export async function createPaymentCommande(
     // Gestion des erreurs métier
     if (error instanceof Error) {
       // Commande déjà payée
-      if (error.message.includes('déjà été payée')) {
+      if (error.message.includes("déjà été payée")) {
         res.status(409).json({
           success: false,
           message: error.message,
@@ -68,7 +74,7 @@ export async function createPaymentCommande(
       }
 
       // Commande introuvable
-      if (error.message.includes('introuvable')) {
+      if (error.message.includes("introuvable")) {
         res.status(404).json({
           success: false,
           message: error.message,
@@ -77,7 +83,7 @@ export async function createPaymentCommande(
       }
 
       // Format de commande invalide
-      if (error.message.includes('Format de commande invalide')) {
+      if (error.message.includes("Format de commande invalide")) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -86,7 +92,7 @@ export async function createPaymentCommande(
       }
 
       // Montant invalide
-      if (error.message.includes('montant')) {
+      if (error.message.includes("montant")) {
         res.status(400).json({
           success: false,
           message: error.message,
@@ -98,8 +104,8 @@ export async function createPaymentCommande(
     // Erreur serveur générique
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la création du Payment Intent pour la commande',
-      error: error instanceof Error ? error.message : 'Erreur inconnue',
+      message: "Erreur lors de la création du Payment Intent pour la commande",
+      error: error instanceof Error ? error.message : "Erreur inconnue",
     });
   }
 }

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour le health check du module professeurs
@@ -66,12 +67,10 @@ export async function healthCheck(
   } catch (error) {
     console.error("❌ [Handler] Erreur lors du health check:", error);
 
-    return res.status(503).json({
-      success: false,
-      status: "unhealthy",
-      module: "professeurs",
-      timestamp: new Date().toISOString(),
-    });
+    throw new InternalServerError(
+      "Erreur lors du health check",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -134,9 +133,9 @@ export async function getDiagnostic(
   } catch (error) {
     console.error("❌ [Handler] Erreur lors du diagnostic:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors du diagnostic",
-    });
+    throw new InternalServerError(
+      "Erreur lors du diagnostic",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

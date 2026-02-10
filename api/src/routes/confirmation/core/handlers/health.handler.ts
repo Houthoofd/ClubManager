@@ -4,6 +4,7 @@
 
 import { Request, Response } from "express";
 import Stripe from "stripe";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 // Initialisation Stripe
 let stripe: Stripe | null = null;
@@ -24,19 +25,26 @@ try {
  * Vérifie la santé du module confirmation
  */
 export async function health(req: Request, res: Response): Promise<void> {
-  res.json({
-    status: "healthy",
-    module: "confirmation",
-    routes: [
-      "POST /confirmation/confirm-payment - Confirmation échéance",
-      "POST /confirmation/confirm-payment-commande - Confirmation commande",
-      "GET /confirmation/debug/table-structure - Structure table commandes",
-      "GET /confirmation/health - Statut du module",
-    ],
-    stripe: {
-      configured: !!stripe,
-      hasSecretKey: !!process.env.STRIPE_SECRET_KEY,
-    },
-    timestamp: new Date().toISOString(),
-  });
+  try {
+    res.json({
+      status: "healthy",
+      module: "confirmation",
+      routes: [
+        "POST /confirmation/confirm-payment - Confirmation échéance",
+        "POST /confirmation/confirm-payment-commande - Confirmation commande",
+        "GET /confirmation/debug/table-structure - Structure table commandes",
+        "GET /confirmation/health - Statut du module",
+      ],
+      stripe: {
+        configured: !!stripe,
+        hasSecretKey: !!process.env.STRIPE_SECRET_KEY,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    throw new InternalServerError(
+      "Erreur lors du health check du module Confirmation",
+      error,
+    );
+  }
 }

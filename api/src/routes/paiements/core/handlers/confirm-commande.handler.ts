@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { ConfirmationService } from "../services/confirmation.service.js";
-import { confirmCommandePaymentSchema } from "../validators/paiement.schema.js";
+import { confirmCommandePaymentSchema } from "@clubmanager/types/validators";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
 import { EmailClient } from "../../../../db/clients/messagerie/emailClient.js";
 import { z } from "zod";

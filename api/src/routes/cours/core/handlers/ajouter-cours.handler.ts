@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { Cours } from "../../../../db/clients/cours/cours.js";
 import { AjoutCours } from "@clubmanager/types";
+import {
+  ValidationError,
+  ConflictError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour ajouter un cours récurrent
@@ -16,28 +21,35 @@ export async function ajouterCours(
 
     // Validation des champs requis
     if (!data.nom || data.nom.length < 2) {
-      res.status(400).json({
-        success: false,
-        message:
-          "Le nom du cours est requis et doit contenir au moins 2 caractères.",
-      });
-      return;
+      throw new ValidationError(
+        "Le nom du cours est requis et doit contenir au moins 2 caractères",
+        [
+          {
+            field: "nom",
+            message:
+              "Le nom du cours est requis et doit contenir au moins 2 caractères",
+          },
+        ],
+      );
     }
 
     if (data.nom.length > 255) {
-      res.status(400).json({
-        success: false,
-        message: "Le nom du cours ne peut pas dépasser 255 caractères.",
-      });
-      return;
+      throw new ValidationError(
+        "Le nom du cours ne peut pas dépasser 255 caractères",
+        [
+          {
+            field: "nom",
+            message: "Le nom du cours ne peut pas dépasser 255 caractères",
+          },
+        ],
+      );
     }
 
     if (!data.heure_debut || !data.heure_fin) {
-      res.status(400).json({
-        success: false,
-        message: "Les heures de début et de fin sont requises.",
-      });
-      return;
+      throw new ValidationError("Les heures de début et de fin sont requises", [
+        { field: "heure_debut", message: "Champ requis" },
+        { field: "heure_fin", message: "Champ requis" },
+      ]);
     }
 
     // Validation du format des heures (HH:MM ou HH:MM:SS)
@@ -46,11 +58,19 @@ export async function ajouterCours(
       !heureRegex.test(data.heure_debut) ||
       !heureRegex.test(data.heure_fin)
     ) {
-      res.status(400).json({
-        success: false,
-        message: "Format d'heure invalide. Utilisez HH:MM ou HH:MM:SS.",
-      });
-      return;
+      throw new ValidationError(
+        "Format d'heure invalide. Utilisez HH:MM ou HH:MM:SS",
+        [
+          {
+            field: "heure_debut",
+            message: "Format d'heure invalide. Utilisez HH:MM ou HH:MM:SS",
+          },
+          {
+            field: "heure_fin",
+            message: "Format d'heure invalide. Utilisez HH:MM ou HH:MM:SS",
+          },
+        ],
+      );
     }
 
     // Validation que heure_fin est après heure_debut
@@ -60,22 +80,30 @@ export async function ajouterCours(
     const minutesFin = hFin * 60 + mFin;
 
     if (minutesFin <= minutesDebut) {
-      res.status(400).json({
-        success: false,
-        message: "L'heure de fin doit être après l'heure de début.",
-      });
-      return;
+      throw new ValidationError(
+        "L'heure de fin doit être après l'heure de début",
+        [
+          {
+            field: "heure_fin",
+            message: "L'heure de fin doit être après l'heure de début",
+          },
+        ],
+      );
     }
 
     // Validation de la date (si fournie)
     if (data.date) {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(data.date)) {
-        res.status(400).json({
-          success: false,
-          message: "Format de date invalide. Utilisez YYYY-MM-DD.",
-        });
-        return;
+        throw new ValidationError(
+          "Format de date invalide. Utilisez YYYY-MM-DD",
+          [
+            {
+              field: "date",
+              message: "Format de date invalide. Utilisez YYYY-MM-DD",
+            },
+          ],
+        );
       }
 
       const dateCours = new Date(data.date);
@@ -83,11 +111,15 @@ export async function ajouterCours(
       aujourdhui.setHours(0, 0, 0, 0);
 
       if (dateCours < aujourdhui) {
-        res.status(400).json({
-          success: false,
-          message: "La date du cours ne peut pas être dans le passé.",
-        });
-        return;
+        throw new ValidationError(
+          "La date du cours ne peut pas être dans le passé",
+          [
+            {
+              field: "date",
+              message: "La date du cours ne peut pas être dans le passé",
+            },
+          ],
+        );
       }
     }
 
@@ -95,11 +127,16 @@ export async function ajouterCours(
     if (data.places_max !== undefined) {
       const places = Number(data.places_max);
       if (isNaN(places) || places <= 0) {
-        res.status(400).json({
-          success: false,
-          message: "Le nombre de places maximum doit être un nombre positif.",
-        });
-        return;
+        throw new ValidationError(
+          "Le nombre de places maximum doit être un nombre positif",
+          [
+            {
+              field: "places_max",
+              message:
+                "Le nombre de places maximum doit être un nombre positif",
+            },
+          ],
+        );
       }
     }
 
@@ -132,11 +169,12 @@ export async function ajouterCours(
           "dimanche",
         ].includes(jourNormalise)
       ) {
-        res.status(400).json({
-          success: false,
-          message: `Jour invalide: ${data.jour_semaine}`,
-        });
-        return;
+        throw new ValidationError(`Jour invalide: ${data.jour_semaine}`, [
+          {
+            field: "jour_semaine",
+            message: `Jour invalide: ${data.jour_semaine}`,
+          },
+        ]);
       }
     } else if (data.date) {
       // Déduire le jour de la semaine à partir de la date
@@ -152,11 +190,10 @@ export async function ajouterCours(
       ];
       jourNormalise = joursIndex[dateObj.getDay()];
     } else {
-      res.status(400).json({
-        success: false,
-        message: "jour_semaine ou date est requis.",
-      });
-      return;
+      throw new ValidationError("jour_semaine ou date est requis", [
+        { field: "jour_semaine", message: "Champ requis" },
+        { field: "date", message: "Champ requis" },
+      ]);
     }
 
     const client = coursClient || new Cours();
@@ -189,13 +226,15 @@ export async function ajouterCours(
         const conflits = coursConflituels
           .map((c) => `${c.type_cours} ${c.heure_debut}-${c.heure_fin}`)
           .join(", ");
-        res.status(409).json({
-          success: false,
-          message: `Conflit d'horaire détecté avec: ${conflits}. Impossible d'ajouter le cours.`,
-        });
-        return;
+        throw new ConflictError(
+          `Conflit d'horaire détecté avec: ${conflits}. Impossible d'ajouter le cours`,
+        );
       }
     } catch (verificationError) {
+      // Re-throw si c'est déjà une erreur GraphQL
+      if (verificationError instanceof ConflictError) {
+        throw verificationError;
+      }
       console.log(
         "Erreur lors de la vérification des conflits:",
         verificationError,
@@ -246,19 +285,29 @@ export async function ajouterCours(
       error instanceof Error &&
       error.message.includes("ER_NO_REFERENCED_ROW_2")
     ) {
-      res.status(400).json({
-        success: false,
-        message:
-          "Un ou plusieurs professeurs spécifiés n'existent pas en base de données. Veuillez vérifier les noms des professeurs.",
-        details:
-          "Erreur de référence de clé étrangère - professeurs introuvables",
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: "Erreur serveur lors de l'ajout du cours récurrent",
-        error: error instanceof Error ? error.message : "Erreur inconnue",
-      });
+      throw new ValidationError(
+        "Un ou plusieurs professeurs spécifiés n'existent pas en base de données. Veuillez vérifier les noms des professeurs",
+        [
+          {
+            field: "professeurs",
+            message: "Professeurs introuvables",
+          },
+        ],
+      );
     }
+
+    // Re-throw les erreurs GraphQL
+    if (
+      error instanceof ValidationError ||
+      error instanceof ConflictError ||
+      error instanceof InternalServerError
+    ) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de l'ajout du cours récurrent",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

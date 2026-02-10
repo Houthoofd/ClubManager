@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
 import { Cours } from "../../../../db/clients/cours/cours.js";
+import {
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour obtenir tous les cours
@@ -14,11 +18,7 @@ export async function getAllCours(
     const cours = await client.obtenirTousLesCours();
 
     if (!cours || cours.length === 0) {
-      res.status(404).json({
-        success: false,
-        message: "Aucun cours à venir trouvé.",
-      });
-      return;
+      throw new NotFoundError("Aucun cours à venir trouvé");
     }
 
     res.status(200).json({
@@ -27,10 +27,15 @@ export async function getAllCours(
     });
   } catch (error) {
     console.error("❌ [Get All Cours] Erreur:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des cours.",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+
+    // Re-throw les erreurs GraphQL
+    if (error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des cours",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

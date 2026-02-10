@@ -9,13 +9,12 @@ import {
   createPaymentIntentCommandeSchema,
   confirmEcheancePaymentSchema,
   confirmCommandePaymentSchema,
-  getHistoriqueSchema,
   CreatePaymentIntentEcheanceData,
   CreatePaymentIntentCommandeData,
   ConfirmEcheancePaymentData,
   ConfirmCommandePaymentData,
   GetHistoriqueData,
-} from "../core/validators/paiement.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Paiements Module - Schémas et Configuration", () => {
   describe("Schémas Zod - Structure", () => {

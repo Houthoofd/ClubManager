@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
-import { z } from "zod";
 import { supprimerEcheance } from "../services/echeances.service.js";
-import { deleteEcheanceSchema } from "../validators/echeance.schema.js";
+import { deleteEcheanceSchema } from "@clubmanager/types/validators";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
+import { formatZodErrors } from "../../../../shared/errors/GraphQLErrors.js";
+import { z } from "zod";
 
 /**
  * Handler pour supprimer une échéance
@@ -25,23 +31,23 @@ export async function deleteEcheance(
 
     // Validation de l'ID échéance
     if (!echeanceIdParam || !/^\d+$/.test(echeanceIdParam)) {
-      res.status(400).json({
-        success: false,
-        error: "ID échéance invalide",
-        message: "L'ID de l'échéance doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError("ID échéance invalide", [
+        {
+          field: "id",
+          message: "L'ID de l'échéance doit être un nombre positif",
+        },
+      ]);
     }
 
     const echeanceId = parseInt(echeanceIdParam, 10);
 
     if (isNaN(echeanceId) || echeanceId <= 0) {
-      res.status(400).json({
-        success: false,
-        error: "ID échéance invalide",
-        message: "L'ID de l'échéance doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError("ID échéance invalide", [
+        {
+          field: "id",
+          message: "L'ID de l'échéance doit être un nombre positif",
+        },
+      ]);
     }
 
     // Validation avec Zod
@@ -58,13 +64,9 @@ export async function deleteEcheance(
     );
 
     if (!supprime) {
-      res.status(404).json({
-        success: false,
-        error: "Échéance non trouvée",
-        message: `L'échéance avec l'ID ${echeanceId} n'existe pas`,
-        echeanceId,
-      });
-      return;
+      throw new NotFoundError(
+        `L'échéance avec l'ID ${echeanceId} n'existe pas`,
+      );
     }
 
     console.log(
@@ -81,21 +83,21 @@ export async function deleteEcheance(
 
     // Gestion des erreurs de validation Zod
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
-      res.status(400).json({
-        success: false,
-        message: "Données invalides",
-        error: firstError.message,
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Données invalides",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
     }
 
     // Erreur serveur générique
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors de la suppression de l'échéance",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la suppression de l'échéance",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

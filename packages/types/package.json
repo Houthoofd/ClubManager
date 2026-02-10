@@ -27,8 +27,8 @@
       "types": "./dist/graphql.d.ts"
     },
     "./validators": {
-      "import": "./dist/validators.js",
-      "types": "./dist/validators.d.ts"
+      "import": "./dist/validators/index.js",
+      "types": "./dist/validators/index.d.ts"
     },
     "./dist/*": {
       "import": "./dist/*",

@@ -26,7 +26,7 @@ import {
   ALLOWED_ALL_EXTENSIONS,
   MAX_FILE_SIZE,
   MAX_IMAGE_SIZE,
-} from "../core/validators/upload.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Upload Module - Tests de validation", () => {
   describe("Schema: uploadedFileSchema", () => {
@@ -364,7 +364,13 @@ describe("Upload Module - Tests de validation", () => {
 
   describe("Schema: encodingSchema", () => {
     it("devrait valider les encodages autorisés", () => {
-      const validEncodings = ["7bit", "8bit", "binary", "base64", "quoted-printable"];
+      const validEncodings = [
+        "7bit",
+        "8bit",
+        "binary",
+        "base64",
+        "quoted-printable",
+      ];
 
       for (const encoding of validEncodings) {
         const result = encodingSchema.safeParse(encoding);
@@ -617,7 +623,10 @@ describe("Upload Module - Tests de validation", () => {
     });
 
     it("devrait combiner toutes les extensions dans ALLOWED_ALL_EXTENSIONS", () => {
-      const combined = [...ALLOWED_IMAGE_EXTENSIONS, ...ALLOWED_DOCUMENT_EXTENSIONS];
+      const combined = [
+        ...ALLOWED_IMAGE_EXTENSIONS,
+        ...ALLOWED_DOCUMENT_EXTENSIONS,
+      ];
       expect(ALLOWED_ALL_EXTENSIONS).toEqual(combined);
     });
 

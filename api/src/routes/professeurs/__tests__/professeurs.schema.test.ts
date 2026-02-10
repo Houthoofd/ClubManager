@@ -19,7 +19,7 @@ import {
   GetPlanningProfesseurData,
   UtilisateurData,
   CoursData,
-} from "../core/validators/professeur.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Professeurs Module - Schémas et Configuration", () => {
   describe("Schémas Zod - Structure", () => {

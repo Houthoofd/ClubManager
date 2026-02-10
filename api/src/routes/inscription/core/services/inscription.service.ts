@@ -3,9 +3,13 @@
  * Contient toute la logique métier pour l'inscription des utilisateurs
  */
 
-import bcrypt from "bcrypt";
 import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
-import type { InscriptionData } from "../validators/inscription.schema.js";
+import type { InscriptionData } from "@clubmanager/types/validators";
+import {
+  hashPassword,
+  verifyPassword,
+  validatePasswordPolicy,
+} from "../../../../shared/utils/password.helpers.js";
 
 /**
  * Résultat de la vérification d'email
@@ -65,20 +69,19 @@ export class InscriptionService {
   }
 
   /**
-   * Hash un mot de passe avec bcrypt
+   * Hash un mot de passe en utilisant les helpers partagés
    * @param password - Mot de passe en clair
    * @returns Mot de passe hashé
    */
-  async hashPassword(password: string): Promise<string> {
+  async hashPasswordInternal(password: string): Promise<string> {
     try {
-      const saltRounds = 10;
-      return await bcrypt.hash(password, saltRounds);
+      return await hashPassword(password);
     } catch (error) {
       console.error(
         "[InscriptionService] Erreur lors du hashage du mot de passe:",
         error,
       );
-      throw new Error("Erreur lors du traitement du mot de passe");
+      throw new Error("Erreur lors du hashage du mot de passe");
     }
   }
 
@@ -151,8 +154,8 @@ export class InscriptionService {
         };
       }
 
-      // 3. Hasher le mot de passe
-      const hashedPassword = await this.hashPassword(data.password);
+      // 2. Hasher le mot de passe
+      const hashedPassword = await this.hashPasswordInternal(data.password);
 
       // 4. Préparer les données pour l'insertion
       const userData = {

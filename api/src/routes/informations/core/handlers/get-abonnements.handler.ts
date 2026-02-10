@@ -6,6 +6,10 @@
 import { Request, Response } from "express";
 import { Informations } from "../../../../db/clients/informations/informations.js";
 import { obtenirAbonnements } from "../services/informations.service.js";
+import {
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer tous les plans tarifaires
@@ -18,25 +22,24 @@ import { obtenirAbonnements } from "../services/informations.service.js";
 export async function getAbonnements(
   req: Request,
   res: Response,
-  informationsClient?: Informations
+  informationsClient?: Informations,
 ): Promise<void> {
   try {
-    console.log("💳 [Handler Informations] GET /abonnements - Récupération des plans tarifaires");
+    console.log(
+      "💳 [Handler Informations] GET /abonnements - Récupération des plans tarifaires",
+    );
 
     // Récupérer les plans tarifaires via le service
     const abonnements = await obtenirAbonnements(informationsClient);
 
     if (!abonnements || abonnements.length === 0) {
       console.log("⚠️ [Handler Informations] Aucun plan tarifaire trouvé");
-      res.status(404).json({
-        success: false,
-        message: "Aucun plan tarifaire trouvé",
-        data: [],
-      });
-      return;
+      throw new NotFoundError("Aucun plan tarifaire trouvé");
     }
 
-    console.log(`✅ [Handler Informations] ${abonnements.length} plans tarifaires récupérés`);
+    console.log(
+      `✅ [Handler Informations] ${abonnements.length} plans tarifaires récupérés`,
+    );
 
     res.status(200).json({
       success: true,
@@ -45,12 +48,19 @@ export async function getAbonnements(
       count: abonnements.length,
     });
   } catch (error) {
-    console.error("❌ [Handler Informations] Erreur récupération plans tarifaires:", error);
+    console.error(
+      "❌ [Handler Informations] Erreur récupération plans tarifaires:",
+      error,
+    );
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des plans tarifaires",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des plans tarifaires",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

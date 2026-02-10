@@ -9,7 +9,7 @@ import {
   inscriptionSchema,
   InscriptionData,
   VerificationEmailData,
-} from "../core/validators/inscription.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Inscription Module - Schémas et Configuration", () => {
   describe("Schémas Zod - Structure", () => {
@@ -473,7 +473,7 @@ describe("Inscription Module - Schémas et Configuration", () => {
       const twoYearsAgo = new Date(
         today.getFullYear() - 2,
         today.getMonth(),
-        today.getDate()
+        today.getDate(),
       );
       const dateStr = twoYearsAgo.toISOString().split("T")[0];
 
@@ -495,7 +495,7 @@ describe("Inscription Module - Schémas et Configuration", () => {
       const fiveYearsAgo = new Date(
         today.getFullYear() - 5,
         today.getMonth(),
-        today.getDate()
+        today.getDate(),
       );
       const dateStr = fiveYearsAgo.toISOString().split("T")[0];
 
@@ -517,7 +517,7 @@ describe("Inscription Module - Schémas et Configuration", () => {
       const oneHundredTwentyYearsAgo = new Date(
         today.getFullYear() - 120,
         today.getMonth(),
-        today.getDate()
+        today.getDate(),
       );
       const dateStr = oneHundredTwentyYearsAgo.toISOString().split("T")[0];
 
@@ -706,7 +706,7 @@ describe("Inscription Module - Schémas et Configuration", () => {
       const twoYearsAgo = new Date(
         today.getFullYear() - 2,
         today.getMonth(),
-        today.getDate()
+        today.getDate(),
       );
       const dateStr = twoYearsAgo.toISOString().split("T")[0];
 

@@ -14,6 +14,11 @@ import {
   obtenirProgressionUtilisateur,
   obtenirPresenceParMois,
 } from "../services/index.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer les statistiques de fréquentation
@@ -31,11 +36,12 @@ export async function getFrequentation(req: Request, res: Response) {
     const userId = parseInt(utilisateurId);
     if (isNaN(userId) || userId <= 0) {
       console.log(`⚠️ [Handler] ID utilisateur invalide: ${utilisateurId}`);
-      return res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "utilisateurId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     const data = await obtenirStatistiquesFrequentation(userId);
@@ -59,19 +65,18 @@ export async function getFrequentation(req: Request, res: Response) {
       error instanceof Error ? error.message : "Erreur inconnue";
 
     if (errorMessage.includes("Aucune statistique")) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucune statistique de fréquentation trouvée",
-        error: errorMessage,
-      });
+      throw new NotFoundError("Aucune statistique de fréquentation trouvée");
     }
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Erreur serveur lors de la récupération des statistiques de fréquentation",
-      error: errorMessage,
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des statistiques de fréquentation",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -91,11 +96,12 @@ export async function getProgression(req: Request, res: Response) {
     const parsedUserId = parseInt(userId);
     if (isNaN(parsedUserId) || parsedUserId <= 0) {
       console.log(`⚠️ [Handler] ID utilisateur invalide: ${userId}`);
-      return res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     const data = await obtenirProgressionUtilisateur(parsedUserId);
@@ -119,18 +125,20 @@ export async function getProgression(req: Request, res: Response) {
       error instanceof Error ? error.message : "Erreur inconnue";
 
     if (errorMessage.includes("Aucune progression")) {
-      return res.status(404).json({
-        success: false,
-        message: "Aucune progression trouvée pour cet utilisateur",
-        error: errorMessage,
-      });
+      throw new NotFoundError(
+        "Aucune progression trouvée pour cet utilisateur",
+      );
     }
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération de la progression",
-      error: errorMessage,
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération de la progression",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -150,11 +158,12 @@ export async function getPresence(req: Request, res: Response) {
     const parsedUserId = parseInt(userId);
     if (isNaN(parsedUserId) || parsedUserId <= 0) {
       console.log(`⚠️ [Handler] ID utilisateur invalide: ${userId}`);
-      return res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     const data = await obtenirPresenceParMois(parsedUserId);
@@ -174,11 +183,15 @@ export async function getPresence(req: Request, res: Response) {
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des présences",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des présences",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -198,11 +211,12 @@ export async function getPresenceRaw(req: Request, res: Response) {
     const parsedUserId = parseInt(userId);
     if (isNaN(parsedUserId) || parsedUserId <= 0) {
       console.log(`⚠️ [Handler] ID utilisateur invalide: ${userId}`);
-      return res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     const data = await obtenirPresenceParMois(parsedUserId);
@@ -223,10 +237,14 @@ export async function getPresenceRaw(req: Request, res: Response) {
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des présences brutes",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des présences brutes",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

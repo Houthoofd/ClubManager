@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
 import { Cours } from "../../../../db/clients/cours/cours.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour retirer un ou plusieurs professeurs d'un cours récurrent
@@ -20,11 +25,10 @@ export async function retirerProfesseur(
       professeursNoms.length === 0 ||
       !jour
     ) {
-      res.status(400).json({
-        success: false,
-        message: "professeursNoms (array) et jour requis.",
-      });
-      return;
+      throw new ValidationError("professeursNoms (array) et jour requis", [
+        { field: "professeursNoms", message: "Tableau de noms requis" },
+        { field: "jour", message: "Champ requis" },
+      ]);
     }
 
     // Vérifier que les noms de professeurs ne sont pas null/undefined/vides
@@ -34,13 +38,16 @@ export async function retirerProfesseur(
 
     if (professeursValides.length === 0) {
       console.error("❌ Aucun nom de professeur valide dans:", professeursNoms);
-      res.status(400).json({
-        success: false,
-        message:
-          "Aucun nom de professeur valide fourni. Noms reçus: " +
+      throw new ValidationError(
+        "Aucun nom de professeur valide fourni. Noms reçus: " +
           JSON.stringify(professeursNoms),
-      });
-      return;
+        [
+          {
+            field: "professeursNoms",
+            message: "Aucun nom de professeur valide fourni",
+          },
+        ],
+      );
     }
 
     if (professeursValides.length !== professeursNoms.length) {
@@ -80,10 +87,9 @@ export async function retirerProfesseur(
           data: result,
         });
       } else {
-        res.status(404).json({
-          success: false,
-          message: result.message,
-        });
+        throw new NotFoundError(
+          result.message || "Professeur(s) non trouvé(s)",
+        );
       }
     } else {
       console.log("⚠️ Utilisation de la méthode avec résolution automatique");
@@ -104,18 +110,22 @@ export async function retirerProfesseur(
           data: result,
         });
       } else {
-        res.status(404).json({
-          success: false,
-          message: result.message,
-        });
+        throw new NotFoundError(
+          result.message || "Professeur(s) non trouvé(s)",
+        );
       }
     }
   } catch (error) {
     console.error("❌ [Retirer Professeur] Erreur:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors du retrait du professeur",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors du retrait du professeur",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

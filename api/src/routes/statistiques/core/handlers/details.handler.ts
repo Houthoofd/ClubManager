@@ -23,15 +23,13 @@ import {
   getProchainsAnniversaires,
   getArticlesPlusVendus,
 } from "../services/index.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour obtenir les 10 derniers paiements
  * GET /api/statistiques/paiements/derniers
  */
-export async function getDerniersPaiementsHandler(
-  req: Request,
-  res: Response,
-) {
+export async function getDerniersPaiementsHandler(req: Request, res: Response) {
   console.log("📊 [Handler] GET /api/statistiques/paiements/derniers");
 
   try {
@@ -51,11 +49,10 @@ export async function getDerniersPaiementsHandler(
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des derniers paiements",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des derniers paiements",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -80,11 +77,10 @@ export async function getPaiementsEchusHandler(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération paiements échus:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des paiements échus",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des paiements échus",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -109,11 +105,10 @@ export async function getNouveauxMembresHandler(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération nouveaux membres:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des nouveaux membres",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des nouveaux membres",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -121,10 +116,7 @@ export async function getNouveauxMembresHandler(req: Request, res: Response) {
  * Handler pour obtenir le top 5 des membres les plus assidus
  * GET /api/statistiques/membres/assidus
  */
-export async function getTopMembresAssidusHandler(
-  req: Request,
-  res: Response,
-) {
+export async function getTopMembresAssidusHandler(req: Request, res: Response) {
   console.log("📊 [Handler] GET /api/statistiques/membres/assidus");
 
   try {
@@ -141,11 +133,10 @@ export async function getTopMembresAssidusHandler(
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération membres assidus:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des membres assidus",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des membres assidus",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -168,16 +159,12 @@ export async function getMembresParGradeHandler(req: Request, res: Response) {
       message: "Répartition des membres par grade récupérée avec succès",
     });
   } catch (error) {
-    console.error(
-      "❌ [Handler] Erreur récupération membres par grade:",
-      error,
-    );
+    console.error("❌ [Handler] Erreur récupération membres par grade:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des membres par grade",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des membres par grade",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -200,16 +187,12 @@ export async function getMembresParGenreHandler(req: Request, res: Response) {
       message: "Répartition des membres par genre récupérée avec succès",
     });
   } catch (error) {
-    console.error(
-      "❌ [Handler] Erreur récupération membres par genre:",
-      error,
-    );
+    console.error("❌ [Handler] Erreur récupération membres par genre:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des membres par genre",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des membres par genre",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -237,11 +220,10 @@ export async function getProchainsAnniversairesHandler(
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération anniversaires:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des anniversaires",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des anniversaires",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -258,7 +240,9 @@ export async function getArticlesPlusVendusHandler(
   try {
     const data = await getArticlesPlusVendus();
 
-    console.log(`✅ [Handler] ${data.length} articles les plus vendus récupérés`);
+    console.log(
+      `✅ [Handler] ${data.length} articles les plus vendus récupérés`,
+    );
 
     return res.status(200).json({
       success: true,
@@ -272,10 +256,9 @@ export async function getArticlesPlusVendusHandler(
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des articles vendus",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des articles vendus",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

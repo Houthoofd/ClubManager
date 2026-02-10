@@ -7,6 +7,11 @@ import { Paiements } from "../../../../db/clients/paiements/paiements.js";
 import { EmailClient } from "../../../../db/clients/messagerie/emailClient.js";
 import { formatMontant } from "../utils/format-montant.js";
 import { getStripeInstance } from "../utils/stripe-instance.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Confirme un paiement d'échéance
@@ -27,16 +32,22 @@ export async function confirmPayment(
 
     // Validation des paramètres
     if (!paymentIntentId || !echeanceId || !userId) {
-      res.status(400).json({
-        error: "Données manquantes pour la confirmation de paiement",
-        required: ["paymentIntentId", "echeanceId", "userId"],
-      });
-      return;
+      throw new ValidationError(
+        "Données manquantes pour la confirmation de paiement",
+        [
+          { field: "paymentIntentId", message: "PaymentIntent ID requis" },
+          { field: "echeanceId", message: "Échéance ID requis" },
+          { field: "userId", message: "User ID requis" },
+        ],
+      );
     }
 
+    const stripe = getStripeInstance();
     if (!stripe) {
-      res.status(503).json({ error: "Service Stripe non disponible" });
-      return;
+      throw new InternalServerError(
+        "Service Stripe non disponible",
+        new Error("Stripe non initialisé"),
+      );
     }
 
     const paiements = new Paiements();
@@ -52,11 +63,7 @@ export async function confirmPayment(
     ]);
 
     if (echeanceCheck.length === 0) {
-      res.status(404).json({
-        error: "Échéance non trouvée",
-        echeanceId: parseInt(echeanceId),
-      });
-      return;
+      throw new NotFoundError(`Échéance non trouvée: ${echeanceId}`);
     }
 
     const echeanceActuelle = echeanceCheck[0];
@@ -128,12 +135,10 @@ export async function confirmPayment(
           );
           // Continue avec le succès
         } else {
-          res.status(500).json({
-            error: "Impossible de mettre à jour l'échéance",
-            details: "L'échéance n'a pas pu être marquée comme payée",
-            echeanceId: parseInt(echeanceId),
-          });
-          return;
+          throw new InternalServerError(
+            "Impossible de mettre à jour l'échéance",
+            new Error("L'échéance n'a pas pu être marquée comme payée"),
+          );
         }
       } else {
         console.log("✅ [ConfirmPayment] Échéance marquée comme payée:", {
@@ -162,13 +167,10 @@ export async function confirmPayment(
           );
           // Continuer avec le succès
         } else {
-          res.status(500).json({
-            error: "Erreur de contrainte de base de données",
-            details: "Conflit détecté - veuillez réessayer",
-            code: "CONSTRAINT_VIOLATION",
-            sqlMessage: updateError.sqlMessage,
-          });
-          return;
+          throw new InternalServerError(
+            "Erreur de contrainte de base de données - conflit détecté",
+            updateError,
+          );
         }
       } else {
         throw updateError;
@@ -303,10 +305,9 @@ export async function confirmPayment(
       return;
     }
 
-    res.status(500).json({
-      error: "Erreur lors de la confirmation du paiement",
-      details: error.message,
-      error_code: error.code,
-    });
+    throw new InternalServerError(
+      "Erreur lors de la confirmation du paiement",
+      error,
+    );
   }
 }

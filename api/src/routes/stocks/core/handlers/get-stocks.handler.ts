@@ -6,6 +6,10 @@
 import { Request, Response } from "express";
 import { Stocks } from "../../../../db/clients/stocks/stocks.js";
 import { obtenirStocks } from "../services/stocks.service.js";
+import {
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer tous les stocks
@@ -18,7 +22,7 @@ import { obtenirStocks } from "../services/stocks.service.js";
 export async function getStocks(
   req: Request,
   res: Response,
-  stocksClient?: Stocks
+  stocksClient?: Stocks,
 ): Promise<void> {
   try {
     console.log("📦 [Handler Stocks] GET /stocks - Récupération des stocks");
@@ -28,12 +32,7 @@ export async function getStocks(
 
     if (!stocks || stocks.length === 0) {
       console.log("⚠️ [Handler Stocks] Aucun stock trouvé");
-      res.status(404).json({
-        success: false,
-        message: "Aucun stock trouvé",
-        data: [],
-      });
-      return;
+      throw new NotFoundError("Aucun stock trouvé");
     }
 
     console.log(`✅ [Handler Stocks] ${stocks.length} stocks récupérés`);
@@ -47,10 +46,14 @@ export async function getStocks(
   } catch (error) {
     console.error("❌ [Handler Stocks] Erreur récupération stocks:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des stocks",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des stocks",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

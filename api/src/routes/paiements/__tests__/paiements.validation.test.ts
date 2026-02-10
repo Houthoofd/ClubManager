@@ -9,14 +9,14 @@ import {
   createPaymentIntentCommandeSchema,
   confirmEcheancePaymentSchema,
   confirmCommandePaymentSchema,
-} from "../core/validators/paiement.schema.js";
+} from "@clubmanager/types/validators";
 import { z } from "zod";
 
 describe("Paiements Validation - Schémas Zod", () => {
   describe("createPaymentIntentEcheanceSchema", () => {
     it("devrait valider des données correctes", () => {
       const validData = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
         userId: 1,
         currency: "eur",
@@ -30,7 +30,7 @@ describe("Paiements Validation - Schémas Zod", () => {
 
     it("devrait accepter les valeurs par défaut", () => {
       const minimalData = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
         userId: 1,
       };
@@ -47,9 +47,9 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow(
-        z.ZodError
-      );
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow(z.ZodError);
     });
 
     it("devrait rejeter un montant négatif", () => {
@@ -59,9 +59,9 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow(
-        "Le montant doit être positif"
-      );
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow("Le montant doit être positif");
     });
 
     it("devrait rejeter un montant inférieur à 0.50€", () => {
@@ -71,9 +71,9 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow(
-        "Le montant minimum est 0.50€"
-      );
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow("Le montant minimum est 0.50€");
     });
 
     it("devrait rejeter un montant supérieur à 999,999€", () => {
@@ -83,14 +83,14 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow(
-        "Le montant maximum est 999,999€"
-      );
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow("Le montant maximum est 999,999€");
     });
 
     it("devrait accepter les montants limites valides", () => {
       const dataMin = {
-        amount: 0.50,
+        amount: 0.5,
         echeanceId: 1,
         userId: 1,
       };
@@ -101,46 +101,58 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(dataMin)).not.toThrow();
-      expect(() => createPaymentIntentEcheanceSchema.parse(dataMax)).not.toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(dataMin),
+      ).not.toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(dataMax),
+      ).not.toThrow();
     });
 
     it("devrait rejeter un echeanceId manquant", () => {
       const invalidData = {
-        amount: 25.50,
+        amount: 25.5,
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait rejeter un echeanceId non entier", () => {
       const invalidData = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1.5,
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait rejeter un echeanceId négatif", () => {
       const invalidData = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: -1,
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait rejeter un userId manquant", () => {
       const invalidData = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait accepter les devises supportées", () => {
@@ -148,34 +160,36 @@ describe("Paiements Validation - Schémas Zod", () => {
 
       devises.forEach((currency) => {
         const data = {
-          amount: 25.50,
+          amount: 25.5,
           echeanceId: 1,
           userId: 1,
           currency,
         };
 
-        expect(() => createPaymentIntentEcheanceSchema.parse(data)).not.toThrow();
+        expect(() =>
+          createPaymentIntentEcheanceSchema.parse(data),
+        ).not.toThrow();
       });
     });
 
     it("devrait rejeter une devise non supportée", () => {
       const invalidData = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
         userId: 1,
         currency: "jpy",
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow(
-        "Devise non supportée"
-      );
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow("Devise non supportée");
     });
   });
 
   describe("createPaymentIntentCommandeSchema", () => {
     it("devrait valider une commande avec ID numérique", () => {
       const validData = {
-        amount: 45.00,
+        amount: 45.0,
         commande: 5,
         userId: 2,
       };
@@ -187,7 +201,7 @@ describe("Paiements Validation - Schémas Zod", () => {
 
     it("devrait valider une commande avec objet", () => {
       const validData = {
-        amount: 45.00,
+        amount: 45.0,
         commande: {
           id: 5,
           articles: [{ id: 1, quantite: 2 }],
@@ -205,36 +219,42 @@ describe("Paiements Validation - Schémas Zod", () => {
 
     it("devrait rejeter une commande manquante", () => {
       const invalidData = {
-        amount: 45.00,
+        amount: 45.0,
         userId: 2,
       };
 
-      expect(() => createPaymentIntentCommandeSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentCommandeSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait rejeter une commande null", () => {
       const invalidData = {
-        amount: 45.00,
+        amount: 45.0,
         commande: null,
         userId: 2,
       };
 
-      expect(() => createPaymentIntentCommandeSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentCommandeSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait rejeter un ID de commande négatif", () => {
       const invalidData = {
-        amount: 45.00,
+        amount: 45.0,
         commande: -5,
         userId: 2,
       };
 
-      expect(() => createPaymentIntentCommandeSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentCommandeSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait accepter userId optionnel", () => {
       const validData = {
-        amount: 45.00,
+        amount: 45.0,
         commande: 5,
       };
 
@@ -267,7 +287,7 @@ describe("Paiements Validation - Schémas Zod", () => {
       };
 
       expect(() => confirmEcheancePaymentSchema.parse(invalidData)).toThrow(
-        "L'ID du Payment Intent doit commencer par 'pi_'"
+        "L'ID du Payment Intent doit commencer par 'pi_'",
       );
     });
 
@@ -280,7 +300,7 @@ describe("Paiements Validation - Schémas Zod", () => {
       };
 
       expect(() => confirmEcheancePaymentSchema.parse(invalidData)).toThrow(
-        "L'ID du Payment Intent est trop court"
+        "L'ID du Payment Intent est trop court",
       );
     });
 
@@ -413,19 +433,21 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow(
-        "Le montant doit être un nombre"
-      );
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow("Le montant doit être un nombre");
     });
 
     it("devrait rejeter un echeanceId de type string", () => {
       const invalidData = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: "1",
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait rejeter un paymentIntentId de type number", () => {
@@ -443,13 +465,13 @@ describe("Paiements Validation - Schémas Zod", () => {
   describe("Champs optionnels", () => {
     it("devrait accepter description optionnelle", () => {
       const data1 = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
         userId: 1,
       };
 
       const data2 = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
         userId: 1,
         description: "Ma description",
@@ -464,13 +486,13 @@ describe("Paiements Validation - Schémas Zod", () => {
 
     it("devrait accepter currency optionnelle", () => {
       const data1 = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
         userId: 1,
       };
 
       const data2 = {
-        amount: 25.50,
+        amount: 25.5,
         echeanceId: 1,
         userId: 1,
         currency: "usd",
@@ -487,12 +509,14 @@ describe("Paiements Validation - Schémas Zod", () => {
   describe("Cas limites", () => {
     it("devrait accepter le montant minimum valide (0.50€)", () => {
       const validData = {
-        amount: 0.50,
+        amount: 0.5,
         echeanceId: 1,
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(validData)).not.toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(validData),
+      ).not.toThrow();
     });
 
     it("devrait accepter le montant maximum valide (999,999€)", () => {
@@ -502,7 +526,9 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(validData)).not.toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(validData),
+      ).not.toThrow();
     });
 
     it("devrait rejeter 0.49€ (juste en dessous du minimum)", () => {
@@ -512,7 +538,9 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait rejeter 1,000,000€ (juste au-dessus du maximum)", () => {
@@ -522,7 +550,9 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(invalidData)).toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(invalidData),
+      ).toThrow();
     });
 
     it("devrait accepter des montants avec décimales", () => {
@@ -532,7 +562,9 @@ describe("Paiements Validation - Schémas Zod", () => {
         userId: 1,
       };
 
-      expect(() => createPaymentIntentEcheanceSchema.parse(validData)).not.toThrow();
+      expect(() =>
+        createPaymentIntentEcheanceSchema.parse(validData),
+      ).not.toThrow();
     });
   });
 });

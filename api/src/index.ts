@@ -9,6 +9,7 @@ import http from "http";
 import { Server } from "socket.io";
 import fs from "fs";
 import { Router } from "express";
+import { initializeSentry } from "./shared/config/sentry.config.js";
 
 // CORRIGÉ: Chargement du .env avec priorité sur NODE_ENV
 const nodeEnv = process.env.NODE_ENV || "development";
@@ -32,6 +33,31 @@ if (!fs.existsSync(envPath)) {
 
 console.log(`📁 [Server] Chargement fichier .env: ${envPath}`);
 dotenv.config({ path: envPath });
+
+// Initialiser Sentry au démarrage (après chargement des variables d'environnement)
+console.log("🔍 [Server] Initialisation de Sentry...");
+if (process.env.SENTRY_ENABLED === "true") {
+  try {
+    initializeSentry();
+    console.log("✅ [Sentry] Monitoring initialisé avec succès");
+    console.log(
+      `   - Environment: ${process.env.SENTRY_ENVIRONMENT || "development"}`,
+    );
+    console.log(
+      `   - DSN configuré: ${process.env.SENTRY_DSN ? "Oui" : "Non"}`,
+    );
+    console.log(`   - Sample Rate: ${process.env.SENTRY_SAMPLE_RATE || "1.0"}`);
+    console.log(
+      `   - Traces Sample Rate: ${process.env.SENTRY_TRACES_SAMPLE_RATE || "0.1"}`,
+    );
+  } catch (error) {
+    console.error("❌ [Sentry] Erreur lors de l'initialisation:", error);
+    console.error("   Le monitoring Sentry ne sera pas actif");
+  }
+} else {
+  console.log("⚠️ [Sentry] Monitoring désactivé (SENTRY_ENABLED !== 'true')");
+  console.log("   Pour activer Sentry, définir SENTRY_ENABLED=true dans .env");
+}
 
 // AJOUTÉ: Debug des variables d'environnement CORS
 console.log("🌐 [Server] Configuration CORS - Variables d'environnement:");

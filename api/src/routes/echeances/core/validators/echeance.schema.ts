@@ -213,13 +213,7 @@ export const diagnosticEcheanceSchema = z.object({
 
 /**
  * Types TypeScript dérivés des schemas
+ *
+ * ⚠️ Les types ont été déplacés vers @club-manager/types
+ * Importez-les depuis : import { CreateEcheanceData, ... } from '@club-manager/types';
  */
-export type GetEcheancesUtilisateurData = z.infer<
-  typeof getEcheancesUtilisateurSchema
->;
-export type GetEcheanceDetailData = z.infer<typeof getEcheanceDetailSchema>;
-export type CreateEcheanceData = z.infer<typeof createEcheanceSchema>;
-export type UpdateEcheanceData = z.infer<typeof updateEcheanceSchema>;
-export type DeleteEcheanceData = z.infer<typeof deleteEcheanceSchema>;
-export type GetStatistiquesData = z.infer<typeof getStatistiquesSchema>;
-export type DiagnosticEcheanceData = z.infer<typeof diagnosticEcheanceSchema>;

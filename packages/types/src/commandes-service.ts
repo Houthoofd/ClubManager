@@ -32,7 +32,13 @@ export interface Commande {
 /**
  * Statut de commande
  */
-export type CommandeStatut = 'en_attente' | 'confirmee' | 'en_preparation' | 'livree' | 'annulee';
+export type CommandeStatut =
+  | "en_attente"
+  | "confirmee"
+  | "en_preparation"
+  | "expediee"
+  | "livree"
+  | "annulee";
 
 /**
  * Données pour créer une commande
@@ -74,6 +80,7 @@ export interface CommandeStats {
   commandesEnAttente: number;
   commandesConfirmees: number;
   commandesEnPreparation: number;
+  commandesExpediees: number;
   commandesLivrees: number;
   commandesAnnulees: number;
   revenuTotal: number;

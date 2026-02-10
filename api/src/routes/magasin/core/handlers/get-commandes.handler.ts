@@ -1,8 +1,13 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { obtenirLesCommandes } from "../services/index.js";
-import { getCommandesUtilisateurSchema } from "../validators/index.js";
+import { getCommandesUtilisateurSchema } from "@clubmanager/types/validators";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
+import {
+  ValidationError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer toutes les commandes
@@ -28,10 +33,9 @@ export async function getCommandes(
       "❌ [Handler Commandes] Erreur récupération commandes:",
       error,
     );
-    res.status(500).json({
-      message: "Erreur lors de la récupération des commandes",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des commandes",
+    );
   }
 }
 
@@ -67,20 +71,18 @@ export async function getCommandesUtilisateur(
         "❌ [Handler Commandes] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des paramètres",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des paramètres",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error(
       "❌ [Handler Commandes] Erreur récupération commandes:",
       error,
     );
-    res.status(500).json({
-      message: "Erreur lors de la récupération des commandes",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des commandes",
+    );
   }
 }

@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
 import { Auth } from "../../../../db/clients/auth/auth.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+  EmailError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour la demande de réinitialisation de mot de passe
@@ -12,8 +18,7 @@ export async function forgotPassword(
     const { email } = req.body;
 
     if (!email) {
-      res.status(400).json({ error: "Email requis" });
-      return;
+      throw new ValidationError("Email requis");
     }
 
     console.log("🔄 [Auth] Demande réinitialisation mot de passe pour:", email);
@@ -76,7 +81,10 @@ export async function forgotPassword(
       console.log("✅ [Auth] Email de réinitialisation envoyé à:", email);
     } catch (emailError) {
       console.error("❌ [Auth] Erreur envoi email:", emailError);
-      // Continuer même si l'email échoue
+      throw new EmailError(
+        "Impossible d'envoyer l'email de réinitialisation",
+        emailError instanceof Error ? emailError : undefined,
+      );
     }
 
     res.json({
@@ -85,6 +93,20 @@ export async function forgotPassword(
     });
   } catch (error: any) {
     console.error("❌ [Auth] Erreur forgot-password:", error);
-    res.status(500).json({ error: "Erreur serveur" });
+
+    // Re-throw si c'est déjà une erreur applicative
+    if (
+      error instanceof ValidationError ||
+      error instanceof NotFoundError ||
+      error instanceof EmailError
+    ) {
+      throw error;
+    }
+
+    // Sinon, wrapper dans InternalServerError
+    throw new InternalServerError(
+      "Erreur serveur lors de la réinitialisation du mot de passe",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

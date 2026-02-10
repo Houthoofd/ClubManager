@@ -6,6 +6,11 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "../../../../infrastructure/database/prisma-client.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Récupère une commande par son ID avec tous ses détails
@@ -23,10 +28,7 @@ export async function getCommande(
     console.log(`🔄 [API] Récupération de la commande ${commandeId}...`);
 
     if (isNaN(commandeId)) {
-      res.status(400).json({
-        message: "ID de commande invalide",
-      });
-      return;
+      throw new ValidationError("ID de commande invalide");
     }
 
     // Récupérer la commande avec toutes ses relations
@@ -58,10 +60,7 @@ export async function getCommande(
     });
 
     if (!commande) {
-      res.status(404).json({
-        message: "Commande non trouvée",
-      });
-      return;
+      throw new NotFoundError("Commande non trouvée");
     }
 
     console.log(
@@ -74,9 +73,8 @@ export async function getCommande(
       "❌ [API] Erreur lors de la récupération de la commande:",
       error,
     );
-    res.status(500).json({
-      message: "Erreur lors de la récupération de la commande",
-      error: error.message,
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération de la commande",
+    );
   }
 }

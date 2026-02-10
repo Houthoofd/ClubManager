@@ -7,6 +7,13 @@ import {
   DataInscription,
   BookResult,
 } from "@clubmanager/types";
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
+import { formatZodErrors } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour inscrire un utilisateur à un cours
@@ -44,11 +51,7 @@ export async function inscrireUtilisateur(
         !verifInscriptionUtilisateur.isFind ||
         !verifInscriptionUtilisateur.data
       ) {
-        res.status(404).json({
-          success: false,
-          message: "Utilisateur introuvable.",
-        });
-        return;
+        throw new NotFoundError("Utilisateur introuvable");
       }
 
       // Si l'utilisateur n'est pas encore inscrit, on procède à l'inscription
@@ -73,51 +76,44 @@ export async function inscrireUtilisateur(
         });
       } else if (result.message?.includes("complet")) {
         // Cours complet
-        res.status(400).json({
-          success: false,
-          message: "Le cours est complet.",
-        });
+        throw new ValidationError("Le cours est complet", [
+          {
+            field: "cours_id",
+            message: "Le cours est complet",
+          },
+        ]);
       } else {
-        res.status(500).json({
-          success: false,
-          message: "Erreur lors de l'inscription de l'utilisateur au cours.",
-        });
+        throw new InternalServerError(
+          "Erreur lors de l'inscription de l'utilisateur au cours",
+        );
       }
     } else {
-      res.status(409).json({
-        success: false,
-        message: "Utilisateur déjà inscrit au cours.",
-      });
+      throw new ConflictError("Utilisateur déjà inscrit au cours");
     }
   } catch (error) {
-    // Vérifier si c'est une erreur Zod (via instanceof ou nom de classe)
-    const isZodError =
-      error instanceof z.ZodError ||
-      (error && typeof error === "object" && "issues" in error) ||
-      (error &&
-        typeof error === "object" &&
-        error.constructor?.name === "ZodError");
+    console.error("❌ [Inscrire Utilisateur] Erreur:", error);
 
-    if (isZodError && error && typeof error === "object" && "errors" in error) {
-      console.error("❌ [Inscrire Utilisateur] Erreur de validation:", error);
-
-      // Extraire le premier message d'erreur pour plus de clarté
-      const errors = (error as any).errors || (error as any).issues || [];
-      const firstError = errors[0];
-      const message = firstError?.message || "Données invalides";
-
-      res.status(400).json({
-        success: false,
-        message: message,
-        errors: errors,
-      });
-    } else {
-      console.error("❌ [Inscrire Utilisateur] Erreur:", error);
-      res.status(500).json({
-        success: false,
-        message: "Erreur serveur lors de l'inscription de l'utilisateur.",
-        error: error instanceof Error ? error.message : "Erreur inconnue",
-      });
+    // Gestion des erreurs de validation Zod
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Données invalides",
+        formatZodErrors(error.errors),
+      );
     }
+
+    // Re-throw les erreurs GraphQL
+    if (
+      error instanceof ValidationError ||
+      error instanceof NotFoundError ||
+      error instanceof ConflictError ||
+      error instanceof InternalServerError
+    ) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de l'inscription de l'utilisateur",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

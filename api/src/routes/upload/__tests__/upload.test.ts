@@ -44,7 +44,7 @@ import {
   ALLOWED_ALL_EXTENSIONS,
   MAX_FILE_SIZE,
   MAX_IMAGE_SIZE,
-} from "../core/validators/upload.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Upload Module - Tests unitaires de base", () => {
   beforeEach(() => {

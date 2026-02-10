@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { emailsService } from '../services/email.service.js';
+import { Request, Response } from "express";
+import { emailsService } from "../services/email.service.js";
 import {
   sendCustomEmailSchema,
   sendTestEmailSchema,
@@ -10,8 +10,15 @@ import {
   confirmEmailSchema,
   messageHistorySchema,
   emailStatsSchema,
-} from '../validators/email.schemas.js';
-import { z } from 'zod';
+} from "@clubmanager/types/validators";
+import { z } from "zod";
+import {
+  ValidationError,
+  NotFoundError,
+  EmailError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour envoyer un email de bienvenue
@@ -21,7 +28,7 @@ import { z } from 'zod';
  */
 export const sendWelcomeEmail = async (req: Request, res: Response) => {
   try {
-    console.log('📧 [EmailHandler] Envoi email de bienvenue');
+    console.log("📧 [EmailHandler] Envoi email de bienvenue");
 
     const validatedData = sendWelcomeEmailSchema.parse(req.body);
 
@@ -30,29 +37,29 @@ export const sendWelcomeEmail = async (req: Request, res: Response) => {
       validatedData.firstName,
       validatedData.lastName,
       validatedData.userId,
-      validatedData.utilisateurId
+      validatedData.utilisateurId,
     );
 
-    res.status(result.success ? 200 : 500).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur sendWelcomeEmail:', error);
-
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Données invalides',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+    if (!result.success) {
+      throw new EmailError(
+        result.message || "Erreur lors de l'envoi de l'email de bienvenue",
+      );
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de l\'envoi de l\'email de bienvenue',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur sendWelcomeEmail:", error);
+
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Données invalides",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de l'envoi de l'email de bienvenue",
+    );
   }
 };
 
@@ -64,7 +71,7 @@ export const sendWelcomeEmail = async (req: Request, res: Response) => {
  */
 export const sendValidationEmail = async (req: Request, res: Response) => {
   try {
-    console.log('📧 [EmailHandler] Envoi email de validation');
+    console.log("📧 [EmailHandler] Envoi email de validation");
 
     const validatedData = sendValidationEmailSchema.parse(req.body);
 
@@ -72,29 +79,29 @@ export const sendValidationEmail = async (req: Request, res: Response) => {
       validatedData.email,
       validatedData.firstName,
       validatedData.userId,
-      validatedData.utilisateurId
+      validatedData.utilisateurId,
     );
 
-    res.status(result.success ? 200 : 500).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur sendValidationEmail:', error);
-
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Données invalides',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+    if (!result.success) {
+      throw new EmailError(
+        result.message || "Erreur lors de l'envoi de l'email de validation",
+      );
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de l\'envoi de l\'email de validation',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur sendValidationEmail:", error);
+
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Données invalides",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de l'envoi de l'email de validation",
+    );
   }
 };
 
@@ -106,32 +113,28 @@ export const sendValidationEmail = async (req: Request, res: Response) => {
  */
 export const recoverUserId = async (req: Request, res: Response) => {
   try {
-    console.log('🔍 [EmailHandler] Récupération userId');
+    console.log("🔍 [EmailHandler] Récupération userId");
 
     const validatedData = recoverUserIdSchema.parse(req.body);
 
     const result = await emailsService.recoverUserId(validatedData.email);
 
-    res.status(result.success ? 200 : 404).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur recoverUserId:', error);
-
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email invalide',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+    if (!result.success) {
+      throw new NotFoundError(result.message || "Utilisateur non trouvé");
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la récupération de l\'userId',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur recoverUserId:", error);
+
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Email invalide",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    throw new InternalServerError("Erreur lors de la récupération de l'userId");
   }
 };
 
@@ -143,32 +146,28 @@ export const recoverUserId = async (req: Request, res: Response) => {
  */
 export const confirmEmail = async (req: Request, res: Response) => {
   try {
-    console.log('✅ [EmailHandler] Confirmation email');
+    console.log("✅ [EmailHandler] Confirmation email");
 
     const validatedData = confirmEmailSchema.parse(req.params);
 
     const result = await emailsService.confirmEmail(validatedData.token);
 
-    res.status(result.success ? 200 : 400).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur confirmEmail:', error);
-
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token invalide',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+    if (!result.success) {
+      throw new ValidationError(result.message || "Token invalide ou expiré");
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la confirmation de l\'email',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur confirmEmail:", error);
+
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Token invalide",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    throw new InternalServerError("Erreur lors de la confirmation de l'email");
   }
 };
 
@@ -180,32 +179,32 @@ export const confirmEmail = async (req: Request, res: Response) => {
  */
 export const sendCustomEmail = async (req: Request, res: Response) => {
   try {
-    console.log('📧 [EmailHandler] Envoi email personnalisé');
+    console.log("📧 [EmailHandler] Envoi email personnalisé");
 
     const validatedData = sendCustomEmailSchema.parse(req.body);
 
     const result = await emailsService.sendCustomEmail(validatedData);
 
-    res.status(result.success ? 200 : 500).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur sendCustomEmail:', error);
-
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Données invalides',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+    if (!result.success) {
+      throw new EmailError(
+        result.message || "Erreur lors de l'envoi de l'email personnalisé",
+      );
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de l\'envoi de l\'email personnalisé',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur sendCustomEmail:", error);
+
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Données invalides",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de l'envoi de l'email personnalisé",
+    );
   }
 };
 
@@ -217,32 +216,30 @@ export const sendCustomEmail = async (req: Request, res: Response) => {
  */
 export const sendTestEmail = async (req: Request, res: Response) => {
   try {
-    console.log('🧪 [EmailHandler] Envoi email de test');
+    console.log("🧪 [EmailHandler] Envoi email de test");
 
     const validatedData = sendTestEmailSchema.parse(req.body);
 
     const result = await emailsService.sendTestEmail(validatedData.email);
 
-    res.status(result.success ? 200 : 500).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur sendTestEmail:', error);
-
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email invalide',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+    if (!result.success) {
+      throw new EmailError(
+        result.message || "Erreur lors de l'envoi de l'email de test",
+      );
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de l\'envoi de l\'email de test',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur sendTestEmail:", error);
+
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Email invalide",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    throw new InternalServerError("Erreur lors de l'envoi de l'email de test");
   }
 };
 
@@ -254,19 +251,23 @@ export const sendTestEmail = async (req: Request, res: Response) => {
  */
 export const getAllTemplates = async (req: Request, res: Response) => {
   try {
-    console.log('📋 [EmailHandler] Récupération des templates');
+    console.log("📋 [EmailHandler] Récupération des templates");
 
     const result = await emailsService.getAllTemplates();
 
+    if (!result.success) {
+      throw new InternalServerError(
+        result.message || "Erreur lors de la récupération des templates",
+      );
+    }
+
     res.status(200).json(result);
   } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur getAllTemplates:', error);
+    console.error("❌ [EmailHandler] Erreur getAllTemplates:", error);
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la récupération des templates',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des templates",
+    );
   }
 };
 
@@ -278,32 +279,32 @@ export const getAllTemplates = async (req: Request, res: Response) => {
  */
 export const sendTemplateEmail = async (req: Request, res: Response) => {
   try {
-    console.log('📧 [EmailHandler] Envoi email avec template');
+    console.log("📧 [EmailHandler] Envoi email avec template");
 
     const validatedData = sendTemplateEmailSchema.parse(req.body);
 
     const result = await emailsService.sendTemplateEmail(validatedData);
 
-    res.status(result.success ? 200 : 500).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur sendTemplateEmail:', error);
-
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Données invalides',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+    if (!result.success) {
+      throw new EmailError(
+        result.message || "Erreur lors de l'envoi de l'email avec template",
+      );
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de l\'envoi de l\'email avec template',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur sendTemplateEmail:", error);
+
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        "Données invalides",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    throw new InternalServerError(
+      "Erreur lors de l'envoi de l'email avec template",
+    );
   }
 };
 
@@ -315,7 +316,7 @@ export const sendTemplateEmail = async (req: Request, res: Response) => {
  */
 export const getMessageHistory = async (req: Request, res: Response) => {
   try {
-    console.log('📚 [EmailHandler] Récupération historique messages');
+    console.log("📚 [EmailHandler] Récupération historique messages");
 
     const validatedData = messageHistorySchema.parse({
       utilisateurId: req.params.utilisateurId,
@@ -324,29 +325,27 @@ export const getMessageHistory = async (req: Request, res: Response) => {
 
     const result = await emailsService.getMessageHistory(
       validatedData.utilisateurId,
-      parseInt(validatedData.limit as any)
+      parseInt(validatedData.limit as any),
     );
+
+    if (!result.success) {
+      throw new NotFoundError(result.message || "Historique non trouvé");
+    }
 
     res.status(200).json(result);
   } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur getMessageHistory:', error);
+    console.error("❌ [EmailHandler] Erreur getMessageHistory:", error);
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres invalides',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+      throw new ValidationError(
+        "Paramètres invalides",
+        formatZodErrors(error.errors),
+      );
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la récupération de l\'historique',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération de l'historique",
+    );
   }
 };
 
@@ -358,7 +357,7 @@ export const getMessageHistory = async (req: Request, res: Response) => {
  */
 export const getEmailStats = async (req: Request, res: Response) => {
   try {
-    console.log('📊 [EmailHandler] Récupération statistiques emails');
+    console.log("📊 [EmailHandler] Récupération statistiques emails");
 
     const validatedData = emailStatsSchema.parse({
       utilisateurId: req.params.utilisateurId,
@@ -367,29 +366,27 @@ export const getEmailStats = async (req: Request, res: Response) => {
 
     const result = await emailsService.getEmailStats(
       validatedData.utilisateurId,
-      parseInt(validatedData.limit as any)
+      parseInt(validatedData.limit as any),
     );
+
+    if (!result.success) {
+      throw new NotFoundError(result.message || "Statistiques non trouvées");
+    }
 
     res.status(200).json(result);
   } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur getEmailStats:', error);
+    console.error("❌ [EmailHandler] Erreur getEmailStats:", error);
 
     if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres invalides',
-        errors: error.errors.map((e) => ({
-          field: e.path.join('.'),
-          message: e.message,
-        })),
-      });
+      throw new ValidationError(
+        "Paramètres invalides",
+        formatZodErrors(error.errors),
+      );
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la récupération des statistiques',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des statistiques",
+    );
   }
 };
 
@@ -401,19 +398,21 @@ export const getEmailStats = async (req: Request, res: Response) => {
  */
 export const cleanupExpiredTokens = async (req: Request, res: Response) => {
   try {
-    console.log('🧹 [EmailHandler] Nettoyage tokens expirés');
+    console.log("🧹 [EmailHandler] Nettoyage tokens expirés");
 
     const result = await emailsService.cleanupExpiredTokens();
 
+    if (!result.success) {
+      throw new InternalServerError(
+        result.message || "Erreur lors du nettoyage des tokens",
+      );
+    }
+
     res.status(200).json(result);
   } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur cleanupExpiredTokens:', error);
+    console.error("❌ [EmailHandler] Erreur cleanupExpiredTokens:", error);
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors du nettoyage des tokens',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    throw new InternalServerError("Erreur lors du nettoyage des tokens");
   }
 };
 
@@ -425,18 +424,20 @@ export const cleanupExpiredTokens = async (req: Request, res: Response) => {
  */
 export const testConfiguration = async (req: Request, res: Response) => {
   try {
-    console.log('🔧 [EmailHandler] Test configuration email');
+    console.log("🔧 [EmailHandler] Test configuration email");
 
     const result = await emailsService.testConfiguration();
 
-    res.status(result.success ? 200 : 500).json(result);
-  } catch (error: any) {
-    console.error('❌ [EmailHandler] Erreur testConfiguration:', error);
+    if (!result.success) {
+      throw new InternalServerError(
+        result.message || "Erreur lors du test de configuration",
+      );
+    }
 
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors du test de configuration',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error("❌ [EmailHandler] Erreur testConfiguration:", error);
+
+    throw new InternalServerError("Erreur lors du test de configuration");
   }
 };

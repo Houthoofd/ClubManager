@@ -12,7 +12,7 @@ import {
   planTarifaireSchema,
   allReferencesSchema,
   healthCheckSchema,
-} from "../core/validators/informations.schema.js";
+} from "@clubmanager/types/validators";
 import { z } from "zod";
 
 describe("Informations - Tests avancés des validators (Branch Coverage 100%)", () => {

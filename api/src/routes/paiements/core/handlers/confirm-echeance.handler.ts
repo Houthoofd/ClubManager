@@ -1,9 +1,16 @@
 import { Request, Response } from "express";
 import { ConfirmationService } from "../services/confirmation.service.js";
-import { confirmEcheancePaymentSchema } from "../validators/paiement.schema.js";
+import { confirmEcheancePaymentSchema } from "@clubmanager/types/validators";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
 import { EmailClient } from "../../../../db/clients/messagerie/emailClient.js";
 import { z } from "zod";
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+  AuthorizationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour confirmer un paiement d'échéance
@@ -60,52 +67,71 @@ export async function confirmEcheancePayment(
   } catch (error) {
     console.error("❌ [Confirm Echeance] Erreur:", error);
 
+    // Re-throw si c'est déjà une erreur applicative
+    if (
+      error instanceof ValidationError ||
+      error instanceof NotFoundError ||
+      error instanceof ConflictError ||
+      error instanceof AuthorizationError
+    ) {
+      throw error;
+    }
+
     // Gestion des erreurs de validation Zod
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
-      res.status(400).json({
-        success: false,
-        message: firstError.message,
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        error.errors[0]?.message || "Données invalides",
+        error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        })),
+      );
     }
 
     // Gestion des erreurs métier
     if (error instanceof Error) {
-      // Payment Intent invalide
-      if (error.message.includes("succeeded")) {
-        res.status(400).json({
-          success: false,
-          message: error.message,
-        });
-        return;
-      }
-
-      // Échéance introuvable
-      if (error.message.includes("introuvable")) {
-        res.status(404).json({
-          success: false,
-          message: error.message,
-        });
-        return;
-      }
-
       // Échéance déjà payée
-      if (error.message.includes("déjà payée")) {
-        res.status(409).json({
-          success: false,
-          message: error.message,
-        });
-        return;
+      if (
+        error.message.includes("déjà payée") ||
+        error.message.includes("déjà été payée")
+      ) {
+        throw new ConflictError(error.message);
+      }
+
+      // Échéance ou paiement introuvable
+      if (
+        error.message.includes("introuvable") ||
+        error.message.includes("non trouvé")
+      ) {
+        throw new NotFoundError(error.message);
+      }
+
+      // Payment Intent invalide
+      if (
+        error.message.includes("succeeded") ||
+        error.message.includes("statut")
+      ) {
+        throw new ValidationError(error.message);
+      }
+
+      // Problème d'autorisation
+      if (
+        error.message.includes("n'appartient pas") ||
+        error.message.includes("pas autorisé")
+      ) {
+        throw new AuthorizationError(error.message);
+      }
+
+      // Montant invalide
+      if (error.message.includes("montant")) {
+        throw new ValidationError(error.message);
       }
     }
 
     // Erreur serveur générique
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors de la confirmation du paiement",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la confirmation du paiement",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

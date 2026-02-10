@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { obtenirLesCategories } from "../services/index.js";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer toutes les catégories
@@ -26,9 +27,8 @@ export async function getCategories(
       "❌ [Handler Catégories] Erreur récupération catégories:",
       error,
     );
-    res.status(500).json({
-      message: "Erreur lors de la récupération des catégories",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des catégories",
+    );
   }
 }

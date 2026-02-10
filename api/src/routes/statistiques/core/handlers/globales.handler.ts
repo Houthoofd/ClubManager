@@ -25,6 +25,7 @@ import {
   getMembresParPlan,
   getCoursSemaine,
 } from "../services/index.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour obtenir le nombre total de membres
@@ -46,11 +47,10 @@ export async function getMembresCount(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération nombre membres:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors du comptage des membres",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors du comptage des membres",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -77,11 +77,10 @@ export async function getPaiementsMois(req: Request, res: Response) {
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors du calcul du total du mois",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors du calcul du total du mois",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -105,11 +104,10 @@ export async function getPaiementsRecentsHandler(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération paiements récents:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors du comptage des paiements récents",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors du comptage des paiements récents",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -139,11 +137,10 @@ export async function getPaiementsEnAttenteHandler(
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors du comptage des paiements en attente",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors du comptage des paiements en attente",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -167,11 +164,10 @@ export async function getPlansActifsHandler(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération plans actifs:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors du comptage des plans actifs",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors du comptage des plans actifs",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -201,11 +197,10 @@ export async function getTauxRenouvellementHandler(
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors du calcul du taux de renouvellement",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors du calcul du taux de renouvellement",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -235,11 +230,10 @@ export async function getPaiementsParMoisHandler(req: Request, res: Response) {
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des paiements par mois",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des paiements par mois",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -266,11 +260,10 @@ export async function getMembresParPlanHandler(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération membres par plan:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des membres par plan",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des membres par plan",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -297,10 +290,9 @@ export async function getCoursSemaineHandler(req: Request, res: Response) {
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des cours de la semaine",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des cours de la semaine",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

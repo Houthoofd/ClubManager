@@ -6,6 +6,11 @@
 import { Request, Response } from "express";
 import { Stocks } from "../../../../db/clients/stocks/stocks.js";
 import { mettreAJourStock } from "../services/stocks.service.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour mettre à jour un stock
@@ -29,41 +34,42 @@ export async function updateStock(
     // Validation
     if (!article_id || quantite === undefined) {
       console.log("⚠️ [Handler Stocks] Données manquantes");
-      res.status(400).json({
-        success: false,
-        message: "article_id et quantite sont requis",
-      });
-      return;
+      throw new ValidationError("Données manquantes", [
+        { field: "article_id", message: "Champ requis" },
+        { field: "quantite", message: "Champ requis" },
+      ]);
     }
 
     // Valider que la quantité est un nombre valide
     if (typeof quantite !== "number" || isNaN(quantite)) {
       console.log("⚠️ [Handler Stocks] Quantité invalide");
-      res.status(400).json({
-        success: false,
-        message: "La quantite doit être un nombre valide",
-      });
-      return;
+      throw new ValidationError("La quantite doit être un nombre valide", [
+        {
+          field: "quantite",
+          message: "La quantite doit être un nombre valide",
+        },
+      ]);
     }
 
     // Valider que la quantité n'est pas négative
     if (quantite < 0) {
       console.log("⚠️ [Handler Stocks] Quantité négative");
-      res.status(400).json({
-        success: false,
-        message: "La quantite ne peut pas être négative",
-      });
-      return;
+      throw new ValidationError("La quantite ne peut pas être négative", [
+        {
+          field: "quantite",
+          message: "La quantite ne peut pas être négative",
+        },
+      ]);
     }
 
     if (!["set", "add", "subtract"].includes(operation)) {
       console.log(`⚠️ [Handler Stocks] Opération invalide: ${operation}`);
-      res.status(400).json({
-        success: false,
-        message:
-          "operation invalide. Opérations autorisées: set, add, subtract",
-      });
-      return;
+      throw new ValidationError("Opération invalide", [
+        {
+          field: "operation",
+          message: "Opérations autorisées: set, add, subtract",
+        },
+      ]);
     }
 
     console.log(
@@ -78,11 +84,7 @@ export async function updateStock(
 
     if (!result.success) {
       console.log(`⚠️ [Handler Stocks] ${result.message}`);
-      res.status(404).json({
-        success: false,
-        message: result.message,
-      });
-      return;
+      throw new NotFoundError(result.message);
     }
 
     console.log(
@@ -101,10 +103,14 @@ export async function updateStock(
   } catch (error) {
     console.error("❌ [Handler Stocks] Erreur mise à jour stock:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la mise à jour du stock",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la mise à jour du stock",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

@@ -12,7 +12,7 @@ import {
   planTarifaireSchema,
   allReferencesSchema,
   healthCheckSchema,
-} from "../core/validators/informations.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Informations - Tests de validation Zod", () => {
   // ==================== REFERENCE ITEM SCHEMA ====================
@@ -503,9 +503,7 @@ describe("Informations - Tests de validation Zod", () => {
         grades: [{ id: -1, nom: "Invalid" }], // ID négatif
         genres: [{ id: 1, nom: "Homme" }],
         status: [{ id: 1, nom: "Actif" }],
-        abonnements: [
-          { id: 1, nom_plan: "Test", prix: 50.0, duree_mois: 1 },
-        ],
+        abonnements: [{ id: 1, nom_plan: "Test", prix: 50.0, duree_mois: 1 }],
       };
 
       const result = allReferencesSchema.safeParse(invalidReferences);

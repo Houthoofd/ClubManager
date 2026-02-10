@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 import { Auth } from "../../../../db/clients/auth/auth.js";
 import { generateToken } from "../../../../middleware/auth.js";
+import {
+  ValidationError,
+  AuthenticationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour la connexion
@@ -10,30 +16,20 @@ export async function login(req: Request, res: Response): Promise<void> {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      res.status(400).json({
-        success: false,
-        message: "UserId et mot de passe requis",
-      });
-      return;
+      throw new ValidationError("Email et mot de passe requis");
     }
 
     const authClient = new Auth();
     const result = await authClient.authentifierUtilisateur(email, password);
 
     if (!result.success) {
-      res.status(401).json({
-        success: false,
-        message: result.message || "Email ou mot de passe incorrect",
-      });
-      return;
+      throw new AuthenticationError(
+        result.message || "Email ou mot de passe incorrect",
+      );
     }
 
     if (!result.user) {
-      res.status(401).json({
-        success: false,
-        message: "Utilisateur non trouvé",
-      });
-      return;
+      throw new NotFoundError("Utilisateur non trouvé");
     }
 
     // Générer le token JWT
@@ -69,9 +65,20 @@ export async function login(req: Request, res: Response): Promise<void> {
     });
   } catch (error) {
     console.error("Erreur lors de la connexion:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur",
-    });
+
+    // Re-throw si c'est déjà une erreur applicative
+    if (
+      error instanceof ValidationError ||
+      error instanceof AuthenticationError ||
+      error instanceof NotFoundError
+    ) {
+      throw error;
+    }
+
+    // Sinon, wrapper dans InternalServerError
+    throw new InternalServerError(
+      "Erreur serveur lors de la connexion",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

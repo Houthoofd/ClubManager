@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { toStripeAmount } from "../validators/stripe.schema.js";
+import { toStripeAmount } from "@clubmanager/types/validators";
 
 /**
  * Service pour interagir avec l'API Stripe

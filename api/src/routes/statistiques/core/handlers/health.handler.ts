@@ -7,6 +7,7 @@
  */
 
 import { Request, Response } from "express";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour le health check du module statistiques
@@ -39,12 +40,10 @@ export async function healthCheck(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur health check:", error);
 
-    return res.status(503).json({
-      success: false,
-      status: "unhealthy",
-      message: "Service temporairement indisponible",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Service temporairement indisponible",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -53,7 +52,9 @@ export async function healthCheck(req: Request, res: Response) {
  * GET /api/statistiques/diagnostic
  */
 export async function getDiagnostic(req: Request, res: Response) {
-  console.log("🔍 [Handler] GET /api/statistiques/diagnostic - Diagnostic complet");
+  console.log(
+    "🔍 [Handler] GET /api/statistiques/diagnostic - Diagnostic complet",
+  );
 
   try {
     const diagnostic = {
@@ -180,10 +181,9 @@ export async function getDiagnostic(req: Request, res: Response) {
   } catch (error) {
     console.error("❌ [Handler] Erreur génération diagnostic:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur lors de la génération du diagnostic",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la génération du diagnostic",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

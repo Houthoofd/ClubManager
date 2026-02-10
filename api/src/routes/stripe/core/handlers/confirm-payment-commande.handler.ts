@@ -9,7 +9,7 @@ import { StripeService } from "../services/stripe.service.js";
 import { PaymentService } from "../services/payment.service.js";
 import { StatusUpgradeService } from "../services/status-upgrade.service.js";
 import { EmailNotificationService } from "../services/email-notification.service.js";
-import { confirmPaymentCommandeSchema } from "../validators/stripe.schema.js";
+import { confirmPaymentCommandeSchema } from "@clubmanager/types/validators";
 
 /**
  * Handler pour confirmer un paiement de commande
@@ -27,16 +27,21 @@ export async function confirmPaymentCommande(
   stripeService?: StripeService,
   paymentService?: PaymentService,
   statusUpgradeService?: StatusUpgradeService,
-  emailService?: EmailNotificationService
+  emailService?: EmailNotificationService,
 ): Promise<void> {
   try {
-    console.log("✅ [Handler Stripe] POST /confirm-payment-commande - Confirmation paiement commande");
+    console.log(
+      "✅ [Handler Stripe] POST /confirm-payment-commande - Confirmation paiement commande",
+    );
 
     // 1. Validation des données avec Zod
     const validation = confirmPaymentCommandeSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("⚠️ [Handler Stripe] Validation échouée:", validation.error.errors);
+      console.log(
+        "⚠️ [Handler Stripe] Validation échouée:",
+        validation.error.errors,
+      );
       res.status(400).json({
         success: false,
         message: "Données invalides",
@@ -50,7 +55,8 @@ export async function confirmPaymentCommande(
     // 2. Initialiser les services
     const stripe = stripeService || StripeService.getInstance();
     const payment = paymentService || PaymentService.getInstance();
-    const statusUpgrade = statusUpgradeService || StatusUpgradeService.getInstance();
+    const statusUpgrade =
+      statusUpgradeService || StatusUpgradeService.getInstance();
     const email = emailService || EmailNotificationService.getInstance();
 
     // 3. Vérifier le PaymentIntent dans Stripe
@@ -74,7 +80,9 @@ export async function confirmPaymentCommande(
     });
 
     if (!confirmationResult.success) {
-      const status = confirmationResult.error?.includes("appartient pas") ? 403 : 404;
+      const status = confirmationResult.error?.includes("appartient pas")
+        ? 403
+        : 404;
       console.log(`⚠️ [Handler Stripe] ${confirmationResult.error}`);
       res.status(status).json({
         success: false,
@@ -88,11 +96,13 @@ export async function confirmPaymentCommande(
     if (confirmationResult.premierPaiement) {
       statusUpgradeResult = await statusUpgrade.upgraderStatutUtilisateur(
         userId,
-        confirmationResult.premierPaiement
+        confirmationResult.premierPaiement,
       );
 
       if (statusUpgradeResult.upgraded) {
-        console.log(`🎉 [Handler Stripe] Utilisateur ${userId} promu: ${statusUpgradeResult.ancienStatut} → ${statusUpgradeResult.nouveauStatut}`);
+        console.log(
+          `🎉 [Handler Stripe] Utilisateur ${userId} promu: ${statusUpgradeResult.ancienStatut} → ${statusUpgradeResult.nouveauStatut}`,
+        );
       }
     }
 
@@ -108,10 +118,15 @@ export async function confirmPaymentCommande(
         statusUpgrade: statusUpgradeResult,
       });
     } catch (emailError) {
-      console.warn("⚠️ [Handler Stripe] Erreur envoi email (non bloquant):", emailError);
+      console.warn(
+        "⚠️ [Handler Stripe] Erreur envoi email (non bloquant):",
+        emailError,
+      );
     }
 
-    console.log(`✅ [Handler Stripe] Paiement commande confirmé avec succès: ${paymentIntentId}`);
+    console.log(
+      `✅ [Handler Stripe] Paiement commande confirmé avec succès: ${paymentIntentId}`,
+    );
 
     res.status(200).json({
       success: true,
@@ -123,7 +138,10 @@ export async function confirmPaymentCommande(
       },
     });
   } catch (error) {
-    console.error("❌ [Handler Stripe] Erreur confirmation paiement commande:", error);
+    console.error(
+      "❌ [Handler Stripe] Erreur confirmation paiement commande:",
+      error,
+    );
 
     res.status(500).json({
       success: false,

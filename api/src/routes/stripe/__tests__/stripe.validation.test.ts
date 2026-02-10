@@ -13,7 +13,7 @@ import {
   toStripeAmount,
   fromStripeAmount,
   isValidPaymentIntentId,
-} from "../core/validators/stripe.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Stripe Validation - Tests des schémas Zod", () => {
   // ==================== CREATE PAYMENT INTENT ECHEANCE ====================

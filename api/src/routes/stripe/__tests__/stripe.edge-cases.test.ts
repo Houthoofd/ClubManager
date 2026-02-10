@@ -5,12 +5,15 @@
 
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
-import { createPaymentIntentEcheance, confirmPaymentEcheance } from "../core/handlers/index.js";
+import {
+  createPaymentIntentEcheance,
+  confirmPaymentEcheance,
+} from "../core/handlers/index.js";
 import {
   createPaymentIntentEcheanceSchema,
   toStripeAmount,
   fromStripeAmount,
-} from "../core/validators/stripe.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Stripe Edge Cases Tests", () => {
   let mockRequest: Partial<Request>;
@@ -192,7 +195,9 @@ describe("Stripe Edge Cases Tests", () => {
         amount: 50,
       };
 
-      const result = data.paymentIntentId.length >= 10 && data.paymentIntentId.startsWith("pi_");
+      const result =
+        data.paymentIntentId.length >= 10 &&
+        data.paymentIntentId.startsWith("pi_");
       expect(result).toBe(true);
     });
 
@@ -205,7 +210,9 @@ describe("Stripe Edge Cases Tests", () => {
         amount: 50,
       };
 
-      const result = data.paymentIntentId.startsWith("pi_") && data.paymentIntentId.length >= 10;
+      const result =
+        data.paymentIntentId.startsWith("pi_") &&
+        data.paymentIntentId.length >= 10;
       expect(result).toBe(true);
     });
   });
@@ -237,13 +244,15 @@ describe("Stripe Edge Cases Tests", () => {
           mockRequest as Request,
           mockResponse as Response,
           mockStripeService as any,
-          mockPaymentService as any
-        )
+          mockPaymentService as any,
+        ),
       );
 
       await Promise.all(requests);
 
-      expect(mockStripeService.creerPaymentIntentEcheance).toHaveBeenCalledTimes(5);
+      expect(
+        mockStripeService.creerPaymentIntentEcheance,
+      ).toHaveBeenCalledTimes(5);
     });
   });
 
@@ -290,7 +299,10 @@ describe("Stripe Edge Cases Tests", () => {
       const data = {
         amount: 1000,
         commande: {
-          articles: Array.from({ length: 100 }, (_, i) => ({ id: i, quantite: 1 })),
+          articles: Array.from({ length: 100 }, (_, i) => ({
+            id: i,
+            quantite: 1,
+          })),
         },
         userId: 1,
       };
@@ -318,7 +330,7 @@ describe("Stripe Edge Cases Tests", () => {
         mockRequest as Request,
         mockResponse as Response,
         {} as any,
-        mockPaymentService as any
+        mockPaymentService as any,
       );
 
       expect(statusMock).toHaveBeenCalledWith(404);

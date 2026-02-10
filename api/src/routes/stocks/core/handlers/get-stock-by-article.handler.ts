@@ -6,6 +6,11 @@
 import { Request, Response } from "express";
 import { Stocks } from "../../../../db/clients/stocks/stocks.js";
 import { obtenirStockParArticle } from "../services/stocks.service.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer les stocks d'un article
@@ -27,22 +32,24 @@ export async function getStockByArticle(
     // Validation stricte : doit être un nombre entier (avec espaces autorisés)
     if (!/^\s*-?\d+\s*$/.test(articleIdParam)) {
       console.log("⚠️ [Handler Stocks] ID d'article invalide");
-      res.status(400).json({
-        success: false,
-        message: "ID d'article invalide",
-      });
-      return;
+      throw new ValidationError("ID d'article invalide", [
+        {
+          field: "articleId",
+          message: "L'ID de l'article doit être un nombre positif",
+        },
+      ]);
     }
 
     const articleId = parseInt(articleIdParam);
 
     if (isNaN(articleId) || articleId <= 0) {
       console.log("⚠️ [Handler Stocks] ID d'article invalide");
-      res.status(400).json({
-        success: false,
-        message: "ID d'article invalide",
-      });
-      return;
+      throw new ValidationError("ID d'article invalide", [
+        {
+          field: "articleId",
+          message: "L'ID de l'article doit être un nombre positif",
+        },
+      ]);
     }
 
     console.log(
@@ -56,12 +63,7 @@ export async function getStockByArticle(
       console.log(
         `⚠️ [Handler Stocks] Aucun stock trouvé pour l'article ${articleId}`,
       );
-      res.status(404).json({
-        success: false,
-        message: `Aucun stock trouvé pour l'article ${articleId}`,
-        data: [],
-      });
-      return;
+      throw new NotFoundError(`Aucun stock trouvé pour l'article ${articleId}`);
     }
 
     console.log(
@@ -77,10 +79,14 @@ export async function getStockByArticle(
   } catch (error) {
     console.error("❌ [Handler Stocks] Erreur récupération stock:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération du stock",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération du stock",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

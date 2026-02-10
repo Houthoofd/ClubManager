@@ -12,7 +12,7 @@ import {
 import {
   createPaymentIntentEcheanceSchema,
   confirmPaymentEcheanceSchema,
-} from "../core/validators/stripe.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Stripe Security Tests", () => {
   let mockRequest: Partial<Request>;

@@ -5,5 +5,5 @@
  * Import types like: import { GraphQLContext, PaginationInput } from '@/shared/types'
  */
 
-export * from './context.types';
-export * from './common.types';
+export * from "./context.types.js";
+export * from "./common.types.js";

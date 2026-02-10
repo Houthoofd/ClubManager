@@ -12,7 +12,7 @@ import {
   getPlanningProfesseurSchema,
   utilisateurSchema,
   coursSchema,
-} from "../core/validators/professeur.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Validators - Tests avancés de branch coverage", () => {
   describe("getProfesseurByIdSchema - Tests de toutes les branches", () => {

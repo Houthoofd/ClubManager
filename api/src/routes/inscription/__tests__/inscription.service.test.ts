@@ -21,7 +21,7 @@ jest.mock("../../../db/clients/utilisateurs/utilisateurs.js");
 
 import { InscriptionService } from "../core/services/inscription.service.js";
 import { Utilisateurs } from "../../../db/clients/utilisateurs/utilisateurs.js";
-import type { InscriptionData } from "../core/validators/inscription.schema.js";
+import type { InscriptionData } from "@clubmanager/types/validators";
 import bcrypt from "bcrypt";
 
 // Mock de bcrypt

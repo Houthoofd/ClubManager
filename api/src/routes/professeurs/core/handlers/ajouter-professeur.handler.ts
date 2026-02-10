@@ -3,10 +3,16 @@ import {
   ajouterProfesseur,
   extraireIdsUtilisateurs,
 } from "../services/index.js";
-import { ajouterProfesseurSchema } from "../validators/index.js";
+import { ajouterProfesseurSchema } from "@clubmanager/types/validators";
 import { emailClient } from "../../../../clients/emailClient.js";
 import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
 import type { EmailClient } from "../../../../clients/emailClient.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
+import { formatZodErrors } from "../../../../shared/errors/GraphQLErrors.js";
+import { z } from "zod";
 
 /**
  * Handler pour ajouter/promouvoir un ou plusieurs professeurs
@@ -32,11 +38,13 @@ export async function ajouterProfesseurHandler(
       ajouterProfesseurSchema.parse(data);
     } catch (validationError: any) {
       console.log("⚠️ [Handler] Erreur de validation:", validationError.errors);
-      return res.status(400).json({
-        success: false,
-        message: "Données invalides",
-        errors: validationError.errors,
-      });
+      if (validationError instanceof z.ZodError) {
+        throw new ValidationError(
+          "Données invalides",
+          formatZodErrors(validationError.errors),
+        );
+      }
+      throw validationError;
     }
 
     // Ajouter/promouvoir le(s) professeur(s)
@@ -131,9 +139,14 @@ export async function ajouterProfesseurHandler(
   } catch (error) {
     console.error("❌ [Handler] Erreur lors de l'ajout/promotion:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la promotion des professeurs",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la promotion des professeurs",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

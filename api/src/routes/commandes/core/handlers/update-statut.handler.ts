@@ -12,6 +12,11 @@ import {
   getStatutsValides,
   getTransitionErrorMessage,
 } from "../utils/statut-validator.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Met à jour le statut d'une commande avec gestion des stocks et historique
@@ -34,11 +39,9 @@ export async function updateStatut(
     // Validation du statut
     const statutsValides = getStatutsValides();
     if (!statutsValides.includes(statut)) {
-      res.status(400).json({
-        message:
-          "Statut invalide. Statuts autorisés: " + statutsValides.join(", "),
-      });
-      return;
+      throw new ValidationError(
+        "Statut invalide. Statuts autorisés: " + statutsValides.join(", "),
+      );
     }
 
     // Vérifier que la commande existe
@@ -50,10 +53,7 @@ export async function updateStatut(
     });
 
     if (!commande) {
-      res.status(404).json({
-        message: "Commande non trouvée",
-      });
-      return;
+      throw new NotFoundError("Commande non trouvée");
     }
 
     const ancienStatut = commande.statut || "en_attente";
@@ -71,10 +71,9 @@ export async function updateStatut(
 
     // Valider la transition de statut
     if (!isValidTransition(ancienStatut, statut)) {
-      res.status(400).json({
-        message: getTransitionErrorMessage(ancienStatut, statut),
-      });
-      return;
+      throw new ValidationError(
+        getTransitionErrorMessage(ancienStatut, statut),
+      );
     }
 
     // Convertir les statuts pour Prisma
@@ -161,9 +160,6 @@ export async function updateStatut(
     });
   } catch (error: any) {
     console.error("❌ [API] Erreur lors de la mise à jour du statut:", error);
-    res.status(500).json({
-      message: "Erreur lors de la mise à jour du statut",
-      error: error.message,
-    });
+    throw new InternalServerError("Erreur lors de la mise à jour du statut");
   }
 }

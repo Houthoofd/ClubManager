@@ -5,7 +5,7 @@
 
 import { Request, Response } from "express";
 import { PaymentService } from "../services/payment.service.js";
-import { alternativePaymentSchema } from "../validators/stripe.schema.js";
+import { alternativePaymentSchema } from "@clubmanager/types/validators";
 
 /**
  * Handler pour créer un paiement Bancontact

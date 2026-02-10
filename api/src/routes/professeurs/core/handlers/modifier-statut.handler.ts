@@ -1,7 +1,13 @@
 import { Request, Response } from "express";
 import { modifierStatutProfesseur } from "../services/index.js";
-import { modifierStatutProfesseurSchema } from "../validators/index.js";
+import { modifierStatutProfesseurSchema } from "@clubmanager/types/validators";
 import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
+import { formatZodErrors } from "../../../../shared/errors/GraphQLErrors.js";
+import { z } from "zod";
 
 /**
  * Handler pour modifier le statut d'un professeur
@@ -31,11 +37,10 @@ export async function modifierStatutProfesseurHandler(
       status_id === null
     ) {
       console.log("⚠️ [Handler] Données manquantes");
-      return res.status(400).json({
-        success: false,
-        message: "ID et status_id requis",
-        error: "Les champs id et status_id sont obligatoires",
-      });
+      throw new ValidationError("ID et status_id requis", [
+        { field: "id", message: "Champ requis" },
+        { field: "status_id", message: "Champ requis" },
+      ]);
     }
 
     // Validation avec Zod
@@ -43,11 +48,13 @@ export async function modifierStatutProfesseurHandler(
       modifierStatutProfesseurSchema.parse({ id, status_id });
     } catch (validationError: any) {
       console.log("⚠️ [Handler] Erreur de validation:", validationError.errors);
-      return res.status(400).json({
-        success: false,
-        message: "Données invalides",
-        errors: validationError.errors,
-      });
+      if (validationError instanceof z.ZodError) {
+        throw new ValidationError(
+          "Données invalides",
+          formatZodErrors(validationError.errors),
+        );
+      }
+      throw validationError;
     }
 
     // Modifier le statut
@@ -61,11 +68,15 @@ export async function modifierStatutProfesseurHandler(
 
     if (!result.success) {
       console.log("⚠️ [Handler] Échec de la modification");
-      return res.status(400).json({
-        success: false,
-        message: result.message || "Échec de la modification du statut",
-        error: result.error,
-      });
+      throw new ValidationError(
+        result.message || "Échec de la modification du statut",
+        [
+          {
+            field: "status_id",
+            message: result.error || "Échec de la modification du statut",
+          },
+        ],
+      );
     }
 
     return res.status(200).json({
@@ -79,9 +90,14 @@ export async function modifierStatutProfesseurHandler(
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la modification du statut",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la modification du statut",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

@@ -19,7 +19,7 @@ import {
   DeleteEcheanceData,
   GetStatistiquesData,
   DiagnosticEcheanceData,
-} from "../core/validators/echeance.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Échéances Module - Schémas et Configuration", () => {
   describe("Schémas Zod - Structure", () => {

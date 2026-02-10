@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { StripeService } from "../services/stripe.service.js";
 import { PaymentService } from "../services/payment.service.js";
-import { createPaymentIntentCommandeSchema } from "../validators/stripe.schema.js";
+import { createPaymentIntentCommandeSchema } from "@clubmanager/types/validators";
 
 /**
  * Handler pour créer un PaymentIntent pour une commande
@@ -22,16 +22,21 @@ export async function createPaymentIntentCommande(
   req: Request,
   res: Response,
   stripeService?: StripeService,
-  paymentService?: PaymentService
+  paymentService?: PaymentService,
 ): Promise<void> {
   try {
-    console.log("💳 [Handler Stripe] POST /create-payment-intent-commande - Création PaymentIntent commande");
+    console.log(
+      "💳 [Handler Stripe] POST /create-payment-intent-commande - Création PaymentIntent commande",
+    );
 
     // 1. Validation des données avec Zod
     const validation = createPaymentIntentCommandeSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("⚠️ [Handler Stripe] Validation échouée:", validation.error.errors);
+      console.log(
+        "⚠️ [Handler Stripe] Validation échouée:",
+        validation.error.errors,
+      );
       res.status(400).json({
         success: false,
         message: "Données invalides",
@@ -46,14 +51,22 @@ export async function createPaymentIntentCommande(
     const stripe = stripeService || StripeService.getInstance();
     const payment = paymentService || PaymentService.getInstance();
 
-    const commandeResult = await payment.creerCommandeSiNecessaire(commande, userId);
+    const commandeResult = await payment.creerCommandeSiNecessaire(
+      commande,
+      userId,
+    );
     const commandeId = commandeResult.commandeId;
 
     // 3. Vérifier que la commande appartient à l'utilisateur et a des articles
-    const verificationCommande = await payment.verifierCommande(commandeId, userId);
+    const verificationCommande = await payment.verifierCommande(
+      commandeId,
+      userId,
+    );
 
     if (!verificationCommande.valid) {
-      const status = verificationCommande.error?.includes("appartient pas") ? 403 : 400;
+      const status = verificationCommande.error?.includes("appartient pas")
+        ? 403
+        : 400;
       console.log(`⚠️ [Handler Stripe] ${verificationCommande.error}`);
       res.status(status).json({
         success: false,
@@ -73,7 +86,9 @@ export async function createPaymentIntentCommande(
       description,
     });
 
-    console.log(`✅ [Handler Stripe] PaymentIntent créé pour commande: ${result.paymentIntentId}`);
+    console.log(
+      `✅ [Handler Stripe] PaymentIntent créé pour commande: ${result.paymentIntentId}`,
+    );
 
     res.status(200).json({
       success: true,
@@ -85,7 +100,10 @@ export async function createPaymentIntentCommande(
       },
     });
   } catch (error) {
-    console.error("❌ [Handler Stripe] Erreur création PaymentIntent commande:", error);
+    console.error(
+      "❌ [Handler Stripe] Erreur création PaymentIntent commande:",
+      error,
+    );
 
     res.status(500).json({
       success: false,

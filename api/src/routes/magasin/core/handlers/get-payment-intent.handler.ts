@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { obtenirPaymentIntentCommande } from "../services/index.js";
-import { getPaymentIntentSchema } from "../validators/index.js";
+import { getPaymentIntentSchema } from "@clubmanager/types/validators";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer le PaymentIntent Stripe d'une commande
@@ -28,10 +34,7 @@ export async function getPaymentIntent(
     });
 
     if (!validatedData.commandeId || !validatedData.userId) {
-      res.status(400).json({
-        error: "ID de commande et utilisateur requis",
-      });
-      return;
+      throw new ValidationError("ID de commande et utilisateur requis");
     }
 
     const userIdNumber = parseInt(validatedData.userId);
@@ -53,11 +56,10 @@ export async function getPaymentIntent(
         "❌ [Handler Payment Intent] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des paramètres",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des paramètres",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error(
@@ -71,16 +73,12 @@ export async function getPaymentIntent(
         error.message.includes("non trouvée") ||
         error.message.includes("appartient pas")
       ) {
-        res.status(404).json({
-          error: error.message,
-        });
-        return;
+        throw new NotFoundError(error.message);
       }
     }
 
-    res.status(500).json({
-      error: "Erreur lors de la récupération du PaymentIntent",
-      details: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération du PaymentIntent",
+    );
   }
 }

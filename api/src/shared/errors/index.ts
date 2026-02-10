@@ -5,5 +5,5 @@
  * Import errors like: import { AuthenticationError, ValidationError } from '@/shared/errors'
  */
 
-export * from './GraphQLErrors';
-export * from './error-codes';
+export * from "./GraphQLErrors.js";
+export * from "./error-codes.js";

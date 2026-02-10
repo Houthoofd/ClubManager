@@ -11,7 +11,7 @@ import {
   articleIdParamSchema,
   healthCheckSchema,
   stocksArraySchema,
-} from "../core/validators/stocks.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Stocks - Tests de validation Zod", () => {
   // ==================== STOCK SCHEMA ====================
@@ -542,8 +542,9 @@ describe("Stocks - Tests de validation Zod", () => {
         article_id: 5,
         quantite: 100,
         article_nom: "Kimono Judo Professionnel",
-        article_prix: 150.50,
-        article_description: "Kimono haut de gamme pour compétitions internationales",
+        article_prix: 150.5,
+        article_description:
+          "Kimono haut de gamme pour compétitions internationales",
       };
 
       const result = stockSchema.safeParse(fullStock);
@@ -566,7 +567,7 @@ describe("Stocks - Tests de validation Zod", () => {
         article_id: 5,
         quantite: 25,
         article_nom: "Kimono (judogi) - 100% coton",
-        article_description: 'Description avec "guillemets" et \'apostrophes\'',
+        article_description: "Description avec \"guillemets\" et 'apostrophes'",
       };
 
       const result = stockSchema.safeParse(stockWithSpecialChars);

@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { StripeService } from "../services/stripe.service.js";
 import { PaymentService } from "../services/payment.service.js";
-import { createPaymentIntentEcheanceSchema } from "../validators/stripe.schema.js";
+import { createPaymentIntentEcheanceSchema } from "@clubmanager/types/validators";
 
 /**
  * Handler pour créer un PaymentIntent pour une échéance
@@ -22,16 +22,21 @@ export async function createPaymentIntentEcheance(
   req: Request,
   res: Response,
   stripeService?: StripeService,
-  paymentService?: PaymentService
+  paymentService?: PaymentService,
 ): Promise<void> {
   try {
-    console.log("💳 [Handler Stripe] POST /create-payment-intent - Création PaymentIntent échéance");
+    console.log(
+      "💳 [Handler Stripe] POST /create-payment-intent - Création PaymentIntent échéance",
+    );
 
     // 1. Validation des données avec Zod
     const validation = createPaymentIntentEcheanceSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("⚠️ [Handler Stripe] Validation échouée:", validation.error.errors);
+      console.log(
+        "⚠️ [Handler Stripe] Validation échouée:",
+        validation.error.errors,
+      );
       res.status(400).json({
         success: false,
         message: "Données invalides",
@@ -46,10 +51,15 @@ export async function createPaymentIntentEcheance(
     const stripe = stripeService || StripeService.getInstance();
     const payment = paymentService || PaymentService.getInstance();
 
-    const verificationEcheance = await payment.verifierEcheance(echeanceId, userId);
+    const verificationEcheance = await payment.verifierEcheance(
+      echeanceId,
+      userId,
+    );
 
     if (!verificationEcheance.valid) {
-      const status = verificationEcheance.error?.includes("appartient pas") ? 403 : 404;
+      const status = verificationEcheance.error?.includes("appartient pas")
+        ? 403
+        : 404;
       console.log(`⚠️ [Handler Stripe] ${verificationEcheance.error}`);
       res.status(status).json({
         success: false,
@@ -66,7 +76,9 @@ export async function createPaymentIntentEcheance(
       description,
     });
 
-    console.log(`✅ [Handler Stripe] PaymentIntent créé: ${result.paymentIntentId}`);
+    console.log(
+      `✅ [Handler Stripe] PaymentIntent créé: ${result.paymentIntentId}`,
+    );
 
     res.status(200).json({
       success: true,
@@ -77,7 +89,10 @@ export async function createPaymentIntentEcheance(
       },
     });
   } catch (error) {
-    console.error("❌ [Handler Stripe] Erreur création PaymentIntent échéance:", error);
+    console.error(
+      "❌ [Handler Stripe] Erreur création PaymentIntent échéance:",
+      error,
+    );
 
     res.status(500).json({
       success: false,

@@ -7,7 +7,7 @@ import { describe, it, expect } from "@jest/globals";
 import {
   inscriptionSchema,
   verificationEmailSchema,
-} from "../core/validators/inscription.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Inscription Validators - Tests avancés", () => {
   // ==================== EMAIL VERIFICATION SCHEMA ====================

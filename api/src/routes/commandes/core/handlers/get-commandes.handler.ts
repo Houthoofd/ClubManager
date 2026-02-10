@@ -6,6 +6,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { prisma as defaultPrisma } from "../../../../infrastructure/database/prisma-client.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Récupère toutes les commandes avec leurs détails
@@ -67,9 +68,8 @@ export async function getCommandes(
       "❌ [API] Erreur lors de la récupération des commandes:",
       error,
     );
-    res.status(500).json({
-      message: "Erreur lors de la récupération des commandes",
-      error: error.message,
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des commandes",
+    );
   }
 }

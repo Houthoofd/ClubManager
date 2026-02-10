@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { modifierArticle } from "../services/index.js";
-import { updateArticleSchema } from "../validators/index.js";
+import { updateArticleSchema } from "@clubmanager/types/validators";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour modifier un article existant
@@ -18,15 +24,13 @@ export async function updateArticle(
 
     // Validation stricte de l'ID avant parseInt
     if (!/^\d+$/.test(req.params.id)) {
-      res.status(400).json({ message: "ID invalide" });
-      return;
+      throw new ValidationError("ID invalide");
     }
 
     const articleId = parseInt(req.params.id, 10);
 
     if (isNaN(articleId) || articleId <= 0) {
-      res.status(400).json({ message: "ID invalide" });
-      return;
+      throw new ValidationError("ID invalide");
     }
 
     // Validation des données avec l'ID
@@ -56,11 +60,10 @@ export async function updateArticle(
         "❌ [Handler Articles] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des données",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des données",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error("❌ [Handler Articles] Erreur modification article:", error);
@@ -75,16 +78,12 @@ export async function updateArticle(
         messageStr.includes("not found");
 
       if (isNotFound) {
-        res.status(404).json({
-          message: "Article non trouvé",
-        });
-        return;
+        throw new NotFoundError("Article non trouvé");
       }
     }
 
-    res.status(500).json({
-      message: "Erreur lors de la modification de l'article",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la modification de l'article",
+    );
   }
 }

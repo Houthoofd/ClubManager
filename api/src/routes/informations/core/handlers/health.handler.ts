@@ -6,6 +6,7 @@
 import { Request, Response } from "express";
 import { Informations } from "../../../../db/clients/informations/informations.js";
 import { verifierSanteService } from "../services/informations.service.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour vérifier la santé du service
@@ -17,10 +18,12 @@ import { verifierSanteService } from "../services/informations.service.js";
 export async function healthCheck(
   req: Request,
   res: Response,
-  informationsClient?: Informations
+  informationsClient?: Informations,
 ): Promise<void> {
   try {
-    console.log("🏥 [Handler Informations] GET /health - Vérification de santé");
+    console.log(
+      "🏥 [Handler Informations] GET /health - Vérification de santé",
+    );
 
     // Vérifier la santé du service
     const healthStatus = await verifierSanteService(informationsClient);
@@ -28,7 +31,7 @@ export async function healthCheck(
     const statusCode = healthStatus.status === "healthy" ? 200 : 503;
 
     console.log(
-      `${healthStatus.status === "healthy" ? "✅" : "⚠️"} [Handler Informations] Santé du service: ${healthStatus.status}`
+      `${healthStatus.status === "healthy" ? "✅" : "⚠️"} [Handler Informations] Santé du service: ${healthStatus.status}`,
     );
 
     res.status(statusCode).json({
@@ -42,17 +45,13 @@ export async function healthCheck(
   } catch (error) {
     console.error(
       "❌ [Handler Informations] Erreur vérification santé:",
-      error
+      error,
     );
 
-    res.status(503).json({
-      success: false,
-      status: "unhealthy",
-      message: "Erreur lors de la vérification de santé",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-      timestamp: new Date().toISOString(),
-      module: "informations",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la vérification de santé",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -66,16 +65,15 @@ export async function healthCheck(
 export async function getAllReferences(
   req: Request,
   res: Response,
-  informationsClient?: Informations
+  informationsClient?: Informations,
 ): Promise<void> {
   try {
     console.log(
-      "🔄 [Handler Informations] GET /all - Récupération de toutes les références"
+      "🔄 [Handler Informations] GET /all - Récupération de toutes les références",
     );
 
-    const { obtenirToutesLesReferences } = await import(
-      "../services/informations.service.js"
-    );
+    const { obtenirToutesLesReferences } =
+      await import("../services/informations.service.js");
     const references = await obtenirToutesLesReferences(informationsClient);
 
     console.log("✅ [Handler Informations] Toutes les références récupérées");
@@ -94,13 +92,12 @@ export async function getAllReferences(
   } catch (error) {
     console.error(
       "❌ [Handler Informations] Erreur récupération références:",
-      error
+      error,
     );
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des références",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des références",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

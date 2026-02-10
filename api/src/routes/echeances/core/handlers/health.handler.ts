@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour le health check du module échéances
@@ -61,13 +62,10 @@ export async function healthCheck(
   } catch (error) {
     console.error("❌ [Handler Échéances] Erreur health check:", error);
 
-    res.status(503).json({
-      success: false,
-      status: "unhealthy",
-      module: "echeances",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-      timestamp: new Date().toISOString(),
-    });
+    throw new InternalServerError(
+      "Erreur lors du health check",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -215,12 +213,10 @@ export async function getDiagnostic(
   } catch (error) {
     console.error("❌ [Handler Échéances] Erreur diagnostic:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors du diagnostic",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-      timestamp: new Date().toISOString(),
-    });
+    throw new InternalServerError(
+      "Erreur lors du diagnostic",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 

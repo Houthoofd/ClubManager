@@ -12,7 +12,7 @@ import {
   deleteEcheanceSchema,
   getStatistiquesSchema,
   diagnosticEcheanceSchema,
-} from "../core/validators/echeance.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Validators - Tests avancés de branch coverage", () => {
   describe("getEcheancesUtilisateurSchema - Tests de toutes les branches", () => {

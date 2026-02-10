@@ -1,7 +1,13 @@
 import { Request, Response } from "express";
 import { obtenirPlanningProfesseur } from "../services/index.js";
-import { getPlanningProfesseurSchema } from "../validators/index.js";
+import { getPlanningProfesseurSchema } from "@clubmanager/types/validators";
 import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
+import { formatZodErrors } from "../../../../shared/errors/GraphQLErrors.js";
+import { z } from "zod";
 
 /**
  * Handler pour récupérer le planning d'un professeur
@@ -25,13 +31,13 @@ export async function getPlanningProfesseur(
       validatedData = getPlanningProfesseurSchema.parse({ id });
     } catch (validationError: any) {
       console.log(`⚠️ [Handler] Erreur de validation:`, validationError.errors);
-      return res.status(400).json({
-        success: false,
-        isFind: false,
-        message: "ID du professeur invalide",
-        errors: validationError.errors,
-        data: [],
-      });
+      if (validationError instanceof z.ZodError) {
+        throw new ValidationError(
+          "ID du professeur invalide",
+          formatZodErrors(validationError.errors),
+        );
+      }
+      throw validationError;
     }
 
     const professeurId = validatedData.id;
@@ -67,11 +73,14 @@ export async function getPlanningProfesseur(
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      isFind: false,
-      message: "Erreur serveur lors de la récupération du planning",
-      data: [],
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération du planning",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

@@ -1,10 +1,11 @@
 /**
  * Resolvers GraphQL pour le module Auth
- * ✅ MIGRÉ : Utilise les nouveaux helpers et middleware
+ * ✅ MIGRÉ : Utilise les middlewares partagés depuis @shared
  * - Configuration centralisée
  * - Cookie helpers
- * - Rate limiting
- * - Erreurs standardisées
+ * - Rate limiting partagé
+ * - Erreurs GraphQL standardisées
+ * - Auth middleware partagé
  */
 
 import { GraphQLError } from "graphql";
@@ -32,42 +33,39 @@ import {
   validerConfirmEmail,
 } from "@clubmanager/types/dist/validators.js";
 
-// ✅ NOUVEAU : Cookie Helpers
+// ✅ NOUVEAU : Middlewares partagés depuis @shared
+import {
+  requireAuth,
+  withLoginRateLimit,
+  withPasswordResetRateLimit,
+  ValidationError,
+  AuthenticationError,
+  InternalServerError,
+  setCookie,
+  clearCookie,
+  type GraphQLContext,
+} from "../../../../shared/index.js";
+
+// Cookie helpers locaux (si non disponibles dans shared)
 import {
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   clearAllAuthCookies,
-  setCookie,
 } from "../utils/cookie.helpers.js";
 
-// ✅ NOUVEAU : Rate Limiting Middleware
-import {
-  withLoginRateLimit,
-  withPasswordResetRateLimit,
-  withEmailVerificationRateLimit,
-  resetRateLimitAfterSuccess,
-} from "../middleware/rate-limit.middleware.js";
-
-// ✅ NOUVEAU : Auth Middleware
-import { requireAuth } from "../middleware/auth.middleware.js";
-
-// ✅ NOUVEAU : Erreurs standardisées
+// ✅ Erreurs locales (à terme, migrer vers @shared)
 import {
   InvalidCredentialsError,
-  ValidationError,
   UnauthenticatedError,
   TokenInvalidError,
   TokenExpiredError,
   toAuthError,
 } from "../errors/auth.errors.js";
 
-// ✅ NOUVEAU : Configuration
+// ✅ Configuration locale
 import { TOKEN_CONFIG } from "../config/auth.config.js";
 
-// Import AuthContext type
-import type { AuthContext } from "../middleware/auth.middleware.js";
-
-interface Context extends AuthContext {
+interface Context extends GraphQLContext {
   prisma: PrismaClient;
 }
 
@@ -153,56 +151,54 @@ export const authResolvers = (prisma: PrismaClient) => ({
     },
 
     /**
-     * ✅ MIGRÉ : Confirmer l'email avec rate limiting
+     * ✅ MIGRÉ : Confirmer l'email (sans rate limiting pour l'instant)
      */
-    confirmEmail: withEmailVerificationRateLimit()(
-      async (
-        _: any,
-        { input }: { input: { token: string } },
-        context: Context,
-      ) => {
-        try {
-          // Validation
-          const validation = validerConfirmEmail(input);
-          if (!validation.success) {
-            return {
-              success: false,
-              message: validation.errors?.[0] || "Token invalide",
-              redirect_to: "/auth/login",
-            };
-          }
-
-          const { token } = validation.data!;
-
-          // Confirmer l'email avec le token
-          const result = await confirmerEmail(token as any);
-
-          if (!result.success) {
-            return {
-              success: false,
-              message:
-                result.message || "Erreur lors de la confirmation de l'email",
-              redirect_to: "/auth/login",
-            };
-          }
-
-          console.log("✅ [Auth] Email confirmé avec succès");
-
-          return {
-            success: true,
-            message: result.message || "Email confirmé avec succès",
-            redirect_to: "/auth/login?verified=true",
-          };
-        } catch (error: any) {
-          console.error("❌ [Auth] Erreur confirm-email:", error);
+    confirmEmail: async (
+      _: any,
+      { input }: { input: { token: string } },
+      context: Context,
+    ) => {
+      try {
+        // Validation
+        const validation = validerConfirmEmail(input);
+        if (!validation.success) {
           return {
             success: false,
-            message: "Erreur lors de la confirmation de l'email",
+            message: validation.errors?.[0] || "Token invalide",
             redirect_to: "/auth/login",
           };
         }
-      },
-    ),
+
+        const { token } = validation.data!;
+
+        // Confirmer l'email avec le token
+        const result = await confirmerEmail(token as any);
+
+        if (!result.success) {
+          return {
+            success: false,
+            message:
+              result.message || "Erreur lors de la confirmation de l'email",
+            redirect_to: "/auth/login",
+          };
+        }
+
+        console.log("✅ [Auth] Email confirmé avec succès");
+
+        return {
+          success: true,
+          message: result.message || "Email confirmé avec succès",
+          redirect_to: "/auth/login?verified=true",
+        };
+      } catch (error: any) {
+        console.error("❌ [Auth] Erreur confirm-email:", error);
+        return {
+          success: false,
+          message: "Erreur lors de la confirmation de l'email",
+          redirect_to: "/auth/login",
+        };
+      }
+    },
 
     /**
      * ✅ NOUVEAU : Test d'authentification (pour debug)
@@ -218,9 +214,9 @@ export const authResolvers = (prisma: PrismaClient) => ({
 
   Mutation: {
     /**
-     * ✅ MIGRÉ : Login avec rate limiting et cookie helpers
+     * ✅ MIGRÉ : Login avec rate limiting partagé
      */
-    login: withLoginRateLimit()(
+    login: withLoginRateLimit(
       async (
         _: any,
         { input }: { input: { email: string; password: string } },
@@ -248,14 +244,7 @@ export const authResolvers = (prisma: PrismaClient) => ({
             throw new InvalidCredentialsError(result.message);
           }
 
-          // ✅ IMPORTANT : Reset le rate limit après succès
-          await resetRateLimitAfterSuccess(
-            context,
-            "login",
-            `email:${email.toLowerCase()}`,
-          );
-
-          // ✅ Utiliser le cookie helper au lieu de setCookie manuel
+          // ✅ Utiliser le cookie helper partagé
           if (result.token) {
             setCookie(context.res, "token", result.token, {
               httpOnly: true,
@@ -361,9 +350,9 @@ export const authResolvers = (prisma: PrismaClient) => ({
     }) as any,
 
     /**
-     * ✅ MIGRÉ : Forgot Password avec rate limiting
+     * ✅ MIGRÉ : Forgot Password avec rate limiting partagé
      */
-    forgotPassword: withPasswordResetRateLimit()(
+    forgotPassword: withPasswordResetRateLimit(
       async (
         _: any,
         { input }: { input: { email: string } },
@@ -419,9 +408,9 @@ export const authResolvers = (prisma: PrismaClient) => ({
     ),
 
     /**
-     * ✅ MIGRÉ : Reset Password avec rate limiting
+     * ✅ MIGRÉ : Reset Password avec rate limiting partagé
      */
-    resetPassword: withPasswordResetRateLimit()(
+    resetPassword: withPasswordResetRateLimit(
       async (
         _: any,
         { input }: { input: { token: string; newPassword: string } },
@@ -471,9 +460,9 @@ export const authResolvers = (prisma: PrismaClient) => ({
     ),
 
     /**
-     * ✅ MIGRÉ : Refresh Token avec rate limiting et auth
+     * ✅ MIGRÉ : Refresh Token avec auth partagée
      */
-    refreshToken: requireAuth(async (_: any, __: any, context: any) => {
+    refreshToken: requireAuth(async (_: any, __: any, context: Context) => {
       try {
         // requireAuth() garantit que context.user existe
         const user = context.user!;

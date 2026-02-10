@@ -3,10 +3,14 @@
  * Health check du module Upload
  */
 
-import { Request, Response } from 'express';
-import { getUploadDirectoryStats, ensureUploadDirectory } from '../services/upload.service.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { Request, Response } from "express";
+import {
+  getUploadDirectoryStats,
+  ensureUploadDirectory,
+} from "../services/upload.service.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import { InternalServerError } from "../../../../shared/errors/GraphQLErrors.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,9 +24,9 @@ const __dirname = path.dirname(__filename);
  */
 export async function healthCheck(req: Request, res: Response): Promise<void> {
   try {
-    console.log('🏥 [Handler Upload] GET /health - Vérification de santé');
+    console.log("🏥 [Handler Upload] GET /health - Vérification de santé");
 
-    const uploadsDir = path.join(__dirname, '../../../../public/uploads');
+    const uploadsDir = path.join(__dirname, "../../../../public/uploads");
 
     const checks = {
       directory: false,
@@ -47,33 +51,33 @@ export async function healthCheck(req: Request, res: Response): Promise<void> {
 
     // Vérifier les permissions d'écriture
     try {
-      const testFile = path.join(uploadsDir, '.health-check');
-      const fs = await import('fs');
-      fs.writeFileSync(testFile, 'health check', 'utf8');
+      const testFile = path.join(uploadsDir, ".health-check");
+      const fs = await import("fs");
+      fs.writeFileSync(testFile, "health check", "utf8");
       fs.unlinkSync(testFile);
       checks.writable = true;
     } catch (writeError) {
-      console.warn('⚠️ [Handler Upload] Erreur d\'écriture:', writeError);
+      console.warn("⚠️ [Handler Upload] Erreur d'écriture:", writeError);
       checks.writable = false;
     }
 
     const healthyCount = Object.values(checks).filter(Boolean).length;
 
     if (healthyCount === 3) {
-      console.log('✅ [Handler Upload] Service opérationnel');
+      console.log("✅ [Handler Upload] Service opérationnel");
       res.status(200).json({
-        status: 'healthy',
+        status: "healthy",
         checks,
-        message: 'Service d\'upload opérationnel',
+        message: "Service d'upload opérationnel",
         data: {
           uploadDirectory: uploadsDir,
           stats: directoryStats,
         },
       });
     } else if (healthyCount >= 1) {
-      console.warn('⚠️ [Handler Upload] Service dégradé');
+      console.warn("⚠️ [Handler Upload] Service dégradé");
       res.status(200).json({
-        status: 'degraded',
+        status: "degraded",
         checks,
         message: `${healthyCount}/3 vérifications réussies`,
         data: {
@@ -82,28 +86,22 @@ export async function healthCheck(req: Request, res: Response): Promise<void> {
         },
       });
     } else {
-      console.error('❌ [Handler Upload] Service non opérationnel');
+      console.error("❌ [Handler Upload] Service non opérationnel");
       res.status(503).json({
-        status: 'unhealthy',
+        status: "unhealthy",
         checks,
-        message: 'Service d\'upload non opérationnel',
+        message: "Service d'upload non opérationnel",
         data: {
           uploadDirectory: uploadsDir,
         },
       });
     }
   } catch (error: any) {
-    console.error('❌ [Handler Upload] Erreur lors du health check:', error);
+    console.error("❌ [Handler Upload] Erreur lors du health check:", error);
 
-    res.status(503).json({
-      status: 'unhealthy',
-      checks: {
-        directory: false,
-        writable: false,
-        stats: false,
-      },
-      message: 'Erreur lors du health check',
-      error: error.message || 'Erreur inconnue',
-    });
+    throw new InternalServerError(
+      "Erreur lors du health check du module Upload",
+      error,
+    );
   }
 }

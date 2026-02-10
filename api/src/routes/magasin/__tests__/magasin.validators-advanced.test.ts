@@ -15,7 +15,7 @@ import {
   getCommandesUtilisateurSchema,
   getPaymentIntentSchema,
   getStatistiquesMagasinSchema,
-} from "../core/validators/magasin.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Magasin Module - Tests de validateurs avancés", () => {
   describe("Transformation et coercition de types", () => {

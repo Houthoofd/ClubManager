@@ -1,8 +1,14 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { ajouterArticle } from "../services/index.js";
-import { createArticleSchema } from "../validators/index.js";
+import { createArticleSchema } from "@clubmanager/types/validators";
 import { Magasin } from "../../../../db/clients/magasin/magasin.js";
+import {
+  ValidationError,
+  DatabaseError,
+  InternalServerError,
+  formatZodErrors,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour créer un nouvel article
@@ -26,37 +32,33 @@ export async function createArticle(
 
     const result = await ajouterArticle(validatedData, magasinClient);
 
-    if (result.isConfirm) {
-      console.log("✅ [Handler Articles] Article créé avec succès");
-      res.status(201).json({
-        message: result.message,
-      });
-    } else {
+    if (!result.isConfirm) {
       console.error(
         "❌ [Handler Articles] Échec création article:",
         result.message,
       );
-      res.status(500).json({
-        message: result.message || "Erreur lors de la création de l'article",
-      });
+      throw new DatabaseError(
+        result.message || "Erreur lors de la création de l'article",
+      );
     }
+
+    console.log("✅ [Handler Articles] Article créé avec succès");
+    res.status(201).json({
+      message: result.message,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error(
         "❌ [Handler Articles] Erreur de validation:",
         error.errors,
       );
-      res.status(400).json({
-        message: "Erreur de validation des données",
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Erreur de validation des données",
+        formatZodErrors(error.errors),
+      );
     }
 
     console.error("❌ [Handler Articles] Erreur création article:", error);
-    res.status(500).json({
-      message: "Erreur lors de la création de l'article",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError("Erreur lors de la création de l'article");
   }
 }

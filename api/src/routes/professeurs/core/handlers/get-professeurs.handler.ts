@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { obtenirTousLesProfesseurs } from "../services/index.js";
 import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer tous les professeurs
@@ -29,10 +34,10 @@ export async function getProfesseurs(
   } catch (error) {
     console.error("❌ [Handler] Erreur récupération professeurs:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des professeurs",
-    });
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des professeurs",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -56,11 +61,12 @@ export async function getProfesseurById(
     const professeurId = parseInt(id);
     if (isNaN(professeurId) || professeurId <= 0) {
       console.log(`⚠️ [Handler] ID professeur invalide: ${id}`);
-      return res.status(400).json({
-        success: false,
-        message: "ID professeur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
+      throw new ValidationError("ID professeur invalide", [
+        {
+          field: "id",
+          message: "L'ID doit être un nombre positif",
+        },
+      ]);
     }
 
     const client = professeursClient || new Professeurs();
@@ -68,11 +74,7 @@ export async function getProfesseurById(
 
     if (!professeur) {
       console.log(`⚠️ [Handler] Professeur ${professeurId} non trouvé`);
-      return res.status(404).json({
-        success: false,
-        message: "Professeur non trouvé",
-        error: `Aucun professeur avec l'ID ${professeurId}`,
-      });
+      throw new NotFoundError(`Aucun professeur avec l'ID ${professeurId}`);
     }
 
     console.log(`✅ [Handler] Professeur ${professeurId} récupéré`);
@@ -85,9 +87,14 @@ export async function getProfesseurById(
   } catch (error) {
     console.error(`❌ [Handler] Erreur récupération professeur ${id}:`, error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération du professeur",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError || error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération du professeur",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

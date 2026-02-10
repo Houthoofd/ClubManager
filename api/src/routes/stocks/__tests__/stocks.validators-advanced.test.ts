@@ -11,7 +11,7 @@ import {
   articleIdParamSchema,
   healthCheckSchema,
   stocksArraySchema,
-} from "../core/validators/stocks.schema.js";
+} from "@clubmanager/types/validators";
 
 describe("Stocks - Tests avancés des validators (Branch Coverage 100%)", () => {
   // ==================== STOCK SCHEMA - ADVANCED ====================
@@ -209,7 +209,11 @@ describe("Stocks - Tests avancés des validators (Branch Coverage 100%)", () => 
     });
 
     it("devrait accepter quantite négative (pour certains cas)", () => {
-      const update = { article_id: 5, quantite: -100, operation: "set" as const };
+      const update = {
+        article_id: 5,
+        quantite: -100,
+        operation: "set" as const,
+      };
       const result = stockUpdateSchema.safeParse(update);
       expect(result.success).toBe(true);
     });
@@ -231,7 +235,11 @@ describe("Stocks - Tests avancés des validators (Branch Coverage 100%)", () => 
     });
 
     it("devrait rejeter quantite NaN", () => {
-      const update = { article_id: 5, quantite: NaN, operation: "set" as const };
+      const update = {
+        article_id: 5,
+        quantite: NaN,
+        operation: "set" as const,
+      };
       const result = stockUpdateSchema.safeParse(update);
       expect(result.success).toBe(false);
     });

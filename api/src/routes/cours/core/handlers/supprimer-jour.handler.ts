@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
 import { Cours } from "../../../../db/clients/cours/cours.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour supprimer un jour de cours récurrent
@@ -27,12 +31,16 @@ export async function supprimerJour(
     const jourNum = joursDeSemaine[jourTexte?.toLowerCase().trim()];
 
     if (!jourNum) {
-      res.status(400).json({
-        success: false,
-        message:
-          "Jour invalide. Veuillez fournir un jour valide (ex: lundi, mardi...)",
-      });
-      return;
+      throw new ValidationError(
+        "Jour invalide. Veuillez fournir un jour valide (ex: lundi, mardi...)",
+        [
+          {
+            field: "jourSemaine",
+            message:
+              "Jour invalide. Veuillez fournir un jour valide (ex: lundi, mardi...)",
+          },
+        ],
+      );
     }
 
     const client = coursClient || new Cours();
@@ -45,10 +53,15 @@ export async function supprimerJour(
     });
   } catch (error) {
     console.error("❌ [Supprimer Jour] Erreur:", error);
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la suppression",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la suppression",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

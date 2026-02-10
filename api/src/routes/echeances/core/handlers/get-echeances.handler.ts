@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { obtenirEcheancesUtilisateur as obtenirEcheancesUtilisateurService } from "../services/echeances.service.js";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer toutes les échéances d'un utilisateur
@@ -24,23 +28,17 @@ export async function getEcheancesUtilisateur(
 
     // Validation stricte: rejeter si contient des caractères non numériques
     if (!/^\d+$/.test(userIdParam)) {
-      res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError(
+        "ID utilisateur invalide - L'ID doit être un nombre positif",
+      );
     }
 
     const userId = parseInt(userIdParam, 10);
 
     if (isNaN(userId) || userId <= 0) {
-      res.status(400).json({
-        success: false,
-        message: "ID utilisateur invalide",
-        error: "L'ID doit être un nombre positif",
-      });
-      return;
+      throw new ValidationError(
+        "ID utilisateur invalide - L'ID doit être un nombre positif",
+      );
     }
 
     // Récupérer les échéances via le service
@@ -75,11 +73,8 @@ export async function getEcheancesUtilisateur(
     });
   } catch (error) {
     console.error(`❌ [Handler Échéances] Erreur GET /:userId:`, error);
-
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors de la récupération des échéances",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la récupération des échéances",
+    );
   }
 }

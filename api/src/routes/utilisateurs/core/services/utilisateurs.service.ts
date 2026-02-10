@@ -6,7 +6,10 @@
 import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
 import { EmailService } from "../../../../services/emailService.js";
 import { emailClient } from "../../../../clients/emailClient.js";
-import bcrypt from "bcrypt";
+import {
+  hashPassword,
+  verifyPassword,
+} from "../../../../shared/utils/password.helpers.js";
 
 /**
  * Vérifier l'existence d'un utilisateur
@@ -15,7 +18,7 @@ export async function verifierExistenceUtilisateur(
   nom: string,
   prenom: string,
   date_naissance: string,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   exists: boolean;
   canRegister: boolean;
@@ -25,7 +28,7 @@ export async function verifierExistenceUtilisateur(
   const client = utilisateursClient || new Utilisateurs();
 
   console.log(
-    `👤 [Service Utilisateurs] Vérification existence: ${prenom} ${nom}`
+    `👤 [Service Utilisateurs] Vérification existence: ${prenom} ${nom}`,
   );
 
   try {
@@ -55,7 +58,7 @@ export async function verifierExistenceUtilisateur(
  */
 export async function inscrireUtilisateur(
   userData: any,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   userId?: number;
@@ -66,13 +69,15 @@ export async function inscrireUtilisateur(
   const client = utilisateursClient || new Utilisateurs();
 
   console.log(
-    `📝 [Service Utilisateurs] Inscription: ${userData.prenom} ${userData.nom}`
+    `📝 [Service Utilisateurs] Inscription: ${userData.prenom} ${userData.nom}`,
   );
 
   try {
     const result = await client.inscrireUtilisateur(userData);
 
-    console.log(`✅ [Service Utilisateurs] Inscription réussie, userId: ${result.userId}`);
+    console.log(
+      `✅ [Service Utilisateurs] Inscription réussie, userId: ${result.userId}`,
+    );
 
     return {
       success: true,
@@ -82,10 +87,7 @@ export async function inscrireUtilisateur(
       details: result,
     };
   } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur inscription:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur inscription:`, error);
     throw error;
   }
 }
@@ -98,16 +100,14 @@ export async function envoyerEmailVerification(
   prenom: string,
   nom: string,
   userId: string,
-  utilisateurId: number
+  utilisateurId: number,
 ): Promise<{
   success: boolean;
   message: string;
   details?: any;
   messageId?: string;
 }> {
-  console.log(
-    `📧 [Service Utilisateurs] Envoi email vérification à: ${email}`
-  );
+  console.log(`📧 [Service Utilisateurs] Envoi email vérification à: ${email}`);
 
   try {
     const emailResult = await emailClient.sendValidationEmail({
@@ -135,10 +135,7 @@ export async function envoyerEmailVerification(
       };
     }
   } catch (error: any) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur envoi email:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur envoi email:`, error);
     return {
       success: false,
       message: "Erreur lors de l'envoi de l'email",
@@ -152,14 +149,14 @@ export async function envoyerEmailVerification(
  */
 export async function validerTokenEmail(
   token: string,
-  userId: string
+  userId: string,
 ): Promise<{
   success: boolean;
   message: string;
   data?: any;
 }> {
   console.log(
-    `🔍 [Service Utilisateurs] Validation token email pour userId: ${userId}`
+    `🔍 [Service Utilisateurs] Validation token email pour userId: ${userId}`,
   );
 
   try {
@@ -173,10 +170,7 @@ export async function validerTokenEmail(
 
     return result;
   } catch (error: any) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur validation token:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur validation token:`, error);
     throw error;
   }
 }
@@ -187,7 +181,7 @@ export async function validerTokenEmail(
 export async function connexionParUserId(
   userId: string,
   password: string,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   message: string;
@@ -215,10 +209,7 @@ export async function connexionParUserId(
       };
     }
   } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur connexion:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur connexion:`, error);
     throw error;
   }
 }
@@ -229,7 +220,7 @@ export async function connexionParUserId(
 export async function connexionParEmail(
   email: string,
   password: string,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   message: string;
@@ -257,10 +248,7 @@ export async function connexionParEmail(
       };
     }
   } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur connexion:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur connexion:`, error);
     throw error;
   }
 }
@@ -269,7 +257,7 @@ export async function connexionParEmail(
  * Récupérer les statistiques des utilisateurs
  */
 export async function obtenirStatistiques(
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   totalUtilisateurs: number;
   utilisateursActifs: number;
@@ -288,7 +276,7 @@ export async function obtenirStatistiques(
   } catch (error) {
     console.error(
       `❌ [Service Utilisateurs] Erreur récupération stats:`,
-      error
+      error,
     );
     throw error;
   }
@@ -299,12 +287,12 @@ export async function obtenirStatistiques(
  */
 export async function obtenirTousLesUtilisateurs(
   includeInactive: boolean = false,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<any[]> {
   const client = utilisateursClient || new Utilisateurs();
 
   console.log(
-    `👥 [Service Utilisateurs] Récupération de tous les utilisateurs (includeInactive: ${includeInactive})`
+    `👥 [Service Utilisateurs] Récupération de tous les utilisateurs (includeInactive: ${includeInactive})`,
   );
 
   try {
@@ -316,14 +304,14 @@ export async function obtenirTousLesUtilisateurs(
     }
 
     console.log(
-      `✅ [Service Utilisateurs] ${utilisateurs.length} utilisateur(s) récupéré(s)`
+      `✅ [Service Utilisateurs] ${utilisateurs.length} utilisateur(s) récupéré(s)`,
     );
 
     return utilisateurs;
   } catch (error) {
     console.error(
       `❌ [Service Utilisateurs] Erreur récupération utilisateurs:`,
-      error
+      error,
     );
     throw error;
   }
@@ -334,12 +322,12 @@ export async function obtenirTousLesUtilisateurs(
  */
 export async function obtenirUtilisateurParId(
   utilisateurId: number,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<any | null> {
   const client = utilisateursClient || new Utilisateurs();
 
   console.log(
-    `👤 [Service Utilisateurs] Récupération utilisateur ID: ${utilisateurId}`
+    `👤 [Service Utilisateurs] Récupération utilisateur ID: ${utilisateurId}`,
   );
 
   try {
@@ -347,7 +335,7 @@ export async function obtenirUtilisateurParId(
 
     if (!utilisateur) {
       console.log(
-        `⚠️ [Service Utilisateurs] Utilisateur ${utilisateurId} non trouvé`
+        `⚠️ [Service Utilisateurs] Utilisateur ${utilisateurId} non trouvé`,
       );
       return null;
     }
@@ -358,7 +346,7 @@ export async function obtenirUtilisateurParId(
   } catch (error) {
     console.error(
       `❌ [Service Utilisateurs] Erreur récupération utilisateur:`,
-      error
+      error,
     );
     throw error;
   }
@@ -370,7 +358,7 @@ export async function obtenirUtilisateurParId(
 export async function mettreAJourUtilisateur(
   utilisateurId: number,
   dataToUpdate: any,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   message: string;
@@ -379,7 +367,7 @@ export async function mettreAJourUtilisateur(
   const client = utilisateursClient || new Utilisateurs();
 
   console.log(
-    `🔄 [Service Utilisateurs] Mise à jour utilisateur ID: ${utilisateurId}`
+    `🔄 [Service Utilisateurs] Mise à jour utilisateur ID: ${utilisateurId}`,
   );
 
   try {
@@ -399,10 +387,7 @@ export async function mettreAJourUtilisateur(
       data: result,
     };
   } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur mise à jour:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur mise à jour:`, error);
     throw error;
   }
 }
@@ -412,7 +397,7 @@ export async function mettreAJourUtilisateur(
  */
 export async function supprimerUtilisateur(
   utilisateurId: number,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   message: string;
@@ -420,7 +405,7 @@ export async function supprimerUtilisateur(
   const client = utilisateursClient || new Utilisateurs();
 
   console.log(
-    `🗑️ [Service Utilisateurs] Suppression définitive utilisateur ID: ${utilisateurId}`
+    `🗑️ [Service Utilisateurs] Suppression définitive utilisateur ID: ${utilisateurId}`,
   );
 
   try {
@@ -433,10 +418,7 @@ export async function supprimerUtilisateur(
       message: "Utilisateur supprimé avec succès",
     };
   } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur suppression:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur suppression:`, error);
     throw error;
   }
 }
@@ -446,7 +428,7 @@ export async function supprimerUtilisateur(
  */
 export async function supprimerUtilisateurSoft(
   utilisateurId: number,
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   message: string;
@@ -454,7 +436,7 @@ export async function supprimerUtilisateurSoft(
   const client = utilisateursClient || new Utilisateurs();
 
   console.log(
-    `🗑️ [Service Utilisateurs] Suppression soft utilisateur ID: ${utilisateurId}`
+    `🗑️ [Service Utilisateurs] Suppression soft utilisateur ID: ${utilisateurId}`,
   );
 
   try {
@@ -467,10 +449,7 @@ export async function supprimerUtilisateurSoft(
       message: "Utilisateur désactivé avec succès",
     };
   } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur suppression soft:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur suppression soft:`, error);
     throw error;
   }
 }
@@ -497,10 +476,7 @@ export async function testerConfigurationEmail(): Promise<{
       details: configTest.details,
     };
   } catch (error: any) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur test config:`,
-      error
-    );
+    console.error(`❌ [Service Utilisateurs] Erreur test config:`, error);
     return {
       success: false,
       message: "Erreur lors du test de configuration",
@@ -512,9 +488,7 @@ export async function testerConfigurationEmail(): Promise<{
 /**
  * Envoyer un email de test
  */
-export async function envoyerEmailTest(
-  email: string
-): Promise<{
+export async function envoyerEmailTest(email: string): Promise<{
   success: boolean;
   message: string;
   messageId?: string;
@@ -545,7 +519,7 @@ export async function envoyerEmailTest(
   } catch (error: any) {
     console.error(
       `❌ [Service Utilisateurs] Erreur envoi email de test:`,
-      error
+      error,
     );
     return {
       success: false,
@@ -559,7 +533,7 @@ export async function envoyerEmailTest(
  * Vérifier la santé du service utilisateurs
  */
 export async function verifierSanteService(
-  utilisateursClient?: Utilisateurs
+  utilisateursClient?: Utilisateurs,
 ): Promise<{
   status: "healthy" | "degraded" | "unhealthy";
   checks: {
@@ -627,7 +601,7 @@ export async function verifierSanteService(
   } catch (error) {
     console.error(
       `❌ [Service Utilisateurs] Erreur vérification santé:`,
-      error
+      error,
     );
     return {
       status: "unhealthy",

@@ -1,5 +1,20 @@
 // Pour compatibilité ESM : utilisez import au lieu de require
 
+// Export des TypeDefs GraphQL
+export { messagesTypeDefs } from "./graphql/messages.graphql.types.js";
+export { alertesTypeDefs } from "./graphql/alertes.graphql.types.js";
+export { commandesTypeDefs } from "./graphql/commandes.graphql.types.js";
+export { compteTypeDefs } from "./graphql/compte.graphql.types.js";
+export { confirmationTypeDefs } from "./graphql/confirmation.graphql.types.js";
+export { coursTypeDefs } from "./graphql/cours.graphql.types.js";
+export { echeancesTypeDefs } from "./graphql/echeances.graphql.types.js";
+export { informationsTypeDefs } from "./graphql/informations.graphql.types.js";
+export { inscriptionTypeDefs } from "./graphql/inscription.graphql.types.js";
+export { magasinTypeDefs } from "./graphql/magasin.graphql.types.js";
+export { paiementsTypeDefs } from "./graphql/paiements.graphql.types.js";
+export { professeursTypeDefs } from "./graphql/professeurs.graphql.types.js";
+export { statistiquesTypeDefs } from "./graphql/statistiques.graphql.types.js";
+
 // Export sélectif pour éviter les conflits avec utilisateurs-service
 export type {
   UserDataSession,
@@ -53,8 +68,35 @@ export * from "./commandes-service.js";
 export * from "./compte-service.js";
 export * from "./cours-service.js";
 export * from "./informations-service.js";
+export * from "./inscription-utilisateur.js";
 export * from "./inscriptions-service.js";
 export * from "./messagerie.js";
+
+// Export sélectif pour messages pour éviter conflit avec messagerie
+export type {
+  Message as MessagePersonnalise,
+  TypeMessage,
+  EmailDetail,
+  EnvoiMessageDetails,
+  EnvoiMessageData,
+  EnvoiMessageResult as EnvoiMessagePersonnaliseResult,
+  MessageStatistiques,
+  MessageNonLusCount,
+  MessageOperationResult,
+  RappelPaiementData,
+  RappelPaiementResult,
+  SendCustomEmailOptions,
+  SendTemplateEmailOptions,
+  SendWelcomeEmailOptions,
+  SendValidationEmailOptions,
+  MessageHistory,
+  EmailStatistics,
+  MessagesResponse,
+  TypesMessagesResponse as TypesMessagesPersonnalisesResponse,
+  TypeMessageResponse,
+  EmailOperationResult,
+} from "./messages.js";
+
 export * from "./paiements.js";
 export * from "./stock.js";
 
@@ -172,3 +214,198 @@ export type {
   UpdateCommandeData,
   CommandeComplete,
 } from "./commandes.js";
+
+// Export des validators pour les commandes
+export {
+  commandesValidators,
+  StatutCommandeEnum,
+  CommandeArticleSchema,
+  CreateCommandeSchema,
+  UpdateCommandeSchema,
+  UpdateStatutCommandeSchema,
+  GetCommandeByIdSchema,
+  GetCommandesUtilisateurSchema,
+  GetCommandesParStatutSchema,
+  SearchCommandesSchema,
+  BatchUpdateCommandesSchema,
+} from "./validators/commandes.validators.js";
+
+export type {
+  StatutCommande as StatutCommandeValidator,
+  CommandeArticleInput,
+  CreateCommandeInput,
+  UpdateCommandeInput,
+  UpdateStatutCommandeInput,
+  SearchCommandesInput,
+  PaginationInput,
+  BatchUpdateCommandesInput,
+} from "./validators/commandes.validators.js";
+
+// Export des validators pour les comptes
+export {
+  compteValidators,
+  EmailSchema,
+  PhoneSchema,
+  NameSchema,
+  PasswordSchema,
+  DateOfBirthSchema,
+  GetCompteByIdSchema,
+  GetCompteByNomPrenomSchema,
+  GetInformationsCompteSchema,
+  UpdateCompteSchema,
+  ChangePasswordSchema,
+  CreatePasswordSchema,
+  UpdatePasswordSchema,
+  DeleteCompteSchema,
+  ConversionInputSchema,
+  GetGenreIdSchema,
+  GetGradeIdSchema,
+  GetStatusIdSchema,
+  GetAbonnementIdSchema,
+  CompteUtilisateurIdParamSchema,
+} from "./validators/compte.validators.js";
+
+export type {
+  GetCompteByIdInput,
+  GetCompteByNomPrenomInput,
+  GetInformationsCompteInput,
+  UpdateCompteInput,
+  ChangePasswordInput,
+  CreatePasswordInput,
+  UpdatePasswordInput,
+  DeleteCompteInput,
+  ConversionInputType,
+  GetGenreIdInput,
+  GetGradeIdInput,
+  GetStatusIdInput,
+  GetAbonnementIdInput,
+} from "./validators/compte.validators.js";
+
+// Export des validators pour la confirmation
+export {
+  confirmationValidators,
+  confirmationPaymentInputSchema,
+  confirmationPaymentCommandeInputSchema,
+} from "./validators/confirmation.validators.js";
+
+export type {
+  ConfirmationPaymentInput,
+  ConfirmationPaymentCommandeInput,
+} from "./validators/confirmation.validators.js";
+
+// Export des validators pour les cours
+export {
+  coursValidators,
+  ajouterCoursInputSchema,
+  modifierCoursInputSchema,
+  inscrireUtilisateurInputSchema as coursInscrireUtilisateurInputSchema,
+  desinscrireUtilisateurInputSchema,
+  presenceInputSchema,
+  retirerProfesseurInputSchema,
+  coursIdSchema,
+  utilisateurIdSchema as coursUtilisateurIdSchema,
+  JourSemaineEnum,
+  HeureSchema,
+  DateCoursSchema,
+} from "./validators/cours.validators.js";
+
+export type {
+  JourSemaine,
+  AjouterCoursInput,
+  ModifierCoursInput,
+  InscrireUtilisateurInput as CoursInscrireUtilisateurInput,
+  DesinscrireUtilisateurInput,
+  PresenceInput,
+  RetirerProfesseurInput,
+} from "./validators/cours.validators.js";
+
+// Export des validators pour les écheances
+export {
+  echeancesValidators,
+  getEcheancesUtilisateurSchema,
+  getEcheanceDetailSchema,
+  createEcheanceSchema,
+  updateEcheanceSchema,
+  deleteEcheanceSchema,
+  getStatistiquesSchema,
+  diagnosticEcheanceSchema,
+  echeancesFiltersInputSchema,
+  echeancesUtilisateurIdSchema,
+  echeanceIdSchema,
+  marquerEcheancePayeeSchema,
+} from "./validators/echeances.validators.js";
+
+export type {
+  GetEcheancesUtilisateurData,
+  GetEcheanceDetailData,
+  CreateEcheanceData,
+  UpdateEcheanceData,
+  DeleteEcheanceData,
+  GetStatistiquesData,
+  DiagnosticEcheanceData,
+  EcheancesFiltersInput,
+  EcheancesUtilisateurIdInput,
+  EcheanceIdInput,
+  MarquerEcheancePayeeInput,
+} from "./validators/echeances.validators.js";
+
+// Export des validators pour les professeurs
+export {
+  getProfesseursSchema,
+  getProfesseurByIdSchema,
+  getProfesseurByIdGraphQLSchema,
+  ajouterProfesseurSchema,
+  modifierStatutProfesseurSchema,
+  getPlanningProfesseurSchema,
+  getPlanningProfesseurGraphQLSchema,
+  professeursUtilisateurSchema,
+  coursSchema,
+} from "./validators/professeurs.validators.js";
+
+export type {
+  GetProfesseursData,
+  GetProfesseurByIdData,
+  GetProfesseurByIdGraphQLData,
+  AjouterProfesseurData,
+  ModifierStatutProfesseurData,
+  GetPlanningProfesseurData,
+  GetPlanningProfesseurGraphQLData,
+  UtilisateurData,
+  CoursData,
+} from "./validators/professeurs.validators.js";
+
+// Export des validators pour les statistiques
+export {
+  utilisateurIdSchema,
+  userIdSchema,
+  utilisateurIdGraphQLSchema,
+  userIdGraphQLSchema,
+  getFrequentationSchema,
+  getProgressionSchema,
+  getPresenceSchema,
+  getPresenceRawSchema,
+  emptyParamsSchema,
+  paginationSchema,
+  dateRangeSchema,
+  simpleUtilisateurIdSchema,
+  joursHistoriqueSchema,
+  moisHistoriqueSchema,
+  periodeSchema,
+} from "./validators/statistiques.validators.js";
+
+export type {
+  UtilisateurIdData,
+  UserIdData,
+  UtilisateurIdGraphQLData,
+  UserIdGraphQLData,
+  GetFrequentationData,
+  GetProgressionData,
+  GetPresenceData,
+  GetPresenceRawData,
+  EmptyParamsData,
+  PaginationData,
+  DateRangeData,
+  JoursHistoriqueData,
+  MoisHistoriqueData,
+  PeriodeData,
+} from "./validators/statistiques.validators.js";

@@ -5,6 +5,38 @@ import { alertesResolvers } from "../services/alertes/index.js";
 import { authResolvers } from "../services/auth/index.js";
 import { uploadResolvers } from "../routes/upload/upload.resolvers.js";
 
+// Import des resolvers et typedefs des modules migrés
+import { messagesResolvers } from "../routes/messages/core/resolvers/index.js";
+import { alertesResolvers as alertesResolversNew } from "../routes/alertes/core/resolvers/index.js";
+import { commandesResolvers } from "../routes/commandes/core/resolvers/index.js";
+import { compteResolvers } from "../routes/compte/core/resolvers/index.js";
+import { confirmationResolvers } from "../routes/confirmation/core/resolvers/index.js";
+import { coursResolvers } from "../routes/cours/core/resolvers/index.js";
+import { echeancesResolvers } from "../routes/echeances/core/resolvers/index.js";
+import { informationsResolvers } from "../routes/informations/core/resolvers/index.js";
+import { inscriptionResolvers } from "../routes/inscription/core/resolvers/index.js";
+import { magasinResolvers } from "../routes/magasin/core/resolvers/index.js";
+import { paiementsResolvers } from "../routes/paiements/core/resolvers/index.js";
+import { professeursResolvers } from "../routes/professeurs/core/resolvers/index.js";
+import { statistiquesResolvers } from "../routes/statistiques/core/resolvers/index.js";
+
+// Import des TypeDefs centralisés depuis @clubmanager/types
+import {
+  messagesTypeDefs,
+  alertesTypeDefs,
+  commandesTypeDefs,
+  compteTypeDefs,
+  confirmationTypeDefs,
+  coursTypeDefs,
+  echeancesTypeDefs,
+  informationsTypeDefs,
+  inscriptionTypeDefs,
+  magasinTypeDefs,
+  paiementsTypeDefs,
+  professeursTypeDefs,
+  statistiquesTypeDefs,
+} from "@clubmanager/types";
+
 /**
  * Schéma GraphQL de base
  * Définit les types, queries et mutations
@@ -13,6 +45,38 @@ export const schema = createSchema({
   typeDefs: /* GraphQL */ `
     scalar DateTime
     scalar Decimal
+    scalar JSON
+
+    # ======================================
+    # TypeDefs centralisés depuis @clubmanager/types
+    # ======================================
+
+    ${messagesTypeDefs}
+
+    ${alertesTypeDefs}
+
+    ${commandesTypeDefs}
+
+    ${compteTypeDefs}
+
+    ${confirmationTypeDefs}
+
+    ${coursTypeDefs}
+
+    ${echeancesTypeDefs}
+
+    ${informationsTypeDefs}
+
+    ${inscriptionTypeDefs}
+
+    ${magasinTypeDefs}
+    ${paiementsTypeDefs}
+    ${professeursTypeDefs}
+    ${statistiquesTypeDefs}
+
+    # ======================================
+    # Types legacy (à migrer progressivement)
+    # ======================================
 
     type Query {
       # Santé de l'API
@@ -403,12 +467,71 @@ export const schema = createSchema({
       parseValue: (value: any) => parseFloat(value),
       parseLiteral: (ast: any) => parseFloat(ast.value),
     },
+    JSON: {
+      serialize: (value: any) => value,
+      parseValue: (value: any) => value,
+      parseLiteral: (ast: any) => {
+        switch (ast.kind) {
+          case "StringValue":
+          case "BooleanValue":
+            return ast.value;
+          case "IntValue":
+          case "FloatValue":
+            return parseFloat(ast.value);
+          case "ObjectValue":
+            return ast.fields.reduce((acc: any, field: any) => {
+              acc[field.name.value] = field.value;
+              return acc;
+            }, {});
+          case "ListValue":
+            return ast.values.map((v: any) => v.value);
+          default:
+            return null;
+        }
+      },
+    },
 
     Query: {
       health: () => "GraphQL API is running!",
 
-      // Alertes
-      ...alertesResolvers.Query,
+      // Alertes (nouveaux resolvers avec middlewares)
+      ...alertesResolversNew.Query,
+
+      // Messages (nouveaux resolvers avec middlewares)
+      ...messagesResolvers.Query,
+
+      // Commandes (nouveaux resolvers avec middlewares)
+      ...commandesResolvers.Query,
+
+      // Compte (nouveaux resolvers avec middlewares)
+      ...compteResolvers.Query,
+
+      // Confirmation (nouveaux resolvers avec middlewares)
+      ...confirmationResolvers.Query,
+
+      // Cours (nouveaux resolvers avec middlewares)
+      ...coursResolvers.Query,
+
+      // Écheances (nouveaux resolvers avec middlewares)
+      ...echeancesResolvers.Query,
+
+      // Informations (nouveaux resolvers avec middlewares)
+      ...informationsResolvers.Query,
+
+      // Inscription (nouveaux resolvers avec middlewares)
+      ...inscriptionResolvers.Query,
+
+      // Magasin (nouveaux resolvers avec middlewares)
+      ...magasinResolvers.Query,
+
+      // Paiements (nouveaux resolvers avec middlewares)
+      ...paiementsResolvers.Query,
+
+      // Professeurs (nouveaux resolvers avec middlewares)
+      ...professeursResolvers.Query,
+
+      // Statistiques (nouveaux resolvers avec middlewares)
+      ...statistiquesResolvers.Query,
 
       // Auth
       ...authResolvers.Query,
@@ -506,8 +629,44 @@ export const schema = createSchema({
       // Auth
       ...authResolvers.Mutation,
 
-      // Alertes
-      ...alertesResolvers.Mutation,
+      // Alertes (nouveaux resolvers avec middlewares)
+      ...alertesResolversNew.Mutation,
+
+      // Messages (nouveaux resolvers avec middlewares)
+      ...messagesResolvers.Mutation,
+
+      // Commandes (nouveaux resolvers avec middlewares)
+      ...commandesResolvers.Mutation,
+
+      // Compte (nouveaux resolvers avec middlewares)
+      ...compteResolvers.Mutation,
+
+      // Confirmation (nouveaux resolvers avec middlewares)
+      ...confirmationResolvers.Mutation,
+
+      // Cours (nouveaux resolvers avec middlewares)
+      ...coursResolvers.Mutation,
+
+      // Écheances (nouveaux resolvers avec middlewares)
+      ...echeancesResolvers.Mutation,
+
+      // Informations (nouveaux resolvers avec middlewares)
+      ...informationsResolvers.Mutation,
+
+      // Inscription (nouveaux resolvers avec middlewares)
+      ...inscriptionResolvers.Mutation,
+
+      // Magasin (nouveaux resolvers avec middlewares)
+      ...magasinResolvers.Mutation,
+
+      // Paiements (nouveaux resolvers avec middlewares)
+      ...paiementsResolvers.Mutation,
+
+      // Professeurs (nouveaux resolvers avec middlewares)
+      ...professeursResolvers.Mutation,
+
+      // Statistiques (nouveaux resolvers avec middlewares)
+      ...statistiquesResolvers.Mutation,
 
       // Upload
       ...uploadResolvers(prisma).Mutation,

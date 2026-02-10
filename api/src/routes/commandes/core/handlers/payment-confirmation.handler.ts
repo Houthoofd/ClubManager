@@ -1,4 +1,8 @@
 import { Request, Response } from "express";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 // Configuration des endpoints de paiement
 const PAYMENT_ENDPOINTS = {
@@ -92,10 +96,7 @@ export async function paymentConfirmation(
     const { commandeId } = req.body;
 
     if (!commandeId) {
-      res.status(400).json({
-        message: "ID de commande requis",
-      });
-      return;
+      throw new ValidationError("ID de commande requis");
     }
 
     console.log(
@@ -112,9 +113,6 @@ export async function paymentConfirmation(
     });
   } catch (error: any) {
     console.error("❌ [API] Erreur confirmation paiement:", error);
-    res.status(500).json({
-      message: "Erreur lors de la confirmation du paiement",
-      error: error.message,
-    });
+    throw new InternalServerError("Erreur lors de la confirmation du paiement");
   }
 }

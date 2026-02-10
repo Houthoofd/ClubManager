@@ -1,134 +1,197 @@
-import { Request, Response } from 'express';
-import { Alerte } from '../../../../db/clients/alertes/alertes.js';
+/**
+ * Handlers REST pour le module Alertes
+ * ✅ MIGRÉ : Utilise les services partagés et erreurs standardisées
+ * Pattern: Handlers REST légers qui appellent les services
+ */
+
+import { Request, Response } from "express";
+import {
+  ValidationError,
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
+
+// Services partagés (utilisés aussi par GraphQL)
+import {
+  obtenirDashboardAlertes,
+  obtenirAlertesActives,
+  obtenirAlertesUtilisateur,
+  detecterAlertes,
+  resoudreAlerte,
+  ignorerAlerte,
+} from "../services/alertes.service.js";
 
 /**
- * Récupère le dashboard des alertes
+ * ✅ Récupère le dashboard des alertes
+ * GET /api/alertes/dashboard
  */
 export async function getDashboard(req: Request, res: Response): Promise<void> {
   try {
-    const client = new Alerte();
-    const dashboard = await client.obtenirDashboardAlertes();
-    
+    console.log("📊 [Handler REST] GET /alertes/dashboard");
+    const dashboard = await obtenirDashboardAlertes();
+
     res.json({
       success: true,
-      data: dashboard
+      data: dashboard,
     });
-  } catch (error) {
-    console.error('Erreur lors de la récupération du dashboard:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
+  } catch (error: any) {
+    // Les erreurs sont déjà standardisées par le service
+    throw error;
   }
 }
 
 /**
- * Récupère toutes les alertes actives
+ * ✅ Récupère toutes les alertes actives
+ * GET /api/alertes/actives
  */
-export async function getAlertesActives(req: Request, res: Response): Promise<void> {
+export async function getAlertesActives(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const client = new Alerte();
-    const alertes = await client.obtenirAlertesActives();
-    
+    console.log("📋 [Handler REST] GET /alertes/actives");
+    const alertes = await obtenirAlertesActives();
+
     res.json({
       success: true,
-      data: alertes
+      data: alertes,
     });
-  } catch (error) {
-    console.error('Erreur lors de la récupération des alertes:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
+  } catch (error: any) {
+    throw error;
   }
 }
 
 /**
- * Récupère les alertes d'un utilisateur spécifique
+ * ✅ Récupère les alertes d'un utilisateur spécifique
+ * GET /api/alertes/utilisateur/:userId
  */
-export async function getAlertesUtilisateur(req: Request, res: Response): Promise<void> {
-  const { userId } = req.params;
-
-  if (!userId || isNaN(parseInt(userId))) {
-    res.status(400).json({ success: false, error: 'ID utilisateur invalide.' });
-    return;
-  }
-
+export async function getAlertesUtilisateur(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const client = new Alerte();
-    const alertes = await client.obtenirAlertesUtilisateur(parseInt(userId));
-    
+    const { userId } = req.params;
+    console.log("👤 [Handler REST] GET /alertes/utilisateur/:userId", {
+      userId,
+    });
+
+    if (!userId || isNaN(parseInt(userId))) {
+      throw new ValidationError("ID utilisateur invalide", [
+        {
+          field: "userId",
+          message: "L'ID utilisateur doit être un nombre valide",
+        },
+      ]);
+    }
+
+    const alertes = await obtenirAlertesUtilisateur(parseInt(userId));
+
     res.json({
       success: true,
-      data: alertes
+      data: alertes,
     });
-  } catch (error) {
-    console.error('Erreur lors de la récupération des alertes utilisateur:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
+  } catch (error: any) {
+    throw error;
   }
 }
 
 /**
- * Déclenche manuellement la détection des alertes
+ * ✅ Déclenche manuellement la détection des alertes
+ * POST /api/alertes/detecter
  */
-export async function detecterAlertes(req: Request, res: Response): Promise<void> {
+export async function detecterAlertesHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const client = new Alerte();
-    await client.detecterAlertes();
-    
+    console.log("🔍 [Handler REST] POST /alertes/detecter");
+    const result = await detecterAlertes();
+
     res.json({
-      success: true,
-      message: 'Détection des alertes effectuée avec succès'
+      success: result.success,
+      message: result.message,
     });
-  } catch (error) {
-    console.error('Erreur lors de la détection des alertes:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
+  } catch (error: any) {
+    throw error;
   }
 }
 
 /**
- * Résout une alerte
+ * ✅ Résout une alerte
+ * PUT /api/alertes/:alerteId/resoudre
  */
-export async function resoudreAlerte(req: any, res: Response): Promise<void> {
-  const { alerteId } = req.params;
-  const { notes } = req.body;
-  const userId = req.user?.id;
-
-  if (!alerteId || isNaN(parseInt(alerteId))) {
-    res.status(400).json({ success: false, error: 'ID alerte invalide.' });
-    return;
-  }
-
+export async function resoudreAlerteHandler(
+  req: any,
+  res: Response,
+): Promise<void> {
   try {
-    const client = new Alerte();
-    await client.resoudreAlerte(parseInt(alerteId), notes || '', userId);
-    
-    res.json({
-      success: true,
-      message: 'Alerte résolue avec succès'
+    const { alerteId } = req.params;
+    const { notes } = req.body;
+    const userId = req.user?.id;
+
+    console.log("✅ [Handler REST] PUT /alertes/:alerteId/resoudre", {
+      alerteId,
+      userId,
+      hasNotes: !!notes,
     });
-  } catch (error) {
-    console.error('Erreur lors de la résolution de l\'alerte:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
+
+    if (!alerteId || isNaN(parseInt(alerteId))) {
+      throw new ValidationError("ID alerte invalide", [
+        {
+          field: "alerteId",
+          message: "L'ID de l'alerte doit être un nombre valide",
+        },
+      ]);
+    }
+
+    const result = await resoudreAlerte(
+      parseInt(alerteId),
+      notes || "",
+      userId,
+    );
+
+    res.json({
+      success: result.success,
+      message: result.message,
+    });
+  } catch (error: any) {
+    throw error;
   }
 }
 
 /**
- * Ignore une alerte
+ * ✅ Ignore une alerte
+ * PUT /api/alertes/:alerteId/ignorer
  */
-export async function ignorerAlerte(req: Request, res: Response): Promise<void> {
-  const { alerteId } = req.params;
-  const { notes } = req.body;
-
-  if (!alerteId || isNaN(parseInt(alerteId))) {
-    res.status(400).json({ success: false, error: 'ID alerte invalide.' });
-    return;
-  }
-
+export async function ignorerAlerteHandler(
+  req: Request,
+  res: Response,
+): Promise<void> {
   try {
-    const client = new Alerte();
-    await client.ignorerAlerte(parseInt(alerteId), notes || '');
-    
-    res.json({
-      success: true,
-      message: 'Alerte ignorée avec succès'
+    const { alerteId } = req.params;
+    const { notes } = req.body;
+
+    console.log("🚫 [Handler REST] PUT /alertes/:alerteId/ignorer", {
+      alerteId,
+      hasNotes: !!notes,
     });
-  } catch (error) {
-    console.error('Erreur lors de l\'ignorement de l\'alerte:', error);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
+
+    if (!alerteId || isNaN(parseInt(alerteId))) {
+      throw new ValidationError("ID alerte invalide", [
+        {
+          field: "alerteId",
+          message: "L'ID de l'alerte doit être un nombre valide",
+        },
+      ]);
+    }
+
+    const result = await ignorerAlerte(parseInt(alerteId), notes || "");
+
+    res.json({
+      success: result.success,
+      message: result.message,
+    });
+  } catch (error: any) {
+    throw error;
   }
 }

@@ -1,8 +1,13 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import { creerEcheance } from "../services/echeances.service.js";
-import { createEcheanceSchema } from "../validators/echeance.schema.js";
+import { createEcheanceSchema } from "@clubmanager/types/validators";
 import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import {
+  ValidationError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
+import { formatZodErrors } from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour créer une nouvelle échéance
@@ -40,12 +45,11 @@ export async function createEcheance(
       !validatedData.montant ||
       !validatedData.date_echeance
     ) {
-      res.status(400).json({
-        success: false,
-        error: "Données manquantes",
-        required: ["utilisateur_id", "montant", "date_echeance"],
-      });
-      return;
+      throw new ValidationError("Données manquantes", [
+        { field: "utilisateur_id", message: "Champ requis" },
+        { field: "montant", message: "Champ requis" },
+        { field: "date_echeance", message: "Champ requis" },
+      ]);
     }
 
     // Créer l'échéance via le service
@@ -75,21 +79,21 @@ export async function createEcheance(
 
     // Gestion des erreurs de validation Zod
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
-      res.status(400).json({
-        success: false,
-        message: "Données invalides",
-        error: firstError.message,
-        errors: error.errors,
-      });
-      return;
+      throw new ValidationError(
+        "Données invalides",
+        formatZodErrors(error.errors),
+      );
+    }
+
+    // Re-throw les erreurs GraphQL
+    if (error instanceof ValidationError) {
+      throw error;
     }
 
     // Erreur serveur générique
-    res.status(500).json({
-      success: false,
-      message: "Erreur lors de la création de l'échéance",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    throw new InternalServerError(
+      "Erreur lors de la création de l'échéance",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

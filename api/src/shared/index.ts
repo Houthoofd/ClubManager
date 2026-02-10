@@ -9,22 +9,22 @@
  */
 
 // ===== Configuration =====
-export * from './config';
+export * from "./config/index.js";
 
 // ===== Services =====
-export * from './services';
+export * from "./services/index.js";
 
 // ===== Middleware =====
-export * from './middleware';
+export * from "./middleware/index.js";
 
 // ===== Errors =====
-export * from './errors';
+export * from "./errors/index.js";
 
 // ===== Utils =====
-export * from './utils';
+export * from "./utils/index.js";
 
 // ===== Types =====
-export * from './types';
+export * from "./types/index.js";
 
 /**
  * Quick reference for commonly used exports:

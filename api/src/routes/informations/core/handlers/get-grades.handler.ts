@@ -6,6 +6,10 @@
 import { Request, Response } from "express";
 import { Informations } from "../../../../db/clients/informations/informations.js";
 import { obtenirGrades } from "../services/informations.service.js";
+import {
+  NotFoundError,
+  InternalServerError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour récupérer tous les grades
@@ -18,22 +22,19 @@ import { obtenirGrades } from "../services/informations.service.js";
 export async function getGrades(
   req: Request,
   res: Response,
-  informationsClient?: Informations
+  informationsClient?: Informations,
 ): Promise<void> {
   try {
-    console.log("📚 [Handler Informations] GET /grades - Récupération des grades");
+    console.log(
+      "📚 [Handler Informations] GET /grades - Récupération des grades",
+    );
 
     // Récupérer les grades via le service
     const grades = await obtenirGrades(informationsClient);
 
     if (!grades || grades.length === 0) {
       console.log("⚠️ [Handler Informations] Aucun grade trouvé");
-      res.status(404).json({
-        success: false,
-        message: "Aucun grade trouvé",
-        data: [],
-      });
-      return;
+      throw new NotFoundError("Aucun grade trouvé");
     }
 
     console.log(`✅ [Handler Informations] ${grades.length} grades récupérés`);
@@ -45,12 +46,19 @@ export async function getGrades(
       count: grades.length,
     });
   } catch (error) {
-    console.error("❌ [Handler Informations] Erreur récupération grades:", error);
+    console.error(
+      "❌ [Handler Informations] Erreur récupération grades:",
+      error,
+    );
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la récupération des grades",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw les erreurs GraphQL
+    if (error instanceof NotFoundError) {
+      throw error;
+    }
+
+    throw new InternalServerError(
+      "Erreur serveur lors de la récupération des grades",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

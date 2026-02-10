@@ -9,7 +9,14 @@ import { StripeService } from "../services/stripe.service.js";
 import { PaymentService } from "../services/payment.service.js";
 import { StatusUpgradeService } from "../services/status-upgrade.service.js";
 import { EmailNotificationService } from "../services/email-notification.service.js";
-import { confirmPaymentEcheanceSchema } from "../validators/stripe.schema.js";
+import { confirmPaymentEcheanceSchema } from "@clubmanager/types/validators";
+import {
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+  InternalServerError,
+  EmailError,
+} from "../../../../shared/errors/GraphQLErrors.js";
 
 /**
  * Handler pour confirmer un paiement d'échéance
@@ -27,22 +34,22 @@ export async function confirmPaymentEcheance(
   stripeService?: StripeService,
   paymentService?: PaymentService,
   statusUpgradeService?: StatusUpgradeService,
-  emailService?: EmailNotificationService
+  emailService?: EmailNotificationService,
 ): Promise<void> {
   try {
-    console.log("✅ [Handler Stripe] POST /confirm-payment - Confirmation paiement échéance");
+    console.log(
+      "✅ [Handler Stripe] POST /confirm-payment - Confirmation paiement échéance",
+    );
 
     // 1. Validation des données avec Zod
     const validation = confirmPaymentEcheanceSchema.safeParse(req.body);
 
     if (!validation.success) {
-      console.log("⚠️ [Handler Stripe] Validation échouée:", validation.error.errors);
-      res.status(400).json({
-        success: false,
-        message: "Données invalides",
-        errors: validation.error.errors,
-      });
-      return;
+      console.log(
+        "⚠️ [Handler Stripe] Validation échouée:",
+        validation.error.errors,
+      );
+      throw new ValidationError("Données invalides", validation.error.errors);
     }
 
     const { paymentIntentId, echeanceId, userId, amount } = validation.data;
@@ -50,7 +57,8 @@ export async function confirmPaymentEcheance(
     // 2. Initialiser les services
     const stripe = stripeService || StripeService.getInstance();
     const payment = paymentService || PaymentService.getInstance();
-    const statusUpgrade = statusUpgradeService || StatusUpgradeService.getInstance();
+    const statusUpgrade =
+      statusUpgradeService || StatusUpgradeService.getInstance();
     const email = emailService || EmailNotificationService.getInstance();
 
     // 3. Vérifier le PaymentIntent dans Stripe
@@ -58,11 +66,7 @@ export async function confirmPaymentEcheance(
 
     if (!paymentIntent) {
       console.log("⚠️ [Handler Stripe] PaymentIntent non trouvé");
-      res.status(404).json({
-        success: false,
-        message: "PaymentIntent non trouvé",
-      });
-      return;
+      throw new NotFoundError("PaymentIntent non trouvé");
     }
 
     // 4. Confirmer le paiement via le service (enregistrement DB + mise à jour échéance)
@@ -74,13 +78,15 @@ export async function confirmPaymentEcheance(
     });
 
     if (!confirmationResult.success) {
-      const status = confirmationResult.error?.includes("appartient pas") ? 403 : 404;
       console.log(`⚠️ [Handler Stripe] ${confirmationResult.error}`);
-      res.status(status).json({
-        success: false,
-        message: confirmationResult.error,
-      });
-      return;
+
+      if (confirmationResult.error?.includes("appartient pas")) {
+        throw new AuthorizationError(confirmationResult.error);
+      } else {
+        throw new NotFoundError(
+          confirmationResult.error || "Ressource non trouvée",
+        );
+      }
     }
 
     // 5. Upgrade du statut utilisateur si premier paiement
@@ -88,11 +94,13 @@ export async function confirmPaymentEcheance(
     if (confirmationResult.premierPaiement) {
       statusUpgradeResult = await statusUpgrade.upgraderStatutUtilisateur(
         userId,
-        confirmationResult.premierPaiement
+        confirmationResult.premierPaiement,
       );
 
       if (statusUpgradeResult.upgraded) {
-        console.log(`🎉 [Handler Stripe] Utilisateur ${userId} promu: ${statusUpgradeResult.ancienStatut} → ${statusUpgradeResult.nouveauStatut}`);
+        console.log(
+          `🎉 [Handler Stripe] Utilisateur ${userId} promu: ${statusUpgradeResult.ancienStatut} → ${statusUpgradeResult.nouveauStatut}`,
+        );
       }
     }
 
@@ -108,10 +116,21 @@ export async function confirmPaymentEcheance(
         statusUpgrade: statusUpgradeResult,
       });
     } catch (emailError) {
-      console.warn("⚠️ [Handler Stripe] Erreur envoi email (non bloquant):", emailError);
+      console.warn(
+        "⚠️ [Handler Stripe] Erreur envoi email (non bloquant):",
+        emailError,
+      );
+      // L'erreur email ne bloque pas le paiement, mais on la log
+      // Si vous voulez rendre l'email obligatoire, décommentez :
+      // throw new EmailError(
+      //   "Impossible d'envoyer l'email de confirmation",
+      //   emailError instanceof Error ? emailError : undefined,
+      // );
     }
 
-    console.log(`✅ [Handler Stripe] Paiement confirmé avec succès: ${paymentIntentId}`);
+    console.log(
+      `✅ [Handler Stripe] Paiement confirmé avec succès: ${paymentIntentId}`,
+    );
 
     res.status(200).json({
       success: true,
@@ -123,12 +142,25 @@ export async function confirmPaymentEcheance(
       },
     });
   } catch (error) {
-    console.error("❌ [Handler Stripe] Erreur confirmation paiement échéance:", error);
+    console.error(
+      "❌ [Handler Stripe] Erreur confirmation paiement échéance:",
+      error,
+    );
 
-    res.status(500).json({
-      success: false,
-      message: "Erreur serveur lors de la confirmation du paiement",
-      error: error instanceof Error ? error.message : "Erreur inconnue",
-    });
+    // Re-throw si c'est déjà une erreur applicative
+    if (
+      error instanceof ValidationError ||
+      error instanceof NotFoundError ||
+      error instanceof AuthorizationError ||
+      error instanceof EmailError
+    ) {
+      throw error;
+    }
+
+    // Sinon, wrapper dans InternalServerError
+    throw new InternalServerError(
+      "Erreur serveur lors de la confirmation du paiement",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
