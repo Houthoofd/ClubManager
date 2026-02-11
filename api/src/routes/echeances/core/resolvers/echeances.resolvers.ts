@@ -6,7 +6,6 @@
  */
 
 import type { GraphQLContext } from "../../../../shared/types/context.types.js";
-import { Paiements } from "../../../../db/clients/paiements/paiements.js";
 import {
   ValidationError,
   NotFoundError,
@@ -69,14 +68,9 @@ const echeancesUtilisateurResolver = async (
     filters,
   });
 
-  const paiementsClient = new Paiements();
-
   try {
     // Récupérer les échéances
-    const echeances = await obtenirEcheancesUtilisateur(
-      utilisateurId,
-      paiementsClient,
-    );
+    const echeances = await obtenirEcheancesUtilisateur(utilisateurId);
 
     // Appliquer les filtres si fournis
     let echeancesFiltrees = echeances;
@@ -165,10 +159,8 @@ const echeanceDetailResolver = async (
 
   console.log("🔍 [EcheanceDetail] Récupération détail échéance:", echeanceId);
 
-  const paiementsClient = new Paiements();
-
   try {
-    const echeance = await obtenirDetailEcheance(echeanceId, paiementsClient);
+    const echeance = await obtenirDetailEcheance(echeanceId);
 
     if (!echeance) {
       throw new NotFoundError(`Échéance non trouvée: ${echeanceId}`);
@@ -240,13 +232,9 @@ const statistiquesEcheancesResolver = async (
     utilisateurId,
   );
 
-  const paiementsClient = new Paiements();
-
   try {
-    const stats = await obtenirStatistiquesUtilisateur(
-      utilisateurId,
-      paiementsClient,
-    );
+    // Récupérer les statistiques
+    const stats = await obtenirStatistiquesUtilisateur(utilisateurId);
 
     console.log("✅ [StatistiquesEcheances] Statistiques récupérées");
 
@@ -285,13 +273,8 @@ const diagnosticEcheanceResolver = async (
 
   console.log("🔧 [DiagnosticEcheance] Diagnostic échéance:", echeanceId);
 
-  const paiementsClient = new Paiements();
-
   try {
-    const diagnostic = await obtenirDiagnosticEcheance(
-      echeanceId,
-      paiementsClient,
-    );
+    const diagnostic = await obtenirDiagnosticEcheance(echeanceId, userId);
 
     console.log("✅ [DiagnosticEcheance] Diagnostic effectué");
 
@@ -346,22 +329,17 @@ const creerEcheanceResolver = async (
   // Validation Zod
   const validatedInput = validateInput(createEcheanceSchema, input);
 
-  console.log("➕ [CreerEcheance] Création échéance:", validatedInput);
-
-  const paiementsClient = new Paiements();
+  console.log("📝 [CreerEcheance] Création échéance:", validatedInput);
 
   try {
-    const echeance = await creerEcheance(
-      {
-        utilisateur_id: validatedInput.utilisateur_id,
-        abonnement_id: validatedInput.abonnement_id || undefined,
-        montant: validatedInput.montant,
-        date_echeance: validatedInput.date_echeance,
-        description: validatedInput.description,
-        statut: validatedInput.statut || "en attente",
-      },
-      paiementsClient,
-    );
+    const echeance = await creerEcheance({
+      utilisateur_id: validatedInput.utilisateur_id,
+      abonnement_id: validatedInput.abonnement_id,
+      montant: validatedInput.montant,
+      date_echeance: validatedInput.date_echeance,
+      description: validatedInput.description,
+      statut: validatedInput.statut,
+    });
 
     console.log("✅ [CreerEcheance] Échéance créée:", echeance.id);
 
@@ -399,20 +377,16 @@ const modifierEcheanceResolver = async (
   _context: GraphQLContext,
 ) => {
   const { echeanceId, input } = args;
+  // Validation Zod
+  const validatedInput = validateInput(updateEcheanceSchema, input);
 
   console.log("✏️ [ModifierEcheance] Modification échéance:", {
     echeanceId,
-    input,
+    input: validatedInput,
   });
 
-  const paiementsClient = new Paiements();
-
   try {
-    const echeance = await modifierEcheance(
-      echeanceId,
-      input,
-      paiementsClient,
-    );
+    const echeance = await modifierEcheance(echeanceId, validatedInput);
 
     console.log("✅ [ModifierEcheance] Échéance modifiée:", echeance.id);
 
@@ -453,10 +427,12 @@ const supprimerEcheanceResolver = async (
 
   console.log("🗑️ [SupprimerEcheance] Suppression échéance:", echeanceId);
 
-  const paiementsClient = new Paiements();
-
   try {
-    await supprimerEcheance(echeanceId, paiementsClient);
+    const success = await supprimerEcheance(echeanceId);
+
+    if (!success) {
+      throw new NotFoundError(`Échéance non trouvée: ${echeanceId}`);
+    }
 
     console.log("✅ [SupprimerEcheance] Échéance supprimée:", echeanceId);
 
@@ -489,19 +465,20 @@ const marquerEcheancePayeeResolver = async (
     echeanceId,
   );
 
-  const paiementsClient = new Paiements();
-
   try {
-    const echeance = await modifierEcheance(
-      echeanceId,
-      {
-        statut: "payé",
-        date_paiement: new Date().toISOString(),
-      },
-      paiementsClient,
-    );
+    const echeance = await modifierEcheance(echeanceId, {
+      statut: "payé",
+      date_paiement: new Date().toISOString(),
+    });
 
-    console.log("✅ [MarquerEcheancePayee] Échéance marquée payée:", echeance.id);
+    if (!echeance) {
+      throw new NotFoundError(`Échéance non trouvée: ${echeanceId}`);
+    }
+
+    console.log(
+      "✅ [MarquerEcheancePayee] Échéance marquée payée:",
+      echeance.id,
+    );
 
     return {
       success: true,
@@ -513,9 +490,7 @@ const marquerEcheancePayeeResolver = async (
         montant: echeance.montant,
         date_echeance: echeance.date_echeance,
         date_paiement: echeance.date_paiement,
-        statut: mapStatutToGraphQL(echeance.statut),
-        description: echeance.description,
-        created_at: echeance.created_at,
+        statut: echeance.statut,
         updated_at: echeance.updated_at,
       },
     };

@@ -1,9 +1,38 @@
-import { Paiements } from "../../../../db/clients/paiements/paiements.js";
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import type { echeances_paiements_statut } from "@prisma/client";
 
 /**
  * Service de gestion des échéances
  * Contient la logique métier pour les opérations sur les échéances
  */
+
+/**
+ * Helper: Convertir statut user-friendly vers enum Prisma
+ */
+function toPrismaStatut(
+  statut: "en attente" | "payé" | "échu",
+): echeances_paiements_statut {
+  switch (statut) {
+    case "payé":
+      return "pay_";
+    case "échu":
+      return "chu";
+    case "en attente":
+    default:
+      return "en_attente";
+  }
+}
+
+/**
+ * Helper: Convertir enum Prisma vers statut user-friendly
+ */
+function fromPrismaStatut(
+  statut: echeances_paiements_statut | null,
+): "en attente" | "payé" | "échu" {
+  if (statut === "pay_") return "payé";
+  if (statut === "chu") return "échu";
+  return "en attente";
+}
 
 /**
  * Interface pour une échéance
@@ -53,20 +82,36 @@ export interface StatistiquesEcheances {
  */
 export async function obtenirEcheancesUtilisateur(
   userId: number,
-  paiementsClient?: Paiements,
+  _paiementsClient?: any,
 ): Promise<Echeance[]> {
-  const client = paiementsClient || new Paiements();
-
-  console.log(`🔍 [Service Échéances] Récupération échéances utilisateur ${userId}`);
+  console.log(
+    `🔍 [Service Échéances] Récupération échéances utilisateur ${userId}`,
+  );
 
   try {
-    const echeances = await client.obtenirEcheancesUtilisateur(userId);
+    const echeances = await prisma.echeances_paiements.findMany({
+      where: { utilisateur_id: userId },
+      orderBy: { date_echeance: "desc" },
+    });
 
-    console.log(`✅ [Service Échéances] ${echeances.length} échéances trouvées`);
+    console.log(
+      `✅ [Service Échéances] ${echeances.length} échéances trouvées`,
+    );
 
-    return echeances;
+    return echeances.map((e) => ({
+      id: e.id,
+      utilisateur_id: e.utilisateur_id,
+      abonnement_id: e.abonnement_id,
+      montant: Number(e.montant),
+      date_echeance: e.date_echeance.toISOString(),
+      statut: fromPrismaStatut(e.statut),
+      date_paiement: e.date_paiement?.toISOString(),
+    }));
   } catch (error) {
-    console.error(`❌ [Service Échéances] Erreur récupération échéances:`, error);
+    console.error(
+      `❌ [Service Échéances] Erreur récupération échéances:`,
+      error,
+    );
     throw new Error(
       `Impossible de récupérer les échéances de l'utilisateur ${userId}`,
     );
@@ -79,71 +124,77 @@ export async function obtenirEcheancesUtilisateur(
 export async function obtenirDetailEcheance(
   echeanceId: number,
   userId?: number,
-  paiementsClient?: Paiements,
+  _paiementsClient?: any,
 ): Promise<EcheanceAvecDetails | null> {
-  const client = paiementsClient || new Paiements();
-
-  console.log(`🔍 [Service Échéances] Récupération détail échéance ${echeanceId}`, {
-    userId: userId || "non spécifié",
-  });
+  console.log(
+    `🔍 [Service Échéances] Récupération détail échéance ${echeanceId}`,
+    {
+      userId: userId || "non spécifié",
+    },
+  );
 
   try {
-    // Requête optimisée avec toutes les informations
-    const query = `
-      SELECT
-        ep.*,
-        u.first_name,
-        u.last_name,
-        u.email,
-        pt.nom_plan,
-        pt.prix as prix_plan,
-        CASE
-          WHEN ep.date_echeance < NOW() AND ep.statut != 'payé' THEN 'en_retard'
-          ELSE ep.statut
-        END as statut_calcule
-      FROM echeances_paiements ep
-      LEFT JOIN utilisateurs u ON ep.utilisateur_id = u.id
-      LEFT JOIN plans_tarifaires pt ON ep.abonnement_id = pt.id
-      WHERE ep.id = ?
-      ${userId ? "AND ep.utilisateur_id = ?" : ""}
-    `;
+    const echeance = await prisma.echeances_paiements.findUnique({
+      where: { id: echeanceId },
+      include: {
+        utilisateurs: {
+          select: {
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+        plans_tarifaires: {
+          select: {
+            nom_plan: true,
+            prix: true,
+          },
+        },
+      },
+    });
 
-    const params = userId ? [echeanceId, userId] : [echeanceId];
-    const results = await client.queryAsync(query, params);
-
-    if (results.length === 0) {
+    if (!echeance) {
       console.log(`⚠️ [Service Échéances] Échéance ${echeanceId} non trouvée`);
       return null;
     }
 
-    const echeance = results[0];
+    // Vérifier si l'échéance appartient à l'utilisateur demandé
+    if (userId && echeance.utilisateur_id !== userId) {
+      console.log(
+        `⚠️ [Service Échéances] Échéance ${echeanceId} n'appartient pas à l'utilisateur ${userId}`,
+      );
+      return null;
+    }
+
+    // Calculer le statut (en_retard si date passée et non payé)
+    const now = new Date();
+    const statutBase = fromPrismaStatut(echeance.statut);
+    const statutCalcule =
+      echeance.date_echeance < now && echeance.statut !== "pay_"
+        ? "en_retard"
+        : statutBase;
 
     // Formater la réponse
     const echeanceFormatee: EcheanceAvecDetails = {
       id: echeance.id,
       utilisateur_id: echeance.utilisateur_id,
       abonnement_id: echeance.abonnement_id,
-      montant: parseFloat(echeance.montant),
-      date_echeance: echeance.date_echeance,
-      statut: echeance.statut,
-      statut_calcule: echeance.statut_calcule,
-      date_creation: echeance.date_creation,
-      date_paiement: echeance.date_paiement,
-      stripe_payment_intent_id: echeance.stripe_payment_intent_id,
-      description:
-        echeance.description ||
-        `Cotisation mensuelle - ${new Date(echeance.date_echeance).toLocaleDateString("fr-FR")}`,
+      montant: Number(echeance.montant),
+      date_echeance: echeance.date_echeance.toISOString(),
+      statut: statutBase,
+      statut_calcule: statutCalcule,
+      date_paiement: echeance.date_paiement?.toISOString(),
       utilisateur: {
-        first_name: echeance.first_name,
-        last_name: echeance.last_name,
-        email: echeance.email,
+        first_name: echeance.utilisateurs.first_name || "",
+        last_name: echeance.utilisateurs.last_name || "",
+        email: echeance.utilisateurs.email,
       },
     };
 
-    if (echeance.nom_plan) {
+    if (echeance.plans_tarifaires) {
       echeanceFormatee.plan = {
-        nom_plan: echeance.nom_plan,
-        prix: parseFloat(echeance.prix_plan),
+        nom_plan: echeance.plans_tarifaires.nom_plan,
+        prix: Number(echeance.plans_tarifaires.prix),
       };
     }
 
@@ -152,7 +203,9 @@ export async function obtenirDetailEcheance(
     return echeanceFormatee;
   } catch (error) {
     console.error(`❌ [Service Échéances] Erreur récupération détail:`, error);
-    throw new Error(`Impossible de récupérer les détails de l'échéance ${echeanceId}`);
+    throw new Error(
+      `Impossible de récupérer les détails de l'échéance ${echeanceId}`,
+    );
   }
 }
 
@@ -168,37 +221,34 @@ export async function creerEcheance(
     description?: string;
     statut?: "en attente" | "payé" | "échu";
   },
-  paiementsClient?: Paiements,
+  _paiementsClient?: any,
 ): Promise<Echeance> {
-  const client = paiementsClient || new Paiements();
-
   console.log(`📝 [Service Échéances] Création nouvelle échéance:`, data);
 
   try {
-    const query = `
-      INSERT INTO echeances_paiements
-      (utilisateur_id, abonnement_id, date_echeance, montant, description, statut)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
+    const echeance = await prisma.echeances_paiements.create({
+      data: {
+        utilisateur_id: data.utilisateur_id,
+        abonnement_id: data.abonnement_id || 0,
+        date_echeance: new Date(data.date_echeance),
+        montant: data.montant,
+        statut: data.statut ? toPrismaStatut(data.statut) : "en_attente",
+      },
+    });
 
-    const result = await client.queryAsync(query, [
-      data.utilisateur_id,
-      data.abonnement_id || null,
-      data.date_echeance,
-      data.montant,
-      data.description || null,
-      data.statut || "en attente",
-    ]);
-
-    // Récupérer l'échéance créée
-    const echeanceCreee = await client.queryAsync(
-      "SELECT * FROM echeances_paiements WHERE id = ?",
-      [result.insertId],
+    console.log(
+      `✅ [Service Échéances] Échéance ${echeance.id} créée avec succès`,
     );
 
-    console.log(`✅ [Service Échéances] Échéance ${result.insertId} créée avec succès`);
-
-    return echeanceCreee[0];
+    return {
+      id: echeance.id,
+      utilisateur_id: echeance.utilisateur_id,
+      abonnement_id: echeance.abonnement_id,
+      montant: Number(echeance.montant),
+      date_echeance: echeance.date_echeance.toISOString(),
+      statut: fromPrismaStatut(echeance.statut),
+      date_paiement: echeance.date_paiement?.toISOString(),
+    };
   } catch (error) {
     console.error(`❌ [Service Échéances] Erreur création échéance:`, error);
     throw new Error("Impossible de créer l'échéance");
@@ -208,7 +258,7 @@ export async function creerEcheance(
 /**
  * Mettre à jour une échéance
  */
-export async function mettreAJourEcheance(
+export async function modifierEcheance(
   echeanceId: number,
   updates: {
     montant?: number;
@@ -218,70 +268,64 @@ export async function mettreAJourEcheance(
     date_paiement?: string;
     stripe_payment_intent_id?: string;
   },
-  paiementsClient?: Paiements,
+  _paiementsClient?: any,
 ): Promise<Echeance | null> {
-  const client = paiementsClient || new Paiements();
-
-  console.log(`📝 [Service Échéances] Mise à jour échéance ${echeanceId}:`, updates);
+  console.log(
+    `📝 [Service Échéances] Mise à jour échéance ${echeanceId}:`,
+    updates,
+  );
 
   try {
     // Vérifier que l'échéance existe
-    const existingEcheance = await client.queryAsync(
-      "SELECT * FROM echeances_paiements WHERE id = ?",
-      [echeanceId],
-    );
+    const existingEcheance = await prisma.echeances_paiements.findUnique({
+      where: { id: echeanceId },
+    });
 
-    if (existingEcheance.length === 0) {
+    if (!existingEcheance) {
       console.log(`⚠️ [Service Échéances] Échéance ${echeanceId} non trouvée`);
       return null;
     }
 
-    // Construire la requête de mise à jour dynamiquement
-    const allowedFields = [
-      "montant",
-      "date_echeance",
-      "description",
-      "statut",
-      "date_paiement",
-      "stripe_payment_intent_id",
-    ];
-    const updateFields: string[] = [];
-    const updateValues: any[] = [];
+    // Construire l'objet de mise à jour
+    const updateData: any = {};
 
-    Object.keys(updates).forEach((field) => {
-      if (
-        allowedFields.includes(field) &&
-        updates[field as keyof typeof updates] !== undefined
-      ) {
-        updateFields.push(`${field} = ?`);
-        updateValues.push(updates[field as keyof typeof updates]);
-      }
-    });
+    if (updates.montant !== undefined) updateData.montant = updates.montant;
+    if (updates.date_echeance !== undefined)
+      updateData.date_echeance = new Date(updates.date_echeance);
+    if (updates.statut !== undefined)
+      updateData.statut = toPrismaStatut(updates.statut);
+    if (updates.date_paiement !== undefined)
+      updateData.date_paiement = new Date(updates.date_paiement);
 
-    if (updateFields.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       console.log(`⚠️ [Service Échéances] Aucun champ à mettre à jour`);
-      return existingEcheance[0];
+      return {
+        id: existingEcheance.id,
+        utilisateur_id: existingEcheance.utilisateur_id,
+        abonnement_id: existingEcheance.abonnement_id,
+        montant: Number(existingEcheance.montant),
+        date_echeance: existingEcheance.date_echeance.toISOString(),
+        statut: fromPrismaStatut(existingEcheance.statut),
+        date_paiement: existingEcheance.date_paiement?.toISOString(),
+      };
     }
 
-    updateValues.push(echeanceId);
-
-    const updateQuery = `
-      UPDATE echeances_paiements
-      SET ${updateFields.join(", ")}
-      WHERE id = ?
-    `;
-
-    await client.queryAsync(updateQuery, updateValues);
-
-    // Récupérer l'échéance mise à jour
-    const echeanceMiseAJour = await client.queryAsync(
-      "SELECT * FROM echeances_paiements WHERE id = ?",
-      [echeanceId],
-    );
+    const echeanceMiseAJour = await prisma.echeances_paiements.update({
+      where: { id: echeanceId },
+      data: updateData,
+    });
 
     console.log(`✅ [Service Échéances] Échéance ${echeanceId} mise à jour`);
 
-    return echeanceMiseAJour[0];
+    return {
+      id: echeanceMiseAJour.id,
+      utilisateur_id: echeanceMiseAJour.utilisateur_id,
+      abonnement_id: echeanceMiseAJour.abonnement_id,
+      montant: Number(echeanceMiseAJour.montant),
+      date_echeance: echeanceMiseAJour.date_echeance.toISOString(),
+      statut: fromPrismaStatut(echeanceMiseAJour.statut),
+      date_paiement: echeanceMiseAJour.date_paiement?.toISOString(),
+    };
   } catch (error) {
     console.error(`❌ [Service Échéances] Erreur mise à jour échéance:`, error);
     throw new Error(`Impossible de mettre à jour l'échéance ${echeanceId}`);
@@ -293,34 +337,25 @@ export async function mettreAJourEcheance(
  */
 export async function supprimerEcheance(
   echeanceId: number,
-  paiementsClient?: Paiements,
+  _paiementsClient?: any,
 ): Promise<boolean> {
-  const client = paiementsClient || new Paiements();
-
   console.log(`🗑️ [Service Échéances] Suppression échéance ${echeanceId}`);
 
   try {
     // Vérifier que l'échéance existe
-    const existingEcheance = await client.queryAsync(
-      "SELECT * FROM echeances_paiements WHERE id = ?",
-      [echeanceId],
-    );
+    const existingEcheance = await prisma.echeances_paiements.findUnique({
+      where: { id: echeanceId },
+    });
 
-    if (existingEcheance.length === 0) {
+    if (!existingEcheance) {
       console.log(`⚠️ [Service Échéances] Échéance ${echeanceId} non trouvée`);
       return false;
     }
 
     // Supprimer l'échéance
-    const result = await client.queryAsync(
-      "DELETE FROM echeances_paiements WHERE id = ?",
-      [echeanceId],
-    );
-
-    if (result.affectedRows === 0) {
-      console.log(`⚠️ [Service Échéances] Échéance ${echeanceId} non supprimée`);
-      return false;
-    }
+    await prisma.echeances_paiements.delete({
+      where: { id: echeanceId },
+    });
 
     console.log(`✅ [Service Échéances] Échéance ${echeanceId} supprimée`);
 
@@ -336,73 +371,72 @@ export async function supprimerEcheance(
  */
 export async function obtenirStatistiquesUtilisateur(
   userId: number,
-  paiementsClient?: Paiements,
+  _paiementsClient?: any,
 ): Promise<{
   statistiques: StatistiquesEcheances;
   echeances: EcheanceAvecDetails[];
 }> {
-  const client = paiementsClient || new Paiements();
-
-  console.log(`📊 [Service Échéances] Récupération statistiques utilisateur ${userId}`);
+  console.log(
+    `📊 [Service Échéances] Récupération statistiques utilisateur ${userId}`,
+  );
 
   try {
-    // Requête détaillée avec jointures
-    const query = `
-      SELECT
-        ep.*,
-        u.first_name,
-        u.last_name,
-        u.email,
-        pt.nom_plan,
-        pt.prix as prix_plan
-      FROM echeances_paiements ep
-      LEFT JOIN utilisateurs u ON ep.utilisateur_id = u.id
-      LEFT JOIN plans_tarifaires pt ON ep.abonnement_id = pt.id
-      WHERE ep.utilisateur_id = ?
-      ORDER BY ep.date_echeance DESC
-    `;
+    const echeancesDetaillees = await prisma.echeances_paiements.findMany({
+      where: { utilisateur_id: userId },
+      include: {
+        utilisateurs: {
+          select: {
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+        plans_tarifaires: {
+          select: {
+            nom_plan: true,
+            prix: true,
+          },
+        },
+      },
+      orderBy: { date_echeance: "desc" },
+    });
 
-    const echeancesDetaillees = await client.queryAsync(query, [userId]);
+    const now = new Date();
 
     // Calculer les statistiques
     const stats: StatistiquesEcheances = {
       total_echeances: echeancesDetaillees.length,
-      en_attente: echeancesDetaillees.filter(
-        (e: any) => e.statut === "en attente",
-      ).length,
-      payees: echeancesDetaillees.filter((e: any) => e.statut === "payé").length,
+      en_attente: echeancesDetaillees.filter((e) => e.statut === "en_attente")
+        .length,
+      payees: echeancesDetaillees.filter((e) => e.statut === "pay_").length,
       echues: echeancesDetaillees.filter(
-        (e: any) =>
-          e.statut === "en attente" && new Date(e.date_echeance) < new Date(),
+        (e) => e.statut === "en_attente" && e.date_echeance < now,
       ).length,
       montant_total_du: echeancesDetaillees
-        .filter((e: any) => e.statut === "en attente")
-        .reduce((sum: number, e: any) => sum + parseFloat(e.montant), 0),
+        .filter((e) => e.statut === "en_attente")
+        .reduce((sum, e) => sum + Number(e.montant), 0),
     };
 
     console.log(`✅ [Service Échéances] Statistiques calculées:`, stats);
 
     // Formater les échéances
-    const echeancesFormatees = echeancesDetaillees.map((e: any) => ({
+    const echeancesFormatees = echeancesDetaillees.map((e) => ({
       id: e.id,
       utilisateur_id: e.utilisateur_id,
       abonnement_id: e.abonnement_id,
-      montant: parseFloat(e.montant),
-      date_echeance: e.date_echeance,
-      statut: e.statut,
-      date_creation: e.date_creation,
-      date_paiement: e.date_paiement,
-      stripe_payment_intent_id: e.stripe_payment_intent_id,
-      description: e.description,
+      montant: Number(e.montant),
+      date_echeance: e.date_echeance.toISOString(),
+      statut: fromPrismaStatut(e.statut),
+      date_paiement: e.date_paiement?.toISOString(),
       utilisateur: {
-        first_name: e.first_name,
-        last_name: e.last_name,
-        email: e.email,
+        first_name: e.utilisateurs.first_name || "",
+        last_name: e.utilisateurs.last_name || "",
+        email: e.utilisateurs.email,
       },
-      plan: e.nom_plan
+      plan: e.plans_tarifaires
         ? {
-            nom_plan: e.nom_plan,
-            prix: parseFloat(e.prix_plan),
+            nom_plan: e.plans_tarifaires.nom_plan,
+            prix: Number(e.plans_tarifaires.prix),
           }
         : undefined,
     }));
@@ -422,55 +456,57 @@ export async function obtenirStatistiquesUtilisateur(
 /**
  * Diagnostic d'une échéance pour un utilisateur
  */
-export async function diagnosticEcheance(
+export async function obtenirDiagnosticEcheance(
   echeanceId: number,
   userId: number,
-  paiementsClient?: Paiements,
+  _paiementsClient?: any,
 ): Promise<any> {
-  const client = paiementsClient || new Paiements();
-
   console.log(
     `🔍 [Service Échéances] Diagnostic échéance ${echeanceId} pour utilisateur ${userId}`,
   );
 
   try {
     // 1. Vérifier si l'échéance existe
-    const echeanceExisteQuery = `SELECT * FROM echeances_paiements WHERE id = ?`;
-    const echeanceExiste = await client.queryAsync(echeanceExisteQuery, [
-      echeanceId,
-    ]);
+    const echeanceExiste = await prisma.echeances_paiements.findUnique({
+      where: { id: echeanceId },
+    });
 
     // 2. Vérifier si l'utilisateur existe
-    const userExisteQuery = `SELECT id, first_name, last_name, email FROM utilisateurs WHERE id = ?`;
-    const userExiste = await client.queryAsync(userExisteQuery, [userId]);
+    const userExiste = await prisma.utilisateurs.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+      },
+    });
 
     // 3. Récupérer toutes les échéances de cet utilisateur
-    const toutesEcheancesQuery = `SELECT * FROM echeances_paiements WHERE utilisateur_id = ?`;
-    const toutesEcheances = await client.queryAsync(toutesEcheancesQuery, [
-      userId,
-    ]);
+    const toutesEcheances = await prisma.echeances_paiements.findMany({
+      where: { utilisateur_id: userId },
+    });
 
     const diagnostic = {
       echeance_recherchee: {
         id: echeanceId,
-        existe: echeanceExiste.length > 0,
-        details: echeanceExiste[0] || null,
+        existe: !!echeanceExiste,
+        details: echeanceExiste || null,
         appartient_utilisateur:
-          echeanceExiste.length > 0 &&
-          echeanceExiste[0].utilisateur_id === userId,
+          !!echeanceExiste && echeanceExiste.utilisateur_id === userId,
       },
       utilisateur: {
         id: userId,
-        existe: userExiste.length > 0,
-        details: userExiste[0] || null,
+        existe: !!userExiste,
+        details: userExiste || null,
       },
       echeances_utilisateur: {
         total: toutesEcheances.length,
-        liste: toutesEcheances.map((e: any) => ({
+        liste: toutesEcheances.map((e) => ({
           id: e.id,
-          montant: e.montant,
+          montant: Number(e.montant),
           statut: e.statut,
-          date_echeance: e.date_echeance,
+          date_echeance: e.date_echeance.toISOString(),
         })),
       },
     };

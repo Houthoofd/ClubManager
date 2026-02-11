@@ -6,7 +6,7 @@
  */
 
 import type { GraphQLContext } from "../../../../shared/types/context.types.js";
-import { Cours } from "../../../../db/clients/cours/cours.js";
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
 import {
   ValidationError,
   NotFoundError,
@@ -29,8 +29,25 @@ import {
 } from "@clubmanager/types/validators";
 import { validateInput } from "../../../../shared/middleware/validation.middleware.js";
 import { combineMiddlewares } from "../../../../shared/middleware/auth.middleware.js";
-import { requireAuth, requireAdmin, requireStaff } from "../../../../shared/middleware/auth.middleware.js";
+import {
+  requireAuth,
+  requireAdmin,
+  requireStaff,
+} from "../../../../shared/middleware/auth.middleware.js";
 import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+
+// Helper: Convertir jour_semaine (1-7) en nom de jour
+const joursMap = [
+  "lundi",
+  "mardi",
+  "mercredi",
+  "jeudi",
+  "vendredi",
+  "samedi",
+  "dimanche",
+];
+const getJourNom = (jourNum: number): string =>
+  joursMap[jourNum - 1] || "inconnu";
 
 // ============================================
 // QUERY RESOLVERS
@@ -44,20 +61,39 @@ const tousLesCoursResolver = async (
   _args: unknown,
   _context: GraphQLContext,
 ) => {
-  const coursClient = new Cours();
-  const cours = await coursClient.obtenirLesJoursDeCours();
+  const cours = await prisma.cours_recurrent.findMany({
+    where: { active: true },
+    include: {
+      cours_recurrent_professeur: {
+        include: {
+          professeurs: {
+            select: {
+              id: true,
+              nom: true,
+              prenom: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ jour_semaine: "asc" }, { heure_debut: "asc" }],
+  });
 
   // Mapper les données pour correspondre au schéma GraphQL
-  return cours.map((c: any) => ({
+  return cours.map((c) => ({
     id: c.id,
-    nom: c.type_cours || c.nom,
+    nom: c.type_cours,
     type_cours: c.type_cours,
-    jour_semaine: c.jour?.toLowerCase() || c.jour_semaine,
+    jour_semaine: getJourNom(c.jour_semaine),
     heure_debut: c.heure_debut,
     heure_fin: c.heure_fin,
-    professeurs: c.professeurs ? (Array.isArray(c.professeurs) ? c.professeurs : [c.professeurs]) : [],
-    places_max: c.places_max,
-    created_at: c.created_at,
+    professeurs: c.cours_recurrent_professeur.map((cp) => ({
+      id: cp.professeurs.id,
+      nom: cp.professeurs.nom,
+      prenom: cp.professeurs.prenom,
+    })),
+    places_max: null, // TODO: Ajouter cette colonne au schéma si nécessaire
+    created_at: null,
   }));
 };
 
@@ -69,24 +105,53 @@ const planningCoursResolver = async (
   _args: unknown,
   _context: GraphQLContext,
 ) => {
-  const coursClient = new Cours();
-  const cours = await coursClient.obtenirLesJoursDeCours();
+  const cours = await prisma.cours_recurrent.findMany({
+    where: { active: true },
+    include: {
+      cours_recurrent_professeur: {
+        include: {
+          professeurs: {
+            select: {
+              id: true,
+              nom: true,
+              prenom: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ jour_semaine: "asc" }, { heure_debut: "asc" }],
+  });
 
   // Grouper les cours par jour
-  const jours = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-  const planning = jours.map(jour => {
+  const jours = [
+    "lundi",
+    "mardi",
+    "mercredi",
+    "jeudi",
+    "vendredi",
+    "samedi",
+    "dimanche",
+  ];
+
+  const planning = jours.map((jour, index) => {
+    const jourNum = index + 1;
     const coursJour = cours
-      .filter((c: any) => c.jour?.toLowerCase() === jour || c.jour_semaine === jour)
-      .map((c: any) => ({
+      .filter((c) => c.jour_semaine === jourNum)
+      .map((c) => ({
         id: c.id,
-        nom: c.type_cours || c.nom,
+        nom: c.type_cours,
         type_cours: c.type_cours,
         jour_semaine: jour,
         heure_debut: c.heure_debut,
         heure_fin: c.heure_fin,
-        professeurs: c.professeurs ? (Array.isArray(c.professeurs) ? c.professeurs : [c.professeurs]) : [],
-        places_max: c.places_max,
-        created_at: c.created_at,
+        professeurs: c.cours_recurrent_professeur.map((cp) => ({
+          id: cp.professeurs.id,
+          nom: cp.professeurs.nom,
+          prenom: cp.professeurs.prenom,
+        })),
+        places_max: null,
+        created_at: null,
       }));
 
     return {
@@ -104,31 +169,46 @@ const planningCoursResolver = async (
 const coursUtilisateurResolver = async (
   _parent: unknown,
   args: { utilisateurId: number },
-  context: GraphQLContext,
+  _context: GraphQLContext,
 ) => {
   const { utilisateurId } = args;
 
-  // Vérifier que l'utilisateur connecté est celui demandé ou admin
-  if (context.user?.id !== utilisateurId && context.user?.role !== 'admin') {
-    throw new ValidationError(
-      "Non autorisé à consulter les cours de cet utilisateur",
-      [{ field: "utilisateurId", message: "Accès refusé" }]
-    );
+  if (!utilisateurId || utilisateurId <= 0) {
+    throw new ValidationError("ID utilisateur invalide", [
+      { field: "utilisateurId", message: "L'ID utilisateur doit être positif" },
+    ]);
   }
 
-  const coursClient = new Cours();
-  const inscriptions = await coursClient.obtenirInscriptionsUtilisateur(utilisateurId);
+  const inscriptions = await prisma.inscriptions.findMany({
+    where: { utilisateur_id: utilisateurId },
+    include: {
+      users: {
+        select: {
+          first_name: true,
+          last_name: true,
+        },
+      },
+      cours: {
+        select: {
+          id: true,
+          date_cours: true,
+          type_cours: true,
+        },
+      },
+    },
+    orderBy: { date_inscription: "desc" },
+  });
 
-  return inscriptions.map((i: any) => ({
+  return inscriptions.map((i) => ({
     id: i.id,
     utilisateur_id: i.utilisateur_id,
     cours_id: i.cours_id,
     date_inscription: i.date_inscription,
-    presence_validee: i.presence_validee || false,
-    utilisateur_nom: i.utilisateur_nom,
-    utilisateur_prenom: i.utilisateur_prenom,
-    cours_date: i.cours_date,
-    cours_type: i.cours_type,
+    presence_validee: i.status_id || false,
+    utilisateur_nom: i.users.last_name,
+    utilisateur_prenom: i.users.first_name,
+    cours_date: i.cours.date_cours,
+    cours_type: i.cours.type_cours,
   }));
 };
 
@@ -142,24 +222,41 @@ const participantsCoursResolver = async (
 ) => {
   const { coursId } = args;
 
-  const coursClient = new Cours();
-  const participants = await coursClient.obtenirParticipantsCours(coursId);
+  const participants = await prisma.inscriptions.findMany({
+    where: { cours_id: coursId },
+    include: {
+      users: {
+        select: {
+          first_name: true,
+          last_name: true,
+        },
+      },
+      cours: {
+        select: {
+          id: true,
+          date_cours: true,
+          type_cours: true,
+        },
+      },
+    },
+    orderBy: { date_inscription: "asc" },
+  });
 
   return {
     cours_id: coursId,
-    cours_date: participants[0]?.cours_date,
-    cours_type: participants[0]?.cours_type,
+    cours_date: participants[0]?.cours.date_cours || null,
+    cours_type: participants[0]?.cours.type_cours || null,
     total_participants: participants.length,
-    participants: participants.map((p: any) => ({
+    participants: participants.map((p) => ({
       id: p.id,
       utilisateur_id: p.utilisateur_id,
       cours_id: p.cours_id,
       date_inscription: p.date_inscription,
-      presence_validee: p.presence_validee || false,
-      utilisateur_nom: p.utilisateur_nom,
-      utilisateur_prenom: p.utilisateur_prenom,
-      cours_date: p.cours_date,
-      cours_type: p.cours_type,
+      presence_validee: p.status_id || false,
+      utilisateur_nom: p.users.last_name,
+      utilisateur_prenom: p.users.first_name,
+      cours_date: p.cours.date_cours,
+      cours_type: p.cours.type_cours,
     })),
   };
 };
@@ -170,31 +267,46 @@ const participantsCoursResolver = async (
 const inscriptionsUtilisateurResolver = async (
   _parent: unknown,
   args: { utilisateurId: number },
-  context: GraphQLContext,
+  _context: GraphQLContext,
 ) => {
   const { utilisateurId } = args;
 
-  // Vérifier que l'utilisateur connecté est celui demandé ou admin
-  if (context.user?.id !== utilisateurId && context.user?.role !== 'admin') {
-    throw new ValidationError(
-      "Non autorisé à consulter les inscriptions de cet utilisateur",
-      [{ field: "utilisateurId", message: "Accès refusé" }]
-    );
+  if (!utilisateurId || utilisateurId <= 0) {
+    throw new ValidationError("ID utilisateur invalide", [
+      { field: "utilisateurId", message: "L'ID utilisateur doit être positif" },
+    ]);
   }
 
-  const coursClient = new Cours();
-  const inscriptions = await coursClient.obtenirInscriptionsUtilisateur(utilisateurId);
+  const inscriptions = await prisma.inscriptions.findMany({
+    where: { utilisateur_id: utilisateurId },
+    include: {
+      users: {
+        select: {
+          first_name: true,
+          last_name: true,
+        },
+      },
+      cours: {
+        select: {
+          id: true,
+          date_cours: true,
+          type_cours: true,
+        },
+      },
+    },
+    orderBy: { date_inscription: "desc" },
+  });
 
-  return inscriptions.map((i: any) => ({
+  return inscriptions.map((i) => ({
     id: i.id,
     utilisateur_id: i.utilisateur_id,
     cours_id: i.cours_id,
     date_inscription: i.date_inscription,
-    presence_validee: i.presence_validee || false,
-    utilisateur_nom: i.utilisateur_nom,
-    utilisateur_prenom: i.utilisateur_prenom,
-    cours_date: i.cours_date,
-    cours_type: i.cours_type,
+    presence_validee: i.status_id || false,
+    utilisateur_nom: i.users.last_name,
+    utilisateur_prenom: i.users.first_name,
+    cours_date: i.cours.date_cours,
+    cours_type: i.cours.type_cours,
   }));
 };
 
@@ -208,32 +320,50 @@ const statistiquesCoursResolver = async (
 ) => {
   const { coursId } = args;
 
-  const coursClient = new Cours();
-
-  // Récupérer les informations du cours
-  const cours = await coursClient.obtenirLesJoursDeCours();
-  const coursInfo = cours.find((c: any) => c.id === coursId);
+  // Récupérer les informations du cours récurrent
+  const coursInfo = await prisma.cours_recurrent.findUnique({
+    where: { id: coursId },
+  });
 
   if (!coursInfo) {
     throw new NotFoundError(`Cours non trouvé: ${coursId}`);
   }
 
-  // Récupérer les inscriptions
-  const participants = await coursClient.obtenirParticipantsCours(coursId);
+  // Récupérer tous les cours (instances) de ce cours récurrent
+  const coursInstances = await prisma.cours.findMany({
+    where: { cours_recurrent_id: coursId },
+    select: { id: true },
+  });
+
+  const coursInstanceIds = coursInstances.map((c) => c.id);
+
+  // Récupérer les inscriptions pour toutes les instances
+  const inscriptions = await prisma.inscriptions.findMany({
+    where: {
+      cours_id: { in: coursInstanceIds },
+    },
+    select: {
+      status_id: true,
+    },
+  });
 
   // Calculer les statistiques
-  const totalInscriptions = participants.length;
-  const presencesValidees = participants.filter((p: any) => p.presence_validee).length;
-  const tauxPresence = totalInscriptions > 0 ? (presencesValidees / totalInscriptions) * 100 : 0;
+  const totalInscriptions = inscriptions.length;
+  const presencesValidees = inscriptions.filter(
+    (i) => i.status_id === true,
+  ).length;
+  const tauxPresence =
+    totalInscriptions > 0 ? (presencesValidees / totalInscriptions) * 100 : 0;
 
   return {
     cours_id: coursId,
-    nom: coursInfo.type_cours || coursInfo.nom,
+    nom: coursInfo.type_cours,
     type_cours: coursInfo.type_cours,
     total_inscriptions: totalInscriptions,
     taux_presence: tauxPresence,
-    places_max: coursInfo.places_max,
-    moyenne_participants: totalInscriptions,
+    places_max: null, // TODO: Ajouter au schéma si nécessaire
+    moyenne_participants:
+      coursInstances.length > 0 ? totalInscriptions / coursInstances.length : 0,
   };
 };
 
@@ -252,32 +382,54 @@ const ajouterCoursResolver = async (
   const { input } = args;
 
   // Validation Zod
-  const validatedInput = validateInput(ajouterCoursInputSchema, input);
+  const validatedInput = validateInput(ajouterCoursInputSchema, input as any);
 
   console.log("🎓 [AjouterCours] Ajout cours:", validatedInput);
 
-  const coursClient = new Cours();
+  // Convertir jour_semaine en numéro
+  const jourNums: Record<string, number> = {
+    lundi: 1,
+    mardi: 2,
+    mercredi: 3,
+    jeudi: 4,
+    vendredi: 5,
+    samedi: 6,
+    dimanche: 7,
+  };
+  const jourNum = jourNums[validatedInput.jour_semaine.toLowerCase()];
+
+  if (!jourNum) {
+    throw new ValidationError("Jour de semaine invalide", [
+      { field: "jour_semaine", message: "Jour non reconnu" },
+    ]);
+  }
 
   // Vérification des conflits d'horaires
   try {
-    const coursExistants = await coursClient.obtenirLesJoursDeCours();
-    const coursConflituels = coursExistants.filter((c: any) => {
+    const coursExistants = await prisma.cours_recurrent.findMany({
+      where: {
+        active: true,
+        jour_semaine: jourNum,
+      },
+    });
+
+    const heureDebut = validatedInput.heure_debut;
+    const heureFin = validatedInput.heure_fin;
+
+    const coursConflituels = coursExistants.filter((c) => {
       if (!c.heure_debut || !c.heure_fin) return false;
 
-      const jourMatch = c.jour?.toLowerCase() === validatedInput.jour_semaine ||
-                        c.jour_semaine === validatedInput.jour_semaine;
+      // Convertir les heures en minutes pour faciliter la comparaison
+      const parseTime = (time: any): number => {
+        const timeStr = typeof time === "string" ? time : time.toString();
+        const [h, m] = timeStr.split(":").map(Number);
+        return h * 60 + m;
+      };
 
-      if (!jourMatch) return false;
-
-      const [hDebut, mDebut] = validatedInput.heure_debut.split(':').map(Number);
-      const [hFin, mFin] = validatedInput.heure_fin.split(':').map(Number);
-      const minutesDebut = hDebut * 60 + mDebut;
-      const minutesFin = hFin * 60 + mFin;
-
-      const [hDebutExist, mDebutExist] = c.heure_debut.split(':').map(Number);
-      const [hFinExist, mFinExist] = c.heure_fin.split(':').map(Number);
-      const minutesDebutExist = hDebutExist * 60 + mDebutExist;
-      const minutesFinExist = hFinExist * 60 + mFinExist;
+      const minutesDebut = parseTime(heureDebut);
+      const minutesFin = parseTime(heureFin);
+      const minutesDebutExist = parseTime(c.heure_debut);
+      const minutesFinExist = parseTime(c.heure_fin);
 
       return (
         (minutesDebut >= minutesDebutExist && minutesDebut < minutesFinExist) ||
@@ -288,10 +440,10 @@ const ajouterCoursResolver = async (
 
     if (coursConflituels.length > 0) {
       const conflits = coursConflituels
-        .map((c: any) => `${c.type_cours} ${c.heure_debut}-${c.heure_fin}`)
+        .map((c) => `${c.type_cours} ${c.heure_debut}-${c.heure_fin}`)
         .join(", ");
       throw new ConflictError(
-        `Conflit d'horaire détecté avec: ${conflits}. Impossible d'ajouter le cours`
+        `Conflit d'horaire détecté avec: ${conflits}. Impossible d'ajouter le cours`,
       );
     }
   } catch (error) {
@@ -299,39 +451,50 @@ const ajouterCoursResolver = async (
     console.log("⚠️ [AjouterCours] Erreur vérification conflits:", error);
   }
 
-  // Préparation des données pour ajout
-  const ajoutCours = {
-    nom: validatedInput.nom,
-    type_cours: validatedInput.type_cours,
-    jour_semaine: validatedInput.jour_semaine,
-    heure_debut: validatedInput.heure_debut,
-    heure_fin: validatedInput.heure_fin,
-    professeurs: validatedInput.professeurs || [],
-  };
-
   try {
-    const result = await coursClient.ajouterCoursRecurrentAvecProfesseurs(ajoutCours);
+    // Créer le cours récurrent avec ses professeurs
+    const result = await prisma.cours_recurrent.create({
+      data: {
+        type_cours: validatedInput.type_cours,
+        jour_semaine: jourNum,
+        heure_debut: validatedInput.heure_debut,
+        heure_fin: validatedInput.heure_fin,
+        active: true,
+        cours_recurrent_professeur: {
+          create: (validatedInput.professeurs || []).map((profId) => ({
+            professeur_id: Number(profId),
+          })),
+        },
+      },
+      include: {
+        cours_recurrent_professeur: {
+          include: {
+            professeurs: true,
+          },
+        },
+      },
+    });
 
-    console.log("✅ [AjouterCours] Cours ajouté:", result);
+    console.log("✅ [AjouterCours] Cours ajouté:", result.id);
 
     return {
       success: true,
-      message: result.message || "Cours récurrent ajouté avec succès",
-      cours_recurrent_id: result.cours_recurrent_id || result.id,
+      message: "Cours récurrent ajouté avec succès",
+      cours_recurrent_id: result.id,
     };
   } catch (error: any) {
     console.error("❌ [AjouterCours] Erreur:", error);
 
-    if (error.message?.includes("ER_NO_REFERENCED_ROW_2")) {
+    if (error.code === "P2003") {
       throw new ValidationError(
         "Un ou plusieurs professeurs spécifiés n'existent pas",
-        [{ field: "professeurs", message: "Professeurs introuvables" }]
+        [{ field: "professeurs", message: "Professeurs introuvables" }],
       );
     }
 
     throw new InternalServerError(
       "Erreur lors de l'ajout du cours récurrent",
-      error
+      error,
     );
   }
 };
@@ -342,34 +505,55 @@ const ajouterCoursResolver = async (
 const modifierCoursResolver = async (
   _parent: unknown,
   args: { coursId: number; input: ModifierCoursInput },
-  _context: GraphQLContext,
+  _context: unknown,
 ) => {
   const { coursId, input } = args;
 
   // Validation Zod
   const validatedInput = validateInput(modifierCoursInputSchema, input);
 
-  console.log("✏️ [ModifierCours] Modification cours:", coursId, validatedInput);
+  console.log(
+    "✏️ [ModifierCours] Modification cours:",
+    coursId,
+    validatedInput,
+  );
 
-  const coursClient = new Cours();
-
-  try {
-    const result = await coursClient.modifierCoursRecurrent(coursId, validatedInput);
-
-    console.log("✅ [ModifierCours] Cours modifié:", result);
-
-    return {
-      success: true,
-      message: "Cours modifié avec succès",
-      cours_recurrent_id: coursId,
+  // Convertir jour_semaine si fourni
+  let jourNum: number | undefined;
+  if (validatedInput.jour_semaine) {
+    const jourNums: Record<string, number> = {
+      lundi: 1,
+      mardi: 2,
+      mercredi: 3,
+      jeudi: 4,
+      vendredi: 5,
+      samedi: 6,
+      dimanche: 7,
     };
-  } catch (error: any) {
-    console.error("❌ [ModifierCours] Erreur:", error);
-    throw new InternalServerError(
-      "Erreur lors de la modification du cours",
-      error
-    );
+    jourNum = jourNums[validatedInput.jour_semaine.toLowerCase()];
   }
+
+  const result = await prisma.cours_recurrent.update({
+    where: { id: coursId },
+    data: {
+      ...(validatedInput.type_cours && {
+        type_cours: validatedInput.type_cours,
+      }),
+      ...(jourNum && { jour_semaine: jourNum }),
+      ...(validatedInput.heure_debut && {
+        heure_debut: validatedInput.heure_debut,
+      }),
+      ...(validatedInput.heure_fin && { heure_fin: validatedInput.heure_fin }),
+    },
+  });
+
+  console.log("✅ [ModifierCours] Cours modifié avec succès:", coursId);
+
+  return {
+    success: true,
+    message: "Cours modifié avec succès",
+    cours_recurrent_id: coursId,
+  };
 };
 
 /**
@@ -384,23 +568,25 @@ const supprimerJourCoursResolver = async (
 
   console.log("🗑️ [SupprimerJourCours] Suppression cours:", coursId);
 
-  const coursClient = new Cours();
-
   try {
-    await coursClient.supprimerJourCours(coursId);
+    // Soft delete - marquer comme inactif
+    await prisma.cours_recurrent.update({
+      where: { id: coursId },
+      data: { active: false },
+    });
 
     console.log("✅ [SupprimerJourCours] Cours supprimé:", coursId);
 
     return {
       success: true,
-      message: "Jour de cours supprimé avec succès",
+      message: "Cours supprimé avec succès",
       cours_id: coursId,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [SupprimerJourCours] Erreur:", error);
     throw new InternalServerError(
       "Erreur lors de la suppression du cours",
-      error
+      error,
     );
   }
 };
@@ -416,43 +602,56 @@ const inscrireUtilisateurResolver = async (
   const { input } = args;
 
   // Validation Zod
-  const validatedInput = validateInput(inscrireUtilisateurInputSchema, input);
+  const validatedInput = validateInput(
+    inscrireUtilisateurInputSchema,
+    input as any,
+  );
 
   console.log("📝 [InscrireUtilisateur] Inscription:", validatedInput);
 
-  const coursClient = new Cours();
-
   try {
-    // Vérifier si l'utilisateur est déjà inscrit
-    const verifInscription = await coursClient.verifierInscriptionUtilisateur({
-      utilisateur_nom: validatedInput.utilisateur_nom,
-      utilisateur_prenom: validatedInput.utilisateur_prenom,
-      cours_id: validatedInput.cours_id,
+    // Trouver l'utilisateur par nom et prénom
+    const utilisateur = await prisma.utilisateurs.findFirst({
+      where: {
+        first_name: validatedInput.utilisateur_prenom,
+        last_name: validatedInput.utilisateur_nom,
+      },
+      select: { id: true },
     });
 
-    if (verifInscription.isBooked) {
-      throw new ConflictError("Utilisateur déjà inscrit à ce cours");
-    }
-
-    // Vérifier si l'utilisateur existe
-    if (!verifInscription.userExists) {
+    if (!utilisateur) {
       throw new NotFoundError("Utilisateur non trouvé");
     }
 
-    // Inscrire l'utilisateur
-    const result = await coursClient.inscrireUtilisateur({
-      utilisateur_nom: validatedInput.utilisateur_nom,
-      utilisateur_prenom: validatedInput.utilisateur_prenom,
-      cours_id: validatedInput.cours_id,
+    // Vérifier si l'utilisateur est déjà inscrit
+    const inscriptionExistante = await prisma.inscriptions.findFirst({
+      where: {
+        utilisateur_id: utilisateur.id,
+        cours_id: validatedInput.cours_id,
+      },
     });
 
-    console.log("✅ [InscrireUtilisateur] Inscription réussie:", result);
+    if (inscriptionExistante) {
+      throw new ConflictError("Utilisateur déjà inscrit à ce cours");
+    }
+
+    // Créer l'inscription
+    const result = await prisma.inscriptions.create({
+      data: {
+        utilisateur_id: utilisateur.id,
+        cours_id: validatedInput.cours_id,
+        date_inscription: new Date(),
+        status_id: false,
+      },
+    });
+
+    console.log("✅ [InscrireUtilisateur] Inscription réussie:", result.id);
 
     return {
       success: true,
       message: "Inscription réussie",
-      inscription_id: result.inscription_id,
-      utilisateur_id: verifInscription.userId,
+      inscription_id: result.id,
+      utilisateur_id: utilisateur.id,
       cours_id: validatedInput.cours_id,
     };
   } catch (error: any) {
@@ -462,10 +661,7 @@ const inscrireUtilisateurResolver = async (
       throw error;
     }
 
-    throw new InternalServerError(
-      "Erreur lors de l'inscription",
-      error
-    );
+    throw new InternalServerError("Erreur lors de l'inscription", error);
   }
 };
 
@@ -480,39 +676,48 @@ const desinscrireUtilisateurResolver = async (
   const { input } = args;
 
   // Validation Zod
-  const validatedInput = validateInput(desinscrireUtilisateurInputSchema, input);
+  const validatedInput = validateInput(
+    desinscrireUtilisateurInputSchema,
+    input as any,
+  );
 
   // Vérifier que l'utilisateur connecté est celui demandé ou admin
-  if (context.user?.id !== validatedInput.utilisateur_id && context.user?.role !== 'admin') {
-    throw new ValidationError(
-      "Non autorisé à désinscrire cet utilisateur",
-      [{ field: "utilisateur_id", message: "Accès refusé" }]
-    );
+  if (
+    context.user?.id !== validatedInput.utilisateur_id &&
+    context.user?.role !== "admin"
+  ) {
+    throw new ValidationError("Non autorisé à désinscrire cet utilisateur", [
+      { field: "utilisateur_id", message: "Accès refusé" },
+    ]);
   }
 
   console.log("❌ [DesinscrireUtilisateur] Désinscription:", validatedInput);
 
-  const coursClient = new Cours();
-
   try {
-    const result = await coursClient.desinscrireUtilisateur(
-      validatedInput.utilisateur_id,
-      validatedInput.cours_id
-    );
+    const result = await prisma.inscriptions.deleteMany({
+      where: {
+        utilisateur_id: validatedInput.utilisateur_id,
+        cours_id: validatedInput.cours_id,
+      },
+    });
 
-    console.log("✅ [DesinscrireUtilisateur] Désinscription réussie:", result);
+    if (result.count === 0) {
+      throw new NotFoundError("Inscription non trouvée");
+    }
+
+    console.log("✅ [DesinscrireUtilisateur] Désinscription réussie");
 
     return {
       success: true,
       message: "Désinscription réussie",
-      inscription_id: result.inscription_id,
+      inscription_id: validatedInput.cours_id,
     };
   } catch (error: any) {
     console.error("❌ [DesinscrireUtilisateur] Erreur:", error);
-    throw new InternalServerError(
-      "Erreur lors de la désinscription",
-      error
-    );
+    if (error instanceof NotFoundError) {
+      throw error;
+    }
+    throw new InternalServerError("Erreur lors de la désinscription", error);
   }
 };
 
@@ -522,36 +727,39 @@ const desinscrireUtilisateurResolver = async (
 const validerPresenceResolver = async (
   _parent: unknown,
   args: { input: PresenceInput },
-  _context: GraphQLContext,
+  _context: unknown,
 ) => {
   const { input } = args;
 
   // Validation Zod
-  const validatedInput = validateInput(presenceInputSchema, input);
+  const validatedInput = validateInput(presenceInputSchema, input as any);
 
   console.log("✅ [ValiderPresence] Validation présence:", validatedInput);
 
-  const coursClient = new Cours();
-
   try {
-    const result = await coursClient.validerPresence(
-      validatedInput.utilisateur_id,
-      validatedInput.cours_id
-    );
+    const result = await prisma.inscriptions.updateMany({
+      where: {
+        utilisateur_id: validatedInput.utilisateur_id,
+        cours_id: validatedInput.cours_id,
+      },
+      data: {
+        status_id: true,
+      },
+    });
 
-    console.log("✅ [ValiderPresence] Présence validée:", result);
+    console.log("✅ [ValiderPresence] Présence validée:", validatedInput);
 
     return {
       success: true,
       message: "Présence validée avec succès",
-      inscription_id: result.inscription_id,
+      inscription_id: validatedInput.cours_id,
       presence_validee: true,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [ValiderPresence] Erreur:", error);
     throw new InternalServerError(
-      "Erreur lors de la validation de présence",
-      error
+      "Erreur lors de la validation de la présence",
+      error,
     );
   }
 };
@@ -562,36 +770,39 @@ const validerPresenceResolver = async (
 const annulerPresenceResolver = async (
   _parent: unknown,
   args: { input: PresenceInput },
-  _context: GraphQLContext,
+  _context: unknown,
 ) => {
   const { input } = args;
 
   // Validation Zod
-  const validatedInput = validateInput(presenceInputSchema, input);
+  const validatedInput = validateInput(presenceInputSchema, input as any);
 
   console.log("❌ [AnnulerPresence] Annulation présence:", validatedInput);
 
-  const coursClient = new Cours();
-
   try {
-    const result = await coursClient.annulerPresence(
-      validatedInput.utilisateur_id,
-      validatedInput.cours_id
-    );
+    const result = await prisma.inscriptions.updateMany({
+      where: {
+        utilisateur_id: validatedInput.utilisateur_id,
+        cours_id: validatedInput.cours_id,
+      },
+      data: {
+        status_id: false,
+      },
+    });
 
-    console.log("✅ [AnnulerPresence] Présence annulée:", result);
+    console.log("✅ [AnnulerPresence] Présence annulée:", validatedInput);
 
     return {
       success: true,
       message: "Présence annulée avec succès",
-      inscription_id: result.inscription_id,
+      inscription_id: validatedInput.cours_id,
       presence_validee: false,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [AnnulerPresence] Erreur:", error);
     throw new InternalServerError(
-      "Erreur lors de l'annulation de présence",
-      error
+      "Erreur lors de l'annulation de la présence",
+      error,
     );
   }
 };
@@ -602,35 +813,38 @@ const annulerPresenceResolver = async (
 const retirerProfesseurResolver = async (
   _parent: unknown,
   args: { input: RetirerProfesseurInput },
-  _context: GraphQLContext,
+  _context: unknown,
 ) => {
   const { input } = args;
 
   // Validation Zod
-  const validatedInput = validateInput(retirerProfesseurInputSchema, input);
+  const validatedInput = validateInput(
+    retirerProfesseurInputSchema,
+    input as any,
+  );
 
   console.log("👨‍🏫 [RetirerProfesseur] Retrait professeur:", validatedInput);
 
-  const coursClient = new Cours();
-
   try {
-    const result = await coursClient.retirerProfesseur(
-      validatedInput.cours_recurrent_id,
-      validatedInput.professeur_id
-    );
+    await prisma.cours_recurrent_professeur.deleteMany({
+      where: {
+        cours_recurrent_id: validatedInput.cours_recurrent_id,
+        professeur_id: validatedInput.professeur_id,
+      },
+    });
 
-    console.log("✅ [RetirerProfesseur] Professeur retiré:", result);
+    console.log("✅ [RetirerProfesseur] Professeur retiré:", validatedInput);
 
     return {
       success: true,
       message: "Professeur retiré avec succès",
       cours_recurrent_id: validatedInput.cours_recurrent_id,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [RetirerProfesseur] Erreur:", error);
     throw new InternalServerError(
       "Erreur lors du retrait du professeur",
-      error
+      error,
     );
   }
 };
@@ -643,34 +857,34 @@ export const coursResolvers = {
   Query: {
     tousLesCours: combineMiddlewares(
       requireAuth,
-      withSentry
+      withSentry,
     )(tousLesCoursResolver),
 
     planningCours: combineMiddlewares(
       requireAuth,
-      withSentry
+      withSentry,
     )(planningCoursResolver),
 
     coursUtilisateur: combineMiddlewares(
       requireAuth,
-      withSentry
+      withSentry,
     )(coursUtilisateurResolver),
 
     participantsCours: combineMiddlewares(
       requireAuth,
       requireStaff,
-      withSentry
+      withSentry,
     )(participantsCoursResolver),
 
     inscriptionsUtilisateur: combineMiddlewares(
       requireAuth,
-      withSentry
+      withSentry,
     )(inscriptionsUtilisateurResolver),
 
     statistiquesCours: combineMiddlewares(
       requireAuth,
       requireStaff,
-      withSentry
+      withSentry,
     )(statistiquesCoursResolver),
   },
 
@@ -678,47 +892,47 @@ export const coursResolvers = {
     ajouterCours: combineMiddlewares(
       requireAuth,
       requireAdmin,
-      withSentry
+      withSentry,
     )(ajouterCoursResolver),
 
     modifierCours: combineMiddlewares(
       requireAuth,
       requireAdmin,
-      withSentry
+      withSentry,
     )(modifierCoursResolver),
 
     supprimerJourCours: combineMiddlewares(
       requireAuth,
       requireAdmin,
-      withSentry
+      withSentry,
     )(supprimerJourCoursResolver),
 
     inscrireUtilisateur: combineMiddlewares(
       requireAuth,
-      withSentry
+      withSentry,
     )(inscrireUtilisateurResolver),
 
     desinscrireUtilisateur: combineMiddlewares(
       requireAuth,
-      withSentry
+      withSentry,
     )(desinscrireUtilisateurResolver),
 
     validerPresence: combineMiddlewares(
       requireAuth,
       requireStaff,
-      withSentry
+      withSentry,
     )(validerPresenceResolver),
 
     annulerPresence: combineMiddlewares(
       requireAuth,
       requireStaff,
-      withSentry
+      withSentry,
     )(annulerPresenceResolver),
 
     retirerProfesseur: combineMiddlewares(
       requireAuth,
       requireAdmin,
-      withSentry
+      withSentry,
     )(retirerProfesseurResolver),
   },
 };

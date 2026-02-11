@@ -6,8 +6,8 @@
  */
 
 import type { GraphQLContext } from "../../../../shared/types/context.types.js";
-import { Paiements } from "../../../../db/clients/paiements/paiements.js";
-import { EmailClient } from "../../../../db/clients/messagerie/emailClient.js";
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import { emailClient } from "../../../../clients/email/index.js";
 import { formatMontant } from "../utils/format-montant.js";
 import { getStripeInstance } from "../utils/stripe-instance.js";
 import {
@@ -89,26 +89,25 @@ const confirmPaymentResolver = async (
     );
   }
 
-  const paiements = new Paiements();
-
   // Vérifier d'abord si l'échéance est déjà payée
-  const checkEcheanceQuery = `
-    SELECT id, statut, utilisateur_id, montant, date_echeance, abonnement_id
-    FROM echeances_paiements
-    WHERE id = ?
-  `;
-  const echeanceCheck = await paiements.queryAsync(checkEcheanceQuery, [
-    echeanceId,
-  ]);
+  const echeanceActuelle = await prisma.echeances_paiements.findUnique({
+    where: { id: echeanceId },
+    select: {
+      id: true,
+      statut: true,
+      utilisateur_id: true,
+      montant: true,
+      date_echeance: true,
+      abonnement_id: true,
+    },
+  });
 
-  if (echeanceCheck.length === 0) {
+  if (!echeanceActuelle) {
     throw new NotFoundError(`Échéance non trouvée: ${echeanceId}`);
   }
 
-  const echeanceActuelle = echeanceCheck[0];
-
   // Si déjà payée, considérer comme succès (idempotence)
-  if (echeanceActuelle.statut === "payé") {
+  if (echeanceActuelle.statut === "pay_") {
     console.log(
       "ℹ️ [ConfirmPayment] Échéance déjà payée - opération idempotente",
     );
@@ -125,11 +124,24 @@ const confirmPaymentResolver = async (
   }
 
   // Vérifier si c'est le premier paiement AVANT de traiter
-  const premierPaiement = await paiements.estPremierPaiement(userId);
+  const paiementsExistants = await prisma.paiements.count({
+    where: {
+      utilisateur_id: userId,
+      statut: "reussi",
+    },
+  });
+  const premierPaiement = paiementsExistants === 0;
 
   // Confirmer le paiement Stripe d'abord (table paiements)
   try {
-    await paiements.confirmerPaiementStripe(paymentIntentId, "reussi");
+    await prisma.paiements.updateMany({
+      where: {
+        stripe_payment_intent_id: paymentIntentId,
+      },
+      data: {
+        statut: "reussi",
+      },
+    });
     console.log("✅ [ConfirmPayment] Paiement Stripe confirmé en base");
   } catch (stripeError: any) {
     console.error(
@@ -141,28 +153,28 @@ const confirmPaymentResolver = async (
 
   // Marquer l'échéance comme payée
   try {
-    const updateEcheanceQuery = `
-      UPDATE echeances_paiements
-      SET
-        statut = 'payé',
-        date_paiement = CURDATE()
-      WHERE id = ? AND statut != 'payé'
-    `;
+    const updateResult = await prisma.echeances_paiements.updateMany({
+      where: {
+        id: echeanceId,
+        statut: { not: "pay_" },
+      },
+      data: {
+        statut: "pay_",
+        date_paiement: new Date(),
+      },
+    });
 
-    const updateResult = await paiements.queryAsync(updateEcheanceQuery, [
-      echeanceId,
-    ]);
-
-    if (updateResult.affectedRows === 0) {
+    if (updateResult.count === 0) {
       console.warn(
         "⚠️ [ConfirmPayment] Aucune ligne mise à jour - échéance peut-être déjà payée",
       );
 
       // Vérifier le statut actuel
-      const recheckEcheance = await paiements.queryAsync(checkEcheanceQuery, [
-        echeanceId,
-      ]);
-      if (recheckEcheance.length > 0 && recheckEcheance[0].statut === "payé") {
+      const recheckEcheance = await prisma.echeances_paiements.findUnique({
+        where: { id: echeanceId },
+        select: { statut: true },
+      });
+      if (recheckEcheance && recheckEcheance.statut === "pay_") {
         console.log("ℹ️ [ConfirmPayment] Échéance confirmée comme déjà payée");
         // Continue avec le succès
       } else {
@@ -174,7 +186,7 @@ const confirmPaymentResolver = async (
     } else {
       console.log("✅ [ConfirmPayment] Échéance marquée comme payée:", {
         echeanceId,
-        affectedRows: updateResult.affectedRows,
+        count: updateResult.count,
       });
     }
   } catch (updateError: any) {
@@ -189,10 +201,11 @@ const confirmPaymentResolver = async (
       );
 
       // Vérifier si l'échéance est maintenant payée malgré l'erreur
-      const finalCheck = await paiements.queryAsync(checkEcheanceQuery, [
-        echeanceId,
-      ]);
-      if (finalCheck.length > 0 && finalCheck[0].statut === "payé") {
+      const finalCheck = await prisma.echeances_paiements.findUnique({
+        where: { id: echeanceId },
+        select: { statut: true },
+      });
+      if (finalCheck && finalCheck.statut === "pay_") {
         console.log(
           "✅ [ConfirmPayment] Échéance finalement payée malgré l'erreur",
         );
@@ -212,38 +225,40 @@ const confirmPaymentResolver = async (
   let statutUpgrade: string | null = null;
   if (premierPaiement) {
     try {
-      const statusQuery = `
-        SELECT u.status_id, s.nom_role as status_actuel
-        FROM utilisateurs u
-        LEFT JOIN status s ON u.status_id = s.id
-        WHERE u.id = ?
-      `;
-      const statusResult = await paiements.queryAsync(statusQuery, [userId]);
+      const utilisateurAvecStatus = await prisma.utilisateurs.findUnique({
+        where: { id: userId },
+        select: {
+          status_id: true,
+          status: {
+            select: {
+              id: true,
+              nom_role: true,
+            },
+          },
+        },
+      });
 
       if (
-        statusResult.length > 0 &&
-        statusResult[0].status_actuel === "visiteur"
+        utilisateurAvecStatus &&
+        utilisateurAvecStatus.status?.nom_role === "visiteur"
       ) {
-        const utilisateurStatusQuery = `SELECT id FROM status WHERE nom_role = 'utilisateur' LIMIT 1`;
-        const nouveauStatut = await paiements.queryAsync(
-          utilisateurStatusQuery,
-          [],
-        );
+        const nouveauStatus = await prisma.status.findFirst({
+          where: { nom_role: "utilisateur" },
+          select: { id: true },
+        });
 
-        if (nouveauStatut.length > 0) {
-          const updateUserQuery = `
-            UPDATE utilisateurs
-            SET status_id = ?, date_modification = NOW()
-            WHERE id = ? AND status_id = ?
-          `;
+        if (nouveauStatus) {
+          const updateResult = await prisma.utilisateurs.updateMany({
+            where: {
+              id: userId,
+              status_id: utilisateurAvecStatus.status_id,
+            },
+            data: {
+              status_id: nouveauStatus.id,
+            },
+          });
 
-          const updateResult = await paiements.queryAsync(updateUserQuery, [
-            nouveauStatut[0].id,
-            userId,
-            statusResult[0].status_id,
-          ]);
-
-          if (updateResult.affectedRows > 0) {
+          if (updateResult.count > 0) {
             statutUpgrade = "visiteur → utilisateur";
             console.log(
               `✅ [ConfirmPayment] Utilisateur ${userId} promu à utilisateur`,
@@ -258,16 +273,20 @@ const confirmPaymentResolver = async (
 
   // Envoyer email de confirmation
   try {
-    const userQuery = `SELECT email, first_name, last_name FROM utilisateurs WHERE id = ?`;
-    const userResults = await paiements.queryAsync(userQuery, [userId]);
+    const user = await prisma.utilisateurs.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        first_name: true,
+        last_name: true,
+      },
+    });
 
-    if (userResults.length > 0) {
-      const user = userResults[0];
+    if (user) {
       const userName =
         `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Membre";
 
-      const emailClient = new EmailClient();
-      const templateData = {
+      const templateData: Record<string, string> = {
         userName,
         amount: formatMontant(amount),
         paymentDate: new Date().toLocaleDateString("fr-FR", {
@@ -279,23 +298,25 @@ const confirmPaymentResolver = async (
         currency: "EUR",
         echeanceId: echeanceId.toString(),
         paymentIntentId,
-        premierPaiement,
+        premierPaiement: premierPaiement.toString(),
         ...(premierPaiement && {
-          isFirstPayment: true,
+          isFirstPayment: "true",
           welcomeMessage:
             "🎉 Bienvenue ! Votre premier paiement a été confirmé avec succès.",
-          statusUpgrade: statutUpgrade,
+          statusUpgrade: statutUpgrade || "",
         }),
         transactionId: paymentIntentId,
         clubName: "Club Manager",
         currentYear: new Date().getFullYear().toString(),
       };
 
-      await emailClient.sendPaymentConfirmation(
-        user.email,
-        templateData,
-        userId,
-      );
+      await emailClient.sendEmail({
+        to: user.email,
+        subject: `Confirmation de paiement - ${amount / 100}€`,
+        templateTitle: "confirmation-paiement",
+        variables: templateData,
+        utilisateurId: userId,
+      });
       console.log("✅ [ConfirmPayment] Email de confirmation envoyé");
     }
   } catch (emailError) {
@@ -366,8 +387,6 @@ const confirmPaymentCommandeResolver = async (
     );
   }
 
-  const paiements = new Paiements();
-
   console.log(
     "🔍 [ConfirmPaymentCommande] Vérification PaymentIntent sur Stripe:",
     paymentIntentId,
@@ -401,31 +420,39 @@ const confirmPaymentCommandeResolver = async (
   );
 
   // Confirmer le paiement et mettre à jour la commande
-  await paiements.confirmerPaiementStripe(paymentIntentId, "reussi");
+  await prisma.paiements.updateMany({
+    where: {
+      stripe_payment_intent_id: paymentIntentId,
+    },
+    data: {
+      statut: "reussi",
+    },
+  });
   console.log("✅ [ConfirmPaymentCommande] Paiement confirmé en base");
 
   // Utiliser seulement les colonnes existantes de la table commandes
-  const updateCommandeQuery = `UPDATE commandes SET statut = 'payée' WHERE id = ?`;
-  const updateResult = await paiements.queryAsync(updateCommandeQuery, [
-    commandeId,
-  ]);
+  const updateResult = await prisma.commandes.updateMany({
+    where: { id: commandeId },
+    data: { statut: "pay_e" },
+  });
 
   console.log("✅ [ConfirmPaymentCommande] Commande mise à jour:", {
     commandeId,
-    affectedRows: updateResult.affectedRows,
+    count: updateResult.count,
     statutMisAJour: "payée",
   });
 
   // Enregistrer la date de paiement dans la table paiements pour traçabilité
   try {
-    const updatePaiementDateQuery = `
-      UPDATE paiements
-      SET date_paiement = NOW(),
-          statut = 'reussi',
-          details = CONCAT(COALESCE(details, ''), ', Commande payée le: ', NOW())
-      WHERE stripe_payment_intent_id = ?
-    `;
-    await paiements.queryAsync(updatePaiementDateQuery, [paymentIntentId]);
+    await prisma.paiements.updateMany({
+      where: {
+        stripe_payment_intent_id: paymentIntentId,
+      },
+      data: {
+        date_paiement: new Date(),
+        statut: "reussi",
+      },
+    });
     console.log(
       "✅ [ConfirmPaymentCommande] Date de paiement enregistrée dans table paiements",
     );
@@ -437,11 +464,16 @@ const confirmPaymentCommandeResolver = async (
   }
 
   // Envoyer email de confirmation commande
-  const userQuery = `SELECT email, first_name, last_name FROM utilisateurs WHERE id = ?`;
-  const userResults = await paiements.queryAsync(userQuery, [userId]);
+  const user = await prisma.utilisateurs.findUnique({
+    where: { id: userId },
+    select: {
+      email: true,
+      first_name: true,
+      last_name: true,
+    },
+  });
 
-  if (userResults.length > 0) {
-    const user = userResults[0];
+  if (user) {
     const userName =
       `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Membre";
 
@@ -451,35 +483,39 @@ const confirmPaymentCommandeResolver = async (
 
       if (commandeId) {
         try {
-          const commandeQuery = `
-            SELECT
-              c.total,
-              ca.article_id,
-              ca.quantite,
-              ca.prix,
-              a.nom as article_nom,
-              t.nom as taille_nom
-            FROM commandes c
-            LEFT JOIN commande_articles ca ON c.id = ca.commande_id
-            LEFT JOIN articles a ON ca.article_id = a.id
-            LEFT JOIN tailles t ON ca.taille_id = t.id
-            WHERE c.id = ?
-          `;
+          const commande = await prisma.commandes.findUnique({
+            where: { id: commandeId },
+            select: {
+              total: true,
+              commande_articles: {
+                select: {
+                  quantite: true,
+                  prix: true,
+                  articles: {
+                    select: {
+                      nom: true,
+                    },
+                  },
+                  tailles: {
+                    select: {
+                      nom: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
 
-          const commandeResults = await paiements.queryAsync(commandeQuery, [
-            commandeId,
-          ]);
-
-          if (commandeResults.length > 0) {
-            commandeDetails.total = commandeResults[0].total || 0;
-            commandeDetails.articles = commandeResults
-              .filter((row: any) => row.article_id)
-              .map((row: any) => ({
-                nom: row.article_nom,
-                quantite: row.quantite,
-                prix: row.prix,
-                taille: row.taille_nom,
-              }));
+          if (commande) {
+            commandeDetails.total = Number(commande.total) || 0;
+            commandeDetails.articles = commande.commande_articles.map(
+              (ca: any) => ({
+                nom: ca.articles?.nom || "Article",
+                quantite: ca.quantite,
+                prix: Number(ca.prix),
+                taille: ca.tailles?.nom || null,
+              }),
+            );
           }
         } catch (commandeError) {
           console.warn(
@@ -488,8 +524,6 @@ const confirmPaymentCommandeResolver = async (
           );
         }
       }
-
-      const emailClient = new EmailClient();
       const templateData = {
         userName,
         numeroCommande: commandeId.toString(),
@@ -513,7 +547,11 @@ const confirmPaymentCommandeResolver = async (
         anneeActuelle: new Date().getFullYear().toString(),
       };
 
-      await emailClient.sendOrderConfirmation(user.email, templateData, userId);
+      await emailClient.sendOrderConfirmationEmail(
+        user.email,
+        userId,
+        templateData,
+      );
       console.log("✅ [ConfirmPaymentCommande] Email commande envoyé");
     } catch (emailError) {
       console.error(
