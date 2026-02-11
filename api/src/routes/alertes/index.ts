@@ -1,22 +1,10 @@
 /**
- * Exports du module alertes
- * ✅ MIGRÉ : REST routes + GraphQL resolvers + typedefs
+ * Exports du module Alertes (GraphQL-only)
+ * ✅ Architecture moderne : GraphQL uniquement
  */
 
-// ✅ Routes REST
-export { default as alertesRouter } from "./alertes.routes.js";
+// Export des resolvers et typeDefs GraphQL
+export { alertesResolvers, alertesTypeDefs } from "./core/resolvers/index.js";
 
-// ✅ GraphQL Resolvers
-export {
-  alertesResolvers,
-  default as defaultAlertesResolvers,
-} from "./core/resolvers/alertes.resolvers.js";
-
-// ✅ GraphQL TypeDefs
-export {
-  alertesTypeDefs,
-  default as defaultAlertesTypeDefs,
-} from "./core/resolvers/alertes.typedefs.js";
-
-// ✅ Services (réutilisables)
+// Export des services (réutilisables)
 export * from "./core/services/alertes.service.js";
