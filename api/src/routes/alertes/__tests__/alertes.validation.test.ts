@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { alertesService } from '../../../services/alertes/alertes.service.js';
-import { alertesResolvers } from '../../../services/alertes/alertes.resolvers.js';
+import { alertesService } from '../core/services/alertes.service.js';
+import { alertesResolvers } from '../core/resolvers/alertes.resolvers.js';
 
 describe('Alertes Resolvers GraphQL - Validation des inputs', () => {
   beforeEach(() => {

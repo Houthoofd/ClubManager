@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { alertesService } from '../../../services/alertes/alertes.service.js';
+import { alertesService } from '../core/services/alertes.service.js';
 
 describe('Alertes - Tests de Performance', () => {
   

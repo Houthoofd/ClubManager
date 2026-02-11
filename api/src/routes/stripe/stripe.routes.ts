@@ -18,10 +18,26 @@ import {
   testPaymentIntent,
   health,
 } from "./core/handlers/index.js";
+import { webhooksRouter } from "./core/webhooks/index.js";
 
 const router = express.Router();
 
-console.log("🔧 [Stripe Routes] Initialisation des routes Stripe refactorisées");
+console.log(
+  "🔧 [Stripe Routes] Initialisation des routes Stripe refactorisées",
+);
+
+/**
+ * =============================================================================
+ * WEBHOOKS (body brut requis, AVANT les middlewares JSON)
+ * =============================================================================
+ */
+
+/**
+ * Monter les routes webhooks
+ * IMPORTANT: Les webhooks doivent être montés avec express.raw() dans index.ts
+ * car ils ont besoin du body brut pour valider la signature Stripe
+ */
+router.use("/webhooks", webhooksRouter);
 
 /**
  * =============================================================================
@@ -125,7 +141,11 @@ router.post("/create-payment-intent", verifyToken, createPaymentIntentEcheance);
  *   }
  * }
  */
-router.post("/create-payment-intent-commande", verifyToken, createPaymentIntentCommande);
+router.post(
+  "/create-payment-intent-commande",
+  verifyToken,
+  createPaymentIntentCommande,
+);
 
 /**
  * POST /api/stripe/confirm-payment

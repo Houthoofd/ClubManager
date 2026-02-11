@@ -137,3 +137,8 @@ export type {
   PresenceInput,
   RetirerProfesseurInput,
 } from "./cours.validators.js";
+
+// ============================================================================
+// WEBHOOKS
+// ============================================================================
+export * from "./webhooks.validators.js";

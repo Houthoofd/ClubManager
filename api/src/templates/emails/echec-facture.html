@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Échec de paiement de facture - {{clubName}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header h2 {
+            color: #ffffff;
+            margin: 10px 0 0 0;
+            font-size: 22px;
+        }
+        .alert-box {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .invoice-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+        .footer {
+            border-top: 1px solid #bdc3c7;
+            padding-top: 20px;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: center;
+        }
+        .button {
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .action-required {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="header">
+                <h1>🥋 {{clubName}}</h1>
+                <h2>⚠️ Échec de paiement</h2>
+            </div>
+
+            <div class="alert-box">
+                <h3 style="margin: 0 0 10px 0; color: #721c24;">Bonjour <strong>{{userName}}</strong>,</h3>
+                <p style="margin: 0;">
+                    ❌ <strong>Le paiement de votre facture n'a pas pu être effectué.</strong>
+                </p>
+            </div>
+
+            <div class="invoice-details">
+                <h4 style="margin: 0 0 15px 0; color: #495057;">📋 Détails de la facture :</h4>
+                <p style="margin: 5px 0;"><strong>Numéro de facture :</strong> {{invoiceNumber}}</p>
+                <p style="margin: 5px 0;"><strong>Montant dû :</strong> <span style="color: #dc3545; font-size: 18px; font-weight: bold;">{{amount}} {{currency}}</span></p>
+                <p style="margin: 5px 0;"><strong>Date d'échec :</strong> {{dateEchec}}</p>
+                {{#if subscriptionId}}
+                <p style="margin: 5px 0;"><strong>Abonnement :</strong> #{{subscriptionId}}</p>
+                {{/if}}
+                <p style="margin: 5px 0;"><strong>Période :</strong> {{periodStart}} - {{periodEnd}}</p>
+                <p style="margin: 5px 0;"><strong>Tentative n°:</strong> {{attemptCount}}/3</p>
+            </div>
+
+            <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+                <h4 style="margin: 0 0 10px 0; color: #721c24;">🔍 Raison de l'échec :</h4>
+                <p style="margin: 0; color: #721c24; font-weight: bold;">
+                    {{errorMessage}}
+                </p>
+                {{#if errorCode}}
+                <p style="margin: 10px 0 0 0; color: #721c24; font-size: 12px;">
+                    Code d'erreur : {{errorCode}}
+                </p>
+                {{/if}}
+            </div>
+
+            <div class="action-required">
+                <h3 style="margin: 0 0 15px 0; color: #856404;">⚡ Action requise</h3>
+                <p style="margin: 0 0 20px 0; color: #856404;">
+                    Pour éviter l'interruption de votre abonnement, veuillez mettre à jour vos informations de paiement ou effectuer un paiement manuel.
+                </p>
+                {{#if nextPaymentAttempt}}
+                <p style="margin: 0 0 20px 0; color: #856404; font-size: 14px;">
+                    ⏰ Prochaine tentative automatique : {{nextPaymentAttempt}}
+                </p>
+                {{/if}}
+                <a href="{{retryUrl}}" class="button">
+                    🔄 Mettre à jour le paiement
+                </a>
+                {{#if hostedInvoiceUrl}}
+                <a href="{{hostedInvoiceUrl}}" class="button" style="background-color: #007bff;">
+                    📄 Voir la facture
+                </a>
+                {{/if}}
+            </div>
+
+            {{#if attemptCount}}
+            {{#if (eq attemptCount 3)}}
+            <div style="background-color: #dc3545; color: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0; color: white;">🚨 Attention - Dernier avertissement</h4>
+                <p style="margin: 0; color: white;">
+                    Il s'agit de la dernière tentative de paiement. Si ce paiement échoue à nouveau, votre abonnement sera suspendu automatiquement.
+                    Veuillez mettre à jour vos informations de paiement dès que possible.
+                </p>
+            </div>
+            {{/if}}
+            {{/if}}
+
+            <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0;">💡 Causes fréquentes d'échec</h4>
+                <ul style="margin: 10px 0; padding-left: 20px; color: #495057;">
+                    <li>Fonds insuffisants sur votre compte</li>
+                    <li>Carte bancaire expirée</li>
+                    <li>Limite de paiement atteinte</li>
+                    <li>Informations de carte incorrectes</li>
+                    <li>Blocage par votre banque (3D Secure)</li>
+                </ul>
+            </div>
+
+            <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0;">📞 Besoin d'aide ?</h4>
+                <p style="margin: 0;">
+                    Notre équipe est disponible pour vous aider à résoudre ce problème rapidement.
+                    Contactez-nous si vous avez besoin d'assistance.
+                </p>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="mailto:{{supportEmail}}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                        ✉️ Contacter le support
+                    </a>
+                </div>
+            </div>
+
+            <p style="margin-top: 30px;">
+                Cordialement,<br>
+                <strong>L'équipe {{clubName}}</strong>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p style="margin: 0;">© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p style="margin: 5px 0 0 0;">Support : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

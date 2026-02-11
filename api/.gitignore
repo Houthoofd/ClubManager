@@ -25,3 +25,7 @@ coverage/
 /src/generated/prisma
 
 /src/generated/prisma
+
+# Uploads - ignore all files but keep directory structure
+public/uploads/*
+!public/uploads/.gitkeep

@@ -11,7 +11,7 @@ import {
   setupTestDatabase,
   cleanupTestDatabase,
 } from "../../../tests/setup/testDatabase.js";
-import { AuthService } from "../../../services/auth/auth.service.js";
+import { AuthService } from "../core/services/auth.service.js";
 import { prisma } from "../../../infrastructure/database/prisma-client.js";
 import jwt from "jsonwebtoken";
 

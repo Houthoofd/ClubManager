@@ -21,6 +21,7 @@ import { stocksResolvers } from "../routes/stocks/core/resolvers/index.js";
 import { utilisateursResolvers } from "../routes/utilisateurs/core/resolvers/index.js";
 import { verificationResolvers } from "../routes/verification/core/resolvers/index.js";
 import { uploadResolvers } from "../routes/upload/core/resolvers/index.js";
+import { webhooksResolvers } from "../routes/stripe/core/webhooks/index.js";
 
 // Import des TypeDefs centralisés depuis @clubmanager/types
 import {
@@ -42,6 +43,7 @@ import {
   utilisateursTypeDefs,
   verificationTypeDefs,
   uploadTypeDefs,
+  webhooksTypeDefs,
 } from "@clubmanager/types";
 
 // Créer les resolvers auth avec Prisma
@@ -89,6 +91,8 @@ export const schema = createSchema({
     ${utilisateursTypeDefs}
     ${verificationTypeDefs}
     ${uploadTypeDefs}
+
+    ${webhooksTypeDefs}
 
     # ======================================
     # Types legacy (à migrer progressivement)
@@ -561,6 +565,9 @@ export const schema = createSchema({
       // Upload (nouveaux resolvers avec middlewares)
       ...uploadResolvers(prisma).Query,
 
+      // Webhooks Stripe (nouveaux resolvers avec middlewares)
+      ...webhooksResolvers.Query,
+
       // Auth
       ...authResolvers.Query,
 
@@ -704,6 +711,14 @@ export const schema = createSchema({
 
       // Upload (nouveaux resolvers avec middlewares)
       ...uploadResolvers(prisma).Mutation,
+
+      // Webhooks Stripe (nouveaux resolvers avec middlewares)
+      ...webhooksResolvers.Mutation,
+    },
+
+    Subscription: {
+      // Webhooks Stripe (nouveaux resolvers avec middlewares)
+      ...webhooksResolvers.Subscription,
     },
 
     // Field resolvers

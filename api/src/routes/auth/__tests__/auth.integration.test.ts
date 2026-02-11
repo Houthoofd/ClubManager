@@ -29,7 +29,7 @@ import {
   teardownTestDatabase,
   getTestPrisma,
 } from "../../../tests/setup/testDatabase.js";
-import { AuthService } from "../../../services/auth/auth.service.js";
+import { AuthService } from "../core/services/auth.service.js";
 import { PrismaClient } from "@prisma/client";
 
 describe("Auth - Tests d'intégration avec DB", () => {

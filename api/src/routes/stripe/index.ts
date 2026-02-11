@@ -25,5 +25,13 @@ export { PaymentService } from "./core/services/payment.service.js";
 export { StatusUpgradeService } from "./core/services/status-upgrade.service.js";
 export { EmailNotificationService } from "./core/services/email-notification.service.js";
 
+// Exporter les webhooks (REST & GraphQL)
+export {
+  WebhookService,
+  webhooksRouter,
+  webhooksResolvers,
+  webhooksTypeDefs,
+} from "./core/webhooks/index.js";
+
 // Exporter les validators pour réutilisation
 export * from "./core/validators/stripe.schema.js";

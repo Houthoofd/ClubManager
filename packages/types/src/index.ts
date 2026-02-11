@@ -19,6 +19,7 @@ export { stocksTypeDefs } from "./graphql/stocks.graphql.types.js";
 export { utilisateursTypeDefs } from "./graphql/utilisateurs.typedefs.js";
 export { verificationTypeDefs } from "./graphql/verification.typedefs.js";
 export { uploadTypeDefs } from "./graphql/upload.typedefs.js";
+export { webhooksTypeDefs } from "./graphql/webhooks.typedefs.js";
 
 // Export sélectif pour éviter les conflits avec utilisateurs-service
 export type {
@@ -428,11 +429,86 @@ export {
 } from "./validators/stocks.validators.js";
 
 export type {
-  Stock as StockValidator,
-  StockUpdate,
   AlerteParams,
   AlerteParamsGraphQL,
   ArticleIdParam,
   ArticleIdGraphQL,
   HealthCheck as StocksHealthCheck,
 } from "./validators/stocks.validators.js";
+
+// Export des types webhooks
+export * from "./webhooks.js";
+
+// Export des types GraphQL webhooks
+export type {
+  GetWebhookLogsArgs,
+  GetWebhookLogArgs,
+  GetWebhookStatsArgs,
+  RetryWebhookEventArgs,
+  ProcessWebhookManuallyArgs,
+  WebhookLogResponse,
+  WebhookStatsResponse,
+  WebhookEventTypeStats,
+  RetryWebhookResponse,
+  ProcessWebhookManuallyResponse,
+  WebhookGraphQLContext,
+  WebhookLogsFilterInput,
+  PaginatedWebhookLogsResponse,
+  OnWebhookProcessedArgs,
+  WebhookProcessedPayload,
+} from "./graphql/webhooks.graphql.types.js";
+
+export {
+  GetWebhookLogsArgsSchema,
+  GetWebhookLogArgsSchema,
+  GetWebhookStatsArgsSchema,
+  RetryWebhookEventArgsSchema,
+  ProcessWebhookManuallyArgsSchema,
+  WebhookLogsFilterInputSchema,
+  OnWebhookProcessedArgsSchema,
+} from "./graphql/webhooks.graphql.types.js";
+
+// Export des validators webhooks
+export {
+  WebhookSignatureSchema,
+  WebhookPaymentMetadataSchema,
+  PaymentIntentSucceededSchema,
+  PaymentIntentFailedSchema,
+  CheckoutSessionCompletedSchema,
+  InvoicePaymentSucceededSchema,
+  InvoicePaymentFailedSchema,
+  SubscriptionSchema,
+  StripeEventSchema,
+  ConfirmPaymentEcheanceSchema,
+  ConfirmPaymentCommandeSchema,
+  WebhookLogSchema,
+  EnregistrerPaiementWebhookSchema,
+  UpdateEcheanceWebhookSchema,
+  EmailConfirmationWebhookSchema,
+  EmailFailureWebhookSchema,
+  RetryWebhookSchema,
+  WebhookLogsFilterSchema,
+  WebhookConfigSchema,
+} from "./validators/webhooks.validators.js";
+
+export type {
+  WebhookSignature,
+  WebhookPaymentMetadata,
+  PaymentIntentSucceeded,
+  PaymentIntentFailed,
+  CheckoutSessionCompleted,
+  InvoicePaymentSucceeded,
+  InvoicePaymentFailed,
+  Subscription as WebhookSubscription,
+  StripeEvent,
+  ConfirmPaymentEcheance,
+  ConfirmPaymentCommande,
+  WebhookLog,
+  EnregistrerPaiementWebhook,
+  UpdateEcheanceWebhook,
+  EmailConfirmationWebhook,
+  EmailFailureWebhook,
+  RetryWebhook,
+  WebhookLogsFilter,
+  WebhookConfig as WebhookConfigValidator,
+} from "./validators/webhooks.validators.js";

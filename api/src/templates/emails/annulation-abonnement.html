@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation d'annulation - {{clubName}}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+        }
+        .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header h2 {
+            color: #ffffff;
+            margin: 10px 0 0 0;
+            font-size: 22px;
+        }
+        .info-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .subscription-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #6c757d;
+        }
+        .footer {
+            border-top: 1px solid #bdc3c7;
+            padding-top: 20px;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-align: center;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="header">
+                <h1>🥋 {{clubName}}</h1>
+                <h2>Annulation d'abonnement</h2>
+            </div>
+
+            <div class="info-box">
+                <h3 style="margin: 0 0 10px 0; color: #856404;">Bonjour <strong>{{userName}}</strong>,</h3>
+                <p style="margin: 0;">
+                    Nous confirmons l'annulation de votre abonnement comme demandé.
+                </p>
+            </div>
+
+            <div class="subscription-details">
+                <h4 style="margin: 0 0 15px 0; color: #495057;">📋 Détails de l'annulation :</h4>
+                <p style="margin: 5px 0;"><strong>Abonnement :</strong> {{planName}}</p>
+                <p style="margin: 5px 0;"><strong>ID d'abonnement :</strong> #{{subscriptionId}}</p>
+                <p style="margin: 5px 0;"><strong>Date d'annulation :</strong> {{canceledAt}}</p>
+                {{#if endDate}}
+                <p style="margin: 5px 0;"><strong>Fin d'accès :</strong> <span style="color: #dc3545; font-weight: bold;">{{endDate}}</span></p>
+                {{/if}}
+            </div>
+
+            {{#if cancelAtPeriodEnd}}
+            <div style="background-color: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #0c5460;">
+                <h4 style="margin: 0 0 10px 0; color: #0c5460;">ℹ️ Accès jusqu'à la fin de la période</h4>
+                <p style="margin: 0; color: #0c5460;">
+                    Votre abonnement reste actif jusqu'au <strong>{{endDate}}</strong>.
+                    Vous pourrez continuer à profiter de tous les services jusqu'à cette date.
+                    Aucun renouvellement ne sera effectué.
+                </p>
+            </div>
+            {{else}}
+            <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #721c24;">
+                <h4 style="margin: 0 0 10px 0; color: #721c24;">⚠️ Annulation immédiate</h4>
+                <p style="margin: 0; color: #721c24;">
+                    Votre abonnement a été annulé immédiatement. Vous n'avez plus accès aux services réservés aux abonnés.
+                </p>
+            </div>
+            {{/if}}
+
+            <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0;">💡 Ce qui change :</h4>
+                <ul style="margin: 10px 0; padding-left: 20px; color: #495057;">
+                    <li>❌ Plus de renouvellement automatique</li>
+                    <li>❌ Perte d'accès aux cours réservés aux abonnés</li>
+                    <li>❌ Fin des notifications personnalisées</li>
+                    <li>❌ Perte des remises exclusives</li>
+                    {{#if endDate}}
+                    <li>✅ Accès maintenu jusqu'au {{endDate}}</li>
+                    {{/if}}
+                </ul>
+            </div>
+
+            <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                <h4 style="margin: 0 0 15px 0; color: #856404;">😢 Vous allez nous manquer !</h4>
+                <p style="margin: 0 0 20px 0; color: #856404;">
+                    Nous espérons vous revoir bientôt parmi nous. Votre compte reste actif et vous pouvez vous réabonner à tout moment.
+                </p>
+                <a href="{{frontendUrl}}/compte/abonnement" class="button">
+                    🔄 Me réabonner
+                </a>
+            </div>
+
+            {{#if feedback}}
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0;">💬 Votre avis compte !</h4>
+                <p style="margin: 0 0 15px 0;">
+                    Aidez-nous à nous améliorer en nous faisant part de votre expérience.
+                </p>
+                <div style="text-align: center;">
+                    <a href="{{feedbackUrl}}" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                        📝 Donner mon avis
+                    </a>
+                </div>
+            </div>
+            {{/if}}
+
+            <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="margin: 0 0 10px 0;">📞 Des questions ?</h4>
+                <p style="margin: 0;">
+                    Si vous avez annulé par erreur ou si vous avez des questions, notre équipe est là pour vous aider.
+                </p>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="mailto:{{supportEmail}}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                        ✉️ Contacter le support
+                    </a>
+                </div>
+            </div>
+
+            <p style="margin-top: 30px; color: #6c757d;">
+                Merci d'avoir fait partie de notre communauté.<br>
+                Nous espérons vous revoir bientôt !
+            </p>
+            <p style="margin: 10px 0 0 0;">
+                <strong>L'équipe {{clubName}}</strong>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p style="margin: 0;">© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p style="margin: 5px 0 0 0;">Support : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

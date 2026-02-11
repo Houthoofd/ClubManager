@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
-import { authService } from "../../../services/auth/auth.service.js";
-import * as refreshTokens from "../../../services/auth/core/refresh-tokens/index.js";
+import { authService } from "../core/services/auth.service.js";
+import * as refreshTokens from "../core/services/core/refresh-tokens/index.js";
 
 describe("Auth Service - Tests de Sécurité", () => {
   beforeEach(() => {

@@ -30,7 +30,7 @@ import {
   getTestPrisma,
   seedTestAlertes,
 } from "../../../tests/setup/testDatabase.js";
-import { alertesService } from "../../../services/alertes/alertes.service.js";
+import { alertesService } from "../core/services/alertes.service.js";
 
 describe("Alertes - Tests d'intégration avec DB", () => {
   beforeAll(async () => {

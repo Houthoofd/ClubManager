@@ -21,8 +21,10 @@ export { paiementsTypeDefs } from "./paiements.graphql.types.js";
 export { professeursTypeDefs } from "./professeurs.graphql.types.js";
 export { statistiquesTypeDefs } from "./statistiques.graphql.types.js";
 export { stocksTypeDefs } from "./stocks.graphql.types.js";
+export { webhooksTypeDefs } from "./webhooks.typedefs.js";
 
 // Export des types GraphQL existants
+export * from "./webhooks.graphql.types.js";
 export * from "./auth.graphql.types.js";
 export * from "./utilisateurs.graphql.types.js";
 export * from "./verification.graphql.types.js";

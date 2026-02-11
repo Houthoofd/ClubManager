@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { authService } from '../../../services/auth/auth.service.js';
+import { authService } from '../core/services/auth.service.js';
 
 describe('Auth Service - Tests de Performance', () => {
   beforeEach(() => {
