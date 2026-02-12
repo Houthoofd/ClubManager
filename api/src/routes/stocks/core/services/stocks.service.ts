@@ -1,39 +1,103 @@
 /**
  * Service Stocks - Logique métier
  * Gère la récupération et la mise à jour des stocks
+ *
+ * ✅ Migré vers Prisma avec intégration Sentry
+ *
+ * @module stocks.service
  */
 
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
 import {
-  Stocks,
-  StockData,
-  StockUpdateData,
-} from "../../../../db/clients/stocks/stocks.js";
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
+
+/**
+ * Interface pour les données de stock
+ */
+export interface StockData {
+  id: number;
+  article_id: number;
+  quantite: number;
+  seuil_alerte?: number;
+  derniere_mise_a_jour?: Date;
+  article?: {
+    nom: string;
+    prix: number;
+    description?: string;
+  };
+}
+
+/**
+ * Interface pour la mise à jour de stock
+ */
+export interface StockUpdateData {
+  article_id: number;
+  quantite: number;
+  operation?: "set" | "add" | "subtract";
+}
 
 /**
  * Récupérer tous les stocks
  */
-export async function obtenirStocks(
-  stocksClient?: Stocks,
-): Promise<StockData[]> {
-  const client = stocksClient || new Stocks();
-
-  console.log(`📦 [Service Stocks] Récupération de tous les stocks`);
-
+export async function obtenirStocks(): Promise<StockData[]> {
   try {
-    const stocks = await client.obtenirTousLesStocks();
+    addSentryBreadcrumb(
+      "Récupération de tous les stocks",
+      "service.stocks",
+      "info",
+    );
 
-    if (!stocks || stocks.length === 0) {
-      console.log(`⚠️ [Service Stocks] Aucun stock trouvé`);
-      return [];
-    }
+    console.log(`📦 [StocksService] Récupération de tous les stocks`);
 
-    console.log(`✅ [Service Stocks] ${stocks.length} stocks récupérés`);
+    const stocks = await prisma.stocks.findMany({
+      include: {
+        articles: {
+          select: {
+            nom: true,
+            prix: true,
+            description: true,
+          },
+        },
+      },
+      orderBy: {
+        articles: {
+          nom: "asc",
+        },
+      },
+    });
 
-    return stocks;
-  } catch (error) {
-    console.error(`❌ [Service Stocks] Erreur récupération stocks:`, error);
-    // Propager l'erreur originale pour préserver le message d'erreur
-    throw error;
+    console.log(`✅ [StocksService] ${stocks.length} stocks récupérés`);
+
+    return stocks.map((stock) => ({
+      id: stock.id,
+      article_id: stock.article_id,
+      quantite: stock.quantite,
+      seuil_alerte: stock.seuil_alerte || undefined,
+      derniere_mise_a_jour: stock.derniere_mise_a_jour || undefined,
+      article: stock.articles
+        ? {
+            nom: stock.articles.nom,
+            prix: Number(stock.articles.prix),
+            description: stock.articles.description || undefined,
+          }
+        : undefined,
+    }));
+  } catch (error: any) {
+    console.error(`❌ [StocksService] Erreur récupération stocks:`, error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "stocks",
+        operation: "obtenirStocks",
+      },
+    });
+
+    throw new Error(
+      `Erreur lors de la récupération des stocks: ${error.message}`,
+    );
   }
 }
 
@@ -42,34 +106,75 @@ export async function obtenirStocks(
  */
 export async function obtenirStockParArticle(
   articleId: number,
-  stocksClient?: Stocks,
 ): Promise<StockData[]> {
-  const client = stocksClient || new Stocks();
-
-  console.log(`📦 [Service Stocks] Récupération stock article ${articleId}`);
-
   try {
-    const stocks = await client.obtenirStockParArticle(articleId);
+    addSentryBreadcrumb(
+      `Récupération stock article ${articleId}`,
+      "service.stocks",
+      "info",
+      { articleId },
+    );
 
-    if (!stocks || stocks.length === 0) {
+    console.log(`📦 [StocksService] Récupération stock article ${articleId}`);
+
+    const stocks = await prisma.stocks.findMany({
+      where: {
+        article_id: articleId,
+      },
+      include: {
+        articles: {
+          select: {
+            nom: true,
+            prix: true,
+            description: true,
+          },
+        },
+      },
+    });
+
+    if (stocks.length === 0) {
       console.log(
-        `⚠️ [Service Stocks] Aucun stock trouvé pour l'article ${articleId}`,
+        `⚠️ [StocksService] Aucun stock trouvé pour l'article ${articleId}`,
       );
       return [];
     }
 
     console.log(
-      `✅ [Service Stocks] ${stocks.length} stock(s) récupéré(s) pour l'article ${articleId}`,
+      `✅ [StocksService] ${stocks.length} stock(s) récupéré(s) pour l'article ${articleId}`,
     );
 
-    return stocks;
-  } catch (error) {
+    return stocks.map((stock) => ({
+      id: stock.id,
+      article_id: stock.article_id,
+      quantite: stock.quantite,
+      seuil_alerte: stock.seuil_alerte || undefined,
+      derniere_mise_a_jour: stock.derniere_mise_a_jour || undefined,
+      article: stock.articles
+        ? {
+            nom: stock.articles.nom,
+            prix: Number(stock.articles.prix),
+            description: stock.articles.description || undefined,
+          }
+        : undefined,
+    }));
+  } catch (error: any) {
     console.error(
-      `❌ [Service Stocks] Erreur récupération stock article ${articleId}:`,
+      `❌ [StocksService] Erreur récupération stock article ${articleId}:`,
       error,
     );
-    // Propager l'erreur originale pour préserver le message d'erreur
-    throw error;
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "stocks",
+        operation: "obtenirStockParArticle",
+      },
+      extra: { articleId },
+    });
+
+    throw new Error(
+      `Erreur lors de la récupération du stock de l'article ${articleId}: ${error.message}`,
+    );
   }
 }
 
@@ -78,58 +183,128 @@ export async function obtenirStockParArticle(
  */
 export async function mettreAJourStock(
   updateData: StockUpdateData,
-  stocksClient?: Stocks,
-): Promise<{ success: boolean; message: string }> {
-  const client = stocksClient || new Stocks();
-
-  const { article_id, quantite, operation = "set" } = updateData;
-
-  console.log(
-    `🔄 [Service Stocks] Mise à jour stock article ${article_id}: ${operation} ${quantite}`,
-  );
-
+): Promise<{ success: boolean; message: string; nouveauStock?: number }> {
   try {
-    let result: { affectedRows: number };
+    const { article_id, quantite, operation = "set" } = updateData;
 
-    switch (operation) {
-      case "set":
-        result = await client.mettreAJourStock(article_id, quantite);
-        break;
-      case "add":
-        result = await client.ajouterAuStock(article_id, quantite);
-        break;
-      case "subtract":
-        result = await client.soustraireStock(article_id, quantite);
-        break;
-      default:
-        throw new Error(`Opération invalide: ${operation}`);
-    }
+    addSentryBreadcrumb(
+      `Mise à jour stock article ${article_id}: ${operation} ${quantite}`,
+      "service.stocks",
+      "info",
+      { article_id, quantite, operation },
+    );
 
-    if (result.affectedRows === 0) {
-      console.log(
-        `⚠️ [Service Stocks] Aucun stock trouvé pour l'article ${article_id}`,
-      );
+    console.log(
+      `🔄 [StocksService] Mise à jour stock article ${article_id}: ${operation} ${quantite}`,
+    );
+
+    // Vérifier que l'article existe
+    const article = await prisma.articles.findUnique({
+      where: { id: article_id },
+    });
+
+    if (!article) {
+      console.log(`❌ [StocksService] Article ${article_id} non trouvé`);
       return {
         success: false,
-        message: "Stock non trouvé pour cet article",
+        message: "Article non trouvé",
       };
     }
 
+    // Vérifier si un stock existe pour cet article
+    let stock = await prisma.stocks.findFirst({
+      where: { article_id },
+    });
+
+    let nouveauStock: number;
+
+    if (!stock) {
+      // Créer un nouveau stock si inexistant
+      console.log(
+        `📝 [StocksService] Création d'un nouveau stock pour l'article ${article_id}`,
+      );
+
+      stock = await prisma.stocks.create({
+        data: {
+          article_id,
+          quantite: operation === "set" ? quantite : quantite,
+          seuil_alerte: 5, // Valeur par défaut
+          derniere_mise_a_jour: new Date(),
+        },
+      });
+
+      nouveauStock = stock.quantite;
+    } else {
+      // Mettre à jour le stock existant
+      switch (operation) {
+        case "set":
+          nouveauStock = quantite;
+          break;
+        case "add":
+          nouveauStock = stock.quantite + quantite;
+          break;
+        case "subtract":
+          nouveauStock = Math.max(0, stock.quantite - quantite); // Ne pas descendre en dessous de 0
+          break;
+        default:
+          throw new Error(`Opération invalide: ${operation}`);
+      }
+
+      stock = await prisma.stocks.update({
+        where: { id: stock.id },
+        data: {
+          quantite: nouveauStock,
+          derniere_mise_a_jour: new Date(),
+        },
+      });
+    }
+
     console.log(
-      `✅ [Service Stocks] Stock mis à jour pour l'article ${article_id}`,
+      `✅ [StocksService] Stock mis à jour pour l'article ${article_id}: ${stock.quantite} -> ${nouveauStock}`,
     );
+
+    addSentryBreadcrumb(
+      "Stock mis à jour avec succès",
+      "service.stocks",
+      "info",
+      { article_id, ancienStock: stock.quantite, nouveauStock },
+    );
+
+    // Vérifier si le stock est en dessous du seuil d'alerte
+    if (stock.seuil_alerte && nouveauStock <= stock.seuil_alerte) {
+      console.log(
+        `⚠️ [StocksService] ALERTE: Stock article ${article_id} en dessous du seuil (${nouveauStock} <= ${stock.seuil_alerte})`,
+      );
+
+      addSentryBreadcrumb(
+        `Alerte stock bas pour article ${article_id}`,
+        "service.stocks",
+        "warning",
+        { article_id, quantite: nouveauStock, seuil: stock.seuil_alerte },
+      );
+    }
 
     return {
       success: true,
       message: "Stock mis à jour avec succès",
+      nouveauStock,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error(
-      `❌ [Service Stocks] Erreur mise à jour stock article ${article_id}:`,
+      `❌ [StocksService] Erreur mise à jour stock article ${updateData.article_id}:`,
       error,
     );
-    // Propager l'erreur originale pour préserver le message d'erreur
-    throw error;
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "stocks",
+        operation: "mettreAJourStock",
+      },
+      extra: updateData,
+    });
+
+    throw new Error(`Erreur lors de la mise à jour du stock: ${error.message}`);
   }
 }
 
@@ -138,54 +313,203 @@ export async function mettreAJourStock(
  */
 export async function obtenirAlertesStock(
   seuil: number = 5,
-  stocksClient?: Stocks,
 ): Promise<StockData[]> {
-  const client = stocksClient || new Stocks();
-
-  console.log(
-    `⚠️ [Service Stocks] Récupération alertes stock (seuil: ${seuil})`,
-  );
-
   try {
-    const alertes = await client.obtenirAlertesStock(seuil);
-
-    console.log(
-      `✅ [Service Stocks] ${alertes.length} alerte(s) de stock récupérée(s)`,
+    addSentryBreadcrumb(
+      `Récupération alertes stock (seuil: ${seuil})`,
+      "service.stocks",
+      "info",
+      { seuil },
     );
 
-    return alertes;
-  } catch (error) {
-    console.error(`❌ [Service Stocks] Erreur récupération alertes:`, error);
-    // Propager l'erreur originale pour préserver le message d'erreur
-    throw error;
+    console.log(
+      `⚠️ [StocksService] Récupération alertes stock (seuil: ${seuil})`,
+    );
+
+    const alertes = await prisma.stocks.findMany({
+      where: {
+        OR: [
+          {
+            quantite: {
+              lte: seuil,
+            },
+          },
+          {
+            AND: [
+              {
+                seuil_alerte: {
+                  not: null,
+                },
+              },
+              {
+                quantite: {
+                  lte: prisma.stocks.fields.seuil_alerte,
+                },
+              },
+            ],
+          },
+        ],
+      },
+      include: {
+        articles: {
+          select: {
+            nom: true,
+            prix: true,
+            description: true,
+          },
+        },
+      },
+      orderBy: {
+        quantite: "asc",
+      },
+    });
+
+    console.log(
+      `✅ [StocksService] ${alertes.length} alerte(s) de stock récupérée(s)`,
+    );
+
+    if (alertes.length > 0) {
+      addSentryBreadcrumb(
+        `${alertes.length} alerte(s) de stock détectée(s)`,
+        "service.stocks",
+        "warning",
+        { count: alertes.length },
+      );
+    }
+
+    return alertes.map((stock) => ({
+      id: stock.id,
+      article_id: stock.article_id,
+      quantite: stock.quantite,
+      seuil_alerte: stock.seuil_alerte || undefined,
+      derniere_mise_a_jour: stock.derniere_mise_a_jour || undefined,
+      article: stock.articles
+        ? {
+            nom: stock.articles.nom,
+            prix: Number(stock.articles.prix),
+            description: stock.articles.description || undefined,
+          }
+        : undefined,
+    }));
+  } catch (error: any) {
+    console.error(`❌ [StocksService] Erreur récupération alertes:`, error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "stocks",
+        operation: "obtenirAlertesStock",
+      },
+      extra: { seuil },
+    });
+
+    throw new Error(
+      `Erreur lors de la récupération des alertes de stock: ${error.message}`,
+    );
+  }
+}
+
+/**
+ * Définir le seuil d'alerte pour un article
+ */
+export async function definirSeuilAlerte(
+  articleId: number,
+  seuil: number,
+): Promise<{ success: boolean; message: string }> {
+  try {
+    addSentryBreadcrumb(
+      `Définition seuil alerte article ${articleId}: ${seuil}`,
+      "service.stocks",
+      "info",
+      { articleId, seuil },
+    );
+
+    console.log(
+      `🔔 [StocksService] Définition seuil alerte article ${articleId}: ${seuil}`,
+    );
+
+    // Vérifier que le stock existe
+    const stock = await prisma.stocks.findFirst({
+      where: { article_id: articleId },
+    });
+
+    if (!stock) {
+      console.log(
+        `❌ [StocksService] Aucun stock trouvé pour l'article ${articleId}`,
+      );
+      return {
+        success: false,
+        message: "Stock non trouvé pour cet article",
+      };
+    }
+
+    // Mettre à jour le seuil d'alerte
+    await prisma.stocks.update({
+      where: { id: stock.id },
+      data: {
+        seuil_alerte: seuil,
+      },
+    });
+
+    console.log(
+      `✅ [StocksService] Seuil d'alerte défini pour l'article ${articleId}: ${seuil}`,
+    );
+
+    return {
+      success: true,
+      message: "Seuil d'alerte défini avec succès",
+    };
+  } catch (error: any) {
+    console.error(`❌ [StocksService] Erreur définition seuil alerte:`, error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "stocks",
+        operation: "definirSeuilAlerte",
+      },
+      extra: { articleId, seuil },
+    });
+
+    throw new Error(
+      `Erreur lors de la définition du seuil d'alerte: ${error.message}`,
+    );
   }
 }
 
 /**
  * Vérifier la santé du service stocks
  */
-export async function verifierSanteService(stocksClient?: Stocks): Promise<{
+export async function verifierSanteService(): Promise<{
   status: "healthy" | "degraded" | "unhealthy";
   checks: {
     stocks: boolean;
     alertes: boolean;
   };
   message: string;
-}> {
-  const client = stocksClient || new Stocks();
-
-  console.log(`🏥 [Service Stocks] Vérification de santé`);
-
-  const checks = {
-    stocks: false,
-    alertes: false,
+  data?: {
+    totalStocks: number;
+    stocksBas: number;
   };
-
+}> {
   try {
-    // Vérifier chaque endpoint
+    addSentryBreadcrumb(
+      "Vérification santé du service stocks",
+      "service.stocks",
+      "info",
+    );
+
+    console.log(`🏥 [StocksService] Vérification de santé`);
+
+    const checks = {
+      stocks: false,
+      alertes: false,
+    };
+
+    // Vérifier chaque composant
     const [stocksTest, alertesTest] = await Promise.allSettled([
-      client.obtenirTousLesStocks(),
-      client.obtenirAlertesStock(5),
+      prisma.stocks.findMany({ take: 1 }),
+      obtenirAlertesStock(5),
     ]);
 
     checks.stocks = stocksTest.status === "fulfilled";
@@ -193,30 +517,64 @@ export async function verifierSanteService(stocksClient?: Stocks): Promise<{
 
     const healthyCount = Object.values(checks).filter(Boolean).length;
 
+    let data;
+    if (checks.stocks) {
+      const totalStocks = await prisma.stocks.count();
+      const stocksBas = await prisma.stocks.count({
+        where: {
+          quantite: {
+            lte: 5,
+          },
+        },
+      });
+
+      data = {
+        totalStocks,
+        stocksBas,
+      };
+    }
+
     if (healthyCount === 2) {
+      console.log(`✅ [StocksService] Tous les services opérationnels`);
       return {
         status: "healthy",
         checks,
         message: "Tous les services sont opérationnels",
+        data,
       };
     } else if (healthyCount === 1) {
+      console.log(`⚠️ [StocksService] Services dégradés: ${healthyCount}/2`);
       return {
         status: "degraded",
         checks,
         message: `${healthyCount}/2 services opérationnels`,
+        data,
       };
     } else {
+      console.log(`❌ [StocksService] Services non opérationnels`);
       return {
         status: "unhealthy",
         checks,
         message: "Services non opérationnels",
       };
     }
-  } catch (error) {
-    console.error(`❌ [Service Stocks] Erreur vérification santé:`, error);
+  } catch (error: any) {
+    console.error(`❌ [StocksService] Erreur vérification santé:`, error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "stocks",
+        operation: "verifierSanteService",
+      },
+    });
+
     return {
       status: "unhealthy",
-      checks,
+      checks: {
+        stocks: false,
+        alertes: false,
+      },
       message: "Erreur lors de la vérification de santé",
     };
   }

@@ -7,7 +7,7 @@
 
 import type { GraphQLContext } from "../../../../shared/types/context.types.js";
 import { prisma } from "../../../../infrastructure/database/prisma-client.js";
-import { emailClient } from "../../../../clients/email/index.js";
+import { emailClient } from "../../../../infrastructure/external-services/email/index.js";
 import { formatMontant } from "../utils/format-montant.js";
 import { getStripeInstance } from "../utils/stripe-instance.js";
 import {

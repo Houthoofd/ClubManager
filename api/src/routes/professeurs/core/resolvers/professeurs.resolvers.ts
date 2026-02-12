@@ -25,8 +25,8 @@ import {
   getPlanningProfesseurGraphQLSchema,
 } from "@clubmanager/types/validators";
 import { prisma } from "../../../../infrastructure/database/prisma-client.js";
-import { emailClient } from "../../../../clients/emailClient.js";
-import type { EmailClient } from "../../../../clients/emailClient.js";
+import { emailClient } from "../../../../infrastructure/external-services/emailClient.js";
+import type { EmailClient } from "../../../../infrastructure/external-services/emailClient.js";
 
 /**
  * Context GraphQL avec utilisateur authentifié

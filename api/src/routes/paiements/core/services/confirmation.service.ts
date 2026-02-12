@@ -1,19 +1,33 @@
+/**
+ * Service de confirmation de paiement
+ *
+ * Orchestre toutes les opérations nécessaires après un paiement réussi :
+ * - Vérification du payment intent Stripe
+ * - Mise à jour du statut des échéances/commandes
+ * - Upgrade du statut utilisateur (premier paiement)
+ * - Envoi des emails de confirmation
+ *
+ * Migré vers Prisma avec intégration Sentry complète
+ *
+ * @module confirmation.service
+ */
+
 import { StripeService } from "./stripe.service.js";
-import { Paiements } from "../../../../db/clients/paiements/paiements.js";
-import { EmailClient } from "../../../../db/clients/messagerie/emailClient.js";
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import { emailClient } from "../../../../infrastructure/external-services/email/index.js";
+import {
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
 import Stripe from "stripe";
 
 /**
  * Service de confirmation de paiement
- * Orchestre toutes les opérations nécessaires après un paiement réussi
  */
 export class ConfirmationService {
   private stripeService: StripeService;
 
-  constructor(
-    private paiementsClient?: Paiements,
-    private emailClient?: EmailClient,
-  ) {
+  constructor() {
     this.stripeService = StripeService.getInstance();
   }
 
@@ -41,14 +55,24 @@ export class ConfirmationService {
       nouveau_statut?: string;
     };
   }> {
-    console.log(
-      "🔔 [Confirmation Service] Confirmation paiement échéance:",
-      params,
-    );
-
-    const client = this.paiementsClient || new Paiements();
-
     try {
+      addSentryBreadcrumb(
+        `Confirmation paiement échéance: ${params.echeanceId}`,
+        "payment.confirmation",
+        "info",
+        {
+          echeanceId: params.echeanceId,
+          userId: params.userId,
+          paymentIntentId: params.paymentIntentId,
+          amount: params.amount,
+        },
+      );
+
+      console.log(
+        "🔔 [Confirmation Service] Confirmation paiement échéance:",
+        params,
+      );
+
       // 1. Vérifier le payment intent sur Stripe
       const paymentIntent = await this.stripeService.retrievePaymentIntent(
         params.paymentIntentId,
@@ -67,7 +91,12 @@ export class ConfirmationService {
       }
 
       // 2. Récupérer les informations utilisateur
-      const userInfo = await client.obtenirUtilisateurParId(params.userId);
+      const userInfo = await prisma.utilisateurs.findUnique({
+        where: { id: params.userId },
+        include: {
+          status: true,
+        },
+      });
 
       if (!userInfo) {
         throw new Error(`Utilisateur ${params.userId} introuvable`);
@@ -80,14 +109,16 @@ export class ConfirmationService {
       });
 
       // 3. Vérifier que l'échéance n'est pas déjà payée
-      const echeance = await client.obtenirEcheance(params.echeanceId);
+      const echeance = await prisma.echeances.findUnique({
+        where: { id: params.echeanceId },
+      });
 
       if (!echeance) {
         throw new Error(`Échéance ${params.echeanceId} introuvable`);
       }
 
       const statutsPayes = ["payé", "paye", "completed", "paid"];
-      if (statutsPayes.includes(echeance.statut?.toLowerCase())) {
+      if (statutsPayes.includes(echeance.statut?.toLowerCase() || "")) {
         console.warn("⚠️ [Confirmation Service] Échéance déjà payée");
         return {
           success: true,
@@ -98,17 +129,33 @@ export class ConfirmationService {
           email_envoye: false,
           user_info: {
             email: userInfo.email,
-            nom_complet: `${userInfo.first_name} ${userInfo.last_name}`,
+            nom_complet: `${userInfo.prenom} ${userInfo.nom}`,
           },
         };
       }
 
       // 4. Mettre à jour le statut de l'échéance
-      await client.mettreAJourStatutEcheance(params.echeanceId, "payé");
+      await prisma.echeances.update({
+        where: { id: params.echeanceId },
+        data: {
+          statut: "payé",
+          date_paiement: new Date(),
+        },
+      });
+
       console.log("✅ [Confirmation Service] Échéance mise à jour");
 
       // 5. Vérifier si c'est le premier paiement
-      const premierPaiement = await client.estPremierPaiement(params.userId);
+      const paiementsCount = await prisma.echeances.count({
+        where: {
+          utilisateur_id: params.userId,
+          statut: {
+            in: ["payé", "paye"],
+          },
+        },
+      });
+
+      const premierPaiement = paiementsCount === 1; // Vient de payer la première échéance
       console.log(
         "🎯 [Confirmation Service] Premier paiement ?",
         premierPaiement,
@@ -118,7 +165,7 @@ export class ConfirmationService {
       let promotionEffectuee = false;
 
       // 6. Upgrade du statut utilisateur si premier paiement
-      if (premierPaiement) {
+      if (premierPaiement && userInfo.status_id !== 5) {
         console.log(
           "🎊 [Confirmation Service] Premier paiement détecté, upgrade statut...",
         );
@@ -128,10 +175,26 @@ export class ConfirmationService {
         // Upgrade vers statut "Actif" (ID 5)
         const nouveauStatut = 5;
 
-        await client.upgradeStatutUtilisateur(params.userId, nouveauStatut);
+        await prisma.utilisateurs.update({
+          where: { id: params.userId },
+          data: {
+            status_id: nouveauStatut,
+          },
+        });
 
         statutUpgrade = "Actif";
         promotionEffectuee = true;
+
+        addSentryBreadcrumb(
+          `Promotion utilisateur ${params.userId} vers statut Actif`,
+          "payment.promotion",
+          "info",
+          {
+            userId: params.userId,
+            ancienStatut: statusActuel,
+            nouveauStatut,
+          },
+        );
 
         console.log("✅ [Confirmation Service] Statut utilisateur upgradé:", {
           ancien: statusActuel,
@@ -143,10 +206,8 @@ export class ConfirmationService {
       let emailEnvoye = false;
 
       try {
-        const emailClientInstance = this.emailClient || new EmailClient();
-
         const templateVariables = {
-          userName: `${userInfo.first_name} ${userInfo.last_name}`,
+          userName: `${userInfo.prenom} ${userInfo.nom}`,
           amount: (params.amount / 100).toFixed(2),
           paymentDate: new Date().toLocaleDateString("fr-FR", {
             day: "2-digit",
@@ -162,22 +223,47 @@ export class ConfirmationService {
             : "",
         };
 
-        const emailResult = await emailClientInstance.envoyerEmail({
+        const emailResult = await emailClient.sendEmail({
           to: userInfo.email,
+          subject: "Confirmation de paiement",
           templateTitle: "confirmation-paiement-echeance",
           variables: templateVariables,
-          utilisateurId: params.userId,
         });
 
         emailEnvoye = emailResult.success;
         console.log("📧 [Confirmation Service] Email envoyé:", emailEnvoye);
-      } catch (emailError) {
+      } catch (emailError: any) {
         console.error(
           "⚠️ [Confirmation Service] Erreur envoi email:",
           emailError,
         );
+
+        captureException(emailError, {
+          level: "warning",
+          tags: {
+            service: "confirmation",
+            operation: "sendEmail",
+            type: "echeance",
+          },
+          extra: {
+            userId: params.userId,
+            echeanceId: params.echeanceId,
+          },
+        });
         // Ne pas bloquer le processus si l'email échoue
       }
+
+      addSentryBreadcrumb(
+        `Paiement échéance confirmé avec succès: ${params.echeanceId}`,
+        "payment.confirmation",
+        "info",
+        {
+          echeanceId: params.echeanceId,
+          premierPaiement,
+          promotionEffectuee,
+          emailEnvoye,
+        },
+      );
 
       return {
         success: true,
@@ -190,15 +276,30 @@ export class ConfirmationService {
         email_envoye: emailEnvoye,
         user_info: {
           email: userInfo.email,
-          nom_complet: `${userInfo.first_name} ${userInfo.last_name}`,
+          nom_complet: `${userInfo.prenom} ${userInfo.nom}`,
           nouveau_statut: statutUpgrade,
         },
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         "❌ [Confirmation Service] Erreur confirmation paiement échéance:",
         error,
       );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "confirmation",
+          operation: "confirmEcheancePayment",
+        },
+        extra: {
+          paymentIntentId: params.paymentIntentId,
+          echeanceId: params.echeanceId,
+          userId: params.userId,
+          amount: params.amount,
+        },
+      });
+
       throw error;
     }
   }
@@ -228,14 +329,24 @@ export class ConfirmationService {
     };
     articles_count?: number;
   }> {
-    console.log(
-      "🔔 [Confirmation Service] Confirmation paiement commande:",
-      params,
-    );
-
-    const client = this.paiementsClient || new Paiements();
-
     try {
+      addSentryBreadcrumb(
+        `Confirmation paiement commande: ${params.commandeId}`,
+        "payment.confirmation",
+        "info",
+        {
+          commandeId: params.commandeId,
+          userId: params.userId,
+          paymentIntentId: params.paymentIntentId,
+          amount: params.amount,
+        },
+      );
+
+      console.log(
+        "🔔 [Confirmation Service] Confirmation paiement commande:",
+        params,
+      );
+
       // 1. Vérifier le payment intent sur Stripe
       const paymentIntent = await this.stripeService.retrievePaymentIntent(
         params.paymentIntentId,
@@ -254,9 +365,24 @@ export class ConfirmationService {
       }
 
       // 2. Récupérer les informations de la commande et de l'utilisateur
-      const commandeInfo = await client.obtenirCommandeAvecUtilisateur(
-        params.commandeId,
-      );
+      const commandeInfo = await prisma.commandes.findUnique({
+        where: { id: params.commandeId },
+        include: {
+          utilisateurs: {
+            select: {
+              id: true,
+              nom: true,
+              prenom: true,
+              email: true,
+            },
+          },
+          articles_commandes: {
+            include: {
+              articles: true,
+            },
+          },
+        },
+      });
 
       if (!commandeInfo) {
         throw new Error(`Commande ${params.commandeId} introuvable`);
@@ -270,7 +396,7 @@ export class ConfirmationService {
 
       // 3. Vérifier que la commande n'est pas déjà payée
       const statutsPayes = ["payé", "paye", "completed", "paid"];
-      if (statutsPayes.includes(commandeInfo.statut?.toLowerCase())) {
+      if (statutsPayes.includes(commandeInfo.statut?.toLowerCase() || "")) {
         console.warn("⚠️ [Confirmation Service] Commande déjà payée");
         return {
           success: true,
@@ -278,56 +404,94 @@ export class ConfirmationService {
           payment_intent_id: params.paymentIntentId,
           commande_id: params.commandeId,
           montant: params.amount,
-          statut: commandeInfo.statut,
+          statut: commandeInfo.statut || "payé",
           date_confirmation: new Date(),
           email_envoye: false,
         };
       }
 
       // 4. Mettre à jour le statut de la commande
-      await client.mettreAJourStatutCommande(params.commandeId, "payé");
+      await prisma.commandes.update({
+        where: { id: params.commandeId },
+        data: {
+          statut: "payé",
+          date_paiement: new Date(),
+        },
+      });
+
       console.log("✅ [Confirmation Service] Commande mise à jour");
 
-      // 5. Enregistrer le paiement
-      await client.enregistrerPaiement({
-        stripe_payment_intent_id: params.paymentIntentId,
-        commande_id: params.commandeId,
-        utilisateur_id: params.userId,
-        montant: params.amount / 100,
-        statut: "completed",
+      // 5. Enregistrer le paiement dans la table paiements
+      await prisma.paiements.create({
+        data: {
+          utilisateur_id: params.userId,
+          commande_id: params.commandeId,
+          montant: params.amount / 100, // Convertir centimes en euros
+          stripe_payment_intent_id: params.paymentIntentId,
+          statut: "completed",
+          date_paiement: new Date(),
+        },
       });
+
+      console.log("✅ [Confirmation Service] Paiement enregistré en DB");
 
       // 6. Envoyer l'email de confirmation
       let emailEnvoye = false;
 
       try {
-        const emailClientInstance = this.emailClient || new EmailClient();
-
         const templateVariables = {
-          userName: `${commandeInfo.utilisateur_first_name} ${commandeInfo.utilisateur_last_name}`,
+          userName: `${commandeInfo.utilisateurs.prenom} ${commandeInfo.utilisateurs.nom}`,
           numeroCommande:
-            commandeInfo.numero_commande || commandeInfo.unique_id,
-          dateCommande: new Date().toLocaleDateString("fr-FR"),
+            commandeInfo.numero_commande || `CMD-${commandeInfo.id}`,
+          dateCommande: new Date().toLocaleDateString("fr-FR", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          }),
           totalCommande: (params.amount / 100).toFixed(2),
-          nbArticles: commandeInfo.articles_count || 0,
+          nbArticles: commandeInfo.articles_commandes.length,
         };
 
-        const emailResult = await emailClientInstance.envoyerEmail({
-          to: commandeInfo.utilisateur_email,
+        const emailResult = await emailClient.sendEmail({
+          to: commandeInfo.utilisateurs.email,
+          subject: "Confirmation de paiement de commande",
           templateTitle: "confirmation-paiement-commande",
           variables: templateVariables,
-          utilisateurId: params.userId,
         });
 
         emailEnvoye = emailResult.success;
         console.log("📧 [Confirmation Service] Email envoyé:", emailEnvoye);
-      } catch (emailError) {
+      } catch (emailError: any) {
         console.error(
           "⚠️ [Confirmation Service] Erreur envoi email:",
           emailError,
         );
+
+        captureException(emailError, {
+          level: "warning",
+          tags: {
+            service: "confirmation",
+            operation: "sendEmail",
+            type: "commande",
+          },
+          extra: {
+            userId: params.userId,
+            commandeId: params.commandeId,
+          },
+        });
         // Ne pas bloquer le processus si l'email échoue
       }
+
+      addSentryBreadcrumb(
+        `Paiement commande confirmé avec succès: ${params.commandeId}`,
+        "payment.confirmation",
+        "info",
+        {
+          commandeId: params.commandeId,
+          articlesCount: commandeInfo.articles_commandes.length,
+          emailEnvoye,
+        },
+      );
 
       return {
         success: true,
@@ -339,18 +503,33 @@ export class ConfirmationService {
         date_confirmation: new Date(),
         email_envoye: emailEnvoye,
         user_info: {
-          email: commandeInfo.utilisateur_email,
-          nom_complet: `${commandeInfo.utilisateur_first_name} ${commandeInfo.utilisateur_last_name}`,
+          email: commandeInfo.utilisateurs.email,
+          nom_complet: `${commandeInfo.utilisateurs.prenom} ${commandeInfo.utilisateurs.nom}`,
           numero_commande:
-            commandeInfo.numero_commande || commandeInfo.unique_id,
+            commandeInfo.numero_commande || `CMD-${commandeInfo.id}`,
         },
-        articles_count: commandeInfo.articles_count,
+        articles_count: commandeInfo.articles_commandes.length,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         "❌ [Confirmation Service] Erreur confirmation paiement commande:",
         error,
       );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "confirmation",
+          operation: "confirmCommandePayment",
+        },
+        extra: {
+          paymentIntentId: params.paymentIntentId,
+          commandeId: params.commandeId,
+          userId: params.userId,
+          amount: params.amount,
+        },
+      });
+
       throw error;
     }
   }

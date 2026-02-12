@@ -1,25 +1,24 @@
-import { Message } from "../../../../db/clients/messages/messages.js";
-
 /**
  * Service pour la gestion des types de messages personnalisés
  *
  * Ce service encapsule la logique métier pour les opérations CRUD
  * sur les types de messages personnalisés.
  *
- * Architecture avec injection de dépendances pour faciliter les tests
+ * Migré vers Prisma avec intégration Sentry
  *
- * @class TypesMessagesService
+ * @module types-messages.service
+ */
+
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import {
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
+
+/**
+ * Service pour la gestion des types de messages personnalisés
  */
 export class TypesMessagesService {
-  private messageClient: Message;
-
-  /**
-   * @param {Message} messageClient - Client de base de données (optionnel, pour injection de dépendances)
-   */
-  constructor(messageClient?: Message) {
-    this.messageClient = messageClient || new Message();
-  }
-
   /**
    * Récupérer tous les types de messages
    *
@@ -27,235 +26,44 @@ export class TypesMessagesService {
    */
   async getAllTypesMessages() {
     try {
-      const result = await this.messageClient.obtenirTousLesTypesDeMessages();
+      addSentryBreadcrumb(
+        "Récupération de tous les types de messages",
+        "service.types-messages",
+        "info",
+      );
 
-      if (!result.isFind) {
-        return {
-          success: false,
-          message: result.message || "Aucun type de message trouvé",
-          data: [],
-        };
-      }
+      console.log(
+        "✅ [TypesMessagesService] Récupération tous les types de messages",
+      );
+
+      const typesMessages = await prisma.types_messages_personnalises.findMany({
+        orderBy: {
+          titre: "asc",
+        },
+      });
 
       return {
         success: true,
         message: "Types de messages récupérés avec succès",
-        data: result.data,
-        count: result.data?.length || 0,
+        data: typesMessages,
+        count: typesMessages.length,
       };
     } catch (error: any) {
       console.error(
         "❌ [TypesMessagesService] Erreur getAllTypesMessages:",
         error,
       );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "types-messages",
+          operation: "getAllTypesMessages",
+        },
+      });
+
       throw new Error(
         `Erreur lors de la récupération des types de messages: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * Créer un nouveau type de message
-   *
-   * @param {string} title - Titre du type de message
-   * @param {string} content - Contenu du type de message
-   * @returns {Promise<any>} Résultat de la création
-   */
-  async createTypeMessage(title: string, content: string) {
-    try {
-      // Validation métier
-      if (!title || title.trim().length === 0) {
-        return {
-          success: false,
-          message: "Le titre ne peut pas être vide",
-        };
-      }
-
-      if (!content || content.trim().length === 0) {
-        return {
-          success: false,
-          message: "Le contenu ne peut pas être vide",
-        };
-      }
-
-      // Vérifier si un type avec ce titre existe déjà
-      const existing = await this.messageClient.obtenirTousLesTypesDeMessages();
-      if (existing.isFind && existing.data) {
-        const duplicate = existing.data.find(
-          (type: any) => type.title.toLowerCase() === title.toLowerCase(),
-        );
-        if (duplicate) {
-          return {
-            success: false,
-            message: "Un type de message avec ce titre existe déjà",
-          };
-        }
-      }
-
-      const result = await this.messageClient.creerTypeMessage(
-        title.trim(),
-        content.trim(),
-      );
-
-      if (!result.isConfirm) {
-        return {
-          success: false,
-          message:
-            result.message || "Erreur lors de la création du type de message",
-        };
-      }
-
-      return {
-        success: true,
-        message: result.message || "Type de message créé avec succès",
-      };
-    } catch (error: any) {
-      console.error(
-        "❌ [TypesMessagesService] Erreur createTypeMessage:",
-        error,
-      );
-      throw new Error(
-        `Erreur lors de la création du type de message: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * Modifier un type de message existant
-   *
-   * @param {number} id - ID du type de message
-   * @param {string} title - Nouveau titre
-   * @param {string} content - Nouveau contenu
-   * @returns {Promise<any>} Résultat de la modification
-   */
-  async updateTypeMessage(id: number, title: string, content: string) {
-    try {
-      // Validation métier
-      if (id <= 0) {
-        return {
-          success: false,
-          message: "ID invalide",
-        };
-      }
-
-      if (!title || title.trim().length === 0) {
-        return {
-          success: false,
-          message: "Le titre ne peut pas être vide",
-        };
-      }
-
-      if (!content || content.trim().length === 0) {
-        return {
-          success: false,
-          message: "Le contenu ne peut pas être vide",
-        };
-      }
-
-      // Vérifier si le type existe
-      const allTypes = await this.messageClient.obtenirTousLesTypesDeMessages();
-      if (allTypes.isFind && allTypes.data) {
-        const exists = allTypes.data.find((type: any) => type.id === id);
-        if (!exists) {
-          return {
-            success: false,
-            message: "Type de message non trouvé",
-          };
-        }
-
-        // Vérifier les doublons de titre (sauf pour le type actuel)
-        const duplicate = allTypes.data.find(
-          (type: any) =>
-            type.id !== id && type.title.toLowerCase() === title.toLowerCase(),
-        );
-        if (duplicate) {
-          return {
-            success: false,
-            message: "Un autre type de message avec ce titre existe déjà",
-          };
-        }
-      }
-
-      const result = await this.messageClient.modifierTypeMessage(
-        id,
-        title.trim(),
-        content.trim(),
-      );
-
-      if (!result.isConfirm) {
-        return {
-          success: false,
-          message:
-            result.message ||
-            "Erreur lors de la modification du type de message",
-        };
-      }
-
-      return {
-        success: true,
-        message: result.message || "Type de message modifié avec succès",
-      };
-    } catch (error: any) {
-      console.error(
-        "❌ [TypesMessagesService] Erreur updateTypeMessage:",
-        error,
-      );
-      throw new Error(
-        `Erreur lors de la modification du type de message: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * Supprimer un type de message
-   *
-   * @param {number} id - ID du type de message à supprimer
-   * @returns {Promise<any>} Résultat de la suppression
-   */
-  async deleteTypeMessage(id: number) {
-    try {
-      // Validation métier
-      if (id <= 0) {
-        return {
-          success: false,
-          message: "ID invalide",
-        };
-      }
-
-      // Vérifier si le type existe
-      const allTypes = await this.messageClient.obtenirTousLesTypesDeMessages();
-      if (allTypes.isFind && allTypes.data) {
-        const exists = allTypes.data.find((type: any) => type.id === id);
-        if (!exists) {
-          return {
-            success: false,
-            message: "Type de message non trouvé",
-          };
-        }
-      }
-
-      const result = await this.messageClient.supprimerTypeMessage(id);
-
-      if (!result.isConfirm) {
-        return {
-          success: false,
-          message:
-            result.message ||
-            "Erreur lors de la suppression du type de message",
-        };
-      }
-
-      return {
-        success: true,
-        message: result.message || "Type de message supprimé avec succès",
-      };
-    } catch (error: any) {
-      console.error(
-        "❌ [TypesMessagesService] Erreur deleteTypeMessage:",
-        error,
-      );
-      throw new Error(
-        `Erreur lors de la suppression du type de message: ${error.message}`,
       );
     }
   }
@@ -268,25 +76,21 @@ export class TypesMessagesService {
    */
   async getTypeMessageById(id: number) {
     try {
-      if (id <= 0) {
-        return {
-          success: false,
-          message: "ID invalide",
-          data: null,
-        };
-      }
+      addSentryBreadcrumb(
+        `Récupération type de message: ${id}`,
+        "service.types-messages",
+        "info",
+        { id },
+      );
 
-      const allTypes = await this.messageClient.obtenirTousLesTypesDeMessages();
+      console.log(
+        "✅ [TypesMessagesService] Récupération type de message:",
+        id,
+      );
 
-      if (!allTypes.isFind || !allTypes.data) {
-        return {
-          success: false,
-          message: "Aucun type de message trouvé",
-          data: null,
-        };
-      }
-
-      const typeMessage = allTypes.data.find((type: any) => type.id === id);
+      const typeMessage = await prisma.types_messages_personnalises.findUnique({
+        where: { id },
+      });
 
       if (!typeMessage) {
         return {
@@ -306,15 +110,246 @@ export class TypesMessagesService {
         "❌ [TypesMessagesService] Erreur getTypeMessageById:",
         error,
       );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "types-messages",
+          operation: "getTypeMessageById",
+        },
+        extra: { id },
+      });
+
       throw new Error(
         `Erreur lors de la récupération du type de message: ${error.message}`,
       );
     }
   }
+
+  /**
+   * Créer un nouveau type de message
+   *
+   * @param {string} titre - Titre du type de message
+   * @param {string} contenu - Contenu du type de message
+   * @returns {Promise<any>} Résultat de la création
+   */
+  async createTypeMessage(titre: string, contenu: string) {
+    try {
+      addSentryBreadcrumb(
+        `Création type de message: ${titre}`,
+        "service.types-messages",
+        "info",
+        { titre },
+      );
+
+      console.log("✅ [TypesMessagesService] Création type de message:", titre);
+
+      // Vérifier si un type avec ce titre existe déjà
+      const existing = await prisma.types_messages_personnalises.findFirst({
+        where: {
+          titre: {
+            equals: titre.trim(),
+            mode: "insensitive",
+          },
+        },
+      });
+
+      if (existing) {
+        return {
+          success: false,
+          message: "Un type de message avec ce titre existe déjà",
+        };
+      }
+
+      const typeMessage = await prisma.types_messages_personnalises.create({
+        data: {
+          titre: titre.trim(),
+          contenu: contenu.trim(),
+        },
+      });
+
+      return {
+        success: true,
+        message: "Type de message créé avec succès",
+        data: typeMessage,
+      };
+    } catch (error: any) {
+      console.error(
+        "❌ [TypesMessagesService] Erreur createTypeMessage:",
+        error,
+      );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "types-messages",
+          operation: "createTypeMessage",
+        },
+        extra: { titre },
+      });
+
+      throw new Error(
+        `Erreur lors de la création du type de message: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Modifier un type de message existant
+   *
+   * @param {number} id - ID du type de message
+   * @param {string} titre - Nouveau titre
+   * @param {string} contenu - Nouveau contenu
+   * @returns {Promise<any>} Résultat de la modification
+   */
+  async updateTypeMessage(id: number, titre: string, contenu: string) {
+    try {
+      addSentryBreadcrumb(
+        `Modification type de message: ${id}`,
+        "service.types-messages",
+        "info",
+        { id, titre },
+      );
+
+      console.log(
+        "✅ [TypesMessagesService] Modification type de message:",
+        id,
+      );
+
+      // Vérifier si le type existe
+      const existing = await prisma.types_messages_personnalises.findUnique({
+        where: { id },
+      });
+
+      if (!existing) {
+        return {
+          success: false,
+          message: "Type de message non trouvé",
+        };
+      }
+
+      // Vérifier les doublons de titre (sauf pour le type actuel)
+      const duplicate = await prisma.types_messages_personnalises.findFirst({
+        where: {
+          id: { not: id },
+          titre: {
+            equals: titre.trim(),
+            mode: "insensitive",
+          },
+        },
+      });
+
+      if (duplicate) {
+        return {
+          success: false,
+          message: "Un autre type de message avec ce titre existe déjà",
+        };
+      }
+
+      const typeMessage = await prisma.types_messages_personnalises.update({
+        where: { id },
+        data: {
+          titre: titre.trim(),
+          contenu: contenu.trim(),
+        },
+      });
+
+      return {
+        success: true,
+        message: "Type de message modifié avec succès",
+        data: typeMessage,
+      };
+    } catch (error: any) {
+      console.error(
+        "❌ [TypesMessagesService] Erreur updateTypeMessage:",
+        error,
+      );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "types-messages",
+          operation: "updateTypeMessage",
+        },
+        extra: { id, titre },
+      });
+
+      throw new Error(
+        `Erreur lors de la modification du type de message: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Supprimer un type de message
+   *
+   * @param {number} id - ID du type de message à supprimer
+   * @returns {Promise<any>} Résultat de la suppression
+   */
+  async deleteTypeMessage(id: number) {
+    try {
+      addSentryBreadcrumb(
+        `Suppression type de message: ${id}`,
+        "service.types-messages",
+        "warning",
+        { id },
+      );
+
+      console.log("✅ [TypesMessagesService] Suppression type de message:", id);
+
+      // Vérifier si le type existe
+      const existing = await prisma.types_messages_personnalises.findUnique({
+        where: { id },
+      });
+
+      if (!existing) {
+        return {
+          success: false,
+          message: "Type de message non trouvé",
+        };
+      }
+
+      // Vérifier s'il y a des messages utilisant ce type
+      const messagesCount = await prisma.messages_personnalises.count({
+        where: { type_message_id: id },
+      });
+
+      if (messagesCount > 0) {
+        return {
+          success: false,
+          message: `Impossible de supprimer: ${messagesCount} message(s) utilisent ce type`,
+        };
+      }
+
+      await prisma.types_messages_personnalises.delete({
+        where: { id },
+      });
+
+      return {
+        success: true,
+        message: "Type de message supprimé avec succès",
+      };
+    } catch (error: any) {
+      console.error(
+        "❌ [TypesMessagesService] Erreur deleteTypeMessage:",
+        error,
+      );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "types-messages",
+          operation: "deleteTypeMessage",
+        },
+        extra: { id },
+      });
+
+      throw new Error(
+        `Erreur lors de la suppression du type de message: ${error.message}`,
+      );
+    }
+  }
 }
 
-// Export d'une instance singleton par défaut
+// Export instance singleton
 export const typesMessagesService = new TypesMessagesService();
-
-// Export de la classe pour permettre l'injection de dépendances dans les tests
-export { TypesMessagesService };

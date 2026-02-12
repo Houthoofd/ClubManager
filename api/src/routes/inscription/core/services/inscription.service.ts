@@ -1,15 +1,20 @@
 /**
  * Service Inscription
  * Contient toute la logique métier pour l'inscription des utilisateurs
+ *
+ * ✅ Migré vers Prisma avec intégration Sentry
+ *
+ * @module inscription.service
  */
 
-import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
-import type { InscriptionData } from "@clubmanager/types/validators";
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
 import {
-  hashPassword,
-  verifyPassword,
-  validatePasswordPolicy,
-} from "../../../../shared/utils/password.helpers.js";
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
+import type { InscriptionData } from "@clubmanager/types/validators";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 /**
  * Résultat de la vérification d'email
@@ -26,18 +31,13 @@ export interface InscriptionResult {
   success: boolean;
   message: string;
   userId?: number;
+  generatedUserId?: string;
 }
 
 /**
  * Service gérant la logique métier de l'inscription
  */
 export class InscriptionService {
-  private utilisateursClient: Utilisateurs;
-
-  constructor(utilisateursClient?: Utilisateurs) {
-    this.utilisateursClient = utilisateursClient || new Utilisateurs();
-  }
-
   /**
    * Vérifie si un email existe déjà dans la base de données
    * @param email - Email à vérifier
@@ -45,43 +45,82 @@ export class InscriptionService {
    */
   async verifierEmail(email: string): Promise<EmailVerificationResult> {
     try {
-      const result =
-        await this.utilisateursClient.checkUtilisateurByEmail(email);
+      addSentryBreadcrumb(
+        `Vérification email: ${email}`,
+        "service.inscription",
+        "info",
+        { email },
+      );
 
-      if (result.isFind) {
+      console.log(`🔍 [InscriptionService] Vérification email: ${email}`);
+
+      const user = await prisma.utilisateurs.findFirst({
+        where: {
+          email: email.toLowerCase().trim(),
+        },
+      });
+
+      if (user) {
+        console.log(`⚠️ [InscriptionService] Email déjà utilisé: ${email}`);
         return {
           exists: true,
           message: "Cet email est déjà utilisé",
         };
       }
 
+      console.log(`✅ [InscriptionService] Email disponible: ${email}`);
       return {
         exists: false,
         message: "Email disponible",
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error(
-        "[InscriptionService] Erreur lors de la vérification d'email:",
+        "❌ [InscriptionService] Erreur vérification email:",
         error,
       );
-      throw new Error("Erreur lors de la vérification de l'email");
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "inscription",
+          operation: "verifierEmail",
+        },
+        extra: { email },
+      });
+
+      throw new Error(
+        `Erreur lors de la vérification de l'email: ${error.message}`,
+      );
     }
   }
 
   /**
-   * Hash un mot de passe en utilisant les helpers partagés
+   * Hash un mot de passe en utilisant bcrypt
    * @param password - Mot de passe en clair
    * @returns Mot de passe hashé
    */
   async hashPasswordInternal(password: string): Promise<string> {
     try {
-      return await hashPassword(password);
-    } catch (error) {
+      console.log(`🔐 [InscriptionService] Hashage du mot de passe`);
+      const hashed = await bcrypt.hash(password, 10);
+      return hashed;
+    } catch (error: any) {
       console.error(
-        "[InscriptionService] Erreur lors du hashage du mot de passe:",
+        "❌ [InscriptionService] Erreur hashage mot de passe:",
         error,
       );
-      throw new Error("Erreur lors du hashage du mot de passe");
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "inscription",
+          operation: "hashPasswordInternal",
+        },
+      });
+
+      throw new Error(
+        `Erreur lors du hashage du mot de passe: ${error.message}`,
+      );
     }
   }
 
@@ -100,7 +139,7 @@ export class InscriptionService {
       const month = parseInt(parts[1], 10);
       const day = parseInt(parts[2], 10);
 
-      // Vérifier que la date est valide (par exemple, rejeter 29 février sur année non bissextile)
+      // Vérifier que la date est valide
       const date = new Date(year, month - 1, day);
       if (
         date.getFullYear() !== year ||
@@ -121,12 +160,32 @@ export class InscriptionService {
           : age;
 
       return adjustedAge >= 5 && adjustedAge <= 120;
-    } catch (error) {
-      console.error(
-        "[InscriptionService] Erreur lors de la validation de l'âge:",
-        error,
-      );
+    } catch (error: any) {
+      console.error("❌ [InscriptionService] Erreur validation âge:", error);
       return false;
+    }
+  }
+
+  /**
+   * Générer un userId unique
+   */
+  async genererUserIdUnique(nom: string, prenom: string): Promise<string> {
+    const baseUserId =
+      `${prenom.substring(0, 3)}${nom.substring(0, 3)}`.toLowerCase();
+    let userId = baseUserId;
+    let counter = 1;
+
+    while (true) {
+      const existing = await prisma.utilisateurs.findUnique({
+        where: { userId: userId },
+      });
+
+      if (!existing) {
+        return userId;
+      }
+
+      userId = `${baseUserId}${counter}`;
+      counter++;
     }
   }
 
@@ -137,9 +196,21 @@ export class InscriptionService {
    */
   async inscrireUtilisateur(data: InscriptionData): Promise<InscriptionResult> {
     try {
+      addSentryBreadcrumb(
+        `Inscription nouvel utilisateur: ${data.email}`,
+        "service.inscription",
+        "info",
+        { email: data.email },
+      );
+
+      console.log(
+        `📝 [InscriptionService] Inscription utilisateur: ${data.prenom} ${data.nom}`,
+      );
+
       // 1. Vérifier si l'email existe déjà
       const emailCheck = await this.verifierEmail(data.email);
       if (emailCheck.exists) {
+        console.log(`❌ [InscriptionService] Email déjà utilisé`);
         return {
           success: false,
           message: "Un compte avec cet email existe déjà",
@@ -148,53 +219,106 @@ export class InscriptionService {
 
       // 2. Valider l'âge (sécurité supplémentaire même si déjà validé par Zod)
       if (!this.validerAge(data.date)) {
+        console.log(`❌ [InscriptionService] Âge invalide`);
         return {
           success: false,
           message: "L'âge doit être entre 5 et 120 ans",
         };
       }
 
-      // 2. Hasher le mot de passe
+      // 3. Hasher le mot de passe
       const hashedPassword = await this.hashPasswordInternal(data.password);
 
-      // 4. Préparer les données pour l'insertion
-      const userData = {
-        nom: data.nom,
-        prenom: data.prenom,
-        email: data.email,
-        password: hashedPassword,
-        date: data.date,
-        abonnement: data.abonnement,
-        genre: data.genre,
-      };
-
-      // 5. Insérer l'utilisateur dans la base de données
-      const result =
-        await this.utilisateursClient.inscriptionUtilisateurSimple(userData);
-
-      if (result.isConfirm) {
-        console.log(
-          `✅ [InscriptionService] Utilisateur inscrit avec succès: ${data.email}`,
-        );
-        return {
-          success: true,
-          message: result.message || "Inscription réussie",
-          userId: result.userId,
-        };
-      } else {
-        console.warn(
-          `⚠️ [InscriptionService] Échec de l'inscription: ${data.email}`,
-        );
-        return {
-          success: false,
-          message: result.message || "Erreur lors de l'inscription",
-        };
-      }
-    } catch (error) {
-      console.error(
-        "[InscriptionService] Erreur lors de l'inscription:",
-        error,
+      // 4. Générer un userId unique
+      const generatedUserId = await this.genererUserIdUnique(
+        data.nom,
+        data.prenom,
       );
+
+      // 5. Générer un nom d'utilisateur unique
+      const nomUtilisateur = `${data.prenom.toLowerCase()}.${data.nom.toLowerCase()}`;
+
+      // 6. Insérer l'utilisateur dans la base de données
+      const newUser = await prisma.utilisateurs.create({
+        data: {
+          userId: generatedUserId,
+          first_name: data.prenom,
+          last_name: data.nom,
+          nom_utilisateur: nomUtilisateur,
+          email: data.email.toLowerCase().trim(),
+          password: hashedPassword,
+          date_of_birth: new Date(data.date),
+          genre_id: data.genre || null,
+          abonnement_id: data.abonnement || null,
+          status_id: 1, // Statut par défaut: utilisateur
+          grade_id: 1, // Grade par défaut: débutant
+          active: true,
+          email_verified: false,
+        },
+      });
+
+      console.log(
+        `✅ [InscriptionService] Utilisateur inscrit avec succès: ${newUser.id}`,
+      );
+
+      addSentryBreadcrumb(
+        "Inscription réussie",
+        "service.inscription",
+        "info",
+        { userId: newUser.id, generatedUserId },
+      );
+
+      // 7. Créer un token de validation d'email
+      try {
+        const validationToken = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 24 * 3600000); // 24 heures
+
+        await prisma.email_validation_tokens.create({
+          data: {
+            utilisateur_id: newUser.id,
+            token: validationToken,
+            type: "email_confirmation",
+            expires_at: expiresAt,
+          },
+        });
+
+        console.log(
+          `📧 [InscriptionService] Token de validation créé pour userId: ${newUser.id}`,
+        );
+      } catch (tokenError: any) {
+        // Ne pas bloquer l'inscription si la création du token échoue
+        console.error(
+          "⚠️ [InscriptionService] Erreur création token validation:",
+          tokenError,
+        );
+
+        captureException(tokenError, {
+          level: "warning",
+          tags: {
+            service: "inscription",
+            operation: "creerTokenValidation",
+          },
+          extra: { userId: newUser.id },
+        });
+      }
+
+      return {
+        success: true,
+        message: "Inscription réussie",
+        userId: newUser.id,
+        generatedUserId: newUser.userId,
+      };
+    } catch (error: any) {
+      console.error("❌ [InscriptionService] Erreur inscription:", error);
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "inscription",
+          operation: "inscrireUtilisateur",
+        },
+        extra: { email: data.email },
+      });
 
       // Ne pas exposer les détails de l'erreur au client
       return {
@@ -235,6 +359,91 @@ export class InscriptionService {
     }
     const { password, ...sanitized } = user;
     return sanitized;
+  }
+
+  /**
+   * Vérifier si un utilisateur existe avec nom, prénom et date de naissance
+   */
+  async verifierExistenceUtilisateur(
+    nom: string,
+    prenom: string,
+    dateNaissance: string,
+  ): Promise<{
+    exists: boolean;
+    canRegister: boolean;
+    userData?: any;
+    message: string;
+  }> {
+    try {
+      addSentryBreadcrumb(
+        `Vérification existence utilisateur: ${prenom} ${nom}`,
+        "service.inscription",
+        "info",
+        { nom, prenom, dateNaissance },
+      );
+
+      console.log(
+        `🔍 [InscriptionService] Vérification existence: ${prenom} ${nom}`,
+      );
+
+      const user = await prisma.utilisateurs.findFirst({
+        where: {
+          first_name: prenom,
+          last_name: nom,
+          date_of_birth: new Date(dateNaissance),
+        },
+        include: {
+          status: true,
+        },
+      });
+
+      if (!user) {
+        console.log(
+          "✅ [InscriptionService] Aucun utilisateur trouvé - peut s'inscrire",
+        );
+        return {
+          exists: false,
+          canRegister: true,
+          message: "Aucun utilisateur trouvé avec ces informations",
+        };
+      }
+
+      console.log(
+        "⚠️ [InscriptionService] Utilisateur existant trouvé:",
+        user.id,
+      );
+
+      return {
+        exists: true,
+        canRegister: false,
+        userData: {
+          id: user.id,
+          userId: user.userId,
+          email: user.email,
+          status: user.status?.nom,
+          active: user.active,
+        },
+        message: "Un utilisateur avec ces informations existe déjà",
+      };
+    } catch (error: any) {
+      console.error(
+        "❌ [InscriptionService] Erreur vérification existence:",
+        error,
+      );
+
+      captureException(error, {
+        level: "error",
+        tags: {
+          service: "inscription",
+          operation: "verifierExistenceUtilisateur",
+        },
+        extra: { nom, prenom, dateNaissance },
+      });
+
+      throw new Error(
+        `Erreur lors de la vérification de l'utilisateur: ${error.message}`,
+      );
+    }
   }
 }
 

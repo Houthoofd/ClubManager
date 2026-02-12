@@ -1,11 +1,16 @@
-import { Magasin } from "../../../../db/clients/magasin/magasin.js";
-import { Paiements } from "../../../../db/clients/paiements/paiements.js";
-import { EmailClient } from "../../../../clients/emailClient.js";
+import { PrismaClient } from "@prisma/client";
+import {
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
+import { EmailClient } from "../../../../infrastructure/external-services/emailClient.js";
 import Stripe from "stripe";
 import crypto from "crypto";
 
+const prisma = new PrismaClient();
+
 /**
- * Service de gestion du magasin
+ * Service de gestion du magasin (migré vers Prisma + Sentry)
  * Contient la logique métier pour les opérations sur les articles et commandes
  */
 
@@ -22,8 +27,8 @@ export interface Article {
   image_url?: string;
   actif: boolean;
   tailles_disponibles?: string[];
-  created_at?: string;
-  updated_at?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 /**
@@ -36,9 +41,9 @@ export interface Commande {
   numero_commande: string;
   total: number;
   statut: "en attente" | "validé" | "préparé" | "livré" | "annulé";
-  date: string;
-  created_at?: string;
-  updated_at?: string;
+  date: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 /**
@@ -122,34 +127,57 @@ export function generateUniqueCommandeId(userId: number): string {
 /**
  * Générer un numéro de commande séquentiel
  */
-export async function generateSequentialCommandeNumber(
-  paiementsClient?: Paiements,
-): Promise<string> {
+export async function generateSequentialCommandeNumber(): Promise<string> {
   try {
-    const paiements = paiementsClient || new Paiements();
+    addSentryBreadcrumb(
+      "Génération numéro de commande séquentiel",
+      "magasin",
+      "info",
+    );
 
-    // Récupérer le dernier numéro de commande
-    const lastCommandeQuery = `
-      SELECT numero_commande
-      FROM commandes
-      WHERE numero_commande LIKE 'CMD-%'
-      ORDER BY id DESC
-      LIMIT 1
-    `;
-
-    const results = await paiements.queryAsync(lastCommandeQuery, []);
+    // Récupérer la dernière commande avec un numéro de commande
+    const lastCommande = await prisma.commandes.findFirst({
+      where: {
+        numero_commande: {
+          startsWith: "CMD-",
+        },
+      },
+      orderBy: {
+        id: "desc",
+      },
+      select: {
+        numero_commande: true,
+      },
+    });
 
     let nextNumber = 1;
-    if (results.length > 0 && results[0].numero_commande) {
+    if (lastCommande?.numero_commande) {
       // Extraire le numéro séquentiel de la dernière commande
-      const lastNumber = results[0].numero_commande.split("-")[1];
-      nextNumber = parseInt(lastNumber) + 1;
+      const parts = lastCommande.numero_commande.split("-");
+      if (parts.length >= 2) {
+        const lastNumber = parseInt(parts[1]);
+        if (!isNaN(lastNumber)) {
+          nextNumber = lastNumber + 1;
+        }
+      }
     }
 
     // Format: CMD-000001, CMD-000002, etc.
-    return `CMD-${nextNumber.toString().padStart(6, "0")}`;
+    const numeroCommande = `CMD-${nextNumber.toString().padStart(6, "0")}`;
+    console.log(
+      "✅ [Magasin Service] Numéro de commande généré:",
+      numeroCommande,
+    );
+
+    return numeroCommande;
   } catch (error) {
-    console.error("❌ Erreur génération numéro commande:", error);
+    console.error(
+      "❌ [Magasin Service] Erreur génération numéro commande:",
+      error,
+    );
+    captureException(error as Error, {
+      tags: { context: "generateSequentialCommandeNumber" },
+    });
     // Fallback vers timestamp en cas d'erreur
     return `CMD-${Date.now()}`;
   }
@@ -158,21 +186,60 @@ export async function generateSequentialCommandeNumber(
 /**
  * Récupérer tous les articles par catégories
  */
-export async function obtenirArticlesParCategories(
-  magasinClient?: Magasin,
-): Promise<any> {
-  const client = magasinClient || new Magasin();
-
-  console.log("🔍 [Service Magasin] Récupération des articles par catégories");
-
+export async function obtenirArticlesParCategories(): Promise<any> {
   try {
-    const articles = await client.obtenirArticlesParCategories();
+    addSentryBreadcrumb(
+      "Récupération des articles par catégories",
+      "magasin",
+      "info",
+    );
 
-    console.log(`✅ [Service Magasin] Articles récupérés avec succès`);
+    console.log(
+      "🔍 [Magasin Service] Récupération des articles par catégories",
+    );
 
-    return articles;
+    const categories = await prisma.categories.findMany({
+      include: {
+        articles: {
+          include: {
+            stocks: true,
+          },
+        },
+      },
+      orderBy: {
+        nom: "asc",
+      },
+    });
+
+    const articlesParCategories = categories.map((categorie) => ({
+      id: categorie.id,
+      nom: categorie.nom,
+      description: categorie.description,
+      articles: categorie.articles.map((article: any) => ({
+        id: article.id,
+        nom: article.nom,
+        description: article.description,
+        prix: Number(article.prix),
+        stock: article.stocks.reduce(
+          (total: number, stock: any) => total + stock.quantite,
+          0,
+        ),
+        categorie_id: article.categorie_id,
+        image_url: article.image_url,
+        created_at: article.created_at,
+      })),
+    }));
+
+    console.log(
+      `✅ [Magasin Service] ${categories.length} catégories récupérées avec articles`,
+    );
+
+    return articlesParCategories;
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur récupération articles:", error);
+    console.error("❌ [Magasin Service] Erreur récupération articles:", error);
+    captureException(error as Error, {
+      tags: { context: "obtenirArticlesParCategories" },
+    });
     throw new Error("Impossible de récupérer les articles");
   }
 }
@@ -180,26 +247,31 @@ export async function obtenirArticlesParCategories(
 /**
  * Récupérer toutes les catégories
  */
-export async function obtenirLesCategories(
-  magasinClient?: Magasin,
-): Promise<any> {
-  const client = magasinClient || new Magasin();
-
-  console.log("🔍 [Service Magasin] Récupération des catégories");
-
+export async function obtenirLesCategories(): Promise<any> {
   try {
-    const categories = await client.obtenirLesCategories();
+    addSentryBreadcrumb("Récupération des catégories", "magasin", "info");
+
+    console.log("🔍 [Magasin Service] Récupération des catégories");
+
+    const categories = await prisma.categories.findMany({
+      orderBy: {
+        nom: "asc",
+      },
+    });
 
     console.log(
-      `✅ [Service Magasin] ${categories.length} catégories récupérées`,
+      `✅ [Magasin Service] ${categories.length} catégories récupérées`,
     );
 
     return categories;
   } catch (error) {
     console.error(
-      "❌ [Service Magasin] Erreur récupération catégories:",
+      "❌ [Magasin Service] Erreur récupération catégories:",
       error,
     );
+    captureException(error as Error, {
+      tags: { context: "obtenirLesCategories" },
+    });
     throw new Error("Impossible de récupérer les catégories");
   }
 }
@@ -207,35 +279,59 @@ export async function obtenirLesCategories(
 /**
  * Ajouter un nouvel article
  */
-export async function ajouterArticle(
-  articleData: any,
-  magasinClient?: Magasin,
-): Promise<any> {
-  const client = magasinClient || new Magasin();
-
-  console.log(
-    "📝 [Service Magasin] Ajout d'un nouvel article:",
-    articleData.nom,
-  );
-
+export async function ajouterArticle(articleData: any): Promise<any> {
   try {
-    const result = await client.ajouterArticle(articleData);
+    addSentryBreadcrumb(
+      `Ajout d'un nouvel article: ${articleData.nom}`,
+      "magasin",
+      "info",
+      { articleNom: articleData.nom },
+    );
 
-    if (result.isConfirm) {
-      console.log("✅ [Service Magasin] Article ajouté avec succès");
-      return result;
-    } else {
-      console.error(
-        "❌ [Service Magasin] Erreur lors de l'ajout:",
-        result.message,
-      );
-      throw new Error(result.message || "Erreur lors de l'ajout de l'article");
+    console.log(
+      "📝 [Magasin Service] Ajout d'un nouvel article:",
+      articleData.nom,
+    );
+
+    const article = await prisma.articles.create({
+      data: {
+        nom: articleData.nom,
+        description: articleData.description,
+        prix: articleData.prix,
+        categorie_id: articleData.categorie_id,
+        image_url: articleData.image_url,
+      },
+    });
+
+    // Si des stocks sont fournis, les créer
+    if (articleData.stocks && Array.isArray(articleData.stocks)) {
+      for (const stock of articleData.stocks) {
+        await prisma.stocks.create({
+          data: {
+            article_id: article.id,
+            taille_id: stock.taille_id,
+            quantite: stock.quantite,
+          },
+        });
+      }
     }
+
+    console.log(
+      "✅ [Magasin Service] Article ajouté avec succès, ID:",
+      article.id,
+    );
+
+    return {
+      isConfirm: true,
+      message: "Article ajouté avec succès",
+      data: article,
+    };
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur ajout article:", error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    console.error("❌ [Magasin Service] Erreur ajout article:", error);
+    captureException(error as Error, {
+      tags: { context: "ajouterArticle" },
+      extra: { articleData },
+    });
     throw new Error("Erreur lors de l'ajout de l'article");
   }
 }
@@ -246,32 +342,41 @@ export async function ajouterArticle(
 export async function modifierArticle(
   articleId: number,
   articleData: any,
-  magasinClient?: Magasin,
 ): Promise<any> {
-  const client = magasinClient || new Magasin();
-
-  console.log(`📝 [Service Magasin] Modification de l'article ${articleId}`);
-
   try {
-    const result = await client.modifierArticle(articleId, articleData);
+    addSentryBreadcrumb(
+      `Modification de l'article ${articleId}`,
+      "magasin",
+      "info",
+      { articleId },
+    );
 
-    if (result.isConfirm) {
-      console.log("✅ [Service Magasin] Article modifié avec succès");
-      return result;
-    } else {
-      console.error(
-        "❌ [Service Magasin] Erreur lors de la modification:",
-        result.message,
-      );
-      throw new Error(
-        result.message || "Erreur lors de la modification de l'article",
-      );
-    }
+    console.log(`📝 [Magasin Service] Modification de l'article ${articleId}`);
+
+    const article = await prisma.articles.update({
+      where: { id: articleId },
+      data: {
+        nom: articleData.nom,
+        description: articleData.description,
+        prix: articleData.prix,
+        categorie_id: articleData.categorie_id,
+        image_url: articleData.image_url,
+      },
+    });
+
+    console.log("✅ [Magasin Service] Article modifié avec succès");
+
+    return {
+      isConfirm: true,
+      message: "Article modifié avec succès",
+      data: article,
+    };
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur modification article:", error);
-    if (error instanceof Error) {
-      throw error;
-    }
+    console.error("❌ [Magasin Service] Erreur modification article:", error);
+    captureException(error as Error, {
+      tags: { context: "modifierArticle" },
+      extra: { articleId, articleData },
+    });
     throw new Error("Erreur lors de la modification de l'article");
   }
 }
@@ -279,34 +384,60 @@ export async function modifierArticle(
 /**
  * Supprimer un article
  */
-export async function supprimerArticle(
-  articleId: number,
-  magasinClient?: Magasin,
-): Promise<any> {
-  const client = magasinClient || new Magasin();
-
-  console.log(`🗑️ [Service Magasin] Suppression de l'article ${articleId}`);
-
+export async function supprimerArticle(articleId: number): Promise<any> {
   try {
-    const result = await client.supprimerArticle(articleId);
+    addSentryBreadcrumb(
+      `Suppression de l'article ${articleId}`,
+      "magasin",
+      "info",
+      { articleId },
+    );
 
-    console.log("✅ [Service Magasin] Article supprimé avec succès");
+    console.log(`🗑️ [Magasin Service] Suppression de l'article ${articleId}`);
 
-    return result;
+    // Vérifier si l'article existe
+    const article = await prisma.articles.findUnique({
+      where: { id: articleId },
+    });
+
+    if (!article) {
+      throw new Error(`Article avec l'ID ${articleId} non trouvé`);
+    }
+
+    // Supprimer les stocks associés d'abord
+    await prisma.stocks.deleteMany({
+      where: { article_id: articleId },
+    });
+
+    // Supprimer l'article
+    await prisma.articles.delete({
+      where: { id: articleId },
+    });
+
+    console.log("✅ [Magasin Service] Article supprimé avec succès");
+
+    return {
+      isConfirm: true,
+      message: "Article supprimé avec succès",
+    };
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur suppression article:", error);
+    console.error("❌ [Magasin Service] Erreur suppression article:", error);
+    captureException(error as Error, {
+      tags: { context: "supprimerArticle" },
+      extra: { articleId },
+    });
 
     // Propager l'erreur originale si elle contient un message métier important
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const messageStr = errorMessage.toLowerCase();
-
-    if (
-      messageStr.includes("non trouvé") ||
-      messageStr.includes("non trouve") ||
-      messageStr.includes("introuvable") ||
-      messageStr.includes("not found")
-    ) {
-      throw error; // Propager l'erreur 404 originale
+    if (error instanceof Error) {
+      const messageStr = error.message.toLowerCase();
+      if (
+        messageStr.includes("non trouvé") ||
+        messageStr.includes("non trouve") ||
+        messageStr.includes("introuvable") ||
+        messageStr.includes("not found")
+      ) {
+        throw error;
+      }
     }
 
     throw new Error("Impossible de supprimer l'article");
@@ -316,166 +447,295 @@ export async function supprimerArticle(
 /**
  * Créer une nouvelle commande avec protection contre les doublons
  */
-export async function creerCommande(
-  commandeData: any,
-  magasinClient?: Magasin,
-  paiementsClient?: Paiements,
-): Promise<any> {
-  const client = magasinClient || new Magasin();
-  const paiements = paiementsClient || new Paiements();
-
+export async function creerCommande(commandeData: any): Promise<any> {
   const { utilisateur_id, articles, total } = commandeData;
 
-  // Créer une clé de cache pour détecter les doublons
-  const cacheKey = `${utilisateur_id}-${total}-${JSON.stringify(
-    articles.map((a: any) => ({
-      id: a.article_id,
-      taille: a.taille,
-      quantite: a.quantite,
-    })),
-  )}`;
-  const maintenant = Date.now();
+  try {
+    // Créer une clé de cache pour détecter les doublons
+    const cacheKey = `${utilisateur_id}-${total}-${JSON.stringify(
+      articles.map((a: any) => ({
+        id: a.article_id,
+        taille: a.taille,
+        quantite: a.quantite,
+      })),
+    )}`;
+    const maintenant = Date.now();
 
-  console.log("🔍 [Service Magasin] Vérification doublon commande:", {
-    cacheKey: cacheKey.substring(0, 50) + "...",
-    utilisateur_id,
-    total,
-    nbArticles: articles.length,
-  });
+    addSentryBreadcrumb("Création d'une nouvelle commande", "magasin", "info", {
+      utilisateur_id,
+      total,
+      nbArticles: articles.length,
+    });
 
-  // Vérifier si une commande identique est déjà en cours
-  const commandeEnCours = commandesEnCours.get(cacheKey);
-  if (commandeEnCours) {
-    const delaiDepuisCommande = maintenant - commandeEnCours.timestamp;
+    console.log("🔍 [Magasin Service] Vérification doublon commande:", {
+      utilisateur_id,
+      total,
+      nbArticles: articles.length,
+    });
 
-    if (delaiDepuisCommande < 30000) {
-      // 30 secondes
-      console.log(
-        "⚠️ [Service Magasin] Commande identique détectée, attente...",
-        {
-          delaiDepuisCommande: `${delaiDepuisCommande}ms`,
-        },
-      );
+    // Vérifier si une commande identique est déjà en cours
+    const commandeEnCours = commandesEnCours.get(cacheKey);
+    if (commandeEnCours) {
+      const delaiDepuisCommande = maintenant - commandeEnCours.timestamp;
 
-      try {
-        // Attendre que la première commande se termine
-        const resultatPremiere = await commandeEnCours.promesse;
+      if (delaiDepuisCommande < 30000) {
+        // 30 secondes
         console.log(
-          "✅ [Service Magasin] Première commande terminée, retour du même résultat",
+          "⚠️ [Magasin Service] Commande identique détectée, attente...",
+          {
+            delaiDepuisCommande: `${delaiDepuisCommande}ms`,
+          },
+        );
+
+        try {
+          // Attendre que la première commande se termine
+          const resultatPremiere = await commandeEnCours.promesse;
+          console.log(
+            "✅ [Magasin Service] Première commande terminée, retour du même résultat",
+          );
+
+          return {
+            ...resultatPremiere,
+            isDuplicate: true,
+          };
+        } catch (error) {
+          console.log(
+            "❌ [Magasin Service] Première commande a échoué, on continue",
+          );
+          commandesEnCours.delete(cacheKey);
+        }
+      } else {
+        // Commande trop ancienne, on la supprime du cache
+        commandesEnCours.delete(cacheKey);
+      }
+    }
+
+    // Générer les IDs de manière robuste
+    const uniqueCommandeId = generateUniqueCommandeId(utilisateur_id);
+    const numeroCommande = await generateSequentialCommandeNumber();
+
+    console.log("🆔 [Magasin Service] IDs générés:", {
+      uniqueCommandeId,
+      numeroCommande,
+      utilisateur_id,
+    });
+
+    // Créer une promesse pour cette commande et la stocker
+    const promesseCommande = (async () => {
+      try {
+        // Créer la commande avec Prisma
+        const commande = await prisma.commandes.create({
+          data: {
+            utilisateur_id,
+            unique_id: uniqueCommandeId,
+            numero_commande: numeroCommande,
+            total: parseFloat(total),
+            statut: commandeData.statut || "en_attente",
+            date_commande: new Date(),
+          },
+        });
+
+        // Créer les articles de la commande
+        for (const article of articles) {
+          await prisma.commande_articles.create({
+            data: {
+              commande_id: commande.id,
+              article_id: article.article_id,
+              quantite: article.quantite,
+              taille_id: article.taille_id || null,
+              prix: parseFloat(article.prix || 0),
+            },
+          });
+
+          // Mettre à jour le stock si nécessaire
+          if (article.taille_id) {
+            const stock = await prisma.stocks.findFirst({
+              where: {
+                article_id: article.article_id,
+                taille_id: article.taille_id,
+              },
+            });
+
+            if (stock && stock.quantite >= article.quantite) {
+              await prisma.stocks.update({
+                where: { id: stock.id },
+                data: {
+                  quantite: stock.quantite - article.quantite,
+                },
+              });
+            }
+          }
+        }
+
+        // Envoyer l'email de confirmation après succès
+        try {
+          const utilisateur = await prisma.utilisateurs.findUnique({
+            where: { id: utilisateur_id },
+            select: {
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          });
+
+          if (utilisateur) {
+            const commandeDataWithIds = {
+              ...commandeData,
+              unique_id: uniqueCommandeId,
+              numero_commande: numeroCommande,
+              created_at: commande.date_commande,
+            };
+
+            await envoyerEmailConfirmationCommande(
+              commandeDataWithIds,
+              utilisateur.email,
+              `${utilisateur.first_name || ""} ${utilisateur.last_name || ""}`.trim() ||
+                "Membre",
+            );
+          } else {
+            console.warn(
+              "⚠️ [Magasin Service] Impossible d'envoyer l'email - utilisateur non trouvé",
+            );
+          }
+        } catch (emailError) {
+          console.error("❌ [Magasin Service] Erreur envoi email:", emailError);
+          captureException(emailError as Error, {
+            tags: { context: "creerCommande.envoyerEmail" },
+          });
+        }
+
+        console.log(
+          "✅ [Magasin Service] Commande créée avec succès, ID:",
+          commande.id,
         );
 
         return {
-          ...resultatPremiere,
-          isDuplicate: true,
+          isConfirm: true,
+          message: "Commande créée avec succès",
+          data: {
+            id: commande.id,
+            unique_id: commande.unique_id,
+            numero_commande: commande.numero_commande,
+            total: Number(commande.total),
+            statut: commande.statut,
+            date: commande.date_commande,
+          },
         };
-      } catch (error) {
-        console.log(
-          "❌ [Service Magasin] Première commande a échoué, on continue",
-        );
-        commandesEnCours.delete(cacheKey);
+      } finally {
+        // Nettoyer le cache après traitement
+        setTimeout(() => {
+          commandesEnCours.delete(cacheKey);
+        }, 5000); // Garder 5 secondes pour les requêtes très rapprochées
       }
-    } else {
-      // Commande trop ancienne, on la supprime du cache
-      commandesEnCours.delete(cacheKey);
-    }
+    })();
+
+    // Stocker la promesse dans le cache
+    commandesEnCours.set(cacheKey, {
+      timestamp: maintenant,
+      promesse: promesseCommande,
+    });
+
+    // Attendre le résultat
+    const resultatCommande = await promesseCommande;
+
+    console.log(
+      "✅ [Magasin Service] Commande créée avec protection doublon:",
+      {
+        unique_id: uniqueCommandeId,
+        numero_commande: numeroCommande,
+      },
+    );
+
+    return {
+      ...resultatCommande,
+      isDuplicate: false,
+    };
+  } catch (error) {
+    console.error("❌ [Magasin Service] Erreur création commande:", error);
+    captureException(error as Error, {
+      tags: { context: "creerCommande" },
+      extra: { utilisateur_id, total, nbArticles: articles?.length },
+    });
+    throw new Error("Erreur lors de la création de la commande");
   }
-
-  // Générer les IDs de manière robuste
-  const uniqueCommandeId = generateUniqueCommandeId(utilisateur_id);
-  const numeroCommande = await generateSequentialCommandeNumber(paiements);
-
-  console.log("🆔 [Service Magasin] IDs générés:", {
-    uniqueCommandeId,
-    numeroCommande,
-    utilisateur_id,
-  });
-
-  // Créer une promesse pour cette commande et la stocker
-  const promesseCommande = (async () => {
-    try {
-      const finalCommandeData = {
-        ...commandeData,
-        unique_id: uniqueCommandeId,
-        numero_commande: numeroCommande,
-        created_at: new Date().toISOString(),
-      };
-
-      const result = await client.ajouterCommande(finalCommandeData);
-
-      // Envoyer l'email de confirmation après succès
-      try {
-        const userData = await recupererDonneesUtilisateur(
-          utilisateur_id,
-          paiements,
-        );
-        if (userData) {
-          await envoyerEmailConfirmationCommande(
-            finalCommandeData,
-            userData.email,
-            userData.nom,
-          );
-        } else {
-          console.warn(
-            "⚠️ [Service Magasin] Impossible d'envoyer l'email - utilisateur non trouvé",
-          );
-        }
-      } catch (emailError) {
-        console.error("❌ [Service Magasin] Erreur envoi email:", emailError);
-      }
-
-      return {
-        ...result,
-        unique_id: uniqueCommandeId,
-        numero_commande: numeroCommande,
-      };
-    } finally {
-      // Nettoyer le cache après traitement
-      setTimeout(() => {
-        commandesEnCours.delete(cacheKey);
-      }, 5000); // Garder 5 secondes pour les requêtes très rapprochées
-    }
-  })();
-
-  // Stocker la promesse dans le cache
-  commandesEnCours.set(cacheKey, {
-    timestamp: maintenant,
-    promesse: promesseCommande,
-  });
-
-  // Attendre le résultat
-  const resultatCommande = await promesseCommande;
-
-  console.log("✅ [Service Magasin] Commande créée avec protection doublon:", {
-    unique_id: uniqueCommandeId,
-    numero_commande: numeroCommande,
-  });
-
-  return {
-    ...resultatCommande,
-    isDuplicate: false,
-  };
 }
 
 /**
  * Récupérer toutes les commandes
  */
-export async function obtenirLesCommandes(
-  magasinClient?: Magasin,
-): Promise<any[]> {
-  const client = magasinClient || new Magasin();
-
-  console.log("🔍 [Service Magasin] Récupération de toutes les commandes");
-
+export async function obtenirLesCommandes(): Promise<any[]> {
   try {
-    const commandes = await client.obtenirLesCommandes();
-
-    console.log(
-      `✅ [Service Magasin] ${commandes.length} commandes récupérées`,
+    addSentryBreadcrumb(
+      "Récupération de toutes les commandes",
+      "magasin",
+      "info",
     );
 
-    return commandes;
+    console.log("🔍 [Magasin Service] Récupération de toutes les commandes");
+
+    const commandes = await prisma.commandes.findMany({
+      include: {
+        users: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+        commande_articles: {
+          include: {
+            articles: {
+              select: {
+                id: true,
+                nom: true,
+                prix: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        date_commande: "desc",
+      },
+    });
+
+    const commandesFormatted = commandes.map((commande: any) => ({
+      id: commande.id,
+      utilisateur_id: commande.utilisateur_id,
+      unique_id: commande.unique_id,
+      numero_commande: commande.numero_commande,
+      total: Number(commande.total),
+      statut: commande.statut,
+      date: commande.date_commande,
+      created_at: commande.created_at,
+      utilisateur: commande.users
+        ? {
+            id: commande.users.id,
+            nom: commande.users.last_name,
+            prenom: commande.users.first_name,
+            email: commande.users.email,
+          }
+        : undefined,
+      articles: commande.commande_articles.map((ca: any) => ({
+        article_id: ca.article_id,
+        nom: ca.articles?.nom,
+        quantite: ca.quantite,
+        taille: ca.taille,
+        prix: Number(ca.prix),
+      })),
+    }));
+
+    console.log(
+      `✅ [Magasin Service] ${commandesFormatted.length} commandes récupérées`,
+    );
+
+    return commandesFormatted;
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur récupération commandes:", error);
+    console.error("❌ [Magasin Service] Erreur récupération commandes:", error);
+    captureException(error as Error, {
+      tags: { context: "obtenirLesCommandes" },
+    });
     throw new Error("Impossible de récupérer les commandes");
   }
 }
@@ -483,34 +743,44 @@ export async function obtenirLesCommandes(
 /**
  * Vérifier l'unicité d'une commande
  */
-export async function verifierUniciteCommande(
-  uniqueId: string,
-  paiementsClient?: Paiements,
-): Promise<any> {
-  const paiements = paiementsClient || new Paiements();
-
-  console.log("🔍 [Service Magasin] Vérification unicité commande:", uniqueId);
-
+export async function verifierUniciteCommande(uniqueId: string): Promise<any> {
   try {
-    const verifyQuery = `
-      SELECT id, unique_id, numero_commande, statut, total, utilisateur_id, date
-      FROM commandes
-      WHERE unique_id = ? OR numero_commande = ?
-    `;
+    addSentryBreadcrumb(
+      `Vérification unicité commande: ${uniqueId}`,
+      "magasin",
+      "info",
+      { uniqueId },
+    );
 
-    const results = await paiements.queryAsync(verifyQuery, [
+    console.log(
+      "🔍 [Magasin Service] Vérification unicité commande:",
       uniqueId,
-      uniqueId,
-    ]);
+    );
 
-    if (results.length === 0) {
+    const commande = await prisma.commandes.findFirst({
+      where: {
+        OR: [{ unique_id: uniqueId }, { numero_commande: uniqueId }],
+      },
+      select: {
+        id: true,
+        unique_id: true,
+        numero_commande: true,
+        statut: true,
+        total: true,
+        utilisateur_id: true,
+        date_commande: true,
+      },
+    });
+
+    if (!commande) {
       return {
         exists: false,
         message: "Commande non trouvée",
       };
     }
 
-    const commande = results[0];
+    console.log("✅ [Magasin Service] Commande trouvée:", commande.unique_id);
+
     return {
       exists: true,
       commande: {
@@ -518,13 +788,17 @@ export async function verifierUniciteCommande(
         unique_id: commande.unique_id,
         numero_commande: commande.numero_commande,
         statut: commande.statut,
-        total: commande.total,
+        total: Number(commande.total),
         utilisateur_id: commande.utilisateur_id,
-        date: commande.date,
+        date: commande.date_commande,
       },
     };
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur vérification unicité:", error);
+    console.error("❌ [Magasin Service] Erreur vérification unicité:", error);
+    captureException(error as Error, {
+      tags: { context: "verifierUniciteCommande" },
+      extra: { uniqueId },
+    });
     throw new Error("Erreur lors de la vérification de l'unicité");
   }
 }
@@ -532,40 +806,30 @@ export async function verifierUniciteCommande(
 /**
  * Récupérer les tailles disponibles
  */
-export async function obtenirTailles(
-  paiementsClient?: Paiements,
-): Promise<any[]> {
-  const { default: MysqlConnector } =
-    await import("../../../../db/connector/mysqlconnector.js");
-  const mysqlConnector = MysqlConnector.getInstance();
-
-  console.log("🔍 [Service Magasin] Récupération de toutes les tailles");
-
+export async function obtenirTailles(): Promise<any[]> {
   try {
-    const taillesQuery = `
-      SELECT id, nom
-      FROM tailles
-      ORDER BY nom ASC
-    `;
-
-    const tailles = await new Promise((resolve, reject) => {
-      mysqlConnector.query(taillesQuery, [], (error: any, results: any) => {
-        if (error) {
-          console.error("❌ [Service Magasin] Erreur SELECT tailles:", error);
-          reject(error);
-        } else {
-          resolve(results);
-        }
-      });
-    });
-
-    console.log(
-      `✅ [Service Magasin] ${(tailles as any[]).length} tailles récupérées`,
+    addSentryBreadcrumb(
+      "Récupération de toutes les tailles",
+      "magasin",
+      "info",
     );
 
-    return tailles as any[];
+    console.log("🔍 [Magasin Service] Récupération de toutes les tailles");
+
+    const tailles = await prisma.tailles.findMany({
+      orderBy: {
+        nom: "asc",
+      },
+    });
+
+    console.log(`✅ [Magasin Service] ${tailles.length} tailles récupérées`);
+
+    return tailles;
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur récupération tailles:", error);
+    console.error("❌ [Magasin Service] Erreur récupération tailles:", error);
+    captureException(error as Error, {
+      tags: { context: "obtenirTailles" },
+    });
     throw new Error("Impossible de récupérer les tailles");
   }
 }
@@ -576,66 +840,80 @@ export async function obtenirTailles(
 export async function obtenirPaymentIntentCommande(
   commandeId: string,
   userId: number,
-  paiementsClient?: Paiements,
 ): Promise<any> {
-  const paiements = paiementsClient || new Paiements();
-
-  console.log(
-    "🔍 [Service Magasin] Récupération PaymentIntent pour commande:",
-    {
-      commandeId,
-      userId,
-    },
-  );
-
   try {
-    // Vérifier la commande par ID numérique OU unique_id
-    const commandeQuery = `
-      SELECT id, utilisateur_id, statut, unique_id, numero_commande
-      FROM commandes
-      WHERE (id = ? OR unique_id = ? OR numero_commande = ?) AND utilisateur_id = ?
-    `;
-    const commandeResults = await paiements.queryAsync(commandeQuery, [
-      parseInt(commandeId) || 0,
-      commandeId,
-      commandeId,
-      userId,
-    ]);
+    addSentryBreadcrumb(
+      `Récupération PaymentIntent pour commande: ${commandeId}`,
+      "magasin",
+      "info",
+      { commandeId, userId },
+    );
 
-    if (commandeResults.length === 0) {
+    console.log(
+      "🔍 [Magasin Service] Récupération PaymentIntent pour commande:",
+      {
+        commandeId,
+        userId,
+      },
+    );
+
+    // Vérifier la commande par ID numérique OU unique_id
+    const commande = await prisma.commandes.findFirst({
+      where: {
+        AND: [
+          {
+            OR: [
+              { id: parseInt(commandeId) || 0 },
+              { unique_id: commandeId },
+              { numero_commande: commandeId },
+            ],
+          },
+          { utilisateur_id: userId },
+        ],
+      },
+      select: {
+        id: true,
+        utilisateur_id: true,
+        statut: true,
+        unique_id: true,
+        numero_commande: true,
+      },
+    });
+
+    if (!commande) {
       throw new Error("Commande non trouvée ou ne vous appartient pas");
     }
 
-    const commande = commandeResults[0];
-    console.log("✅ [Service Magasin] Commande trouvée:", {
+    console.log("✅ [Magasin Service] Commande trouvée:", {
       id: commande.id,
       unique_id: commande.unique_id,
       numero_commande: commande.numero_commande,
     });
 
     // Rechercher le paiement par l'ID réel de la commande
-    const paymentQuery = `
-      SELECT stripe_payment_intent_id, statut, montant
-      FROM paiements
-      WHERE commande_id = ? AND utilisateur_id = ?
-      ORDER BY id DESC
-      LIMIT 1
-    `;
-    const paymentResults = await paiements.queryAsync(paymentQuery, [
-      commande.id,
-      userId,
-    ]);
+    const payment = await prisma.paiements.findFirst({
+      where: {
+        commande_id: commande.id,
+        utilisateur_id: userId,
+      },
+      orderBy: {
+        id: "desc",
+      },
+      select: {
+        stripe_payment_intent_id: true,
+        statut: true,
+        montant: true,
+      },
+    });
 
-    if (paymentResults.length === 0) {
+    if (!payment) {
       throw new Error("Aucun paiement trouvé pour cette commande");
     }
 
-    const payment = paymentResults[0];
-
-    console.log("🔍 [Service Magasin] PaymentIntent trouvé dans DB:", {
+    console.log("🔍 [Magasin Service] PaymentIntent trouvé dans DB:", {
       stripe_payment_intent_id: payment.stripe_payment_intent_id,
       statut: payment.statut,
-      montant: payment.montant,
+      montant: Number(payment.montant),
     });
 
     // Récupérer les détails du PaymentIntent depuis Stripe
@@ -645,14 +923,14 @@ export async function obtenirPaymentIntentCommande(
     }
 
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2025-02-24.acacia",
+      apiVersion: "2026-01-28.clover",
     });
 
     const paymentIntent = await stripe.paymentIntents.retrieve(
-      payment.stripe_payment_intent_id,
+      payment.stripe_payment_intent_id!,
     );
 
-    console.log("✅ [Service Magasin] PaymentIntent récupéré depuis Stripe:", {
+    console.log("✅ [Magasin Service] PaymentIntent récupéré depuis Stripe:", {
       id: paymentIntent.id,
       status: paymentIntent.status,
       amount: paymentIntent.amount,
@@ -663,14 +941,19 @@ export async function obtenirPaymentIntentCommande(
       client_secret: paymentIntent.client_secret,
       payment_intent_id: paymentIntent.id,
       statut: payment.statut,
-      montant: payment.montant,
+      montant: Number(payment.montant),
       metadata: paymentIntent.metadata || {},
     };
   } catch (error: any) {
     console.error(
-      "❌ [Service Magasin] Erreur récupération PaymentIntent:",
+      "❌ [Magasin Service] Erreur récupération PaymentIntent:",
       error,
     );
+    captureException(error as Error, {
+      tags: { context: "obtenirPaymentIntentCommande" },
+      extra: { commandeId, userId },
+    });
+
     // Préserver les messages d'erreur métier spécifiques
     if (
       error instanceof Error &&
@@ -694,6 +977,13 @@ async function envoyerEmailConfirmationCommande(
   utilisateurNom: string,
 ): Promise<void> {
   try {
+    addSentryBreadcrumb(
+      `Envoi email confirmation commande: ${commandeData.numero_commande}`,
+      "magasin",
+      "info",
+      { numeroCommande: commandeData.numero_commande },
+    );
+
     const emailClient = new EmailClient();
 
     // Générer la liste des articles pour le template
@@ -738,71 +1028,38 @@ async function envoyerEmailConfirmationCommande(
       anneeActuelle: new Date().getFullYear().toString(),
     };
 
-    console.log("📧 [Service Magasin] Envoi email confirmation commande:", {
+    console.log("📧 [Magasin Service] Envoi email confirmation commande:", {
       destinataire: utilisateurEmail,
       numeroCommande: commandeData.numero_commande,
     });
 
-    const result = await emailClient.sendTemplatedEmail({
+    const result = await emailClient.sendEmail({
       to: utilisateurEmail,
+      subject: "Confirmation de commande",
+      message: "",
       templateTitle: "confirmation-commande",
       variables: templateVariables,
+      saveToDb: true,
       utilisateurId: commandeData.utilisateur_id,
     });
 
     if (result.success) {
       console.log(
-        "✅ [Service Magasin] Email de confirmation envoyé avec succès",
+        "✅ [Magasin Service] Email de confirmation envoyé avec succès",
       );
     } else {
-      console.error("❌ [Service Magasin] Échec envoi email:", result.error);
+      console.error("❌ [Magasin Service] Échec envoi email:", result.error);
     }
   } catch (error) {
     console.error(
-      "❌ [Service Magasin] Erreur envoi email confirmation:",
+      "❌ [Magasin Service] Erreur envoi email confirmation:",
       error,
     );
+    captureException(error as Error, {
+      tags: { context: "envoyerEmailConfirmationCommande" },
+      extra: { numeroCommande: commandeData.numero_commande },
+    });
     // Ne pas faire échouer la commande si l'email échoue
-  }
-}
-
-/**
- * Récupérer les données d'un utilisateur
- */
-async function recupererDonneesUtilisateur(
-  utilisateurId: number,
-  paiementsClient?: Paiements,
-): Promise<{ email: string; nom: string } | null> {
-  try {
-    const paiements = paiementsClient || new Paiements();
-
-    const userQuery = `
-      SELECT email, nom, prenom
-      FROM utilisateurs
-      WHERE id = ?
-    `;
-
-    const results = await paiements.queryAsync(userQuery, [utilisateurId]);
-
-    if (results.length === 0) {
-      console.error(
-        "❌ [Service Magasin] Utilisateur non trouvé:",
-        utilisateurId,
-      );
-      return null;
-    }
-
-    const user = results[0];
-    return {
-      email: user.email,
-      nom: `${user.prenom || ""} ${user.nom || ""}`.trim() || "Membre",
-    };
-  } catch (error) {
-    console.error(
-      "❌ [Service Magasin] Erreur récupération utilisateur:",
-      error,
-    );
-    return null;
   }
 }
 
@@ -812,47 +1069,63 @@ async function recupererDonneesUtilisateur(
 export async function calculerStatistiquesMagasin(
   dateDebut?: string,
   dateFin?: string,
-  paiementsClient?: Paiements,
 ): Promise<StatistiquesMagasin> {
-  const paiements = paiementsClient || new Paiements();
-
-  console.log("📊 [Service Magasin] Calcul des statistiques");
-
   try {
-    let whereClause = "";
-    const params: any[] = [];
+    addSentryBreadcrumb(
+      "Calcul des statistiques du magasin",
+      "magasin",
+      "info",
+      { dateDebut, dateFin },
+    );
 
+    console.log("📊 [Magasin Service] Calcul des statistiques");
+
+    const whereClause: any = {};
     if (dateDebut && dateFin) {
-      whereClause = "WHERE date BETWEEN ? AND ?";
-      params.push(dateDebut, dateFin);
+      whereClause.date_commande = {
+        gte: new Date(dateDebut),
+        lte: new Date(dateFin),
+      };
     }
 
-    // Statistiques de commandes
-    const statsQuery = `
-      SELECT
-        COUNT(*) as total_commandes,
-        SUM(CASE WHEN statut = 'en attente' THEN 1 ELSE 0 END) as commandes_en_attente,
-        SUM(CASE WHEN statut = 'validé' THEN 1 ELSE 0 END) as commandes_validees,
-        SUM(CASE WHEN statut = 'livré' THEN 1 ELSE 0 END) as commandes_livrees,
-        SUM(CASE WHEN statut = 'annulé' THEN 1 ELSE 0 END) as commandes_annulees,
-        SUM(total) as chiffre_affaires_total
-      FROM commandes
-      ${whereClause}
-    `;
+    // Récupérer toutes les commandes dans la période
+    const commandes = await prisma.commandes.findMany({
+      where: whereClause,
+      select: {
+        statut: true,
+        total: true,
+      },
+    });
 
-    const statsResults = await paiements.queryAsync(statsQuery, params);
-    const stats = statsResults[0] || {};
-
-    return {
-      total_commandes: stats.total_commandes || 0,
-      commandes_en_attente: stats.commandes_en_attente || 0,
-      commandes_validees: stats.commandes_validees || 0,
-      commandes_livrees: stats.commandes_livrees || 0,
-      commandes_annulees: stats.commandes_annulees || 0,
-      chiffre_affaires_total: stats.chiffre_affaires_total || 0,
+    const stats = {
+      total_commandes: commandes.length,
+      commandes_en_attente: commandes.filter(
+        (c: any) => c.statut === "en_attente",
+      ).length,
+      commandes_validees: commandes.filter(
+        (c: any) => c.statut === "validé" || c.statut === "valide",
+      ).length,
+      commandes_livrees: commandes.filter(
+        (c: any) => c.statut === "livré" || c.statut === "livre",
+      ).length,
+      commandes_annulees: commandes.filter(
+        (c: any) => c.statut === "annulé" || c.statut === "annule",
+      ).length,
+      chiffre_affaires_total: commandes.reduce(
+        (sum: number, c: any) => sum + Number(c.total),
+        0,
+      ),
     };
+
+    console.log("✅ [Magasin Service] Statistiques calculées:", stats);
+
+    return stats;
   } catch (error) {
-    console.error("❌ [Service Magasin] Erreur calcul statistiques:", error);
+    console.error("❌ [Magasin Service] Erreur calcul statistiques:", error);
+    captureException(error as Error, {
+      tags: { context: "calculerStatistiquesMagasin" },
+      extra: { dateDebut, dateFin },
+    });
     throw new Error("Impossible de calculer les statistiques");
   }
 }

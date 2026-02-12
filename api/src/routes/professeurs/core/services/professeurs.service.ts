@@ -1,28 +1,37 @@
-import { Professeurs } from "../../../../db/clients/professeurs/professeurs.js";
-import { VerifyResultWithData, ConfirmationResult } from "@clubmanager/types";
-
 /**
- * Service de gestion des professeurs
- * Contient la logique métier pour les opérations sur les professeurs
+ * Service Professeurs - Logique métier
+ * Gère les opérations sur les professeurs
+ *
+ * ✅ Migré vers Prisma avec intégration Sentry
+ *
+ * @module professeurs.service
  */
+
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import {
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
 
 /**
  * Interface pour un professeur
  */
 export interface Professeur {
   id: number;
+  userId: string;
   first_name: string;
   last_name: string;
   email: string;
-  role_id?: number;
+  nom_utilisateur: string;
   status_id?: number;
-  date_creation?: string;
+  status?: string;
+  date_inscription: Date;
   telephone?: string;
-  adresse?: string;
-  nom_utilisateur?: string;
   genre_id?: number;
-  date_of_birth?: string;
+  date_of_birth: Date;
   grade_id?: number;
+  grade?: string;
+  active: boolean;
 }
 
 /**
@@ -63,31 +72,75 @@ export interface PlanningResult {
 }
 
 /**
+ * ID du statut "Professeur" dans la base de données
+ */
+const PROFESSEUR_STATUS_ID = 2;
+
+/**
  * Récupérer tous les professeurs
  */
-export async function obtenirTousLesProfesseurs(
-  professeursClient?: Professeurs,
-): Promise<Professeur[]> {
-  const client = professeursClient || new Professeurs();
-
-  console.log(`🔍 [Service Professeurs] Récupération de tous les professeurs`);
-
+export async function obtenirTousLesProfesseurs(): Promise<Professeur[]> {
   try {
-    const result: VerifyResultWithData = await client.obtenirLesProfesseurs();
+    addSentryBreadcrumb(
+      "Récupération de tous les professeurs",
+      "service.professeurs",
+      "info",
+    );
 
-    const professeurs = (result.data || []) as Professeur[];
+    console.log(`🔍 [ProfesseursService] Récupération de tous les professeurs`);
+
+    const professeurs = await prisma.utilisateurs.findMany({
+      where: {
+        status_id: PROFESSEUR_STATUS_ID,
+        active: true,
+      },
+      include: {
+        status: true,
+        grades: true,
+        genres: true,
+      },
+      orderBy: {
+        last_name: "asc",
+      },
+    });
 
     console.log(
-      `✅ [Service Professeurs] ${professeurs.length} professeurs trouvés`,
+      `✅ [ProfesseursService] ${professeurs.length} professeurs trouvés`,
     );
 
-    return professeurs;
-  } catch (error) {
+    return professeurs.map((prof) => ({
+      id: prof.id,
+      userId: prof.userId,
+      first_name: prof.first_name,
+      last_name: prof.last_name,
+      email: prof.email,
+      nom_utilisateur: prof.nom_utilisateur,
+      status_id: prof.status_id || undefined,
+      status: prof.status?.nom,
+      date_inscription: prof.date_inscription,
+      genre_id: prof.genre_id || undefined,
+      date_of_birth: prof.date_of_birth,
+      grade_id: prof.grade_id || undefined,
+      grade: prof.grades?.nom,
+      active: prof.active,
+    }));
+  } catch (error: any) {
     console.error(
-      `❌ [Service Professeurs] Erreur récupération professeurs:`,
+      `❌ [ProfesseursService] Erreur récupération professeurs:`,
       error,
     );
-    throw new Error("Impossible de récupérer la liste des professeurs");
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "professeurs",
+        operation: "obtenirTousLesProfesseurs",
+      },
+    });
+
+    throw new Error(
+      `Impossible de récupérer la liste des professeurs: ${error.message}`,
+    );
   }
 }
 
@@ -96,64 +149,195 @@ export async function obtenirTousLesProfesseurs(
  */
 export async function obtenirProfesseurParId(
   professeurId: number,
-  professeursClient?: Professeurs,
 ): Promise<Professeur | null> {
-  const client = professeursClient || new Professeurs();
-
-  console.log(
-    `🔍 [Service Professeurs] Récupération professeur ID: ${professeurId}`,
-  );
-
   try {
-    const professeur = await client.obtenirUtilisateurParId(professeurId);
+    addSentryBreadcrumb(
+      `Récupération professeur ID: ${professeurId}`,
+      "service.professeurs",
+      "info",
+      { professeurId },
+    );
+
+    console.log(
+      `🔍 [ProfesseursService] Récupération professeur ID: ${professeurId}`,
+    );
+
+    const professeur = await prisma.utilisateurs.findUnique({
+      where: {
+        id: professeurId,
+      },
+      include: {
+        status: true,
+        grades: true,
+        genres: true,
+      },
+    });
 
     if (!professeur) {
       console.log(
-        `⚠️ [Service Professeurs] Professeur ${professeurId} non trouvé`,
+        `⚠️ [ProfesseursService] Professeur ${professeurId} non trouvé`,
       );
       return null;
     }
 
-    console.log(`✅ [Service Professeurs] Professeur ${professeurId} trouvé`);
+    // Vérifier si c'est bien un professeur
+    if (professeur.status_id !== PROFESSEUR_STATUS_ID) {
+      console.log(
+        `⚠️ [ProfesseursService] Utilisateur ${professeurId} n'est pas professeur`,
+      );
+      return null;
+    }
 
-    return professeur;
-  } catch (error) {
+    console.log(`✅ [ProfesseursService] Professeur ${professeurId} trouvé`);
+
+    return {
+      id: professeur.id,
+      userId: professeur.userId,
+      first_name: professeur.first_name,
+      last_name: professeur.last_name,
+      email: professeur.email,
+      nom_utilisateur: professeur.nom_utilisateur,
+      status_id: professeur.status_id || undefined,
+      status: professeur.status?.nom,
+      date_inscription: professeur.date_inscription,
+      genre_id: professeur.genre_id || undefined,
+      date_of_birth: professeur.date_of_birth,
+      grade_id: professeur.grade_id || undefined,
+      grade: professeur.grades?.nom,
+      active: professeur.active,
+    };
+  } catch (error: any) {
     console.error(
-      `❌ [Service Professeurs] Erreur récupération professeur:`,
+      `❌ [ProfesseursService] Erreur récupération professeur:`,
       error,
     );
-    throw new Error(`Impossible de récupérer le professeur ${professeurId}`);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "professeurs",
+        operation: "obtenirProfesseurParId",
+      },
+      extra: { professeurId },
+    });
+
+    throw new Error(
+      `Impossible de récupérer le professeur ${professeurId}: ${error.message}`,
+    );
   }
 }
 
 /**
  * Ajouter/promouvoir un ou plusieurs utilisateurs comme professeurs
  */
-export async function ajouterProfesseur(
-  data: any,
-  professeursClient?: Professeurs,
-): Promise<OperationResult> {
-  const client = professeursClient || new Professeurs();
-
-  console.log(`📝 [Service Professeurs] Promotion de professeur(s):`, data);
-
+export async function ajouterProfesseur(data: {
+  utilisateurs: number[] | string[];
+}): Promise<OperationResult> {
   try {
-    const result: ConfirmationResult = await client.ajouterUnProfesseur(data);
+    const userIds = extraireIdsUtilisateurs(data);
 
-    console.log(`✅ [Service Professeurs] Promotion effectuée:`, result);
+    addSentryBreadcrumb(
+      `Promotion de ${userIds.length} professeur(s)`,
+      "service.professeurs",
+      "info",
+      { userIds },
+    );
+
+    console.log(
+      `📝 [ProfesseursService] Promotion de ${userIds.length} professeur(s):`,
+      userIds,
+    );
+
+    if (userIds.length === 0) {
+      console.log("❌ [ProfesseursService] Aucun ID utilisateur valide fourni");
+      return {
+        success: false,
+        message: "Aucun ID utilisateur valide fourni",
+      };
+    }
+
+    // Vérifier que les utilisateurs existent
+    const utilisateurs = await prisma.utilisateurs.findMany({
+      where: {
+        id: { in: userIds },
+        active: true,
+      },
+    });
+
+    if (utilisateurs.length === 0) {
+      console.log("❌ [ProfesseursService] Aucun utilisateur trouvé");
+      return {
+        success: false,
+        message: "Aucun utilisateur trouvé avec ces IDs",
+      };
+    }
+
+    // Filtrer les utilisateurs qui ne sont pas déjà professeurs
+    const utilisateursAPromouvoir = utilisateurs.filter(
+      (u) => u.status_id !== PROFESSEUR_STATUS_ID,
+    );
+
+    if (utilisateursAPromouvoir.length === 0) {
+      console.log(
+        "⚠️ [ProfesseursService] Tous les utilisateurs sont déjà professeurs",
+      );
+      return {
+        success: false,
+        message: "Tous les utilisateurs sélectionnés sont déjà professeurs",
+      };
+    }
+
+    // Promouvoir les utilisateurs
+    const result = await prisma.utilisateurs.updateMany({
+      where: {
+        id: { in: utilisateursAPromouvoir.map((u) => u.id) },
+      },
+      data: {
+        status_id: PROFESSEUR_STATUS_ID,
+      },
+    });
+
+    console.log(
+      `✅ [ProfesseursService] ${result.count} professeur(s) promu(s)`,
+    );
+
+    addSentryBreadcrumb(
+      `${result.count} professeur(s) promu(s)`,
+      "service.professeurs",
+      "info",
+      { count: result.count },
+    );
 
     return {
-      isConfirm: result.isConfirm,
-      success: result.isConfirm || false,
-      message: result.message || "Opération effectuée",
-      data: result.data,
+      isConfirm: true,
+      success: true,
+      message: `${result.count} utilisateur(s) promu(s) au rang de professeur`,
+      data: {
+        count: result.count,
+        promoted: utilisateursAPromouvoir.map((u) => ({
+          id: u.id,
+          name: `${u.first_name} ${u.last_name}`,
+        })),
+      },
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error(
-      `❌ [Service Professeurs] Erreur promotion professeur:`,
+      `❌ [ProfesseursService] Erreur promotion professeur:`,
       error,
     );
-    throw new Error("Impossible de promouvoir le(s) professeur(s)");
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "professeurs",
+        operation: "ajouterProfesseur",
+      },
+      extra: { data },
+    });
+
+    throw new Error(
+      `Impossible de promouvoir le(s) professeur(s): ${error.message}`,
+    );
   }
 }
 
@@ -163,35 +347,93 @@ export async function ajouterProfesseur(
 export async function modifierStatutProfesseur(
   professeurId: number,
   statusId: number,
-  professeursClient?: Professeurs,
 ): Promise<OperationResult> {
-  const client = professeursClient || new Professeurs();
-
-  console.log(
-    `📝 [Service Professeurs] Modification statut professeur ${professeurId} -> ${statusId}`,
-  );
-
   try {
-    const result: ConfirmationResult = await client.modifierStatutProfesseur(
-      professeurId,
-      statusId,
+    addSentryBreadcrumb(
+      `Modification statut professeur ${professeurId} -> ${statusId}`,
+      "service.professeurs",
+      "info",
+      { professeurId, statusId },
     );
 
-    console.log(`✅ [Service Professeurs] Statut modifié:`, result);
+    console.log(
+      `📝 [ProfesseursService] Modification statut professeur ${professeurId} -> ${statusId}`,
+    );
+
+    // Vérifier que le professeur existe
+    const professeur = await prisma.utilisateurs.findUnique({
+      where: { id: professeurId },
+    });
+
+    if (!professeur) {
+      console.log(
+        `❌ [ProfesseursService] Professeur ${professeurId} non trouvé`,
+      );
+      return {
+        success: false,
+        message: `Professeur ${professeurId} non trouvé`,
+      };
+    }
+
+    // Vérifier que le nouveau statut existe
+    const status = await prisma.status.findUnique({
+      where: { id: statusId },
+    });
+
+    if (!status) {
+      console.log(`❌ [ProfesseursService] Statut ${statusId} invalide`);
+      return {
+        success: false,
+        message: `Statut ${statusId} invalide`,
+      };
+    }
+
+    // Mettre à jour le statut
+    const updated = await prisma.utilisateurs.update({
+      where: { id: professeurId },
+      data: { status_id: statusId },
+      include: {
+        status: true,
+      },
+    });
+
+    console.log(
+      `✅ [ProfesseursService] Statut modifié: ${professeur.status_id} -> ${statusId}`,
+    );
+
+    addSentryBreadcrumb(
+      "Statut professeur modifié",
+      "service.professeurs",
+      "info",
+      { professeurId, oldStatus: professeur.status_id, newStatus: statusId },
+    );
 
     return {
-      isConfirm: result.isConfirm,
-      success: result.isConfirm || false,
-      message: result.message || "Statut modifié",
-      data: result.data,
+      isConfirm: true,
+      success: true,
+      message: `Statut du professeur modifié en ${status.nom}`,
+      data: {
+        id: updated.id,
+        name: `${updated.first_name} ${updated.last_name}`,
+        oldStatus: professeur.status_id,
+        newStatus: statusId,
+        statusName: updated.status?.nom,
+      },
     };
-  } catch (error) {
-    console.error(
-      `❌ [Service Professeurs] Erreur modification statut:`,
-      error,
-    );
+  } catch (error: any) {
+    console.error(`❌ [ProfesseursService] Erreur modification statut:`, error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "professeurs",
+        operation: "modifierStatutProfesseur",
+      },
+      extra: { professeurId, statusId },
+    });
+
     throw new Error(
-      `Impossible de modifier le statut du professeur ${professeurId}`,
+      `Impossible de modifier le statut du professeur ${professeurId}: ${error.message}`,
     );
   }
 }
@@ -201,30 +443,85 @@ export async function modifierStatutProfesseur(
  */
 export async function obtenirPlanningProfesseur(
   professeurId: number,
-  professeursClient?: Professeurs,
 ): Promise<PlanningResult> {
-  const client = professeursClient || new Professeurs();
-
-  console.log(
-    `🔍 [Service Professeurs] Récupération planning professeur ${professeurId}`,
-  );
-
   try {
-    const planning = await client.obtenirPlanningCoursProfesseur(professeurId);
+    addSentryBreadcrumb(
+      `Récupération planning professeur ${professeurId}`,
+      "service.professeurs",
+      "info",
+      { professeurId },
+    );
 
     console.log(
-      `✅ [Service Professeurs] Planning récupéré:`,
-      planning.isFind ? `${planning.data.length} cours` : "aucun cours",
+      `🔍 [ProfesseursService] Récupération planning professeur ${professeurId}`,
     );
 
-    return planning;
-  } catch (error) {
+    // Récupérer les cours du professeur
+    const cours = await prisma.cours.findMany({
+      where: {
+        professeur_id: professeurId,
+      },
+      include: {
+        inscriptions: {
+          select: {
+            id: true,
+          },
+        },
+      },
+      orderBy: [{ jour_semaine: "asc" }, { heure_debut: "asc" }],
+    });
+
+    if (cours.length === 0) {
+      console.log(
+        `⚠️ [ProfesseursService] Aucun cours pour le professeur ${professeurId}`,
+      );
+      return {
+        isFind: false,
+        message: "Aucun cours trouvé pour ce professeur",
+        data: [],
+      };
+    }
+
+    console.log(
+      `✅ [ProfesseursService] ${cours.length} cours trouvés pour le professeur ${professeurId}`,
+    );
+
+    const planning: CoursProfesseur[] = cours.map((c) => ({
+      id: c.id,
+      nom_cours: c.nom_cours,
+      description: c.description || undefined,
+      jour_semaine: c.jour_semaine,
+      heure_debut: c.heure_debut,
+      heure_fin: c.heure_fin,
+      salle: c.salle || undefined,
+      niveau: c.niveau || undefined,
+      capacite_max: c.capacite_max || undefined,
+      professeur_id: c.professeur_id,
+      nombre_inscrits: c.inscriptions.length,
+    }));
+
+    return {
+      isFind: true,
+      message: `${cours.length} cours trouvé(s)`,
+      data: planning,
+    };
+  } catch (error: any) {
     console.error(
-      `❌ [Service Professeurs] Erreur récupération planning:`,
+      `❌ [ProfesseursService] Erreur récupération planning:`,
       error,
     );
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "professeurs",
+        operation: "obtenirPlanningProfesseur",
+      },
+      extra: { professeurId },
+    });
+
     throw new Error(
-      `Impossible de récupérer le planning du professeur ${professeurId}`,
+      `Impossible de récupérer le planning du professeur ${professeurId}: ${error.message}`,
     );
   }
 }
@@ -234,7 +531,7 @@ export async function obtenirPlanningProfesseur(
  */
 export function extraireIdsUtilisateurs(data: any): number[] {
   console.log(
-    "🔍 [extractUserIds] Extraction des IDs depuis:",
+    "🔍 [ProfesseursService] Extraction des IDs depuis:",
     JSON.stringify(data, null, 2),
   );
 
@@ -242,7 +539,9 @@ export function extraireIdsUtilisateurs(data: any): number[] {
 
   // Cas 1: data.utilisateurs est un tableau
   if (data.utilisateurs && Array.isArray(data.utilisateurs)) {
-    console.log("🔍 [extractUserIds] Cas 1: data.utilisateurs est un tableau");
+    console.log(
+      "🔍 [ProfesseursService] Cas 1: data.utilisateurs est un tableau",
+    );
 
     // Vérifier si c'est un tableau de strings/numbers (IDs directs)
     if (
@@ -251,12 +550,12 @@ export function extraireIdsUtilisateurs(data: any): number[] {
       )
     ) {
       console.log(
-        "🔍 [extractUserIds] Cas 1a: Tableau d'IDs directs (strings/numbers)",
+        "🔍 [ProfesseursService] Cas 1a: Tableau d'IDs directs (strings/numbers)",
       );
       userIds = data.utilisateurs
         .map((id: any) => {
           console.log(
-            "🔍 [extractUserIds] ID direct:",
+            "🔍 [ProfesseursService] ID direct:",
             id,
             "converti en:",
             parseInt(id),
@@ -267,11 +566,11 @@ export function extraireIdsUtilisateurs(data: any): number[] {
     }
     // Sinon c'est un tableau d'objets
     else {
-      console.log("🔍 [extractUserIds] Cas 1b: Tableau d'objets");
+      console.log("🔍 [ProfesseursService] Cas 1b: Tableau d'objets");
       userIds = data.utilisateurs
         .map((user: any) => {
           const id = user.id || user.userId || user.user_id;
-          console.log("🔍 [extractUserIds] User:", user, "ID extrait:", id);
+          console.log("🔍 [ProfesseursService] User:", user, "ID extrait:", id);
           return parseInt(id);
         })
         .filter((id: number) => !isNaN(id));
@@ -279,7 +578,9 @@ export function extraireIdsUtilisateurs(data: any): number[] {
   }
   // Cas 2: data est directement un tableau
   else if (Array.isArray(data)) {
-    console.log("🔍 [extractUserIds] Cas 2: data est directement un tableau");
+    console.log(
+      "🔍 [ProfesseursService] Cas 2: data est directement un tableau",
+    );
     userIds = data
       .map((item: any) => {
         const id =
@@ -292,13 +593,15 @@ export function extraireIdsUtilisateurs(data: any): number[] {
   }
   // Cas 3: data contient un seul utilisateur
   else if (data.id || data.userId || data.user_id) {
-    console.log("🔍 [extractUserIds] Cas 3: data contient un seul utilisateur");
+    console.log(
+      "🔍 [ProfesseursService] Cas 3: data contient un seul utilisateur",
+    );
     const id = data.id || data.userId || data.user_id;
     userIds = [parseInt(id)].filter((id: number) => !isNaN(id));
   }
   // Cas 4: autres propriétés possibles
   else if (data.users && Array.isArray(data.users)) {
-    console.log("🔍 [extractUserIds] Cas 4: data.users existe");
+    console.log("🔍 [ProfesseursService] Cas 4: data.users existe");
     userIds = data.users
       .map((user: any) => {
         const id = user.id || user.userId || user.user_id || user;
@@ -307,7 +610,7 @@ export function extraireIdsUtilisateurs(data: any): number[] {
       .filter((id: number) => !isNaN(id));
   }
 
-  console.log("🔍 [extractUserIds] IDs extraits:", userIds);
+  console.log("🔍 [ProfesseursService] IDs extraits:", userIds);
   return userIds;
 }
 
@@ -316,41 +619,111 @@ export function extraireIdsUtilisateurs(data: any): number[] {
  */
 export async function validerUtilisateurPourPromotion(
   userId: number,
-  professeursClient?: Professeurs,
 ): Promise<{ valide: boolean; message?: string; utilisateur?: Professeur }> {
-  const client = professeursClient || new Professeurs();
-
   try {
-    const utilisateur = await client.obtenirUtilisateurParId(userId);
+    addSentryBreadcrumb(
+      `Validation utilisateur ${userId} pour promotion`,
+      "service.professeurs",
+      "info",
+      { userId },
+    );
+
+    console.log(
+      `🔍 [ProfesseursService] Validation utilisateur ${userId} pour promotion`,
+    );
+
+    const utilisateur = await prisma.utilisateurs.findUnique({
+      where: { id: userId },
+      include: {
+        status: true,
+        grades: true,
+      },
+    });
 
     if (!utilisateur) {
+      console.log(`❌ [ProfesseursService] Utilisateur ${userId} n'existe pas`);
       return {
         valide: false,
         message: `L'utilisateur avec l'ID ${userId} n'existe pas`,
       };
     }
 
-    // Vérifier si l'utilisateur n'est pas déjà professeur (role_id = 2)
-    if (utilisateur.role_id === 2) {
+    if (!utilisateur.active) {
+      console.log(`❌ [ProfesseursService] Utilisateur ${userId} est inactif`);
       return {
         valide: false,
-        message: `L'utilisateur ${utilisateur.first_name} ${utilisateur.last_name} est déjà professeur`,
-        utilisateur,
+        message: `L'utilisateur ${utilisateur.first_name} ${utilisateur.last_name} est inactif`,
       };
     }
 
+    // Vérifier si l'utilisateur n'est pas déjà professeur
+    if (utilisateur.status_id === PROFESSEUR_STATUS_ID) {
+      console.log(
+        `⚠️ [ProfesseursService] Utilisateur ${userId} est déjà professeur`,
+      );
+      return {
+        valide: false,
+        message: `L'utilisateur ${utilisateur.first_name} ${utilisateur.last_name} est déjà professeur`,
+        utilisateur: {
+          id: utilisateur.id,
+          userId: utilisateur.userId,
+          first_name: utilisateur.first_name,
+          last_name: utilisateur.last_name,
+          email: utilisateur.email,
+          nom_utilisateur: utilisateur.nom_utilisateur,
+          status_id: utilisateur.status_id || undefined,
+          status: utilisateur.status?.nom,
+          date_inscription: utilisateur.date_inscription,
+          genre_id: utilisateur.genre_id || undefined,
+          date_of_birth: utilisateur.date_of_birth,
+          grade_id: utilisateur.grade_id || undefined,
+          grade: utilisateur.grades?.nom,
+          active: utilisateur.active,
+        },
+      };
+    }
+
+    console.log(
+      `✅ [ProfesseursService] Utilisateur ${userId} peut être promu`,
+    );
+
     return {
       valide: true,
-      utilisateur,
+      utilisateur: {
+        id: utilisateur.id,
+        userId: utilisateur.userId,
+        first_name: utilisateur.first_name,
+        last_name: utilisateur.last_name,
+        email: utilisateur.email,
+        nom_utilisateur: utilisateur.nom_utilisateur,
+        status_id: utilisateur.status_id || undefined,
+        status: utilisateur.status?.nom,
+        date_inscription: utilisateur.date_inscription,
+        genre_id: utilisateur.genre_id || undefined,
+        date_of_birth: utilisateur.date_of_birth,
+        grade_id: utilisateur.grade_id || undefined,
+        grade: utilisateur.grades?.nom,
+        active: utilisateur.active,
+      },
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error(
-      `❌ [Service Professeurs] Erreur validation utilisateur ${userId}:`,
+      `❌ [ProfesseursService] Erreur validation utilisateur ${userId}:`,
       error,
     );
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "professeurs",
+        operation: "validerUtilisateurPourPromotion",
+      },
+      extra: { userId },
+    });
+
     return {
       valide: false,
-      message: `Erreur lors de la validation de l'utilisateur ${userId}`,
+      message: `Erreur lors de la validation de l'utilisateur ${userId}: ${error.message}`,
     };
   }
 }

@@ -1,9 +1,17 @@
-import { EmailService } from "../../../../services/emailService.js";
-import { EmailTemplateService } from "../../../../services/emailTemplateService.js";
-import { messageClient } from "../../../../db/clients/messages/messageClient.js";
+import { PrismaClient } from "@prisma/client";
+import {
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
+// TODO: Ces services ont été refactorisés - utiliser EmailClient à la place
+// import { EmailService } from "../../../../services/emailService.js";
+// import { EmailTemplateService } from "../../../../services/emailTemplateService.js";
+import { EmailClient } from "../../../../infrastructure/external-services/emailClient.js";
+
+const prisma = new PrismaClient();
 
 /**
- * Service pour la gestion des emails
+ * Service pour la gestion des emails (migré vers Prisma + Sentry)
  *
  * Ce service encapsule la logique métier pour l'envoi d'emails,
  * la gestion des templates et la validation des emails.
@@ -11,12 +19,10 @@ import { messageClient } from "../../../../db/clients/messages/messageClient.js"
  * @class EmailsService
  */
 export class EmailsService {
-  private emailService: EmailService;
-  private templateService: EmailTemplateService;
+  private emailClient: EmailClient;
 
   constructor() {
-    this.emailService = new EmailService();
-    this.templateService = new EmailTemplateService();
+    this.emailClient = new EmailClient();
   }
 
   /**
@@ -37,25 +43,49 @@ export class EmailsService {
     utilisateurId?: number,
   ) {
     try {
-      console.log("📧 [EmailsService] Envoi email de bienvenue à:", email);
-
-      const result = await this.emailService.envoyerEmailBienvenue(
-        email,
-        firstName,
-        lastName,
-        userId,
+      addSentryBreadcrumb(
+        `Envoi email de bienvenue à: ${email}`,
+        "email",
+        "info",
+        { email, firstName, lastName },
       );
+
+      console.log("📧 [Email Service] Envoi email de bienvenue à:", email);
+
+      // Utiliser le nouveau EmailClient
+      const result = await this.emailClient.sendEmail({
+        to: email,
+        subject: "Bienvenue",
+        message: "",
+        templateTitle: "bienvenue",
+        variables: {
+          firstName,
+          lastName,
+          userId,
+        },
+        saveToDb: true,
+        utilisateurId,
+      });
 
       // Sauvegarder en base si utilisateurId fourni
       if (utilisateurId && result.success) {
-        await messageClient.saveMessageToDatabase({
-          utilisateur_id: utilisateurId,
-          type_message: "welcome_email",
-          contenu: `Email de bienvenue envoyé à ${email}`,
-          status_envoi: "sent",
-          email_recipient: email,
+        await prisma.messages_personnalises.create({
+          data: {
+            utilisateur_id: utilisateurId,
+            contenu: `Email de bienvenue envoyé à ${email}`,
+            status_envoi: "sent",
+            sendgrid_message_id: result.messageId,
+          },
         });
+
+        console.log(
+          "✅ [Email Service] Message de bienvenue enregistré en base",
+        );
       }
+
+      console.log(
+        `✅ [Email Service] Email de bienvenue envoyé avec succès à ${email}`,
+      );
 
       return {
         success: result.success,
@@ -67,7 +97,11 @@ export class EmailsService {
         details: result.details,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur sendWelcomeEmail:", error);
+      console.error("❌ [Email Service] Erreur sendWelcomeEmail:", error);
+      captureException(error as Error, {
+        tags: { context: "sendWelcomeEmail" },
+        extra: { email, firstName, lastName, utilisateurId },
+      });
       throw new Error(
         `Erreur lors de l'envoi de l'email de bienvenue: ${error.message}`,
       );
@@ -90,25 +124,48 @@ export class EmailsService {
     utilisateurId?: number,
   ) {
     try {
-      console.log("📧 [EmailsService] Envoi email de validation à:", email);
-
-      const result = await this.emailService.envoyerEmailBienvenue(
-        email,
-        firstName,
-        "",
-        userId,
+      addSentryBreadcrumb(
+        `Envoi email de validation à: ${email}`,
+        "email",
+        "info",
+        { email, firstName },
       );
+
+      console.log("📧 [Email Service] Envoi email de validation à:", email);
+
+      // Utiliser le nouveau EmailClient
+      const result = await this.emailClient.sendEmail({
+        to: email,
+        subject: "Validation de votre email",
+        message: "",
+        templateTitle: "validation",
+        variables: {
+          firstName,
+          userId,
+        },
+        saveToDb: true,
+        utilisateurId,
+      });
 
       // Sauvegarder en base si utilisateurId fourni
       if (utilisateurId && result.success) {
-        await messageClient.saveMessageToDatabase({
-          utilisateur_id: utilisateurId,
-          type_message: "validation_email",
-          contenu: `Email de validation envoyé à ${email}`,
-          status_envoi: "sent",
-          email_recipient: email,
+        await prisma.messages_personnalises.create({
+          data: {
+            utilisateur_id: utilisateurId,
+            contenu: `Email de validation envoyé à ${email}`,
+            status_envoi: "sent",
+            sendgrid_message_id: result.messageId,
+          },
         });
+
+        console.log(
+          "✅ [Email Service] Message de validation enregistré en base",
+        );
       }
+
+      console.log(
+        `✅ [Email Service] Email de validation envoyé avec succès à ${email}`,
+      );
 
       return {
         success: result.success,
@@ -120,7 +177,11 @@ export class EmailsService {
         details: result.details,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur sendValidationEmail:", error);
+      console.error("❌ [Email Service] Erreur sendValidationEmail:", error);
+      captureException(error as Error, {
+        tags: { context: "sendValidationEmail" },
+        extra: { email, firstName, utilisateurId },
+      });
       throw new Error(
         `Erreur lors de l'envoi de l'email de validation: ${error.message}`,
       );
@@ -135,16 +196,48 @@ export class EmailsService {
    */
   async recoverUserId(email: string) {
     try {
-      console.log("🔍 [EmailsService] Récupération userId pour:", email);
+      addSentryBreadcrumb(
+        `Récupération userId pour: ${email}`,
+        "email",
+        "info",
+        { email },
+      );
 
-      // Fonction de récupération d'userId à implémenter selon votre logique
+      console.log("🔍 [Email Service] Récupération userId pour:", email);
+
+      const utilisateur = await prisma.utilisateurs.findFirst({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+        },
+      });
+
+      if (!utilisateur) {
+        console.log("⚠️ [Email Service] Utilisateur non trouvé:", email);
+        return {
+          success: false,
+          message: "Utilisateur non trouvé",
+          userId: undefined,
+        };
+      }
+
+      console.log("✅ [Email Service] Utilisateur trouvé, ID:", utilisateur.id);
+
       return {
-        success: false,
-        message: "Fonction non implémentée",
-        userId: undefined,
+        success: true,
+        message: "Utilisateur trouvé",
+        userId: utilisateur.id,
+        data: utilisateur,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur recoverUserId:", error);
+      console.error("❌ [Email Service] Erreur recoverUserId:", error);
+      captureException(error as Error, {
+        tags: { context: "recoverUserId" },
+        extra: { email },
+      });
       throw new Error(
         `Erreur lors de la récupération de l'userId: ${error.message}`,
       );
@@ -159,16 +252,90 @@ export class EmailsService {
    */
   async confirmEmail(token: string) {
     try {
-      console.log("✅ [EmailsService] Confirmation email avec token:", token);
+      addSentryBreadcrumb("Confirmation email avec token", "email", "info", {
+        tokenLength: token.length,
+      });
 
-      // Fonction de confirmation d'email à implémenter selon votre logique
+      console.log("✅ [Email Service] Confirmation email avec token");
+
+      // Chercher le token dans la table email_validation_tokens
+      const validationToken = await prisma.email_validation_tokens.findUnique({
+        where: { token },
+      });
+
+      if (!validationToken) {
+        console.log("⚠️ [Email Service] Token non trouvé");
+        return {
+          success: false,
+          message: "Token invalide ou expiré",
+          data: null,
+        };
+      }
+
+      // Vérifier si le token est expiré
+      if (validationToken.expires_at < new Date()) {
+        console.log("⚠️ [Email Service] Token expiré");
+        return {
+          success: false,
+          message: "Token expiré",
+          data: null,
+        };
+      }
+
+      // Vérifier si le token a déjà été utilisé
+      if (validationToken.used) {
+        console.log("⚠️ [Email Service] Token déjà utilisé");
+        return {
+          success: false,
+          message: "Token déjà utilisé",
+          data: null,
+        };
+      }
+
+      // Marquer le token comme utilisé
+      await prisma.email_validation_tokens.update({
+        where: { id: validationToken.id },
+        data: {
+          used: true,
+        },
+      });
+
+      // Marquer l'email comme vérifié si besoin
+      // Récupérer l'utilisateur pour vérifier email_verified
+      const utilisateur = await prisma.utilisateurs.findUnique({
+        where: { id: validationToken.utilisateur_id },
+        select: { email_verified: true, email: true },
+      });
+
+      if (utilisateur && !utilisateur.email_verified) {
+        await prisma.utilisateurs.update({
+          where: { id: validationToken.utilisateur_id },
+          data: {
+            email_verified: true,
+            email_verified_at: new Date(),
+          },
+        });
+      }
+
+      console.log(
+        "✅ [Email Service] Email confirmé avec succès pour utilisateur:",
+        validationToken.utilisateur_id,
+      );
+
       return {
-        success: false,
-        message: "Fonction non implémentée",
-        data: null,
+        success: true,
+        message: "Email confirmé avec succès",
+        data: {
+          utilisateur_id: validationToken.utilisateur_id,
+          email: utilisateur?.email || "",
+        },
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur confirmEmail:", error);
+      console.error("❌ [Email Service] Erreur confirmEmail:", error);
+      captureException(error as Error, {
+        tags: { context: "confirmEmail" },
+        extra: { tokenLength: token.length },
+      });
       throw new Error(
         `Erreur lors de la confirmation de l'email: ${error.message}`,
       );
@@ -205,40 +372,60 @@ export class EmailsService {
         type_message = "custom_email",
       } = params;
 
-      console.log("📧 [EmailsService] Envoi email personnalisé à:", to);
+      addSentryBreadcrumb(
+        `Envoi email personnalisé à: ${to}`,
+        "email",
+        "info",
+        { to, subject, type_message },
+      );
+
+      console.log("📧 [Email Service] Envoi email personnalisé à:", to);
 
       let dbMessageId: number | undefined;
 
       // Sauvegarder en base si demandé
       if (saveToDb && utilisateurId) {
-        dbMessageId = await messageClient.saveMessageToDatabase({
-          utilisateur_id: utilisateurId,
-          type_message,
-          contenu: html || text,
-          status_envoi: "pending",
-          email_recipient: to,
+        const message = await prisma.messages_personnalises.create({
+          data: {
+            utilisateur_id: utilisateurId,
+            contenu: html || text,
+            status_envoi: "pending",
+          },
         });
+        dbMessageId = message.id;
+        console.log(
+          "📝 [Email Service] Message enregistré en base, ID:",
+          dbMessageId,
+        );
       }
 
-      // Envoyer l'email
-      const emailResult = await this.emailService.envoyerEmailPersonnalise({
+      // Envoyer l'email avec le nouveau EmailClient
+      const emailResult = await this.emailClient.sendEmail({
         to,
         subject,
-        html: html || "",
-        text: text || "",
-        cc,
-        bcc,
+        message: html || text || "",
+        saveToDb,
+        utilisateurId,
       });
 
       // Mettre à jour le statut en base si sauvegardé
       if (saveToDb && dbMessageId) {
-        await messageClient.updateMessageStatus(
-          dbMessageId,
-          emailResult.success ? "sent" : "failed",
-          emailResult.messageId,
-          emailResult.error,
+        await prisma.messages_personnalises.update({
+          where: { id: dbMessageId },
+          data: {
+            status_envoi: emailResult.success ? "sent" : "failed",
+            sendgrid_message_id: emailResult.messageId,
+            error_details: emailResult.error,
+          },
+        });
+        console.log(
+          `✅ [Email Service] Statut du message mis à jour: ${emailResult.success ? "sent" : "failed"}`,
         );
       }
+
+      console.log(
+        `✅ [Email Service] Email personnalisé ${emailResult.success ? "envoyé" : "échoué"}`,
+      );
 
       return {
         success: emailResult.success,
@@ -251,7 +438,11 @@ export class EmailsService {
         dbMessageId,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur sendCustomEmail:", error);
+      console.error("❌ [Email Service] Erreur sendCustomEmail:", error);
+      captureException(error as Error, {
+        tags: { context: "sendCustomEmail" },
+        extra: { to: params.to, subject: params.subject },
+      });
       throw new Error(
         `Erreur lors de l'envoi de l'email personnalisé: ${error.message}`,
       );
@@ -266,9 +457,21 @@ export class EmailsService {
    */
   async sendTestEmail(email: string) {
     try {
-      console.log("🧪 [EmailsService] Envoi email de test à:", email);
+      addSentryBreadcrumb(`Envoi email de test à: ${email}`, "email", "info", {
+        email,
+      });
 
-      const result = await this.emailService.envoyerEmailTest(email);
+      console.log("🧪 [Email Service] Envoi email de test à:", email);
+
+      const result = await this.emailClient.sendEmail({
+        to: email,
+        subject: "Test Email - Club Manager",
+        message: "<h1>Test Email</h1><p>Ceci est un email de test.</p>",
+      });
+
+      console.log(
+        `✅ [Email Service] Email de test ${result.success ? "envoyé" : "échoué"}`,
+      );
 
       return {
         success: result.success,
@@ -279,7 +482,11 @@ export class EmailsService {
         error: result.error,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur sendTestEmail:", error);
+      console.error("❌ [Email Service] Erreur sendTestEmail:", error);
+      captureException(error as Error, {
+        tags: { context: "sendTestEmail" },
+        extra: { email },
+      });
       throw new Error(
         `Erreur lors de l'envoi de l'email de test: ${error.message}`,
       );
@@ -293,18 +500,30 @@ export class EmailsService {
    */
   async getAllTemplates() {
     try {
-      console.log("📋 [EmailsService] Récupération de tous les templates");
+      addSentryBreadcrumb(
+        "Récupération de tous les templates",
+        "email",
+        "info",
+      );
 
-      const templates = await this.templateService.getAllTemplates();
+      console.log("📋 [Email Service] Récupération de tous les templates");
+
+      // TODO: Implémenter avec le nouveau système de templates
+      const templates: any[] = [];
+
+      console.log(`✅ [Email Service] ${templates.length} templates récupérés`);
 
       return {
         success: true,
-        message: "Templates récupérés avec succès",
+        message: "Templates récupérés avec succès (TODO: nouveau système)",
         templates,
         count: templates.length,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur getAllTemplates:", error);
+      console.error("❌ [Email Service] Erreur getAllTemplates:", error);
+      captureException(error as Error, {
+        tags: { context: "getAllTemplates" },
+      });
       throw new Error(
         `Erreur lors de la récupération des templates: ${error.message}`,
       );
@@ -333,60 +552,67 @@ export class EmailsService {
         utilisateurId,
       } = params;
 
+      addSentryBreadcrumb(
+        `Envoi email avec template: ${templateTitle}`,
+        "email",
+        "info",
+        { templateTitle, to },
+      );
+
       console.log(
-        "📧 [EmailsService] Envoi email avec template:",
+        "📧 [Email Service] Envoi email avec template:",
         templateTitle,
         "à:",
         to,
-      );
-
-      // Récupérer le template
-      const template =
-        await this.templateService.getTemplateByTitle(templateTitle);
-
-      if (!template) {
-        return {
-          success: false,
-          message: "Template non trouvé",
-        };
-      }
-
-      // Traiter le template avec les variables
-      const processedTemplate = this.templateService.processTemplate(
-        template.content,
-        variables,
       );
 
       let dbMessageId: number | undefined;
 
       // Sauvegarder en base si demandé
       if (saveToDb && utilisateurId) {
-        dbMessageId = await messageClient.saveMessageToDatabase({
-          utilisateur_id: utilisateurId,
-          type_message: "template_email",
-          contenu: processedTemplate.html,
-          status_envoi: "pending",
-          email_recipient: to,
+        const message = await prisma.messages_personnalises.create({
+          data: {
+            utilisateur_id: utilisateurId,
+            contenu: `Email avec template: ${templateTitle}`,
+            status_envoi: "pending",
+          },
         });
+        dbMessageId = message.id;
+        console.log(
+          "📝 [Email Service] Message template enregistré en base, ID:",
+          dbMessageId,
+        );
       }
 
-      // Envoyer l'email
-      const emailResult = await this.emailService.envoyerEmailPersonnalise({
+      // Envoyer l'email avec template
+      const emailResult = await this.emailClient.sendEmail({
         to,
-        subject: processedTemplate.subject,
-        html: processedTemplate.html,
-        text: processedTemplate.text,
+        subject: templateTitle,
+        message: "",
+        templateTitle,
+        variables,
+        saveToDb,
+        utilisateurId,
       });
 
       // Mettre à jour le statut en base si sauvegardé
       if (saveToDb && dbMessageId) {
-        await messageClient.updateMessageStatus(
-          dbMessageId,
-          emailResult.success ? "sent" : "failed",
-          emailResult.messageId,
-          emailResult.error,
+        await prisma.messages_personnalises.update({
+          where: { id: dbMessageId },
+          data: {
+            status_envoi: emailResult.success ? "sent" : "failed",
+            sendgrid_message_id: emailResult.messageId,
+            error_details: emailResult.error,
+          },
+        });
+        console.log(
+          `✅ [Email Service] Statut du message template mis à jour: ${emailResult.success ? "sent" : "failed"}`,
         );
       }
+
+      console.log(
+        `✅ [Email Service] Email template ${emailResult.success ? "envoyé" : "échoué"}`,
+      );
 
       return {
         success: emailResult.success,
@@ -397,13 +623,13 @@ export class EmailsService {
         error: emailResult.error,
         details: emailResult.details,
         dbMessageId,
-        template: {
-          title: template.title,
-          processed: processedTemplate,
-        },
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur sendTemplateEmail:", error);
+      console.error("❌ [Email Service] Erreur sendTemplateEmail:", error);
+      captureException(error as Error, {
+        tags: { context: "sendTemplateEmail" },
+        extra: { templateTitle: params.templateTitle, to: params.to },
+      });
       throw new Error(
         `Erreur lors de l'envoi de l'email avec template: ${error.message}`,
       );
@@ -419,14 +645,30 @@ export class EmailsService {
    */
   async getMessageHistory(utilisateurId: number, limit: number = 100) {
     try {
+      addSentryBreadcrumb(
+        `Récupération historique pour utilisateur: ${utilisateurId}`,
+        "email",
+        "info",
+        { utilisateurId, limit },
+      );
+
       console.log(
-        "📚 [EmailsService] Récupération historique pour utilisateur:",
+        "📚 [Email Service] Récupération historique pour utilisateur:",
         utilisateurId,
       );
 
-      const messages = await messageClient.getMessageHistory(
-        utilisateurId,
-        limit,
+      const messages = await prisma.messages_personnalises.findMany({
+        where: {
+          utilisateur_id: utilisateurId,
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+        take: limit,
+      });
+
+      console.log(
+        `✅ [Email Service] ${messages.length} messages récupérés pour l'utilisateur ${utilisateurId}`,
       );
 
       return {
@@ -436,7 +678,11 @@ export class EmailsService {
         count: messages.length,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur getMessageHistory:", error);
+      console.error("❌ [Email Service] Erreur getMessageHistory:", error);
+      captureException(error as Error, {
+        tags: { context: "getMessageHistory" },
+        extra: { utilisateurId, limit },
+      });
       throw new Error(
         `Erreur lors de la récupération de l'historique: ${error.message}`,
       );
@@ -452,31 +698,41 @@ export class EmailsService {
    */
   async getEmailStats(utilisateurId: number, limit: number = 1000) {
     try {
+      addSentryBreadcrumb(
+        `Récupération statistiques pour utilisateur: ${utilisateurId}`,
+        "email",
+        "info",
+        { utilisateurId, limit },
+      );
+
       console.log(
-        "📊 [EmailsService] Récupération statistiques pour utilisateur:",
+        "📊 [Email Service] Récupération statistiques pour utilisateur:",
         utilisateurId,
       );
 
-      const messages = await messageClient.getMessageHistory(
-        utilisateurId,
-        limit,
-      );
+      const messages = await prisma.messages_personnalises.findMany({
+        where: {
+          utilisateur_id: utilisateurId,
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+        take: limit,
+      });
+
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
 
       const stats = {
         total: messages.length,
         sent: messages.filter((m) => m.status_envoi === "sent").length,
         failed: messages.filter((m) => m.status_envoi === "failed").length,
         pending: messages.filter((m) => m.status_envoi === "pending").length,
-        types: messages.reduce((acc: any, m: any) => {
-          acc[m.type_message] = (acc[m.type_message] || 0) + 1;
-          return acc;
-        }, {}),
-        lastWeek: messages.filter((m) => {
-          const weekAgo = new Date();
-          weekAgo.setDate(weekAgo.getDate() - 7);
-          return new Date(m.date_creation) > weekAgo;
-        }).length,
+        types: {},
+        lastWeek: messages.filter((m) => m.created_at > weekAgo).length,
       };
+
+      console.log("✅ [Email Service] Statistiques calculées:", stats);
 
       return {
         success: true,
@@ -484,7 +740,11 @@ export class EmailsService {
         stats,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur getEmailStats:", error);
+      console.error("❌ [Email Service] Erreur getEmailStats:", error);
+      captureException(error as Error, {
+        tags: { context: "getEmailStats" },
+        extra: { utilisateurId, limit },
+      });
       throw new Error(
         `Erreur lors de la récupération des statistiques: ${error.message}`,
       );
@@ -498,29 +758,28 @@ export class EmailsService {
    */
   async cleanupExpiredTokens() {
     try {
-      console.log("🧹 [EmailsService] Nettoyage des tokens expirés");
+      addSentryBreadcrumb("Nettoyage des tokens expirés", "email", "info");
 
-      const MysqlConnector = (
-        await import("../../../../db/connector/mysqlconnector.js")
-      ).default;
-      const mysqlConnector = MysqlConnector.getInstance();
+      console.log("🧹 [Email Service] Nettoyage des tokens expirés");
 
-      const deletedCount = await new Promise<number>((resolve, reject) => {
-        const sql = `
-          DELETE FROM email_validation_tokens
-          WHERE expires_at < NOW() OR used = TRUE
-        `;
-
-        mysqlConnector.query(sql, [], (error: any, results: any) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(results.affectedRows || 0);
-          }
-        });
+      const result = await prisma.email_validation_tokens.deleteMany({
+        where: {
+          OR: [
+            {
+              expires_at: {
+                lt: new Date(),
+              },
+            },
+            {
+              used: true,
+            },
+          ],
+        },
       });
 
-      console.log(`🗑️ [EmailsService] ${deletedCount} tokens supprimés`);
+      const deletedCount = result.count;
+
+      console.log(`🗑️ [Email Service] ${deletedCount} tokens supprimés`);
 
       return {
         success: true,
@@ -528,7 +787,10 @@ export class EmailsService {
         deleted_count: deletedCount,
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur cleanupExpiredTokens:", error);
+      console.error("❌ [Email Service] Erreur cleanupExpiredTokens:", error);
+      captureException(error as Error, {
+        tags: { context: "cleanupExpiredTokens" },
+      });
       throw new Error(`Erreur lors du nettoyage des tokens: ${error.message}`);
     }
   }
@@ -540,9 +802,20 @@ export class EmailsService {
    */
   async testConfiguration() {
     try {
-      console.log("🔧 [EmailsService] Test de la configuration email");
+      addSentryBreadcrumb("Test de la configuration email", "email", "info");
 
-      const result = await this.emailService.testerConfiguration();
+      console.log("🔧 [Email Service] Test de la configuration email");
+
+      // Tester avec un email simple
+      const result = await this.emailClient.sendEmail({
+        to: "test@clubmanager.com",
+        subject: "Test Configuration",
+        message: "Test de configuration",
+      });
+
+      console.log(
+        `✅ [Email Service] Configuration ${result.success ? "valide" : "invalide"}`,
+      );
 
       return {
         success: result.success,
@@ -551,7 +824,10 @@ export class EmailsService {
           : "Configuration invalide",
       };
     } catch (error: any) {
-      console.error("❌ [EmailsService] Erreur testConfiguration:", error);
+      console.error("❌ [Email Service] Erreur testConfiguration:", error);
+      captureException(error as Error, {
+        tags: { context: "testConfiguration" },
+      });
       throw new Error(`Erreur lors du test de configuration: ${error.message}`);
     }
   }

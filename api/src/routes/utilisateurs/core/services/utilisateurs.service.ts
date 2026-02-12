@@ -1,15 +1,52 @@
 /**
  * Service Utilisateurs - Logique métier
  * Gère les opérations sur les utilisateurs
+ *
+ * ✅ Migré vers Prisma avec intégration Sentry
+ *
+ * @module utilisateurs.service
  */
 
-import { Utilisateurs } from "../../../../db/clients/utilisateurs/utilisateurs.js";
-import { EmailService } from "../../../../services/emailService.js";
-import { emailClient } from "../../../../clients/emailClient.js";
+import { prisma } from "../../../../infrastructure/database/prisma-client.js";
 import {
-  hashPassword,
-  verifyPassword,
-} from "../../../../shared/utils/password.helpers.js";
+  captureException,
+  addSentryBreadcrumb,
+} from "../../../../shared/config/sentry.config.js";
+import { emailClient } from "../../../../infrastructure/external-services/emailClient.js";
+import { EmailService } from "../../../../services/emailService.js";
+import bcrypt from "bcrypt";
+
+/**
+ * Interface pour les données utilisateur
+ */
+export interface UtilisateurData {
+  id: number;
+  userId: string;
+  first_name: string;
+  last_name: string;
+  nom_utilisateur: string;
+  email: string;
+  genre_id?: number;
+  date_of_birth: Date;
+  status_id?: number;
+  active: boolean;
+  grade_id?: number;
+  abonnement_id?: number;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  date_inscription: Date;
+  email_verified?: boolean;
+  email_verified_at?: Date;
+}
+
+/**
+ * Interface pour les statistiques utilisateurs
+ */
+export interface StatistiquesUtilisateurs {
+  totalUtilisateurs: number;
+  utilisateursActifs: number;
+  utilisateursInactifs: number;
+}
 
 /**
  * Vérifier l'existence d'un utilisateur
@@ -18,77 +55,225 @@ export async function verifierExistenceUtilisateur(
   nom: string,
   prenom: string,
   date_naissance: string,
-  utilisateursClient?: Utilisateurs,
 ): Promise<{
   exists: boolean;
   canRegister: boolean;
   userData?: any;
   message: string;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(
-    `👤 [Service Utilisateurs] Vérification existence: ${prenom} ${nom}`,
-  );
-
   try {
-    await client.verifierUtilisateurExiste({ nom, prenom, date_naissance });
+    addSentryBreadcrumb(
+      `Vérification existence utilisateur: ${prenom} ${nom}`,
+      "service.utilisateurs",
+      "info",
+      { nom, prenom, date_naissance },
+    );
 
-    // Si aucune erreur n'est levée, l'utilisateur n'existe pas
-    return {
-      exists: false,
-      canRegister: true,
-      message: "Aucun utilisateur trouvé avec ces informations",
-    };
-  } catch (conflictError: any) {
-    if (conflictError.status === 409) {
+    console.log(
+      `👤 [UtilisateursService] Vérification existence: ${prenom} ${nom}`,
+    );
+
+    const user = await prisma.utilisateurs.findFirst({
+      where: {
+        first_name: prenom,
+        last_name: nom,
+        date_of_birth: new Date(date_naissance),
+      },
+      include: {
+        status: true,
+        grades: true,
+      },
+    });
+
+    if (!user) {
+      console.log(
+        "✅ [UtilisateursService] Aucun utilisateur trouvé - peut s'inscrire",
+      );
       return {
-        exists: true,
-        canRegister: false,
-        userData: conflictError.data,
-        message: conflictError.message,
+        exists: false,
+        canRegister: true,
+        message: "Aucun utilisateur trouvé avec ces informations",
       };
     }
-    throw conflictError;
+
+    console.log(
+      "⚠️ [UtilisateursService] Utilisateur existant trouvé:",
+      user.id,
+    );
+
+    return {
+      exists: true,
+      canRegister: false,
+      userData: {
+        id: user.id,
+        userId: user.userId,
+        email: user.email,
+        status: user.status?.nom,
+        active: user.active,
+      },
+      message: "Un utilisateur avec ces informations existe déjà",
+    };
+  } catch (error: any) {
+    console.error(
+      "❌ [UtilisateursService] Erreur vérification existence:",
+      error,
+    );
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "verifierExistenceUtilisateur",
+      },
+      extra: { nom, prenom, date_naissance },
+    });
+
+    throw new Error(
+      `Erreur lors de la vérification de l'utilisateur: ${error.message}`,
+    );
+  }
+}
+
+/**
+ * Générer un userId unique
+ */
+async function genererUserIdUnique(
+  nom: string,
+  prenom: string,
+): Promise<string> {
+  const baseUserId =
+    `${prenom.substring(0, 3)}${nom.substring(0, 3)}`.toLowerCase();
+  let userId = baseUserId;
+  let counter = 1;
+
+  while (true) {
+    const existing = await prisma.utilisateurs.findUnique({
+      where: { userId: userId },
+    });
+
+    if (!existing) {
+      return userId;
+    }
+
+    userId = `${baseUserId}${counter}`;
+    counter++;
   }
 }
 
 /**
  * Inscrire un nouvel utilisateur
  */
-export async function inscrireUtilisateur(
-  userData: any,
-  utilisateursClient?: Utilisateurs,
-): Promise<{
+export async function inscrireUtilisateur(userData: {
+  first_name: string;
+  last_name: string;
+  nom_utilisateur: string;
+  email: string;
+  password: string;
+  genre_id?: number;
+  date_of_birth: string;
+  status_id?: number;
+  grade_id?: number;
+  abonnement_id?: number;
+}): Promise<{
   success: boolean;
   userId?: number;
   generatedUserId?: string;
   message: string;
   details?: any;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(
-    `📝 [Service Utilisateurs] Inscription: ${userData.prenom} ${userData.nom}`,
-  );
-
   try {
-    const result = await client.inscrireUtilisateur(userData);
+    addSentryBreadcrumb(
+      `Inscription utilisateur: ${userData.first_name} ${userData.last_name}`,
+      "service.utilisateurs",
+      "info",
+      { email: userData.email },
+    );
 
     console.log(
-      `✅ [Service Utilisateurs] Inscription réussie, userId: ${result.userId}`,
+      `📝 [UtilisateursService] Inscription: ${userData.first_name} ${userData.last_name}`,
+    );
+
+    // Vérifier si l'email existe déjà
+    const emailExists = await prisma.utilisateurs.findFirst({
+      where: { email: userData.email.toLowerCase().trim() },
+    });
+
+    if (emailExists) {
+      console.log(
+        "❌ [UtilisateursService] Email déjà utilisé:",
+        userData.email,
+      );
+      return {
+        success: false,
+        message: "Cette adresse email est déjà utilisée",
+      };
+    }
+
+    // Générer un userId unique
+    const generatedUserId = await genererUserIdUnique(
+      userData.last_name,
+      userData.first_name,
+    );
+
+    // Hasher le mot de passe
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    // Créer l'utilisateur
+    const newUser = await prisma.utilisateurs.create({
+      data: {
+        userId: generatedUserId,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        nom_utilisateur: userData.nom_utilisateur,
+        email: userData.email.toLowerCase().trim(),
+        password: hashedPassword,
+        genre_id: userData.genre_id || null,
+        date_of_birth: new Date(userData.date_of_birth),
+        status_id: userData.status_id || 1,
+        grade_id: userData.grade_id || 1,
+        abonnement_id: userData.abonnement_id || null,
+        active: true,
+        email_verified: false,
+      },
+    });
+
+    console.log(
+      `✅ [UtilisateursService] Inscription réussie, userId: ${newUser.id}`,
+    );
+
+    addSentryBreadcrumb(
+      "Utilisateur inscrit avec succès",
+      "service.utilisateurs",
+      "info",
+      { userId: newUser.id, generatedUserId },
     );
 
     return {
       success: true,
-      userId: result.userId,
-      generatedUserId: result.generatedUserId,
+      userId: newUser.id,
+      generatedUserId: newUser.userId,
       message: "Inscription réussie",
-      details: result,
+      details: {
+        id: newUser.id,
+        userId: newUser.userId,
+        email: newUser.email,
+        first_name: newUser.first_name,
+        last_name: newUser.last_name,
+      },
     };
-  } catch (error) {
-    console.error(`❌ [Service Utilisateurs] Erreur inscription:`, error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur inscription:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "inscrireUtilisateur",
+      },
+      extra: { email: userData.email },
+    });
+
+    throw new Error(`Erreur lors de l'inscription: ${error.message}`);
   }
 }
 
@@ -107,9 +292,18 @@ export async function envoyerEmailVerification(
   details?: any;
   messageId?: string;
 }> {
-  console.log(`📧 [Service Utilisateurs] Envoi email vérification à: ${email}`);
-
   try {
+    addSentryBreadcrumb(
+      `Envoi email de vérification à: ${email}`,
+      "service.utilisateurs",
+      "info",
+      { email, utilisateurId },
+    );
+
+    console.log(
+      `📧 [UtilisateursService] Envoi email vérification à: ${email}`,
+    );
+
     const emailResult = await emailClient.sendValidationEmail({
       email,
       prenom,
@@ -119,7 +313,15 @@ export async function envoyerEmailVerification(
     });
 
     if (emailResult.success) {
-      console.log(`✅ [Service Utilisateurs] Email envoyé avec succès`);
+      console.log(`✅ [UtilisateursService] Email envoyé avec succès`);
+
+      addSentryBreadcrumb(
+        "Email de vérification envoyé",
+        "service.utilisateurs",
+        "info",
+        { email },
+      );
+
       return {
         success: true,
         message: emailResult.message,
@@ -127,7 +329,7 @@ export async function envoyerEmailVerification(
         messageId: emailResult.messageId,
       };
     } else {
-      console.warn(`⚠️ [Service Utilisateurs] Échec envoi email`);
+      console.warn(`⚠️ [UtilisateursService] Échec envoi email`);
       return {
         success: false,
         message: emailResult.message,
@@ -135,7 +337,17 @@ export async function envoyerEmailVerification(
       };
     }
   } catch (error: any) {
-    console.error(`❌ [Service Utilisateurs] Erreur envoi email:`, error);
+    console.error("❌ [UtilisateursService] Erreur envoi email:", error);
+
+    captureException(error, {
+      level: "warning",
+      tags: {
+        service: "utilisateurs",
+        operation: "envoyerEmailVerification",
+      },
+      extra: { email, utilisateurId },
+    });
+
     return {
       success: false,
       message: "Erreur lors de l'envoi de l'email",
@@ -155,23 +367,47 @@ export async function validerTokenEmail(
   message: string;
   data?: any;
 }> {
-  console.log(
-    `🔍 [Service Utilisateurs] Validation token email pour userId: ${userId}`,
-  );
-
   try {
+    addSentryBreadcrumb(
+      `Validation token email pour userId: ${userId}`,
+      "service.utilisateurs",
+      "info",
+      { userId },
+    );
+
+    console.log(
+      `🔍 [UtilisateursService] Validation token email pour userId: ${userId}`,
+    );
+
     const result = await emailClient.validateEmailToken(token, userId);
 
     if (result.success) {
-      console.log(`✅ [Service Utilisateurs] Token validé avec succès`);
+      console.log(`✅ [UtilisateursService] Token validé avec succès`);
+
+      addSentryBreadcrumb(
+        "Token email validé",
+        "service.utilisateurs",
+        "info",
+        { userId },
+      );
     } else {
-      console.warn(`⚠️ [Service Utilisateurs] Token invalide`);
+      console.warn(`⚠️ [UtilisateursService] Token invalide`);
     }
 
     return result;
   } catch (error: any) {
-    console.error(`❌ [Service Utilisateurs] Erreur validation token:`, error);
-    throw error;
+    console.error("❌ [UtilisateursService] Erreur validation token:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "validerTokenEmail",
+      },
+      extra: { userId },
+    });
+
+    throw new Error(`Erreur lors de la validation du token: ${error.message}`);
   }
 }
 
@@ -181,36 +417,99 @@ export async function validerTokenEmail(
 export async function connexionParUserId(
   userId: string,
   password: string,
-  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   message: string;
   data?: any;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(`🔐 [Service Utilisateurs] Connexion par userId: ${userId}`);
-
   try {
-    const result = await client.validerConnexionParUserId(userId, password);
+    addSentryBreadcrumb(
+      `Connexion par userId: ${userId}`,
+      "service.utilisateurs",
+      "info",
+      { userId },
+    );
 
-    if (result.isFind) {
-      console.log(`✅ [Service Utilisateurs] Connexion réussie`);
-      return {
-        success: true,
-        message: result.message,
-        data: result.dataToStore,
-      };
-    } else {
-      console.warn(`⚠️ [Service Utilisateurs] Connexion échouée`);
+    console.log(`🔐 [UtilisateursService] Connexion par userId: ${userId}`);
+
+    const user = await prisma.utilisateurs.findUnique({
+      where: { userId: userId },
+      include: {
+        status: true,
+        grades: true,
+      },
+    });
+
+    if (!user) {
+      console.log("❌ [UtilisateursService] Utilisateur non trouvé");
       return {
         success: false,
-        message: result.message,
+        message: "Identifiants incorrects",
       };
     }
-  } catch (error) {
-    console.error(`❌ [Service Utilisateurs] Erreur connexion:`, error);
-    throw error;
+
+    if (!user.active) {
+      console.log("❌ [UtilisateursService] Compte désactivé");
+      return {
+        success: false,
+        message: "Votre compte est désactivé",
+      };
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      console.log("❌ [UtilisateursService] Mot de passe incorrect");
+      return {
+        success: false,
+        message: "Identifiants incorrects",
+      };
+    }
+
+    if (!user.email_verified) {
+      console.log("⚠️ [UtilisateursService] Email non vérifié");
+      return {
+        success: false,
+        message:
+          "Veuillez vérifier votre adresse email avant de vous connecter",
+      };
+    }
+
+    console.log(`✅ [UtilisateursService] Connexion réussie`);
+
+    addSentryBreadcrumb(
+      "Connexion par userId réussie",
+      "service.utilisateurs",
+      "info",
+      { userId: user.id },
+    );
+
+    return {
+      success: true,
+      message: "Connexion réussie",
+      data: {
+        id: user.id,
+        userId: user.userId,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        status: user.status?.nom,
+        grade: user.grades?.nom,
+      },
+    };
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur connexion:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "connexionParUserId",
+      },
+      extra: { userId },
+    });
+
+    throw new Error(`Erreur lors de la connexion: ${error.message}`);
   }
 }
 
@@ -220,65 +519,144 @@ export async function connexionParUserId(
 export async function connexionParEmail(
   email: string,
   password: string,
-  utilisateursClient?: Utilisateurs,
 ): Promise<{
   success: boolean;
   message: string;
   data?: any;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(`🔐 [Service Utilisateurs] Connexion par email: ${email}`);
-
   try {
-    const result = await client.validerConnexion({ email, password });
+    addSentryBreadcrumb(
+      `Connexion par email: ${email}`,
+      "service.utilisateurs",
+      "info",
+      { email },
+    );
 
-    if (result.isFind) {
-      console.log(`✅ [Service Utilisateurs] Connexion réussie`);
-      return {
-        success: true,
-        message: result.message,
-        data: result.dataToStore,
-      };
-    } else {
-      console.warn(`⚠️ [Service Utilisateurs] Connexion échouée`);
+    console.log(`🔐 [UtilisateursService] Connexion par email: ${email}`);
+
+    const user = await prisma.utilisateurs.findFirst({
+      where: {
+        email: email.toLowerCase().trim(),
+        active: true,
+      },
+      include: {
+        status: true,
+        grades: true,
+      },
+    });
+
+    if (!user) {
+      console.log("❌ [UtilisateursService] Utilisateur non trouvé");
       return {
         success: false,
-        message: result.message,
+        message: "Identifiants incorrects",
       };
     }
-  } catch (error) {
-    console.error(`❌ [Service Utilisateurs] Erreur connexion:`, error);
-    throw error;
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      console.log("❌ [UtilisateursService] Mot de passe incorrect");
+      return {
+        success: false,
+        message: "Identifiants incorrects",
+      };
+    }
+
+    if (!user.email_verified) {
+      console.log("⚠️ [UtilisateursService] Email non vérifié");
+      return {
+        success: false,
+        message:
+          "Veuillez vérifier votre adresse email avant de vous connecter",
+      };
+    }
+
+    console.log(`✅ [UtilisateursService] Connexion réussie`);
+
+    addSentryBreadcrumb(
+      "Connexion par email réussie",
+      "service.utilisateurs",
+      "info",
+      { userId: user.id },
+    );
+
+    return {
+      success: true,
+      message: "Connexion réussie",
+      data: {
+        id: user.id,
+        userId: user.userId,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        status: user.status?.nom,
+        grade: user.grades?.nom,
+      },
+    };
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur connexion:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "connexionParEmail",
+      },
+      extra: { email },
+    });
+
+    throw new Error(`Erreur lors de la connexion: ${error.message}`);
   }
 }
 
 /**
  * Récupérer les statistiques des utilisateurs
  */
-export async function obtenirStatistiques(
-  utilisateursClient?: Utilisateurs,
-): Promise<{
-  totalUtilisateurs: number;
-  utilisateursActifs: number;
-  utilisateursInactifs: number;
-}> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(`📊 [Service Utilisateurs] Récupération des statistiques`);
-
+export async function obtenirStatistiques(): Promise<StatistiquesUtilisateurs> {
   try {
-    const stats = await client.obtenirStatistiques();
-
-    console.log(`✅ [Service Utilisateurs] Statistiques récupérées`);
-
-    return stats;
-  } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur récupération stats:`,
-      error,
+    addSentryBreadcrumb(
+      "Récupération statistiques utilisateurs",
+      "service.utilisateurs",
+      "info",
     );
-    throw error;
+
+    console.log(`📊 [UtilisateursService] Récupération des statistiques`);
+
+    const [totalUtilisateurs, utilisateursActifs] = await Promise.all([
+      prisma.utilisateurs.count(),
+      prisma.utilisateurs.count({
+        where: { active: true },
+      }),
+    ]);
+
+    const utilisateursInactifs = totalUtilisateurs - utilisateursActifs;
+
+    console.log(`✅ [UtilisateursService] Statistiques récupérées:`, {
+      totalUtilisateurs,
+      utilisateursActifs,
+      utilisateursInactifs,
+    });
+
+    return {
+      totalUtilisateurs,
+      utilisateursActifs,
+      utilisateursInactifs,
+    };
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur récupération stats:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "obtenirStatistiques",
+      },
+    });
+
+    throw new Error(
+      `Erreur lors de la récupération des statistiques: ${error.message}`,
+    );
   }
 }
 
@@ -287,33 +665,73 @@ export async function obtenirStatistiques(
  */
 export async function obtenirTousLesUtilisateurs(
   includeInactive: boolean = false,
-  utilisateursClient?: Utilisateurs,
-): Promise<any[]> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(
-    `👥 [Service Utilisateurs] Récupération de tous les utilisateurs (includeInactive: ${includeInactive})`,
-  );
-
+): Promise<UtilisateurData[]> {
   try {
-    const utilisateurs = await client.obtenirTous(includeInactive);
-
-    if (!utilisateurs || utilisateurs.length === 0) {
-      console.log(`⚠️ [Service Utilisateurs] Aucun utilisateur trouvé`);
-      return [];
-    }
+    addSentryBreadcrumb(
+      "Récupération de tous les utilisateurs",
+      "service.utilisateurs",
+      "info",
+      { includeInactive },
+    );
 
     console.log(
-      `✅ [Service Utilisateurs] ${utilisateurs.length} utilisateur(s) récupéré(s)`,
+      `👥 [UtilisateursService] Récupération de tous les utilisateurs (includeInactive: ${includeInactive})`,
     );
 
-    return utilisateurs;
-  } catch (error) {
+    const utilisateurs = await prisma.utilisateurs.findMany({
+      where: includeInactive ? {} : { active: true },
+      include: {
+        status: true,
+        grades: true,
+        genres: true,
+        plans_tarifaires: true,
+      },
+      orderBy: {
+        date_inscription: "desc",
+      },
+    });
+
+    console.log(
+      `✅ [UtilisateursService] ${utilisateurs.length} utilisateur(s) récupéré(s)`,
+    );
+
+    return utilisateurs.map((user) => ({
+      id: user.id,
+      userId: user.userId,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      nom_utilisateur: user.nom_utilisateur,
+      email: user.email,
+      genre_id: user.genre_id || undefined,
+      date_of_birth: user.date_of_birth,
+      status_id: user.status_id || undefined,
+      active: user.active,
+      grade_id: user.grade_id || undefined,
+      abonnement_id: user.abonnement_id || undefined,
+      stripe_customer_id: user.stripe_customer_id || undefined,
+      stripe_subscription_id: user.stripe_subscription_id || undefined,
+      date_inscription: user.date_inscription,
+      email_verified: user.email_verified || undefined,
+      email_verified_at: user.email_verified_at || undefined,
+    }));
+  } catch (error: any) {
     console.error(
-      `❌ [Service Utilisateurs] Erreur récupération utilisateurs:`,
+      "❌ [UtilisateursService] Erreur récupération utilisateurs:",
       error,
     );
-    throw error;
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "obtenirTousLesUtilisateurs",
+      },
+      extra: { includeInactive },
+    });
+
+    throw new Error(
+      `Erreur lors de la récupération des utilisateurs: ${error.message}`,
+    );
   }
 }
 
@@ -322,33 +740,75 @@ export async function obtenirTousLesUtilisateurs(
  */
 export async function obtenirUtilisateurParId(
   utilisateurId: number,
-  utilisateursClient?: Utilisateurs,
-): Promise<any | null> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(
-    `👤 [Service Utilisateurs] Récupération utilisateur ID: ${utilisateurId}`,
-  );
-
+): Promise<UtilisateurData | null> {
   try {
-    const utilisateur = await client.obtenirParId(utilisateurId);
+    addSentryBreadcrumb(
+      `Récupération utilisateur ID: ${utilisateurId}`,
+      "service.utilisateurs",
+      "info",
+      { utilisateurId },
+    );
 
-    if (!utilisateur) {
+    console.log(
+      `👤 [UtilisateursService] Récupération utilisateur ID: ${utilisateurId}`,
+    );
+
+    const user = await prisma.utilisateurs.findUnique({
+      where: { id: utilisateurId },
+      include: {
+        status: true,
+        grades: true,
+        genres: true,
+        plans_tarifaires: true,
+      },
+    });
+
+    if (!user) {
       console.log(
-        `⚠️ [Service Utilisateurs] Utilisateur ${utilisateurId} non trouvé`,
+        `⚠️ [UtilisateursService] Utilisateur ${utilisateurId} non trouvé`,
       );
       return null;
     }
 
-    console.log(`✅ [Service Utilisateurs] Utilisateur récupéré`);
+    console.log(`✅ [UtilisateursService] Utilisateur récupéré`);
 
-    return utilisateur;
-  } catch (error) {
+    return {
+      id: user.id,
+      userId: user.userId,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      nom_utilisateur: user.nom_utilisateur,
+      email: user.email,
+      genre_id: user.genre_id || undefined,
+      date_of_birth: user.date_of_birth,
+      status_id: user.status_id || undefined,
+      active: user.active,
+      grade_id: user.grade_id || undefined,
+      abonnement_id: user.abonnement_id || undefined,
+      stripe_customer_id: user.stripe_customer_id || undefined,
+      stripe_subscription_id: user.stripe_subscription_id || undefined,
+      date_inscription: user.date_inscription,
+      email_verified: user.email_verified || undefined,
+      email_verified_at: user.email_verified_at || undefined,
+    };
+  } catch (error: any) {
     console.error(
-      `❌ [Service Utilisateurs] Erreur récupération utilisateur:`,
+      "❌ [UtilisateursService] Erreur récupération utilisateur:",
       error,
     );
-    throw error;
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "obtenirUtilisateurParId",
+      },
+      extra: { utilisateurId },
+    });
+
+    throw new Error(
+      `Erreur lors de la récupération de l'utilisateur: ${error.message}`,
+    );
   }
 }
 
@@ -357,100 +817,265 @@ export async function obtenirUtilisateurParId(
  */
 export async function mettreAJourUtilisateur(
   utilisateurId: number,
-  dataToUpdate: any,
-  utilisateursClient?: Utilisateurs,
+  dataToUpdate: Partial<{
+    first_name: string;
+    last_name: string;
+    nom_utilisateur: string;
+    email: string;
+    password: string;
+    genre_id: number;
+    date_of_birth: string;
+    status_id: number;
+    grade_id: number;
+    abonnement_id: number;
+    active: boolean;
+  }>,
 ): Promise<{
   success: boolean;
   message: string;
   data?: any;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(
-    `🔄 [Service Utilisateurs] Mise à jour utilisateur ID: ${utilisateurId}`,
-  );
-
   try {
-    // Hasher le mot de passe si présent
-    if (dataToUpdate.password) {
-      const hashedPassword = await bcrypt.hash(dataToUpdate.password, 10);
-      dataToUpdate.password = hashedPassword;
+    addSentryBreadcrumb(
+      `Mise à jour utilisateur ID: ${utilisateurId}`,
+      "service.utilisateurs",
+      "info",
+      { utilisateurId },
+    );
+
+    console.log(
+      `🔄 [UtilisateursService] Mise à jour utilisateur ID: ${utilisateurId}`,
+    );
+
+    // Vérifier que l'utilisateur existe
+    const existingUser = await prisma.utilisateurs.findUnique({
+      where: { id: utilisateurId },
+    });
+
+    if (!existingUser) {
+      console.log(
+        `❌ [UtilisateursService] Utilisateur ${utilisateurId} non trouvé`,
+      );
+      return {
+        success: false,
+        message: "Utilisateur non trouvé",
+      };
     }
 
-    const result = await client.mettreAJour(utilisateurId, dataToUpdate);
+    // Préparer les données de mise à jour
+    const updateData: any = {};
 
-    console.log(`✅ [Service Utilisateurs] Utilisateur mis à jour`);
+    if (dataToUpdate.first_name)
+      updateData.first_name = dataToUpdate.first_name;
+    if (dataToUpdate.last_name) updateData.last_name = dataToUpdate.last_name;
+    if (dataToUpdate.nom_utilisateur)
+      updateData.nom_utilisateur = dataToUpdate.nom_utilisateur;
+    if (dataToUpdate.email)
+      updateData.email = dataToUpdate.email.toLowerCase().trim();
+    if (dataToUpdate.genre_id !== undefined)
+      updateData.genre_id = dataToUpdate.genre_id;
+    if (dataToUpdate.date_of_birth)
+      updateData.date_of_birth = new Date(dataToUpdate.date_of_birth);
+    if (dataToUpdate.status_id !== undefined)
+      updateData.status_id = dataToUpdate.status_id;
+    if (dataToUpdate.grade_id !== undefined)
+      updateData.grade_id = dataToUpdate.grade_id;
+    if (dataToUpdate.abonnement_id !== undefined)
+      updateData.abonnement_id = dataToUpdate.abonnement_id;
+    if (dataToUpdate.active !== undefined)
+      updateData.active = dataToUpdate.active;
+
+    // Hasher le mot de passe si fourni
+    if (dataToUpdate.password) {
+      updateData.password = await bcrypt.hash(dataToUpdate.password, 10);
+    }
+
+    // Mettre à jour l'utilisateur
+    const updatedUser = await prisma.utilisateurs.update({
+      where: { id: utilisateurId },
+      data: updateData,
+      include: {
+        status: true,
+        grades: true,
+      },
+    });
+
+    console.log(`✅ [UtilisateursService] Utilisateur mis à jour`);
+
+    addSentryBreadcrumb(
+      "Utilisateur mis à jour",
+      "service.utilisateurs",
+      "info",
+      { utilisateurId },
+    );
 
     return {
       success: true,
       message: "Utilisateur mis à jour avec succès",
-      data: result,
+      data: {
+        id: updatedUser.id,
+        userId: updatedUser.userId,
+        email: updatedUser.email,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+      },
     };
-  } catch (error) {
-    console.error(`❌ [Service Utilisateurs] Erreur mise à jour:`, error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur mise à jour:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "mettreAJourUtilisateur",
+      },
+      extra: { utilisateurId },
+    });
+
+    throw new Error(
+      `Erreur lors de la mise à jour de l'utilisateur: ${error.message}`,
+    );
   }
 }
 
 /**
  * Supprimer un utilisateur (hard delete)
  */
-export async function supprimerUtilisateur(
-  utilisateurId: number,
-  utilisateursClient?: Utilisateurs,
-): Promise<{
+export async function supprimerUtilisateur(utilisateurId: number): Promise<{
   success: boolean;
   message: string;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(
-    `🗑️ [Service Utilisateurs] Suppression définitive utilisateur ID: ${utilisateurId}`,
-  );
-
   try {
-    const result = await client.supprimer(utilisateurId);
+    addSentryBreadcrumb(
+      `Suppression définitive utilisateur ID: ${utilisateurId}`,
+      "service.utilisateurs",
+      "warning",
+      { utilisateurId },
+    );
 
-    console.log(`✅ [Service Utilisateurs] Utilisateur supprimé`);
+    console.log(
+      `🗑️ [UtilisateursService] Suppression définitive utilisateur ID: ${utilisateurId}`,
+    );
+
+    // Vérifier que l'utilisateur existe
+    const existingUser = await prisma.utilisateurs.findUnique({
+      where: { id: utilisateurId },
+    });
+
+    if (!existingUser) {
+      console.log(
+        `❌ [UtilisateursService] Utilisateur ${utilisateurId} non trouvé`,
+      );
+      return {
+        success: false,
+        message: "Utilisateur non trouvé",
+      };
+    }
+
+    // Supprimer l'utilisateur
+    await prisma.utilisateurs.delete({
+      where: { id: utilisateurId },
+    });
+
+    console.log(`✅ [UtilisateursService] Utilisateur supprimé`);
+
+    addSentryBreadcrumb(
+      "Utilisateur supprimé définitivement",
+      "service.utilisateurs",
+      "warning",
+      { utilisateurId },
+    );
 
     return {
       success: true,
       message: "Utilisateur supprimé avec succès",
     };
-  } catch (error) {
-    console.error(`❌ [Service Utilisateurs] Erreur suppression:`, error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur suppression:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "supprimerUtilisateur",
+      },
+      extra: { utilisateurId },
+    });
+
+    throw new Error(
+      `Erreur lors de la suppression de l'utilisateur: ${error.message}`,
+    );
   }
 }
 
 /**
  * Supprimer un utilisateur (soft delete)
  */
-export async function supprimerUtilisateurSoft(
-  utilisateurId: number,
-  utilisateursClient?: Utilisateurs,
-): Promise<{
+export async function supprimerUtilisateurSoft(utilisateurId: number): Promise<{
   success: boolean;
   message: string;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(
-    `🗑️ [Service Utilisateurs] Suppression soft utilisateur ID: ${utilisateurId}`,
-  );
-
   try {
-    const result = await client.supprimerSoft(utilisateurId);
+    addSentryBreadcrumb(
+      `Suppression soft utilisateur ID: ${utilisateurId}`,
+      "service.utilisateurs",
+      "info",
+      { utilisateurId },
+    );
 
-    console.log(`✅ [Service Utilisateurs] Utilisateur désactivé`);
+    console.log(
+      `🗑️ [UtilisateursService] Suppression soft utilisateur ID: ${utilisateurId}`,
+    );
+
+    // Vérifier que l'utilisateur existe
+    const existingUser = await prisma.utilisateurs.findUnique({
+      where: { id: utilisateurId },
+    });
+
+    if (!existingUser) {
+      console.log(
+        `❌ [UtilisateursService] Utilisateur ${utilisateurId} non trouvé`,
+      );
+      return {
+        success: false,
+        message: "Utilisateur non trouvé",
+      };
+    }
+
+    // Désactiver l'utilisateur
+    await prisma.utilisateurs.update({
+      where: { id: utilisateurId },
+      data: { active: false },
+    });
+
+    console.log(`✅ [UtilisateursService] Utilisateur désactivé`);
+
+    addSentryBreadcrumb(
+      "Utilisateur désactivé (soft delete)",
+      "service.utilisateurs",
+      "info",
+      { utilisateurId },
+    );
 
     return {
       success: true,
       message: "Utilisateur désactivé avec succès",
     };
-  } catch (error) {
-    console.error(`❌ [Service Utilisateurs] Erreur suppression soft:`, error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur suppression soft:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "supprimerUtilisateurSoft",
+      },
+      extra: { utilisateurId },
+    });
+
+    throw new Error(
+      `Erreur lors de la désactivation de l'utilisateur: ${error.message}`,
+    );
   }
 }
 
@@ -462,11 +1087,22 @@ export async function testerConfigurationEmail(): Promise<{
   message: string;
   details?: any;
 }> {
-  console.log(`🔧 [Service Utilisateurs] Test de configuration email`);
-
   try {
+    addSentryBreadcrumb(
+      "Test de configuration email",
+      "service.utilisateurs",
+      "info",
+    );
+
+    console.log(`🔧 [UtilisateursService] Test de configuration email`);
+
     const emailService = new EmailService();
     const configTest = await emailService.testerConfiguration();
+
+    console.log(
+      `${configTest.success ? "✅" : "❌"} [UtilisateursService] Test configuration:`,
+      configTest.success ? "OK" : "Échec",
+    );
 
     return {
       success: configTest.success,
@@ -476,7 +1112,16 @@ export async function testerConfigurationEmail(): Promise<{
       details: configTest.details,
     };
   } catch (error: any) {
-    console.error(`❌ [Service Utilisateurs] Erreur test config:`, error);
+    console.error("❌ [UtilisateursService] Erreur test config:", error);
+
+    captureException(error, {
+      level: "warning",
+      tags: {
+        service: "utilisateurs",
+        operation: "testerConfigurationEmail",
+      },
+    });
+
     return {
       success: false,
       message: "Erreur lors du test de configuration",
@@ -494,14 +1139,21 @@ export async function envoyerEmailTest(email: string): Promise<{
   messageId?: string;
   details?: any;
 }> {
-  console.log(`🧪 [Service Utilisateurs] Envoi email de test à: ${email}`);
-
   try {
+    addSentryBreadcrumb(
+      `Envoi email de test à: ${email}`,
+      "service.utilisateurs",
+      "info",
+      { email },
+    );
+
+    console.log(`🧪 [UtilisateursService] Envoi email de test à: ${email}`);
+
     const emailService = new EmailService();
     const result = await emailService.envoyerEmailTest(email);
 
     if (result.success) {
-      console.log(`✅ [Service Utilisateurs] Email de test envoyé`);
+      console.log(`✅ [UtilisateursService] Email de test envoyé`);
       return {
         success: true,
         message: "Email de test envoyé avec succès",
@@ -509,7 +1161,7 @@ export async function envoyerEmailTest(email: string): Promise<{
         details: result.details,
       };
     } else {
-      console.warn(`⚠️ [Service Utilisateurs] Échec envoi email de test`);
+      console.warn(`⚠️ [UtilisateursService] Échec envoi email de test`);
       return {
         success: false,
         message: "Échec de l'envoi de l'email de test",
@@ -518,9 +1170,19 @@ export async function envoyerEmailTest(email: string): Promise<{
     }
   } catch (error: any) {
     console.error(
-      `❌ [Service Utilisateurs] Erreur envoi email de test:`,
+      "❌ [UtilisateursService] Erreur envoi email de test:",
       error,
     );
+
+    captureException(error, {
+      level: "warning",
+      tags: {
+        service: "utilisateurs",
+        operation: "envoyerEmailTest",
+      },
+      extra: { email },
+    });
+
     return {
       success: false,
       message: "Erreur lors de l'envoi de l'email de test",
@@ -532,9 +1194,7 @@ export async function envoyerEmailTest(email: string): Promise<{
 /**
  * Vérifier la santé du service utilisateurs
  */
-export async function verifierSanteService(
-  utilisateursClient?: Utilisateurs,
-): Promise<{
+export async function verifierSanteService(): Promise<{
   status: "healthy" | "degraded" | "unhealthy";
   checks: {
     database: boolean;
@@ -544,21 +1204,25 @@ export async function verifierSanteService(
   message: string;
   data?: any;
 }> {
-  const client = utilisateursClient || new Utilisateurs();
-
-  console.log(`🏥 [Service Utilisateurs] Vérification de santé`);
-
-  const checks = {
-    database: false,
-    utilisateurs: false,
-    email: false,
-  };
-
   try {
+    addSentryBreadcrumb(
+      "Vérification santé du service utilisateurs",
+      "service.utilisateurs",
+      "info",
+    );
+
+    console.log(`🏥 [UtilisateursService] Vérification de santé`);
+
+    const checks = {
+      database: false,
+      utilisateurs: false,
+      email: false,
+    };
+
     // Vérifier chaque composant
     const [utilisateursTest, statsTest, emailTest] = await Promise.allSettled([
-      client.obtenirTous(false),
-      client.obtenirStatistiques(),
+      prisma.utilisateurs.findMany({ take: 1 }),
+      obtenirStatistiques(),
       new EmailService().testerConfiguration(),
     ]);
 
@@ -578,6 +1242,7 @@ export async function verifierSanteService(
     }
 
     if (healthyCount === 3) {
+      console.log(`✅ [UtilisateursService] Tous les services opérationnels`);
       return {
         status: "healthy",
         checks,
@@ -585,6 +1250,9 @@ export async function verifierSanteService(
         data: statsData,
       };
     } else if (healthyCount >= 1) {
+      console.log(
+        `⚠️ [UtilisateursService] Services dégradés: ${healthyCount}/3`,
+      );
       return {
         status: "degraded",
         checks,
@@ -592,20 +1260,31 @@ export async function verifierSanteService(
         data: statsData,
       };
     } else {
+      console.log(`❌ [UtilisateursService] Services non opérationnels`);
       return {
         status: "unhealthy",
         checks,
         message: "Services non opérationnels",
       };
     }
-  } catch (error) {
-    console.error(
-      `❌ [Service Utilisateurs] Erreur vérification santé:`,
-      error,
-    );
+  } catch (error: any) {
+    console.error("❌ [UtilisateursService] Erreur vérification santé:", error);
+
+    captureException(error, {
+      level: "error",
+      tags: {
+        service: "utilisateurs",
+        operation: "verifierSanteService",
+      },
+    });
+
     return {
       status: "unhealthy",
-      checks,
+      checks: {
+        database: false,
+        utilisateurs: false,
+        email: false,
+      },
       message: "Erreur lors de la vérification de santé",
     };
   }
