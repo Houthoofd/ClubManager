@@ -14,14 +14,14 @@
  */
 
 import { GraphQLError } from "graphql";
-import { MagasinService } from "../../../../services/magasin/magasin.service.js";
-import { validateInput } from "../../../../shared/middleware/validation.middleware.js";
+import { MagasinService } from "../services/magasin.service.js";
+import { validateInput } from "@/shared/middleware/validation.middleware.js";
 import {
   combineMiddlewares,
   requireAuth,
   requireAdmin,
-} from "../../../../shared/middleware/auth.middleware.js";
-import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+} from "@/shared/middleware/auth.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 import {
   createArticleSchema,
   updateArticleSchema,

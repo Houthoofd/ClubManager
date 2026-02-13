@@ -36,7 +36,7 @@ import {
   ConflictError,
   InternalServerError,
   type GraphQLContext,
-} from "../../../../shared/index.js";
+} from '@/shared/index.js';
 
 interface Context extends GraphQLContext {
   prisma: PrismaClient;

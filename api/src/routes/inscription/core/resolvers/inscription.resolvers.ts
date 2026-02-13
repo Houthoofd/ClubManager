@@ -19,8 +19,8 @@ import {
   inscriptionService,
   InscriptionService,
 } from "../services/inscription.service.js";
-import { validateInput } from "../../../../shared/middleware/validation.middleware.js";
-import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+import { validateInput } from '@/shared/middleware/validation.middleware.js';
+import { withSentry } from '@/shared/middleware/sentry.middleware.js';
 import {
   verificationEmailSchema,
   inscriptionSchema,

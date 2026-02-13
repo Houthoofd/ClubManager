@@ -1,0 +1,601 @@
+### ============================================
+### STRIPE
+### ClubManager API - Stripe Webhooks & Payments (REST)
+### ============================================
+
+### Variables
+@baseUrl = http://localhost:4000
+@graphqlEndpoint = {{baseUrl}}/graphql
+@stripeWebhookEndpoint = {{baseUrl}}/api/stripe/webhook
+@token = YOUR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+
+# Stripe Test Keys
+@stripePublishableKey = pk_test_YOUR_KEY
+@stripeSecretKey = sk_test_YOUR_KEY
+@stripeWebhookSecret = whsec_YOUR_SECRET
+
+# Test IDs
+@customerId = cus_test123
+@subscriptionId = sub_test123
+@paymentIntentId = pi_test123
+
+### ============================================
+### WEBHOOKS (REST - POST /api/stripe/webhook)
+### ============================================
+
+### 1. Simulate: Payment Intent Succeeded
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_webhook",
+  "object": "event",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "{{paymentIntentId}}",
+      "object": "payment_intent",
+      "amount": 2999,
+      "currency": "eur",
+      "customer": "{{customerId}}",
+      "status": "succeeded",
+      "metadata": {
+        "user_id": "1",
+        "commande_id": "123"
+      }
+    }
+  }
+}
+
+### 2. Simulate: Payment Intent Failed
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_payment_failed",
+  "object": "event",
+  "type": "payment_intent.payment_failed",
+  "data": {
+    "object": {
+      "id": "pi_failed_test",
+      "object": "payment_intent",
+      "amount": 5000,
+      "currency": "eur",
+      "customer": "{{customerId}}",
+      "status": "failed",
+      "last_payment_error": {
+        "message": "Your card was declined."
+      },
+      "metadata": {
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### 3. Simulate: Customer Subscription Created
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_subscription_created",
+  "object": "event",
+  "type": "customer.subscription.created",
+  "data": {
+    "object": {
+      "id": "{{subscriptionId}}",
+      "object": "subscription",
+      "customer": "{{customerId}}",
+      "status": "active",
+      "current_period_start": 1640000000,
+      "current_period_end": 1642592000,
+      "items": {
+        "data": [
+          {
+            "id": "si_test",
+            "price": {
+              "id": "price_monthly",
+              "unit_amount": 2999,
+              "currency": "eur",
+              "recurring": {
+                "interval": "month"
+              }
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### 4. Simulate: Customer Subscription Updated
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_subscription_updated",
+  "object": "event",
+  "type": "customer.subscription.updated",
+  "data": {
+    "object": {
+      "id": "{{subscriptionId}}",
+      "object": "subscription",
+      "customer": "{{customerId}}",
+      "status": "active",
+      "cancel_at_period_end": false,
+      "metadata": {
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### 5. Simulate: Customer Subscription Deleted (Cancelled)
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_subscription_deleted",
+  "object": "event",
+  "type": "customer.subscription.deleted",
+  "data": {
+    "object": {
+      "id": "{{subscriptionId}}",
+      "object": "subscription",
+      "customer": "{{customerId}}",
+      "status": "canceled",
+      "canceled_at": 1640000000,
+      "metadata": {
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### 6. Simulate: Charge Succeeded
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_charge_succeeded",
+  "object": "event",
+  "type": "charge.succeeded",
+  "data": {
+    "object": {
+      "id": "ch_test123",
+      "object": "charge",
+      "amount": 4999,
+      "currency": "eur",
+      "customer": "{{customerId}}",
+      "status": "succeeded",
+      "payment_method": "pm_card_visa",
+      "metadata": {
+        "user_id": "1",
+        "commande_id": "456"
+      }
+    }
+  }
+}
+
+### 7. Simulate: Charge Refunded
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_charge_refunded",
+  "object": "event",
+  "type": "charge.refunded",
+  "data": {
+    "object": {
+      "id": "ch_test123",
+      "object": "charge",
+      "amount": 4999,
+      "amount_refunded": 4999,
+      "currency": "eur",
+      "customer": "{{customerId}}",
+      "refunded": true,
+      "status": "succeeded",
+      "metadata": {
+        "user_id": "1",
+        "commande_id": "456"
+      }
+    }
+  }
+}
+
+### 8. Simulate: Invoice Payment Succeeded
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_invoice_paid",
+  "object": "event",
+  "type": "invoice.payment_succeeded",
+  "data": {
+    "object": {
+      "id": "in_test123",
+      "object": "invoice",
+      "customer": "{{customerId}}",
+      "subscription": "{{subscriptionId}}",
+      "amount_paid": 2999,
+      "currency": "eur",
+      "status": "paid",
+      "metadata": {
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### 9. Simulate: Invoice Payment Failed
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_invoice_failed",
+  "object": "event",
+  "type": "invoice.payment_failed",
+  "data": {
+    "object": {
+      "id": "in_failed123",
+      "object": "invoice",
+      "customer": "{{customerId}}",
+      "subscription": "{{subscriptionId}}",
+      "amount_due": 2999,
+      "currency": "eur",
+      "status": "open",
+      "attempt_count": 1,
+      "metadata": {
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### 10. Simulate: Customer Created
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_test_customer_created",
+  "object": "event",
+  "type": "customer.created",
+  "data": {
+    "object": {
+      "id": "{{customerId}}",
+      "object": "customer",
+      "email": "user@clubmanager.com",
+      "name": "John Doe",
+      "metadata": {
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### ============================================
+### GRAPHQL STRIPE OPERATIONS
+### ============================================
+
+### 11. Créer un Payment Intent (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerPaymentIntent($input: CreerPaymentIntentInput!) { creerPaymentIntent(input: $input) { clientSecret paymentIntentId amount currency status } }",
+  "variables": {
+    "input": {
+      "amount": 2999,
+      "currency": "eur",
+      "description": "Achat d'articles de sport",
+      "metadata": {
+        "commande_id": "123",
+        "user_id": "1"
+      }
+    }
+  }
+}
+
+### 12. Créer une Subscription (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerSubscription($input: CreerSubscriptionInput!) { creerSubscription(input: $input) { subscriptionId clientSecret status currentPeriodEnd } }",
+  "variables": {
+    "input": {
+      "priceId": "price_monthly_premium",
+      "metadata": {
+        "user_id": "1",
+        "plan": "premium"
+      }
+    }
+  }
+}
+
+### 13. Annuler une Subscription (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation AnnulerSubscription($subscriptionId: String!) { annulerSubscription(subscriptionId: $subscriptionId) { success message subscription { id status cancelAt } } }",
+  "variables": {
+    "subscriptionId": "{{subscriptionId}}"
+  }
+}
+
+### 14. Obtenir le statut d'un paiement (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query StatutPaiement($paymentIntentId: String!) { statutPaiement(paymentIntentId: $paymentIntentId) { id status amount currency lastPaymentError { message } metadata } }",
+  "variables": {
+    "paymentIntentId": "{{paymentIntentId}}"
+  }
+}
+
+### 15. Obtenir mes paiements (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesPaiements { mesPaiements { id amount currency status created description metadata } }"
+}
+
+### 16. Obtenir ma subscription active (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MaSubscription { maSubscription { id status currentPeriodStart currentPeriodEnd cancelAtPeriodEnd plan { id amount currency interval } } }"
+}
+
+### 17. Créer un Checkout Session (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerCheckoutSession($input: CreerCheckoutSessionInput!) { creerCheckoutSession(input: $input) { sessionId url } }",
+  "variables": {
+    "input": {
+      "mode": "payment",
+      "lineItems": [
+        {
+          "price": "price_item_1",
+          "quantity": 2
+        }
+      ],
+      "successUrl": "http://localhost:3000/success",
+      "cancelUrl": "http://localhost:3000/cancel",
+      "metadata": {
+        "commande_id": "789"
+      }
+    }
+  }
+}
+
+### 18. Créer un Refund (Admin uniquement - GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation CreerRefund($input: CreerRefundInput!) { creerRefund(input: $input) { refundId amount status reason } }",
+  "variables": {
+    "input": {
+      "paymentIntentId": "{{paymentIntentId}}",
+      "amount": 2999,
+      "reason": "requested_by_customer"
+    }
+  }
+}
+
+### 19. Obtenir l'historique des paiements d'un utilisateur (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query PaiementsUtilisateur($userId: Int!) { paiementsUtilisateur(userId: $userId) { id amount currency status created description metadata refunded } }",
+  "variables": {
+    "userId": 1
+  }
+}
+
+### 20. Mettre à jour le mode de paiement (GraphQL)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MettreAJourPaymentMethod($paymentMethodId: String!) { mettreAJourPaymentMethod(paymentMethodId: $paymentMethodId) { success message } }",
+  "variables": {
+    "paymentMethodId": "pm_card_visa"
+  }
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 21. Webhook sans signature (doit échouer)
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+
+{
+  "id": "evt_no_signature",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_test"
+    }
+  }
+}
+
+### 22. Webhook avec signature invalide (doit échouer)
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=invalid_signature
+
+{
+  "id": "evt_invalid_signature",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_test"
+    }
+  }
+}
+
+### 23. Créer payment intent sans authentification (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "mutation CreerPaymentIntent($input: CreerPaymentIntentInput!) { creerPaymentIntent(input: $input) { clientSecret } }",
+  "variables": {
+    "input": {
+      "amount": 1000,
+      "currency": "eur"
+    }
+  }
+}
+
+### 24. Annuler la subscription d'un autre utilisateur (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation AnnulerSubscription($subscriptionId: String!) { annulerSubscription(subscriptionId: $subscriptionId) { success } }",
+  "variables": {
+    "subscriptionId": "sub_autre_utilisateur"
+  }
+}
+
+### ============================================
+### SCÉNARIOS DE TEST
+### ============================================
+
+### 25. Workflow complet : Créer Payment Intent → Simuler Succès → Vérifier
+
+# Étape 1 : Créer un Payment Intent
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerPaymentIntent($input: CreerPaymentIntentInput!) { creerPaymentIntent(input: $input) { paymentIntentId clientSecret amount status } }",
+  "variables": {
+    "input": {
+      "amount": 2999,
+      "currency": "eur",
+      "description": "Test complet",
+      "metadata": {
+        "user_id": "1",
+        "commande_id": "999"
+      }
+    }
+  }
+}
+
+###
+
+# Étape 2 : Simuler le webhook de succès (utilisez l'ID de l'étape 1)
+POST {{stripeWebhookEndpoint}}
+Content-Type: application/json
+Stripe-Signature: t=1234567890,v1=mock_signature
+
+{
+  "id": "evt_workflow_test",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_from_step_1",
+      "amount": 2999,
+      "currency": "eur",
+      "status": "succeeded",
+      "metadata": {
+        "user_id": "1",
+        "commande_id": "999"
+      }
+    }
+  }
+}
+
+###
+
+# Étape 3 : Vérifier le statut
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query StatutPaiement($paymentIntentId: String!) { statutPaiement(paymentIntentId: $paymentIntentId) { status amount metadata } }",
+  "variables": {
+    "paymentIntentId": "pi_from_step_1"
+  }
+}
+
+### ============================================
+### NOTES
+### ============================================
+# Webhooks Stripe supportés :
+# - payment_intent.succeeded : Paiement réussi
+# - payment_intent.payment_failed : Paiement échoué
+# - customer.subscription.created : Abonnement créé
+# - customer.subscription.updated : Abonnement mis à jour
+# - customer.subscription.deleted : Abonnement annulé
+# - charge.succeeded : Charge réussie
+# - charge.refunded : Charge remboursée
+# - invoice.payment_succeeded : Facture payée
+# - invoice.payment_failed : Facture impayée
+# - customer.created : Client créé
+#
+# Configuration requise :
+# 1. Créer un compte Stripe (https://stripe.com)
+# 2. Obtenir les clés API (Dashboard → Developers → API keys)
+# 3. Configurer le webhook endpoint dans Stripe Dashboard
+# 4. Copier le webhook secret (whsec_...)
+# 5. Ajouter les clés dans .env :
+#    STRIPE_SECRET_KEY=sk_test_...
+#    STRIPE_PUBLISHABLE_KEY=pk_test_...
+#    STRIPE_WEBHOOK_SECRET=whsec_...
+#
+# Test avec Stripe CLI :
+# stripe listen --forward-to localhost:4000/api/stripe/webhook
+# stripe trigger payment_intent.succeeded
+#
+# Montants Stripe :
+# Les montants sont en centimes (2999 = 29.99 EUR)
+#
+# Permissions :
+# - USER : Créer des paiements, voir ses paiements, gérer ses subscriptions
+# - ADMIN : Tous les paiements, refunds, historique complet
+#
+# Sécurité :
+# - Toujours vérifier la signature du webhook
+# - Ne jamais exposer la clé secrète côté client
+# - Utiliser HTTPS en production

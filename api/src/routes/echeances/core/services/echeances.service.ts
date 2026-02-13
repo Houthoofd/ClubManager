@@ -1,4 +1,4 @@
-import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import { prisma } from '@/infrastructure/database/prisma-client.js';
 import type { echeances_paiements_statut } from "@prisma/client";
 
 /**

@@ -29,7 +29,7 @@ export interface AuthUser {
  * GraphQL context interface
  * Re-export from shared types for convenience
  */
-export { GraphQLContext } from "../types/context.types.js";
+export { GraphQLContext } from "@/types/context.types.js";
 
 /**
  * Status/Role constants

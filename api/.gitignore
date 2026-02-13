@@ -1,9 +1,14 @@
-# Variables d'environnement API
-.env
-.env.local
-.env.development
-.env.production
-.env.test
+# Variables d'environnement API (à la racine uniquement)
+/.env
+/.env.local
+/.env.development
+/.env.production
+# Note: .env.test est copié depuis config/env/ pour les tests
+
+# Garder les templates dans config/env/
+!config/env/.env.example
+!config/env/.env.test
+!config/env/env.production.example
 
 # Logs API
 logs/

@@ -11,9 +11,9 @@ import {
   WebhookStats,
   WebhookLogStatus,
 } from "@clubmanager/types";
-import { Paiements } from "../../../../infrastructure/database/repositories/paiements/paiements.js";
-import { Message } from "../../../../infrastructure/database/repositories/messages/messages.js";
-import { emailClient } from "../../../../infrastructure/external-services/emailClient.js";
+import { Paiements } from "@/infrastructure/database/repositories/paiements/paiements.js";
+import { Message } from "@/infrastructure/database/repositories/messages/messages.js";
+import { emailClient } from "@/infrastructure/external-services/emailClient.js";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();

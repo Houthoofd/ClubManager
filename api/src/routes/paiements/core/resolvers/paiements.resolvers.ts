@@ -13,13 +13,13 @@ import {
   requireAuth,
   combineMiddlewares,
   type GraphQLContext,
-} from "../../../../shared/middleware/auth.middleware.js";
+} from '@/shared/middleware/auth.middleware.js';
 import {
   ValidationError,
   InternalServerError,
-} from "../../../../shared/errors/GraphQLErrors.js";
-import { validateInput } from "../../../../shared/middleware/validation.middleware.js";
-import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+} from '@/shared/errors/GraphQLErrors.js';
+import { validateInput } from '@/shared/middleware/validation.middleware.js';
+import { withSentry } from '@/shared/middleware/sentry.middleware.js';
 
 // Services
 import { PaymentIntentService } from "../services/payment-intent.service.js";

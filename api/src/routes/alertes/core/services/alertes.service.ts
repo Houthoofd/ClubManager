@@ -7,11 +7,11 @@
  * @module alertes.service
  */
 
-import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from "../../../../shared/config/sentry.config.js";
+} from "@/shared/config/sentry.config.js";
 
 /**
  * Interface pour le dashboard des alertes

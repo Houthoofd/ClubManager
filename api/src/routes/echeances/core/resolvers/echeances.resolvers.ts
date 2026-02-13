@@ -5,12 +5,12 @@
  * @module echeances.resolvers
  */
 
-import type { GraphQLContext } from "../../../../shared/types/context.types.js";
+import type { GraphQLContext } from '@/shared/types/context.types.js';
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
-} from "../../../../shared/errors/GraphQLErrors.js";
+} from '@/shared/errors/GraphQLErrors.js';
 import {
   createEcheanceSchema,
   updateEcheanceSchema,
@@ -24,13 +24,13 @@ import {
   type MarquerEcheancePayeeInput,
   type EcheancesFiltersInput,
 } from "@clubmanager/types/validators";
-import { validateInput } from "../../../../shared/middleware/validation.middleware.js";
-import { combineMiddlewares } from "../../../../shared/middleware/auth.middleware.js";
+import { validateInput } from '@/shared/middleware/validation.middleware.js';
+import { combineMiddlewares } from '@/shared/middleware/auth.middleware.js';
 import {
   requireAuth,
   requireAdmin,
-} from "../../../../shared/middleware/auth.middleware.js";
-import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+} from '@/shared/middleware/auth.middleware.js';
+import { withSentry } from '@/shared/middleware/sentry.middleware.js';
 import {
   creerEcheance,
   obtenirEcheancesUtilisateur,

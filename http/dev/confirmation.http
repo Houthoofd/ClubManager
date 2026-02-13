@@ -1,0 +1,377 @@
+### ============================================
+### CONFIRMATION (INSCRIPTIONS & RESERVATIONS)
+### ClubManager API - Confirmation Module (GraphQL)
+### ============================================
+
+### Variables
+@graphqlEndpoint = http://localhost:4000/graphql
+@token = YOUR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+@inscriptionId = 1
+@reservationId = 1
+@userId = 1
+@coursId = 1
+
+### ============================================
+### QUERIES - INSCRIPTIONS
+### ============================================
+
+### 1. Obtenir toutes les inscriptions (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query Inscriptions { inscriptions { id utilisateur_id cours_id date_inscription statut } }"
+}
+
+### 2. Obtenir mes inscriptions
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesInscriptions { mesInscriptions { id cours_id date_inscription statut cours { nom description date_debut date_fin } } }"
+}
+
+### 3. Obtenir les inscriptions d'un utilisateur
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query InscriptionsUtilisateur($userId: Int!) { inscriptionsUtilisateur(userId: $userId) { id cours_id date_inscription statut cours { nom date_debut } } }",
+  "variables": {
+    "userId": {{userId}}
+  }
+}
+
+### 4. Obtenir une inscription par ID
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query Inscription($id: Int!) { inscription(id: $id) { id utilisateur_id cours_id date_inscription statut notes utilisateur { nom prenom email } cours { nom description date_debut date_fin } } }",
+  "variables": {
+    "id": {{inscriptionId}}
+  }
+}
+
+### 5. Obtenir les inscriptions d'un cours (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query InscriptionsCours($coursId: Int!) { inscriptionsCours(coursId: $coursId) { id utilisateur_id date_inscription statut utilisateur { nom prenom email telephone } } }",
+  "variables": {
+    "coursId": {{coursId}}
+  }
+}
+
+### ============================================
+### QUERIES - RESERVATIONS
+### ============================================
+
+### 6. Obtenir toutes les réservations (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query Reservations { reservations { id utilisateur_id cours_id date_reservation statut } }"
+}
+
+### 7. Obtenir mes réservations
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesReservations { mesReservations { id cours_id date_reservation statut cours { nom date_debut date_fin places_disponibles } } }"
+}
+
+### 8. Obtenir les réservations d'un utilisateur
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query ReservationsUtilisateur($userId: Int!) { reservationsUtilisateur(userId: $userId) { id cours_id date_reservation statut cours { nom date_debut } } }",
+  "variables": {
+    "userId": {{userId}}
+  }
+}
+
+### 9. Obtenir une réservation par ID
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query Reservation($id: Int!) { reservation(id: $id) { id utilisateur_id cours_id date_reservation statut notes utilisateur { nom prenom email } cours { nom description date_debut date_fin places_disponibles } } }",
+  "variables": {
+    "id": {{reservationId}}
+  }
+}
+
+### 10. Obtenir les réservations d'un cours
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query ReservationsCours($coursId: Int!) { reservationsCours(coursId: $coursId) { id utilisateur_id date_reservation statut utilisateur { nom prenom email telephone } } }",
+  "variables": {
+    "coursId": {{coursId}}
+  }
+}
+
+### ============================================
+### MUTATIONS - INSCRIPTIONS
+### ============================================
+
+### 11. Créer une inscription
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerInscription($input: CreerInscriptionInput!) { creerInscription(input: $input) { id utilisateur_id cours_id date_inscription statut } }",
+  "variables": {
+    "input": {
+      "cours_id": {{coursId}},
+      "notes": "Première inscription"
+    }
+  }
+}
+
+### 12. Confirmer une inscription (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ConfirmerInscription($inscriptionId: Int!, $notes: String) { confirmerInscription(inscriptionId: $inscriptionId, notes: $notes) { success message inscription { id statut } } }",
+  "variables": {
+    "inscriptionId": {{inscriptionId}},
+    "notes": "Inscription confirmée par l'administrateur"
+  }
+}
+
+### 13. Annuler une inscription
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation AnnulerInscription($inscriptionId: Int!, $raison: String) { annulerInscription(inscriptionId: $inscriptionId, raison: $raison) { success message } }",
+  "variables": {
+    "inscriptionId": {{inscriptionId}},
+    "raison": "Empêchement"
+  }
+}
+
+### 14. Supprimer une inscription (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerInscription($id: Int!) { supprimerInscription(id: $id) { success message } }",
+  "variables": {
+    "id": {{inscriptionId}}
+  }
+}
+
+### ============================================
+### MUTATIONS - RESERVATIONS
+### ============================================
+
+### 15. Créer une réservation
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerReservation($input: CreerReservationInput!) { creerReservation(input: $input) { id utilisateur_id cours_id date_reservation statut } }",
+  "variables": {
+    "input": {
+      "cours_id": {{coursId}},
+      "notes": "Première réservation"
+    }
+  }
+}
+
+### 16. Confirmer une réservation (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ConfirmerReservation($reservationId: Int!, $notes: String) { confirmerReservation(reservationId: $reservationId, notes: $notes) { success message reservation { id statut } } }",
+  "variables": {
+    "reservationId": {{reservationId}},
+    "notes": "Réservation confirmée"
+  }
+}
+
+### 17. Annuler une réservation
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation AnnulerReservation($reservationId: Int!, $raison: String) { annulerReservation(reservationId: $reservationId, raison: $raison) { success message } }",
+  "variables": {
+    "reservationId": {{reservationId}},
+    "raison": "Changement de programme"
+  }
+}
+
+### 18. Supprimer une réservation (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerReservation($id: Int!) { supprimerReservation(id: $id) { success message } }",
+  "variables": {
+    "id": {{reservationId}}
+  }
+}
+
+### 19. Convertir une réservation en inscription (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ConvertirReservationEnInscription($reservationId: Int!) { convertirReservationEnInscription(reservationId: $reservationId) { success message inscription { id statut } } }",
+  "variables": {
+    "reservationId": {{reservationId}}
+  }
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 20. Créer une inscription sans authentification (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "mutation CreerInscription($input: CreerInscriptionInput!) { creerInscription(input: $input) { id } }",
+  "variables": {
+    "input": {
+      "cours_id": 1
+    }
+  }
+}
+
+### 21. Confirmer une inscription sans être admin (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ConfirmerInscription($inscriptionId: Int!) { confirmerInscription(inscriptionId: $inscriptionId) { success } }",
+  "variables": {
+    "inscriptionId": {{inscriptionId}}
+  }
+}
+
+### 22. Accéder à l'inscription d'un autre utilisateur (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query Inscription($id: Int!) { inscription(id: $id) { id utilisateur_id } }",
+  "variables": {
+    "id": 999
+  }
+}
+
+### 23. S'inscrire à un cours complet (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerInscription($input: CreerInscriptionInput!) { creerInscription(input: $input) { id } }",
+  "variables": {
+    "input": {
+      "cours_id": 99
+    }
+  }
+}
+
+### ============================================
+### SCÉNARIOS DE TEST
+### ============================================
+
+### 24. Workflow : Réservation → Confirmation → Conversion en Inscription
+
+# Étape 1 : Créer une réservation
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerReservation($input: CreerReservationInput!) { creerReservation(input: $input) { id statut } }",
+  "variables": {
+    "input": {
+      "cours_id": 1
+    }
+  }
+}
+
+###
+
+# Étape 2 : Confirmer la réservation (admin)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ConfirmerReservation($reservationId: Int!) { confirmerReservation(reservationId: $reservationId) { success reservation { statut } } }",
+  "variables": {
+    "reservationId": 1
+  }
+}
+
+###
+
+# Étape 3 : Convertir en inscription (admin)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ConvertirReservationEnInscription($reservationId: Int!) { convertirReservationEnInscription(reservationId: $reservationId) { success inscription { id statut } } }",
+  "variables": {
+    "reservationId": 1
+  }
+}
+
+### ============================================
+### NOTES
+### ============================================
+# Statuts d'inscription :
+# - en_attente : Inscription créée, en attente de confirmation
+# - confirmee : Inscription confirmée
+# - annulee : Inscription annulée
+# - terminee : Cours terminé
+#
+# Statuts de réservation :
+# - en_attente : Réservation créée
+# - confirmee : Place confirmée
+# - annulee : Réservation annulée
+# - convertie : Convertie en inscription
+#
+# Permissions :
+# - USER : Créer ses propres inscriptions/réservations, les consulter, les annuler
+# - ADMIN : Toutes les opérations, confirmer, convertir

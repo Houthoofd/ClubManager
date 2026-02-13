@@ -7,13 +7,15 @@
  * @module utilisateurs.service
  */
 
-import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from "../../../../shared/config/sentry.config.js";
-import { emailClient } from "../../../../infrastructure/external-services/emailClient.js";
-import { EmailService } from "../../../../services/emailService.js";
+} from "@/shared/config/sentry.config.js";
+import { emailClient } from "@/infrastructure/external-services/emailClient.js";
+// TODO: EmailService a été refactorisé - utiliser EmailClient à la place
+// Ce service n'existe plus, les lignes ci-dessous doivent être migrées vers emailClient
+// import { EmailService } from "../../../../services/emailService.js";
 import bcrypt from "bcrypt";
 
 /**

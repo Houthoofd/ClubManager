@@ -1,4 +1,4 @@
-import MysqlConnector from "../../../../infrastructure/database/connector/mysqlconnector.js";
+import MysqlConnector from "@/infrastructure/database/connector/mysqlconnector.js";
 
 /**
  * Service pour gérer la promotion du statut utilisateur

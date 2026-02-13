@@ -14,14 +14,14 @@ import {
   requireAdmin,
   combineMiddlewares,
   type GraphQLContext,
-} from "../../../../shared/middleware/auth.middleware.js";
+} from '@/shared/middleware/auth.middleware.js';
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
-} from "../../../../shared/errors/GraphQLErrors.js";
-import { validateInput } from "../../../../shared/middleware/validation.middleware.js";
-import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+} from '@/shared/errors/GraphQLErrors.js';
+import { validateInput } from '@/shared/middleware/validation.middleware.js';
+import { withSentry } from '@/shared/middleware/sentry.middleware.js';
 
 // Services
 import { messagesPersonnalisesService } from "../services/messages-personnalises.service.js";

@@ -45,7 +45,7 @@ import {
   setCookie,
   clearCookie,
   type GraphQLContext,
-} from "../../../../shared/index.js";
+} from '@/shared/index.js';
 
 // Cookie helpers locaux
 import {

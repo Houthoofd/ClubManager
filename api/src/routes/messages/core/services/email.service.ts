@@ -2,11 +2,11 @@ import { PrismaClient } from "@prisma/client";
 import {
   captureException,
   addSentryBreadcrumb,
-} from "../../../../shared/config/sentry.config.js";
+} from '@/shared/config/sentry.config.js';
 // TODO: Ces services ont été refactorisés - utiliser EmailClient à la place
 // import { EmailService } from "../../../../services/emailService.js";
 // import { EmailTemplateService } from "../../../../services/emailTemplateService.js";
-import { EmailClient } from "../../../../infrastructure/external-services/emailClient.js";
+import { EmailClient } from '@/infrastructure/external-services/emailClient.js';
 
 const prisma = new PrismaClient();
 

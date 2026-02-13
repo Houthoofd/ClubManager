@@ -1,0 +1,154 @@
+================================================================================
+  📁 DOSSIER CONFIG - CONFIGURATION DE L'API
+================================================================================
+
+Ce dossier contient tous les fichiers de configuration de l'API ClubManager.
+
+================================================================================
+  📂 STRUCTURE
+================================================================================
+
+config/
+├── jest/                    # Configuration des tests Jest
+│   ├── jest.config.cjs                  # Config principale Jest
+│   ├── jest.integration.config.cjs      # Tests d'intégration
+│   ├── jest.real-integration.config.cjs # Tests d'intégration réels (DB)
+│   ├── jest.webhook.config.cjs          # Tests webhooks Stripe
+│   └── jest.setup.webhook.cjs           # Setup pour tests webhooks
+│
+└── env/                     # Templates de variables d'environnement
+    ├── .env.example                     # Template pour développement
+    ├── .env.test                        # Variables pour tests
+    └── env.production.example           # Template pour production
+
+
+================================================================================
+  🧪 CONFIGURATION JEST
+================================================================================
+
+Les fichiers de configuration Jest définissent comment les tests sont exécutés.
+
+jest.config.cjs
+  → Configuration principale pour les tests unitaires
+  → Utilisé par défaut pour tous les tests
+
+jest.integration.config.cjs
+  → Tests d'intégration avec mocks
+  → Tests GraphQL, API endpoints
+
+jest.real-integration.config.cjs
+  → Tests d'intégration avec vraie base de données
+  → Tests E2E complets
+
+jest.webhook.config.cjs
+  → Tests spécifiques pour les webhooks Stripe
+  → Configuration spéciale pour les événements async
+
+jest.setup.webhook.cjs
+  → Setup et mocks pour les tests webhook
+  → Initialisation de l'environnement de test
+
+
+COMMANDES:
+  npm run test                    # Tests unitaires
+  npm run test:integration        # Tests d'intégration
+  npm run test:[module]           # Tests d'un module spécifique
+  npm run test:[module]:coverage  # Avec couverture de code
+
+
+================================================================================
+  🔒 VARIABLES D'ENVIRONNEMENT
+================================================================================
+
+Les fichiers .env contiennent les variables de configuration sensibles.
+
+.env.example
+  → Template pour le développement local
+  → Copiez vers .env à la racine et configurez vos valeurs
+
+.env.test
+  → Variables pour l'environnement de test
+  → Utilisé automatiquement par Jest
+
+env.production.example
+  → Template pour la production
+  → Contient toutes les variables nécessaires en production
+
+
+UTILISATION:
+  1. Copiez .env.example vers ../../.env (racine api/)
+  2. Remplissez les valeurs selon votre environnement
+  3. Ne commitez JAMAIS le fichier .env (il est dans .gitignore)
+
+
+VARIABLES IMPORTANTES:
+  - DATABASE_URL          : Connexion à la base de données
+  - JWT_SECRET            : Secret pour les tokens JWT
+  - STRIPE_SECRET_KEY     : Clé API Stripe
+  - SENDGRID_API_KEY      : Clé API SendGrid pour emails
+  - AWS_S3_*              : Configuration AWS S3 pour uploads
+  - FRONTEND_URL          : URL du frontend (CORS)
+
+
+================================================================================
+  ⚙️  CONFIGURATION TYPESCRIPT
+================================================================================
+
+Le fichier tsconfig.json est resté à la racine de l'API (standard Node.js).
+
+Localisation: ../tsconfig.json
+
+Path aliases configurés:
+  @/infrastructure  → src/infrastructure
+  @/shared          → src/shared
+  @/routes          → src/routes
+  @/types           → src/types
+  @/graphql         → src/graphql
+
+
+================================================================================
+  🔧 MAINTENANCE
+================================================================================
+
+Lors de l'ajout de nouvelles configurations:
+
+1. TESTS:
+   - Ajoutez les configs dans config/jest/
+   - Mettez à jour package.json avec le bon chemin
+   - Format: config/jest/[nom].config.cjs
+
+2. VARIABLES D'ENVIRONNEMENT:
+   - Documentez dans env.production.example
+   - Ajoutez dans .env.example si nécessaire
+   - Mettez à jour la validation dans le code
+
+3. AUTRES CONFIGS:
+   - Créez un sous-dossier approprié dans config/
+   - Documentez dans ce README
+
+
+================================================================================
+  📚 RESSOURCES
+================================================================================
+
+Jest Documentation:      https://jestjs.io/docs/configuration
+TypeScript tsconfig:     https://www.typescriptlang.org/tsconfig
+Node.js Best Practices:  https://github.com/goldbergyoni/nodebestpractices
+
+
+================================================================================
+  ✅ CHECKLIST NOUVELLE CONFIG
+================================================================================
+
+[ ] Créer le fichier de config dans le bon sous-dossier
+[ ] Mettre à jour package.json si nécessaire
+[ ] Documenter dans ce README
+[ ] Tester que la config fonctionne
+[ ] Commiter les changements
+
+
+================================================================================
+
+Pour toute question: contactez l'équipe technique
+
+================================================================================

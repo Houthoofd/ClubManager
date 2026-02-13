@@ -1,0 +1,359 @@
+### ============================================
+### COMMANDES (ORDERS)
+### ClubManager API - Commandes Module (GraphQL)
+### ============================================
+
+### Variables
+@graphqlEndpoint = http://localhost:4000/graphql
+@token = YOUR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+@commandeId = 1
+@userId = 1
+
+### ============================================
+### QUERIES
+### ============================================
+
+### 1. Obtenir toutes les commandes (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query Commandes { commandes { id utilisateur_id montant_total statut date_commande date_livraison adresse_livraison } }"
+}
+
+### 2. Obtenir une commande par ID
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query Commande($id: Int!) { commande(id: $id) { id utilisateur_id montant_total statut date_commande date_livraison adresse_livraison ville_livraison code_postal_livraison pays_livraison articles { id article_id quantite prix_unitaire } } }",
+  "variables": {
+    "id": {{commandeId}}
+  }
+}
+
+### 3. Obtenir mes commandes
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesCommandes { mesCommandes { id montant_total statut date_commande date_livraison } }"
+}
+
+### 4. Obtenir les commandes d'un utilisateur (Admin ou propriétaire)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query CommandesUtilisateur($userId: Int!) { commandesUtilisateur(userId: $userId) { id montant_total statut date_commande date_livraison adresse_livraison } }",
+  "variables": {
+    "userId": {{userId}}
+  }
+}
+
+### 5. Obtenir les commandes par statut (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query CommandesParStatut($statut: String!) { commandesParStatut(statut: $statut) { id utilisateur_id montant_total statut date_commande } }",
+  "variables": {
+    "statut": "en_attente"
+  }
+}
+
+### 6. Rechercher des commandes (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query RechercherCommandes($recherche: String!, $filtres: FiltresCommandesInput) { rechercherCommandes(recherche: $recherche, filtres: $filtres) { id utilisateur_id montant_total statut date_commande } }",
+  "variables": {
+    "recherche": "martin",
+    "filtres": {
+      "statut": "payee",
+      "dateDebut": "2024-01-01",
+      "dateFin": "2024-12-31"
+    }
+  }
+}
+
+### 7. Obtenir les statistiques des commandes (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query StatistiquesCommandes { statistiquesCommandes { total montantTotal montantMoyen commandesParStatut { statut nombre montant } commandesParMois { mois annee nombre montant } } }"
+}
+
+### 8. Compter les commandes par statut (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query CompterCommandesParStatut { compterCommandesParStatut { statut nombre } }"
+}
+
+### 9. Obtenir l'historique d'une commande
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query HistoriqueCommande($commandeId: Int!) { historiqueCommande(commandeId: $commandeId) { id commande_id statut_precedent nouveau_statut date_changement note utilisateur_id } }",
+  "variables": {
+    "commandeId": {{commandeId}}
+  }
+}
+
+### ============================================
+### MUTATIONS
+### ============================================
+
+### 10. Créer une commande
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerCommande($input: CreerCommandeInput!) { creerCommande(input: $input) { id utilisateur_id montant_total statut date_commande articles { id article_id quantite prix_unitaire } } }",
+  "variables": {
+    "input": {
+      "articles": [
+        {
+          "article_id": 1,
+          "quantite": 2,
+          "prix_unitaire": 29.99
+        },
+        {
+          "article_id": 3,
+          "quantite": 1,
+          "prix_unitaire": 49.99
+        }
+      ],
+      "adresse_livraison": "123 Rue Example",
+      "ville_livraison": "Bruxelles",
+      "code_postal_livraison": "1000",
+      "pays_livraison": "Belgique",
+      "notes": "Livraison avant 18h si possible"
+    }
+  }
+}
+
+### 11. Modifier une commande (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ModifierCommande($id: Int!, $input: ModifierCommandeInput!) { modifierCommande(id: $id, input: $input) { id statut date_livraison adresse_livraison } }",
+  "variables": {
+    "id": {{commandeId}},
+    "input": {
+      "statut": "en_cours",
+      "date_livraison": "2024-12-25",
+      "adresse_livraison": "456 Nouvelle Adresse",
+      "notes": "Commande mise à jour"
+    }
+  }
+}
+
+### 12. Changer le statut d'une commande (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ChangerStatutCommande($commandeId: Int!, $nouveauStatut: String!, $note: String) { changerStatutCommande(commandeId: $commandeId, nouveauStatut: $nouveauStatut, note: $note) { success message commande { id statut } } }",
+  "variables": {
+    "commandeId": {{commandeId}},
+    "nouveauStatut": "expediee",
+    "note": "Expédiée via Bpost - Tracking: BE123456789"
+  }
+}
+
+### 13. Annuler une commande
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation AnnulerCommande($commandeId: Int!, $raison: String) { annulerCommande(commandeId: $commandeId, raison: $raison) { success message } }",
+  "variables": {
+    "commandeId": {{commandeId}},
+    "raison": "Changement d'avis"
+  }
+}
+
+### 14. Marquer une commande comme payée (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation MarquerCommandePayee($commandeId: Int!, $methodePaiement: String) { marquerCommandePayee(commandeId: $commandeId, methodePaiement: $methodePaiement) { success message commande { id statut } } }",
+  "variables": {
+    "commandeId": {{commandeId}},
+    "methodePaiement": "carte_bancaire"
+  }
+}
+
+### 15. Marquer une commande comme livrée (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation MarquerCommandeLivree($commandeId: Int!, $note: String) { marquerCommandeLivree(commandeId: $commandeId, note: $note) { success message } }",
+  "variables": {
+    "commandeId": {{commandeId}},
+    "note": "Livrée et signée par le client"
+  }
+}
+
+### 16. Supprimer une commande (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerCommande($id: Int!) { supprimerCommande(id: $id) { success message } }",
+  "variables": {
+    "id": {{commandeId}}
+  }
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 17. Créer une commande sans authentification (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "mutation CreerCommande($input: CreerCommandeInput!) { creerCommande(input: $input) { id } }",
+  "variables": {
+    "input": {
+      "articles": [{ "article_id": 1, "quantite": 1, "prix_unitaire": 29.99 }],
+      "adresse_livraison": "Test"
+    }
+  }
+}
+
+### 18. Modifier une commande sans être admin (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierCommande($id: Int!, $input: ModifierCommandeInput!) { modifierCommande(id: $id, input: $input) { id } }",
+  "variables": {
+    "id": {{commandeId}},
+    "input": {
+      "statut": "annulee"
+    }
+  }
+}
+
+### 19. Accéder à la commande d'un autre utilisateur (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query Commande($id: Int!) { commande(id: $id) { id utilisateur_id montant_total } }",
+  "variables": {
+    "id": 999
+  }
+}
+
+### ============================================
+### SCÉNARIOS DE TEST
+### ============================================
+
+### 20. Workflow complet : Créer → Payer → Expédier → Livrer
+
+# Étape 1 : Créer la commande
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerCommande($input: CreerCommandeInput!) { creerCommande(input: $input) { id montant_total statut } }",
+  "variables": {
+    "input": {
+      "articles": [{ "article_id": 1, "quantite": 1, "prix_unitaire": 29.99 }],
+      "adresse_livraison": "123 Rue Test"
+    }
+  }
+}
+
+###
+
+# Étape 2 : Marquer comme payée (utilisez l'ID de la commande créée)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation MarquerCommandePayee($commandeId: Int!, $methodePaiement: String) { marquerCommandePayee(commandeId: $commandeId, methodePaiement: $methodePaiement) { success commande { statut } } }",
+  "variables": {
+    "commandeId": 1,
+    "methodePaiement": "carte"
+  }
+}
+
+###
+
+# Étape 3 : Marquer comme expédiée
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ChangerStatutCommande($commandeId: Int!, $nouveauStatut: String!) { changerStatutCommande(commandeId: $commandeId, nouveauStatut: $nouveauStatut) { success commande { statut } } }",
+  "variables": {
+    "commandeId": 1,
+    "nouveauStatut": "expediee"
+  }
+}
+
+###
+
+# Étape 4 : Marquer comme livrée
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation MarquerCommandeLivree($commandeId: Int!) { marquerCommandeLivree(commandeId: $commandeId) { success } }",
+  "variables": {
+    "commandeId": 1
+  }
+}
+
+### ============================================
+### NOTES
+### ============================================
+# Statuts de commande disponibles :
+# - en_attente : Commande créée mais non payée
+# - payee : Paiement confirmé
+# - en_cours : En préparation
+# - expediee : Envoyée au client
+# - livree : Reçue par le client
+# - annulee : Annulée
+# - remboursee : Remboursée
+#
+# Permissions :
+# - USER : Peut créer ses commandes, voir ses commandes, annuler ses commandes
+# - ADMIN : Toutes les opérations, modifier statuts, voir toutes les commandes

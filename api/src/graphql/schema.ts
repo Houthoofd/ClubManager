@@ -1,6 +1,6 @@
 import { createSchema } from "graphql-yoga";
 import { DateTimeResolver } from "graphql-scalars";
-import { prisma } from "../infrastructure/database/prisma-client.js";
+import { prisma } from '@/infrastructure/database/prisma-client.js';
 
 // Import des resolvers et typedefs des modules migrés
 import { createAuthResolvers } from "../routes/auth/core/resolvers/index.js";

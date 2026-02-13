@@ -3,7 +3,7 @@
  * Copie la structure de la DB principale vers une DB de test séparée
  */
 
-import { prisma } from "../../infrastructure/database/prisma-client.js";
+import { prisma } from '@/infrastructure/database/prisma-client.js';
 import { execSync } from "child_process";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";

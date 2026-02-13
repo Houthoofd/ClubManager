@@ -10,13 +10,13 @@ import {
   requireAdmin,
   withSentry,
   combineMiddlewares,
-} from "../../../../shared/middleware/index.js";
+} from '@/shared/middleware/index.js';
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
   formatZodErrors,
-} from "../../../../shared/errors/GraphQLErrors.js";
+} from '@/shared/errors/GraphQLErrors.js';
 import {
   articleIdGraphQLSchema,
   alerteParamsGraphQLSchema,

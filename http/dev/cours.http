@@ -1,79 +1,414 @@
-### Cours endpoints
+### ============================================
+### COURS (CLASSES)
+### ClubManager API - Cours Module (GraphQL)
+### ============================================
 
-# Récupérer tous les cours
-GET http://localhost:3000/cours
+### Variables
+@graphqlEndpoint = http://localhost:4000/graphql
+@token = YOUR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+@coursId = 1
+@professeurId = 1
+@categorieId = 1
 
-### Ajouter un cours récurrent avec professeurs
-POST http://localhost:3000/cours/ajouterrs endpoints
+### ============================================
+### QUERIES
+### ============================================
 
-### Récupérer tous les cours
-GET http://localhost:3000/cours
-
-### Ajouter un cours récurrent avec professeurs
-POST http://localhost:3000/api/cours/ajouter
+### 1. Obtenir tous les cours
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "nom": "Judo débutants",
-  "type_cours": "Judo",
-  "jour": "Lundi",
-  "heure_debut": "18:00",
-  "heure_fin": "19:30",
-  "professeurs": ["Jean Dupont", "Marie Martin"]
+  "query": "query Cours { cours { id nom description date_debut date_fin professeur_id categorie_id niveau places_totales places_disponibles prix statut } }"
 }
 
-### Supprimer un cours par jour
-DELETE http://localhost:3000/cours/supprimer
+### 2. Obtenir un cours par ID
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "jourSemaine": "lundi"
+  "query": "query Cours($id: Int!) { cours(id: $id) { id nom description date_debut date_fin horaire lieu professeur { id nom prenom email } categorie { id nom } niveau places_totales places_disponibles prix statut image_url prerequis materiels } }",
+  "variables": {
+    "id": {{coursId}}
+  }
 }
 
-### Modifier un cours récurrent
-PATCH http://localhost:3000/cours/modifier
+### 3. Obtenir les cours disponibles
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "nom": "Judo avancés",
-  "type_cours": "Judo",
-  "jour": "Mardi",
-  "heure_debut": "19:00",
-  "heure_fin": "20:30",
-  "professeurs": ["Jean Dupont"]
+  "query": "query CoursDisponibles { coursDisponibles { id nom description date_debut date_fin professeur_id places_disponibles prix niveau } }"
 }
 
-### Retirer un professeur d'un cours
-POST http://localhost:3000/cours/retirer-professeur
+### 4. Obtenir les cours par catégorie
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "professeursNoms": ["Marie Martin"],
-  "jour": "Lundi"
+  "query": "query CoursParCategorie($categorieId: Int!) { coursParCategorie(categorieId: $categorieId) { id nom description date_debut date_fin prix places_disponibles } }",
+  "variables": {
+    "categorieId": {{categorieId}}
+  }
 }
 
-### Récupérer les informations de planning des cours
-GET http://localhost:3000/cours/informations/planning
-
-### Récupérer les cours d'un utilisateur
-GET http://localhost:3000/cours/inscriptions/utilisateur/1
-
-### Valider la présence d'un utilisateur à un cours
-PATCH http://localhost:3000/cours/inscription/validation
+### 5. Obtenir les cours par professeur
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "cours_id": 1,
-  "utilisateur_nom": "Dupont",
-  "utilisateur_prenom": "Jean"
+  "query": "query CoursParProfesseur($professeurId: Int!) { coursParProfesseur(professeurId: $professeurId) { id nom description date_debut date_fin places_totales places_disponibles statut } }",
+  "variables": {
+    "professeurId": {{professeurId}}
+  }
 }
 
-### Annuler la présence d'un utilisateur à un cours
-PATCH http://localhost:3000/cours/inscription/annulation
+### 6. Obtenir les cours par niveau
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "cours_id": 1,
-  "utilisateur_nom": "Dupont",
-  "utilisateur_prenom": "Jean"
+  "query": "query CoursParNiveau($niveau: String!) { coursParNiveau(niveau: $niveau) { id nom description date_debut date_fin prix places_disponibles } }",
+  "variables": {
+    "niveau": "DEBUTANT"
+  }
 }
+
+### 7. Rechercher des cours
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query RechercherCours($recherche: String!, $filtres: FiltresCoursInput) { rechercherCours(recherche: $recherche, filtres: $filtres) { id nom description date_debut date_fin prix places_disponibles niveau professeur { nom prenom } } }",
+  "variables": {
+    "recherche": "yoga",
+    "filtres": {
+      "niveau": "DEBUTANT",
+      "categorieId": 1,
+      "dateDebut": "2024-01-01",
+      "dateFin": "2024-12-31",
+      "prixMin": 0,
+      "prixMax": 100,
+      "placesDisponibles": true
+    }
+  }
+}
+
+### 8. Obtenir les cours à venir
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query CoursAVenir { coursAVenir { id nom description date_debut date_fin places_disponibles prix } }"
+}
+
+### 9. Obtenir les cours récurrents
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query CoursRecurrents { coursRecurrents { id nom description jour_semaine heure_debut heure_fin professeur_id places_totales prix statut } }"
+}
+
+### 10. Obtenir un cours récurrent par ID
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query CoursRecurrent($id: Int!) { coursRecurrent(id: $id) { id nom description jour_semaine heure_debut heure_fin lieu professeur { nom prenom } places_totales prix statut } }",
+  "variables": {
+    "id": 1
+  }
+}
+
+### 11. Obtenir mes cours inscrits (utilisateur connecté)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesCours { mesCours { id nom description date_debut date_fin horaire lieu professeur { nom prenom } inscription { date_inscription statut } } }"
+}
+
+### ============================================
+### MUTATIONS
+### ============================================
+
+### 12. Créer un cours (Admin/Professeur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation CreerCours($input: CreerCoursInput!) { creerCours(input: $input) { id nom description date_debut date_fin professeur_id places_totales prix statut } }",
+  "variables": {
+    "input": {
+      "nom": "Yoga Débutant",
+      "description": "Cours de yoga pour débutants",
+      "date_debut": "2024-12-01T10:00:00Z",
+      "date_fin": "2024-12-01T11:30:00Z",
+      "horaire": "Lundi 10h-11h30",
+      "lieu": "Salle A",
+      "professeur_id": {{professeurId}},
+      "categorie_id": {{categorieId}},
+      "niveau": "DEBUTANT",
+      "places_totales": 15,
+      "prix": 25.00,
+      "prerequis": "Aucun",
+      "materiels": "Tapis de yoga, tenue confortable"
+    }
+  }
+}
+
+### 13. Créer un cours récurrent (Admin/Professeur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation CreerCoursRecurrent($input: CreerCoursRecurrentInput!) { creerCoursRecurrent(input: $input) { id nom description jour_semaine heure_debut heure_fin places_totales prix } }",
+  "variables": {
+    "input": {
+      "nom": "Pilates Hebdomadaire",
+      "description": "Cours de Pilates tous les mercredis",
+      "jour_semaine": "MERCREDI",
+      "heure_debut": "18:00:00",
+      "heure_fin": "19:00:00",
+      "lieu": "Salle B",
+      "professeur_id": {{professeurId}},
+      "categorie_id": {{categorieId}},
+      "niveau": "INTERMEDIAIRE",
+      "places_totales": 12,
+      "prix": 20.00
+    }
+  }
+}
+
+### 14. Modifier un cours (Admin/Professeur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ModifierCours($id: Int!, $input: ModifierCoursInput!) { modifierCours(id: $id, input: $input) { id nom description date_debut date_fin places_totales prix statut } }",
+  "variables": {
+    "id": {{coursId}},
+    "input": {
+      "nom": "Yoga Débutant - Session 2",
+      "description": "Cours de yoga pour débutants - nouvelle session",
+      "date_debut": "2024-12-15T10:00:00Z",
+      "date_fin": "2024-12-15T11:30:00Z",
+      "prix": 30.00,
+      "places_totales": 20
+    }
+  }
+}
+
+### 15. Modifier un cours récurrent (Admin/Professeur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ModifierCoursRecurrent($id: Int!, $input: ModifierCoursRecurrentInput!) { modifierCoursRecurrent(id: $id, input: $input) { id nom heure_debut heure_fin prix } }",
+  "variables": {
+    "id": 1,
+    "input": {
+      "heure_debut": "19:00:00",
+      "heure_fin": "20:00:00",
+      "prix": 22.00
+    }
+  }
+}
+
+### 16. Annuler un cours (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation AnnulerCours($coursId: Int!, $raison: String) { annulerCours(coursId: $coursId, raison: $raison) { success message } }",
+  "variables": {
+    "coursId": {{coursId}},
+    "raison": "Professeur malade"
+  }
+}
+
+### 17. Publier un cours (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation PublierCours($coursId: Int!) { publierCours(coursId: $coursId) { success message cours { id statut } } }",
+  "variables": {
+    "coursId": {{coursId}}
+  }
+}
+
+### 18. Archiver un cours (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ArchiverCours($coursId: Int!) { archiverCours(coursId: $coursId) { success message } }",
+  "variables": {
+    "coursId": {{coursId}}
+  }
+}
+
+### 19. Supprimer un cours (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerCours($id: Int!) { supprimerCours(id: $id) { success message } }",
+  "variables": {
+    "id": {{coursId}}
+  }
+}
+
+### 20. Supprimer un cours récurrent (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerCoursRecurrent($id: Int!) { supprimerCoursRecurrent(id: $id) { success message } }",
+  "variables": {
+    "id": 1
+  }
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 21. Créer un cours sans être admin (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation CreerCours($input: CreerCoursInput!) { creerCours(input: $input) { id } }",
+  "variables": {
+    "input": {
+      "nom": "Test",
+      "date_debut": "2024-12-01T10:00:00Z",
+      "date_fin": "2024-12-01T11:00:00Z"
+    }
+  }
+}
+
+### 22. Modifier un cours d'un autre professeur (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierCours($id: Int!, $input: ModifierCoursInput!) { modifierCours(id: $id, input: $input) { id } }",
+  "variables": {
+    "id": 999,
+    "input": {
+      "nom": "Cours modifié"
+    }
+  }
+}
+
+### 23. Accéder à un cours inexistant (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query Cours($id: Int!) { cours(id: $id) { id nom } }",
+  "variables": {
+    "id": 99999
+  }
+}
+
+### ============================================
+### SCÉNARIOS DE TEST
+### ============================================
+
+### 24. Workflow : Créer un cours → Publier → Inscrire des participants
+
+# Étape 1 : Créer le cours (brouillon)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation CreerCours($input: CreerCoursInput!) { creerCours(input: $input) { id nom statut } }",
+  "variables": {
+    "input": {
+      "nom": "Zumba Fitness",
+      "description": "Cours de Zumba énergique",
+      "date_debut": "2024-12-20T18:00:00Z",
+      "date_fin": "2024-12-20T19:00:00Z",
+      "horaire": "Vendredi 18h-19h",
+      "lieu": "Grande Salle",
+      "professeur_id": 1,
+      "categorie_id": 1,
+      "niveau": "TOUS_NIVEAUX",
+      "places_totales": 25,
+      "prix": 15.00
+    }
+  }
+}
+
+###
+
+# Étape 2 : Publier le cours (le rendre visible)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation PublierCours($coursId: Int!) { publierCours(coursId: $coursId) { success cours { statut } } }",
+  "variables": {
+    "coursId": 1
+  }
+}
+
+###
+
+# Étape 3 : Vérifier les places disponibles
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query Cours($id: Int!) { cours(id: $id) { nom places_totales places_disponibles statut } }",
+  "variables": {
+    "id": 1
+  }
+}
+
+### ============================================
+### NOTES
+### ============================================
+# Niveaux de cours :
+# - DEBUTANT : Pour les débutants
+# - INTERMEDIAIRE : Niveau intermédiaire
+# - AVANCE : Niveau avancé
+# - TOUS_NIVEAUX : Accessible à tous
+#
+# Statuts de cours :
+# - BROUILLON : Cours en création
+# - PUBLIE : Visible et inscriptions ouvertes
+# - COMPLET : Plus de places disponibles
+# - EN_COURS : Cours en déroulement
+# - TERMINE : Cours terminé
+# - ANNULE : Cours annulé
+# - ARCHIVE : Archivé
+#
+# Jours de semaine (cours récurrents) :
+# - LUNDI, MARDI, MERCREDI, JEUDI, VENDREDI, SAMEDI, DIMANCHE
+#
+# Permissions :
+# - PUBLIC : Voir les cours publiés
+# - USER : S'inscrire aux cours
+# - PROFESSEUR : Créer/modifier ses propres cours
+# - ADMIN : Toutes les opérations

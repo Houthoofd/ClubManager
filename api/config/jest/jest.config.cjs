@@ -39,7 +39,7 @@ module.exports = {
     "magasin.integration.test.ts",
     ".integration.test.tsx",
   ],
-  rootDir: ".",
+  rootDir: "../..",
   verbose: true,
   // setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/jest-setup-improved.ts'],
   injectGlobals: true,

@@ -1,5 +1,5 @@
-import { Paiements } from "../../../../infrastructure/database/repositories/paiements/paiements.js";
-import { Magasin } from "../../../../infrastructure/database/repositories/magasin/magasin.js";
+import { Paiements } from "@/infrastructure/database/repositories/paiements/paiements.js";
+import { Magasin } from "@/infrastructure/database/repositories/magasin/magasin.js";
 import { getStripeService } from "./stripe.service.js";
 
 /**

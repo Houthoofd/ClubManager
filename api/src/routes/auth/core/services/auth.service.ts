@@ -7,12 +7,12 @@
  * @module auth.service
  */
 
-import { prisma } from "../../../../infrastructure/database/prisma-client.js";
-import { generateToken } from "../../../../middleware/auth.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
+import { generateToken } from "@/shared/middleware/auth.middleware.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from "../../../../shared/config/sentry.config.js";
+} from "@/shared/config/sentry.config.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 

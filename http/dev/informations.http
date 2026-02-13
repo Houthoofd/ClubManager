@@ -1,31 +1,406 @@
-### Informations endpoints
+### ============================================
+### INFORMATIONS
+### ClubManager API - Informations Module (GraphQL)
+### ============================================
 
-# Récupérer les informations générales du club
-GET http://localhost:3000/informations/abonnements
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+### Variables
+@graphqlEndpoint = http://localhost:4000/graphql
+@token = YOUR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+@informationId = 1
 
-# Récupérer les informations générales du club
-### Récupérer les grades
-GET http://localhost:3000/informations/grades
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+### ============================================
+### QUERIES
+### ============================================
 
-# Récupérer les informations générales du club
-GET http://localhost:3000/informations/status
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+### 1. Obtenir toutes les informations publiées
+POST {{graphqlEndpoint}}
+Content-Type: application/json
 
-# Récupérer les informations générales du club
-### Récupérer les genres
-GET http://localhost:3000/informations/genres
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+{
+  "query": "query Informations { informations { id titre contenu type date_publication auteur_id priorite statut } }"
+}
 
-# Récupérer les informations générales du club
-GET http://localhost:3000/informations
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+### 2. Obtenir une information par ID
+POST {{graphqlEndpoint}}
+Content-Type: application/json
 
-### Récupérer le planning des cours
-GET http://localhost:3000/informations/planning
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
-uthorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+{
+  "query": "query Information($id: Int!) { information(id: $id) { id titre contenu type date_publication date_expiration auteur { nom prenom email } priorite statut image_url pieces_jointes { id nom url type } } }",
+  "variables": {
+    "id": {{informationId}}
+  }
+}
 
+### 3. Obtenir les informations par type
+POST {{graphqlEndpoint}}
+Content-Type: application/json
 
+{
+  "query": "query InformationsParType($type: String!) { informationsParType(type: $type) { id titre contenu date_publication priorite statut } }",
+  "variables": {
+    "type": "ACTUALITE"
+  }
+}
 
+### 4. Obtenir les informations par priorité
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query InformationsParPriorite($priorite: String!) { informationsParPriorite(priorite: $priorite) { id titre contenu date_publication type statut } }",
+  "variables": {
+    "priorite": "HAUTE"
+  }
+}
+
+### 5. Obtenir les informations urgentes
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query InformationsUrgentes { informationsUrgentes { id titre contenu date_publication type auteur { nom prenom } } }"
+}
+
+### 6. Obtenir les dernières informations
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query DernieresInformations($limite: Int) { dernieresInformations(limite: $limite) { id titre contenu date_publication type priorite } }",
+  "variables": {
+    "limite": 10
+  }
+}
+
+### 7. Rechercher des informations
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query RechercherInformations($recherche: String!, $filtres: FiltresInformationsInput) { rechercherInformations(recherche: $recherche, filtres: $filtres) { id titre contenu date_publication type priorite statut } }",
+  "variables": {
+    "recherche": "horaires",
+    "filtres": {
+      "type": "ACTUALITE",
+      "priorite": "HAUTE",
+      "dateDebut": "2024-01-01",
+      "dateFin": "2024-12-31",
+      "statut": "PUBLIE"
+    }
+  }
+}
+
+### 8. Obtenir toutes les informations (Admin uniquement - incluant brouillons)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query ToutesInformations { toutesInformations { id titre contenu type date_publication statut auteur { nom prenom } } }"
+}
+
+### 9. Obtenir mes informations créées (Auteur)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesInformations { mesInformations { id titre contenu type date_publication statut priorite } }"
+}
+
+### ============================================
+### MUTATIONS
+### ============================================
+
+### 10. Créer une information (Admin/Éditeur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation CreerInformation($input: CreerInformationInput!) { creerInformation(input: $input) { id titre contenu type date_publication priorite statut } }",
+  "variables": {
+    "input": {
+      "titre": "Nouvelle information importante",
+      "contenu": "Voici le contenu de l'information. Il peut être long et détaillé.",
+      "type": "ACTUALITE",
+      "priorite": "HAUTE",
+      "date_expiration": "2024-12-31T23:59:59Z",
+      "image_url": "https://example.com/image.jpg",
+      "tags": ["horaires", "important", "club"]
+    }
+  }
+}
+
+### 11. Modifier une information (Admin/Auteur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ModifierInformation($id: Int!, $input: ModifierInformationInput!) { modifierInformation(id: $id, input: $input) { id titre contenu type priorite statut date_modification } }",
+  "variables": {
+    "id": {{informationId}},
+    "input": {
+      "titre": "Information mise à jour",
+      "contenu": "Contenu modifié avec nouvelles informations",
+      "priorite": "MOYENNE",
+      "date_expiration": "2025-01-31T23:59:59Z"
+    }
+  }
+}
+
+### 12. Publier une information (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation PublierInformation($informationId: Int!) { publierInformation(informationId: $informationId) { success message information { id statut date_publication } } }",
+  "variables": {
+    "informationId": {{informationId}}
+  }
+}
+
+### 13. Dépublier une information (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation DepublierInformation($informationId: Int!) { depublierInformation(informationId: $informationId) { success message information { id statut } } }",
+  "variables": {
+    "informationId": {{informationId}}
+  }
+}
+
+### 14. Archiver une information (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ArchiverInformation($informationId: Int!) { archiverInformation(informationId: $informationId) { success message } }",
+  "variables": {
+    "informationId": {{informationId}}
+  }
+}
+
+### 15. Épingler une information (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation EpinglerInformation($informationId: Int!) { epinglerInformation(informationId: $informationId) { success message information { id epingle } } }",
+  "variables": {
+    "informationId": {{informationId}}
+  }
+}
+
+### 16. Désépingler une information (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation DesepinglerInformation($informationId: Int!) { desepinglerInformation(informationId: $informationId) { success message } }",
+  "variables": {
+    "informationId": {{informationId}}
+  }
+}
+
+### 17. Supprimer une information (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerInformation($id: Int!) { supprimerInformation(id: $id) { success message } }",
+  "variables": {
+    "id": {{informationId}}
+  }
+}
+
+### 18. Ajouter une pièce jointe (Admin/Auteur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation AjouterPieceJointe($informationId: Int!, $input: PieceJointeInput!) { ajouterPieceJointe(informationId: $informationId, input: $input) { success message pieceJointe { id nom url type taille } } }",
+  "variables": {
+    "informationId": {{informationId}},
+    "input": {
+      "nom": "Document important.pdf",
+      "url": "https://example.com/documents/document.pdf",
+      "type": "application/pdf",
+      "taille": 1024000
+    }
+  }
+}
+
+### 19. Supprimer une pièce jointe (Admin/Auteur uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerPieceJointe($pieceJointeId: Int!) { supprimerPieceJointe(pieceJointeId: $pieceJointeId) { success message } }",
+  "variables": {
+    "pieceJointeId": 1
+  }
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 20. Créer une information sans authentification (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "mutation CreerInformation($input: CreerInformationInput!) { creerInformation(input: $input) { id } }",
+  "variables": {
+    "input": {
+      "titre": "Test",
+      "contenu": "Contenu test",
+      "type": "ACTUALITE"
+    }
+  }
+}
+
+### 21. Publier une information sans être admin (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation PublierInformation($informationId: Int!) { publierInformation(informationId: $informationId) { success } }",
+  "variables": {
+    "informationId": {{informationId}}
+  }
+}
+
+### 22. Modifier une information d'un autre auteur (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ModifierInformation($id: Int!, $input: ModifierInformationInput!) { modifierInformation(id: $id, input: $input) { id } }",
+  "variables": {
+    "id": 999,
+    "input": {
+      "titre": "Modifié"
+    }
+  }
+}
+
+### 23. Accéder à une information archivée (utilisateur normal - doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query Information($id: Int!) { information(id: $id) { id titre statut } }",
+  "variables": {
+    "id": 999
+  }
+}
+
+### ============================================
+### SCÉNARIOS DE TEST
+### ============================================
+
+### 24. Workflow : Créer → Publier → Épingler → Archiver
+
+# Étape 1 : Créer une information (brouillon)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation CreerInformation($input: CreerInformationInput!) { creerInformation(input: $input) { id titre statut } }",
+  "variables": {
+    "input": {
+      "titre": "Information de test",
+      "contenu": "Contenu de l'information de test",
+      "type": "EVENEMENT",
+      "priorite": "HAUTE"
+    }
+  }
+}
+
+###
+
+# Étape 2 : Publier l'information
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation PublierInformation($informationId: Int!) { publierInformation(informationId: $informationId) { success information { statut date_publication } } }",
+  "variables": {
+    "informationId": 1
+  }
+}
+
+###
+
+# Étape 3 : Épingler l'information
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation EpinglerInformation($informationId: Int!) { epinglerInformation(informationId: $informationId) { success information { epingle } } }",
+  "variables": {
+    "informationId": 1
+  }
+}
+
+###
+
+# Étape 4 : Archiver l'information
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ArchiverInformation($informationId: Int!) { archiverInformation(informationId: $informationId) { success } }",
+  "variables": {
+    "informationId": 1
+  }
+}
+
+### ============================================
+### NOTES
+### ============================================
+# Types d'information :
+# - ACTUALITE : Actualités du club
+# - EVENEMENT : Événements à venir
+# - ANNONCE : Annonces importantes
+# - REGLE : Règlements et règles
+# - HORAIRE : Changements d'horaires
+# - FERMETURE : Fermetures exceptionnelles
+#
+# Priorités :
+# - BASSE : Information normale
+# - MOYENNE : Information importante
+# - HAUTE : Information urgente
+# - CRITIQUE : Alerte critique
+#
+# Statuts :
+# - BROUILLON : En cours de rédaction
+# - PUBLIE : Visible par tous
+# - DEPUBLIE : Retirée temporairement
+# - ARCHIVE : Archivée (non visible)
+# - EXPIREE : Date d'expiration dépassée
+#
+# Permissions :
+# - PUBLIC : Voir les informations publiées
+# - EDITEUR : Créer/modifier des informations
+# - ADMIN : Toutes les opérations

@@ -1,37 +1,203 @@
-## Obtenir les informations d'un utilisateur via son nom et prenom
-POST http://localhost:3000/compte/informations
+### ============================================
+### COMPTE (ACCOUNT)
+### ClubManager API - Compte Module (GraphQL)
+### ============================================
+
+### Variables
+@graphqlEndpoint = http://localhost:4000/graphql
+@token = YOUR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+@userId = 1
+
+### ============================================
+### QUERIES
+### ============================================
+
+### 1. Obtenir mon compte
+POST {{graphqlEndpoint}}
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+Authorization: Bearer {{token}}
 
 {
-  "prenom": "Benoit",
-  "nom": "Houthoofd"
+  "query": "query MonCompte { monCompte { id email nom prenom telephone adresse codePostal ville dateNaissance role statut dateCreation derniereConnexion } }"
 }
 
-### Comptes endpoints
-
-# Récupérer les informations du compte utilisateur connecté
-GET http://localhost:3000/compte
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
-
-### Modifier le profil utilisateur
-PUT http://localhost:3000/compte/modifier
+### 2. Obtenir un compte par ID (Admin uniquement)
+POST {{graphqlEndpoint}}
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+Authorization: Bearer {{adminToken}}
 
 {
-  "nom_utilisateur": "nouveau_nom",
-  "first_name": "Nouveau",
-  "last_name": "Nom",
-  "email": "nouveau.email@example.com"
+  "query": "query Compte($id: Int!) { compte(id: $id) { id email nom prenom telephone adresse codePostal ville dateNaissance role statut dateCreation derniereConnexion } }",
+  "variables": {
+    "id": {{userId}}
+  }
 }
 
-### Changer le mot de passe
-PUT http://localhost:3000/compte/mot-de-passe
+### 3. Obtenir tous les comptes (Admin uniquement)
+POST {{graphqlEndpoint}}
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTU1LCJlbWFpbCI6ImhvdXRob29mZC5iZW5vaXQ0OEBnbWFpbC5jb20iLCJzdGF0dXNfaWQiOjQsImlhdCI6MTc1ODc3ODQxMCwiZXhwIjoxNzU4ODY0ODEwfQ.9f1V1UDn8dQHfbO2K1kAy68EMr3_IjrpZTT9W5fwhFE
+Authorization: Bearer {{adminToken}}
 
 {
-  "ancien_mot_de_passe": "ancien123",
-  "nouveau_mot_de_passe": "nouveau123"
+  "query": "query Comptes { comptes { id email nom prenom role statut dateCreation derniereConnexion } }"
 }
+
+### 4. Rechercher des comptes (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query RechercherComptes($recherche: String!) { rechercherComptes(recherche: $recherche) { id email nom prenom telephone role statut } }",
+  "variables": {
+    "recherche": "martin"
+  }
+}
+
+### ============================================
+### MUTATIONS
+### ============================================
+
+### 5. Mettre à jour mon profil
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MettreAJourProfil($input: UpdateProfilInput!) { mettreAJourProfil(input: $input) { id email nom prenom telephone adresse codePostal ville dateNaissance } }",
+  "variables": {
+    "input": {
+      "nom": "Nouveau Nom",
+      "prenom": "Nouveau Prenom",
+      "telephone": "+32471234567",
+      "adresse": "123 Rue Example",
+      "codePostal": "1000",
+      "ville": "Bruxelles"
+    }
+  }
+}
+
+### 6. Mettre à jour mon email
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MettreAJourEmail($nouveauEmail: String!) { mettreAJourEmail(nouveauEmail: $nouveauEmail) { success message } }",
+  "variables": {
+    "nouveauEmail": "nouveau.email@clubmanager.com"
+  }
+}
+
+### 7. Changer mon mot de passe
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ChangerMotDePasse($ancienMotDePasse: String!, $nouveauMotDePasse: String!) { changerMotDePasse(ancienMotDePasse: $ancienMotDePasse, nouveauMotDePasse: $nouveauMotDePasse) { success message } }",
+  "variables": {
+    "ancienMotDePasse": "OldPassword123!",
+    "nouveauMotDePasse": "NewPassword123!"
+  }
+}
+
+### 8. Mettre à jour un compte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation MettreAJourCompte($id: Int!, $input: UpdateCompteInput!) { mettreAJourCompte(id: $id, input: $input) { id email nom prenom role statut } }",
+  "variables": {
+    "id": {{userId}},
+    "input": {
+      "role": "PROFESSEUR",
+      "statut": "ACTIF"
+    }
+  }
+}
+
+### 9. Activer un compte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ActiverCompte($id: Int!) { activerCompte(id: $id) { success message } }",
+  "variables": {
+    "id": {{userId}}
+  }
+}
+
+### 10. Désactiver un compte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation DesactiverCompte($id: Int!) { desactiverCompte(id: $id) { success message } }",
+  "variables": {
+    "id": {{userId}}
+  }
+}
+
+### 11. Supprimer mon compte
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation SupprimerMonCompte($motDePasse: String!) { supprimerMonCompte(motDePasse: $motDePasse) { success message } }",
+  "variables": {
+    "motDePasse": "MyPassword123!"
+  }
+}
+
+### 12. Supprimer un compte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerCompte($id: Int!) { supprimerCompte(id: $id) { success message } }",
+  "variables": {
+    "id": {{userId}}
+  }
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 13. Accès sans authentification (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query MonCompte { monCompte { id email } }"
+}
+
+### 14. Mettre à jour un compte sans être admin (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation MettreAJourCompte($id: Int!, $input: UpdateCompteInput!) { mettreAJourCompte(id: $id, input: $input) { id email } }",
+  "variables": {
+    "id": 2,
+    "input": {
+      "role": "ADMIN"
+    }
+  }
+}
+
+### ============================================
+### NOTES
+### ============================================
+# - Toutes les opérations nécessitent une authentification
+# - Les opérations admin nécessitent le rôle ADMIN
+# - Un utilisateur peut modifier son propre profil
+# - Seul un admin peut modifier le rôle/statut d'un utilisateur

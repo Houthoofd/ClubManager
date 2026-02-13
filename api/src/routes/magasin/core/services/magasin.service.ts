@@ -2,8 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import {
   captureException,
   addSentryBreadcrumb,
-} from "../../../../shared/config/sentry.config.js";
-import { EmailClient } from "../../../../infrastructure/external-services/emailClient.js";
+} from '@/shared/config/sentry.config.js';
+import { EmailClient } from '@/infrastructure/external-services/emailClient.js';
 import Stripe from "stripe";
 import crypto from "crypto";
 

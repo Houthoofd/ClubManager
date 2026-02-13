@@ -15,23 +15,23 @@ import {
   requireAdmin,
   combineMiddlewares,
   type GraphQLContext,
-} from "../../../../shared/middleware/auth.middleware.js";
+} from "@/shared/middleware/auth.middleware.js";
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
-} from "../../../../shared/errors/GraphQLErrors.js";
-import { withValidation } from "../../../../shared/middleware/validation.middleware.js";
-import { withAuditLog } from "../../../../shared/middleware/audit-log.middleware.js";
+} from "@/shared/errors/GraphQLErrors.js";
+import { withValidation } from "@/shared/middleware/validation.middleware.js";
+import { withAuditLog } from "@/shared/middleware/audit-log.middleware.js";
 import {
   withRateLimit,
   RateLimitPresets,
-} from "../../../../shared/middleware/rate-limit.middleware.js";
-import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+} from "@/shared/middleware/rate-limit.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 import {
   AuditEventType,
   AuditSeverity,
-} from "../../../../shared/services/audit-log.service.js";
+} from "@/shared/services/audit-log.service.js";
 
 // Services
 import {

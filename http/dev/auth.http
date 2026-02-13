@@ -1,27 +1,163 @@
-### Login pour obtenir un token avec userId
+### ============================================
+### AUTHENTIFICATION
+### ClubManager API - Auth Module (GraphQL)
+### ============================================
 
-POST http://localhost:3000/api/auth/login
+### Variables
+@graphqlEndpoint = http://localhost:4000/graphql
+@email = admin@clubmanager.com
+@password = Admin123!
+@userEmail = user@clubmanager.com
+@userPassword = User123!
+
+### ============================================
+### MUTATIONS
+### ============================================
+
+### 1. Login (Utilisateur normal)
+# @name login
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "userId": "USR202570da10",
-  "password": "password123"
+  "query": "mutation Login($email: String!, $password: String!) { login(email: $email, password: $password) { token user { id email nom prenom role } } }",
+  "variables": {
+    "email": "{{userEmail}}",
+    "password": "{{userPassword}}"
+  }
 }
 
-### Alternative avec mot de passe différent
-POST http://localhost:3000/api/auth/login
+### 2. Login (Admin)
+# @name loginAdmin
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "userId": 165,
-  "password": "password"
+  "query": "mutation Login($email: String!, $password: String!) { login(email: $email, password: $password) { token user { id email nom prenom role } } }",
+  "variables": {
+    "email": "{{email}}",
+    "password": "{{password}}"
+  }
 }
 
-### Alternative avec mot de passe vide ou simple
-POST http://localhost:3000/api/auth/login
+### 3. Inscription (Register)
+# @name register
+POST {{graphqlEndpoint}}
 Content-Type: application/json
 
 {
-  "userId": 165,
-  "password": ""
+  "query": "mutation Register($input: RegisterInput!) { register(input: $input) { token user { id email nom prenom role } } }",
+  "variables": {
+    "input": {
+      "email": "nouveau@clubmanager.com",
+      "password": "Password123!",
+      "nom": "Nouveau",
+      "prenom": "Utilisateur",
+      "telephone": "+32471234567"
+    }
+  }
 }
+
+### 4. Demande de réinitialisation de mot de passe
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "mutation RequestPasswordReset($email: String!) { requestPasswordReset(email: $email) { success message } }",
+  "variables": {
+    "email": "{{userEmail}}"
+  }
+}
+
+### 5. Réinitialiser le mot de passe
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "mutation ResetPassword($token: String!, $newPassword: String!) { resetPassword(token: $token, newPassword: $newPassword) { success message } }",
+  "variables": {
+    "token": "RESET_TOKEN_FROM_EMAIL",
+    "newPassword": "NewPassword123!"
+  }
+}
+
+### 6. Logout
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "query": "mutation Logout { logout { success message } }"
+}
+
+### 7. Rafraîchir le token
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "query": "mutation RefreshToken { refreshToken { token user { id email nom prenom role } } }"
+}
+
+### ============================================
+### QUERIES
+### ============================================
+
+### 8. Vérifier l'authentification
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "query": "query VerifyAuth { verifyAuth { id email nom prenom role } }"
+}
+
+### 9. Obtenir l'utilisateur courant
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "query": "query Me { me { id email nom prenom telephone role dateCreation derniereConnexion } }"
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 10. Login avec mauvais identifiants
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "mutation Login($email: String!, $password: String!) { login(email: $email, password: $password) { token user { id email } } }",
+  "variables": {
+    "email": "wrong@email.com",
+    "password": "wrongpassword"
+  }
+}
+
+### 11. Accès sans token (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "query VerifyAuth { verifyAuth { id email } }"
+}
+
+### 12. Accès avec token invalide (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer invalid_token_here
+
+{
+  "query": "query VerifyAuth { verifyAuth { id email } }"
+}
+
+### ============================================
+### NOTES
+### ============================================
+# Après un login réussi :
+# 1. Copiez le token retourné
+# 2. Remplacez "YOUR_TOKEN_HERE" dans les requêtes suivantes
+# 3. Le token sera utilisé pour l'authentification

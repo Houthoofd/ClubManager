@@ -5,14 +5,14 @@
  * @module cours.resolvers
  */
 
-import type { GraphQLContext } from "../../../../shared/types/context.types.js";
-import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import type { GraphQLContext } from '@/shared/types/context.types.js';
+import { prisma } from '@/infrastructure/database/prisma-client.js';
 import {
   ValidationError,
   NotFoundError,
   ConflictError,
   InternalServerError,
-} from "../../../../shared/errors/GraphQLErrors.js";
+} from '@/shared/errors/GraphQLErrors.js';
 import {
   ajouterCoursInputSchema,
   modifierCoursInputSchema,
@@ -27,14 +27,14 @@ import {
   type PresenceInput,
   type RetirerProfesseurInput,
 } from "@clubmanager/types/validators";
-import { validateInput } from "../../../../shared/middleware/validation.middleware.js";
-import { combineMiddlewares } from "../../../../shared/middleware/auth.middleware.js";
+import { validateInput } from '@/shared/middleware/validation.middleware.js';
+import { combineMiddlewares } from '@/shared/middleware/auth.middleware.js';
 import {
   requireAuth,
   requireAdmin,
   requireStaff,
-} from "../../../../shared/middleware/auth.middleware.js";
-import { withSentry } from "../../../../shared/middleware/sentry.middleware.js";
+} from '@/shared/middleware/auth.middleware.js';
+import { withSentry } from '@/shared/middleware/sentry.middleware.js';
 
 // Helper: Convertir jour_semaine (1-7) en nom de jour
 const joursMap = [

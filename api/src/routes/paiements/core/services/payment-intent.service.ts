@@ -8,11 +8,11 @@
  */
 
 import { StripeService } from "./stripe.service.js";
-import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import { prisma } from '@/infrastructure/database/prisma-client.js';
 import {
   captureException,
   addSentryBreadcrumb,
-} from "../../../../shared/config/sentry.config.js";
+} from '@/shared/config/sentry.config.js';
 import Stripe from "stripe";
 
 /**

@@ -9,11 +9,11 @@
  * @module messages-personnalises.service
  */
 
-import { prisma } from "../../../../infrastructure/database/prisma-client.js";
+import { prisma } from '@/infrastructure/database/prisma-client.js';
 import {
   captureException,
   addSentryBreadcrumb,
-} from "../../../../shared/config/sentry.config.js";
+} from '@/shared/config/sentry.config.js';
 
 /**
  * Service pour la gestion des messages personnalisés

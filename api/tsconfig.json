@@ -17,7 +17,13 @@
     "paths": {
       "@clubmanager/types": ["../packages/types/src"],
       "@clubmanager/types/*": ["../packages/types/src/*"],
+      "@/infrastructure": ["src/infrastructure"],
+      "@/infrastructure/*": ["src/infrastructure/*"],
+      "@/shared": ["src/shared"],
       "@/shared/*": ["src/shared/*"],
+      "@/routes/*": ["src/routes/*"],
+      "@/types/*": ["src/types/*"],
+      "@/graphql/*": ["src/graphql/*"],
       "*": ["*"],
     },
     "typeRoots": ["./src/types", "./node_modules/@types"],

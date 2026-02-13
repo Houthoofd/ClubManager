@@ -1,0 +1,350 @@
+### ============================================
+### ALERTES
+### ClubManager API - Alertes Module (GraphQL)
+### ============================================
+
+### Variables
+@graphqlEndpoint = http://localhost:4000/graphql
+@token = YOUR_TOKEN_HERE
+@adminToken = YOUR_ADMIN_TOKEN_HERE
+@alerteId = 1
+@userId = 1
+
+### ============================================
+### QUERIES
+### ============================================
+
+### 1. Obtenir le dashboard des alertes (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query AlertesDashboard { alertesDashboard { statistiques { total actives resolues ignorees par_type { type nombre } par_priorite { priorite nombre } } alertes_recentes { id utilisateur_id alerte_type_id statut date_detection priorite } } }"
+}
+
+### 2. Obtenir toutes les alertes actives (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query AlertesActives { alertesActives { id utilisateur_id alerte_type_id statut date_detection priorite donnees_contexte utilisateur { nom prenom email } type { code nom description } } }"
+}
+
+### 3. Obtenir les alertes d'un utilisateur
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query AlertesUtilisateur($userId: Int!) { alertesUtilisateur(userId: $userId) { id alerte_type_id statut date_detection date_resolution priorite donnees_contexte type { code nom description priorite } } }",
+  "variables": {
+    "userId": {{userId}}
+  }
+}
+
+### 4. Obtenir mes alertes
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query MesAlertes { mesAlertes { id alerte_type_id statut date_detection priorite donnees_contexte type { nom description priorite } } }"
+}
+
+### 5. Obtenir une alerte par ID
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query Alerte($id: Int!) { alerte(id: $id) { id utilisateur_id alerte_type_id statut date_detection date_resolution priorite donnees_contexte notes_resolution resolu_par utilisateur { nom prenom email telephone } type { code nom description priorite actif } } }",
+  "variables": {
+    "id": {{alerteId}}
+  }
+}
+
+### 6. Obtenir les alertes par type (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query AlertesParType($typeCode: String!) { alertesParType(typeCode: $typeCode) { id utilisateur_id statut date_detection priorite utilisateur { nom prenom email } } }",
+  "variables": {
+    "typeCode": "CHAMPS_MANQUANTS"
+  }
+}
+
+### 7. Obtenir les alertes par priorité (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query AlertesParPriorite($priorite: String!) { alertesParPriorite(priorite: $priorite) { id utilisateur_id alerte_type_id statut date_detection donnees_contexte } }",
+  "variables": {
+    "priorite": "HAUTE"
+  }
+}
+
+### 8. Obtenir les types d'alertes
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query TypesAlertes { typesAlertes { id code nom description priorite actif date_creation } }"
+}
+
+### 9. Rechercher des alertes (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query RechercherAlertes($filtres: FiltresAlertesInput!) { rechercherAlertes(filtres: $filtres) { id utilisateur_id alerte_type_id statut date_detection priorite utilisateur { nom prenom email } type { nom priorite } } }",
+  "variables": {
+    "filtres": {
+      "statut": "active",
+      "priorite": "HAUTE",
+      "typeCode": "CHAMPS_MANQUANTS",
+      "dateDebut": "2024-01-01",
+      "dateFin": "2024-12-31"
+    }
+  }
+}
+
+### ============================================
+### MUTATIONS
+### ============================================
+
+### 10. Détecter les alertes manuellement (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation DetecterAlertes { detecterAlertes { success message alertes_detectees { type nombre } total } }"
+}
+
+### 11. Résoudre une alerte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ResoudreAlerte($alerteId: Int!, $notes: String) { resoudreAlerte(alerteId: $alerteId, notes: $notes) { success message alerte { id statut date_resolution notes_resolution } } }",
+  "variables": {
+    "alerteId": {{alerteId}},
+    "notes": "Problème résolu : champs complétés par l'utilisateur"
+  }
+}
+
+### 12. Ignorer une alerte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation IgnorerAlerte($alerteId: Int!, $notes: String) { ignorerAlerte(alerteId: $alerteId, notes: $notes) { success message alerte { id statut notes_resolution } } }",
+  "variables": {
+    "alerteId": {{alerteId}},
+    "notes": "Alerte non pertinente pour ce cas"
+  }
+}
+
+### 13. Créer un type d'alerte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation CreerTypeAlerte($input: CreerTypeAlerteInput!) { creerTypeAlerte(input: $input) { id code nom description priorite actif } }",
+  "variables": {
+    "input": {
+      "code": "PAIEMENT_RETARD",
+      "nom": "Paiement en retard",
+      "description": "Détecte les paiements en retard de plus de 7 jours",
+      "priorite": "HAUTE"
+    }
+  }
+}
+
+### 14. Modifier un type d'alerte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ModifierTypeAlerte($id: Int!, $input: ModifierTypeAlerteInput!) { modifierTypeAlerte(id: $id, input: $input) { id code nom description priorite actif } }",
+  "variables": {
+    "id": 1,
+    "input": {
+      "nom": "Champs obligatoires manquants",
+      "description": "Détecte les utilisateurs avec des champs obligatoires manquants",
+      "priorite": "MOYENNE"
+    }
+  }
+}
+
+### 15. Activer/Désactiver un type d'alerte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ToggleTypeAlerte($id: Int!, $actif: Boolean!) { toggleTypeAlerte(id: $id, actif: $actif) { success message type { id actif } } }",
+  "variables": {
+    "id": 1,
+    "actif": false
+  }
+}
+
+### 16. Supprimer une alerte (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation SupprimerAlerte($id: Int!) { supprimerAlerte(id: $id) { success message } }",
+  "variables": {
+    "id": {{alerteId}}
+  }
+}
+
+### 17. Résoudre toutes les alertes d'un utilisateur (Admin uniquement)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ResoudreAlertesUtilisateur($userId: Int!, $notes: String) { resoudreAlertesUtilisateur(userId: $userId, notes: $notes) { success message nombre_alertes_resolues } }",
+  "variables": {
+    "userId": {{userId}},
+    "notes": "Profil utilisateur complété et vérifié"
+  }
+}
+
+### ============================================
+### TESTS D'ERREURS
+### ============================================
+
+### 18. Accéder au dashboard sans être admin (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query AlertesDashboard { alertesDashboard { statistiques { total } } }"
+}
+
+### 19. Résoudre une alerte sans être admin (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "mutation ResoudreAlerte($alerteId: Int!) { resoudreAlerte(alerteId: $alerteId) { success } }",
+  "variables": {
+    "alerteId": {{alerteId}}
+  }
+}
+
+### 20. Accéder aux alertes d'un autre utilisateur (doit échouer)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "query": "query AlertesUtilisateur($userId: Int!) { alertesUtilisateur(userId: $userId) { id } }",
+  "variables": {
+    "userId": 999
+  }
+}
+
+### ============================================
+### SCÉNARIOS DE TEST
+### ============================================
+
+### 21. Workflow : Détecter → Analyser → Résoudre
+
+# Étape 1 : Détecter les alertes
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation DetecterAlertes { detecterAlertes { success total alertes_detectees { type nombre } } }"
+}
+
+###
+
+# Étape 2 : Voir le dashboard
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query AlertesDashboard { alertesDashboard { statistiques { total actives par_priorite { priorite nombre } } } }"
+}
+
+###
+
+# Étape 3 : Voir les alertes actives prioritaires
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "query AlertesParPriorite($priorite: String!) { alertesParPriorite(priorite: $priorite) { id utilisateur_id type { nom } donnees_contexte } }",
+  "variables": {
+    "priorite": "HAUTE"
+  }
+}
+
+###
+
+# Étape 4 : Résoudre une alerte spécifique
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "query": "mutation ResoudreAlerte($alerteId: Int!, $notes: String) { resoudreAlerte(alerteId: $alerteId, notes: $notes) { success alerte { statut date_resolution } } }",
+  "variables": {
+    "alerteId": 1,
+    "notes": "Problème corrigé"
+  }
+}
+
+### ============================================
+### NOTES
+### ============================================
+# Types d'alertes courants :
+# - CHAMPS_MANQUANTS : Champs obligatoires manquants dans le profil
+# - PAIEMENT_RETARD : Paiements en retard
+# - COTISATION_EXPIREE : Cotisation expirée
+# - CERTIFICAT_MEDICAL_EXPIRE : Certificat médical expiré
+# - INACTIVITE : Utilisateur inactif depuis longtemps
+# - QUOTA_DEPASSEMENT : Quota de cours/inscriptions dépassé
+#
+# Priorités :
+# - BASSE : Informative
+# - MOYENNE : Nécessite attention
+# - HAUTE : Urgent
+# - CRITIQUE : Action immédiate requise
+#
+# Statuts :
+# - active : Alerte active, non résolue
+# - resolue : Problème résolu
+# - ignoree : Alerte ignorée volontairement
+#
+# Permissions :
+# - USER : Voir ses propres alertes
+# - ADMIN : Toutes les opérations, dashboard, résolution
+#
+# Détection automatique :
+# Les alertes sont détectées automatiquement à intervalles réguliers
+# ou peuvent être déclenchées manuellement par un admin

@@ -5,65 +5,56 @@
 
 module.exports = {
   // Environnement de test
-  testEnvironment: 'node',
+  testEnvironment: "node",
 
   // Support des modules ES6
-  extensionsToTreatAsEsm: ['.ts'],
+  extensionsToTreatAsEsm: [".ts"],
 
   // Transformation TypeScript
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      useESM: true,
-      tsconfig: {
-        module: 'esnext',
-        target: 'es2022',
-        moduleResolution: 'node',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-        resolveJsonModule: true,
+    "^.+\\.ts$": [
+      "ts-jest",
+      {
+        useESM: true,
+        tsconfig: {
+          module: "esnext",
+          target: "es2022",
+          moduleResolution: "node",
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+          resolveJsonModule: true,
+        },
       },
-    }],
+    ],
   },
 
   // Extensions de fichiers à résoudre
-  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
+  moduleFileExtensions: ["ts", "js", "json", "node"],
 
   // Patterns de fichiers de test (webhooks uniquement)
-  testMatch: [
-    '**/routes/stripe/__tests__/stripe.webhook*.test.ts',
-  ],
+  testMatch: ["**/routes/stripe/__tests__/stripe.webhook*.test.ts"],
 
   // Patterns à ignorer
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/coverage/',
-  ],
+  testPathIgnorePatterns: ["/node_modules/", "/dist/", "/coverage/"],
 
   // Mapping des modules
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    "^(\\.{1,2}/.*)\\.js$": "$1",
   },
 
   // Configuration de la couverture
   collectCoverageFrom: [
-    'src/routes/stripe/core/webhooks/**/*.ts',
-    '!src/routes/stripe/core/webhooks/**/*.test.ts',
-    '!src/routes/stripe/core/webhooks/**/*.spec.ts',
-    '!src/routes/stripe/core/webhooks/**/index.ts',
+    "src/routes/stripe/core/webhooks/**/*.ts",
+    "!src/routes/stripe/core/webhooks/**/*.test.ts",
+    "!src/routes/stripe/core/webhooks/**/*.spec.ts",
+    "!src/routes/stripe/core/webhooks/**/index.ts",
   ],
 
   // Répertoire de sortie de la couverture
-  coverageDirectory: 'coverage/webhooks',
+  coverageDirectory: "coverage/webhooks",
 
   // Reporters de couverture
-  coverageReporters: [
-    'text',
-    'text-summary',
-    'html',
-    'lcov',
-    'json',
-  ],
+  coverageReporters: ["text", "text-summary", "html", "lcov", "json"],
 
   // Seuils de couverture
   coverageThreshold: {
@@ -73,7 +64,7 @@ module.exports = {
       lines: 90,
       statements: 90,
     },
-    './src/routes/stripe/core/webhooks/webhook.service.ts': {
+    "./src/routes/stripe/core/webhooks/webhook.service.ts": {
       branches: 90,
       functions: 95,
       lines: 95,
@@ -81,8 +72,11 @@ module.exports = {
     },
   },
 
+  // Root directory
+  rootDir: "../..",
+
   // Fichiers de setup
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.webhook.cjs'],
+  setupFilesAfterEnv: ["<rootDir>/config/jest/jest.setup.webhook.cjs"],
 
   // Timeouts
   testTimeout: 10000,
@@ -92,15 +86,15 @@ module.exports = {
 
   // Afficher les tests individuels
   displayName: {
-    name: 'WEBHOOKS',
-    color: 'blue',
+    name: "WEBHOOKS",
+    color: "blue",
   },
 
   // Bail après N échecs
   bail: 0,
 
   // Nombre de workers (parallélisation)
-  maxWorkers: '50%',
+  maxWorkers: "50%",
 
   // Clear mocks entre chaque test
   clearMocks: true,
@@ -113,25 +107,25 @@ module.exports = {
 
   // Variables d'environnement
   testEnvironmentOptions: {
-    NODE_ENV: 'test',
+    NODE_ENV: "test",
   },
 
   // Globals
   globals: {
-    'ts-jest': {
+    "ts-jest": {
       useESM: true,
     },
   },
 
   // Reporters
   reporters: [
-    'default',
+    "default",
     [
-      'jest-html-reporters',
+      "jest-html-reporters",
       {
-        publicPath: './coverage/webhooks/html-report',
-        filename: 'report.html',
-        pageTitle: 'Webhook Tests Report',
+        publicPath: "./coverage/webhooks/html-report",
+        filename: "report.html",
+        pageTitle: "Webhook Tests Report",
         expand: true,
         openReport: false,
       },
@@ -142,11 +136,7 @@ module.exports = {
   detectLeaks: false,
 
   // Afficher les changements de fichiers surveillés
-  watchPathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/coverage/',
-  ],
+  watchPathIgnorePatterns: ["/node_modules/", "/dist/", "/coverage/"],
 
   // Force la sortie après tous les tests
   forceExit: false,
@@ -155,7 +145,5 @@ module.exports = {
   silent: false,
 
   // Patterns des modules à ne pas transformer
-  transformIgnorePatterns: [
-    'node_modules/(?!(stripe|@stripe)/)',
-  ],
+  transformIgnorePatterns: ["node_modules/(?!(stripe|@stripe)/)"],
 };

@@ -1,0 +1,92 @@
+### Configuration Globale pour Tests HTTP
+### ClubManager API - GraphQL & Stripe
+
+# Variables globales
+@baseUrl = http://localhost:4000
+@graphqlEndpoint = {{baseUrl}}/graphql
+@stripeWebhookEndpoint = {{baseUrl}}/api/stripe/webhook
+
+# Variables d'authentification (à remplir après login)
+@token = YOUR_JWT_TOKEN_HERE
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+@userToken = YOUR_USER_JWT_TOKEN_HERE
+
+# IDs de test (à remplir selon vos données de test)
+@userId = 1
+@adminId = 1
+@commandeId = 1
+@articleId = 1
+@coursId = 1
+@professeurId = 1
+@inscriptionId = 1
+@reservationId = 1
+@paiementId = 1
+@alerteId = 1
+@informationId = 1
+@stockId = 1
+@messageId = 1
+
+# Stripe Test Keys (mode test)
+@stripeTestKey = sk_test_YOUR_STRIPE_KEY
+@stripeWebhookSecret = whsec_YOUR_WEBHOOK_SECRET
+
+### ============================================
+### INSTRUCTIONS
+### ============================================
+# 1. Démarrez votre API : cd api && npm run dev
+# 2. Utilisez d'abord 01-auth.http pour obtenir un token
+# 3. Copiez le token JWT dans @token/@adminToken ci-dessus
+# 4. Utilisez les autres fichiers pour tester les routes
+# 5. L'API est principalement GraphQL sauf Stripe (REST)
+
+### ============================================
+### Health Check
+### ============================================
+
+### Vérifier que l'API répond
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+### ============================================
+### Test GraphQL Endpoint
+### ============================================
+
+### Test de base GraphQL (sans auth)
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "{ __typename }"
+}
+
+### Introspection GraphQL - Voir tous les types disponibles
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "{ __schema { types { name kind description } } }"
+}
+
+### Voir toutes les QUERIES disponibles
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "{ __schema { queryType { fields { name description args { name type { name kind ofType { name kind } } } } } } }"
+}
+
+### Voir toutes les MUTATIONS disponibles
+POST {{graphqlEndpoint}}
+Content-Type: application/json
+
+{
+  "query": "{ __schema { mutationType { fields { name description args { name type { name kind ofType { name kind } } } } } } }"
+}
+
+### ============================================
+### NOTES
+### ============================================
+# - Tous les endpoints sont GraphQL (POST /graphql)
+# - Stripe utilise REST (POST /api/stripe/webhook)
+# - L'authentification se fait via header Authorization: Bearer {token}
+# - Les variables sont définies dans ce fichier et réutilisables
