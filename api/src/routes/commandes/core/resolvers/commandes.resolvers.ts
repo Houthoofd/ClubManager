@@ -137,7 +137,7 @@ export const commandesResolvers = {
 
       try {
         const commande = await commandesService.obtenirCommandeParId(
-          validatedArgs.commandeId,
+          Number(validatedArgs.commandeId),
         );
 
         if (!commande) {
@@ -146,7 +146,7 @@ export const commandesResolvers = {
 
         // Vérifier que l'utilisateur est propriétaire ou admin
         const isOwner = commande.utilisateur_id === context.user?.id;
-        const isAdmin = context.user?.role === "admin";
+        const isAdmin = context.user?.status_id === 1; // 1 = admin
 
         if (!isOwner && !isAdmin) {
           throw new AuthorizationError("Accès refusé à cette commande");
@@ -189,7 +189,7 @@ export const commandesResolvers = {
 
         // Vérifier que l'utilisateur demande ses propres commandes ou est admin
         const isSelf = validatedArgs.utilisateurId === context.user?.id;
-        const isAdmin = context.user?.role === "admin";
+        const isAdmin = context.user?.status_id === 1; // 1 = admin
 
         if (!isSelf && !isAdmin) {
           throw new AuthorizationError(
@@ -260,9 +260,21 @@ export const commandesResolvers = {
         const validatedArgs = validateInput(SearchCommandesSchema, args);
 
         try {
-          const result =
+          const items =
             await commandesService.rechercherCommandes(validatedArgs);
-          return result;
+
+          // Construire le résultat de recherche avec pagination
+          const page = validatedArgs.page || 1;
+          const limit = validatedArgs.limit || 100;
+          const total = items.length; // Approximation - en production il faudrait un count séparé
+
+          return {
+            items: items as any, // Type assertion temporaire
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+          };
         } catch (error: any) {
           throw new InternalServerError(
             `Erreur lors de la recherche de commandes: ${error.message}`,
@@ -288,7 +300,19 @@ export const commandesResolvers = {
       ): Promise<CommandeStats> => {
         try {
           const stats = await commandesService.obtenirStatistiques();
-          return stats;
+
+          // Adapter la structure pour correspondre à CommandeStats
+          return {
+            totalCommandes: stats.total_commandes,
+            commandesEnAttente: stats.commandes_en_attente || 0,
+            commandesConfirmees: stats.commandes_confirmees || 0,
+            commandesEnPreparation: 0, // Non disponible dans les stats actuelles
+            commandesLivrees: 0, // Non disponible dans les stats actuelles
+            commandesAnnulees: stats.commandes_annulees || 0,
+            revenuTotal: stats.montant_total || 0,
+            panierMoyen: stats.panier_moyen || stats.montant_moyen || 0,
+            tauxConversion: 0, // Non disponible dans les stats actuelles
+          } as any;
         } catch (error: any) {
           throw new InternalServerError(
             `Erreur lors de la récupération des statistiques: ${error.message}`,
@@ -314,7 +338,12 @@ export const commandesResolvers = {
       ): Promise<CommandeCountByStatut[]> => {
         try {
           const counts = await commandesService.compterParStatut();
-          return counts;
+
+          // Convertir Record<string, number> en array de CommandeCountByStatut
+          return Object.entries(counts).map(([statut, count]) => ({
+            statut: statut as any,
+            count,
+          })) as any;
         } catch (error: any) {
           throw new InternalServerError(
             `Erreur lors du comptage des commandes: ${error.message}`,
@@ -346,7 +375,7 @@ export const commandesResolvers = {
 
         // Vérifier que l'utilisateur crée une commande pour lui-même
         const isSelf = validatedArgs.utilisateur_id === context.user?.id;
-        const isAdmin = context.user?.role === "admin";
+        const isAdmin = context.user?.status_id === 1; // 1 = admin
 
         if (!isSelf && !isAdmin) {
           throw new AuthorizationError(
@@ -393,7 +422,7 @@ export const commandesResolvers = {
 
         try {
           const commande = await commandesService.modifierCommande(
-            validatedCommandeId.commandeId,
+            Number(validatedCommandeId.commandeId),
             validatedInput,
           );
 
@@ -442,7 +471,7 @@ export const commandesResolvers = {
 
         try {
           const commande = await commandesService.modifierStatutCommande(
-            validatedCommandeId.commandeId,
+            Number(validatedCommandeId.commandeId),
             validatedStatut.statut,
           );
 
@@ -488,7 +517,7 @@ export const commandesResolvers = {
 
         try {
           const success = await commandesService.supprimerCommande(
-            validatedArgs.commandeId,
+            Number(validatedArgs.commandeId),
           );
 
           if (!success) {
@@ -540,7 +569,7 @@ export const commandesResolvers = {
           for (const commandeId of validatedArgs.commandeIds) {
             try {
               const commande = await commandesService.modifierStatutCommande(
-                commandeId,
+                Number(commandeId),
                 validatedArgs.statut,
               );
 

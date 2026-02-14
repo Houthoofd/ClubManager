@@ -5,8 +5,12 @@
  * Logs all critical operations, security events, and user actions.
  */
 
-import { GraphQLResolveInfo } from 'graphql';
-import { AuditLogService, AuditEventType, AuditSeverity } from '../services/audit-log.service';
+import { GraphQLResolveInfo } from "graphql";
+import {
+  AuditLogService,
+  AuditEventType,
+  AuditSeverity,
+} from "../services/audit-log.service";
 
 export interface AuditContext {
   userId?: string;
@@ -24,62 +28,70 @@ export interface AuditLogOptions {
 
 /**
  * Middleware factory for audit logging
+ * Wraps a resolver with automatic audit logging
  */
 export function withAuditLog<TArgs = any, TContext = any, TResult = any>(
   options: AuditLogOptions,
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
 ) {
-  return async (
-    parent: any,
-    args: TArgs,
-    context: any,
-    info: GraphQLResolveInfo
-  ): Promise<TResult> => {
-    const startTime = Date.now();
-    let result: TResult;
-    let success = false;
-    let errorMessage: string | undefined;
+  return (
+    resolver: (
+      parent: any,
+      args: TArgs,
+      context: TContext,
+      info: GraphQLResolveInfo,
+    ) => Promise<TResult>,
+  ) => {
+    return async (
+      parent: any,
+      args: TArgs,
+      context: any,
+      info: GraphQLResolveInfo,
+    ): Promise<TResult> => {
+      const startTime = Date.now();
+      let result: TResult;
+      let success = true;
+      let errorMessage: string | undefined;
 
-    try {
-      // Execute the resolver
-      result = await resolver(parent, args, context, info);
-      success = true;
-      return result;
-    } catch (error: any) {
-      success = false;
-      errorMessage = error.message || 'Unknown error';
-      throw error;
-    } finally {
-      // Log the audit event
-      if (!options.skipOnError || success) {
-        try {
-          const auditService = context.auditLogService as AuditLogService;
-          if (auditService) {
-            await auditService.log({
-              eventType: options.eventType,
-              severity: success
-                ? (options.severity || AuditSeverity.INFO)
-                : AuditSeverity.ERROR,
-              userId: context.user?.id,
-              ipAddress: context.req?.ip || context.ip,
-              userAgent: context.req?.headers?.['user-agent'] || context.userAgent,
-              resource: options.resource,
-              action: info.fieldName,
-              metadata: {
-                operationName: info.operation.name?.value,
-                variables: sanitizeVariables(args),
-                duration: Date.now() - startTime,
-              },
-              success,
-              errorMessage,
-            });
+      try {
+        result = await resolver(parent, args, context, info);
+        return result;
+      } catch (error: any) {
+        success = false;
+        errorMessage = error.message || "Unknown error";
+        throw error;
+      } finally {
+        // Log the audit event
+        if (context.auditLogService) {
+          try {
+            const auditService = context.auditLogService as AuditLogService;
+            if (auditService) {
+              await auditService.log({
+                eventType: options.eventType,
+                severity: success
+                  ? options.severity || AuditSeverity.INFO
+                  : AuditSeverity.ERROR,
+                userId: context.user?.id,
+                ipAddress: context.req?.ip || context.ip,
+                userAgent:
+                  context.req?.headers?.["user-agent"] || context.userAgent,
+                resource: options.resource,
+                action: info.fieldName,
+                metadata: {
+                  ...options.metadata,
+                  args: sanitizeVariables(args),
+                  duration: Date.now() - startTime,
+                  success,
+                  errorMessage,
+                },
+              });
+            }
+          } catch (auditError) {
+            // Never let audit logging crash the app
+            console.error("[AUDIT MIDDLEWARE] Failed to log:", auditError);
           }
-        } catch (auditError) {
-          // Never let audit logging crash the app
-          console.error('[AUDIT MIDDLEWARE] Failed to log:', auditError);
         }
       }
-    }
+    };
   };
 }
 
@@ -90,11 +102,21 @@ function sanitizeVariables(variables: any): any {
   if (!variables) return {};
 
   const sanitized = { ...variables };
-  const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'creditCard'];
+  const sensitiveFields = [
+    "password",
+    "token",
+    "secret",
+    "apiKey",
+    "creditCard",
+  ];
 
   for (const key of Object.keys(sanitized)) {
-    if (sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
-      sanitized[key] = '[REDACTED]';
+    if (
+      sensitiveFields.some((field) =>
+        key.toLowerCase().includes(field.toLowerCase()),
+      )
+    ) {
+      sanitized[key] = "[REDACTED]";
     }
   }
 
@@ -102,33 +124,34 @@ function sanitizeVariables(variables: any): any {
 }
 
 /**
- * Specific middleware for authentication events
+ * Helper middleware for auth operations
  */
 export function withAuthAudit<TArgs = any, TContext = any, TResult = any>(
   eventType: AuditEventType,
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
 ) {
-  return withAuditLog(
-    {
-      eventType,
-      severity: AuditSeverity.INFO,
-      resource: 'auth',
-    },
-    resolver
-  );
+  return withAuditLog({
+    eventType,
+    severity: AuditSeverity.INFO,
+    resource: "auth",
+  });
 }
 
 /**
  * Middleware for login attempts
  */
 export function withLoginAudit<TArgs = any, TContext = any, TResult = any>(
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
+  resolver: (
+    parent: any,
+    args: TArgs,
+    context: TContext,
+    info: GraphQLResolveInfo,
+  ) => Promise<TResult>,
 ) {
   return async (
     parent: any,
     args: TArgs,
     context: any,
-    info: GraphQLResolveInfo
+    info: GraphQLResolveInfo,
   ): Promise<TResult> => {
     let success = false;
     let userId: string | undefined;
@@ -154,9 +177,10 @@ export function withLoginAudit<TArgs = any, TContext = any, TResult = any>(
             severity: success ? AuditSeverity.INFO : AuditSeverity.WARNING,
             userId,
             ipAddress: context.req?.ip || context.ip,
-            userAgent: context.req?.headers?.['user-agent'] || context.userAgent,
-            resource: 'auth',
-            action: 'login',
+            userAgent:
+              context.req?.headers?.["user-agent"] || context.userAgent,
+            resource: "auth",
+            action: "login",
             metadata: {
               email: (args as any)?.email,
             },
@@ -165,7 +189,7 @@ export function withLoginAudit<TArgs = any, TContext = any, TResult = any>(
           });
         }
       } catch (auditError) {
-        console.error('[AUDIT MIDDLEWARE] Failed to log login:', auditError);
+        console.error("[AUDIT MIDDLEWARE] Failed to log login:", auditError);
       }
     }
   };
@@ -176,57 +200,46 @@ export function withLoginAudit<TArgs = any, TContext = any, TResult = any>(
  */
 export function withDataAccessAudit<TArgs = any, TContext = any, TResult = any>(
   resourceType: string,
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
 ) {
-  return withAuditLog(
-    {
-      eventType: AuditEventType.DATA_ACCESSED,
-      severity: AuditSeverity.INFO,
-      resource: resourceType,
-    },
-    resolver
-  );
+  return withAuditLog({
+    eventType: AuditEventType.DATA_ACCESSED,
+    severity: AuditSeverity.INFO,
+    resource: resourceType,
+  });
 }
 
 /**
  * Middleware for data modification (GDPR compliance)
  */
-export function withDataModificationAudit<TArgs = any, TContext = any, TResult = any>(
-  resourceType: string,
-  action: 'create' | 'update' | 'delete',
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
-) {
+export function withDataModificationAudit<
+  TArgs = any,
+  TContext = any,
+  TResult = any,
+>(resourceType: string, action: "create" | "update" | "delete") {
   const eventTypeMap = {
     create: AuditEventType.USER_CREATED,
-    update: AuditEventType.USER_UPDATED,
-    delete: AuditEventType.USER_DELETED,
+    update: AuditEventType.DATA_MODIFIED,
+    delete: AuditEventType.DATA_DELETED,
   };
 
-  return withAuditLog(
-    {
-      eventType: eventTypeMap[action],
-      severity: action === 'delete' ? AuditSeverity.WARNING : AuditSeverity.INFO,
-      resource: resourceType,
-    },
-    resolver
-  );
+  return withAuditLog({
+    eventType: eventTypeMap[action],
+    severity: action === "delete" ? AuditSeverity.WARNING : AuditSeverity.INFO,
+    resource: resourceType,
+  });
 }
 
 /**
- * Middleware for admin actions
+ * Middleware for admin operations
  */
 export function withAdminAudit<TArgs = any, TContext = any, TResult = any>(
   action: string,
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
 ) {
-  return withAuditLog(
-    {
-      eventType: AuditEventType.ADMIN_SYSTEM_OPERATION,
-      severity: AuditSeverity.WARNING,
-      resource: 'admin',
-    },
-    resolver
-  );
+  return withAuditLog({
+    eventType: AuditEventType.ADMIN_SYSTEM_OPERATION,
+    severity: AuditSeverity.WARNING,
+    resource: "admin",
+  });
 }
 
 /**
@@ -234,16 +247,12 @@ export function withAdminAudit<TArgs = any, TContext = any, TResult = any>(
  */
 export function withSecurityAudit<TArgs = any, TContext = any, TResult = any>(
   eventType: AuditEventType,
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
 ) {
-  return withAuditLog(
-    {
-      eventType,
-      severity: AuditSeverity.CRITICAL,
-      resource: 'security',
-    },
-    resolver
-  );
+  return withAuditLog({
+    eventType,
+    severity: AuditSeverity.CRITICAL,
+    resource: "security",
+  });
 }
 
 /**
@@ -259,7 +268,7 @@ export async function logAuditEvent(
     metadata?: Record<string, any>;
     success: boolean;
     errorMessage?: string;
-  }
+  },
 ): Promise<void> {
   try {
     const auditService = context.auditLogService as AuditLogService;
@@ -269,7 +278,7 @@ export async function logAuditEvent(
         severity: options.severity || AuditSeverity.INFO,
         userId: context.user?.id,
         ipAddress: context.req?.ip || context.ip,
-        userAgent: context.req?.headers?.['user-agent'] || context.userAgent,
+        userAgent: context.req?.headers?.["user-agent"] || context.userAgent,
         resource: options.resource,
         action: options.action,
         metadata: options.metadata,
@@ -278,6 +287,6 @@ export async function logAuditEvent(
       });
     }
   } catch (error) {
-    console.error('[AUDIT] Failed to log event:', error);
+    console.error("[AUDIT] Failed to log event:", error);
   }
 }

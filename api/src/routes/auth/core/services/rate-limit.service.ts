@@ -16,11 +16,34 @@ import { RATE_LIMIT_CONFIG, STORAGE_CONFIG } from "../config/auth.config.js";
 /**
  * Configuration pour une règle de rate limit
  */
-export interface RateLimitRule {
+export interface AuthRateLimitRule {
   windowMs: number;
   maxAttempts: number;
   blockDurationMs?: number;
   message?: string;
+}
+
+/**
+ * Normaliser un preset config en AuthRateLimitRule
+ */
+function normalizeRateLimitConfig(
+  config:
+    | (typeof RATE_LIMIT_CONFIG)[keyof typeof RATE_LIMIT_CONFIG]
+    | AuthRateLimitRule,
+): AuthRateLimitRule {
+  // Si c'est déjà au bon format
+  if ("windowMs" in config) {
+    return config;
+  }
+
+  // Convertir depuis le format UPPER_CASE
+  return {
+    windowMs: config.WINDOW_MS,
+    maxAttempts: config.MAX_ATTEMPTS,
+    blockDurationMs:
+      "BLOCK_DURATION_MS" in config ? config.BLOCK_DURATION_MS : undefined,
+    message: undefined,
+  };
 }
 
 /**
@@ -193,7 +216,11 @@ class RedisRateLimitStore implements RateLimitStore {
 export class RateLimitService {
   private store: RateLimitStore;
 
-  constructor(storeType: "memory" | "redis" = STORAGE_CONFIG.rateLimitStore) {
+  constructor(
+    storeType: "memory" | "redis" = STORAGE_CONFIG.RATE_LIMIT_STORE as
+      | "memory"
+      | "redis",
+  ) {
     if (storeType === "redis") {
       // Pour l'instant, fallback sur memory si Redis demandé
       console.warn(
@@ -216,9 +243,10 @@ export class RateLimitService {
   async checkLimit(
     identifier: string,
     action: keyof typeof RATE_LIMIT_CONFIG,
-    rule?: RateLimitRule,
+    rule?: AuthRateLimitRule,
   ): Promise<RateLimitResult> {
-    const limitRule = rule || RATE_LIMIT_CONFIG[action];
+    const configRule = rule || RATE_LIMIT_CONFIG[action];
+    const limitRule = normalizeRateLimitConfig(configRule);
     const key = this.buildKey(identifier, action);
     const now = Date.now();
 
@@ -232,8 +260,7 @@ export class RateLimitService {
         remaining: 0,
         resetAt: new Date(entry.blockedUntil),
         blockedUntil: new Date(entry.blockedUntil),
-        message:
-          limitRule.message || "Too many requests. Please try again later.",
+        message: "Too many requests. Please try again later.",
       };
     }
 
@@ -289,6 +316,7 @@ export class RateLimitService {
     }
 
     // Sauvegarder l'entrée mise à jour
+    // Mettre à jour l'entrée
     await this.store.set(key, entry, limitRule.windowMs);
 
     return {
@@ -332,19 +360,19 @@ export class RateLimitService {
         remaining: 0,
         resetAt: new Date(entry.blockedUntil),
         blockedUntil: new Date(entry.blockedUntil),
-        message: limitRule.message,
+        message: "Too many requests. Please try again later.",
       };
     }
 
     // Vérifier expiration de la fenêtre
-    if (now - entry.firstAttemptAt > limitRule.windowMs) {
+    if (now - entry.firstAttemptAt > limitRule.WINDOW_MS) {
       return null;
     }
 
     return {
-      allowed: entry.count <= limitRule.maxAttempts,
-      remaining: Math.max(0, limitRule.maxAttempts - entry.count),
-      resetAt: new Date(entry.firstAttemptAt + limitRule.windowMs),
+      allowed: entry.count <= limitRule.MAX_ATTEMPTS,
+      remaining: Math.max(0, limitRule.MAX_ATTEMPTS - entry.count),
+      resetAt: new Date(entry.firstAttemptAt + limitRule.WINDOW_MS),
     };
   }
 
@@ -403,6 +431,17 @@ export class RateLimitService {
 let rateLimitServiceInstance: RateLimitService | null = null;
 
 /**
+ * Créer une nouvelle instance du service de rate limiting
+ */
+export const createRateLimitService = (): RateLimitService => {
+  if (rateLimitServiceInstance) {
+    rateLimitServiceInstance.destroy();
+  }
+  rateLimitServiceInstance = new RateLimitService();
+  return rateLimitServiceInstance;
+};
+
+/**
  * Obtenir l'instance singleton du service de rate limiting
  */
 export const getRateLimitService = (): RateLimitService => {
@@ -413,9 +452,9 @@ export const getRateLimitService = (): RateLimitService => {
 };
 
 /**
- * Réinitialiser l'instance (pour tests)
+ * Détruire l'instance (pour tests)
  */
-export const resetRateLimitService = (): void => {
+export const destroyRateLimitService = (): void => {
   if (rateLimitServiceInstance) {
     rateLimitServiceInstance.destroy();
     rateLimitServiceInstance = null;
@@ -433,7 +472,7 @@ export const checkLoginRateLimit = async (
   identifier: string,
 ): Promise<RateLimitResult> => {
   const service = getRateLimitService();
-  return service.checkLimit(identifier, "login");
+  return service.checkLimit(identifier, "LOGIN");
 };
 
 /**
@@ -443,7 +482,7 @@ export const checkPasswordResetRateLimit = async (
   identifier: string,
 ): Promise<RateLimitResult> => {
   const service = getRateLimitService();
-  return service.checkLimit(identifier, "passwordReset");
+  return service.checkLimit(identifier, "PASSWORD_RESET");
 };
 
 /**
@@ -453,7 +492,7 @@ export const checkEmailVerificationRateLimit = async (
   identifier: string,
 ): Promise<RateLimitResult> => {
   const service = getRateLimitService();
-  return service.checkLimit(identifier, "emailVerification");
+  return service.checkLimit(identifier, "EMAIL_VERIFICATION");
 };
 
 /**
@@ -463,7 +502,7 @@ export const checkRegistrationRateLimit = async (
   identifier: string,
 ): Promise<RateLimitResult> => {
   const service = getRateLimitService();
-  return service.checkLimit(identifier, "registration");
+  return service.checkLimit(identifier, "REGISTRATION");
 };
 
 /**
@@ -473,13 +512,13 @@ export const checkRefreshTokenRateLimit = async (
   identifier: string,
 ): Promise<RateLimitResult> => {
   const service = getRateLimitService();
-  return service.checkLimit(identifier, "refreshToken");
+  return service.checkLimit(identifier, "API");
 };
 
 /**
  * Réinitialiser le rate limit après succès (ex: login réussi)
  */
-export const resetRateLimit = async (
+export const resetAuthRateLimit = async (
   identifier: string,
   action: keyof typeof RATE_LIMIT_CONFIG,
 ): Promise<void> => {
@@ -491,11 +530,11 @@ export const resetRateLimit = async (
 export default {
   RateLimitService,
   getRateLimitService,
-  resetRateLimitService,
+  destroyRateLimitService,
   checkLoginRateLimit,
   checkPasswordResetRateLimit,
   checkEmailVerificationRateLimit,
   checkRegistrationRateLimit,
   checkRefreshTokenRateLimit,
-  resetRateLimit,
+  resetAuthRateLimit,
 };

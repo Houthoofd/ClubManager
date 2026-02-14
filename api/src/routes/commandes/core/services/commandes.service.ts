@@ -41,9 +41,11 @@ export interface StatistiquesCommandes {
   total_commandes: number;
   commandes_en_attente: number;
   commandes_validees: number;
+  commandes_confirmees?: number;
   commandes_annulees: number;
   montant_total: number;
   montant_moyen: number;
+  panier_moyen?: number;
 }
 
 /**
@@ -481,8 +483,8 @@ export async function obtenirStatistiques(): Promise<StatistiquesCommandes> {
     ] = await Promise.all([
       prisma.commandes.count(),
       prisma.commandes.count({ where: { statut: "en_attente" } }),
-      prisma.commandes.count({ where: { statut: "validee" } }),
-      prisma.commandes.count({ where: { statut: "annulee" } }),
+      prisma.commandes.count({ where: { statut: "pay_e" } }),
+      prisma.commandes.count({ where: { statut: "annul_e" } }),
       prisma.commandes.aggregate({
         _sum: {
           total: true,

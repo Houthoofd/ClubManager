@@ -3,22 +3,22 @@
  */
 
 // Auth service
-export * from './auth.service.js';
+export * from "./auth.service.js";
 
 // Rate limit service
 export {
-  RateLimitService,
+  createRateLimitService,
   getRateLimitService,
-  resetRateLimitService,
+  destroyRateLimitService,
   checkLoginRateLimit,
   checkPasswordResetRateLimit,
   checkEmailVerificationRateLimit,
   checkRegistrationRateLimit,
   checkRefreshTokenRateLimit,
-  resetRateLimit,
-} from './rate-limit.service.js';
+  resetAuthRateLimit,
+} from "./rate-limit.service.js";
 
 export type {
-  RateLimitRule,
+  AuthRateLimitRule,
   RateLimitResult,
-} from './rate-limit.service.js';
+} from "./rate-limit.service.js";

@@ -140,7 +140,7 @@ export const compteResolvers = {
 
         // Vérifier que l'utilisateur demande son propre compte ou est admin
         const isSelf = validatedArgs.utilisateurId === context.user?.id;
-        const isAdmin = context.user?.role === "admin";
+        const isAdmin = context.user?.status_id === 1; // 1 = admin
 
         if (!isSelf && !isAdmin) {
           throw new AuthorizationError(
@@ -467,7 +467,7 @@ export const compteResolvers = {
 
       // Vérifier que l'utilisateur modifie son propre compte ou est admin
       const isSelf = args.utilisateurId === context.user?.id;
-      const isAdmin = context.user?.role === "admin";
+      const isAdmin = context.user?.status_id === 1; // 1 = admin
 
       if (!isSelf && !isAdmin) {
         throw new AuthorizationError(

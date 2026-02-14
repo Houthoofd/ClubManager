@@ -1,16 +1,47 @@
 /**
- * Resolvers GraphQL pour le module Écheances
- * ✅ Pattern standardisé avec middlewares partagés
+ * Resolvers GraphQL pour le module Echéances
+ * Gère les requêtes et mutations pour les échéances de paiement
  *
  * @module echeances.resolvers
  */
 
-import type { GraphQLContext } from '@/shared/types/context.types.js';
+import type { GraphQLContext } from "@/shared/types/context.types.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
-} from '@/shared/errors/GraphQLErrors.js';
+} from "@/shared/errors/GraphQLErrors.js";
+
+/**
+ * Mapper les valeurs d'enum user-facing vers les valeurs Prisma
+ */
+function mapStatutToPrisma(
+  statut?: "en attente" | "payé" | "échu",
+): "en_attente" | "pay_" | "chu" | undefined {
+  if (!statut) return undefined;
+  const mapping: Record<string, "en_attente" | "pay_" | "chu"> = {
+    "en attente": "en_attente",
+    payé: "pay_",
+    échu: "chu",
+  };
+  return mapping[statut];
+}
+
+/**
+ * Mapper les valeurs Prisma vers les valeurs user-facing
+ */
+function mapStatutFromPrisma(
+  statut?: "en_attente" | "pay_" | "chu",
+): "en attente" | "payé" | "échu" | undefined {
+  if (!statut) return undefined;
+  const mapping: Record<string, "en attente" | "payé" | "échu"> = {
+    en_attente: "en attente",
+    pay_: "payé",
+    chu: "échu",
+  };
+  return mapping[statut];
+}
 import {
   createEcheanceSchema,
   updateEcheanceSchema,
@@ -24,13 +55,13 @@ import {
   type MarquerEcheancePayeeInput,
   type EcheancesFiltersInput,
 } from "@clubmanager/types/validators";
-import { validateInput } from '@/shared/middleware/validation.middleware.js';
-import { combineMiddlewares } from '@/shared/middleware/auth.middleware.js';
+import { validateInput } from "@/shared/middleware/validation.middleware.js";
+import { combineMiddlewares } from "@/shared/middleware/auth.middleware.js";
 import {
   requireAuth,
   requireAdmin,
-} from '@/shared/middleware/auth.middleware.js';
-import { withSentry } from '@/shared/middleware/sentry.middleware.js';
+} from "@/shared/middleware/auth.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 import {
   creerEcheance,
   obtenirEcheancesUtilisateur,
@@ -40,6 +71,44 @@ import {
   obtenirStatistiquesUtilisateur,
   obtenirDiagnosticEcheance,
 } from "../services/echeances.service.js";
+import type { EcheanceAvecDetails } from "../services/echeances.service.js";
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Calcule le nombre de jours de retard d'une échéance
+ */
+function calculateRetardJours(echeance: EcheanceAvecDetails): number {
+  if (echeance.statut === "pay_" || !echeance.date_echeance) {
+    return 0;
+  }
+
+  const today = new Date();
+  const dateEcheance = new Date(echeance.date_echeance);
+
+  if (today <= dateEcheance) {
+    return 0;
+  }
+
+  const diffTime = today.getTime() - dateEcheance.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  return diffDays;
+}
+
+/**
+ * Mappe le statut de la DB vers le format GraphQL
+ */
+function mapStatutToGraphQL(statut: string): string {
+  const statusMap: Record<string, string> = {
+    en_attente: "EN_ATTENTE",
+    pay_: "PAYEE",
+    chu: "ECHU",
+  };
+  return statusMap[statut] || statut.toUpperCase();
+}
 
 // ============================================
 // QUERY RESOLVERS
@@ -56,7 +125,8 @@ const echeancesUtilisateurResolver = async (
   const { utilisateurId, filters } = args;
 
   // Vérifier que l'utilisateur connecté est celui demandé ou admin
-  if (context.user?.id !== utilisateurId && context.user?.role !== "admin") {
+  if (context.user?.id !== utilisateurId && context.user?.status_id !== 1) {
+    // 1 = admin
     throw new ValidationError(
       "Non autorisé à consulter les échéances de cet utilisateur",
       [{ field: "utilisateurId", message: "Accès refusé" }],
@@ -169,7 +239,7 @@ const echeanceDetailResolver = async (
     // Vérifier que l'utilisateur connecté est le propriétaire ou admin
     if (
       context.user?.id !== echeance.utilisateur_id &&
-      context.user?.role !== "admin"
+      context.user?.status_id !== 1 // 1 = admin
     ) {
       throw new ValidationError("Non autorisé à consulter cette échéance", [
         { field: "echeanceId", message: "Accès refusé" },
@@ -181,19 +251,19 @@ const echeanceDetailResolver = async (
     return {
       id: echeance.id,
       utilisateur_id: echeance.utilisateur_id,
-      utilisateur_nom: echeance.utilisateur_nom,
-      utilisateur_prenom: echeance.utilisateur_prenom,
-      utilisateur_email: echeance.utilisateur_email,
+      utilisateur_nom: echeance.utilisateur?.last_name || "",
+      utilisateur_prenom: echeance.utilisateur?.first_name || "",
+      utilisateur_email: echeance.utilisateur?.email || "",
       abonnement_id: echeance.abonnement_id,
-      abonnement_nom: echeance.abonnement_nom,
+      abonnement_nom: echeance.plan?.nom_plan || "",
       montant: echeance.montant,
       date_echeance: echeance.date_echeance,
       date_paiement: echeance.date_paiement,
       statut: mapStatutToGraphQL(echeance.statut),
       description: echeance.description,
-      created_at: echeance.created_at,
-      updated_at: echeance.updated_at,
-      retard_jours: echeance.retard_jours || 0,
+      created_at: new Date(),
+      updated_at: new Date(),
+      retard_jours: calculateRetardJours(echeance),
     };
   } catch (error: any) {
     console.error("❌ [EcheanceDetail] Erreur:", error);
@@ -220,7 +290,8 @@ const statistiquesEcheancesResolver = async (
   const { utilisateurId } = args;
 
   // Vérifier que l'utilisateur connecté est celui demandé ou admin
-  if (context.user?.id !== utilisateurId && context.user?.role !== "admin") {
+  if (context.user?.id !== utilisateurId && context.user?.status_id !== 1) {
+    // 1 = admin
     throw new ValidationError(
       "Non autorisé à consulter les statistiques de cet utilisateur",
       [{ field: "utilisateurId", message: "Accès refusé" }],
@@ -240,17 +311,18 @@ const statistiquesEcheancesResolver = async (
 
     return {
       utilisateur_id: utilisateurId,
-      total_echeances: stats.total_echeances || 0,
-      total_montant: stats.total_montant || 0,
-      echeances_payees: stats.echeances_payees || 0,
-      montant_paye: stats.montant_paye || 0,
-      echeances_en_attente: stats.echeances_en_attente || 0,
-      montant_en_attente: stats.montant_en_attente || 0,
-      echeances_echues: stats.echeances_echues || 0,
-      montant_echu: stats.montant_echu || 0,
-      taux_paiement: stats.taux_paiement || 0,
-      prochain_paiement: stats.prochain_paiement,
-      prochain_montant: stats.prochain_montant,
+      total_echeances: stats.statistiques.total_echeances || 0,
+      total_montant: stats.statistiques.montant_total_du || 0,
+      echeances_payees: stats.statistiques.payees || 0,
+      montant_paye: 0, // Non disponible dans le service
+      echeances_en_attente: stats.statistiques.en_attente || 0,
+      montant_en_attente: 0, // Non disponible dans le service
+      echeances_echues: stats.statistiques.echues || 0,
+      montant_echu: 0, // Non disponible dans le service
+      taux_paiement:
+        stats.statistiques.payees / (stats.statistiques.total_echeances || 1),
+      prochain_paiement: null, // Non disponible dans le service
+      prochain_montant: null, // Non disponible dans le service
     };
   } catch (error: any) {
     console.error("❌ [StatistiquesEcheances] Erreur:", error);
@@ -274,7 +346,10 @@ const diagnosticEcheanceResolver = async (
   console.log("🔧 [DiagnosticEcheance] Diagnostic échéance:", echeanceId);
 
   try {
-    const diagnostic = await obtenirDiagnosticEcheance(echeanceId, userId);
+    const diagnostic = await obtenirDiagnosticEcheance(
+      echeanceId,
+      _context.user?.id ?? 0,
+    );
 
     console.log("✅ [DiagnosticEcheance] Diagnostic effectué");
 
@@ -334,11 +409,11 @@ const creerEcheanceResolver = async (
   try {
     const echeance = await creerEcheance({
       utilisateur_id: validatedInput.utilisateur_id,
-      abonnement_id: validatedInput.abonnement_id,
+      abonnement_id: validatedInput.abonnement_id ?? null,
       montant: validatedInput.montant,
       date_echeance: validatedInput.date_echeance,
       description: validatedInput.description,
-      statut: validatedInput.statut,
+      statut: mapStatutToPrisma(validatedInput.statut as any),
     });
 
     console.log("✅ [CreerEcheance] Échéance créée:", echeance.id);
@@ -353,10 +428,10 @@ const creerEcheanceResolver = async (
         montant: echeance.montant,
         date_echeance: echeance.date_echeance,
         date_paiement: echeance.date_paiement,
-        statut: mapStatutToGraphQL(echeance.statut),
+        statut: mapStatutFromPrisma(echeance.statut),
         description: echeance.description,
-        created_at: echeance.created_at,
-        updated_at: echeance.updated_at,
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     };
   } catch (error: any) {
@@ -373,7 +448,7 @@ const creerEcheanceResolver = async (
  */
 const modifierEcheanceResolver = async (
   _parent: unknown,
-  args: { echeanceId: number; input: Partial<UpdateEcheanceData> },
+  args: { echeanceId: number; input: UpdateEcheanceData },
   _context: GraphQLContext,
 ) => {
   const { echeanceId, input } = args;
@@ -386,7 +461,22 @@ const modifierEcheanceResolver = async (
   });
 
   try {
-    const echeance = await modifierEcheance(echeanceId, validatedInput);
+    // Extraire echeanceId de validatedInput et passer le reste au service
+    const { echeanceId: _, ...updateData } = validatedInput;
+
+    // Mapper le statut si présent
+    const mappedUpdateData = {
+      ...updateData,
+      statut: updateData.statut
+        ? mapStatutToPrisma(updateData.statut as any)
+        : undefined,
+    };
+
+    const echeance = await modifierEcheance(echeanceId, mappedUpdateData);
+
+    if (!echeance) {
+      throw new NotFoundError(`Échéance non trouvée: ${echeanceId}`);
+    }
 
     console.log("✅ [ModifierEcheance] Échéance modifiée:", echeance.id);
 
@@ -394,16 +484,16 @@ const modifierEcheanceResolver = async (
       success: true,
       message: "Échéance modifiée avec succès",
       echeance: {
-        id: echeance.id,
-        utilisateur_id: echeance.utilisateur_id,
-        abonnement_id: echeance.abonnement_id,
-        montant: echeance.montant,
-        date_echeance: echeance.date_echeance,
-        date_paiement: echeance.date_paiement,
-        statut: mapStatutToGraphQL(echeance.statut),
-        description: echeance.description,
-        created_at: echeance.created_at,
-        updated_at: echeance.updated_at,
+        id: echeance!.id,
+        utilisateur_id: echeance!.utilisateur_id,
+        abonnement_id: echeance!.abonnement_id,
+        montant: echeance!.montant,
+        date_echeance: echeance!.date_echeance,
+        date_paiement: echeance!.date_paiement,
+        statut: mapStatutToGraphQL(echeance!.statut),
+        description: echeance!.description,
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     };
   } catch (error: any) {
@@ -467,7 +557,7 @@ const marquerEcheancePayeeResolver = async (
 
   try {
     const echeance = await modifierEcheance(echeanceId, {
-      statut: "payé",
+      statut: "pay_",
       date_paiement: new Date().toISOString(),
     });
 
@@ -490,8 +580,9 @@ const marquerEcheancePayeeResolver = async (
         montant: echeance.montant,
         date_echeance: echeance.date_echeance,
         date_paiement: echeance.date_paiement,
-        statut: echeance.statut,
-        updated_at: echeance.updated_at,
+        statut: mapStatutFromPrisma(echeance.statut),
+        description: echeance.description,
+        created_at: echeance.created_at,
       },
     };
   } catch (error: any) {
@@ -506,19 +597,6 @@ const marquerEcheancePayeeResolver = async (
 // ============================================
 // HELPERS
 // ============================================
-
-/**
- * Mapper le statut DB vers le format GraphQL enum
- */
-function mapStatutToGraphQL(statut: string): string {
-  const statutMap: { [key: string]: string } = {
-    "en attente": "EN_ATTENTE",
-    payé: "PAYE",
-    échu: "ECHU",
-    annulé: "ANNULE",
-  };
-  return statutMap[statut] || statut.toUpperCase().replace(/ /g, "_");
-}
 
 // ============================================
 // EXPORTS AVEC MIDDLEWARES

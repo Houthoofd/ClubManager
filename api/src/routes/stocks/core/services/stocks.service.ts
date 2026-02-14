@@ -7,11 +7,11 @@
  * @module stocks.service
  */
 
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
+} from "@/shared/config/sentry.config.js";
 
 /**
  * Interface pour les données de stock
@@ -74,8 +74,8 @@ export async function obtenirStocks(): Promise<StockData[]> {
       id: stock.id,
       article_id: stock.article_id,
       quantite: stock.quantite,
-      seuil_alerte: stock.seuil_alerte || undefined,
-      derniere_mise_a_jour: stock.derniere_mise_a_jour || undefined,
+      stock_disponible: stock.stock_disponible,
+      // Note: seuil_alerte and derniere_mise_a_jour don't exist in schema
       article: stock.articles
         ? {
             nom: stock.articles.nom,
@@ -147,8 +147,8 @@ export async function obtenirStockParArticle(
       id: stock.id,
       article_id: stock.article_id,
       quantite: stock.quantite,
-      seuil_alerte: stock.seuil_alerte || undefined,
-      derniere_mise_a_jour: stock.derniere_mise_a_jour || undefined,
+      stock_disponible: stock.stock_disponible,
+      // Note: seuil_alerte and derniere_mise_a_jour don't exist in schema
       article: stock.articles
         ? {
             nom: stock.articles.nom,
@@ -227,9 +227,9 @@ export async function mettreAJourStock(
       stock = await prisma.stocks.create({
         data: {
           article_id,
+          taille_id: 1, // Default taille_id - required field
           quantite: operation === "set" ? quantite : quantite,
-          seuil_alerte: 5, // Valeur par défaut
-          derniere_mise_a_jour: new Date(),
+          stock_disponible: operation === "set" ? quantite : quantite,
         },
       });
 
@@ -254,7 +254,7 @@ export async function mettreAJourStock(
         where: { id: stock.id },
         data: {
           quantite: nouveauStock,
-          derniere_mise_a_jour: new Date(),
+          stock_disponible: nouveauStock,
         },
       });
     }
@@ -270,17 +270,18 @@ export async function mettreAJourStock(
       { article_id, ancienStock: stock.quantite, nouveauStock },
     );
 
-    // Vérifier si le stock est en dessous du seuil d'alerte
-    if (stock.seuil_alerte && nouveauStock <= stock.seuil_alerte) {
+    // Vérifier si le stock est bas (seuil par défaut: 5)
+    const seuilAlerte = 5;
+    if (nouveauStock <= seuilAlerte) {
       console.log(
-        `⚠️ [StocksService] ALERTE: Stock article ${article_id} en dessous du seuil (${nouveauStock} <= ${stock.seuil_alerte})`,
+        `⚠️ [StocksService] ALERTE: Stock article ${article_id} en dessous du seuil (${nouveauStock} <= ${seuilAlerte})`,
       );
 
       addSentryBreadcrumb(
         `Alerte stock bas pour article ${article_id}`,
         "service.stocks",
         "warning",
-        { article_id, quantite: nouveauStock, seuil: stock.seuil_alerte },
+        { article_id, quantite: nouveauStock, seuil: seuilAlerte },
       );
     }
 

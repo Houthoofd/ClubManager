@@ -11,20 +11,14 @@ import {
   WebhookStats,
   WebhookLogStatus,
 } from "@clubmanager/types";
-import { Paiements } from "@/infrastructure/database/repositories/paiements/paiements.js";
-import { Message } from "@/infrastructure/database/repositories/messages/messages.js";
-import { emailClient } from "@/infrastructure/external-services/emailClient.js";
+import { emailClient } from "@/infrastructure/external-services/email/index.js";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export class WebhookService {
-  private paiements: Paiements;
-  private messageClient: Message;
-
   constructor() {
-    this.paiements = new Paiements();
-    this.messageClient = new Message();
+    // Service initialized
   }
 
   validateSignature(
@@ -33,18 +27,10 @@ export class WebhookService {
     secret: string,
     stripe: Stripe,
   ): Stripe.Event {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.validate",
-      name: "Validate Stripe Webhook Signature",
-    });
     try {
       const event = stripe.webhooks.constructEvent(payload, signature, secret);
-      transaction.setStatus("ok");
-      transaction.finish();
       return event;
     } catch (err: any) {
-      transaction.setStatus("invalid_argument");
-      transaction.finish();
       Sentry.captureException(err, {
         tags: { component: "webhook", action: "validate_signature" },
       });
@@ -58,10 +44,7 @@ export class WebhookService {
   async handlePaymentSuccess(
     paymentIntent: Stripe.PaymentIntent,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.process",
-      name: "Process Payment Success",
-    });
+    // Process payment success
 
     const eventId = `evt_${paymentIntent.id}`;
 
@@ -141,13 +124,10 @@ export class WebhookService {
     }
   }
 
-  async handlePaymentFailed(
+  async handlePaymentFailure(
     paymentIntent: Stripe.PaymentIntent,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.process",
-      name: "Process Payment Failed",
-    });
+    // Process payment failure
 
     const eventId = `evt_${paymentIntent.id}`;
 
@@ -227,17 +207,19 @@ export class WebhookService {
 
   private async sendConfirmationEmail(data: any): Promise<void> {
     try {
-      const utilisateur = await this.messageClient.obtenirEmailsDestinataires([
-        data.utilisateurId,
-      ]);
-      if (utilisateur.length > 0 && utilisateur[0].email) {
-        await emailClient.sendTemplatedEmailFromFile({
-          to: utilisateur[0].email,
-          templateName: "confirmation-paiement",
+      const utilisateur = await prisma.utilisateurs.findUnique({
+        where: { id: data.utilisateurId },
+        select: { email: true, first_name: true, last_name: true },
+      });
+      if (utilisateur && utilisateur.email) {
+        await emailClient.sendEmail({
+          to: utilisateur.email,
+          subject: "[ClubManager] Confirmation de paiement",
+          templateTitle: "confirmation-paiement",
           variables: {
-            userName: `${utilisateur[0].first_name} ${utilisateur[0].last_name}`,
-            firstName: utilisateur[0].first_name,
-            lastName: utilisateur[0].last_name,
+            userName: `${utilisateur.first_name} ${utilisateur.last_name}`,
+            firstName: utilisateur.first_name,
+            lastName: utilisateur.last_name,
             amount: data.montantPaye.toFixed(2),
             currency: data.currency.toUpperCase(),
             paymentIntentId: data.paymentIntentId,
@@ -250,7 +232,6 @@ export class WebhookService {
             premierPaiement: data.premierPaiement.toString(),
           },
           utilisateurId: data.utilisateurId,
-          fallbackSubject: "[ClubManager] Confirmation de paiement",
         });
       }
     } catch (error: any) {
@@ -262,20 +243,21 @@ export class WebhookService {
 
   private async sendFailureEmail(data: any): Promise<void> {
     try {
-      const utilisateur = await this.messageClient.obtenirEmailsDestinataires([
-        data.utilisateurId,
-      ]);
-      if (utilisateur.length > 0 && utilisateur[0].email) {
-        await emailClient.sendTemplatedEmailFromFile({
-          to: utilisateur[0].email,
-          templateName: "echec-paiement",
+      const utilisateur = await prisma.utilisateurs.findUnique({
+        where: { id: data.utilisateurId },
+        select: { email: true, first_name: true, last_name: true },
+      });
+      if (utilisateur && utilisateur.email) {
+        await emailClient.sendEmail({
+          to: utilisateur.email,
+          subject: "[ClubManager] Échec de paiement",
+          templateTitle: "echec-paiement",
           variables: {
-            userName: `${utilisateur[0].first_name} ${utilisateur[0].last_name}`,
-            firstName: utilisateur[0].first_name,
-            lastName: utilisateur[0].last_name,
-            amount: data.montant.toFixed(2),
+            userName: `${utilisateur.first_name} ${utilisateur.last_name}`,
+            firstName: utilisateur.first_name,
+            lastName: utilisateur.last_name,
+            amount: data.montantPaye.toFixed(2),
             currency: data.currency.toUpperCase(),
-            errorMessage: data.errorMessage,
             paymentIntentId: data.paymentIntentId,
             echeanceId: data.echeanceId || "N/A",
             dateEchec: new Date().toLocaleDateString("fr-FR"),
@@ -283,12 +265,8 @@ export class WebhookService {
             currentYear: new Date().getFullYear().toString(),
             supportEmail: process.env.ADMIN_EMAIL || "support@clubmanager.com",
             frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
-            retryUrl: data.echeanceId
-              ? `${process.env.FRONTEND_URL}/pages/paiement?echeance=${data.echeanceId}&userId=${data.utilisateurId}`
-              : `${process.env.FRONTEND_URL}/pages/paiement?userId=${data.utilisateurId}`,
           },
           utilisateurId: data.utilisateurId,
-          fallbackSubject: "[ClubManager] Échec de paiement - Action requise",
         });
       }
     } catch (error: any) {
@@ -309,9 +287,10 @@ export class WebhookService {
    */
   private async sendInvoiceSuccessEmail(data: any): Promise<void> {
     try {
-      await emailClient.sendTemplatedEmailFromFile({
+      await emailClient.sendEmail({
         to: data.email,
-        templateName: "confirmation-facture",
+        subject: "[ClubManager] Échec de paiement de facture",
+        templateTitle: "echec-facture",
         variables: {
           userName: data.userName,
           firstName: data.firstName,
@@ -319,20 +298,20 @@ export class WebhookService {
           invoiceNumber: data.invoiceNumber,
           amount: data.montantPaye.toFixed(2),
           currency: data.currency.toUpperCase(),
-          datePaiement: new Date().toLocaleDateString("fr-FR"),
+          dateEchec: new Date().toLocaleDateString("fr-FR"),
+          errorMessage: data.errorMessage || "Erreur de paiement",
           subscriptionId: data.subscriptionId || "",
           periodStart: data.periodStart || "",
           periodEnd: data.periodEnd || "",
-          invoicePdfUrl: data.invoicePdfUrl || "",
           hostedInvoiceUrl: data.hostedInvoiceUrl || "",
           paymentIntentId: data.paymentIntentId,
           clubName: "Club Manager",
           currentYear: new Date().getFullYear().toString(),
           supportEmail: process.env.ADMIN_EMAIL || "support@clubmanager.com",
           frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+          retryUrl: `${process.env.FRONTEND_URL}/pages/paiement?invoice=${data.invoiceId}&userId=${data.utilisateurId}`,
         },
         utilisateurId: data.utilisateurId,
-        fallbackSubject: "[ClubManager] Facture payée",
       });
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -346,15 +325,18 @@ export class WebhookService {
    */
   private async sendInvoiceFailureEmail(data: any): Promise<void> {
     try {
-      await emailClient.sendTemplatedEmailFromFile({
+      await emailClient.sendEmail({
         to: data.email,
-        templateName: "echec-facture",
+        subject: "[ClubManager] Échec de paiement de facture",
+        templateTitle: "echec-facture",
         variables: {
           userName: data.userName,
           firstName: data.firstName,
           lastName: data.lastName,
           invoiceNumber: data.invoiceNumber,
-          amount: data.montant.toFixed(2),
+          amount: data.montantPaye
+            ? data.montantPaye.toFixed(2)
+            : data.montant.toFixed(2),
           currency: data.currency.toUpperCase(),
           dateEchec: new Date().toLocaleDateString("fr-FR"),
           subscriptionId: data.subscriptionId || "",
@@ -371,8 +353,6 @@ export class WebhookService {
           frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
         },
         utilisateurId: data.utilisateurId,
-        fallbackSubject:
-          "[ClubManager] Échec de paiement de facture - Action requise",
       });
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -386,9 +366,10 @@ export class WebhookService {
    */
   private async sendSubscriptionWelcomeEmail(data: any): Promise<void> {
     try {
-      await emailClient.sendTemplatedEmailFromFile({
+      await emailClient.sendEmail({
         to: data.email,
-        templateName: "bienvenue-abonnement",
+        subject: "[ClubManager] Bienvenue - Votre abonnement est actif",
+        templateTitle: "bienvenue-abonnement",
         variables: {
           userName: data.userName,
           firstName: data.firstName,
@@ -406,7 +387,6 @@ export class WebhookService {
           frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
         },
         utilisateurId: data.utilisateurId,
-        fallbackSubject: "[ClubManager] Bienvenue - Votre abonnement est actif",
       });
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -423,9 +403,10 @@ export class WebhookService {
    */
   private async sendSubscriptionCancelledEmail(data: any): Promise<void> {
     try {
-      await emailClient.sendTemplatedEmailFromFile({
+      await emailClient.sendEmail({
         to: data.email,
-        templateName: "annulation-abonnement",
+        subject: "[ClubManager] Confirmation d'annulation d'abonnement",
+        templateTitle: "annulation-abonnement",
         variables: {
           userName: data.userName,
           firstName: data.firstName,
@@ -443,7 +424,6 @@ export class WebhookService {
           frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
         },
         utilisateurId: data.utilisateurId,
-        fallbackSubject: "[ClubManager] Confirmation d'annulation d'abonnement",
       });
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -460,9 +440,10 @@ export class WebhookService {
    */
   private async sendSubscriptionPastDueEmail(data: any): Promise<void> {
     try {
-      await emailClient.sendTemplatedEmailFromFile({
+      await emailClient.sendEmail({
         to: data.email,
-        templateName: "rappel-paiement-1",
+        subject: "[ClubManager] Paiement en retard - Action requise",
+        templateTitle: "rappel-paiement-1",
         variables: {
           userName: data.userName,
           subscriptionId: data.subscriptionId,
@@ -472,7 +453,6 @@ export class WebhookService {
           frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
         },
         utilisateurId: 0,
-        fallbackSubject: "[ClubManager] Paiement en retard - Action requise",
       });
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -491,9 +471,10 @@ export class WebhookService {
     data: any,
   ): Promise<void> {
     try {
-      await emailClient.sendTemplatedEmailFromFile({
+      await emailClient.sendEmail({
         to: data.email,
-        templateName: "annulation-abonnement",
+        subject: "[ClubManager] Annulation programmée de votre abonnement",
+        templateTitle: "annulation-abonnement",
         variables: {
           userName: data.userName,
           subscriptionId: data.subscriptionId,
@@ -505,8 +486,6 @@ export class WebhookService {
           frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
         },
         utilisateurId: 0,
-        fallbackSubject:
-          "[ClubManager] Annulation programmée de votre abonnement",
       });
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -707,13 +686,10 @@ export class WebhookService {
   /**
    * Traiter un invoice payment succeeded
    */
-  async handleInvoicePaymentSucceeded(
+  async handleInvoicePaymentSuccess(
     invoice: Stripe.Invoice,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.process",
-      name: "Process Invoice Payment Succeeded",
-    });
+    // Process invoice payment success
 
     const eventId = `evt_${invoice.id}`;
 
@@ -819,13 +795,10 @@ export class WebhookService {
   /**
    * Traiter un invoice payment failed
    */
-  async handleInvoicePaymentFailed(
+  async handleInvoicePaymentFailure(
     invoice: Stripe.Invoice,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.process",
-      name: "Process Invoice Payment Failed",
-    });
+    // Process invoice payment failure
 
     const eventId = `evt_${invoice.id}`;
 

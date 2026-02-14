@@ -193,6 +193,24 @@ export const RateLimitPresets = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     message: "Trop de requêtes, veuillez ralentir",
   } as RateLimitConfig,
+
+  /**
+   * Strict rate limit: 10 requests per 15 minutes
+   */
+  STRICT: {
+    max: 10,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    message: "Limite stricte atteinte, veuillez réessayer plus tard",
+  } as RateLimitConfig,
+
+  /**
+   * Loose rate limit: 500 requests per 15 minutes
+   */
+  LOOSE: {
+    max: 500,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    message: "Trop de requêtes, veuillez ralentir",
+  } as RateLimitConfig,
 } as const;
 
 /**
@@ -272,89 +290,81 @@ function checkRateLimit(
  */
 export function withRateLimit<TArgs = any, TContext = any, TResult = any>(
   config: RateLimitConfig,
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
 ) {
-  return async (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ): Promise<TResult> => {
-    // Skip if condition met
-    if (config.skip && config.skip(context)) {
-      return resolver(parent, args, context, info);
-    }
-
-    const resolverName = info.fieldName;
-    const key = generateKey(context, config, resolverName);
-
-    // Check rate limit
-    const result = checkRateLimit(key, config);
-
-    // Add rate limit info to context
-    (context as any).rateLimit = {
-      limit: config.max,
-      remaining: result.remaining,
-      resetTime: result.resetTime,
-    };
-
-    // If limit exceeded, throw error
-    if (!result.allowed) {
-      const resetDate = new Date(result.resetTime);
-      const resetIn = Math.ceil((result.resetTime - Date.now()) / 1000 / 60);
-
-      // Call custom handler if provided
-      if (config.onLimitReached) {
-        config.onLimitReached(context, config);
+  return (
+    resolver: (
+      parent: any,
+      args: TArgs,
+      context: TContext,
+      info: GraphQLResolveInfo,
+    ) => Promise<TResult>,
+  ) => {
+    return async (
+      parent: any,
+      args: TArgs,
+      context: TContext,
+      info: GraphQLResolveInfo,
+    ): Promise<TResult> => {
+      // Skip if condition met
+      if (config.skip && config.skip(context)) {
+        return resolver(parent, args, context, info);
       }
 
-      throw new RateLimitError(
-        config.message || "Trop de requêtes, veuillez réessayer plus tard",
-        resetIn * 60, // retryAfter en secondes
-        {
-          limit: config.max,
-          remaining: 0,
-          resetTime: resetDate.toISOString(),
-          resetIn: `${resetIn} minutes`,
-        },
-      );
-    }
+      const resolverName = info.fieldName;
+      const key = generateKey(context, config, resolverName);
 
-    return resolver(parent, args, context, info);
+      // Check rate limit
+      const result = checkRateLimit(key, config);
+
+      // Add rate limit info to context
+      (context as any).rateLimit = {
+        limit: config.max,
+        remaining: result.remaining,
+        resetTime: result.resetTime,
+      };
+
+      // If limit exceeded, throw error
+      if (!result.allowed) {
+        const resetDate = new Date(result.resetTime);
+        const resetIn = Math.ceil((result.resetTime - Date.now()) / 1000 / 60);
+
+        // Call custom handler if provided
+        if (config.onLimitReached) {
+          config.onLimitReached(context, config);
+        }
+
+        throw new RateLimitError(
+          config.message || "Trop de requêtes, veuillez réessayer plus tard",
+          resetIn * 60, // retryAfter en secondes
+          {
+            limit: config.max,
+            remaining: result.remaining,
+            resetTime: resetDate,
+          },
+        );
+      }
+
+      return resolver(parent, args, context, info);
+    };
   };
 }
 
 /**
  * Preset middleware: API rate limit
  */
-export function withApiRateLimit<TArgs = any, TContext = any, TResult = any>(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.API, resolver);
+export function withApiRateLimit<TArgs = any, TContext = any, TResult = any>() {
+  return withRateLimit(RateLimitPresets.API);
 }
 
 /**
  * Preset middleware: Login rate limit
  */
-export function withLoginRateLimit<TArgs = any, TContext = any, TResult = any>(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.LOGIN, resolver);
+export function withLoginRateLimit<
+  TArgs = any,
+  TContext = any,
+  TResult = any,
+>() {
+  return withRateLimit(RateLimitPresets.LOGIN);
 }
 
 /**
@@ -364,15 +374,8 @@ export function withPasswordResetRateLimit<
   TArgs = any,
   TContext = any,
   TResult = any,
->(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.PASSWORD_RESET, resolver);
+>() {
+  return withRateLimit(RateLimitPresets.PASSWORD_RESET);
 }
 
 /**
@@ -382,61 +385,41 @@ export function withRegistrationRateLimit<
   TArgs = any,
   TContext = any,
   TResult = any,
->(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.REGISTRATION, resolver);
+>() {
+  return withRateLimit(RateLimitPresets.REGISTRATION);
 }
 
 /**
  * Preset middleware: Email rate limit
  */
-export function withEmailRateLimit<TArgs = any, TContext = any, TResult = any>(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.EMAIL, resolver);
+export function withEmailRateLimit<
+  TArgs = any,
+  TContext = any,
+  TResult = any,
+>() {
+  return withRateLimit(RateLimitPresets.EMAIL);
 }
 
 /**
  * Preset middleware: Payment rate limit
  */
-export function withPaymentRateLimit<
+export function withStrictRateLimit<
   TArgs = any,
   TContext = any,
   TResult = any,
->(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.PAYMENT, resolver);
+>() {
+  return withRateLimit(RateLimitPresets.STRICT);
 }
 
 /**
  * Preset middleware: Upload rate limit
  */
-export function withUploadRateLimit<TArgs = any, TContext = any, TResult = any>(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.UPLOAD, resolver);
+export function withLooseRateLimit<
+  TArgs = any,
+  TContext = any,
+  TResult = any,
+>() {
+  return withRateLimit(RateLimitPresets.LOOSE);
 }
 
 /**
@@ -446,29 +429,19 @@ export function withMutationRateLimit<
   TArgs = any,
   TContext = any,
   TResult = any,
->(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.MUTATION, resolver);
+>() {
+  return withRateLimit(RateLimitPresets.MUTATION);
 }
 
 /**
  * Preset middleware: Query rate limit
  */
-export function withQueryRateLimit<TArgs = any, TContext = any, TResult = any>(
-  resolver: (
-    parent: any,
-    args: TArgs,
-    context: TContext,
-    info: GraphQLResolveInfo,
-  ) => Promise<TResult>,
-) {
-  return withRateLimit(RateLimitPresets.QUERY, resolver);
+export function withQueryRateLimit<
+  TArgs = any,
+  TContext = any,
+  TResult = any,
+>() {
+  return withRateLimit(RateLimitPresets.QUERY);
 }
 
 /**

@@ -3,20 +3,20 @@
  * Gestion des statistiques de fréquentation, progression, et statistiques globales
  */
 
-import { GraphQLError } from "graphql";
+import { GraphQLError, GraphQLResolveInfo } from "graphql";
 import { z } from "zod";
 import {
   requireAuth,
   requireAdmin,
   withSentry,
   combineMiddlewares,
-} from '@/shared/middleware/index.js';
+} from "@/shared/middleware/index.js";
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
   formatZodErrors,
-} from '@/shared/errors/GraphQLErrors.js';
+} from "@/shared/errors/GraphQLErrors.js";
 import {
   utilisateurIdGraphQLSchema,
   userIdGraphQLSchema,
@@ -66,54 +66,63 @@ export const statistiquesQueries = {
   frequentationUtilisateur: combineMiddlewares(
     requireAuth,
     withSentry,
-  )(async (_: any, args: { utilisateurId: number }, context: GraphQLContext) => {
-    console.log(
-      `📊 [GraphQL Query] frequentationUtilisateur - Récupération fréquentation utilisateur ${args.utilisateurId}`,
-    );
-
-    try {
-      // Validation de l'ID
-      const validatedData = utilisateurIdGraphQLSchema.parse(args);
-
-      const data = await obtenirStatistiquesFrequentation(
-        validatedData.utilisateurId,
-      );
-
+  )(
+    async (
+      _: any,
+      args: { utilisateurId: number },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
       console.log(
-        `✅ [GraphQL Query] Statistiques de fréquentation récupérées pour l'utilisateur ${validatedData.utilisateurId}`,
+        `📊 [GraphQL Query] frequentationUtilisateur - Récupération fréquentation utilisateur ${args.utilisateurId}`,
       );
 
-      return {
-        success: true,
-        message: "Statistiques de fréquentation récupérées avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error(
-        `❌ [GraphQL Query] Erreur récupération fréquentation utilisateur ${args.utilisateurId}:`,
-        error,
-      );
+      try {
+        // Validation de l'ID
+        const validatedData = utilisateurIdGraphQLSchema.parse(args);
 
-      if (error instanceof z.ZodError) {
-        throw new ValidationError(
-          "ID utilisateur invalide",
-          formatZodErrors(error.errors),
+        const data = await obtenirStatistiquesFrequentation(
+          validatedData.utilisateurId,
+        );
+
+        console.log(
+          `✅ [GraphQL Query] Statistiques de fréquentation récupérées pour l'utilisateur ${validatedData.utilisateurId}`,
+        );
+
+        return {
+          success: true,
+          message: "Statistiques de fréquentation récupérées avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          `❌ [GraphQL Query] Erreur récupération fréquentation utilisateur ${args.utilisateurId}:`,
+          error,
+        );
+
+        if (error instanceof z.ZodError) {
+          throw new ValidationError(
+            "ID utilisateur invalide",
+            formatZodErrors(error.errors),
+          );
+        }
+
+        const errorMessage =
+          error instanceof Error ? error.message : "Erreur inconnue";
+
+        if (errorMessage.includes("Aucune statistique")) {
+          throw new NotFoundError(
+            "Aucune statistique de fréquentation trouvée",
+          );
+        }
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération des statistiques de fréquentation",
+          error instanceof Error ? error : undefined,
         );
       }
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Erreur inconnue";
-
-      if (errorMessage.includes("Aucune statistique")) {
-        throw new NotFoundError("Aucune statistique de fréquentation trouvée");
-      }
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération des statistiques de fréquentation",
-        error instanceof Error ? error : undefined,
-      );
-    }
-  }),
+    },
+  ),
 
   /**
    * Progression d'un utilisateur
@@ -122,52 +131,59 @@ export const statistiquesQueries = {
   progressionUtilisateur: combineMiddlewares(
     requireAuth,
     withSentry,
-  )(async (_: any, args: { userId: number }, context: GraphQLContext) => {
-    console.log(
-      `📊 [GraphQL Query] progressionUtilisateur - Récupération progression utilisateur ${args.userId}`,
-    );
-
-    try {
-      // Validation de l'ID
-      const validatedData = userIdGraphQLSchema.parse(args);
-
-      const data = await obtenirProgressionUtilisateur(validatedData.userId);
-
+  )(
+    async (
+      _: any,
+      args: { userId: number },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
       console.log(
-        `✅ [GraphQL Query] Progression récupérée pour l'utilisateur ${validatedData.userId}`,
+        `📊 [GraphQL Query] progressionUtilisateur - Récupération progression utilisateur ${args.userId}`,
       );
 
-      return {
-        success: true,
-        message: "Progression récupérée avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error(
-        `❌ [GraphQL Query] Erreur récupération progression utilisateur ${args.userId}:`,
-        error,
-      );
+      try {
+        // Validation de l'ID
+        const validatedData = userIdGraphQLSchema.parse(args);
 
-      if (error instanceof z.ZodError) {
-        throw new ValidationError(
-          "ID utilisateur invalide",
-          formatZodErrors(error.errors),
+        const data = await obtenirProgressionUtilisateur(validatedData.userId);
+
+        console.log(
+          `✅ [GraphQL Query] Progression récupérée pour l'utilisateur ${validatedData.userId}`,
+        );
+
+        return {
+          success: true,
+          message: "Progression récupérée avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          `❌ [GraphQL Query] Erreur récupération progression utilisateur ${args.userId}:`,
+          error,
+        );
+
+        if (error instanceof z.ZodError) {
+          throw new ValidationError(
+            "ID utilisateur invalide",
+            formatZodErrors(error.errors),
+          );
+        }
+
+        const errorMessage =
+          error instanceof Error ? error.message : "Erreur inconnue";
+
+        if (errorMessage.includes("Aucune progression")) {
+          throw new NotFoundError("Aucune progression trouvée");
+        }
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération de la progression",
+          error instanceof Error ? error : undefined,
         );
       }
-
-      const errorMessage =
-        error instanceof Error ? error.message : "Erreur inconnue";
-
-      if (errorMessage.includes("Aucune progression")) {
-        throw new NotFoundError("Aucune progression trouvée");
-      }
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération de la progression",
-        error instanceof Error ? error : undefined,
-      );
-    }
-  }),
+    },
+  ),
 
   /**
    * Présences par mois d'un utilisateur
@@ -176,45 +192,52 @@ export const statistiquesQueries = {
   presenceUtilisateur: combineMiddlewares(
     requireAuth,
     withSentry,
-  )(async (_: any, args: { userId: number }, context: GraphQLContext) => {
-    console.log(
-      `📊 [GraphQL Query] presenceUtilisateur - Récupération présences utilisateur ${args.userId}`,
-    );
-
-    try {
-      // Validation de l'ID
-      const validatedData = userIdGraphQLSchema.parse(args);
-
-      const data = await obtenirPresenceParMois(validatedData.userId);
-
+  )(
+    async (
+      _: any,
+      args: { userId: number },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
       console.log(
-        `✅ [GraphQL Query] Présences récupérées pour l'utilisateur ${validatedData.userId}`,
+        `📊 [GraphQL Query] presenceUtilisateur - Récupération présences utilisateur ${args.userId}`,
       );
 
-      return {
-        success: true,
-        message: "Présences récupérées avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error(
-        `❌ [GraphQL Query] Erreur récupération présences utilisateur ${args.userId}:`,
-        error,
-      );
+      try {
+        // Validation de l'ID
+        const validatedData = userIdGraphQLSchema.parse(args);
 
-      if (error instanceof z.ZodError) {
-        throw new ValidationError(
-          "ID utilisateur invalide",
-          formatZodErrors(error.errors),
+        const data = await obtenirPresenceParMois(validatedData.userId);
+
+        console.log(
+          `✅ [GraphQL Query] Présences récupérées pour l'utilisateur ${validatedData.userId}`,
+        );
+
+        return {
+          success: true,
+          message: "Présences récupérées avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          `❌ [GraphQL Query] Erreur récupération présences utilisateur ${args.userId}:`,
+          error,
+        );
+
+        if (error instanceof z.ZodError) {
+          throw new ValidationError(
+            "ID utilisateur invalide",
+            formatZodErrors(error.errors),
+          );
+        }
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération des présences",
+          error instanceof Error ? error : undefined,
         );
       }
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération des présences",
-        error instanceof Error ? error : undefined,
-      );
-    }
-  }),
+    },
+  ),
 
   /**
    * Statistiques globales du dashboard
@@ -223,60 +246,67 @@ export const statistiquesQueries = {
   statistiquesGlobales: combineMiddlewares(
     requireAdmin,
     withSentry,
-  )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log(
-      "📊 [GraphQL Query] statistiquesGlobales - Récupération statistiques globales",
-    );
-
-    try {
-      // Récupérer toutes les statistiques en parallèle
-      const [
-        nombreMembres,
-        totalPaiementsMois,
-        paiementsRecents,
-        paiementsEnAttente,
-        plansActifs,
-        tauxRenouvellement,
-        coursSemaine,
-      ] = await Promise.all([
-        getNombreMembres(),
-        getTotalPaiementsMois(),
-        getPaiementsRecents(),
-        getPaiementsEnAttente(),
-        getPlansActifs(),
-        getTauxRenouvellement(),
-        getCoursSemaine(),
-      ]);
-
-      const data = {
-        nombreMembres,
-        totalPaiementsMois,
-        paiementsRecents,
-        paiementsEnAttente,
-        plansActifs,
-        tauxRenouvellement,
-        coursSemaine,
-      };
-
-      console.log("✅ [GraphQL Query] Statistiques globales récupérées");
-
-      return {
-        success: true,
-        message: "Statistiques globales récupérées avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error(
-        "❌ [GraphQL Query] Erreur récupération statistiques globales:",
-        error,
+  )(
+    async (
+      _: any,
+      __: any,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
+      console.log(
+        "📊 [GraphQL Query] statistiquesGlobales - Récupération statistiques globales",
       );
 
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération des statistiques globales",
-        error instanceof Error ? error : undefined,
-      );
-    }
-  }),
+      try {
+        // Récupérer toutes les statistiques en parallèle
+        const [
+          nombreMembres,
+          totalPaiementsMois,
+          paiementsRecents,
+          paiementsEnAttente,
+          plansActifs,
+          tauxRenouvellement,
+          coursSemaine,
+        ] = await Promise.all([
+          getNombreMembres(),
+          getTotalPaiementsMois(),
+          getPaiementsRecents(),
+          getPaiementsEnAttente(),
+          getPlansActifs(),
+          getTauxRenouvellement(),
+          getCoursSemaine(),
+        ]);
+
+        const data = {
+          nombreMembres,
+          totalPaiementsMois,
+          paiementsRecents,
+          paiementsEnAttente,
+          plansActifs,
+          tauxRenouvellement,
+          coursSemaine,
+        };
+
+        console.log("✅ [GraphQL Query] Statistiques globales récupérées");
+
+        return {
+          success: true,
+          message: "Statistiques globales récupérées avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          "❌ [GraphQL Query] Erreur récupération statistiques globales:",
+          error,
+        );
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération des statistiques globales",
+          error instanceof Error ? error : undefined,
+        );
+      }
+    },
+  ),
 
   /**
    * Nombre total de membres
@@ -285,28 +315,40 @@ export const statistiquesQueries = {
   nombreMembres: combineMiddlewares(
     requireAdmin,
     withSentry,
-  )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] nombreMembres - Récupération nombre de membres");
-
-    try {
-      const data = await getNombreMembres();
-
-      console.log("✅ [GraphQL Query] Nombre de membres récupéré");
-
-      return {
-        success: true,
-        message: "Nombre de membres récupéré avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération nombre membres:", error);
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération du nombre de membres",
-        error instanceof Error ? error : undefined,
+  )(
+    async (
+      _: any,
+      __: any,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
+      console.log(
+        "📊 [GraphQL Query] nombreMembres - Récupération nombre de membres",
       );
-    }
-  }),
+
+      try {
+        const data = await getNombreMembres();
+
+        console.log("✅ [GraphQL Query] Nombre de membres récupéré");
+
+        return {
+          success: true,
+          message: "Nombre de membres récupéré avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          "❌ [GraphQL Query] Erreur récupération nombre membres:",
+          error,
+        );
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération du nombre de membres",
+          error instanceof Error ? error : undefined,
+        );
+      }
+    },
+  ),
 
   /**
    * Total des paiements du mois
@@ -315,28 +357,40 @@ export const statistiquesQueries = {
   totalPaiementsMois: combineMiddlewares(
     requireAdmin,
     withSentry,
-  )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] totalPaiementsMois - Récupération total paiements mois");
-
-    try {
-      const data = await getTotalPaiementsMois();
-
-      console.log("✅ [GraphQL Query] Total paiements mois récupéré");
-
-      return {
-        success: true,
-        message: "Total des paiements du mois récupéré avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération total paiements mois:", error);
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération du total des paiements",
-        error instanceof Error ? error : undefined,
+  )(
+    async (
+      _: any,
+      __: any,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
+      console.log(
+        "📊 [GraphQL Query] totalPaiementsMois - Récupération total paiements mois",
       );
-    }
-  }),
+
+      try {
+        const data = await getTotalPaiementsMois();
+
+        console.log("✅ [GraphQL Query] Total paiements mois récupéré");
+
+        return {
+          success: true,
+          message: "Total des paiements du mois récupéré avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          "❌ [GraphQL Query] Erreur récupération total paiements mois:",
+          error,
+        );
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération du total des paiements",
+          error instanceof Error ? error : undefined,
+        );
+      }
+    },
+  ),
 
   /**
    * Paiements récents (7 derniers jours)
@@ -345,28 +399,40 @@ export const statistiquesQueries = {
   paiementsRecents: combineMiddlewares(
     requireAdmin,
     withSentry,
-  )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] paiementsRecents - Récupération paiements récents");
-
-    try {
-      const data = await getPaiementsRecents();
-
-      console.log("✅ [GraphQL Query] Paiements récents récupérés");
-
-      return {
-        success: true,
-        message: "Paiements récents récupérés avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération paiements récents:", error);
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération des paiements récents",
-        error instanceof Error ? error : undefined,
+  )(
+    async (
+      _: any,
+      __: any,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
+      console.log(
+        "📊 [GraphQL Query] paiementsRecents - Récupération paiements récents",
       );
-    }
-  }),
+
+      try {
+        const data = await getPaiementsRecents();
+
+        console.log("✅ [GraphQL Query] Paiements récents récupérés");
+
+        return {
+          success: true,
+          message: "Paiements récents récupérés avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          "❌ [GraphQL Query] Erreur récupération paiements récents:",
+          error,
+        );
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération des paiements récents",
+          error instanceof Error ? error : undefined,
+        );
+      }
+    },
+  ),
 
   /**
    * Paiements en attente
@@ -375,28 +441,40 @@ export const statistiquesQueries = {
   paiementsEnAttente: combineMiddlewares(
     requireAdmin,
     withSentry,
-  )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] paiementsEnAttente - Récupération paiements en attente");
-
-    try {
-      const data = await getPaiementsEnAttente();
-
-      console.log("✅ [GraphQL Query] Paiements en attente récupérés");
-
-      return {
-        success: true,
-        message: "Paiements en attente récupérés avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération paiements en attente:", error);
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération des paiements en attente",
-        error instanceof Error ? error : undefined,
+  )(
+    async (
+      _: any,
+      __: any,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
+      console.log(
+        "📊 [GraphQL Query] paiementsEnAttente - Récupération paiements en attente",
       );
-    }
-  }),
+
+      try {
+        const data = await getPaiementsEnAttente();
+
+        console.log("✅ [GraphQL Query] Paiements en attente récupérés");
+
+        return {
+          success: true,
+          message: "Paiements en attente récupérés avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          "❌ [GraphQL Query] Erreur récupération paiements en attente:",
+          error,
+        );
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération des paiements en attente",
+          error instanceof Error ? error : undefined,
+        );
+      }
+    },
+  ),
 
   /**
    * Plans actifs
@@ -405,28 +483,38 @@ export const statistiquesQueries = {
   plansActifs: combineMiddlewares(
     requireAdmin,
     withSentry,
-  )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] plansActifs - Récupération plans actifs");
+  )(
+    async (
+      _: any,
+      __: any,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
+      console.log("📊 [GraphQL Query] plansActifs - Récupération plans actifs");
 
-    try {
-      const data = await getPlansActifs();
+      try {
+        const data = await getPlansActifs();
 
-      console.log("✅ [GraphQL Query] Plans actifs récupérés");
+        console.log("✅ [GraphQL Query] Plans actifs récupérés");
 
-      return {
-        success: true,
-        message: "Plans actifs récupérés avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération plans actifs:", error);
+        return {
+          success: true,
+          message: "Plans actifs récupérés avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          "❌ [GraphQL Query] Erreur récupération plans actifs:",
+          error,
+        );
 
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération des plans actifs",
-        error instanceof Error ? error : undefined,
-      );
-    }
-  }),
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération des plans actifs",
+          error instanceof Error ? error : undefined,
+        );
+      }
+    },
+  ),
 
   /**
    * Taux de renouvellement des abonnements
@@ -435,28 +523,40 @@ export const statistiquesQueries = {
   tauxRenouvellement: combineMiddlewares(
     requireAdmin,
     withSentry,
-  )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] tauxRenouvellement - Récupération taux de renouvellement");
-
-    try {
-      const data = await getTauxRenouvellement();
-
-      console.log("✅ [GraphQL Query] Taux de renouvellement récupéré");
-
-      return {
-        success: true,
-        message: "Taux de renouvellement récupéré avec succès",
-        data,
-      };
-    } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération taux de renouvellement:", error);
-
-      throw new InternalServerError(
-        "Erreur serveur lors de la récupération du taux de renouvellement",
-        error instanceof Error ? error : undefined,
+  )(
+    async (
+      _: any,
+      __: any,
+      context: GraphQLContext,
+      info: GraphQLResolveInfo,
+    ) => {
+      console.log(
+        "📊 [GraphQL Query] tauxRenouvellement - Récupération taux de renouvellement",
       );
-    }
-  }),
+
+      try {
+        const data = await getTauxRenouvellement();
+
+        console.log("✅ [GraphQL Query] Taux de renouvellement récupéré");
+
+        return {
+          success: true,
+          message: "Taux de renouvellement récupéré avec succès",
+          data,
+        };
+      } catch (error) {
+        console.error(
+          "❌ [GraphQL Query] Erreur récupération taux de renouvellement:",
+          error,
+        );
+
+        throw new InternalServerError(
+          "Erreur serveur lors de la récupération du taux de renouvellement",
+          error instanceof Error ? error : undefined,
+        );
+      }
+    },
+  ),
 
   /**
    * Nombre de cours de la semaine
@@ -466,7 +566,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] coursSemaine - Récupération cours de la semaine");
+    console.log(
+      "📊 [GraphQL Query] coursSemaine - Récupération cours de la semaine",
+    );
 
     try {
       const data = await getCoursSemaine();
@@ -479,7 +581,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération cours semaine:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération cours semaine:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des cours de la semaine",
@@ -496,7 +601,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] paiementsParMois - Récupération paiements par mois");
+    console.log(
+      "📊 [GraphQL Query] paiementsParMois - Récupération paiements par mois",
+    );
 
     try {
       const data = await getPaiementsParMois();
@@ -509,7 +616,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération paiements par mois:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération paiements par mois:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des paiements par mois",
@@ -526,7 +636,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] membresParPlan - Récupération membres par plan");
+    console.log(
+      "📊 [GraphQL Query] membresParPlan - Récupération membres par plan",
+    );
 
     try {
       const data = await getMembresParPlan();
@@ -539,7 +651,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération membres par plan:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération membres par plan:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des membres par plan",
@@ -556,7 +671,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] derniersPaiements - Récupération derniers paiements");
+    console.log(
+      "📊 [GraphQL Query] derniersPaiements - Récupération derniers paiements",
+    );
 
     try {
       const data = await getDerniersPaiements();
@@ -569,7 +686,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération derniers paiements:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération derniers paiements:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des derniers paiements",
@@ -586,7 +706,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] paiementsEchus - Récupération paiements échus");
+    console.log(
+      "📊 [GraphQL Query] paiementsEchus - Récupération paiements échus",
+    );
 
     try {
       const data = await getPaiementsEchus();
@@ -599,7 +721,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération paiements échus:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération paiements échus:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des paiements échus",
@@ -616,7 +741,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] nouveauxMembres - Récupération nouveaux membres");
+    console.log(
+      "📊 [GraphQL Query] nouveauxMembres - Récupération nouveaux membres",
+    );
 
     try {
       const data = await getNouveauxMembres();
@@ -629,7 +756,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération nouveaux membres:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération nouveaux membres:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des nouveaux membres",
@@ -646,7 +776,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] topMembresAssidus - Récupération top membres assidus");
+    console.log(
+      "📊 [GraphQL Query] topMembresAssidus - Récupération top membres assidus",
+    );
 
     try {
       const data = await getTopMembresAssidus();
@@ -659,7 +791,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération top membres assidus:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération top membres assidus:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des membres les plus assidus",
@@ -676,7 +811,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] membresParGrade - Récupération membres par grade");
+    console.log(
+      "📊 [GraphQL Query] membresParGrade - Récupération membres par grade",
+    );
 
     try {
       const data = await getMembresParGrade();
@@ -689,7 +826,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération membres par grade:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération membres par grade:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des membres par grade",
@@ -706,7 +846,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] membresParGenre - Récupération membres par genre");
+    console.log(
+      "📊 [GraphQL Query] membresParGenre - Récupération membres par genre",
+    );
 
     try {
       const data = await getMembresParGenre();
@@ -719,7 +861,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération membres par genre:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération membres par genre:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des membres par genre",
@@ -736,7 +881,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] prochainsAnniversaires - Récupération prochains anniversaires");
+    console.log(
+      "📊 [GraphQL Query] prochainsAnniversaires - Récupération prochains anniversaires",
+    );
 
     try {
       const data = await getProchainsAnniversaires();
@@ -749,7 +896,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération prochains anniversaires:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération prochains anniversaires:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des prochains anniversaires",
@@ -766,7 +916,9 @@ export const statistiquesQueries = {
     requireAdmin,
     withSentry,
   )(async (_: any, __: any, context: GraphQLContext) => {
-    console.log("📊 [GraphQL Query] articlesPlusVendus - Récupération articles plus vendus");
+    console.log(
+      "📊 [GraphQL Query] articlesPlusVendus - Récupération articles plus vendus",
+    );
 
     try {
       const data = await getArticlesPlusVendus();
@@ -779,7 +931,10 @@ export const statistiquesQueries = {
         data,
       };
     } catch (error) {
-      console.error("❌ [GraphQL Query] Erreur récupération articles plus vendus:", error);
+      console.error(
+        "❌ [GraphQL Query] Erreur récupération articles plus vendus:",
+        error,
+      );
 
       throw new InternalServerError(
         "Erreur serveur lors de la récupération des articles les plus vendus",

@@ -37,6 +37,8 @@ import type {
   Grade,
 } from "@clubmanager/types";
 
+import type { InformationData } from "../services/informations.service.js";
+
 // ============================================
 // TYPES POUR LES RESOLVERS
 // ============================================
@@ -117,7 +119,7 @@ const obtenirInformationParIdResolver = async (
   _: unknown,
   args: InformationArgs,
   context: any,
-): Promise<Information | null> => {
+): Promise<InformationData | null> => {
   try {
     // Validation de l'ID
     const validatedArgs = await validateInput(informationIdSchema, args);

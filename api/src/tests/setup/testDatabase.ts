@@ -3,7 +3,11 @@
  * Copie la structure de la DB principale vers une DB de test séparée
  */
 
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
+import {
+  alertes_types_priorite,
+  alertes_utilisateurs_statut,
+} from "@prisma/client";
 import { execSync } from "child_process";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -254,10 +258,10 @@ export async function seedTestAlertes() {
   const alertTypes = [
     {
       id: 1,
-      code: "COMPTE_INCOMPLET",
-      nom: "Compte incomplet",
+      code: "PROFIL_INCOMPLET",
+      nom: "Profil incomplet",
       description: "Profil utilisateur incomplet",
-      priorite: "haute",
+      priorite: alertes_types_priorite.basse,
       actif: true,
     },
     {
@@ -265,7 +269,7 @@ export async function seedTestAlertes() {
       code: "PAIEMENT_RETARD",
       nom: "Paiement en retard",
       description: "Paiement en retard",
-      priorite: "normale",
+      priorite: alertes_types_priorite.normale,
       actif: true,
     },
     {
@@ -273,7 +277,7 @@ export async function seedTestAlertes() {
       code: "PAIEMENT_CRITIQUE",
       nom: "Paiement critique",
       description: "Paiement très en retard",
-      priorite: "critique",
+      priorite: alertes_types_priorite.critique,
       actif: true,
     },
   ];
@@ -331,14 +335,14 @@ export async function seedTestAlertes() {
     {
       utilisateur_id: 1,
       alerte_type_id: 1,
-      statut: "active",
+      statut: alertes_utilisateurs_statut.active,
       date_detection: new Date("2026-01-20"),
       donnees_contexte: { champsManquants: ["email"] },
     },
     {
       utilisateur_id: 2,
       alerte_type_id: 3,
-      statut: "active",
+      statut: alertes_utilisateurs_statut.active,
       date_detection: new Date("2026-01-15"),
       donnees_contexte: { joursRetard: 45, montantTotal: "150.00" },
     },
@@ -367,7 +371,7 @@ export async function seedTestCommandes() {
 
   // Nettoyer les tables dans le bon ordre (contraintes FK)
   try {
-    await prismaInstance.commandes_articles.deleteMany({});
+    await prismaInstance.commande_articles.deleteMany({});
     await prismaInstance.historique_statuts_commande.deleteMany({});
     await prismaInstance.commandes.deleteMany({});
     await prismaInstance.articles_tailles.deleteMany({});
@@ -479,7 +483,6 @@ export async function seedTestCommandes() {
     data: {
       id: 1,
       nom: "S",
-      code: "S",
     },
   });
 
@@ -487,7 +490,6 @@ export async function seedTestCommandes() {
     data: {
       id: 2,
       nom: "M",
-      code: "M",
     },
   });
 
@@ -495,7 +497,6 @@ export async function seedTestCommandes() {
     data: {
       id: 3,
       nom: "L",
-      code: "L",
     },
   });
 
@@ -518,20 +519,20 @@ export async function seedTestCommandes() {
       id: 1,
       utilisateur_id: testUser1.id,
       numero_commande: "CMD-TEST-001",
-      statut: "en attente",
+      statut: "en_attente",
       total: 99.98,
       date_commande: new Date("2024-01-15"),
     },
   });
 
-  await prismaInstance.commandes_articles.createMany({
+  await prismaInstance.commande_articles.createMany({
     data: [
       {
         commande_id: commande1.id,
         article_id: article1.id,
         taille_id: tailleM.id,
         quantite: 2,
-        prix_unitaire: 49.99,
+        prix: 49.99,
       },
     ],
   });
@@ -541,27 +542,27 @@ export async function seedTestCommandes() {
       id: 2,
       utilisateur_id: testUser2.id,
       numero_commande: "CMD-TEST-002",
-      statut: "payée",
+      statut: "pay_e",
       total: 79.98,
       date_commande: new Date("2024-01-20"),
     },
   });
 
-  await prismaInstance.commandes_articles.createMany({
+  await prismaInstance.commande_articles.createMany({
     data: [
       {
         commande_id: commande2.id,
         article_id: article1.id,
         taille_id: tailleL.id,
         quantite: 1,
-        prix_unitaire: 49.99,
+        prix: 49.99,
       },
       {
         commande_id: commande2.id,
         article_id: article2.id,
         taille_id: tailleM.id,
         quantite: 1,
-        prix_unitaire: 29.99,
+        prix: 29.99,
       },
     ],
   });
@@ -571,21 +572,20 @@ export async function seedTestCommandes() {
       id: 3,
       utilisateur_id: testUser1.id,
       numero_commande: "CMD-TEST-003",
-      statut: "expédiée",
+      statut: "exp_di_e",
       total: 49.99,
       date_commande: new Date("2024-01-10"),
-      date_expedition: new Date("2024-01-12"),
     },
   });
 
-  await prismaInstance.commandes_articles.createMany({
+  await prismaInstance.commande_articles.createMany({
     data: [
       {
         commande_id: commande3.id,
         article_id: article1.id,
         taille_id: tailleS.id,
         quantite: 1,
-        prix_unitaire: 49.99,
+        prix: 49.99,
       },
     ],
   });
@@ -595,20 +595,20 @@ export async function seedTestCommandes() {
     data: [
       {
         commande_id: commande2.id,
-        ancien_statut: "en attente",
-        nouveau_statut: "payée",
+        ancien_statut: "en_attente",
+        nouveau_statut: "pay_e",
         date_changement: new Date("2024-01-21"),
       },
       {
         commande_id: commande3.id,
-        ancien_statut: "en attente",
-        nouveau_statut: "payée",
+        ancien_statut: "en_attente",
+        nouveau_statut: "pay_e",
         date_changement: new Date("2024-01-11"),
       },
       {
         commande_id: commande3.id,
-        ancien_statut: "payée",
-        nouveau_statut: "expédiée",
+        ancien_statut: "pay_e",
+        nouveau_statut: "exp_di_e",
         date_changement: new Date("2024-01-12"),
       },
     ],

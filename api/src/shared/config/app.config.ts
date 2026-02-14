@@ -146,7 +146,7 @@ function parseBoolean(
 /**
  * Parse integer from environment variable
  */
-function parseInt(value: string | undefined, defaultValue: number): number {
+function parseIntEnv(value: string | undefined, defaultValue: number): number {
   if (value === undefined) return defaultValue;
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? defaultValue : parsed;
@@ -178,7 +178,7 @@ export const appConfig: AppConfig = {
   isTest: process.env.NODE_ENV === "test",
 
   // Server
-  port: parseInt(process.env.PORT, 4000),
+  port: parseIntEnv(process.env.PORT, 4000),
   host: process.env.HOST || "localhost",
   apiUrl: process.env.API_URL || "http://localhost:4000",
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
@@ -186,17 +186,17 @@ export const appConfig: AppConfig = {
   // Database
   database: {
     url: process.env.DATABASE_URL || "",
-    poolSize: parseInt(process.env.DB_POOL_SIZE, 10),
-    connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT, 10000),
+    poolSize: parseIntEnv(process.env.DB_POOL_SIZE, 10),
+    connectionTimeout: parseIntEnv(process.env.DB_CONNECTION_TIMEOUT, 10000),
   },
 
   // Redis
   redis: {
     enabled: parseBoolean(process.env.REDIS_ENABLED, false),
     host: process.env.REDIS_HOST || "localhost",
-    port: parseInt(process.env.REDIS_PORT, 6379),
+    port: parseIntEnv(process.env.REDIS_PORT, 6379),
     password: process.env.REDIS_PASSWORD,
-    db: parseInt(process.env.REDIS_DB, 0),
+    db: parseIntEnv(process.env.REDIS_DB, 0),
   },
 
   // Logging
@@ -214,7 +214,7 @@ export const appConfig: AppConfig = {
 
   // File Upload
   upload: {
-    maxFileSize: parseInt(process.env.UPLOAD_MAX_FILE_SIZE, 5 * 1024 * 1024), // 5MB default
+    maxFileSize: parseIntEnv(process.env.UPLOAD_MAX_FILE_SIZE, 5 * 1024 * 1024), // 5MB default
     allowedMimeTypes: parseArray(process.env.UPLOAD_ALLOWED_MIME_TYPES, [
       "image/jpeg",
       "image/png",
@@ -233,7 +233,7 @@ export const appConfig: AppConfig = {
     smtp: process.env.SMTP_HOST
       ? {
           host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT, 587),
+          port: parseIntEnv(process.env.SMTP_PORT, 587),
           secure: parseBoolean(process.env.SMTP_SECURE, false),
           user: process.env.SMTP_USER || "",
           password: process.env.SMTP_PASSWORD || "",
@@ -259,16 +259,16 @@ export const appConfig: AppConfig = {
   // Rate Limiting
   rateLimit: {
     enabled: parseBoolean(process.env.RATE_LIMIT_ENABLED, true),
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 100),
+    windowMs: parseIntEnv(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 minutes
+    maxRequests: parseIntEnv(process.env.RATE_LIMIT_MAX_REQUESTS, 100),
     store: (process.env.RATE_LIMIT_STORE as any) || "memory",
   },
 
   // Session
   session: {
-    expirationDays: parseInt(process.env.SESSION_EXPIRATION_DAYS, 30),
-    maxSessionsPerUser: parseInt(process.env.SESSION_MAX_PER_USER, 10),
-    cleanupIntervalHours: parseInt(
+    expirationDays: parseIntEnv(process.env.SESSION_EXPIRATION_DAYS, 30),
+    maxSessionsPerUser: parseIntEnv(process.env.SESSION_MAX_PER_USER, 10),
+    cleanupIntervalHours: parseIntEnv(
       process.env.SESSION_CLEANUP_INTERVAL_HOURS,
       24,
     ),
@@ -277,8 +277,8 @@ export const appConfig: AppConfig = {
   // Audit
   audit: {
     enabled: parseBoolean(process.env.AUDIT_ENABLED, true),
-    retentionDays: parseInt(process.env.AUDIT_RETENTION_DAYS, 730), // 2 years (GDPR)
-    cleanupIntervalHours: parseInt(
+    retentionDays: parseIntEnv(process.env.AUDIT_RETENTION_DAYS, 730), // 2 years (GDPR)
+    cleanupIntervalHours: parseIntEnv(
       process.env.AUDIT_CLEANUP_INTERVAL_HOURS,
       24,
     ),
@@ -304,9 +304,9 @@ export const appConfig: AppConfig = {
 
   // Security
   security: {
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS, 12),
+    bcryptRounds: parseIntEnv(process.env.BCRYPT_ROUNDS, 12),
     jwtAlgorithm: (process.env.JWT_ALGORITHM as any) || "HS256",
-    passwordMinLength: parseInt(process.env.PASSWORD_MIN_LENGTH, 8),
+    passwordMinLength: parseIntEnv(process.env.PASSWORD_MIN_LENGTH, 8),
     passwordRequireUppercase: parseBoolean(
       process.env.PASSWORD_REQUIRE_UPPERCASE,
       true,

@@ -10,6 +10,17 @@ import {
   AuthenticationError,
   AuthorizationError,
 } from "../errors/GraphQLErrors.js";
+import { GraphQLContext } from "../types/context.types.js";
+
+// Re-export token helpers for backward compatibility
+export {
+  generateToken,
+  generateRefreshToken,
+  verifyToken,
+  verifyRefreshToken,
+  generateTokenPair,
+  extractTokenFromHeader,
+} from "../utils/token.helpers.js";
 
 /**
  * User context interface
@@ -29,7 +40,7 @@ export interface AuthUser {
  * GraphQL context interface
  * Re-export from shared types for convenience
  */
-export { GraphQLContext } from "@/types/context.types.js";
+export type { GraphQLContext };
 
 /**
  * Status/Role constants
@@ -51,9 +62,9 @@ export const UserStatusId = {
 /**
  * Check if user is authenticated
  */
-export function isAuthenticated(context: GraphQLContext): boolean {
+export const isAuthenticated = (context: any): boolean => {
   return !!context.user && !!context.user.id;
-}
+};
 
 /**
  * Check if user is admin

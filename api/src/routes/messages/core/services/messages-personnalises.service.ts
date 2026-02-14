@@ -9,11 +9,11 @@
  * @module messages-personnalises.service
  */
 
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
+} from "@/shared/config/sentry.config.js";
 
 /**
  * Service pour la gestion des messages personnalisés
@@ -41,11 +41,11 @@ export class MessagesPersonnalisesService {
 
       const messages = await prisma.messages_personnalises.findMany({
         where: {
-          destinataire_id: userId,
-          supprime: false,
+          utilisateur_id: userId,
+          deleted_at: null,
         },
         orderBy: {
-          date_envoi: "desc",
+          created_at: "desc",
         },
       });
 
@@ -150,11 +150,10 @@ export class MessagesPersonnalisesService {
       const message = await prisma.messages_personnalises.update({
         where: {
           id: messageId,
-          destinataire_id: userId,
         },
         data: {
-          supprime: true,
-          date_suppression: new Date(),
+          deleted_at: new Date(),
+          deleted_by: userId,
         },
       });
 
@@ -205,11 +204,11 @@ export class MessagesPersonnalisesService {
 
       const messages = await prisma.messages_personnalises.findMany({
         where: {
-          destinataire_id: userId,
-          supprime: true,
+          utilisateur_id: userId,
+          deleted_at: { not: null },
         },
         orderBy: {
-          date_suppression: "desc",
+          deleted_at: "desc",
         },
       });
 
@@ -264,11 +263,10 @@ export class MessagesPersonnalisesService {
       const message = await prisma.messages_personnalises.update({
         where: {
           id: messageId,
-          destinataire_id: userId,
         },
         data: {
-          supprime: false,
-          date_suppression: null,
+          deleted_at: null,
+          deleted_by: null,
         },
       });
 
@@ -321,7 +319,6 @@ export class MessagesPersonnalisesService {
       await prisma.messages_personnalises.delete({
         where: {
           id: messageId,
-          destinataire_id: userId,
         },
       });
 
@@ -372,7 +369,7 @@ export class MessagesPersonnalisesService {
 
       const message = await prisma.messages_personnalises.update({
         where: { id: messageId },
-        data: { actif: false },
+        data: { is_active: false },
       });
 
       return {

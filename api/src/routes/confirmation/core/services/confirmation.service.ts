@@ -74,7 +74,7 @@ export async function obtenirInscriptionParId(
     const inscription = await prisma.inscriptions.findUnique({
       where: { id: inscriptionId },
       include: {
-        utilisateurs: {
+        users: {
           select: {
             first_name: true,
             last_name: true,
@@ -148,7 +148,7 @@ export async function obtenirReservationParId(
     const reservation = await prisma.reservations.findUnique({
       where: { id: reservationId },
       include: {
-        utilisateurs: {
+        users: {
           select: {
             first_name: true,
             last_name: true,
@@ -231,7 +231,7 @@ export async function creerInscription(
         status_id: true,
       },
       include: {
-        utilisateurs: {
+        users: {
           select: {
             first_name: true,
             last_name: true,
@@ -306,7 +306,7 @@ export async function creerReservation(
         cours_id: coursId,
       },
       include: {
-        utilisateurs: {
+        users: {
           select: {
             first_name: true,
             last_name: true,
@@ -616,7 +616,7 @@ export async function modifierStatutInscription(
         status_id: statusId,
       },
       include: {
-        utilisateurs: {
+        users: {
           select: {
             first_name: true,
             last_name: true,

@@ -9,6 +9,7 @@
 
 import { GraphQLError } from "graphql";
 import { PrismaClient } from "@prisma/client";
+import type { AuthenticatedContext } from "@/shared/types/context.types.js";
 
 // Services
 import {
@@ -30,7 +31,10 @@ import {
   validerResetPassword,
   validerVerifyToken,
   validerConfirmEmail,
-} from "@clubmanager/types/dist/validators.js";
+} from "@clubmanager/types/validators";
+
+// Configuration
+import { TOKEN_CONFIG } from "../config/auth.config.js";
 
 // Middlewares partagés
 import {
@@ -45,7 +49,7 @@ import {
   setCookie,
   clearCookie,
   type GraphQLContext,
-} from '@/shared/index.js';
+} from "@/shared/index.js";
 
 // Cookie helpers locaux
 import {
@@ -63,13 +67,6 @@ import {
   toAuthError,
 } from "../errors/auth.errors.js";
 
-// Configuration locale
-import { TOKEN_CONFIG } from "../config/auth.config.js";
-
-interface Context extends GraphQLContext {
-  prisma: PrismaClient;
-}
-
 export const createAuthResolvers = (prisma: PrismaClient) => ({
   Query: {
     /**
@@ -79,15 +76,21 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
     verifyAuth: combineMiddlewares(
       requireAuth,
       withSentry,
-    )(async (_parent: unknown, _args: unknown, context: Context) => {
-      // requireAuth garantit que context.user existe
-      console.log("✅ [Auth] Vérification auth pour:", context.user?.email);
+    )(
+      async (
+        _parent: unknown,
+        _args: unknown,
+        context: AuthenticatedContext,
+      ) => {
+        // requireAuth garantit que context.user existe
+        console.log("✅ [Auth] Vérification auth pour:", context.user.email);
 
-      return {
-        success: true,
-        user: context.user!,
-      };
-    }),
+        return {
+          success: true,
+          user: context.user,
+        };
+      },
+    ),
 
     /**
      * ✅ MODERNISÉ : Vérifier un token de reset
@@ -97,7 +100,7 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
       async (
         _parent: unknown,
         { input }: { input: { token: string } },
-        context: Context,
+        context: GraphQLContext,
       ) => {
         console.log("🔍 [Auth] Vérification token reset");
 
@@ -139,7 +142,7 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
      * Middleware: withSentry seulement (public)
      */
     checkAuthStatus: combineMiddlewares(withSentry)(
-      async (_parent: unknown, _args: unknown, context: Context) => {
+      async (_parent: unknown, _args: unknown, context: GraphQLContext) => {
         console.log("🔍 [Auth] Vérification statut auth");
 
         if (!context.user) {
@@ -164,7 +167,7 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
       async (
         _parent: unknown,
         { input }: { input: { token: string } },
-        context: Context,
+        context: GraphQLContext,
       ) => {
         console.log("📧 [Auth] Confirmation email");
 
@@ -209,7 +212,7 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
      * Middleware: withSentry seulement (public)
      */
     testAuth: combineMiddlewares(withSentry)(
-      async (_parent: unknown, _args: unknown, context: Context) => {
+      async (_parent: unknown, _args: unknown, context: GraphQLContext) => {
         console.log("🧪 [Auth] Test auth");
 
         return {
@@ -227,13 +230,13 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
      * Middleware: withLoginRateLimit, withSentry
      */
     login: combineMiddlewares(
-      withLoginRateLimit,
+      withLoginRateLimit(),
       withSentry,
     )(
       async (
         _parent: unknown,
         { input }: { input: { email: string; password: string } },
-        context: Context,
+        context: GraphQLContext,
       ) => {
         console.log("🔐 [Auth] Tentative login pour:", input.email);
 
@@ -273,7 +276,7 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
               process.env.NODE_ENV === "production"
                 ? process.env.COOKIE_DOMAIN || "clubmanagment.com"
                 : "localhost",
-            maxAge: TOKEN_CONFIG.access.expiresInMs,
+            maxAge: 15 * 60 * 1000, // 15 minutes in ms
           });
 
           console.log("✅ [Auth] Cookie défini pour:", email);
@@ -297,89 +300,96 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
     logout: combineMiddlewares(
       requireAuth,
       withSentry,
-    )(async (_parent: unknown, _args: unknown, context: Context) => {
-      console.log(
-        "🚪 [Auth] Déconnexion demandée pour utilisateur:",
-        context.user?.id,
-      );
-
-      // Supprimer tous les cookies d'auth
-      clearAllAuthCookies(context.res);
-
-      // Supprimer aussi le cookie "token" (custom)
-      const cookieVariants = [
-        {
-          httpOnly: true,
-          secure: true,
-          sameSite: "strict" as const,
-          domain: "clubmanagment.com",
-          path: "/",
-        },
-        {
-          httpOnly: true,
-          secure: false,
-          sameSite: "lax" as const,
-          domain: "localhost",
-          path: "/",
-        },
-        {
-          httpOnly: true,
-          secure: false,
-          sameSite: "lax" as const,
-          path: "/",
-        },
-        { httpOnly: true, path: "/" },
-        { path: "/" },
-      ];
-
-      // Supprimer le cookie "token" avec toutes les variantes
-      cookieVariants.forEach((variant) => {
-        try {
-          if (context.res && typeof context.res.clearCookie === "function") {
-            context.res.clearCookie("token", variant);
-          }
-        } catch (error: any) {
-          // Ignorer les erreurs silencieusement
-          console.debug(
-            "❌ [Auth] Erreur clearCookie (ignorée):",
-            error.message,
-          );
-        }
-      });
-
-      // Headers de sécurité additionnels
-      if (context.res && typeof context.res.setHeader === "function") {
-        context.res.setHeader("Clear-Site-Data", '"cookies", "storage"');
-        context.res.setHeader(
-          "Cache-Control",
-          "no-cache, no-store, must-revalidate",
+    )(
+      async (
+        _parent: unknown,
+        _args: unknown,
+        context: AuthenticatedContext,
+      ) => {
+        console.log("👋 [Auth] Déconnexion:", context.user.email);
+        console.log(
+          "🚪 [Auth] Déconnexion demandée pour utilisateur:",
+          context.user?.id,
         );
-        context.res.setHeader("Pragma", "no-cache");
-        context.res.setHeader("Expires", "0");
-      }
 
-      console.log("✅ [Auth] Déconnexion terminée");
+        // Supprimer tous les cookies d'auth
+        clearAllAuthCookies(context.res);
 
-      return {
-        success: true,
-        message: "Déconnexion réussie",
-        cookiesCleared: ["token", "refreshToken", "sessionId"],
-        headersSet: 4,
-      };
-    }),
+        // Supprimer aussi le cookie "token" (custom)
+        const cookieVariants = [
+          {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict" as const,
+            domain: "clubmanagment.com",
+            path: "/",
+          },
+          {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax" as const,
+            domain: "localhost",
+            path: "/",
+          },
+          {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax" as const,
+            path: "/",
+          },
+          { httpOnly: true, path: "/" },
+          { path: "/" },
+        ];
+
+        // Supprimer le cookie "token" avec toutes les variantes
+        cookieVariants.forEach((variant) => {
+          try {
+            if (context.res && typeof context.res.clearCookie === "function") {
+              context.res.clearCookie("token", variant);
+            }
+          } catch (error: any) {
+            // Ignorer les erreurs silencieusement
+            console.debug(
+              "❌ [Auth] Erreur clearCookie (ignorée):",
+              error.message,
+            );
+          }
+        });
+
+        // Headers de sécurité additionnels
+        if (context.res && typeof context.res.setHeader === "function") {
+          context.res.setHeader("Clear-Site-Data", '"cookies", "storage"');
+          context.res.setHeader(
+            "Cache-Control",
+            "no-cache, no-store, must-revalidate",
+          );
+          context.res.setHeader("Pragma", "no-cache");
+          context.res.setHeader("Expires", "0");
+        }
+
+        console.log("✅ [Auth] Déconnexion terminée");
+
+        return {
+          success: true,
+          message: "Déconnexion réussie",
+          cookiesCleared: ["token", "refreshToken", "sessionId"],
+          headersSet: 4,
+        };
+      },
+    ),
 
     /**
      * ✅ MODERNISÉ : Forgot Password avec rate limiting et Sentry
      * Middleware: withPasswordResetRateLimit, withSentry
      */
     forgotPassword: combineMiddlewares(
-      withPasswordResetRateLimit,
+      withPasswordResetRateLimit(),
       withSentry,
     )(
       async (
         _parent: unknown,
         { input }: { input: { email: string } },
-        context: Context,
+        context: GraphQLContext,
       ) => {
         console.log(
           "🔄 [Auth] Demande réinitialisation mot de passe pour:",
@@ -435,13 +445,13 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
      * Middleware: withPasswordResetRateLimit, withSentry
      */
     resetPassword: combineMiddlewares(
-      withPasswordResetRateLimit,
+      withPasswordResetRateLimit(),
       withSentry,
     )(
       async (
         _parent: unknown,
         { input }: { input: { token: string; newPassword: string } },
-        context: Context,
+        context: GraphQLContext,
       ) => {
         console.log(
           "🔄 [Auth] Réinitialisation mot de passe avec token:",
@@ -490,7 +500,7 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
     refreshToken: combineMiddlewares(
       requireAuth,
       withSentry,
-    )(async (_parent: unknown, _args: unknown, context: Context) => {
+    )(async (_parent: unknown, _args: unknown, context: GraphQLContext) => {
       console.log(
         "🔄 [Auth] Rafraîchissement token pour utilisateur:",
         context.user?.id,
@@ -506,8 +516,6 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
         first_name: user.first_name,
         last_name: user.last_name,
         status_id: user.status_id,
-        role: user.role,
-        status: user.status,
       });
 
       // Définir le nouveau cookie
@@ -519,7 +527,7 @@ export const createAuthResolvers = (prisma: PrismaClient) => ({
           process.env.NODE_ENV === "production"
             ? process.env.COOKIE_DOMAIN || "clubmanagment.com"
             : "localhost",
-        maxAge: TOKEN_CONFIG.access.expiresInMs,
+        maxAge: TOKEN_CONFIG.ACCESS_TOKEN.expiresInMs,
       });
 
       console.log("✅ [Auth] Token rafraîchi pour utilisateur:", user.id);

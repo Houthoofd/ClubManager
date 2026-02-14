@@ -6,7 +6,7 @@
  */
 
 import { GraphQLError } from "graphql";
-import { ErrorCode, getErrorMessage, getHttpStatus } from "./error-codes";
+import { ErrorCode, getErrorMessage, getHttpStatus } from "./error-codes.js";
 import { z } from "zod";
 
 /**

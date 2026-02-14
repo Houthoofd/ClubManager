@@ -1,38 +1,10 @@
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import type { echeances_paiements_statut } from "@prisma/client";
 
 /**
  * Service de gestion des échéances
  * Contient la logique métier pour les opérations sur les échéances
  */
-
-/**
- * Helper: Convertir statut user-friendly vers enum Prisma
- */
-function toPrismaStatut(
-  statut: "en attente" | "payé" | "échu",
-): echeances_paiements_statut {
-  switch (statut) {
-    case "payé":
-      return "pay_";
-    case "échu":
-      return "chu";
-    case "en attente":
-    default:
-      return "en_attente";
-  }
-}
-
-/**
- * Helper: Convertir enum Prisma vers statut user-friendly
- */
-function fromPrismaStatut(
-  statut: echeances_paiements_statut | null,
-): "en attente" | "payé" | "échu" {
-  if (statut === "pay_") return "payé";
-  if (statut === "chu") return "échu";
-  return "en attente";
-}
 
 /**
  * Interface pour une échéance
@@ -43,7 +15,7 @@ export interface Echeance {
   abonnement_id?: number;
   montant: number;
   date_echeance: string;
-  statut: "en attente" | "payé" | "échu";
+  statut: "en_attente" | "pay_" | "chu";
   date_creation?: string;
   date_paiement?: string;
   stripe_payment_intent_id?: string;
@@ -104,7 +76,7 @@ export async function obtenirEcheancesUtilisateur(
       abonnement_id: e.abonnement_id,
       montant: Number(e.montant),
       date_echeance: e.date_echeance.toISOString(),
-      statut: fromPrismaStatut(e.statut),
+      statut: e.statut || "en_attente",
       date_paiement: e.date_paiement?.toISOString(),
     }));
   } catch (error) {
@@ -168,7 +140,7 @@ export async function obtenirDetailEcheance(
 
     // Calculer le statut (en_retard si date passée et non payé)
     const now = new Date();
-    const statutBase = fromPrismaStatut(echeance.statut);
+    const statutBase = echeance.statut || "en_attente";
     const statutCalcule =
       echeance.date_echeance < now && echeance.statut !== "pay_"
         ? "en_retard"
@@ -215,11 +187,11 @@ export async function obtenirDetailEcheance(
 export async function creerEcheance(
   data: {
     utilisateur_id: number;
-    abonnement_id?: number;
+    abonnement_id?: number | null;
     montant: number;
     date_echeance: string;
     description?: string;
-    statut?: "en attente" | "payé" | "échu";
+    statut?: "en_attente" | "pay_" | "chu";
   },
   _paiementsClient?: any,
 ): Promise<Echeance> {
@@ -232,7 +204,7 @@ export async function creerEcheance(
         abonnement_id: data.abonnement_id || 0,
         date_echeance: new Date(data.date_echeance),
         montant: data.montant,
-        statut: data.statut ? toPrismaStatut(data.statut) : "en_attente",
+        statut: data.statut || "en_attente",
       },
     });
 
@@ -246,7 +218,7 @@ export async function creerEcheance(
       abonnement_id: echeance.abonnement_id,
       montant: Number(echeance.montant),
       date_echeance: echeance.date_echeance.toISOString(),
-      statut: fromPrismaStatut(echeance.statut),
+      statut: echeance.statut || "en_attente",
       date_paiement: echeance.date_paiement?.toISOString(),
     };
   } catch (error) {
@@ -264,7 +236,7 @@ export async function modifierEcheance(
     montant?: number;
     date_echeance?: string;
     description?: string;
-    statut?: "en attente" | "payé" | "échu";
+    statut?: "en_attente" | "pay_" | "chu";
     date_paiement?: string;
     stripe_payment_intent_id?: string;
   },
@@ -292,8 +264,7 @@ export async function modifierEcheance(
     if (updates.montant !== undefined) updateData.montant = updates.montant;
     if (updates.date_echeance !== undefined)
       updateData.date_echeance = new Date(updates.date_echeance);
-    if (updates.statut !== undefined)
-      updateData.statut = toPrismaStatut(updates.statut);
+    if (updates.statut !== undefined) updateData.statut = updates.statut;
     if (updates.date_paiement !== undefined)
       updateData.date_paiement = new Date(updates.date_paiement);
 
@@ -305,7 +276,7 @@ export async function modifierEcheance(
         abonnement_id: existingEcheance.abonnement_id,
         montant: Number(existingEcheance.montant),
         date_echeance: existingEcheance.date_echeance.toISOString(),
-        statut: fromPrismaStatut(existingEcheance.statut),
+        statut: existingEcheance.statut || "en_attente",
         date_paiement: existingEcheance.date_paiement?.toISOString(),
       };
     }
@@ -323,7 +294,7 @@ export async function modifierEcheance(
       abonnement_id: echeanceMiseAJour.abonnement_id,
       montant: Number(echeanceMiseAJour.montant),
       date_echeance: echeanceMiseAJour.date_echeance.toISOString(),
-      statut: fromPrismaStatut(echeanceMiseAJour.statut),
+      statut: echeanceMiseAJour.statut || "en_attente",
       date_paiement: echeanceMiseAJour.date_paiement?.toISOString(),
     };
   } catch (error) {
@@ -426,7 +397,7 @@ export async function obtenirStatistiquesUtilisateur(
       abonnement_id: e.abonnement_id,
       montant: Number(e.montant),
       date_echeance: e.date_echeance.toISOString(),
-      statut: fromPrismaStatut(e.statut),
+      statut: e.statut || "en_attente",
       date_paiement: e.date_paiement?.toISOString(),
       utilisateur: {
         first_name: e.utilisateurs.first_name || "",

@@ -5,26 +5,26 @@
  * @module confirmation.resolvers
  */
 
-import type { GraphQLContext } from '@/shared/types/context.types.js';
-import { prisma } from '@/infrastructure/database/prisma-client.js';
-import { emailClient } from '@/infrastructure/external-services/email/index.js';
+import type { GraphQLContext } from "@/shared/types/context.types.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
+import { emailClient } from "@/infrastructure/external-services/email/index.js";
 import { formatMontant } from "../utils/format-montant.js";
 import { getStripeInstance } from "../utils/stripe-instance.js";
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
-} from '@/shared/errors/GraphQLErrors.js';
+} from "@/shared/errors/GraphQLErrors.js";
 import {
   confirmationPaymentInputSchema,
   confirmationPaymentCommandeInputSchema,
   type ConfirmationPaymentInput,
   type ConfirmationPaymentCommandeInput,
 } from "@clubmanager/types/validators";
-import { validateInput } from '@/shared/middleware/validation.middleware.js';
-import { combineMiddlewares } from '@/shared/middleware/auth.middleware.js';
-import { requireAuth } from '@/shared/middleware/auth.middleware.js';
-import { withSentry } from '@/shared/middleware/sentry.middleware.js';
+import { validateInput } from "@/shared/middleware/validation.middleware.js";
+import { combineMiddlewares } from "@/shared/middleware/auth.middleware.js";
+import { requireAuth } from "@/shared/middleware/auth.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 
 // ============================================
 // QUERY RESOLVERS
@@ -72,7 +72,8 @@ const confirmPaymentResolver = async (
   });
 
   // Vérifier que l'utilisateur connecté est celui de la transaction
-  if (context.user?.id !== userId && context.user?.role !== "admin") {
+  if (context.user?.id !== userId && context.user?.status_id !== 1) {
+    // 1 = admin
     throw new ValidationError("Non autorisé à confirmer ce paiement", [
       {
         field: "userId",
@@ -369,7 +370,8 @@ const confirmPaymentCommandeResolver = async (
   });
 
   // Vérifier que l'utilisateur connecté est celui de la transaction
-  if (context.user?.id !== userId && context.user?.role !== "admin") {
+  if (context.user?.id !== userId && context.user?.status_id !== 1) {
+    // 1 = admin
     throw new ValidationError("Non autorisé à confirmer ce paiement", [
       {
         field: "userId",

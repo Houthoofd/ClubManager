@@ -12,17 +12,17 @@ datasource db {
 // ============================================================================
 
 model WebhookLog {
-  id            String   @id @default(cuid())
-  eventId       String   @unique @map("event_id") @db.VarChar(255)
-  eventType     String   @map("event_type") @db.VarChar(100)
-  status        WebhookLogStatus
-  payload       Json
-  error         String?  @db.Text
-  retryCount    Int      @default(0) @map("retry_count")
-  nextRetryAt   DateTime? @map("next_retry_at") @db.DateTime(0)
-  processedAt   DateTime? @map("processed_at") @db.DateTime(0)
-  createdAt     DateTime @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+  id          String           @id @default(cuid())
+  eventId     String           @unique @map("event_id") @db.VarChar(255)
+  eventType   String           @map("event_type") @db.VarChar(100)
+  status      WebhookLogStatus
+  payload     Json
+  error       String?          @db.Text
+  retryCount  Int              @default(0) @map("retry_count")
+  nextRetryAt DateTime?        @map("next_retry_at") @db.DateTime(0)
+  processedAt DateTime?        @map("processed_at") @db.DateTime(0)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.DateTime(0)
 
   @@index([eventType, status], map: "idx_event_type_status")
   @@index([status, createdAt], map: "idx_status_created")
@@ -38,17 +38,17 @@ enum WebhookLogStatus {
 }
 
 model articles {
-  id                 Int                  @id @default(autoincrement())
-  nom                String               @db.VarChar(100)
-  description        String?              @db.Text
-  prix               Decimal              @db.Decimal(10, 2)
-  image_url          String?              @db.VarChar(255)
-  categorie_id       Int?
-  categories         categories?          @relation(fields: [categorie_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "articles_ibfk_1")
-  commande_articles  commande_articles[]
-  images             images[]
-  stocks             stocks[]
-  articles_tailles   articles_tailles[]   @relation("articles_tailles_article")
+  id                Int                 @id @default(autoincrement())
+  nom               String              @db.VarChar(100)
+  description       String?             @db.Text
+  prix              Decimal             @db.Decimal(10, 2)
+  image_url         String?             @db.VarChar(255)
+  categorie_id      Int?
+  categories        categories?         @relation(fields: [categorie_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "articles_ibfk_1")
+  commande_articles commande_articles[]
+  images            images[]
+  stocks            stocks[]
+  articles_tailles  articles_tailles[]  @relation("articles_tailles_article")
 
   @@index([categorie_id], map: "categorie_id")
   @@index([nom], map: "idx_nom")
@@ -78,12 +78,12 @@ model commandes {
 }
 
 model historique_statuts_commande {
-  id             Int              @id @default(autoincrement())
-  commande_id    Int
-  ancien_statut  commandes_statut
-  nouveau_statut commandes_statut
+  id              Int              @id @default(autoincrement())
+  commande_id     Int
+  ancien_statut   commandes_statut
+  nouveau_statut  commandes_statut
   date_changement DateTime         @default(now()) @db.Timestamp(0)
-  commandes      commandes        @relation(fields: [commande_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "historique_statuts_commande_ibfk_1")
+  commandes       commandes        @relation(fields: [commande_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "historique_statuts_commande_ibfk_1")
 
   @@index([commande_id], map: "idx_commande_id")
   @@index([date_changement], map: "idx_date_changement")
@@ -562,7 +562,7 @@ model utilisateurs {
   email_verified_at                                                              DateTime?                  @db.Timestamp(0)
   alertes_actions                                                                alertes_actions[]
   alertes_utilisateurs                                                           alertes_utilisateurs[]
-  alertes_utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs            alertes_utilisateurs[]     @relation("alertes_utilisateurs_resolu_parToutilisateurs")
+  alertes_utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs             alertes_utilisateurs[]     @relation("alertes_utilisateurs_resolu_parToutilisateurs")
   commandes                                                                      commandes[]
   echeances_paiements                                                            echeances_paiements[]
   email_validation_tokens                                                        email_validation_tokens[]
@@ -645,19 +645,19 @@ model alertes_types {
 }
 
 model alertes_utilisateurs {
-  id                                    Int                          @id @default(autoincrement())
-  utilisateur_id                        Int
-  alerte_type_id                        Int
-  statut                                alertes_utilisateurs_statut? @default(active)
-  donnees_contexte                      Json?
-  date_detection                        DateTime?                    @default(now()) @db.Timestamp(0)
-  date_resolution                       DateTime?                    @db.Timestamp(0)
-  resolu_par                            Int?
-  notes                                 String?                      @db.Text
-  alertes_actions                       alertes_actions[]
-  utilisateurs                          utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_1")
-  alertes_types                         alertes_types                @relation(fields: [alerte_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_2")
-  utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs utilisateurs? @relation("alertes_utilisateurs_resolu_parToutilisateurs", fields: [resolu_par], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_3")
+  id                                                         Int                          @id @default(autoincrement())
+  utilisateur_id                                             Int
+  alerte_type_id                                             Int
+  statut                                                     alertes_utilisateurs_statut? @default(active)
+  donnees_contexte                                           Json?
+  date_detection                                             DateTime?                    @default(now()) @db.Timestamp(0)
+  date_resolution                                            DateTime?                    @db.Timestamp(0)
+  resolu_par                                                 Int?
+  notes                                                      String?                      @db.Text
+  alertes_actions                                            alertes_actions[]
+  utilisateurs                                               utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_1")
+  alertes_types                                              alertes_types                @relation(fields: [alerte_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_2")
+  utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs utilisateurs?                @relation("alertes_utilisateurs_resolu_parToutilisateurs", fields: [resolu_par], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_3")
 
   @@index([alerte_type_id, statut], map: "idx_type_statut")
   @@index([resolu_par], map: "resolu_par")

@@ -734,11 +734,54 @@ export function genererToken(userData: {
   email: string;
   first_name: string;
   last_name: string;
-  status_id: number;
-  role: string;
-  status: string;
+  status_id: number | null;
+  role?: string;
+  status?: string;
 }): string {
-  return generateToken(userData);
+  // Map status_id to role/status if not provided
+  const role = userData.role || mapStatusIdToRole(userData.status_id);
+  const status = userData.status || mapStatusIdToStatus(userData.status_id);
+
+  return generateToken({
+    ...userData,
+    status_id: userData.status_id || 4, // Default to PROSPECT
+    role,
+    status,
+  });
+}
+
+/**
+ * Map status_id to role string
+ */
+function mapStatusIdToRole(status_id: number | null): string {
+  switch (status_id) {
+    case 1:
+      return "admin";
+    case 2:
+      return "professeur";
+    case 3:
+      return "membre";
+    case 4:
+    default:
+      return "prospect";
+  }
+}
+
+/**
+ * Map status_id to status string
+ */
+function mapStatusIdToStatus(status_id: number | null): string {
+  switch (status_id) {
+    case 1:
+      return "admin";
+    case 2:
+      return "professeur";
+    case 3:
+      return "membre";
+    case 4:
+    default:
+      return "prospect";
+  }
 }
 
 /**

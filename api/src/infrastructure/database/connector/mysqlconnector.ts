@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import mysql from "mysql2";
+import type { Pool, PoolConnection, QueryError, FieldPacket } from "mysql2";
 
 // Pour __dirname dans ES modules (compatible avec Jest)
 // Utiliser les variables globales si disponibles (CommonJS/Jest), sinon fallback
@@ -200,14 +201,14 @@ export default class MysqlConnector {
     sql: string,
     values: any[] = [],
     callback: (
-      error: mysql.MysqlError | null,
+      error: QueryError | null,
       results?: any,
-      fields?: mysql.FieldInfo[],
+      fields?: FieldPacket[],
     ) => void,
   ): void {
     if (!this.isPoolHealthy) {
       return callback(
-        new Error("Pool de connexions non disponible") as mysql.MysqlError,
+        new Error("Pool de connexions non disponible") as QueryError,
       );
     }
 
@@ -222,7 +223,7 @@ export default class MysqlConnector {
 
       const queryTimeoutTimer = setTimeout(() => {
         connection.destroy();
-        callback(new Error("Timeout de requête SQL") as mysql.MysqlError);
+        callback(new Error("Timeout de requête SQL") as QueryError);
       }, QUERY_TIMEOUT_MS);
 
       connection.query(sql, values, (error, results, fields) => {
@@ -240,10 +241,7 @@ export default class MysqlConnector {
   }
 
   public beginTransaction(
-    callback: (
-      err: mysql.MysqlError | null,
-      connection?: mysql.PoolConnection,
-    ) => void,
+    callback: (err: QueryError | null, connection?: PoolConnection) => void,
   ): void {
     pool.getConnection((err, connection) => {
       if (err) {
@@ -265,8 +263,8 @@ export default class MysqlConnector {
   }
 
   public commit(
-    connection: mysql.PoolConnection,
-    callback?: (err: mysql.MysqlError | null) => void,
+    connection: PoolConnection,
+    callback?: (err: QueryError | null) => void,
   ): void {
     connection.commit((err) => {
       if (err) {
@@ -280,10 +278,7 @@ export default class MysqlConnector {
     });
   }
 
-  public rollback(
-    connection: mysql.PoolConnection,
-    callback?: () => void,
-  ): void {
+  public rollback(connection: PoolConnection, callback?: () => void): void {
     connection.rollback(() => {
       connection.release();
       if (callback) callback();

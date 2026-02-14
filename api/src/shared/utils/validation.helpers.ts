@@ -9,9 +9,9 @@
  */
 export function isEmpty(value: any): boolean {
   if (value === null || value === undefined) return true;
-  if (typeof value === 'string') return value.trim().length === 0;
+  if (typeof value === "string") return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value).length === 0;
+  if (typeof value === "object") return Object.keys(value).length === 0;
   return false;
 }
 
@@ -39,7 +39,8 @@ export function isValidURL(url: string): boolean {
  * Check if value is a valid UUID
  */
 export function isValidUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 }
 
@@ -47,7 +48,8 @@ export function isValidUUID(uuid: string): boolean {
  * Check if value is a valid phone number (international format)
  */
 export function isValidPhoneNumber(phone: string): boolean {
-  const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
+  const phoneRegex =
+    /^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
   return phoneRegex.test(phone);
 }
 
@@ -106,7 +108,11 @@ export function isInRange(value: number, min: number, max: number): boolean {
 /**
  * Check if string length is within range
  */
-export function isLengthInRange(str: string, min: number, max: number): boolean {
+export function isLengthInRange(
+  str: string,
+  min: number,
+  max: number,
+): boolean {
   const length = str.trim().length;
   return length >= min && length <= max;
 }
@@ -130,7 +136,7 @@ export function hasUniqueValues<T>(arr: T[]): boolean {
  */
 export function isValidCreditCard(cardNumber: string): boolean {
   // Remove spaces and dashes
-  const cleaned = cardNumber.replace(/[\s-]/g, '');
+  const cleaned = cardNumber.replace(/[\s-]/g, "");
 
   // Check if only digits
   if (!/^\d+$/.test(cleaned)) return false;
@@ -164,7 +170,7 @@ export function isValidCreditCard(cardNumber: string): boolean {
  */
 export function isValidIBAN(iban: string): boolean {
   // Remove spaces and convert to uppercase
-  const cleaned = iban.replace(/\s/g, '').toUpperCase();
+  const cleaned = iban.replace(/\s/g, "").toUpperCase();
 
   // Check format
   if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/.test(cleaned)) return false;
@@ -176,8 +182,8 @@ export function isValidIBAN(iban: string): boolean {
   const rearranged = cleaned.slice(4) + cleaned.slice(0, 4);
 
   // Convert letters to numbers (A=10, B=11, ..., Z=35)
-  const numeric = rearranged.replace(/[A-Z]/g, char =>
-    (char.charCodeAt(0) - 55).toString()
+  const numeric = rearranged.replace(/[A-Z]/g, (char) =>
+    (char.charCodeAt(0) - 55).toString(),
   );
 
   // Perform mod-97 operation
@@ -195,7 +201,7 @@ export function isValidIBAN(iban: string): boolean {
  */
 export function isValidBelgianNationalNumber(nn: string): boolean {
   // Remove dots, spaces, and dashes
-  const cleaned = nn.replace(/[\s.-]/g, '');
+  const cleaned = nn.replace(/[\s.-]/g, "");
 
   // Check format (11 digits)
   if (!/^\d{11}$/.test(cleaned)) return false;
@@ -212,7 +218,7 @@ export function isValidBelgianNationalNumber(nn: string): boolean {
   if (calculatedCheck === checkDigit) return true;
 
   // Try with 2000+ birth year
-  const baseNumber2000 = parseInt('2' + birthDate + sequence, 10);
+  const baseNumber2000 = parseInt("2" + birthDate + sequence, 10);
   const calculatedCheck2000 = 97 - (baseNumber2000 % 97);
 
   return calculatedCheck2000 === checkDigit;
@@ -223,25 +229,25 @@ export function isValidBelgianNationalNumber(nn: string): boolean {
  */
 export function sanitizeString(str: string): string {
   return str
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;");
 }
 
 /**
  * Strip HTML tags from string
  */
 export function stripHtmlTags(str: string): string {
-  return str.replace(/<[^>]*>/g, '');
+  return str.replace(/<[^>]*>/g, "");
 }
 
 /**
  * Normalize string (trim, lowercase, remove extra spaces)
  */
 export function normalizeString(str: string): string {
-  return str.trim().toLowerCase().replace(/\s+/g, ' ');
+  return str.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 /**
@@ -251,33 +257,42 @@ export function toSlug(str: string): string {
   return str
     .toLowerCase()
     .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-    .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Remove consecutive hyphens
-    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+    .replace(/[^a-z0-9\s-]/g, "") // Remove special chars
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Remove consecutive hyphens
+    .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
 }
 
 /**
  * Validate file extension
  */
-export function hasValidExtension(filename: string, allowedExtensions: string[]): boolean {
-  const ext = filename.split('.').pop()?.toLowerCase();
+export function hasValidExtension(
+  filename: string,
+  allowedExtensions: string[],
+): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase();
   return ext ? allowedExtensions.includes(ext) : false;
 }
 
 /**
  * Validate MIME type
  */
-export function hasValidMimeType(mimeType: string, allowedTypes: string[]): boolean {
+export function hasValidMimeType(
+  mimeType: string,
+  allowedTypes: string[],
+): boolean {
   return allowedTypes.includes(mimeType);
 }
 
 /**
  * Check if file size is within limit
  */
-export function isFileSizeValid(sizeInBytes: number, maxSizeInBytes: number): boolean {
+export function isFileSizeValid(
+  sizeInBytes: number,
+  maxSizeInBytes: number,
+): boolean {
   return sizeInBytes <= maxSizeInBytes;
 }
 
@@ -285,19 +300,23 @@ export function isFileSizeValid(sizeInBytes: number, maxSizeInBytes: number): bo
  * Format file size to human-readable string
  */
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) return "0 Bytes";
 
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
 /**
  * Truncate string with ellipsis
  */
-export function truncate(str: string, maxLength: number, ellipsis: string = '...'): string {
+export function truncate(
+  str: string,
+  maxLength: number,
+  ellipsis: string = "...",
+): string {
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength - ellipsis.length) + ellipsis;
 }
@@ -313,7 +332,7 @@ export function capitalize(str: string): string {
  * Capitalize all words
  */
 export function capitalizeWords(str: string): string {
-  return str.replace(/\b\w/g, char => char.toUpperCase());
+  return str.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 /**
@@ -341,7 +360,7 @@ export function isAlphanumericWithSpaces(str: string): boolean {
  * Remove accents from string
  */
 export function removeAccents(str: string): string {
-  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /**
@@ -349,7 +368,12 @@ export function removeAccents(str: string): string {
  */
 export function parseBoolean(value: string): boolean {
   const normalized = value.toLowerCase().trim();
-  return normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on';
+  return (
+    normalized === "true" ||
+    normalized === "1" ||
+    normalized === "yes" ||
+    normalized === "on"
+  );
 }
 
 /**
@@ -380,9 +404,13 @@ export function isEqual(obj1: any, obj2: any): boolean {
 /**
  * Remove null and undefined values from object
  */
-export function removeNullish<T extends Record<string, any>>(obj: T): Partial<T> {
+export function removeNullish<T extends Record<string, any>>(
+  obj: T,
+): Partial<T> {
   return Object.fromEntries(
-    Object.entries(obj).filter(([_, value]) => value !== null && value !== undefined)
+    Object.entries(obj).filter(
+      ([_, value]) => value !== null && value !== undefined,
+    ),
   ) as Partial<T>;
 }
 
@@ -391,10 +419,10 @@ export function removeNullish<T extends Record<string, any>>(obj: T): Partial<T>
  */
 export function pick<T extends Record<string, any>, K extends keyof T>(
   obj: T,
-  keys: K[]
+  keys: K[],
 ): Pick<T, K> {
   const result = {} as Pick<T, K>;
-  keys.forEach(key => {
+  keys.forEach((key) => {
     if (key in obj) {
       result[key] = obj[key];
     }
@@ -407,10 +435,10 @@ export function pick<T extends Record<string, any>, K extends keyof T>(
  */
 export function omit<T extends Record<string, any>, K extends keyof T>(
   obj: T,
-  keys: K[]
+  keys: K[],
 ): Omit<T, K> {
   const result = { ...obj };
-  keys.forEach(key => {
+  keys.forEach((key) => {
     delete result[key];
   });
   return result;
@@ -419,13 +447,17 @@ export function omit<T extends Record<string, any>, K extends keyof T>(
 /**
  * Flatten nested object
  */
-export function flatten(obj: any, prefix: string = ''): Record<string, any> {
+export function flatten(obj: any, prefix: string = ""): Record<string, any> {
   const result: Record<string, any> = {};
 
   for (const key in obj) {
     const newKey = prefix ? `${prefix}.${key}` : key;
 
-    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+    if (
+      typeof obj[key] === "object" &&
+      obj[key] !== null &&
+      !Array.isArray(obj[key])
+    ) {
       Object.assign(result, flatten(obj[key], newKey));
     } else {
       result[newKey] = obj[key];
@@ -439,14 +471,17 @@ export function flatten(obj: any, prefix: string = ''): Record<string, any> {
  * Group array by key
  */
 export function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
-  return arr.reduce((result, item) => {
-    const groupKey = String(item[key]);
-    if (!result[groupKey]) {
-      result[groupKey] = [];
-    }
-    result[groupKey].push(item);
-    return result;
-  }, {} as Record<string, T[]>);
+  return arr.reduce(
+    (result, item) => {
+      const groupKey = String(item[key]);
+      if (!result[groupKey]) {
+        result[groupKey] = [];
+      }
+      result[groupKey].push(item);
+      return result;
+    },
+    {} as Record<string, T[]>,
+  );
 }
 
 /**
@@ -482,8 +517,11 @@ export function shuffle<T>(arr: T[]): T[] {
 /**
  * Generate random string
  */
-export function randomString(length: number, chars: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'): string {
-  let result = '';
+export function randomString(
+  length: number,
+  chars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+): string {
+  let result = "";
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -493,7 +531,7 @@ export function randomString(length: number, chars: string = 'ABCDEFGHIJKLMNOPQR
 /**
  * Generate random integer between min and max (inclusive)
  */
-export function randomInt(min: number, max: number): boolean {
+export function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -501,7 +539,7 @@ export function randomInt(min: number, max: number): boolean {
  * Sleep for specified milliseconds
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -509,11 +547,11 @@ export function sleep(ms: number): Promise<void> {
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 
-  return function(...args: Parameters<T>) {
+  return function (...args: Parameters<T>) {
     if (timeout) {
       clearTimeout(timeout);
     }
@@ -526,15 +564,15 @@ export function debounce<T extends (...args: any[]) => any>(
  */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle = false;
 
-  return function(...args: Parameters<T>) {
+  return function (...args: Parameters<T>) {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
   };
 }

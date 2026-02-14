@@ -5,14 +5,14 @@
  * @module cours.resolvers
  */
 
-import type { GraphQLContext } from '@/shared/types/context.types.js';
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import type { GraphQLContext } from "@/shared/types/context.types.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   ValidationError,
   NotFoundError,
   ConflictError,
   InternalServerError,
-} from '@/shared/errors/GraphQLErrors.js';
+} from "@/shared/errors/GraphQLErrors.js";
 import {
   ajouterCoursInputSchema,
   modifierCoursInputSchema,
@@ -27,14 +27,14 @@ import {
   type PresenceInput,
   type RetirerProfesseurInput,
 } from "@clubmanager/types/validators";
-import { validateInput } from '@/shared/middleware/validation.middleware.js';
-import { combineMiddlewares } from '@/shared/middleware/auth.middleware.js';
+import { validateInput } from "@/shared/middleware/validation.middleware.js";
+import { combineMiddlewares } from "@/shared/middleware/auth.middleware.js";
 import {
   requireAuth,
   requireAdmin,
   requireStaff,
-} from '@/shared/middleware/auth.middleware.js';
-import { withSentry } from '@/shared/middleware/sentry.middleware.js';
+} from "@/shared/middleware/auth.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 
 // Helper: Convertir jour_semaine (1-7) en nom de jour
 const joursMap = [
@@ -446,7 +446,7 @@ const ajouterCoursResolver = async (
         `Conflit d'horaire détecté avec: ${conflits}. Impossible d'ajouter le cours`,
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof ConflictError) throw error;
     console.log("⚠️ [AjouterCours] Erreur vérification conflits:", error);
   }
@@ -582,7 +582,7 @@ const supprimerJourCoursResolver = async (
       message: "Cours supprimé avec succès",
       cours_id: coursId,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ [SupprimerJourCours] Erreur:", error);
     throw new InternalServerError(
       "Erreur lors de la suppression du cours",
@@ -684,7 +684,7 @@ const desinscrireUtilisateurResolver = async (
   // Vérifier que l'utilisateur connecté est celui demandé ou admin
   if (
     context.user?.id !== validatedInput.utilisateur_id &&
-    context.user?.role !== "admin"
+    context.user?.status_id !== 1 // 1 = admin
   ) {
     throw new ValidationError("Non autorisé à désinscrire cet utilisateur", [
       { field: "utilisateur_id", message: "Accès refusé" },
@@ -755,10 +755,10 @@ const validerPresenceResolver = async (
       inscription_id: validatedInput.cours_id,
       presence_validee: true,
     };
-  } catch (error) {
-    console.error("❌ [ValiderPresence] Erreur:", error);
+  } catch (error: any) {
+    console.error("❌ [MarquerPresence] Erreur:", error);
     throw new InternalServerError(
-      "Erreur lors de la validation de la présence",
+      "Erreur lors du marquage de la présence",
       error,
     );
   }
@@ -798,10 +798,10 @@ const annulerPresenceResolver = async (
       inscription_id: validatedInput.cours_id,
       presence_validee: false,
     };
-  } catch (error) {
-    console.error("❌ [AnnulerPresence] Erreur:", error);
+  } catch (error: any) {
+    console.error("❌ [AnnulerReservation] Erreur:", error);
     throw new InternalServerError(
-      "Erreur lors de l'annulation de la présence",
+      "Erreur lors de l'annulation de la réservation",
       error,
     );
   }
@@ -840,7 +840,7 @@ const retirerProfesseurResolver = async (
       message: "Professeur retiré avec succès",
       cours_recurrent_id: validatedInput.cours_recurrent_id,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ [RetirerProfesseur] Erreur:", error);
     throw new InternalServerError(
       "Erreur lors du retrait du professeur",

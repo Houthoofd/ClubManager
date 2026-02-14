@@ -7,11 +7,11 @@
  * @module professeurs.service
  */
 
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
+} from "@/shared/config/sentry.config.js";
 
 /**
  * Interface pour un professeur
@@ -116,12 +116,12 @@ export async function obtenirTousLesProfesseurs(): Promise<Professeur[]> {
       email: prof.email,
       nom_utilisateur: prof.nom_utilisateur,
       status_id: prof.status_id || undefined,
-      status: prof.status?.nom,
+      status: prof.status?.nom_role,
       date_inscription: prof.date_inscription,
       genre_id: prof.genre_id || undefined,
       date_of_birth: prof.date_of_birth,
       grade_id: prof.grade_id || undefined,
-      grade: prof.grades?.nom,
+      grade: prof.grades?.grade_id || undefined,
       active: prof.active,
     }));
   } catch (error: any) {
@@ -198,12 +198,12 @@ export async function obtenirProfesseurParId(
       email: professeur.email,
       nom_utilisateur: professeur.nom_utilisateur,
       status_id: professeur.status_id || undefined,
-      status: professeur.status?.nom,
+      status: professeur.status?.nom_role,
       date_inscription: professeur.date_inscription,
       genre_id: professeur.genre_id || undefined,
       date_of_birth: professeur.date_of_birth,
       grade_id: professeur.grade_id || undefined,
-      grade: professeur.grades?.nom,
+      grade: professeur.grades?.grade_id || undefined,
       active: professeur.active,
     };
   } catch (error: any) {
@@ -417,7 +417,7 @@ export async function modifierStatutProfesseur(
         name: `${updated.first_name} ${updated.last_name}`,
         oldStatus: professeur.status_id,
         newStatus: statusId,
-        statusName: updated.status?.nom,
+        statusName: updated.status?.nom_role,
       },
     };
   } catch (error: any) {
@@ -456,22 +456,30 @@ export async function obtenirPlanningProfesseur(
       `🔍 [ProfesseursService] Récupération planning professeur ${professeurId}`,
     );
 
-    // Récupérer les cours du professeur
-    const cours = await prisma.cours.findMany({
+    // Récupérer les cours du professeur via cours_recurrent
+    const coursRecurrents = await prisma.cours_recurrent.findMany({
       where: {
-        professeur_id: professeurId,
-      },
-      include: {
-        inscriptions: {
-          select: {
-            id: true,
+        cours_recurrent_professeur: {
+          some: {
+            professeur_id: professeurId,
           },
         },
       },
-      orderBy: [{ jour_semaine: "asc" }, { heure_debut: "asc" }],
+      include: {
+        cours: {
+          include: {
+            inscriptions: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ heure_debut: "asc" }],
     });
 
-    if (cours.length === 0) {
+    if (coursRecurrents.length === 0) {
       console.log(
         `⚠️ [ProfesseursService] Aucun cours pour le professeur ${professeurId}`,
       );
@@ -483,26 +491,32 @@ export async function obtenirPlanningProfesseur(
     }
 
     console.log(
-      `✅ [ProfesseursService] ${cours.length} cours trouvés pour le professeur ${professeurId}`,
+      `✅ [ProfesseursService] ${coursRecurrents.length} cours trouvés pour le professeur ${professeurId}`,
     );
 
-    const planning: CoursProfesseur[] = cours.map((c) => ({
-      id: c.id,
-      nom_cours: c.nom_cours,
-      description: c.description || undefined,
-      jour_semaine: c.jour_semaine,
-      heure_debut: c.heure_debut,
-      heure_fin: c.heure_fin,
-      salle: c.salle || undefined,
-      niveau: c.niveau || undefined,
-      capacite_max: c.capacite_max || undefined,
-      professeur_id: c.professeur_id,
-      nombre_inscrits: c.inscriptions.length,
-    }));
+    // Mapper les cours récurrents en planning
+    const planning: CoursProfesseur[] = [];
+    for (const cr of coursRecurrents) {
+      for (const c of cr.cours) {
+        planning.push({
+          id: c.id,
+          nom_cours: c.type_cours,
+          description: undefined,
+          jour_semaine: cr.jour_semaine.toString(),
+          heure_debut: c.heure_debut,
+          heure_fin: c.heure_fin,
+          salle: undefined,
+          niveau: undefined,
+          capacite_max: undefined,
+          professeur_id: professeurId,
+          nombre_inscrits: c.inscriptions.length,
+        });
+      }
+    }
 
     return {
       isFind: true,
-      message: `${cours.length} cours trouvé(s)`,
+      message: `${planning.length} cours trouvé(s)`,
       data: planning,
     };
   } catch (error: any) {
@@ -672,12 +686,12 @@ export async function validerUtilisateurPourPromotion(
           email: utilisateur.email,
           nom_utilisateur: utilisateur.nom_utilisateur,
           status_id: utilisateur.status_id || undefined,
-          status: utilisateur.status?.nom,
+          status: utilisateur.status?.nom_role,
           date_inscription: utilisateur.date_inscription,
           genre_id: utilisateur.genre_id || undefined,
           date_of_birth: utilisateur.date_of_birth,
           grade_id: utilisateur.grade_id || undefined,
-          grade: utilisateur.grades?.nom,
+          grade: utilisateur.grades?.grade_id,
           active: utilisateur.active,
         },
       };
@@ -697,12 +711,12 @@ export async function validerUtilisateurPourPromotion(
         email: utilisateur.email,
         nom_utilisateur: utilisateur.nom_utilisateur,
         status_id: utilisateur.status_id || undefined,
-        status: utilisateur.status?.nom,
+        status: utilisateur.status?.nom_role,
         date_inscription: utilisateur.date_inscription,
         genre_id: utilisateur.genre_id || undefined,
         date_of_birth: utilisateur.date_of_birth,
         grade_id: utilisateur.grade_id || undefined,
-        grade: utilisateur.grades?.nom,
+        grade: utilisateur.grades?.grade_id,
         active: utilisateur.active,
       },
     };

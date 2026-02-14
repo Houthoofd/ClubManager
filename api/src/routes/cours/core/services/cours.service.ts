@@ -112,7 +112,7 @@ export async function obtenirCoursParId(
         cours_recurrent: true,
         inscriptions: {
           include: {
-            utilisateurs: {
+            users: {
               select: {
                 id: true,
                 first_name: true,
@@ -388,7 +388,7 @@ export async function obtenirCoursRecurrents(): Promise<CoursRecurrentData[]> {
 
     console.log(`✅ [CoursService] ${coursRecurrents.length} cours récurrents`);
 
-    return coursRecurrents as CoursRecurrentData[];
+    return coursRecurrents as any as CoursRecurrentData[];
   } catch (error: any) {
     console.error(
       `❌ [CoursService] Erreur récupération cours récurrents:`,
@@ -432,7 +432,7 @@ export async function obtenirInscriptions(coursId: number): Promise<any[]> {
         cours_id: coursId,
       },
       include: {
-        utilisateurs: {
+        users: {
           select: {
             id: true,
             first_name: true,
@@ -498,7 +498,7 @@ export async function inscrireUtilisateur(
         cours_id: coursId,
         utilisateur_id: utilisateurId,
         date_inscription: new Date(),
-        statut: "confirmee",
+        status_id: true,
       },
     });
 

@@ -21,7 +21,7 @@ export function initializeStripe(): Stripe | null {
       !process.env.STRIPE_SECRET_KEY.includes("4e")
     ) {
       stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: "2025-02-24.acacia",
+        apiVersion: "2026-01-28.clover",
       });
       console.log("✅ [Stripe] Instance Stripe initialisée");
     } else {

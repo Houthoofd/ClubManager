@@ -13,12 +13,12 @@
  */
 
 import { StripeService } from "./stripe.service.js";
-import { prisma } from '@/infrastructure/database/prisma-client.js';
-import { emailClient } from '@/infrastructure/external-services/email/index.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
+import { emailClient } from "@/infrastructure/external-services/email/index.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
+} from "@/shared/config/sentry.config.js";
 import Stripe from "stripe";
 
 /**
@@ -109,7 +109,7 @@ export class ConfirmationService {
       });
 
       // 3. Vérifier que l'échéance n'est pas déjà payée
-      const echeance = await prisma.echeances.findUnique({
+      const echeance = await prisma.echeances_paiements.findUnique({
         where: { id: params.echeanceId },
       });
 
@@ -129,16 +129,16 @@ export class ConfirmationService {
           email_envoye: false,
           user_info: {
             email: userInfo.email,
-            nom_complet: `${userInfo.prenom} ${userInfo.nom}`,
+            nom_complet: `${userInfo.first_name} ${userInfo.last_name}`,
           },
         };
       }
 
       // 4. Mettre à jour le statut de l'échéance
-      await prisma.echeances.update({
+      await prisma.echeances_paiements.update({
         where: { id: params.echeanceId },
         data: {
-          statut: "payé",
+          statut: "pay_",
           date_paiement: new Date(),
         },
       });
@@ -146,11 +146,11 @@ export class ConfirmationService {
       console.log("✅ [Confirmation Service] Échéance mise à jour");
 
       // 5. Vérifier si c'est le premier paiement
-      const paiementsCount = await prisma.echeances.count({
+      const paiementsCount = await prisma.echeances_paiements.count({
         where: {
           utilisateur_id: params.userId,
           statut: {
-            in: ["payé", "paye"],
+            in: ["pay_"],
           },
         },
       });
@@ -207,7 +207,7 @@ export class ConfirmationService {
 
       try {
         const templateVariables = {
-          userName: `${userInfo.prenom} ${userInfo.nom}`,
+          userName: `${userInfo.first_name} ${userInfo.last_name}`,
           amount: (params.amount / 100).toFixed(2),
           paymentDate: new Date().toLocaleDateString("fr-FR", {
             day: "2-digit",
