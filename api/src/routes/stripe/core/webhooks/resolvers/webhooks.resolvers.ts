@@ -28,6 +28,10 @@ import {
 } from "@/shared/middleware/rate-limit.middleware.js";
 import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 import {
+  pubSubService,
+  PubSubEvent,
+} from "../../../../../infrastructure/pubsub/index.js";
+import {
   AuditEventType,
   AuditSeverity,
 } from "@/shared/services/audit-log.service.js";
@@ -324,19 +328,23 @@ export const webhooksResolvers = {
         info: any,
       ) => {
         // Note: Subscriptions return AsyncIterator, not Promise, so combineMiddlewares doesn't work
-        // TODO: Add manual auth/admin checks here if needed
+        // Vérification manuelle de l'authentification pour les subscriptions
+        if (!context.user) {
+          throw new Error("Non authentifié");
+        }
+
+        // Vérification admin (optionnel, selon les besoins)
+        // if (context.user.role !== 'admin') {
+        //   throw new Error("Accès réservé aux administrateurs");
+        // }
+
         console.log("🔔 [GraphQL] Subscription: onWebhookProcessed", {
           userId: context.user?.id,
+          pubsubType: pubSubService.getType(),
         });
 
-        // TODO: Implémenter avec PubSub (Redis ou en mémoire)
-        // Pour l'instant, retourner un AsyncIterator vide
-        return {
-          [Symbol.asyncIterator]: async function* () {
-            // Placeholder - à implémenter avec pubsub
-            yield { onWebhookProcessed: null };
-          },
-        };
+        // Retourner l'AsyncIterator du PubSub
+        return pubSubService.asyncIterator(PubSubEvent.WEBHOOK_PROCESSED);
       },
     },
   },

@@ -26,7 +26,7 @@ import {
   type DesinscrireUtilisateurInput,
   type PresenceInput,
   type RetirerProfesseurInput,
-} from '@clubmanager/types/domains/cours/validators';
+} from "@clubmanager/types/domains/cours/validators";
 import { validateInput } from "@/shared/middleware/validation.middleware.js";
 import { combineMiddlewares } from "@/shared/middleware/auth.middleware.js";
 import {
@@ -92,7 +92,7 @@ const tousLesCoursResolver = async (
       nom: cp.professeurs.nom,
       prenom: cp.professeurs.prenom,
     })),
-    places_max: null, // TODO: Ajouter cette colonne au schéma si nécessaire
+    places_max: c.places_max,
     created_at: null,
   }));
 };
@@ -150,7 +150,7 @@ const planningCoursResolver = async (
           nom: cp.professeurs.nom,
           prenom: cp.professeurs.prenom,
         })),
-        places_max: null,
+        places_max: c.places_max,
         created_at: null,
       }));
 
@@ -361,7 +361,7 @@ const statistiquesCoursResolver = async (
     type_cours: coursInfo.type_cours,
     total_inscriptions: totalInscriptions,
     taux_presence: tauxPresence,
-    places_max: null, // TODO: Ajouter au schéma si nécessaire
+    places_max: coursInfo.places_max,
     moyenne_participants:
       coursInstances.length > 0 ? totalInscriptions / coursInstances.length : 0,
   };

@@ -7,6 +7,7 @@
  * - Redis (production, multi-instance)
  */
 
+import { Redis } from "ioredis";
 import { RATE_LIMIT_CONFIG, STORAGE_CONFIG } from "../config/auth.config.js";
 
 // ============================================================================
@@ -175,37 +176,206 @@ class InMemoryRateLimitStore implements RateLimitStore {
 
 /**
  * Store Redis (pour production multi-instance)
- * TODO: Implémenter avec ioredis ou redis client
+ * Implémentation complète avec ioredis
  */
 class RedisRateLimitStore implements RateLimitStore {
-  // private client: RedisClient;
+  private client: Redis;
+  private isConnected: boolean = false;
 
-  constructor() {
-    // TODO: Initialiser le client Redis
-    // this.client = createRedisClient(STORAGE_CONFIG.redis);
-    throw new Error(
-      "Redis store not yet implemented. Use in-memory store for now.",
-    );
+  constructor(redisUrl?: string) {
+    // Initialiser le client Redis
+    const url =
+      redisUrl ||
+      process.env.REDIS_URL ||
+      process.env.REDIS_CONNECTION_STRING ||
+      "redis://localhost:6379";
+
+    try {
+      this.client = new Redis(url, {
+        maxRetriesPerRequest: 3,
+        retryStrategy: (times: number) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+        lazyConnect: true,
+      });
+
+      // Gérer les événements de connexion
+      this.client.on("connect", () => {
+        console.log("✅ [RedisRateLimitStore] Connecté à Redis");
+        this.isConnected = true;
+      });
+
+      this.client.on("error", (error: Error) => {
+        console.error("❌ [RedisRateLimitStore] Erreur Redis:", error.message);
+        this.isConnected = false;
+      });
+
+      this.client.on("close", () => {
+        console.warn("⚠️ [RedisRateLimitStore] Connexion Redis fermée");
+        this.isConnected = false;
+      });
+
+      // Connecter immédiatement
+      this.client.connect().catch((error: Error) => {
+        console.error(
+          "❌ [RedisRateLimitStore] Échec connexion initiale:",
+          error.message,
+        );
+      });
+    } catch (error: any) {
+      console.error(
+        "❌ [RedisRateLimitStore] Erreur initialisation:",
+        error.message,
+      );
+      throw new Error(`Impossible d'initialiser Redis store: ${error.message}`);
+    }
   }
 
+  /**
+   * Récupérer une entrée de rate limit
+   */
   async get(key: string): Promise<RateLimitEntry | null> {
-    // TODO: Implémenter avec Redis GET
-    throw new Error("Not implemented");
+    try {
+      const data = await this.client.get(key);
+      if (!data) {
+        return null;
+      }
+
+      const entry: RateLimitEntry = JSON.parse(data);
+      return entry;
+    } catch (error: any) {
+      console.error(
+        `❌ [RedisRateLimitStore] Erreur GET ${key}:`,
+        error.message,
+      );
+      return null;
+    }
   }
 
+  /**
+   * Sauvegarder une entrée de rate limit avec TTL
+   */
   async set(key: string, entry: RateLimitEntry, ttlMs: number): Promise<void> {
-    // TODO: Implémenter avec Redis SETEX
-    throw new Error("Not implemented");
+    try {
+      const ttlSeconds = Math.ceil(ttlMs / 1000);
+      const data = JSON.stringify(entry);
+
+      // SETEX = SET avec expiration
+      await this.client.setex(key, ttlSeconds, data);
+    } catch (error: any) {
+      console.error(
+        `❌ [RedisRateLimitStore] Erreur SET ${key}:`,
+        error.message,
+      );
+      throw error;
+    }
   }
 
+  /**
+   * Supprimer une entrée
+   */
   async delete(key: string): Promise<void> {
-    // TODO: Implémenter avec Redis DEL
-    throw new Error("Not implemented");
+    try {
+      await this.client.del(key);
+    } catch (error: any) {
+      console.error(
+        `❌ [RedisRateLimitStore] Erreur DEL ${key}:`,
+        error.message,
+      );
+      throw error;
+    }
   }
 
+  /**
+   * Incrémenter un compteur atomiquement
+   */
   async increment(key: string): Promise<number> {
-    // TODO: Implémenter avec Redis INCR + EXPIRE
-    throw new Error("Not implemented");
+    try {
+      const now = Date.now();
+
+      // Utiliser une transaction Redis pour l'atomicité
+      const pipeline = this.client.pipeline();
+
+      // Essayer de récupérer l'entrée existante
+      const existingData = await this.client.get(key);
+
+      let entry: RateLimitEntry;
+
+      if (!existingData) {
+        // Nouvelle entrée
+        entry = {
+          count: 1,
+          firstAttemptAt: now,
+          lastAttemptAt: now,
+        };
+      } else {
+        // Incrémenter l'entrée existante
+        entry = JSON.parse(existingData);
+        entry.count += 1;
+        entry.lastAttemptAt = now;
+      }
+
+      // Sauvegarder avec expiration de 24h
+      const ttlSeconds = 24 * 60 * 60;
+      const data = JSON.stringify(entry);
+      await this.client.setex(key, ttlSeconds, data);
+
+      return entry.count;
+    } catch (error: any) {
+      console.error(
+        `❌ [RedisRateLimitStore] Erreur INCREMENT ${key}:`,
+        error.message,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Vérifier si la connexion Redis est active
+   */
+  isReady(): boolean {
+    return this.isConnected && this.client.status === "ready";
+  }
+
+  /**
+   * Fermer la connexion Redis proprement
+   */
+  async disconnect(): Promise<void> {
+    try {
+      await this.client.quit();
+      console.log("✅ [RedisRateLimitStore] Connexion fermée proprement");
+    } catch (error: any) {
+      console.error(
+        "❌ [RedisRateLimitStore] Erreur fermeture:",
+        error.message,
+      );
+    }
+  }
+
+  /**
+   * Obtenir des statistiques Redis (pour debug)
+   */
+  async getStats(): Promise<{
+    connected: boolean;
+    status: string;
+    keyCount?: number;
+  }> {
+    try {
+      const info = await this.client.info("stats");
+      const keyCount = await this.client.dbsize();
+
+      return {
+        connected: this.isConnected,
+        status: this.client.status,
+        keyCount,
+      };
+    } catch (error: any) {
+      return {
+        connected: this.isConnected,
+        status: this.client.status,
+      };
+    }
   }
 }
 
@@ -220,14 +390,22 @@ export class RateLimitService {
     storeType: "memory" | "redis" = STORAGE_CONFIG.RATE_LIMIT_STORE as
       | "memory"
       | "redis",
+    redisUrl?: string,
   ) {
     if (storeType === "redis") {
-      // Pour l'instant, fallback sur memory si Redis demandé
-      console.warn(
-        "Redis rate limit store not implemented yet. Using in-memory store.",
-      );
-      this.store = new InMemoryRateLimitStore();
+      try {
+        console.log("🔄 [RateLimitService] Initialisation Redis store...");
+        this.store = new RedisRateLimitStore(redisUrl);
+        console.log("✅ [RateLimitService] Redis store initialisé");
+      } catch (error: any) {
+        console.error(
+          "❌ [RateLimitService] Échec initialisation Redis, fallback sur memory:",
+          error.message,
+        );
+        this.store = new InMemoryRateLimitStore();
+      }
     } else {
+      console.log("🔄 [RateLimitService] Utilisation du store en mémoire");
       this.store = new InMemoryRateLimitStore();
     }
   }

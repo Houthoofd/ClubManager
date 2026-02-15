@@ -92,6 +92,42 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// ============================================================================
+// EMAILS - Historique des emails envoyés
+// ============================================================================
+
+model Email {
+  id             String    @id @default(cuid())
+  to             String    @db.VarChar(255)
+  subject        String    @db.VarChar(500)
+  content        String    @db.Text
+  htmlContent    String?   @map("html_content") @db.Text
+  status         EmailStatus @default(SENT)
+  provider       String?   @db.VarChar(50) // 'sendgrid', 'smtp', etc.
+  messageId      String?   @map("message_id") @db.VarChar(255)
+  error          String?   @db.Text
+  utilisateurId  Int?      @map("utilisateur_id")
+  metadata       Json?     // Données additionnelles (template, variables, etc.)
+  sentAt         DateTime  @default(now()) @map("sent_at") @db.DateTime(0)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+
+  utilisateur utilisateurs? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([utilisateurId, sentAt], map: "idx_user_sent")
+  @@index([to, sentAt], map: "idx_to_sent")
+  @@index([status, sentAt], map: "idx_status_sent")
+  @@index([sentAt], map: "idx_sent_at")
+  @@map("emails")
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  BOUNCED
+  DELIVERED
+}
+
 model articles {
   id                Int                 @id @default(autoincrement())
   nom               String              @db.VarChar(100)
@@ -396,6 +432,7 @@ model cours_recurrent {
   jour_semaine               Int
   heure_debut                DateTime                     @db.Time(0)
   heure_fin                  DateTime                     @db.Time(0)
+  places_max                 Int?                         @map("places_max")
   active                     Boolean?                     @default(true)
   cours                      cours[]
   cours_recurrent_professeur cours_recurrent_professeur[]
@@ -638,6 +675,7 @@ model utilisateurs {
   sms_recovery_codes                                                             sms_recovery_codes[]
   sessions                                                                       Session[]
   audit_logs                                                                     AuditLog[]
+  emails                                                                         Email[]
   genres                                                                         genres?                    @relation(fields: [genre_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_1")
   status                                                                         status?                    @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_2")
   grades                                                                         grades?                    @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_3")

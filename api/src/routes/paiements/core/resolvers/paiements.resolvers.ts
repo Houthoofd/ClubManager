@@ -20,6 +20,7 @@ import {
 } from "@/shared/errors/GraphQLErrors.js";
 import { validateInput } from "@/shared/middleware/validation.middleware.js";
 import { withSentry } from "@/shared/middleware/sentry.middleware.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 
 // Services
 import { PaymentIntentService } from "../services/payment-intent.service.js";
@@ -123,12 +124,58 @@ export const paiementsResolvers = {
           offset: args.offset || 0,
         });
 
-        // TODO: Implémenter la récupération de l'historique depuis la DB
-        // Pour l'instant, retourner une structure vide
+        // Récupérer l'historique des paiements depuis la DB
+        const [paiements, total] = await Promise.all([
+          prisma.paiements.findMany({
+            where: {
+              utilisateur_id: validatedArgs.utilisateurId,
+            },
+            include: {
+              commandes: {
+                select: {
+                  id: true,
+                  unique_id: true,
+                  statut: true,
+                  total: true,
+                  date_commande: true,
+                },
+              },
+            },
+            orderBy: {
+              date_paiement: "desc",
+            },
+            take: validatedArgs.limit,
+            skip: validatedArgs.offset,
+          }),
+          prisma.paiements.count({
+            where: {
+              utilisateur_id: validatedArgs.utilisateurId,
+            },
+          }),
+        ]);
+
         return {
           success: true,
-          paiements: [],
-          total: 0,
+          paiements: paiements.map((p) => ({
+            id: p.id,
+            montant: Number(p.montant),
+            devise: "EUR", // Devise par défaut
+            statut: p.statut,
+            date_paiement: p.date_paiement,
+            moyen_paiement: p.methode_paiement || "stripe",
+            stripe_payment_intent_id: p.stripe_payment_intent_id,
+            commande: p.commandes
+              ? {
+                  id: p.commandes.id,
+                  unique_id: p.commandes.unique_id,
+                  statut: p.commandes.statut,
+                  total: Number(p.commandes.total),
+                  date_commande: p.commandes.date_commande,
+                }
+              : null,
+            echeance: null, // Pas de relation echeances_paiements dans le schéma
+          })),
+          total,
           limit: validatedArgs.limit,
           offset: validatedArgs.offset,
         };

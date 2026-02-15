@@ -12,6 +12,8 @@ import {
   WebhookLogStatus,
 } from "@clubmanager/types";
 import { emailClient } from "@/infrastructure/external-services/email/index.js";
+import { pubSubService } from "@/infrastructure/pubsub/index.js";
+import { alertService } from "@/infrastructure/services/alert.service.js";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -937,9 +939,17 @@ export class WebhookService {
             },
           });
 
-          // TODO: Créer une alerte pour l'admin
+          // Créer une alerte pour l'admin
+          await alertService.createSubscriptionSuspendedAlert(utilisateurId, {
+            subscriptionId,
+            invoiceId: invoice.id,
+            amount: invoice.amount_due / 100,
+            attemptCount: invoice.attempt_count || 3,
+            error: "Tentatives max atteintes",
+          });
+
           console.error(
-            `🚨 [Webhooks] Abonnement ${subscriptionId} suspendu pour échecs répétés`,
+            `🚨 [Webhooks] Abonnement ${subscriptionId} suspendu pour échecs répétés - Alerte créée`,
           );
         }
       }
@@ -1030,6 +1040,12 @@ export class WebhookService {
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
       });
 
+      // Récupérer le nom du plan depuis subscription.items
+      const planName =
+        subscription.items.data[0]?.price?.nickname ||
+        subscription.items.data[0]?.plan?.nickname ||
+        "Abonnement mensuel";
+
       // Envoyer email de bienvenue
       await this.sendSubscriptionWelcomeEmail({
         utilisateurId: utilisateur.id,
@@ -1038,7 +1054,7 @@ export class WebhookService {
         firstName: utilisateur.first_name,
         lastName: utilisateur.last_name,
         subscriptionId: subscription.id,
-        planName: "Abonnement mensuel", // TODO: Récupérer depuis subscription.items
+        planName,
         startDate: new Date(
           subscription.current_period_start * 1000,
         ).toLocaleDateString("fr-FR"),
@@ -1236,6 +1252,13 @@ export class WebhookService {
         // Annuler les échéances futures
         await this.cancelFuturePaymentSchedules(utilisateur.id);
 
+        // Récupérer le nom du plan depuis metadata ou items
+        const planName =
+          subscription.metadata?.plan_name ||
+          subscription.items?.data[0]?.price?.nickname ||
+          subscription.items?.data[0]?.plan?.nickname ||
+          "Abonnement mensuel";
+
         // Envoyer email de confirmation d'annulation
         await this.sendSubscriptionCancelledEmail({
           email: utilisateur.email,
@@ -1243,7 +1266,7 @@ export class WebhookService {
           firstName: utilisateur.first_name,
           lastName: utilisateur.last_name,
           subscriptionId: subscription.id,
-          planName: "Abonnement mensuel", // TODO: Récupérer depuis metadata
+          planName,
           canceledAt: subscription.canceled_at
             ? new Date(subscription.canceled_at * 1000).toLocaleDateString(
                 "fr-FR",
@@ -1322,12 +1345,21 @@ export class WebhookService {
    */
   private async markWebhookSuccess(eventId: string): Promise<void> {
     try {
-      await prisma.webhookLog.update({
+      const updatedLog = await prisma.webhookLog.update({
         where: { eventId },
         data: {
           status: "SUCCESS",
           processedAt: new Date(),
         },
+      });
+
+      // Publier l'événement en temps réel
+      await pubSubService.publishWebhookEvent("PROCESSED", {
+        id: updatedLog.id,
+        eventId: updatedLog.eventId,
+        eventType: updatedLog.eventType,
+        status: updatedLog.status,
+        processedAt: updatedLog.processedAt || undefined,
       });
     } catch (error: any) {
       Sentry.captureException(error, {
@@ -1348,20 +1380,37 @@ export class WebhookService {
         where: { eventId },
       });
 
-      if (log) {
-        await prisma.webhookLog.update({
-          where: { eventId },
-          data: {
-            status: "FAILURE",
-            error: errorMessage,
-            retryCount: log.retryCount + 1,
-            nextRetryAt:
-              log.retryCount < 3
-                ? new Date(Date.now() + (log.retryCount + 1) * 60000)
-                : null,
-          },
-        });
+      if (!log) {
+        console.error(`❌ [WebhookService] Log webhook non trouvé: ${eventId}`);
+        return;
       }
+
+      const retryCount = log.retryCount + 1;
+      const shouldRetry = retryCount < 3;
+
+      const updatedLog = await prisma.webhookLog.update({
+        where: { eventId },
+        data: {
+          status: shouldRetry ? "RETRYING" : "FAILURE",
+          error: errorMessage,
+          retryCount,
+          nextRetryAt: shouldRetry
+            ? new Date(Date.now() + Math.pow(2, retryCount) * 60000)
+            : null,
+        },
+      });
+
+      // Publier l'événement en temps réel
+      await pubSubService.publishWebhookEvent(
+        shouldRetry ? "RETRY" : "FAILED",
+        {
+          id: updatedLog.id,
+          eventId: updatedLog.eventId,
+          eventType: updatedLog.eventType,
+          status: updatedLog.status,
+          error: updatedLog.error || undefined,
+        },
+      );
     } catch (error: any) {
       Sentry.captureException(error, {
         tags: { component: "webhook", action: "mark_failure" },
@@ -1494,18 +1543,83 @@ export class WebhookService {
         _count: { id: true },
       });
 
+      // Calculer les temps de traitement moyens
+      const logsWithProcessingTime = await prisma.webhookLog.findMany({
+        where: {
+          status: "SUCCESS",
+          processedAt: { not: null },
+        },
+        select: {
+          createdAt: true,
+          processedAt: true,
+          eventType: true,
+        },
+      });
+
+      const processingTimes = logsWithProcessingTime.map((log) =>
+        log.processedAt && log.createdAt
+          ? log.processedAt.getTime() - log.createdAt.getTime()
+          : 0,
+      );
+
+      const averageProcessingTime =
+        processingTimes.length > 0
+          ? processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length
+          : 0;
+
+      // Calculer les statistiques par type d'événement
+      const eventTypeStats = await Promise.all(
+        groupedByType.map(async (group) => {
+          const typeSuccess = await prisma.webhookLog.count({
+            where: {
+              eventType: group.eventType,
+              status: "SUCCESS",
+            },
+          });
+
+          const typeLogs = await prisma.webhookLog.findMany({
+            where: {
+              eventType: group.eventType,
+              status: "SUCCESS",
+              processedAt: { not: null },
+            },
+            select: {
+              createdAt: true,
+              processedAt: true,
+            },
+          });
+
+          const typeProcessingTimes = typeLogs.map((log) =>
+            log.processedAt && log.createdAt
+              ? log.processedAt.getTime() - log.createdAt.getTime()
+              : 0,
+          );
+
+          const typeAvgProcessingTime =
+            typeProcessingTimes.length > 0
+              ? typeProcessingTimes.reduce((a, b) => a + b, 0) /
+                typeProcessingTimes.length
+              : 0;
+
+          return {
+            eventType: group.eventType,
+            count: group._count.id,
+            successRate:
+              group._count.id > 0
+                ? Math.round((typeSuccess / group._count.id) * 100)
+                : 0,
+            averageProcessingTime: Math.round(typeAvgProcessingTime),
+          };
+        }),
+      );
+
       const stats: WebhookStats = {
         totalProcessed: total,
         successCount: success,
         failureCount: failure,
         pendingCount: pending,
-        averageProcessingTime: 0, // TODO: Calculer si processedAt disponible
-        byEventType: groupedByType.map((group) => ({
-          eventType: group.eventType,
-          count: group._count.id,
-          successRate: 0, // TODO: Calculer avec sous-requête
-          averageProcessingTime: 0,
-        })),
+        averageProcessingTime: Math.round(averageProcessingTime),
+        byEventType: eventTypeStats,
         recentFailures: recentFailures.map((log) => ({
           id: log.id,
           eventId: log.eventId,

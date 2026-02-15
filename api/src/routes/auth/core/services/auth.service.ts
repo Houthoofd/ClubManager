@@ -353,12 +353,23 @@ export async function envoyerEmailResetMotDePasse(
 
     console.log("📧 [AuthService] Envoi email de réinitialisation à:", email);
 
-    // TODO: Implémenter l'envoi d'email de réinitialisation
-    // const { emailClient } =
-    //   await import("../../../../infrastructure/external-services/email/index.js");
-    // await emailClient.envoyerResetPassword(email, prenom, token);
+    const { emailClient } =
+      await import("../../../../infrastructure/external-services/email/index.js");
 
-    console.log("✅ [AuthService] Email de réinitialisation envoyé (TODO)");
+    const result = await emailClient.sendPasswordResetEmail(
+      email,
+      prenom,
+      token,
+    );
+
+    if (result.success) {
+      console.log(
+        "✅ [AuthService] Email de réinitialisation envoyé avec succès",
+      );
+    } else {
+      console.warn("⚠️ [AuthService] Échec envoi email:", result.error);
+      throw new Error(`Erreur envoi email: ${result.error}`);
+    }
   } catch (error: any) {
     console.error("❌ [AuthService] Erreur envoi email:", error);
 

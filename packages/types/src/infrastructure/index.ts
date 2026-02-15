@@ -73,3 +73,31 @@ export {
 // Database types
 export * from "./database/auth.types.js";
 export * from "./database/utilisateurs.types.js";
+
+// Alert types
+export type {
+  CreateAlertInput,
+  AlerteType as AlertTypeInfo,
+  AlerteUtilisateur,
+  AlertContext,
+  AlertStats,
+  GetAlertsResult,
+  AlertAction,
+} from "./alerts.js";
+
+export {
+  AlertType,
+  AlertPriority,
+  AlertStatus,
+  createAlertSchema,
+  resolveAlertSchema,
+  getAlertsSchema,
+  createAlertActionSchema,
+  isAlertType,
+  isAlertPriority,
+  isAlertStatus,
+  getAlertTypeName,
+  getAlertTypeDescription,
+  getAlertPriorityColor,
+  getAlertTypeIcon,
+} from "./alerts.js";

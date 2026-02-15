@@ -22,6 +22,7 @@ import {
 } from "@/shared/errors/GraphQLErrors.js";
 import { validateInput } from "@/shared/middleware/validation.middleware.js";
 import { withSentry } from "@/shared/middleware/sentry.middleware.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 
 // Services
 import { CompteService, compteService } from "../services/compte.service.js";
@@ -380,9 +381,20 @@ export const compteResolvers = {
       withSentry,
     )(async (_parent: any, _args: any, context: GraphQLContext) => {
       try {
-        // TODO: Implémenter la récupération des genres depuis la DB
-        // Pour l'instant retourner un tableau vide
-        return [];
+        const genres = await prisma.genres.findMany({
+          select: {
+            id: true,
+            genre_name: true,
+          },
+          orderBy: {
+            genre_name: "asc",
+          },
+        });
+
+        return genres.map((genre) => ({
+          id: genre.id,
+          genre_name: genre.genre_name,
+        }));
       } catch (error: any) {
         throw new InternalServerError(
           `Erreur lors de la récupération des genres: ${error.message}`,
@@ -400,9 +412,21 @@ export const compteResolvers = {
       withSentry,
     )(async (_parent: any, _args: any, context: GraphQLContext) => {
       try {
-        // TODO: Implémenter la récupération des grades depuis la DB
-        // Pour l'instant retourner un tableau vide
-        return [];
+        const grades = await prisma.grades.findMany({
+          select: {
+            id: true,
+            grade_id: true,
+          },
+          orderBy: {
+            id: "asc",
+          },
+        });
+
+        return grades.map((grade) => ({
+          id: grade.id,
+          grade_id: grade.grade_id,
+          grade_name: grade.grade_id, // Utiliser grade_id comme nom
+        }));
       } catch (error: any) {
         throw new InternalServerError(
           `Erreur lors de la récupération des grades: ${error.message}`,
@@ -420,12 +444,23 @@ export const compteResolvers = {
       withSentry,
     )(async (_parent: any, _args: any, context: GraphQLContext) => {
       try {
-        // TODO: Implémenter la récupération des status depuis la DB
-        // Pour l'instant retourner un tableau vide
-        return [];
+        const statuses = await prisma.status.findMany({
+          select: {
+            id: true,
+            nom_role: true,
+          },
+          orderBy: {
+            nom_role: "asc",
+          },
+        });
+
+        return statuses.map((status) => ({
+          id: status.id,
+          nom_role: status.nom_role,
+        }));
       } catch (error: any) {
         throw new InternalServerError(
-          `Erreur lors de la récupération des status: ${error.message}`,
+          `Erreur lors de la récupération des statuts: ${error.message}`,
         );
       }
     }),
@@ -440,9 +475,24 @@ export const compteResolvers = {
       withSentry,
     )(async (_parent: any, _args: any, context: GraphQLContext) => {
       try {
-        // TODO: Implémenter la récupération des plans tarifaires depuis la DB
-        // Pour l'instant retourner un tableau vide
-        return [];
+        const plans = await prisma.plans_tarifaires.findMany({
+          select: {
+            id: true,
+            nom_plan: true,
+            prix: true,
+            description: true,
+          },
+          orderBy: {
+            prix: "asc",
+          },
+        });
+
+        return plans.map((plan) => ({
+          id: plan.id,
+          nom_plan: plan.nom_plan,
+          prix: plan.prix,
+          description: plan.description,
+        }));
       } catch (error: any) {
         throw new InternalServerError(
           `Erreur lors de la récupération des plans tarifaires: ${error.message}`,

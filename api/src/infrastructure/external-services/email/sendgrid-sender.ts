@@ -2,7 +2,8 @@
  * Service d'envoi d'emails via SendGrid
  */
 
-import type { EmailSendResult, SendGridOptions } from '@clubmanager/types';
+import type { EmailSendResult, SendGridOptions } from "@clubmanager/types";
+import { prisma } from "../../../infrastructure/database/prisma-client.js";
 
 export class SendGridSender {
   /**
@@ -12,12 +13,12 @@ export class SendGridSender {
     to: string,
     subject: string,
     htmlContent: string,
-    options: SendGridOptions = {}
+    options: SendGridOptions = {},
   ): Promise<EmailSendResult> {
     try {
-      console.log('📧 [SendGridSender] Envoi email via SendGrid...');
+      console.log("📧 [SendGridSender] Envoi email via SendGrid...");
 
-      const sgMail = await import('@sendgrid/mail');
+      const sgMail = await import("@sendgrid/mail");
       sgMail.default.setApiKey(process.env.SENDGRID_API_KEY!);
 
       const msg = {
@@ -28,23 +29,45 @@ export class SendGridSender {
       };
 
       const response = await sgMail.default.send(msg);
+      const messageId =
+        response[0]?.headers?.["x-message-id"] || "sendgrid-success";
       console.log(`✅ [SendGridSender] Email envoyé à ${to}`);
 
       // Sauvegarder en base si demandé
       if (options.saveToDb && options.utilisateurId) {
-        await this.saveToDatabase(to, subject, htmlContent, options.utilisateurId);
+        await this.saveToDatabase(
+          to,
+          subject,
+          htmlContent,
+          options.utilisateurId,
+          messageId,
+          "SENT",
+        );
       }
 
       return {
         success: true,
-        messageId: response[0]?.headers?.['x-message-id'] || 'sendgrid-success',
+        messageId,
         details: {
           statusCode: response[0]?.statusCode,
           headers: response[0]?.headers,
         },
       };
     } catch (error: any) {
-      console.error('❌ [SendGridSender] Erreur envoi:', error);
+      console.error("❌ [SendGridSender] Erreur envoi:", error);
+
+      // Sauvegarder l'échec en base si demandé
+      if (options.saveToDb && options.utilisateurId) {
+        await this.saveToDatabase(
+          to,
+          subject,
+          htmlContent,
+          options.utilisateurId,
+          undefined,
+          "FAILED",
+          error.message,
+        );
+      }
 
       if (options.fallbackOnError) {
         return await this.tryFallback();
@@ -62,53 +85,72 @@ export class SendGridSender {
    * Tente un fallback en cas d'erreur
    */
   private async tryFallback(): Promise<EmailSendResult> {
-    console.log('🔄 [SendGridSender] Tentative fallback...');
+    console.log("🔄 [SendGridSender] Tentative fallback...");
 
     try {
       // Importer le service email pour tester la configuration
-      const { EmailService } = await import('../../services/emailService.js');
+      const { EmailService } = await import("../../services/emailService.js");
       const emailService = new EmailService();
       const testResult = await emailService.testerConfiguration();
 
       if (testResult.success) {
         return {
           success: true,
-          messageId: 'fallback-test-success',
+          messageId: "fallback-test-success",
           details: { fallback: true, testResult },
         };
       }
     } catch (fallbackError) {
-      console.warn('⚠️ [SendGridSender] Fallback échoué:', fallbackError);
+      console.warn("⚠️ [SendGridSender] Fallback échoué:", fallbackError);
     }
 
     return {
       success: false,
-      error: 'Erreur SendGrid et fallback échoué',
+      error: "Erreur SendGrid et fallback échoué",
     };
   }
 
   /**
-   * Sauvegarde l'email en base de données (placeholder)
+   * Sauvegarde l'email en base de données
    */
   private async saveToDatabase(
     to: string,
     subject: string,
     content: string,
-    utilisateurId: number
+    utilisateurId: number,
+    messageId?: string,
+    status: "SENT" | "FAILED" = "SENT",
+    error?: string,
   ): Promise<void> {
     try {
-      console.log('💾 [SendGridSender] Sauvegarde email en base:', {
+      console.log("💾 [SendGridSender] Sauvegarde email en base:", {
         to,
         subject,
         utilisateurId,
+        status,
       });
 
-      // TODO: Implémenter avec Prisma
-      // await prisma.emails.create({
-      //   data: { to, subject, content, utilisateurId }
-      // });
+      await prisma.email.create({
+        data: {
+          to,
+          subject,
+          content,
+          htmlContent: content,
+          utilisateurId,
+          status,
+          provider: "sendgrid",
+          messageId,
+          error,
+          metadata: {
+            savedBy: "SendGridSender",
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      console.log("✅ [SendGridSender] Email sauvegardé en base avec succès");
     } catch (error) {
-      console.warn('⚠️ [SendGridSender] Erreur sauvegarde email:', error);
+      console.warn("⚠️ [SendGridSender] Erreur sauvegarde email:", error);
     }
   }
 }
