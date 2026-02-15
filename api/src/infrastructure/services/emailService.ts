@@ -2,7 +2,13 @@
  * Email Service - Wrapper de compatibilité
  *
  * Ce service sert de pont entre l'ancien code utilisant EmailService
- * et le nouveau EmailClient. Il délègue les appels vers EmailClient.
+ * et le nouveau EmailClient unifié.
+ *
+ * SYSTÈME UNIFIÉ :
+ * - Utilise uniquement template-loader.ts (templates HTML depuis fichiers)
+ * - Plus de templates en mémoire (emailTemplateService supprimé)
+ * - Validation automatique des variables
+ * - Retry et rate limiting intégrés
  */
 
 import {
@@ -26,7 +32,6 @@ export class EmailService {
     subject: string,
     message: string,
     options?: {
-      templateId?: number;
       templateTitle?: string;
       variables?: Record<string, string | number>;
       utilisateurId?: number;
@@ -47,11 +52,10 @@ export class EmailService {
       to,
       subject,
       message,
-      templateId: options?.templateId,
       templateTitle: options?.templateTitle,
       variables: stringVariables,
       utilisateurId: options?.utilisateurId,
-      saveToDb: options?.saveToDb,
+      saveToDb: options?.saveToDb ?? true,
     });
   }
 
@@ -106,35 +110,19 @@ export class EmailService {
   }
 
   /**
-   * Teste la configuration du service email
+   * Envoie un email de réinitialisation de mot de passe
    */
-  async testerConfiguration(): Promise<{ success: boolean; message?: string }> {
-    try {
-      // Test simple : vérifier que SendGrid est configuré
-      if (!process.env.SENDGRID_API_KEY) {
-        return {
-          success: false,
-          message: "SENDGRID_API_KEY non configurée",
-        };
-      }
-
-      if (!process.env.SENDGRID_FROM_EMAIL) {
-        return {
-          success: false,
-          message: "SENDGRID_FROM_EMAIL non configurée",
-        };
-      }
-
-      return {
-        success: true,
-        message: "Configuration email OK",
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+  async envoyerEmailResetPassword(
+    to: string,
+    userName: string,
+    resetToken: string,
+    utilisateurId?: number,
+  ): Promise<EmailSendResult> {
+    return this.client.sendPasswordResetEmail(to, userName, resetToken, {
+      variables: {
+        expirationTime: "1 heure",
+      },
+    });
   }
 
   /**
@@ -161,36 +149,12 @@ export class EmailService {
       templateTitle,
       variables: stringVariables,
       utilisateurId: options?.utilisateurId,
-      saveToDb: options?.saveToDb,
+      saveToDb: options?.saveToDb ?? true,
     });
   }
 
   /**
-   * Envoie un email de réinitialisation de mot de passe
-   */
-  async envoyerEmailResetPassword(
-    to: string,
-    userName: string,
-    resetLink: string,
-    utilisateurId?: number,
-  ): Promise<EmailSendResult> {
-    return this.client.sendEmail({
-      to,
-      subject: "Réinitialisation de votre mot de passe",
-      message: "",
-      templateTitle: "reset-password",
-      variables: {
-        userName,
-        resetLink,
-        expirationTime: "24 heures",
-      },
-      utilisateurId,
-      saveToDb: true,
-    });
-  }
-
-  /**
-   * Envoie un email de notification
+   * Envoie un email de notification simple
    */
   async envoyerNotification(
     to: string,
@@ -205,6 +169,79 @@ export class EmailService {
       utilisateurId,
       saveToDb: true,
     });
+  }
+
+  /**
+   * Teste la configuration du service email
+   */
+  async testerConfiguration(): Promise<{ success: boolean; message?: string }> {
+    try {
+      // Test simple : vérifier que SendGrid est configuré
+      if (!process.env.SENDGRID_API_KEY) {
+        return {
+          success: false,
+          message: "SENDGRID_API_KEY non configurée",
+        };
+      }
+
+      if (!process.env.SENDGRID_FROM_EMAIL) {
+        return {
+          success: false,
+          message: "SENDGRID_FROM_EMAIL non configurée",
+        };
+      }
+
+      // Vérifier que le répertoire templates existe
+      const templates = await this.client.listTemplates();
+      if (templates.length === 0) {
+        return {
+          success: false,
+          message: "Aucun template trouvé dans resources/templates/emails/",
+        };
+      }
+
+      return {
+        success: true,
+        message: `Configuration email OK - ${templates.length} templates disponibles`,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  /**
+   * Liste tous les templates disponibles
+   */
+  async listerTemplates(): Promise<string[]> {
+    return this.client.listTemplates();
+  }
+
+  /**
+   * Preview d'un template (utile pour tests/debug)
+   */
+  async previewTemplate(
+    templateName: string,
+    variables: Record<string, string>,
+  ): Promise<{
+    subject: string;
+    html: string;
+    validation: {
+      isValid: boolean;
+      missingVariables: string[];
+      unusedVariables: string[];
+    };
+  }> {
+    return this.client.previewTemplate(templateName, variables);
+  }
+
+  /**
+   * Vérifie si un template existe
+   */
+  async templateExists(templateName: string): Promise<boolean> {
+    return this.client.templateExists(templateName);
   }
 }
 

@@ -8,6 +8,57 @@ datasource db {
 }
 
 // ============================================================================
+// EMAIL QUEUE - File d'attente persistante pour les emails
+// ============================================================================
+
+model EmailQueue {
+  id            Int              @id @default(autoincrement())
+  to            String           @db.VarChar(255)
+  subject       String?          @db.VarChar(500)
+  templateTitle String?          @map("template_title") @db.VarChar(100)
+  variables     Json?
+  htmlContent   String?          @map("html_content") @db.Text
+
+  // Gestion des tentatives
+  attempts      Int              @default(0)
+  maxAttempts   Int              @default(5) @map("max_attempts")
+  nextRetryAt   DateTime?        @map("next_retry_at") @db.DateTime(0)
+
+  // Statut
+  status        EmailQueueStatus @default(PENDING)
+
+  // Métadonnées
+  priority      Int              @default(0) // 0=normal, 1=high, -1=low
+  createdAt     DateTime         @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.DateTime(0)
+  processedAt   DateTime?        @map("processed_at") @db.DateTime(0)
+
+  // Erreurs
+  lastError     String?          @map("last_error") @db.Text
+  errorDetails  Json?            @map("error_details")
+
+  // Relations
+  utilisateurId Int?             @map("utilisateur_id")
+  utilisateur   utilisateurs?    @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+
+  // Correlation pour tracing
+  correlationId String?          @map("correlation_id") @db.VarChar(36)
+
+  @@index([status, nextRetryAt], map: "idx_status_retry")
+  @@index([status, priority, createdAt], map: "idx_status_priority_created")
+  @@index([correlationId], map: "idx_correlation")
+  @@index([utilisateurId], map: "idx_utilisateur")
+  @@map("email_queue")
+}
+
+enum EmailQueueStatus {
+  PENDING      // En attente d'envoi
+  PROCESSING   // En cours d'envoi
+  COMPLETED    // Envoyé avec succès
+  FAILED       // Échec définitif après max tentatives
+}
+
+// ============================================================================
 // WEBHOOKS - Logs et traçabilité des événements Stripe
 // ============================================================================
 
@@ -676,6 +727,7 @@ model utilisateurs {
   sessions                                                                       Session[]
   audit_logs                                                                     AuditLog[]
   emails                                                                         Email[]
+  emailQueue                                                                     EmailQueue[]
   genres                                                                         genres?                    @relation(fields: [genre_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_1")
   status                                                                         status?                    @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_2")
   grades                                                                         grades?                    @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_3")

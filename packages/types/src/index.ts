@@ -29,6 +29,20 @@ export type {
   PromotionEmailOptions,
   WelcomeEmailVariables,
   OrderConfirmationVariables,
+  // Advanced Email System v2.1 Types
+  TemplateVariablesMap,
+  TemplateName,
+  TemplateVariables,
+  BulkEmailRecipient,
+  BulkEmailRequest,
+  BulkEmailResult,
+  EmailBuilderOptions,
+  DryRunResult,
+  UserEmailData,
+  EmailHook,
+  EnrichedEmailRequest,
+  EmailPartial,
+  EmailStats,
 } from "./infrastructure/email.js";
 
 export * from "./infrastructure/s3.js";

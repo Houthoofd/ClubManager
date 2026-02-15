@@ -15,6 +15,39 @@ export type {
   PromotionEmailOptions,
   WelcomeEmailVariables,
   OrderConfirmationVariables,
+  TemplateVariablesMap,
+  TemplateName,
+  TemplateVariables,
+  BulkEmailRecipient,
+  BulkEmailRequest,
+  BulkEmailResult,
+  EmailBuilderOptions,
+  DryRunResult,
+  UserEmailData,
+  EmailHook,
+  EnrichedEmailRequest,
+  EmailPartial,
+  EmailStats,
+  MetricsConfig,
+  EmailMetricLabels,
+  MetricsSnapshot,
+  CorrelationIdConfig,
+  CorrelationMetadata,
+  CorrelationContext,
+  AlertConfig,
+  AlertChannel,
+  AlertChannelType,
+  AlertSeverity,
+  AlertContext as EmailAlertContext,
+  AlertRequest,
+  AlertResult,
+  SlackMessage,
+  DiscordMessage,
+  DiscordEmbed,
+  AlertStats as EmailAlertStats,
+  DashboardConfig,
+  DashboardData,
+  DashboardEvent,
 } from "./email.js";
 
 // S3/Storage types
@@ -101,3 +134,6 @@ export {
   getAlertPriorityColor,
   getAlertTypeIcon,
 } from "./alerts.js";
+
+// Email Phase 3 GraphQL Types
+export { emailPhase3TypeDefs } from "./email-phase3.graphql.typedefs.js";
