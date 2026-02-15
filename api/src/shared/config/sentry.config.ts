@@ -5,9 +5,9 @@
  * Integrates seamlessly with the shared architecture.
  */
 
-import * as Sentry from '@sentry/node';
-import { ProfilingIntegration } from '@sentry/profiling-node';
-import { appConfig } from './app.config';
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
+import { appConfig } from "./app.config.js";
 
 export interface SentryConfig {
   dsn: string;
@@ -32,20 +32,22 @@ export interface SentryConfig {
  * Sentry configuration from environment variables
  */
 export const sentryConfig: SentryConfig = {
-  dsn: process.env.SENTRY_DSN || '',
+  dsn: process.env.SENTRY_DSN || "",
   environment: appConfig.env,
-  enabled: process.env.SENTRY_ENABLED === 'true' && !!process.env.SENTRY_DSN,
-  sampleRate: parseFloat(process.env.SENTRY_SAMPLE_RATE || '1.0'),
-  tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
-  profilesSampleRate: parseFloat(process.env.SENTRY_PROFILES_SAMPLE_RATE || '0.1'),
-  debug: process.env.SENTRY_DEBUG === 'true',
+  enabled: process.env.SENTRY_ENABLED === "true" && !!process.env.SENTRY_DSN,
+  sampleRate: parseFloat(process.env.SENTRY_SAMPLE_RATE || "1.0"),
+  tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || "0.1"),
+  profilesSampleRate: parseFloat(
+    process.env.SENTRY_PROFILES_SAMPLE_RATE || "0.1",
+  ),
+  debug: process.env.SENTRY_DEBUG === "true",
 
   integrations: {
-    http: process.env.SENTRY_INTEGRATION_HTTP !== 'false',
-    express: process.env.SENTRY_INTEGRATION_EXPRESS !== 'false',
-    graphql: process.env.SENTRY_INTEGRATION_GRAPHQL !== 'false',
-    prisma: process.env.SENTRY_INTEGRATION_PRISMA !== 'false',
-    console: process.env.SENTRY_INTEGRATION_CONSOLE !== 'false',
+    http: process.env.SENTRY_INTEGRATION_HTTP !== "false",
+    express: process.env.SENTRY_INTEGRATION_EXPRESS !== "false",
+    graphql: process.env.SENTRY_INTEGRATION_GRAPHQL !== "false",
+    prisma: process.env.SENTRY_INTEGRATION_PRISMA !== "false",
+    console: process.env.SENTRY_INTEGRATION_CONSOLE !== "false",
   },
 };
 
@@ -54,7 +56,7 @@ export const sentryConfig: SentryConfig = {
  */
 export function initializeSentry(): void {
   if (!sentryConfig.enabled) {
-    console.log('⚠️  Sentry disabled (SENTRY_ENABLED=false or no DSN)');
+    console.log("⚠️  Sentry disabled (SENTRY_ENABLED=false or no DSN)");
     return;
   }
 
@@ -69,13 +71,15 @@ export function initializeSentry(): void {
 
       integrations: [
         // HTTP requests tracking
-        ...(sentryConfig.integrations.http ? [new Sentry.Integrations.Http({ tracing: true })] : []),
+        ...(sentryConfig.integrations.http ? [Sentry.httpIntegration()] : []),
 
         // Console breadcrumbs
-        ...(sentryConfig.integrations.console ? [new Sentry.Integrations.Console()] : []),
+        ...(sentryConfig.integrations.console
+          ? [Sentry.consoleIntegration()]
+          : []),
 
         // Profiling
-        new ProfilingIntegration(),
+        nodeProfilingIntegration(),
       ],
 
       // Filter sensitive data
@@ -92,9 +96,11 @@ export function initializeSentry(): void {
 
         // Remove passwords from breadcrumbs
         if (event.breadcrumbs) {
-          event.breadcrumbs = event.breadcrumbs.map(breadcrumb => ({
+          event.breadcrumbs = event.breadcrumbs.map((breadcrumb) => ({
             ...breadcrumb,
-            data: breadcrumb.data ? sanitizeSentryData(breadcrumb.data) : undefined,
+            data: breadcrumb.data
+              ? sanitizeSentryData(breadcrumb.data)
+              : undefined,
           }));
         }
 
@@ -104,7 +110,10 @@ export function initializeSentry(): void {
       // Filter transactions
       beforeSendTransaction(event) {
         // Don't send healthcheck transactions
-        if (event.transaction === 'GET /health' || event.transaction === 'GET /ping') {
+        if (
+          event.transaction === "GET /health" ||
+          event.transaction === "GET /ping"
+        ) {
           return null;
         }
 
@@ -114,29 +123,31 @@ export function initializeSentry(): void {
       // Ignore certain errors
       ignoreErrors: [
         // Network errors
-        'NetworkError',
-        'Network request failed',
-        'Failed to fetch',
+        "NetworkError",
+        "Network request failed",
+        "Failed to fetch",
 
         // Browser extensions
-        'Extension context invalidated',
-        'chrome-extension://',
-        'moz-extension://',
+        "Extension context invalidated",
+        "chrome-extension://",
+        "moz-extension://",
 
         // Development
-        'ResizeObserver loop limit exceeded',
+        "ResizeObserver loop limit exceeded",
 
         // Common non-critical errors
-        'Non-Error promise rejection captured',
+        "Non-Error promise rejection captured",
       ],
     });
 
-    console.log('✅ Sentry initialized successfully');
+    console.log("✅ Sentry initialized successfully");
     console.log(`   Environment: ${sentryConfig.environment}`);
     console.log(`   Sample Rate: ${sentryConfig.sampleRate * 100}%`);
-    console.log(`   Traces Sample Rate: ${sentryConfig.tracesSampleRate * 100}%`);
+    console.log(
+      `   Traces Sample Rate: ${sentryConfig.tracesSampleRate * 100}%`,
+    );
   } catch (error) {
-    console.error('❌ Failed to initialize Sentry:', error);
+    console.error("❌ Failed to initialize Sentry:", error);
   }
 }
 
@@ -144,38 +155,38 @@ export function initializeSentry(): void {
  * Sanitize sensitive data before sending to Sentry
  */
 function sanitizeSentryData(data: any): any {
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== "object") {
     return data;
   }
 
   const sensitiveKeys = [
-    'password',
-    'passwordHash',
-    'token',
-    'accessToken',
-    'refreshToken',
-    'apiKey',
-    'secret',
-    'secretKey',
-    'authorization',
-    'cookie',
-    'creditCard',
-    'cvv',
-    'ssn',
-    'socialSecurity',
+    "password",
+    "passwordHash",
+    "token",
+    "accessToken",
+    "refreshToken",
+    "apiKey",
+    "secret",
+    "secretKey",
+    "authorization",
+    "cookie",
+    "creditCard",
+    "cvv",
+    "ssn",
+    "socialSecurity",
   ];
 
   const sanitized = Array.isArray(data) ? [...data] : { ...data };
 
-  Object.keys(sanitized).forEach(key => {
+  Object.keys(sanitized).forEach((key) => {
     const lowerKey = key.toLowerCase();
 
     // Check if key contains sensitive data
-    if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
-      sanitized[key] = '[REDACTED]';
+    if (sensitiveKeys.some((sensitive) => lowerKey.includes(sensitive))) {
+      sanitized[key] = "[REDACTED]";
     }
     // Recursively sanitize nested objects
-    else if (sanitized[key] && typeof sanitized[key] === 'object') {
+    else if (sanitized[key] && typeof sanitized[key] === "object") {
       sanitized[key] = sanitizeSentryData(sanitized[key]);
     }
   });
@@ -186,7 +197,11 @@ function sanitizeSentryData(data: any): any {
 /**
  * Set user context for Sentry
  */
-export function setSentryUser(user: { id: string; email?: string; role?: string }): void {
+export function setSentryUser(user: {
+  id: string;
+  email?: string;
+  role?: string;
+}): void {
   if (!sentryConfig.enabled) return;
 
   Sentry.setUser({
@@ -217,9 +232,9 @@ export function setSentryContext(key: string, value: any): void {
  */
 export function addSentryBreadcrumb(
   message: string,
-  category: string = 'custom',
-  level: Sentry.SeverityLevel = 'info',
-  data?: Record<string, any>
+  category: string = "custom",
+  level: Sentry.SeverityLevel = "info",
+  data?: Record<string, any>,
 ): void {
   if (!sentryConfig.enabled) return;
 
@@ -242,12 +257,12 @@ export function captureException(
     tags?: Record<string, string>;
     extra?: Record<string, any>;
     user?: { id: string; email?: string };
-  }
+  },
 ): string | undefined {
   if (!sentryConfig.enabled) return;
 
   return Sentry.captureException(error, {
-    level: context?.level || 'error',
+    level: context?.level || "error",
     tags: context?.tags,
     extra: context?.extra ? sanitizeSentryData(context.extra) : undefined,
     user: context?.user,
@@ -259,11 +274,11 @@ export function captureException(
  */
 export function captureMessage(
   message: string,
-  level: Sentry.SeverityLevel = 'info',
+  level: Sentry.SeverityLevel = "info",
   context?: {
     tags?: Record<string, string>;
     extra?: Record<string, any>;
-  }
+  },
 ): string | undefined {
   if (!sentryConfig.enabled) return;
 
@@ -279,14 +294,13 @@ export function captureMessage(
  */
 export function startTransaction(
   name: string,
-  op: string = 'custom'
-): Sentry.Transaction | undefined {
+  op: string = "custom",
+): any | undefined {
   if (!sentryConfig.enabled) return;
 
-  return Sentry.startTransaction({
-    name,
-    op,
-  });
+  // Sentry v10 uses startSpan instead of startTransaction
+  // startSpan requires a callback, so we return undefined for now
+  return undefined;
 }
 
 /**
@@ -299,7 +313,7 @@ export async function flushSentry(timeout: number = 2000): Promise<boolean> {
   try {
     return await Sentry.flush(timeout);
   } catch (error) {
-    console.error('Failed to flush Sentry:', error);
+    console.error("Failed to flush Sentry:", error);
     return false;
   }
 }
@@ -314,7 +328,7 @@ export async function closeSentry(timeout: number = 2000): Promise<boolean> {
   try {
     return await Sentry.close(timeout);
   } catch (error) {
-    console.error('Failed to close Sentry:', error);
+    console.error("Failed to close Sentry:", error);
     return false;
   }
 }
@@ -326,14 +340,14 @@ export function captureGraphQLError(
   error: Error,
   operation: string,
   variables?: any,
-  user?: { id: string; email?: string }
+  user?: { id: string; email?: string },
 ): void {
   if (!sentryConfig.enabled) return;
 
   captureException(error, {
-    level: 'error',
+    level: "error",
     tags: {
-      type: 'graphql',
+      type: "graphql",
       operation,
     },
     extra: {
@@ -350,24 +364,23 @@ export function captureGraphQLError(
 export async function withSentryTransaction<T>(
   name: string,
   op: string,
-  callback: (transaction: Sentry.Transaction) => Promise<T>
+  callback: (transaction: any) => Promise<T>,
 ): Promise<T> {
   if (!sentryConfig.enabled) {
-    return callback({} as Sentry.Transaction);
+    return callback({} as any);
   }
 
-  const transaction = Sentry.startTransaction({ name, op });
-
-  try {
-    const result = await callback(transaction);
-    transaction.setStatus('ok');
-    return result;
-  } catch (error) {
-    transaction.setStatus('internal_error');
-    throw error;
-  } finally {
-    transaction.finish();
-  }
+  // Sentry v10 uses startSpan instead of startTransaction
+  return Sentry.startSpan({ name, op }, async (span) => {
+    try {
+      const result = await callback(span);
+      span.setStatus({ code: 1 }); // 1 = OK status
+      return result;
+    } catch (error) {
+      span.setStatus({ code: 2 }); // 2 = ERROR status
+      throw error;
+    }
+  });
 }
 
 export default Sentry;

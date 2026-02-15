@@ -1,5 +1,4 @@
-import { Paiements } from "@/infrastructure/database/repositories/paiements/paiements.js";
-import { Magasin } from "@/infrastructure/database/repositories/magasin/magasin.js";
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import { getStripeService } from "./stripe.service.js";
 
 /**
@@ -23,13 +22,8 @@ export interface PaymentRecord {
  * Service Payment
  */
 export class PaymentServiceClass {
-  private paiementsClient: Paiements;
-  private magasinClient: Magasin;
-
-  constructor(paiementsClient?: Paiements, magasinClient?: Magasin) {
-    this.paiementsClient = paiementsClient || new Paiements();
-    this.magasinClient = magasinClient || new Magasin();
-    console.log("✅ [Service Payment] Service de paiement initialisé");
+  constructor() {
+    console.log("✅ [Service Payment] Service initialisé");
   }
 
   /**
@@ -44,19 +38,17 @@ export class PaymentServiceClass {
     );
 
     try {
-      // Vérifier existence
-      const echeanceExiste =
-        await this.paiementsClient.verifierEcheanceExiste(echeanceId);
+      // Récupérer l'échéance directement avec Prisma
+      const echeance = await prisma.echeances_paiements.findUnique({
+        where: { id: echeanceId },
+      });
 
-      if (!echeanceExiste) {
+      if (!echeance) {
         return {
           valid: false,
           error: "Échéance introuvable",
         };
       }
-
-      // Récupérer l'échéance
-      const echeance = await this.paiementsClient.obtenirEcheance(echeanceId);
 
       // Vérifier ownership
       if (echeance.utilisateur_id !== userId) {
@@ -66,8 +58,8 @@ export class PaymentServiceClass {
         };
       }
 
-      // Vérifier si déjà payée
-      if (echeance.statut === "payé") {
+      // Vérifier statut (enum values: pay_, en_attente)
+      if (echeance.statut === "pay_") {
         return {
           valid: false,
           error: "Cette échéance est déjà payée",
@@ -102,8 +94,12 @@ export class PaymentServiceClass {
     );
 
     try {
-      const commande =
-        await this.paiementsClient.obtenirCommandeParId(commandeId);
+      const commande = await prisma.commandes.findUnique({
+        where: { id: commandeId },
+        include: {
+          commande_articles: true,
+        },
+      });
 
       if (!commande) {
         return {
@@ -121,7 +117,10 @@ export class PaymentServiceClass {
       }
 
       // Vérifier que la commande a des articles
-      if (!commande.nb_articles || commande.nb_articles === 0) {
+      if (
+        !commande.commande_articles ||
+        commande.commande_articles.length === 0
+      ) {
         return {
           valid: false,
           error: "La commande ne contient aucun article",
@@ -167,19 +166,21 @@ export class PaymentServiceClass {
     );
 
     try {
-      const commandeData = {
-        utilisateur_id: userId,
-        articles: commande.articles || [],
-        total: commande.total || 0,
-        statut: "en attente",
-      };
+      const nouvelleCommande = await prisma.commandes.create({
+        data: {
+          utilisateur_id: userId,
+          total: commande.total || 0,
+          statut: "en_attente",
+          date_commande: new Date(),
+        },
+      });
 
-      const result = await this.magasinClient.creerCommande(commandeData);
-
-      console.log(`✅ [Service Payment] Commande créée: ${result.commandeId}`);
+      console.log(
+        `✅ [Service Payment] Commande créée: ${nouvelleCommande.id}`,
+      );
 
       return {
-        commandeId: result.commandeId,
+        commandeId: nouvelleCommande.id,
         created: true,
       };
     } catch (error) {
@@ -197,8 +198,13 @@ export class PaymentServiceClass {
     );
 
     try {
-      const premierPaiement =
-        await this.paiementsClient.estPremierPaiement(userId);
+      const paiementsCount = await prisma.paiements.count({
+        where: {
+          utilisateur_id: userId,
+          statut: "reussi",
+        },
+      });
+      const premierPaiement = paiementsCount === 0;
       console.log(
         `${premierPaiement ? "🎉" : "✅"} [Service Payment] Premier paiement: ${premierPaiement}`,
       );
@@ -225,10 +231,13 @@ export class PaymentServiceClass {
     );
 
     try {
-      await this.paiementsClient.marquerEcheancePayee(
-        echeanceId,
-        paymentIntentId,
-      );
+      await prisma.echeances_paiements.update({
+        where: { id: echeanceId },
+        data: {
+          statut: "pay_", // Enum value from Prisma schema: pay_ = "payé"
+          date_paiement: new Date(),
+        },
+      });
       console.log(
         `✅ [Service Payment] Échéance ${echeanceId} marquée comme payée`,
       );
@@ -257,7 +266,17 @@ export class PaymentServiceClass {
     );
 
     try {
-      const paiementId = await this.paiementsClient.creerPaiement(data);
+      const paiement = await prisma.paiements.create({
+        data: {
+          utilisateur_id: data.utilisateur_id,
+          montant: data.montant,
+          statut: data.statut,
+          stripe_payment_intent_id: data.stripe_payment_intent_id,
+          description: data.description,
+          date_paiement: new Date(),
+        },
+      });
+      const paiementId = paiement.id;
       console.log(`✅ [Service Payment] Paiement enregistré: ${paiementId}`);
       return paiementId;
     } catch (error) {
@@ -389,10 +408,12 @@ export class PaymentServiceClass {
       const premierPaiement = await this.estPremierPaiement(data.userId);
 
       // Mettre à jour le statut de la commande
-      await this.paiementsClient.mettreAJourStatutCommande(
-        data.commandeId,
-        "payée",
-      );
+      await prisma.commandes.update({
+        where: { id: data.commandeId },
+        data: {
+          statut: "pay_e", // Enum value from Prisma schema: pay_e = "payée"
+        },
+      });
 
       // Enregistrer le paiement
       const paiementId = await this.enregistrerPaiement({
@@ -435,25 +456,16 @@ export { PaymentServiceClass as PaymentService };
 
 let paymentServiceInstance: PaymentServiceClass | null = null;
 
-export function getPaymentService(
-  paiementsClient?: Paiements,
-  magasinClient?: Magasin,
-): PaymentServiceClass {
+export function getPaymentService(): PaymentServiceClass {
   if (!paymentServiceInstance) {
-    paymentServiceInstance = new PaymentServiceClass(
-      paiementsClient,
-      magasinClient,
-    );
+    paymentServiceInstance = new PaymentServiceClass();
   }
   return paymentServiceInstance;
 }
 
 // Méthode getInstance pour compatibilité
-PaymentServiceClass.getInstance = function (
-  paiementsClient?: Paiements,
-  magasinClient?: Magasin,
-): PaymentServiceClass {
-  return getPaymentService(paiementsClient, magasinClient);
+(PaymentServiceClass as any).getInstance = function (): PaymentServiceClass {
+  return getPaymentService();
 };
 
 export default getPaymentService;

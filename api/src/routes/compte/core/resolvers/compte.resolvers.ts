@@ -40,14 +40,14 @@ import {
   GetStatusIdSchema,
   GetAbonnementIdSchema,
   ConversionInputSchema,
-} from "@clubmanager/types/validators";
+} from "@clubmanager/types/domains/compte/validators";
 
-import type {
-  CompteInfo,
-  CompteUpdateInput,
-  ConversionInput,
-  ConversionResult,
-} from "@clubmanager/types";
+import { Compte } from "@clubmanager/types";
+
+type CompteInfo = Compte.CompteInfo;
+type CompteUpdateInput = Compte.UpdateCompteInput;
+type ConversionInput = Compte.ConversionInput;
+type ConversionResult = Compte.ConversionResult;
 
 /**
  * Interfaces pour les arguments GraphQL

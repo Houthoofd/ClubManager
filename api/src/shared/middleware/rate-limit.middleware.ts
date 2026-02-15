@@ -11,7 +11,7 @@ import { RateLimitError } from "../errors/GraphQLErrors.js";
 /**
  * Rate limit store interface
  */
-interface RateLimitEntry {
+export interface RateLimitEntry {
   count: number;
   resetTime: number;
 }
@@ -20,7 +20,7 @@ interface RateLimitEntry {
  * In-memory rate limit store
  * For production, use Redis or similar distributed cache
  */
-class RateLimitStore {
+export class RateLimitStore {
   private store: Map<string, RateLimitEntry> = new Map();
   private cleanupInterval: NodeJS.Timeout;
 

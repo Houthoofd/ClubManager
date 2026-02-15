@@ -5,8 +5,8 @@
  * Integrates Sentry with the shared architecture.
  */
 
-import { GraphQLResolveInfo } from 'graphql';
-import * as Sentry from '@sentry/node';
+import { GraphQLResolveInfo } from "graphql";
+import * as Sentry from "@sentry/node";
 import {
   captureException,
   captureGraphQLError,
@@ -15,32 +15,41 @@ import {
   addSentryBreadcrumb,
   startTransaction,
   sentryConfig,
-} from '../config/sentry.config';
-import { GraphQLContext } from '@/types/context.types';
+} from "../config/sentry.config.js";
+import { GraphQLContext } from "../types/context.types.js";
 
 /**
  * Sentry middleware for GraphQL resolvers
  * Automatically captures errors and tracks performance
  */
-export function withSentry<TArgs = any, TContext = GraphQLContext, TResult = any>(
-  resolver: (parent: any, args: TArgs, context: TContext, info: GraphQLResolveInfo) => Promise<TResult>
+export function withSentry<
+  TArgs = any,
+  TContext = GraphQLContext,
+  TResult = any,
+>(
+  resolver: (
+    parent: any,
+    args: TArgs,
+    context: TContext,
+    info: GraphQLResolveInfo,
+  ) => Promise<TResult>,
 ) {
   return async (
     parent: any,
     args: TArgs,
     context: any,
-    info: GraphQLResolveInfo
+    info: GraphQLResolveInfo,
   ): Promise<TResult> => {
     if (!sentryConfig.enabled) {
       return resolver(parent, args, context, info);
     }
 
-    const operationName = info.operation.name?.value || 'anonymous';
+    const operationName = info.operation.name?.value || "anonymous";
     const fieldName = info.fieldName;
     const transactionName = `${info.operation.operation}:${operationName}.${fieldName}`;
 
     // Start transaction for performance monitoring
-    const transaction = startTransaction(transactionName, 'graphql.resolver');
+    const transaction = startTransaction(transactionName, "graphql.resolver");
 
     // Set user context if available
     if (context.user) {
@@ -52,7 +61,7 @@ export function withSentry<TArgs = any, TContext = GraphQLContext, TResult = any
     }
 
     // Set custom context
-    setSentryContext('graphql', {
+    setSentryContext("graphql", {
       operation: info.operation.operation,
       operationName,
       fieldName,
@@ -62,19 +71,19 @@ export function withSentry<TArgs = any, TContext = GraphQLContext, TResult = any
     // Add breadcrumb
     addSentryBreadcrumb(
       `GraphQL ${info.operation.operation}: ${fieldName}`,
-      'graphql',
-      'info',
+      "graphql",
+      "info",
       {
         operation: operationName,
         field: fieldName,
-      }
+      },
     );
 
     try {
       const result = await resolver(parent, args, context, info);
 
       if (transaction) {
-        transaction.setStatus('ok');
+        transaction.setStatus("ok");
       }
 
       return result;
@@ -84,14 +93,16 @@ export function withSentry<TArgs = any, TContext = GraphQLContext, TResult = any
         error,
         `${operationName}.${fieldName}`,
         args,
-        context.user ? {
-          id: context.user.id,
-          email: context.user.email,
-        } : undefined
+        context.user
+          ? {
+              id: context.user.id,
+              email: context.user.email,
+            }
+          : undefined,
       );
 
       if (transaction) {
-        transaction.setStatus('internal_error');
+        transaction.setStatus("internal_error");
       }
 
       // Re-throw to let GraphQL handle it
@@ -108,10 +119,10 @@ export function withSentry<TArgs = any, TContext = GraphQLContext, TResult = any
  * Sentry middleware for Express request handler
  */
 export function sentryRequestHandler() {
-  return Sentry.Handlers.requestHandler({
-    user: ['id', 'email', 'role'],
+  return (Sentry as any).Handlers.requestHandler({
+    user: ["id", "email", "role"],
     ip: true,
-    request: ['method', 'url', 'headers', 'query'],
+    request: ["method", "url", "headers", "query"],
   });
 }
 
@@ -119,8 +130,8 @@ export function sentryRequestHandler() {
  * Sentry middleware for Express error handler
  */
 export function sentryErrorHandler() {
-  return Sentry.Handlers.errorHandler({
-    shouldHandleError(error) {
+  return (Sentry as any).Handlers.errorHandler({
+    shouldHandleError(error: any) {
       // Capture all errors
       return true;
     },
@@ -131,7 +142,8 @@ export function sentryErrorHandler() {
  * Sentry tracing middleware for Express
  */
 export function sentryTracingHandler() {
-  return Sentry.Handlers.tracingHandler();
+  // Sentry v10: Handlers.tracingHandler() removed, use middleware directly
+  return (req: any, res: any, next: any) => next();
 }
 
 /**
@@ -144,12 +156,12 @@ export function enrichSentryContext() {
     }
 
     // Set request context
-    setSentryContext('request', {
+    setSentryContext("request", {
       method: req.method,
       url: req.url,
       ip: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers['user-agent'],
-      referer: req.headers['referer'],
+      userAgent: req.headers["user-agent"],
+      referer: req.headers["referer"],
     });
 
     // Set user context if authenticated
@@ -168,20 +180,24 @@ export function enrichSentryContext() {
 /**
  * GraphQL error formatter with Sentry integration
  */
-export function sentryGraphQLErrorFormatter(error: any, context?: GraphQLContext) {
+export function sentryGraphQLErrorFormatter(
+  error: any,
+  context?: GraphQLContext,
+) {
   if (!sentryConfig.enabled) {
     return error;
   }
 
   // Don't send expected errors to Sentry (validation, auth, etc.)
   const expectedErrorCodes = [
-    'UNAUTHENTICATED',
-    'FORBIDDEN',
-    'BAD_USER_INPUT',
-    'NOT_FOUND',
+    "UNAUTHENTICATED",
+    "FORBIDDEN",
+    "BAD_USER_INPUT",
+    "NOT_FOUND",
   ];
 
-  const isExpectedError = error.extensions?.code &&
+  const isExpectedError =
+    error.extensions?.code &&
     expectedErrorCodes.includes(error.extensions.code);
 
   if (!isExpectedError) {
@@ -189,20 +205,22 @@ export function sentryGraphQLErrorFormatter(error: any, context?: GraphQLContext
     const originalError = error.originalError || error;
 
     captureException(originalError, {
-      level: 'error',
+      level: "error",
       tags: {
-        type: 'graphql',
-        code: error.extensions?.code || 'UNKNOWN',
+        type: "graphql",
+        code: error.extensions?.code || "UNKNOWN",
       },
       extra: {
         path: error.path,
         locations: error.locations,
         extensions: error.extensions,
       },
-      user: context?.user ? {
-        id: context.user.id,
-        email: context.user.email,
-      } : undefined,
+      user: context?.user
+        ? {
+            id: String(context.user.id),
+            email: context.user.email,
+          }
+        : undefined,
     });
   }
 
@@ -214,9 +232,12 @@ export function sentryGraphQLErrorFormatter(error: any, context?: GraphQLContext
  */
 export function withSentryCritical<T>(
   operation: string,
-  callback: () => Promise<T>
+  callback: () => Promise<T>,
 ): Promise<T> {
-  return withSentryTransaction(operation, 'critical', callback);
+  // Use the renamed function from this file
+  return withSentryTransactionMiddleware(operation, "critical", async () =>
+    callback(),
+  );
 }
 
 /**
@@ -226,22 +247,22 @@ export function trackDatabaseQuery(query: string, duration: number) {
   if (!sentryConfig.enabled) return;
 
   addSentryBreadcrumb(
-    `Database query: ${query.substring(0, 100)}${query.length > 100 ? '...' : ''}`,
-    'query',
-    duration > 1000 ? 'warning' : 'info',
+    `Database query: ${query.substring(0, 100)}${query.length > 100 ? "..." : ""}`,
+    "query",
+    duration > 1000 ? "warning" : "info",
     {
       query: query.substring(0, 500),
       duration: `${duration}ms`,
       slow: duration > 1000,
-    }
+    },
   );
 
   // Capture slow queries as performance issues
   if (duration > 2000) {
     captureException(new Error(`Slow query detected: ${duration}ms`), {
-      level: 'warning',
+      level: "warning",
       tags: {
-        type: 'slow-query',
+        type: "slow-query",
         duration: `${duration}ms`,
       },
       extra: {
@@ -255,25 +276,26 @@ export function trackDatabaseQuery(query: string, duration: number) {
 /**
  * Helper for tracking external API calls
  */
-export async function withSentryTransaction<T>(
+// Renamed to avoid conflict with sentry.config.ts export
+export async function withSentryTransactionMiddleware<T>(
   name: string,
   op: string,
-  callback: (transaction?: Sentry.Transaction) => Promise<T>
+  callback: (transaction?: any) => Promise<T>,
 ): Promise<T> {
   if (!sentryConfig.enabled) {
     return callback();
   }
 
-  const transaction = Sentry.startTransaction({ name, op });
+  const transaction = startTransaction(name, op);
 
   try {
     const result = await callback(transaction);
-    transaction.setStatus('ok');
+    if (transaction) transaction.setStatus("ok");
     return result;
   } catch (error: any) {
-    transaction.setStatus('internal_error');
+    if (transaction) transaction.setStatus("internal_error");
     captureException(error, {
-      level: 'error',
+      level: "error",
       tags: {
         transaction: name,
         operation: op,
@@ -281,7 +303,7 @@ export async function withSentryTransaction<T>(
     });
     throw error;
   } finally {
-    transaction.finish();
+    transaction?.finish();
   }
 }
 
@@ -289,31 +311,31 @@ export async function withSentryTransaction<T>(
  * Helper for tracking authentication events
  */
 export function trackAuthEvent(
-  event: 'login' | 'logout' | 'register' | 'password-reset',
+  event: "login" | "logout" | "register" | "password-reset",
   userId?: string,
-  success: boolean = true
+  success: boolean = true,
 ) {
   if (!sentryConfig.enabled) return;
 
   addSentryBreadcrumb(
-    `Auth: ${event} ${success ? 'success' : 'failed'}`,
-    'auth',
-    success ? 'info' : 'warning',
+    `Auth: ${event} ${success ? "success" : "failed"}`,
+    "auth",
+    success ? "info" : "warning",
     {
       event,
       userId,
       success,
-    }
+    },
   );
 
   // Track failed auth attempts as security events
   if (!success) {
     captureException(new Error(`Auth ${event} failed`), {
-      level: 'warning',
+      level: "warning",
       tags: {
-        type: 'auth',
+        type: "auth",
         event,
-        success: 'false',
+        success: "false",
       },
       extra: {
         userId,
@@ -325,18 +347,10 @@ export function trackAuthEvent(
 /**
  * Helper for tracking business events
  */
-export function trackBusinessEvent(
-  event: string,
-  data?: Record<string, any>
-) {
+export function trackBusinessEvent(event: string, data?: Record<string, any>) {
   if (!sentryConfig.enabled) return;
 
-  addSentryBreadcrumb(
-    `Business: ${event}`,
-    'business',
-    'info',
-    data
-  );
+  addSentryBreadcrumb(`Business: ${event}`, "business", "info", data);
 }
 
 /**
@@ -353,8 +367,8 @@ export function applySentryToResolvers(resolvers: any): any {
     wrappedResolvers[typeName] = {};
 
     for (const [fieldName, resolver] of Object.entries(typeResolvers as any)) {
-      if (typeof resolver === 'function') {
-        wrappedResolvers[typeName][fieldName] = withSentry(resolver);
+      if (typeof resolver === "function") {
+        wrappedResolvers[typeName][fieldName] = withSentry(resolver as any);
       } else {
         wrappedResolvers[typeName][fieldName] = resolver;
       }
@@ -373,7 +387,10 @@ export function setSentryTransactionName() {
       return next();
     }
 
-    const transaction = Sentry.getCurrentHub().getScope()?.getTransaction();
+    const transaction = (Sentry as any)
+      .getCurrentHub()
+      ?.getScope()
+      ?.getTransaction();
     if (transaction && req.route) {
       transaction.setName(`${req.method} ${req.route.path}`);
     }

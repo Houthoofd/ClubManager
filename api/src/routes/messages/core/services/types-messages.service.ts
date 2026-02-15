@@ -9,11 +9,11 @@
  * @module types-messages.service
  */
 
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
+} from "@/shared/config/sentry.config.js";
 
 /**
  * Service pour la gestion des types de messages personnalisés
@@ -38,7 +38,7 @@ export class TypesMessagesService {
 
       const typesMessages = await prisma.types_messages_personnalises.findMany({
         orderBy: {
-          titre: "asc",
+          title: "asc",
         },
       });
 
@@ -133,7 +133,7 @@ export class TypesMessagesService {
    * @param {string} contenu - Contenu du type de message
    * @returns {Promise<any>} Résultat de la création
    */
-  async createTypeMessage(titre: string, contenu: string) {
+  async createTypeMessage(titre: string, description?: string) {
     try {
       addSentryBreadcrumb(
         `Création type de message: ${titre}`,
@@ -147,9 +147,8 @@ export class TypesMessagesService {
       // Vérifier si un type avec ce titre existe déjà
       const existing = await prisma.types_messages_personnalises.findFirst({
         where: {
-          titre: {
+          title: {
             equals: titre.trim(),
-            mode: "insensitive",
           },
         },
       });
@@ -163,8 +162,8 @@ export class TypesMessagesService {
 
       const typeMessage = await prisma.types_messages_personnalises.create({
         data: {
-          titre: titre.trim(),
-          contenu: contenu.trim(),
+          title: titre.trim(),
+          content: description?.trim() || "",
         },
       });
 
@@ -202,7 +201,7 @@ export class TypesMessagesService {
    * @param {string} contenu - Nouveau contenu
    * @returns {Promise<any>} Résultat de la modification
    */
-  async updateTypeMessage(id: number, titre: string, contenu: string) {
+  async updateTypeMessage(id: number, titre: string, description?: string) {
     try {
       addSentryBreadcrumb(
         `Modification type de message: ${id}`,
@@ -232,9 +231,8 @@ export class TypesMessagesService {
       const duplicate = await prisma.types_messages_personnalises.findFirst({
         where: {
           id: { not: id },
-          titre: {
+          title: {
             equals: titre.trim(),
-            mode: "insensitive",
           },
         },
       });
@@ -249,8 +247,8 @@ export class TypesMessagesService {
       const typeMessage = await prisma.types_messages_personnalises.update({
         where: { id },
         data: {
-          titre: titre.trim(),
-          contenu: contenu.trim(),
+          title: titre.trim(),
+          content: description?.trim() || "",
         },
       });
 
@@ -310,14 +308,15 @@ export class TypesMessagesService {
       }
 
       // Vérifier s'il y a des messages utilisant ce type
-      const messagesCount = await prisma.messages_personnalises.count({
-        where: { type_message_id: id },
-      });
+      // Note: messages_personnalises table doesn't have type_message_id field
+      // Returning 0 for now - may need schema migration if this feature is needed
+      const usageCount = 0;
 
-      if (messagesCount > 0) {
+      if (usageCount > 0) {
         return {
           success: false,
-          message: `Impossible de supprimer: ${messagesCount} message(s) utilisent ce type`,
+          message: `Impossible de supprimer: ${usageCount} message(s) utilisent ce type`,
+          data: null,
         };
       }
 

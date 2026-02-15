@@ -18,7 +18,7 @@ import {
   getFileInfoInputSchema,
   fileExistsInputSchema,
   cleanupOldFilesInputSchema,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/upload/validators';
 import {
   combineMiddlewares,
   requireAuth,

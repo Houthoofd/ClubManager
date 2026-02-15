@@ -41,17 +41,17 @@ import {
   GetCommandesParStatutSchema,
   SearchCommandesSchema,
   BatchUpdateCommandesSchema,
-} from "@clubmanager/types/validators";
+} from "@clubmanager/types/domains/commandes/validators";
 
-import type {
-  Commande,
-  CommandeStats,
-  CommandeCountByStatut,
-  CreateCommandeInput,
-  UpdateCommandeInput,
-  CommandeSearchFilters,
-  CommandeSearchResult,
-} from "@clubmanager/types";
+import { Commandes } from "@clubmanager/types";
+
+type Commande = Commandes.Commande;
+type CommandeStats = Commandes.CommandeStats;
+type CommandeCountByStatut = Commandes.CommandeCountByStatut;
+type CreateCommandeInput = Commandes.CreateCommandeInput;
+type UpdateCommandeInput = Commandes.UpdateCommandeInput;
+type CommandeSearchFilters = Commandes.CommandeSearchFilters;
+type CommandeSearchResult = Commandes.CommandeSearchResult;
 
 /**
  * Interfaces pour les arguments GraphQL

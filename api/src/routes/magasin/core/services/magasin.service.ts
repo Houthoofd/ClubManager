@@ -2,8 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
-import { EmailClient } from '@/infrastructure/external-services/emailClient.js';
+} from "@/shared/config/sentry.config.js";
+import { EmailClient } from "@/infrastructure/external-services/emailClient.js";
 import Stripe from "stripe";
 import crypto from "crypto";
 
@@ -1129,3 +1129,23 @@ export async function calculerStatistiquesMagasin(
     throw new Error("Impossible de calculer les statistiques");
   }
 }
+
+/**
+ * Export namespace pour compatibilité avec les imports existants
+ */
+export const MagasinService = {
+  nettoyerCacheCommandes,
+  getArticles: obtenirArticlesParCategories,
+  getCategories: obtenirLesCategories,
+  createArticle: ajouterArticle,
+  updateArticle: modifierArticle,
+  deleteArticle: supprimerArticle,
+  createCommande: creerCommande,
+  getToutesCommandes: obtenirLesCommandes,
+  calculerStatistiquesMagasin,
+  generateUniqueCommandeId,
+  generateSequentialCommandeNumber,
+  verifierUniciteCommande,
+  obtenirTailles,
+  obtenirPaymentIntentCommande,
+};

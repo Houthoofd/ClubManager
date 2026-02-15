@@ -4,5 +4,7 @@
  * @package api
  */
 
-export { paiementsResolvers } from './paiements.resolvers.js';
+import { paiementsResolvers } from "./paiements.resolvers.js";
+
+export { paiementsResolvers };
 export default paiementsResolvers;

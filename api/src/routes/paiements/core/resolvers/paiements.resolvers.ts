@@ -13,13 +13,13 @@ import {
   requireAuth,
   combineMiddlewares,
   type GraphQLContext,
-} from '@/shared/middleware/auth.middleware.js';
+} from "@/shared/middleware/auth.middleware.js";
 import {
   ValidationError,
   InternalServerError,
-} from '@/shared/errors/GraphQLErrors.js';
-import { validateInput } from '@/shared/middleware/validation.middleware.js';
-import { withSentry } from '@/shared/middleware/sentry.middleware.js';
+} from "@/shared/errors/GraphQLErrors.js";
+import { validateInput } from "@/shared/middleware/validation.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 
 // Services
 import { PaymentIntentService } from "../services/payment-intent.service.js";
@@ -33,15 +33,15 @@ import {
   type ConfirmEcheancePaymentInput,
   type ConfirmCommandePaymentInput,
   type GetHistoriqueInput,
-} from "@clubmanager/types/validators";
+} from "@clubmanager/types/domains/paiements/validators";
 
-// Import des validators Stripe
 import {
   createPaymentIntentEcheanceSchema,
   createPaymentIntentCommandeSchema,
+  toStripeAmount,
   type CreatePaymentIntentEcheanceInput,
   type CreatePaymentIntentCommandeInput,
-} from "@clubmanager/types/validators";
+} from "@clubmanager/types/domains/paiements/validators";
 
 /**
  * Interfaces pour les arguments GraphQL
@@ -114,9 +114,7 @@ export const paiementsResolvers = {
 
         // Si non-admin, forcer l'utilisateur connecté
         const utilisateurId =
-          context.user?.role === "admin"
-            ? args.utilisateurId
-            : context.user!.id;
+          context.user?.status_id === 1 ? args.utilisateurId : context.user!.id;
 
         // Validation
         const validatedArgs = validateInput(getHistoriqueSchema, {
@@ -160,16 +158,12 @@ export const paiementsResolvers = {
         });
 
         // Vérification de sécurité
-        if (
-          context.user?.id !== args.userId &&
-          context.user?.role !== "admin"
-        ) {
+        if (context.user?.id !== args.userId && context.user?.status_id !== 1) {
           throw new ValidationError(
             "Vous ne pouvez créer un paiement que pour vous-même",
           );
         }
 
-        // Validation
         const validatedArgs = validateInput(createPaymentIntentEcheanceSchema, {
           amount: args.amount,
           echeanceId: args.echeanceId,
@@ -217,33 +211,26 @@ export const paiementsResolvers = {
         const userId = args.userId || context.user!.id;
 
         // Vérification de sécurité
-        if (context.user?.id !== userId && context.user?.role !== "admin") {
+        if (context.user?.id !== userId && context.user?.status_id !== 1) {
           throw new ValidationError(
             "Vous ne pouvez créer un paiement que pour vous-même",
           );
         }
 
-        // Validation
         const validatedArgs = validateInput(createPaymentIntentCommandeSchema, {
           amount: args.amount,
-          commande: args.commandeId,
+          commandeId:
+            typeof args.commandeId === "number"
+              ? args.commandeId
+              : (args.commandeId as any)?.id || 0,
           userId: userId,
           currency: args.currency,
           description: args.description,
         });
 
-        const commandeId =
-          typeof validatedArgs.commande === "number"
-            ? validatedArgs.commande
-            : validatedArgs.commande.id || 0;
-
-        if (!commandeId) {
-          throw new ValidationError("ID de commande invalide");
-        }
-
         const result = await paymentIntentService.createForCommande({
           amount: validatedArgs.amount,
-          commande: commandeId,
+          commande: validatedArgs.commandeId,
           userId: validatedArgs.userId,
           description: validatedArgs.description || "Paiement commande",
         });
@@ -278,10 +265,7 @@ export const paiementsResolvers = {
         });
 
         // Vérification de sécurité
-        if (
-          context.user?.id !== args.userId &&
-          context.user?.role !== "admin"
-        ) {
+        if (context.user?.id !== args.userId && context.user?.status_id !== 1) {
           throw new ValidationError(
             "Vous ne pouvez confirmer que vos propres paiements",
           );
@@ -340,10 +324,7 @@ export const paiementsResolvers = {
         });
 
         // Vérification de sécurité
-        if (
-          context.user?.id !== args.userId &&
-          context.user?.role !== "admin"
-        ) {
+        if (context.user?.id !== args.userId && context.user?.status_id !== 1) {
           throw new ValidationError(
             "Vous ne pouvez confirmer que vos propres paiements",
           );

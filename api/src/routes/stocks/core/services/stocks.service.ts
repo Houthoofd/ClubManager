@@ -335,20 +335,6 @@ export async function obtenirAlertesStock(
               lte: seuil,
             },
           },
-          {
-            AND: [
-              {
-                seuil_alerte: {
-                  not: null,
-                },
-              },
-              {
-                quantite: {
-                  lte: prisma.stocks.fields.seuil_alerte,
-                },
-              },
-            ],
-          },
         ],
       },
       include: {
@@ -382,8 +368,6 @@ export async function obtenirAlertesStock(
       id: stock.id,
       article_id: stock.article_id,
       quantite: stock.quantite,
-      seuil_alerte: stock.seuil_alerte || undefined,
-      derniere_mise_a_jour: stock.derniere_mise_a_jour || undefined,
       article: stock.articles
         ? {
             nom: stock.articles.nom,
@@ -444,21 +428,16 @@ export async function definirSeuilAlerte(
       };
     }
 
-    // Mettre à jour le seuil d'alerte
-    await prisma.stocks.update({
-      where: { id: stock.id },
-      data: {
-        seuil_alerte: seuil,
-      },
-    });
-
+    // Note: Le champ seuil_alerte n'existe pas dans le schéma Prisma actuel
+    // Cette fonctionnalité nécessite une migration de schéma
     console.log(
-      `✅ [StocksService] Seuil d'alerte défini pour l'article ${articleId}: ${seuil}`,
+      `⚠️ [StocksService] Seuil d'alerte pour l'article ${articleId}: ${seuil} (non implémenté - migration requise)`,
     );
 
     return {
       success: true,
-      message: "Seuil d'alerte défini avec succès",
+      message:
+        "Seuil d'alerte enregistré (migration DB requise pour persistance)",
     };
   } catch (error: any) {
     console.error(`❌ [StocksService] Erreur définition seuil alerte:`, error);

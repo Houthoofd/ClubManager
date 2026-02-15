@@ -3,7 +3,7 @@
  * Gestion des événements webhook de paiement avec Sentry
  */
 
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import Stripe from "stripe";
 import * as Sentry from "@sentry/node";
 import { WebhookRequest } from "@clubmanager/types";
@@ -26,21 +26,17 @@ console.log("🔧 [Webhooks Routes] Initialisation des routes webhooks Stripe");
  * Route principale pour recevoir les événements webhook de Stripe
  * IMPORTANT: Cette route doit recevoir le body brut (Buffer)
  */
-router.post("/stripe", async (req: WebhookRequest, res: Response) => {
+router.post("/stripe", async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"] as string;
 
-  // Démarrer une transaction Sentry pour le webhook complet
-  const transaction = Sentry.startTransaction({
-    op: "webhook.handle",
-    name: "Handle Stripe Webhook",
-  });
+  // Sentry transaction tracking (v10 uses startSpan instead)
+  // const transaction = Sentry.startSpan({ op: "webhook.handle", name: "Handle Stripe Webhook" }, (span) => span);
 
   try {
     // Validation de la configuration
     if (!endpointSecret) {
       console.error("❌ [Webhooks] STRIPE_WEBHOOK_SECRET non configuré");
-      transaction.setStatus("failed_precondition");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       return res.status(500).json({
         error: "Configuration webhook manquante",
       });
@@ -48,8 +44,7 @@ router.post("/stripe", async (req: WebhookRequest, res: Response) => {
 
     if (!sig) {
       console.error("❌ [Webhooks] Signature manquante dans les headers");
-      transaction.setStatus("invalid_argument");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       return res.status(400).json({
         error: "Signature webhook manquante",
       });
@@ -85,7 +80,7 @@ router.post("/stripe", async (req: WebhookRequest, res: Response) => {
 
       case "payment_intent.payment_failed":
         console.log("❌ [Webhooks] Traitement paiement échoué");
-        result = await webhookService.handlePaymentFailed(
+        result = await webhookService.handlePaymentFailure(
           event.data.object as Stripe.PaymentIntent,
         );
         break;
@@ -99,14 +94,14 @@ router.post("/stripe", async (req: WebhookRequest, res: Response) => {
 
       case "invoice.payment_succeeded":
         console.log("📄 [Webhooks] Facture payée");
-        result = await webhookService.handleInvoicePaymentSucceeded(
+        result = await webhookService.handleInvoicePaymentSuccess(
           event.data.object as Stripe.Invoice,
         );
         break;
 
       case "invoice.payment_failed":
         console.log("❌ [Webhooks] Échec paiement facture");
-        result = await webhookService.handleInvoicePaymentFailed(
+        result = await webhookService.handleInvoicePaymentFailure(
           event.data.object as Stripe.Invoice,
         );
         break;
@@ -143,8 +138,7 @@ router.post("/stripe", async (req: WebhookRequest, res: Response) => {
     }
 
     // Marquer la transaction comme réussie
-    transaction.setStatus("ok");
-    transaction.finish();
+    // Transaction handling removed (Sentry v10 API change)
 
     // Répondre à Stripe
     res.json({
@@ -167,8 +161,7 @@ router.post("/stripe", async (req: WebhookRequest, res: Response) => {
       level: "error",
     });
 
-    transaction.setStatus("internal_error");
-    transaction.finish();
+    // Transaction handling removed (Sentry v10 API change)
 
     // Répondre avec erreur
     res.status(400).json({

@@ -19,8 +19,8 @@ import {
   inscriptionService,
   InscriptionService,
 } from "../services/inscription.service.js";
-import { validateInput } from '@/shared/middleware/validation.middleware.js';
-import { withSentry } from '@/shared/middleware/sentry.middleware.js';
+import { validateInput } from "@/shared/middleware/validation.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 import {
   verificationEmailSchema,
   inscriptionSchema,
@@ -28,12 +28,12 @@ import {
   type VerificationEmailData,
   type InscriptionData,
   type EvaluerMotDePasseInput,
-} from "@clubmanager/types/validators";
-import type {
-  EmailVerificationResult,
-  InscriptionUtilisateurResult,
-  PasswordStrength,
-} from "@clubmanager/types";
+} from "@clubmanager/types/domains/inscription/validators";
+import { Inscription } from "@clubmanager/types";
+
+type EmailVerificationResult = Inscription.EmailVerificationResult;
+type InscriptionUtilisateurResult = Inscription.InscriptionUtilisateurResult;
+type PasswordStrength = Inscription.PasswordStrength;
 
 // ============================================
 // TYPES POUR LES RESOLVERS
@@ -77,9 +77,7 @@ const verifierEmailResolver = async (
       `🔍 [InscriptionResolver] Vérification email: ${validatedInput.email}`,
     );
 
-    const result = await inscriptionService.verifierEmail(
-      validatedInput.email,
-    );
+    const result = await inscriptionService.verifierEmail(validatedInput.email);
 
     console.log(
       `✅ [InscriptionResolver] Email ${validatedInput.email} - existe: ${result.exists}`,
@@ -87,10 +85,7 @@ const verifierEmailResolver = async (
 
     return result;
   } catch (error: any) {
-    console.error(
-      "❌ [InscriptionResolver] Erreur verifierEmail:",
-      error,
-    );
+    console.error("❌ [InscriptionResolver] Erreur verifierEmail:", error);
     if (error instanceof GraphQLError) throw error;
     throw new GraphQLError(
       `Erreur lors de la vérification de l'email: ${error.message}`,
@@ -122,9 +117,7 @@ const evaluerForceMotDePasseResolver = async (
       args.input,
     );
 
-    console.log(
-      `🔐 [InscriptionResolver] Évaluation force mot de passe`,
-    );
+    console.log(`🔐 [InscriptionResolver] Évaluation force mot de passe`);
 
     const score = inscriptionService.evaluerForceMotDePasse(
       validatedInput.password,
@@ -152,9 +145,7 @@ const evaluerForceMotDePasseResolver = async (
         feedback = "Indéterminé";
     }
 
-    console.log(
-      `✅ [InscriptionResolver] Score mot de passe: ${score}/4`,
-    );
+    console.log(`✅ [InscriptionResolver] Score mot de passe: ${score}/4`);
 
     return {
       score,
@@ -228,15 +219,12 @@ const inscrireUtilisateurResolver = async (
       error,
     );
     if (error instanceof GraphQLError) throw error;
-    throw new GraphQLError(
-      `Erreur lors de l'inscription: ${error.message}`,
-      {
-        extensions: {
-          code: "INTERNAL_SERVER_ERROR",
-          originalError: error,
-        },
+    throw new GraphQLError(`Erreur lors de l'inscription: ${error.message}`, {
+      extensions: {
+        code: "INTERNAL_SERVER_ERROR",
+        originalError: error,
       },
-    );
+    });
   }
 };
 

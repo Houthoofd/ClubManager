@@ -14,14 +14,14 @@ import {
   requireAdmin,
   combineMiddlewares,
   type GraphQLContext,
-} from '@/shared/middleware/auth.middleware.js';
+} from "@/shared/middleware/auth.middleware.js";
 import {
   ValidationError,
   NotFoundError,
   InternalServerError,
-} from '@/shared/errors/GraphQLErrors.js';
-import { validateInput } from '@/shared/middleware/validation.middleware.js';
-import { withSentry } from '@/shared/middleware/sentry.middleware.js';
+} from "@/shared/errors/GraphQLErrors.js";
+import { validateInput } from "@/shared/middleware/validation.middleware.js";
+import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 
 // Services
 import { messagesPersonnalisesService } from "../services/messages-personnalises.service.js";
@@ -47,7 +47,7 @@ import {
   type SendPaymentReminderInput,
   type CountUnreadMessagesInput,
   type ToggleMessageStatusInput,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/messages/validators';
 
 /**
  * Interfaces pour les arguments GraphQL
@@ -73,6 +73,7 @@ interface StatistiquesMessagesArgs {
 interface EnvoyerMessageArgs {
   destinataires: number[];
   type_message_id: number;
+  contenu: string;
   envoyerEmail?: boolean;
 }
 
@@ -158,7 +159,7 @@ export const messagesResolvers = {
         // sauf s'il est admin
         if (
           context.user?.id !== validatedArgs.userId &&
-          context.user?.role !== "admin"
+          context.user?.status_id !== 1
         ) {
           throw new ValidationError(
             "Vous ne pouvez accéder qu'à vos propres messages",
@@ -204,7 +205,7 @@ export const messagesResolvers = {
         // Vérification de sécurité
         if (
           context.user?.id !== validatedArgs.userId &&
-          context.user?.role !== "admin"
+          context.user?.status_id !== 1
         ) {
           throw new ValidationError(
             "Vous ne pouvez accéder qu'à vos propres messages",
@@ -213,7 +214,6 @@ export const messagesResolvers = {
 
         const result = await messagesPersonnalisesService.getMessagesSupprimes(
           validatedArgs.userId,
-          validatedArgs.limit,
         );
 
         if (!result.success) {
@@ -277,7 +277,7 @@ export const messagesResolvers = {
         // Vérification de sécurité
         if (
           context.user?.id !== validatedArgs.userId &&
-          context.user?.role !== "admin"
+          context.user?.status_id !== 1
         ) {
           throw new ValidationError(
             "Vous ne pouvez accéder qu'à vos propres statistiques",
@@ -325,9 +325,7 @@ export const messagesResolvers = {
         const validatedArgs = validateInput(messageStatsSchema, args);
 
         const result =
-          await messagesPersonnalisesService.getStatistiquesMessages(
-            validatedArgs.periode || "mois",
-          );
+          await messagesPersonnalisesService.getStatistiquesMessages();
 
         if (!result.success || !result.data) {
           throw new InternalServerError(
@@ -336,10 +334,10 @@ export const messagesResolvers = {
         }
 
         return {
-          totalMessages: result.data.totalMessages || 0,
-          messagesNonLus: result.data.messagesNonLus || 0,
-          messagesLus: result.data.messagesLus || 0,
-          messagesSupprimes: result.data.messagesSupprimes || 0,
+          totalMessages: result.data.total || 0,
+          messagesNonLus: result.data.nonLus || 0,
+          messagesLus: (result.data.total || 0) - (result.data.nonLus || 0),
+          messagesSupprimes: result.data.supprimes || 0,
           periode: validatedArgs.periode || "mois",
         };
       },
@@ -424,11 +422,13 @@ export const messagesResolvers = {
         // Validation
         const validatedArgs = validateInput(sendMessageSchema, args);
 
-        const result = await messagesPersonnalisesService.envoyerMessage(
-          validatedArgs.destinataires,
-          validatedArgs.type_message_id,
-          validatedArgs.envoyerEmail,
-        );
+        const result = await messagesPersonnalisesService.envoyerMessage({
+          expediteur_id: context.user!.id,
+          destinataires: validatedArgs.destinataires,
+          type_message_id: validatedArgs.type_message_id,
+          contenu: args.contenu || "",
+          envoyerEmail: validatedArgs.envoyerEmail,
+        });
 
         if (!result.success) {
           throw new InternalServerError(
@@ -507,7 +507,7 @@ export const messagesResolvers = {
         // Vérification de sécurité
         if (
           context.user?.id !== validatedArgs.userId &&
-          context.user?.role !== "admin"
+          context.user?.status_id !== 1
         ) {
           throw new ValidationError(
             "Vous ne pouvez supprimer que vos propres messages",
@@ -560,6 +560,7 @@ export const messagesResolvers = {
         const result =
           await messagesPersonnalisesService.supprimerDefinitivement(
             validatedArgs.messageId,
+            context.user!.id,
           );
 
         if (!result.success) {
@@ -602,6 +603,7 @@ export const messagesResolvers = {
 
         const result = await messagesPersonnalisesService.restaurerMessage(
           validatedArgs.messageId,
+          context.user!.id,
         );
 
         if (!result.success) {
@@ -728,8 +730,11 @@ export const messagesResolvers = {
           : [args.echeanceIds];
 
         const result = await messagesPersonnalisesService.envoyerRappelPaiement(
-          echeanceIds,
-          args.messagePersonnalise || "",
+          {
+            userId: context.user!.id,
+            echeanceIds,
+            message: args.messagePersonnalise || "",
+          },
         );
 
         if (!result.success) {

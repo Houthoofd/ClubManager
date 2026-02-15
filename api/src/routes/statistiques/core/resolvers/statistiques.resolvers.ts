@@ -20,7 +20,7 @@ import {
 import {
   utilisateurIdGraphQLSchema,
   userIdGraphQLSchema,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/statistiques/validators';
 import {
   obtenirStatistiquesFrequentation,
   obtenirProgressionUtilisateur,
@@ -43,17 +43,7 @@ import {
   getProchainsAnniversaires,
   getArticlesPlusVendus,
 } from "../services/index.js";
-
-/**
- * Context GraphQL avec utilisateur authentifié
- */
-interface GraphQLContext {
-  user?: {
-    id: number;
-    email: string;
-    role_id: number;
-  };
-}
+import type { GraphQLContext } from "@/shared/types/context.types.js";
 
 /**
  * Queries pour les statistiques

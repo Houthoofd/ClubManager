@@ -8,11 +8,11 @@
  */
 
 import { StripeService } from "./stripe.service.js";
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
+} from "@/shared/config/sentry.config.js";
 import Stripe from "stripe";
 
 /**
@@ -170,14 +170,14 @@ export class PaymentIntentService {
       }
 
       // Récupérer les détails de l'échéance via Prisma
-      const echeance = await prisma.echeances.findUnique({
+      const echeance = await prisma.echeances_paiements.findUnique({
         where: { id: data.echeanceId },
         include: {
           utilisateurs: {
             select: {
               id: true,
-              nom: true,
-              prenom: true,
+              first_name: true,
+              last_name: true,
               email: true,
             },
           },
@@ -194,7 +194,7 @@ export class PaymentIntentService {
       }
 
       // Vérifier que l'échéance n'est pas déjà payée
-      if (echeance.statut === "payé" || echeance.statut === "paye") {
+      if (echeance.statut === "pay_") {
         throw new Error("Cette échéance a déjà été payée");
       }
 

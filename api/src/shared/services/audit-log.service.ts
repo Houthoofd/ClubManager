@@ -5,82 +5,85 @@
  * Tracks all critical operations, user actions, and data access.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 export enum AuditEventType {
   // Authentication
-  AUTH_LOGIN_SUCCESS = 'AUTH_LOGIN_SUCCESS',
-  AUTH_LOGIN_FAILED = 'AUTH_LOGIN_FAILED',
-  AUTH_LOGOUT = 'AUTH_LOGOUT',
-  AUTH_PASSWORD_CHANGE = 'AUTH_PASSWORD_CHANGE',
-  AUTH_PASSWORD_RESET_REQUEST = 'AUTH_PASSWORD_RESET_REQUEST',
-  AUTH_PASSWORD_RESET_COMPLETE = 'AUTH_PASSWORD_RESET_COMPLETE',
-  AUTH_EMAIL_VERIFICATION = 'AUTH_EMAIL_VERIFICATION',
-  AUTH_ACCOUNT_LOCKED = 'AUTH_ACCOUNT_LOCKED',
-  AUTH_ACCOUNT_UNLOCKED = 'AUTH_ACCOUNT_UNLOCKED',
+  AUTH_LOGIN_SUCCESS = "AUTH_LOGIN_SUCCESS",
+  AUTH_LOGIN_FAILED = "AUTH_LOGIN_FAILED",
+  AUTH_LOGOUT = "AUTH_LOGOUT",
+  AUTH_PASSWORD_CHANGE = "AUTH_PASSWORD_CHANGE",
+  AUTH_PASSWORD_RESET_REQUEST = "AUTH_PASSWORD_RESET_REQUEST",
+  AUTH_PASSWORD_RESET_COMPLETE = "AUTH_PASSWORD_RESET_COMPLETE",
+  AUTH_EMAIL_VERIFICATION = "AUTH_EMAIL_VERIFICATION",
+  AUTH_ACCOUNT_LOCKED = "AUTH_ACCOUNT_LOCKED",
+  AUTH_ACCOUNT_UNLOCKED = "AUTH_ACCOUNT_UNLOCKED",
 
   // User Management
-  USER_CREATED = 'USER_CREATED',
-  USER_UPDATED = 'USER_UPDATED',
-  USER_DELETED = 'USER_DELETED',
-  USER_ROLE_CHANGED = 'USER_ROLE_CHANGED',
-  USER_PERMISSIONS_CHANGED = 'USER_PERMISSIONS_CHANGED',
+  USER_CREATED = "USER_CREATED",
+  USER_UPDATED = "USER_UPDATED",
+  USER_DELETED = "USER_DELETED",
+  USER_ROLE_CHANGED = "USER_ROLE_CHANGED",
+  USER_PERMISSIONS_CHANGED = "USER_PERMISSIONS_CHANGED",
 
   // Data Access (GDPR)
-  DATA_ACCESSED = 'DATA_ACCESSED',
-  DATA_EXPORTED = 'DATA_EXPORTED',
-  DATA_DELETED = 'DATA_DELETED',
-  GDPR_DATA_REQUEST = 'GDPR_DATA_REQUEST',
-  GDPR_DATA_DELETION = 'GDPR_DATA_DELETION',
+  DATA_ACCESSED = "DATA_ACCESSED",
+  DATA_EXPORTED = "DATA_EXPORTED",
+  DATA_DELETED = "DATA_DELETED",
+  GDPR_DATA_REQUEST = "GDPR_DATA_REQUEST",
+  GDPR_DATA_DELETION = "GDPR_DATA_DELETION",
 
   // Security Events
-  SECURITY_RATE_LIMIT_EXCEEDED = 'SECURITY_RATE_LIMIT_EXCEEDED',
-  SECURITY_UNAUTHORIZED_ACCESS = 'SECURITY_UNAUTHORIZED_ACCESS',
-  SECURITY_SUSPICIOUS_ACTIVITY = 'SECURITY_SUSPICIOUS_ACTIVITY',
-  SECURITY_SESSION_HIJACK_ATTEMPT = 'SECURITY_SESSION_HIJACK_ATTEMPT',
+  SECURITY_RATE_LIMIT_EXCEEDED = "SECURITY_RATE_LIMIT_EXCEEDED",
+  SECURITY_UNAUTHORIZED_ACCESS = "SECURITY_UNAUTHORIZED_ACCESS",
+  SECURITY_SUSPICIOUS_ACTIVITY = "SECURITY_SUSPICIOUS_ACTIVITY",
+  SECURITY_SESSION_HIJACK_ATTEMPT = "SECURITY_SESSION_HIJACK_ATTEMPT",
 
   // Admin Actions
-  ADMIN_USER_IMPERSONATION = 'ADMIN_USER_IMPERSONATION',
-  ADMIN_CONFIG_CHANGE = 'ADMIN_CONFIG_CHANGE',
-  ADMIN_SYSTEM_OPERATION = 'ADMIN_SYSTEM_OPERATION',
+  ADMIN_USER_IMPERSONATION = "ADMIN_USER_IMPERSONATION",
+  ADMIN_CONFIG_CHANGE = "ADMIN_CONFIG_CHANGE",
+  ADMIN_SYSTEM_OPERATION = "ADMIN_SYSTEM_OPERATION",
 }
 
 export enum AuditSeverity {
-  INFO = 'INFO',
-  WARNING = 'WARNING',
-  ERROR = 'ERROR',
-  CRITICAL = 'CRITICAL',
+  INFO = "INFO",
+  WARNING = "WARNING",
+  ERROR = "ERROR",
+  CRITICAL = "CRITICAL",
 }
 
 export interface AuditLogEntry {
   eventType: AuditEventType;
   severity: AuditSeverity;
-  userId?: string;
-  actorId?: string; // For admin impersonation
+  userId?: number;
+  actorId?: number; // For admin impersonation
   ipAddress?: string;
   userAgent?: string;
   resource?: string; // Resource being accessed (e.g., 'user:123', 'course:456')
   action?: string;
   metadata?: Record<string, any>;
   success: boolean;
+  errorCode?: string;
   errorMessage?: string;
 }
 
 export interface AuditQueryOptions {
-  userId?: string;
+  userId?: number;
   eventType?: AuditEventType;
   severity?: AuditSeverity;
   startDate?: Date;
   endDate?: Date;
   limit?: number;
   offset?: number;
+  page?: number;
 }
 
 export class AuditLogService {
   private prisma: PrismaClient;
   private retentionDays: number;
 
-  constructor(prisma: PrismaClient, retentionDays: number = 730) { // 2 years default (GDPR)
+  constructor(prisma: PrismaClient, retentionDays: number = 730) {
+    // 2 years default (GDPR)
     this.prisma = prisma;
     this.retentionDays = retentionDays;
   }
@@ -95,21 +98,24 @@ export class AuditLogService {
           eventType: entry.eventType,
           severity: entry.severity,
           userId: entry.userId,
-          actorId: entry.actorId,
           ipAddress: entry.ipAddress,
           userAgent: entry.userAgent,
           resource: entry.resource,
           action: entry.action,
-          metadata: entry.metadata ? JSON.stringify(entry.metadata) : null,
           success: entry.success,
-          errorMessage: entry.errorMessage,
+          errorCode: entry.errorCode,
+          message: entry.errorMessage,
+          metadata: entry.metadata as any,
           timestamp: new Date(),
         },
       });
 
       // Log critical events to console for immediate visibility
-      if (entry.severity === AuditSeverity.CRITICAL || entry.severity === AuditSeverity.ERROR) {
-        console.error('[AUDIT]', {
+      if (
+        entry.severity === AuditSeverity.CRITICAL ||
+        entry.severity === AuditSeverity.ERROR
+      ) {
+        console.error("[AUDIT]", {
           eventType: entry.eventType,
           severity: entry.severity,
           userId: entry.userId,
@@ -119,7 +125,7 @@ export class AuditLogService {
       }
     } catch (error) {
       // Never let audit logging crash the app
-      console.error('[AUDIT ERROR] Failed to log audit event:', error);
+      console.error("[AUDIT ERROR] Failed to log audit event:", error);
     }
   }
 
@@ -138,31 +144,31 @@ export class AuditLogService {
       if (options.endDate) where.timestamp.lte = options.endDate;
     }
 
+    const page = options.page || 1;
+    const limit = options.limit || 100;
+
     const [logs, total] = await Promise.all([
       this.prisma.auditLog.findMany({
         where,
-        orderBy: { timestamp: 'desc' },
-        take: options.limit || 100,
-        skip: options.offset || 0,
+        orderBy: { timestamp: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
       }),
       this.prisma.auditLog.count({ where }),
     ]);
 
     return {
-      logs: logs.map(log => ({
-        ...log,
-        metadata: log.metadata ? JSON.parse(log.metadata as string) : null,
-      })),
+      logs,
       total,
-      limit: options.limit || 100,
-      offset: options.offset || 0,
+      page,
+      limit,
     };
   }
 
   /**
    * Get audit logs for a specific user (GDPR data export)
    */
-  async getUserAuditLogs(userId: string) {
+  async getUserAuditLogs(userId: number) {
     return this.query({
       userId,
       limit: 10000, // Get all logs for GDPR export
@@ -182,23 +188,24 @@ export class AuditLogService {
       AuditEventType.SECURITY_SESSION_HIJACK_ATTEMPT,
     ];
 
+    const where: any = {
+      eventType: { in: securityEventTypes },
+    };
+
+    if (startDate && endDate) {
+      where.timestamp = { gte: startDate, lte: endDate };
+    }
+
     return this.prisma.auditLog.findMany({
-      where: {
-        eventType: { in: securityEventTypes },
-        timestamp: {
-          gte: startDate || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
-          lte: endDate || new Date(),
-        },
-      },
-      orderBy: { timestamp: 'desc' },
-      take: 1000,
+      where,
+      orderBy: { timestamp: "desc" },
     });
   }
 
   /**
    * Get failed login attempts for a user
    */
-  async getFailedLoginAttempts(userId: string, withinMinutes: number = 15) {
+  async getFailedLoginAttempts(userId: number, withinMinutes: number = 15) {
     const since = new Date(Date.now() - withinMinutes * 60 * 1000);
 
     return this.prisma.auditLog.count({
@@ -213,7 +220,10 @@ export class AuditLogService {
   /**
    * Get failed login attempts by IP
    */
-  async getFailedLoginAttemptsByIP(ipAddress: string, withinMinutes: number = 15) {
+  async getFailedLoginAttemptsByIP(
+    ipAddress: string,
+    withinMinutes: number = 15,
+  ) {
     const since = new Date(Date.now() - withinMinutes * 60 * 1000);
 
     return this.prisma.auditLog.count({
@@ -229,7 +239,9 @@ export class AuditLogService {
    * Cleanup old audit logs (retention policy)
    */
   async cleanup(): Promise<number> {
-    const cutoffDate = new Date(Date.now() - this.retentionDays * 24 * 60 * 60 * 1000);
+    const cutoffDate = new Date(
+      Date.now() - this.retentionDays * 24 * 60 * 60 * 1000,
+    );
 
     const result = await this.prisma.auditLog.deleteMany({
       where: {
@@ -237,7 +249,10 @@ export class AuditLogService {
       },
     });
 
-    console.log(`[AUDIT] Cleaned up ${result.count} old audit logs older than ${this.retentionDays} days`);
+    console.log(
+      `[AUDIT] Cleaned up ${result.count} old audit logs older than ${this.retentionDays} days`,
+    );
+
     return result.count;
   }
 
@@ -261,27 +276,28 @@ export class AuditLogService {
       byEventType: {} as Record<string, number>,
       bySeverity: {} as Record<string, number>,
       successRate: 0,
-      failureCount: 0,
     };
 
     let successCount = 0;
 
-    logs.forEach(log => {
+    logs.forEach((log) => {
       // Count by event type
-      stats.byEventType[log.eventType] = (stats.byEventType[log.eventType] || 0) + 1;
+      stats.byEventType[log.eventType] =
+        (stats.byEventType[log.eventType] || 0) + 1;
 
       // Count by severity
-      stats.bySeverity[log.severity] = (stats.bySeverity[log.severity] || 0) + 1;
+      stats.bySeverity[log.severity] =
+        (stats.bySeverity[log.severity] || 0) + 1;
 
       // Count success/failure
       if (log.success) {
         successCount++;
-      } else {
-        stats.failureCount++;
       }
     });
 
-    stats.successRate = stats.total > 0 ? (successCount / stats.total) * 100 : 0;
+    if (logs.length > 0) {
+      stats.successRate = (successCount / logs.length) * 100;
+    }
 
     return stats;
   }
@@ -289,7 +305,7 @@ export class AuditLogService {
   /**
    * Export user data for GDPR compliance
    */
-  async exportUserData(userId: string) {
+  async exportUserData(userId: number) {
     const logs = await this.getUserAuditLogs(userId);
 
     return {
@@ -301,10 +317,13 @@ export class AuditLogService {
   }
 
   /**
-   * Delete user audit logs (GDPR right to be forgotten)
-   * Note: Some logs may need to be retained for legal/compliance reasons
+   * Delete all logs for a user (for GDPR compliance)
+   * Optionally retain security-related events for legal compliance
    */
-  async deleteUserLogs(userId: string, retainSecurityEvents: boolean = true) {
+  async deleteUserLogs(
+    userId: number,
+    retainSecurityEvents: boolean = true,
+  ): Promise<number> {
     if (retainSecurityEvents) {
       // Keep security events for legal compliance
       const result = await this.prisma.auditLog.deleteMany({
@@ -315,17 +334,18 @@ export class AuditLogService {
               AuditEventType.SECURITY_RATE_LIMIT_EXCEEDED,
               AuditEventType.SECURITY_UNAUTHORIZED_ACCESS,
               AuditEventType.SECURITY_SUSPICIOUS_ACTIVITY,
-              AuditEventType.SECURITY_SESSION_HIJACK_ATTEMPT,
             ],
           },
         },
       });
+      console.log("[AUDIT] Deleted user logs except security events:", userId);
       return result.count;
     } else {
       // Delete all logs
       const result = await this.prisma.auditLog.deleteMany({
         where: { userId },
       });
+      console.log("[AUDIT] Deleted all user logs:", userId);
       return result.count;
     }
   }
@@ -334,7 +354,10 @@ export class AuditLogService {
 // Singleton instance
 let auditLogService: AuditLogService | null = null;
 
-export function createAuditLogService(prisma: PrismaClient, retentionDays?: number): AuditLogService {
+export function createAuditLogService(
+  prisma: PrismaClient,
+  retentionDays?: number,
+): AuditLogService {
   if (!auditLogService) {
     auditLogService = new AuditLogService(prisma, retentionDays);
   }
@@ -343,7 +366,9 @@ export function createAuditLogService(prisma: PrismaClient, retentionDays?: numb
 
 export function getAuditLogService(): AuditLogService {
   if (!auditLogService) {
-    throw new Error('AuditLogService not initialized. Call createAuditLogService first.');
+    throw new Error(
+      "AuditLogService not initialized. Call createAuditLogService first.",
+    );
   }
   return auditLogService;
 }

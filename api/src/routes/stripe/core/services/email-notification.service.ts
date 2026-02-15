@@ -35,9 +35,9 @@ export class EmailNotificationServiceClass {
     );
 
     try {
-      // Import dynamique du EmailClient (comme dans le code original)
+      // Import du EmailClient depuis l'infrastructure
       const { EmailClient } =
-        await import("../../../../clients/emailClient.js");
+        await import("@/infrastructure/external-services/emailClient.js");
       const emailClient = new EmailClient();
 
       // Préparer les variables du template
@@ -81,12 +81,14 @@ export class EmailNotificationServiceClass {
       }
 
       // Envoyer l'email
-      const emailResult = await emailClient.sendPaymentConfirmation(
-        data.email,
-        templateVariables,
-        data.userId,
-        templateType,
-      );
+      const emailResult = await emailClient.sendEmail({
+        to: data.email,
+        subject: data.premierPaiement
+          ? "Bienvenue ! Confirmation de votre premier paiement"
+          : "Confirmation de paiement",
+        templateTitle: templateType,
+        variables: templateVariables,
+      });
 
       if (emailResult.success) {
         console.log(`✅ [Service Email Notification] Email envoyé avec succès`);
@@ -129,27 +131,28 @@ export class EmailNotificationServiceClass {
     email: string;
   } | null> {
     try {
-      // Import dynamique du connector
-      const MysqlConnector = (
-        await import("../../../../db/connector/mysqlconnector.js")
-      ).default;
-      const connector = MysqlConnector.getInstance();
+      // Utiliser Prisma au lieu du connector MySQL
+      const { prisma } =
+        await import("@/infrastructure/database/prisma-client.js");
 
-      return new Promise((resolve, reject) => {
-        const query = `
-          SELECT nom_utilisateur as nom, first_name as prenom, email
-          FROM utilisateurs
-          WHERE id = ?
-        `;
-
-        connector.query(query, [userId], (error, results) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve(results[0] || null);
-          }
-        });
+      const utilisateur = await prisma.utilisateurs.findUnique({
+        where: { id: userId },
+        select: {
+          nom_utilisateur: true,
+          first_name: true,
+          email: true,
+        },
       });
+
+      if (!utilisateur) {
+        return null;
+      }
+
+      return {
+        nom: utilisateur.nom_utilisateur,
+        prenom: utilisateur.first_name,
+        email: utilisateur.email,
+      };
     } catch (error) {
       console.error(
         `❌ [Service Email Notification] Erreur récupération utilisateur:`,
@@ -174,7 +177,7 @@ export function getEmailNotificationService(): EmailNotificationServiceClass {
 }
 
 // Méthode getInstance pour compatibilité
-EmailNotificationServiceClass.getInstance =
+(EmailNotificationServiceClass as any).getInstance =
   function (): EmailNotificationServiceClass {
     return getEmailNotificationService();
   };

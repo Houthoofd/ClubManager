@@ -24,7 +24,7 @@ import {
   verifierUtilisateurSchema,
   miseAJourUtilisateurSchema,
   suppressionUtilisateurSchema,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/utilisateurs/validators';
 import {
   requireAuth,
   requireAdmin,
@@ -36,7 +36,7 @@ import {
   ConflictError,
   InternalServerError,
   type GraphQLContext,
-} from '@/shared/index.js';
+} from "@/shared/index.js";
 
 interface Context extends GraphQLContext {
   prisma: PrismaClient;
@@ -82,8 +82,8 @@ export const utilisateursResolvers = (prisma: PrismaClient) => ({
         throw new ValidationError("ID utilisateur invalide");
       }
 
-      // Vérification des droits : admin ou propriétaire
-      if (context.user?.role !== "admin" && context.user?.id !== id) {
+      // Vérification des droits : admin (status_id = 1) ou propriétaire
+      if (context.user?.status_id !== 1 && context.user?.id !== id) {
         throw new ValidationError(
           "Vous n'avez pas les droits pour accéder à cet utilisateur",
         );
@@ -250,7 +250,20 @@ export const utilisateursResolvers = (prisma: PrismaClient) => ({
         const validated = inscriptionUtilisateurSchema.parse(input);
 
         // Appel du service d'inscription
-        const result = await inscrireUtilisateur(validated);
+        // Mapper les champs français vers les champs Prisma anglais
+        const mappedData = {
+          first_name: validated.prenom,
+          last_name: validated.nom,
+          date_of_birth: validated.date_naissance,
+          nom_utilisateur: validated.nom_utilisateur,
+          email: validated.email,
+          password: validated.password,
+          genre_id: validated.genre_id,
+          abonnement_id: validated.abonnement_id,
+          status_id: validated.status_id,
+          grade_id: validated.grade_id,
+        };
+        const result = await inscrireUtilisateur(mappedData);
 
         if (!result.success) {
           throw new ValidationError(result.message || "Échec de l'inscription");
@@ -387,8 +400,8 @@ export const utilisateursResolvers = (prisma: PrismaClient) => ({
           throw new ValidationError("ID utilisateur invalide");
         }
 
-        // Vérification des droits : admin ou propriétaire
-        if (context.user?.role !== "admin" && context.user?.id !== id) {
+        // Vérification des droits : admin (status_id = 1) ou propriétaire
+        if (context.user?.status_id !== 1 && context.user?.id !== id) {
           throw new ValidationError(
             "Vous n'avez pas les droits pour modifier cet utilisateur",
           );

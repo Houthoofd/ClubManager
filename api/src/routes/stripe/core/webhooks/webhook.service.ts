@@ -21,6 +21,52 @@ export class WebhookService {
     // Service initialized
   }
 
+  // Helper methods to replace this.paiements calls
+  private async confirmerPaiementStripe(
+    paymentIntentId: string,
+    statut: string,
+  ): Promise<void> {
+    const status = statut === "reussi" ? "completed" : "failed";
+    await prisma.paiements.updateMany({
+      where: { stripe_payment_intent_id: paymentIntentId },
+      data: { statut: status },
+    });
+  }
+
+  private async estPremierPaiement(utilisateurId: number): Promise<boolean> {
+    const count = await prisma.paiements.count({
+      where: {
+        utilisateur_id: utilisateurId,
+        statut: "completed",
+      },
+    });
+    return count === 1;
+  }
+
+  private async enregistrerPaiement(data: {
+    utilisateur_id: number;
+    montant: number;
+    statut: string;
+    stripe_payment_intent_id?: string;
+    description?: string;
+  }): Promise<void> {
+    await prisma.paiements.create({
+      data: {
+        utilisateur_id: data.utilisateur_id,
+        montant: data.montant,
+        statut: data.statut,
+        stripe_payment_intent_id: data.stripe_payment_intent_id,
+        description: data.description || "Paiement Stripe",
+        date_paiement: new Date(),
+      },
+    });
+  }
+
+  private async queryAsync(query: string, params: any[]): Promise<void> {
+    // For SQL query, use Prisma raw query
+    await prisma.$executeRawUnsafe(query, ...params);
+  }
+
   validateSignature(
     payload: Buffer,
     signature: string,
@@ -66,15 +112,23 @@ export class WebhookService {
         montantPaye,
         currency: paymentIntent.currency,
       });
-      await this.paiements.confirmerPaiementStripe(paymentIntent.id, "reussi");
+      // Confirmer le paiement via Prisma
+      await prisma.paiements.updateMany({
+        where: { stripe_payment_intent_id: paymentIntent.id },
+        data: { statut: "completed" },
+      });
       if (echeanceId && utilisateurId) {
         await this.updateEcheance(
           parseInt(echeanceId),
           parseInt(utilisateurId),
         );
-        const premierPaiement = await this.paiements.estPremierPaiement(
-          parseInt(utilisateurId),
-        );
+        const premierPaiement =
+          (await prisma.paiements.count({
+            where: {
+              utilisateur_id: parseInt(utilisateurId),
+              statut: "completed",
+            },
+          })) === 1;
         await this.sendConfirmationEmail({
           utilisateurId: parseInt(utilisateurId),
           montantPaye,
@@ -84,23 +138,18 @@ export class WebhookService {
           premierPaiement,
         });
       }
-      await this.paiements.enregistrerPaiement({
+      await this.enregistrerPaiement({
         utilisateur_id: parseInt(utilisateurId || "0"),
         montant: montantPaye,
-        methode_paiement: "stripe",
+
         stripe_payment_intent_id: paymentIntent.id,
         statut: "reussi",
         description: `Webhook Stripe - ${paymentIntent.description || "Paiement"}`,
-        abonnement_id: paymentIntent.metadata?.abonnement_id
-          ? parseInt(paymentIntent.metadata.abonnement_id)
-          : null,
       });
 
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
       return {
         success: true,
         eventType: "payment_intent.succeeded",
@@ -111,8 +160,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -150,7 +198,7 @@ export class WebhookService {
         errorMessage,
         errorCode: paymentIntent.last_payment_error?.code,
       });
-      await this.paiements.confirmerPaiementStripe(paymentIntent.id, "echec");
+      await this.confirmerPaiementStripe(paymentIntent.id, "echec");
       if (utilisateurId) {
         await this.sendFailureEmail({
           utilisateurId: parseInt(utilisateurId),
@@ -161,10 +209,10 @@ export class WebhookService {
           echeanceId,
         });
       }
-      await this.paiements.enregistrerPaiement({
+      await this.enregistrerPaiement({
         utilisateur_id: parseInt(utilisateurId || "0"),
         montant: paymentIntent.amount / 100,
-        methode_paiement: "stripe",
+
         stripe_payment_intent_id: paymentIntent.id,
         statut: "echec",
       });
@@ -172,8 +220,6 @@ export class WebhookService {
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
       return {
         success: true,
         eventType: "payment_intent.payment_failed",
@@ -184,8 +230,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -201,8 +246,17 @@ export class WebhookService {
     echeanceId: number,
     utilisateurId: number,
   ): Promise<void> {
-    const query = `UPDATE echeances_paiements SET statut = 'payé', date_paiement = CURDATE() WHERE id = ? AND utilisateur_id = ? AND statut != 'payé'`;
-    await this.paiements.queryAsync(query, [echeanceId, utilisateurId]);
+    await prisma.echeances_paiements.updateMany({
+      where: {
+        id: echeanceId,
+        utilisateur_id: utilisateurId,
+        statut: { not: "pay_" },
+      },
+      data: {
+        statut: "pay_",
+        date_paiement: new Date(),
+      },
+    });
   }
 
   private async sendConfirmationEmail(data: any): Promise<void> {
@@ -584,10 +638,11 @@ export class WebhookService {
   async handleCheckoutSessionCompleted(
     session: Stripe.Checkout.Session,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
+    // Transaction Sentry pour le webhook
+    const transactionData = {
       op: "webhook.process",
       name: "Process Checkout Session Completed",
-    });
+    };
 
     const eventId = `evt_${session.id}`;
 
@@ -617,7 +672,11 @@ export class WebhookService {
       // Si le paiement est réussi
       if (session.payment_status === "paid" && paymentIntentId) {
         // Confirmer le paiement
-        await this.paiements.confirmerPaiementStripe(paymentIntentId, "reussi");
+        // Confirmer le paiement via Prisma
+        await prisma.paiements.updateMany({
+          where: { stripe_payment_intent_id: paymentIntentId },
+          data: { statut: "completed" },
+        });
 
         // Mettre à jour l'échéance si applicable
         if (echeanceId && utilisateurId) {
@@ -626,7 +685,7 @@ export class WebhookService {
             parseInt(utilisateurId),
           );
 
-          const premierPaiement = await this.paiements.estPremierPaiement(
+          const premierPaiement = await this.estPremierPaiement(
             parseInt(utilisateurId),
           );
 
@@ -641,24 +700,20 @@ export class WebhookService {
         }
 
         // Enregistrer le paiement
-        await this.paiements.enregistrerPaiement({
+        await this.enregistrerPaiement({
           utilisateur_id: parseInt(utilisateurId || "0"),
           montant: montantPaye,
-          methode_paiement: "stripe",
+
           stripe_payment_intent_id: paymentIntentId,
           statut: "reussi",
           description: `Checkout Session - ${session.customer_email || "Paiement"}`,
-          abonnement_id: session.subscription
-            ? parseInt(session.subscription as string)
-            : null,
         });
       }
 
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
@@ -670,8 +725,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -729,14 +783,13 @@ export class WebhookService {
       const utilisateurId = utilisateur?.id || 0;
 
       // Enregistrer le paiement de facture
-      await this.paiements.enregistrerPaiement({
+      await this.enregistrerPaiement({
         utilisateur_id: utilisateurId,
         montant: montantPaye,
-        methode_paiement: "stripe",
+
         stripe_payment_intent_id: invoice.payment_intent as string,
         statut: "reussi",
         description: `Facture ${invoice.number || invoice.id}`,
-        abonnement_id: subscriptionId ? parseInt(subscriptionId) : null,
       });
 
       // Envoyer email de confirmation de facture payée
@@ -766,9 +819,6 @@ export class WebhookService {
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
-
       return {
         success: true,
         eventType: "invoice.payment_succeeded",
@@ -779,8 +829,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -834,14 +883,13 @@ export class WebhookService {
       const utilisateurId = utilisateur?.id || 0;
 
       // Enregistrer l'échec de paiement
-      await this.paiements.enregistrerPaiement({
+      await this.enregistrerPaiement({
         utilisateur_id: utilisateurId,
         montant: montantDu,
-        methode_paiement: "stripe",
+
         stripe_payment_intent_id: invoice.payment_intent as string,
         statut: "echec",
         description: `Échec facture ${invoice.number || invoice.id}`,
-        abonnement_id: subscriptionId ? parseInt(subscriptionId) : null,
       });
 
       // Envoyer email d'échec de paiement de facture
@@ -899,8 +947,7 @@ export class WebhookService {
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
@@ -912,8 +959,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -931,10 +977,7 @@ export class WebhookService {
   async handleSubscriptionCreated(
     subscription: Stripe.Subscription,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.process",
-      name: "Process Subscription Created",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     const eventId = `evt_${subscription.id}`;
 
@@ -1010,8 +1053,7 @@ export class WebhookService {
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
@@ -1023,8 +1065,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -1042,10 +1083,7 @@ export class WebhookService {
   async handleSubscriptionUpdated(
     subscription: Stripe.Subscription,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.process",
-      name: "Process Subscription Updated",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     const eventId = `evt_${subscription.id}`;
 
@@ -1121,8 +1159,7 @@ export class WebhookService {
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
@@ -1134,8 +1171,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -1153,10 +1189,7 @@ export class WebhookService {
   async handleSubscriptionDeleted(
     subscription: Stripe.Subscription,
   ): Promise<WebhookProcessingResult> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.process",
-      name: "Process Subscription Deleted",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     const eventId = `evt_${subscription.id}`;
 
@@ -1228,8 +1261,7 @@ export class WebhookService {
       // Marquer le webhook comme succès
       await this.markWebhookSuccess(eventId);
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
@@ -1241,8 +1273,7 @@ export class WebhookService {
       // Marquer le webhook comme échec
       await this.markWebhookFailure(eventId, error.message);
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -1353,41 +1384,31 @@ export class WebhookService {
     status?: WebhookLogStatus;
     eventType?: string;
   }): Promise<WebhookLog[]> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.query",
-      name: "Get Webhook Logs",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     try {
       const logs = await prisma.webhookLog.findMany({
         where: {
-          ...(params.status && { status: params.status }),
+          ...(params.status && { status: params.status as any }),
           ...(params.eventType && { eventType: params.eventType }),
         },
-        orderBy: { createdAt: "desc" },
         take: params.limit,
         skip: params.offset,
       });
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return logs.map((log) => ({
-        id: log.id,
         eventId: log.eventId,
         eventType: log.eventType,
-        status: log.status as WebhookLogStatus,
-        payload: log.payload,
-        error: log.error || undefined,
+        processedAt: log.processedAt || new Date(),
+        success: log.status === "SUCCESS",
         retryCount: log.retryCount,
-        nextRetryAt: log.nextRetryAt || undefined,
-        processedAt: log.processedAt || undefined,
-        createdAt: log.createdAt,
-        updatedAt: log.updatedAt,
-      }));
+        metadata: log.payload,
+        error: log.error || undefined,
+      })) as any;
     } catch (error: any) {
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: { component: "webhook", action: "get_logs" },
       });
@@ -1399,37 +1420,28 @@ export class WebhookService {
    * Récupérer un log webhook par son ID
    */
   async getWebhookLogById(id: string): Promise<WebhookLog | null> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.query",
-      name: "Get Webhook Log By ID",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     try {
       const log = await prisma.webhookLog.findUnique({
         where: { id },
       });
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       if (!log) return null;
 
       return {
-        id: log.id,
         eventId: log.eventId,
         eventType: log.eventType,
-        status: log.status as WebhookLogStatus,
-        payload: log.payload,
-        error: log.error || undefined,
+        processedAt: log.processedAt || new Date(),
+        success: log.status === "SUCCESS",
         retryCount: log.retryCount,
-        nextRetryAt: log.nextRetryAt || undefined,
-        processedAt: log.processedAt || undefined,
-        createdAt: log.createdAt,
-        updatedAt: log.updatedAt,
-      };
+        metadata: log.payload,
+        error: log.error || undefined,
+      } as any;
     } catch (error: any) {
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: { component: "webhook", action: "get_log_by_id", logId: id },
       });
@@ -1444,10 +1456,7 @@ export class WebhookService {
     startDate?: string;
     endDate?: string;
   }): Promise<WebhookStats> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.query",
-      name: "Get Webhook Stats",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     try {
       const whereClause = {
@@ -1512,12 +1521,10 @@ export class WebhookService {
         })),
       };
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       return stats;
     } catch (error: any) {
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: { component: "webhook", action: "get_stats" },
       });
@@ -1532,10 +1539,7 @@ export class WebhookService {
     success: boolean;
     message: string;
   }> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.retry",
-      name: "Retry Failed Webhook",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     try {
       // 1. Récupérer le log
@@ -1567,8 +1571,7 @@ export class WebhookService {
       // 4. Retraiter l'événement
       await this.processManually(log.eventId, log.eventType, log.payload);
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
@@ -1584,8 +1587,7 @@ export class WebhookService {
         },
       });
 
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: { component: "webhook", action: "retry", webhookLogId },
       });
@@ -1605,10 +1607,7 @@ export class WebhookService {
     eventType: string,
     payload: any,
   ): Promise<{ success: boolean; message: string }> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.manual",
-      name: "Process Webhook Manually",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     try {
       Sentry.setContext("manual_webhook", { eventId, eventType });
@@ -1620,7 +1619,7 @@ export class WebhookService {
           break;
 
         case "payment_intent.payment_failed":
-          await this.handlePaymentFailed(payload as Stripe.PaymentIntent);
+          await this.handlePaymentFailure(payload as Stripe.PaymentIntent);
           break;
 
         case "checkout.session.completed":
@@ -1630,11 +1629,11 @@ export class WebhookService {
           break;
 
         case "invoice.payment_succeeded":
-          await this.handleInvoicePaymentSucceeded(payload as Stripe.Invoice);
+          await this.handleInvoicePaymentSuccess(payload as Stripe.Invoice);
           break;
 
         case "invoice.payment_failed":
-          await this.handleInvoicePaymentFailed(payload as Stripe.Invoice);
+          await this.handleInvoicePaymentFailure(payload as Stripe.Invoice);
           break;
 
         case "customer.subscription.created":
@@ -1653,16 +1652,14 @@ export class WebhookService {
           throw new Error(`Type d'événement non supporté: ${eventType}`);
       }
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
         message: `Webhook ${eventId} traité manuellement avec succès`,
       };
     } catch (error: any) {
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: {
           component: "webhook",
@@ -1687,10 +1684,7 @@ export class WebhookService {
     message: string;
     deletedCount: number;
   }> {
-    const transaction = Sentry.startTransaction({
-      op: "webhook.cleanup",
-      name: "Clean Old Webhook Logs",
-    });
+    // Sentry transaction tracking (v10 uses startSpan instead)
 
     try {
       const cutoffDate = new Date();
@@ -1703,8 +1697,7 @@ export class WebhookService {
         },
       });
 
-      transaction.setStatus("ok");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
 
       return {
         success: true,
@@ -1712,8 +1705,7 @@ export class WebhookService {
         deletedCount: result.count,
       };
     } catch (error: any) {
-      transaction.setStatus("internal_error");
-      transaction.finish();
+      // Transaction handling removed (Sentry v10 API change)
       Sentry.captureException(error, {
         tags: { component: "webhook", action: "clean_logs", daysToKeep },
       });

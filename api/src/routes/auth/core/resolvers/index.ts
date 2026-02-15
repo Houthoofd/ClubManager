@@ -22,4 +22,4 @@ export { authResolvers } from "./auth.resolvers.js";
 /**
  * Export des TypeDefs depuis packages/types (centralisé)
  */
-export { authTypeDefs } from "@clubmanager/types/dist/graphql/index.js";
+export { authTypeDefs } from "@clubmanager/types";

@@ -5,17 +5,17 @@
  * session revocation, and security monitoring.
  */
 
-import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
+import { PrismaClient } from "@prisma/client";
+import crypto from "crypto";
 
 export interface SessionData {
   id: string;
-  userId: string;
+  userId: number;
   token: string;
   deviceInfo: {
     userAgent: string;
     ip: string;
-    deviceType?: 'desktop' | 'mobile' | 'tablet' | 'unknown';
+    deviceType?: "desktop" | "mobile" | "tablet" | "unknown";
     browser?: string;
     os?: string;
   };
@@ -26,16 +26,18 @@ export interface SessionData {
 }
 
 export interface CreateSessionOptions {
-  userId: string;
+  userId: number;
   userAgent: string;
   ipAddress: string;
   expiresInDays?: number;
 }
 
 export interface SessionQueryOptions {
-  userId?: string;
+  userId?: number;
   isActive?: boolean;
   includeExpired?: boolean;
+  activeOnly?: boolean;
+  limit?: number;
 }
 
 export class SessionService {
@@ -46,7 +48,7 @@ export class SessionService {
   constructor(
     prisma: PrismaClient,
     defaultExpirationDays: number = 30,
-    maxSessionsPerUser: number = 10
+    maxSessionsPerUser: number = 10,
   ) {
     this.prisma = prisma;
     this.defaultExpirationDays = defaultExpirationDays;
@@ -57,7 +59,7 @@ export class SessionService {
    * Generate a secure session token
    */
   private generateSessionToken(): string {
-    return crypto.randomBytes(32).toString('hex');
+    return crypto.randomBytes(32).toString("hex");
   }
 
   /**
@@ -70,41 +72,41 @@ export class SessionService {
 
     // Detect device type
     if (/mobile/i.test(userAgent)) {
-      deviceInfo.deviceType = 'mobile';
+      deviceInfo.deviceType = "mobile";
     } else if (/tablet|ipad/i.test(userAgent)) {
-      deviceInfo.deviceType = 'tablet';
+      deviceInfo.deviceType = "tablet";
     } else if (/desktop|windows|mac|linux/i.test(userAgent)) {
-      deviceInfo.deviceType = 'desktop';
+      deviceInfo.deviceType = "desktop";
     } else {
-      deviceInfo.deviceType = 'unknown';
+      deviceInfo.deviceType = "unknown";
     }
 
     // Detect browser
     if (/chrome/i.test(userAgent) && !/edg/i.test(userAgent)) {
-      deviceInfo.browser = 'Chrome';
+      deviceInfo.browser = "Chrome";
     } else if (/firefox/i.test(userAgent)) {
-      deviceInfo.browser = 'Firefox';
+      deviceInfo.browser = "Firefox";
     } else if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent)) {
-      deviceInfo.browser = 'Safari';
+      deviceInfo.browser = "Safari";
     } else if (/edg/i.test(userAgent)) {
-      deviceInfo.browser = 'Edge';
+      deviceInfo.browser = "Edge";
     } else {
-      deviceInfo.browser = 'Unknown';
+      deviceInfo.browser = "Unknown";
     }
 
     // Detect OS
     if (/windows/i.test(userAgent)) {
-      deviceInfo.os = 'Windows';
+      deviceInfo.os = "Windows";
     } else if (/mac/i.test(userAgent)) {
-      deviceInfo.os = 'macOS';
+      deviceInfo.os = "macOS";
     } else if (/linux/i.test(userAgent)) {
-      deviceInfo.os = 'Linux';
+      deviceInfo.os = "Linux";
     } else if (/android/i.test(userAgent)) {
-      deviceInfo.os = 'Android';
+      deviceInfo.os = "Android";
     } else if (/ios|iphone|ipad/i.test(userAgent)) {
-      deviceInfo.os = 'iOS';
+      deviceInfo.os = "iOS";
     } else {
-      deviceInfo.os = 'Unknown';
+      deviceInfo.os = "Unknown";
     }
 
     return deviceInfo;
@@ -117,10 +119,15 @@ export class SessionService {
     const token = this.generateSessionToken();
     const deviceInfo = this.parseUserAgent(options.userAgent);
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + (options.expiresInDays || this.defaultExpirationDays));
+    expiresAt.setDate(
+      expiresAt.getDate() +
+        (options.expiresInDays || this.defaultExpirationDays),
+    );
 
     // Check active sessions count and cleanup if needed
-    const activeSessions = await this.getUserSessions(options.userId, { activeOnly: true });
+    const activeSessions = await this.getUserSessions(options.userId, {
+      activeOnly: true,
+    });
     if (activeSessions.length >= this.maxSessionsPerUser) {
       // Revoke oldest session
       const oldestSession = activeSessions[activeSessions.length - 1];
@@ -142,7 +149,16 @@ export class SessionService {
       },
     });
 
-    return this.mapToSessionData(session, deviceInfo);
+    return {
+      id: session.id,
+      userId: session.userId,
+      token: session.token,
+      deviceInfo,
+      createdAt: session.createdAt,
+      lastActivityAt: session.lastActivityAt,
+      expiresAt: session.expiresAt,
+      isActive: session.isActive,
+    };
   }
 
   /**
@@ -163,7 +179,7 @@ export class SessionService {
       return null;
     }
 
-    const deviceInfo = this.parseUserAgent(session.userAgent);
+    const deviceInfo = this.parseUserAgent(session.userAgent || "");
     return this.mapToSessionData(session, deviceInfo);
   }
 
@@ -179,7 +195,7 @@ export class SessionService {
       return null;
     }
 
-    const deviceInfo = this.parseUserAgent(session.userAgent);
+    const deviceInfo = this.parseUserAgent(session.userAgent || "");
     return this.mapToSessionData(session, deviceInfo);
   }
 
@@ -194,7 +210,7 @@ export class SessionService {
       });
     } catch (error) {
       // Session might not exist or be expired
-      console.error('[SESSION] Failed to update activity:', error);
+      console.error("[SESSION] Failed to update activity:", error);
     }
   }
 
@@ -202,8 +218,8 @@ export class SessionService {
    * Get all sessions for a user
    */
   async getUserSessions(
-    userId: string,
-    options: { activeOnly?: boolean } = {}
+    userId: number,
+    options: SessionQueryOptions = {},
   ): Promise<SessionData[]> {
     const where: any = { userId };
 
@@ -214,11 +230,12 @@ export class SessionService {
 
     const sessions = await this.prisma.session.findMany({
       where,
-      orderBy: { lastActivityAt: 'desc' },
+      orderBy: { lastActivityAt: "desc" },
+      take: options.limit || 100,
     });
 
-    return sessions.map(session => {
-      const deviceInfo = this.parseUserAgent(session.userAgent);
+    return sessions.map((session) => {
+      const deviceInfo = this.parseUserAgent(session.userAgent || "");
       return this.mapToSessionData(session, deviceInfo);
     });
   }
@@ -234,7 +251,7 @@ export class SessionService {
       });
       return true;
     } catch (error) {
-      console.error('[SESSION] Failed to revoke session:', error);
+      console.error("[SESSION] Failed to revoke session:", error);
       return false;
     }
   }
@@ -250,15 +267,18 @@ export class SessionService {
       });
       return true;
     } catch (error) {
-      console.error('[SESSION] Failed to revoke session:', error);
+      console.error("[SESSION] Failed to revoke session:", error);
       return false;
     }
   }
 
   /**
-   * Revoke all sessions for a user (except current)
+   * Revoke all sessions for a user except one
    */
-  async revokeAllUserSessions(userId: string, exceptSessionId?: string): Promise<number> {
+  async revokeAllUserSessions(
+    userId: number,
+    exceptSessionId?: string,
+  ): Promise<number> {
     const where: any = { userId, isActive: true };
     if (exceptSessionId) {
       where.id = { not: exceptSessionId };
@@ -280,19 +300,24 @@ export class SessionService {
       where: {
         OR: [
           { expiresAt: { lt: new Date() } },
-          { isActive: false, updatedAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }, // Inactive for 30 days
+          {
+            isActive: false,
+            updatedAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+          }, // Inactive for 30 days
         ],
       },
     });
 
-    console.log(`[SESSION] Cleaned up ${result.count} expired/inactive sessions`);
     return result.count;
   }
 
   /**
    * Detect potential session hijacking
    */
-  async detectSuspiciousActivity(sessionId: string, currentIp: string): Promise<boolean> {
+  async detectSuspiciousActivity(
+    sessionId: string,
+    currentIp: string,
+  ): Promise<boolean> {
     const session = await this.getSessionById(sessionId);
     if (!session) {
       return false;
@@ -301,7 +326,7 @@ export class SessionService {
     // Check if IP changed significantly (basic check)
     if (session.deviceInfo.ip !== currentIp) {
       // Log suspicious activity
-      console.warn('[SESSION] Suspicious activity detected:', {
+      console.warn("[SESSION] Suspicious activity detected:", {
         sessionId,
         originalIp: session.deviceInfo.ip,
         currentIp,
@@ -316,59 +341,49 @@ export class SessionService {
   /**
    * Get session statistics for a user
    */
-  async getUserSessionStats(userId: string) {
+  async getUserSessionStats(userId: number) {
     const [activeSessions, totalSessions, recentSessions] = await Promise.all([
       this.prisma.session.count({
-        where: {
-          userId,
-          isActive: true,
-          expiresAt: { gte: new Date() },
-        },
+        where: { userId, isActive: true, expiresAt: { gt: new Date() } },
       }),
       this.prisma.session.count({ where: { userId } }),
       this.prisma.session.findMany({
         where: { userId },
-        orderBy: { lastActivityAt: 'desc' },
+        orderBy: { lastActivityAt: "desc" },
         take: 10,
       }),
     ]);
 
-    const deviceTypes = recentSessions.reduce((acc, session) => {
-      const type = session.deviceType || 'unknown';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
     return {
       activeSessions,
       totalSessions,
-      deviceTypes,
-      recentActivity: recentSessions.map(s => ({
-        id: s.id,
-        deviceType: s.deviceType,
-        browser: s.browser,
-        os: s.os,
-        lastActivityAt: s.lastActivityAt,
-        isActive: s.isActive,
-      })),
+      recentSessions: recentSessions.map((session) => {
+        const deviceInfo = this.parseUserAgent(session.userAgent || "");
+        return this.mapToSessionData(session, deviceInfo);
+      }),
     };
   }
 
   /**
    * Extend session expiration
    */
-  async extendSession(sessionId: string, additionalDays: number = 30): Promise<boolean> {
+  async extendSession(
+    sessionId: string,
+    additionalHours: number = 24,
+  ): Promise<boolean> {
     try {
       const session = await this.prisma.session.findUnique({
         where: { id: sessionId },
       });
 
-      if (!session || !session.isActive) {
+      if (!session) {
         return false;
       }
 
       const newExpiresAt = new Date(session.expiresAt);
-      newExpiresAt.setDate(newExpiresAt.getDate() + additionalDays);
+      newExpiresAt.setTime(
+        newExpiresAt.getTime() + additionalHours * 60 * 60 * 1000,
+      );
 
       await this.prisma.session.update({
         where: { id: sessionId },
@@ -377,7 +392,7 @@ export class SessionService {
 
       return true;
     } catch (error) {
-      console.error('[SESSION] Failed to extend session:', error);
+      console.error("[SESSION] Failed to extend session:", error);
       return false;
     }
   }
@@ -411,17 +426,23 @@ let sessionService: SessionService | null = null;
 export function createSessionService(
   prisma: PrismaClient,
   defaultExpirationDays?: number,
-  maxSessionsPerUser?: number
+  maxSessionsPerUser?: number,
 ): SessionService {
   if (!sessionService) {
-    sessionService = new SessionService(prisma, defaultExpirationDays, maxSessionsPerUser);
+    sessionService = new SessionService(
+      prisma,
+      defaultExpirationDays,
+      maxSessionsPerUser,
+    );
   }
   return sessionService;
 }
 
 export function getSessionService(): SessionService {
   if (!sessionService) {
-    throw new Error('SessionService not initialized. Call createSessionService first.');
+    throw new Error(
+      "SessionService not initialized. Call createSessionService first.",
+    );
   }
   return sessionService;
 }

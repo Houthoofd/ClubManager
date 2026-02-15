@@ -10,7 +10,7 @@ import {
   AuditLogService,
   AuditEventType,
   AuditSeverity,
-} from "../services/audit-log.service";
+} from "../services/audit-log.service.js";
 
 export interface AuditContext {
   userId?: string;
@@ -24,6 +24,7 @@ export interface AuditLogOptions {
   severity?: AuditSeverity;
   resource?: string;
   skipOnError?: boolean;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -76,6 +77,7 @@ export function withAuditLog<TArgs = any, TContext = any, TResult = any>(
                   context.req?.headers?.["user-agent"] || context.userAgent,
                 resource: options.resource,
                 action: info.fieldName,
+                success: success,
                 metadata: {
                   ...options.metadata,
                   args: sanitizeVariables(args),
@@ -154,7 +156,7 @@ export function withLoginAudit<TArgs = any, TContext = any, TResult = any>(
     info: GraphQLResolveInfo,
   ): Promise<TResult> => {
     let success = false;
-    let userId: string | undefined;
+    let userId: number | undefined;
     let errorMessage: string | undefined;
 
     try {
@@ -218,7 +220,7 @@ export function withDataModificationAudit<
 >(resourceType: string, action: "create" | "update" | "delete") {
   const eventTypeMap = {
     create: AuditEventType.USER_CREATED,
-    update: AuditEventType.DATA_MODIFIED,
+    update: AuditEventType.USER_UPDATED,
     delete: AuditEventType.DATA_DELETED,
   };
 

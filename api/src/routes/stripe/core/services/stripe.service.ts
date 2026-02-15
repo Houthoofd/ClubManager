@@ -1,5 +1,11 @@
 import Stripe from "stripe";
-import { toStripeAmount } from "@clubmanager/types/validators";
+
+/**
+ * Convertit un montant en centimes pour Stripe
+ * @param amount Montant en euros
+ * @returns Montant en centimes
+ */
+const toStripeAmount = (amount: number): number => Math.round(amount * 100);
 
 /**
  * Service pour interagir avec l'API Stripe
@@ -46,7 +52,7 @@ export class StripeServiceClass {
     }
 
     this.stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2025-02-24.acacia",
+      apiVersion: "2026-01-28.clover",
     });
 
     console.log("✅ [Service Stripe] Client Stripe initialisé");
@@ -353,7 +359,7 @@ export function getStripeService(): StripeServiceClass {
 }
 
 // Méthode getInstance pour compatibilité
-StripeServiceClass.getInstance = function (): StripeServiceClass {
+(StripeServiceClass as any).getInstance = function (): StripeServiceClass {
   return getStripeService();
 };
 

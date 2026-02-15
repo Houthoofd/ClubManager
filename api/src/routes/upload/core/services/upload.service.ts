@@ -15,7 +15,7 @@ import {
   type UploadStats,
   type SanitizationOptions,
   type UploadError,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/upload/validators';
 
 /**
  * Nettoyer le nom de fichier

@@ -52,7 +52,7 @@ import {
   obtenirAlertesUtilisateurSchema,
   resoudreAlerteSchema,
   ignorerAlerteSchema,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/alertes/validators';
 
 /**
  * Interface pour les arguments GraphQL

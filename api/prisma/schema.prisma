@@ -37,6 +37,61 @@ enum WebhookLogStatus {
   RETRYING
 }
 
+// ============================================================================
+// SESSIONS - Gestion des sessions utilisateur
+// ============================================================================
+
+model Session {
+  id             String   @id @default(cuid())
+  token          String   @unique @db.VarChar(255)
+  userId         Int      @map("user_id")
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent") @db.Text
+  deviceType     String?  @map("device_type") @db.VarChar(50)
+  browser        String?  @db.VarChar(50)
+  os             String?  @db.VarChar(50)
+  isActive       Boolean  @default(true) @map("is_active")
+  lastActivityAt DateTime @default(now()) @map("last_activity_at") @db.DateTime(0)
+  expiresAt      DateTime @map("expires_at") @db.DateTime(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  utilisateur utilisateurs @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId, isActive], map: "idx_user_active")
+  @@index([token], map: "idx_token")
+  @@index([expiresAt], map: "idx_expires_at")
+  @@map("sessions")
+}
+
+// ============================================================================
+// AUDIT LOGS - Journalisation des événements de sécurité et actions
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  eventType  String   @map("event_type") @db.VarChar(100)
+  severity   String   @db.VarChar(20)
+  userId     Int?     @map("user_id")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.Text
+  resource   String?  @db.VarChar(100)
+  action     String?  @db.VarChar(100)
+  success    Boolean  @default(true)
+  errorCode  String?  @map("error_code") @db.VarChar(50)
+  message    String?  @db.Text
+  metadata   Json?
+  timestamp  DateTime @default(now()) @db.DateTime(0)
+
+  utilisateur utilisateurs? @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([eventType, timestamp], map: "idx_event_type_timestamp")
+  @@index([userId, timestamp], map: "idx_user_timestamp")
+  @@index([severity, timestamp], map: "idx_severity_timestamp")
+  @@index([timestamp], map: "idx_timestamp")
+  @@map("audit_logs")
+}
+
 model articles {
   id                Int                 @id @default(autoincrement())
   nom               String              @db.VarChar(100)
@@ -581,6 +636,8 @@ model utilisateurs {
   refresh_tokens                                                                 refresh_tokens[]
   reservations                                                                   reservations[]
   sms_recovery_codes                                                             sms_recovery_codes[]
+  sessions                                                                       Session[]
+  audit_logs                                                                     AuditLog[]
   genres                                                                         genres?                    @relation(fields: [genre_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_1")
   status                                                                         status?                    @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_2")
   grades                                                                         grades?                    @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_3")

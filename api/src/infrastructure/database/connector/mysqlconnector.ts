@@ -218,7 +218,7 @@ export default class MysqlConnector {
           "❌ Erreur lors de l'acquisition de connexion :",
           err.message,
         );
-        return callback(err);
+        return callback(err as QueryError);
       }
 
       const queryTimeoutTimer = setTimeout(() => {
@@ -249,7 +249,7 @@ export default class MysqlConnector {
           "❌ Erreur lors de l'acquisition de connexion pour transaction :",
           err.message,
         );
-        return callback(err);
+        return callback(err as QueryError);
       }
 
       connection.beginTransaction((transErr) => {

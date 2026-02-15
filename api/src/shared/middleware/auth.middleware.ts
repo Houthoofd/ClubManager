@@ -11,6 +11,7 @@ import {
   AuthorizationError,
 } from "../errors/GraphQLErrors.js";
 import { GraphQLContext } from "../types/context.types.js";
+import { utilisateurs } from "@prisma/client";
 
 // Re-export token helpers for backward compatibility
 export {
@@ -31,9 +32,9 @@ export interface AuthUser {
   email: string;
   first_name: string;
   last_name: string;
-  status_id: number;
-  role: string;
-  status: string;
+  status_id: number | null;
+  userId: string;
+  nom_utilisateur: string;
 }
 
 /**
@@ -45,7 +46,8 @@ export type { GraphQLContext };
 /**
  * Status/Role constants
  */
-export const UserRole = {
+// Renamed to avoid conflict with UserRole enum in common.types.ts
+export const UserRoleConstants = {
   ADMIN: "admin",
   PROFESSEUR: "professeur",
   MEMBRE: "membre",
@@ -71,9 +73,7 @@ export const isAuthenticated = (context: any): boolean => {
  */
 export function isAdmin(user: AuthUser): boolean {
   return (
-    user.status_id === UserStatusId.ADMIN ||
-    user.role === UserRole.ADMIN ||
-    user.status === UserRole.ADMIN
+    user.status_id === UserStatusId.ADMIN || user.status_id === 1 // 1 = ADMIN status
   );
 }
 
@@ -82,9 +82,7 @@ export function isAdmin(user: AuthUser): boolean {
  */
 export function isProfesseur(user: AuthUser): boolean {
   return (
-    user.status_id === UserStatusId.PROFESSEUR ||
-    user.role === UserRole.PROFESSEUR ||
-    user.status === UserRole.PROFESSEUR
+    user.status_id === UserStatusId.PROFESSEUR || user.status_id === 2 // 2 = PROFESSEUR status
   );
 }
 
@@ -93,9 +91,7 @@ export function isProfesseur(user: AuthUser): boolean {
  */
 export function isMembre(user: AuthUser): boolean {
   return (
-    user.status_id === UserStatusId.MEMBRE ||
-    user.role === UserRole.MEMBRE ||
-    user.status === UserRole.MEMBRE
+    user.status_id === UserStatusId.MEMBRE || user.status_id === 3 // 3 = MEMBRE status
   );
 }
 
@@ -104,9 +100,7 @@ export function isMembre(user: AuthUser): boolean {
  */
 export function isProspect(user: AuthUser): boolean {
   return (
-    user.status_id === UserStatusId.PROSPECT ||
-    user.role === UserRole.PROSPECT ||
-    user.status === UserRole.PROSPECT
+    user.status_id === UserStatusId.PROSPECT || user.status_id === 4 // 4 = PROSPECT status
   );
 }
 
@@ -421,8 +415,17 @@ export function requireRole<
       throw new AuthenticationError("Utilisateur non trouvé dans le contexte");
     }
 
-    const userRole = context.user.role || context.user.status;
-    if (!allowedRoles.includes(userRole)) {
+    // Map status_id to role names for backward compatibility
+    const roleMap: Record<number, string> = {
+      1: "admin",
+      2: "professeur",
+      3: "utilisateur",
+    };
+
+    const userRole = context.user.status_id
+      ? roleMap[context.user.status_id]
+      : null;
+    if (!userRole || !allowedRoles.includes(userRole)) {
       throw new AuthorizationError(
         `Cette ressource nécessite un des rôles suivants: ${allowedRoles.join(", ")}`,
       );
@@ -467,7 +470,10 @@ export function requireStatusId<
       throw new AuthenticationError("Utilisateur non trouvé dans le contexte");
     }
 
-    if (!allowedStatusIds.includes(context.user.status_id)) {
+    if (
+      !context.user.status_id ||
+      !allowedStatusIds.includes(context.user.status_id)
+    ) {
       throw new AuthorizationError(
         "Vous n'avez pas le statut requis pour accéder à cette ressource",
       );
@@ -525,7 +531,7 @@ export function combineMiddlewares<TArgs = any, TContext = any, TResult = any>(
 /**
  * Helper: Get user from context (throws if not authenticated)
  */
-export function getUserFromContext(context: GraphQLContext): AuthUser {
+export function getUserFromContext(context: GraphQLContext): utilisateurs {
   if (!isAuthenticated(context) || !context.user) {
     throw new AuthenticationError("Utilisateur non authentifié");
   }

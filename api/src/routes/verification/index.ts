@@ -7,7 +7,7 @@
 // Exports principaux pour GraphQL
 export {
   verificationResolvers,
-  verificationTypeDefs,
+  // verificationTypeDefs, // TODO: Create TypeDefs if needed
 } from "./core/resolvers/index.js";
 
 // Export des services pour utilisation directe si nécessaire

@@ -46,11 +46,7 @@ export function withValidation<TArgs = any, TContext = any, TResult = any>(
         if (error instanceof ZodError) {
           // Transform Zod errors to GraphQL validation errors
           const formattedErrors = formatZodErrors(error);
-          throw new ValidationError(
-            "Validation failed",
-            ErrorCode.VALIDATION_ERROR,
-            formattedErrors,
-          );
+          throw new ValidationError("Validation failed", formattedErrors);
         }
         throw error;
       }
@@ -81,11 +77,7 @@ export function validateInput<T>(schema: ZodSchema<T>, input: unknown): T {
   } catch (error) {
     if (error instanceof ZodError) {
       const formattedErrors = formatZodErrors(error);
-      throw new ValidationError(
-        "Validation failed",
-        ErrorCode.VALIDATION_ERROR,
-        formattedErrors,
-      );
+      throw new ValidationError("Validation failed", formattedErrors);
     }
     throw error;
   }
@@ -144,11 +136,7 @@ export function withNestedValidation<
       } catch (error) {
         if (error instanceof ZodError) {
           const formattedErrors = formatZodErrors(error);
-          throw new ValidationError(
-            "Validation failed",
-            ErrorCode.VALIDATION_ERROR,
-            formattedErrors,
-          );
+          throw new ValidationError("Validation failed", formattedErrors);
         }
         throw error;
       }
@@ -270,8 +258,8 @@ export const ValidationHelpers = {
   /**
    * Combine multiple schemas
    */
-  mergeSchemas<T extends z.ZodObject<any>>(...schemas: T[]): z.ZodObject<any> {
-    return schemas.reduce((acc, schema) => acc.merge(schema));
+  mergeSchemas<T extends z.ZodObject<any>>(...schemas: T[]): any {
+    return schemas.reduce((acc, schema) => (acc as any).merge(schema)) as any;
   },
 
   /**
@@ -281,8 +269,8 @@ export const ValidationHelpers = {
     schema: T,
     check: (data: any) => boolean,
     message: string,
-  ): T {
-    return schema.refine(check, { message }) as T;
+  ): any {
+    return schema.refine(check, { message });
   },
 };
 

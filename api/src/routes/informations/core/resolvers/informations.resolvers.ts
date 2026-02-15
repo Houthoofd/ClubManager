@@ -26,16 +26,16 @@ import { withSentry } from "@/shared/middleware/sentry.middleware.js";
 import {
   informationInputSchema,
   informationIdSchema,
-} from "@clubmanager/types/validators";
+} from "@clubmanager/types/domains/informations/validators";
 
-import type {
-  Information,
-  InformationInput,
-  InformationResult,
-  Status,
-  PlanTarifaire,
-  Grade,
-} from "@clubmanager/types";
+import { Informations } from "@clubmanager/types";
+
+type Information = Informations.Information;
+type InformationInput = Informations.InformationInput;
+type InformationResult = Informations.InformationResult;
+type Status = Informations.Status;
+type Grade = Informations.Grade;
+type PlanTarifaire = Informations.PlanTarifaire;
 
 import type { InformationData } from "../services/informations.service.js";
 
@@ -92,7 +92,12 @@ const obtenirToutesLesInformationsResolver = async (
   try {
     const informations =
       await informationsService.obtenirToutesLesInformations();
-    return informations;
+    // Map InformationData to Information by adding missing fields
+    return informations.map((info) => ({
+      ...info,
+      date_creation: new Date(),
+      status_id: 1,
+    }));
   } catch (error: any) {
     console.error(
       "❌ [InformationsResolver] Erreur obtenirToutesLesInformations:",
@@ -103,7 +108,6 @@ const obtenirToutesLesInformationsResolver = async (
       {
         extensions: {
           code: "INTERNAL_SERVER_ERROR",
-          originalError: error,
         },
       },
     );
@@ -196,7 +200,12 @@ const obtenirLesPlansTarifairesResolver = async (
 ): Promise<PlanTarifaire[]> => {
   try {
     const plans = await informationsService.obtenirLesPlansTarifaires();
-    return plans;
+    // Map Prisma Decimal to number
+    return plans.map((plan: any) => ({
+      ...plan,
+      prix: Number(plan.prix),
+      description: plan.description || undefined,
+    }));
   } catch (error: any) {
     console.error(
       "❌ [InformationsResolver] Erreur obtenirLesPlansTarifaires:",
@@ -207,7 +216,6 @@ const obtenirLesPlansTarifairesResolver = async (
       {
         extensions: {
           code: "INTERNAL_SERVER_ERROR",
-          originalError: error,
         },
       },
     );
@@ -290,7 +298,11 @@ const obtenirTousLesReferentielsResolver = async (
       grades,
       genres,
       status,
-      abonnements,
+      abonnements: abonnements.map((plan: any) => ({
+        ...plan,
+        prix: Number(plan.prix),
+        description: plan.description || undefined,
+      })),
     };
   } catch (error: any) {
     console.error(
@@ -457,6 +469,12 @@ const modifierInformationResolver = async (
       validatedId.id,
       validatedInput,
     );
+
+    if (!result) {
+      throw new GraphQLError("Information non trouvée", {
+        extensions: { code: "NOT_FOUND" },
+      });
+    }
 
     if (!result.success) {
       throw new GraphQLError(result.message, {

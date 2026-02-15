@@ -20,7 +20,7 @@ import {
   confirmationPaymentCommandeInputSchema,
   type ConfirmationPaymentInput,
   type ConfirmationPaymentCommandeInput,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/paiements/confirmation.validators';
 import { validateInput } from "@/shared/middleware/validation.middleware.js";
 import { combineMiddlewares } from "@/shared/middleware/auth.middleware.js";
 import { requireAuth } from "@/shared/middleware/auth.middleware.js";

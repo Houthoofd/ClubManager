@@ -26,7 +26,7 @@ import {
   type DesinscrireUtilisateurInput,
   type PresenceInput,
   type RetirerProfesseurInput,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/cours/validators';
 import { validateInput } from "@/shared/middleware/validation.middleware.js";
 import { combineMiddlewares } from "@/shared/middleware/auth.middleware.js";
 import {

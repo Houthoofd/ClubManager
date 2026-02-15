@@ -419,7 +419,7 @@ export class MessagesPersonnalisesService {
 
       const message = await prisma.messages_personnalises.update({
         where: { id: messageId },
-        data: { actif: true },
+        data: { is_active: true },
       });
 
       return {
@@ -464,16 +464,16 @@ export class MessagesPersonnalisesService {
         "✅ [MessagesPersonnalisesService] Récupération messages inactifs",
       );
 
-      const messages = await prisma.messages_personnalises.findMany({
-        where: { actif: false },
-        orderBy: { date_envoi: "desc" },
+      const messagesArchives = await prisma.messages_personnalises.findMany({
+        where: { is_active: false },
+        orderBy: { created_at: "desc" },
       });
 
       return {
         success: true,
         message: "Messages inactifs récupérés avec succès",
-        data: messages,
-        count: messages.length,
+        data: messagesArchives,
+        count: messagesArchives.length,
       };
     } catch (error: any) {
       console.error(
@@ -517,10 +517,10 @@ export class MessagesPersonnalisesService {
 
       const count = await prisma.messages_personnalises.count({
         where: {
-          destinataire_id: userId,
+          utilisateur_id: userId,
           lu: false,
-          supprime: false,
-          actif: true,
+          deleted_at: null,
+          is_active: true,
         },
       });
 
@@ -584,17 +584,14 @@ export class MessagesPersonnalisesService {
       const messagesCreated = [];
 
       // Créer un message pour chaque destinataire
+      // Note: Schema only supports utilisateur_id (recipient), not expediteur_id
       for (const destinataire_id of data.destinataires) {
         const message = await prisma.messages_personnalises.create({
           data: {
-            expediteur_id: data.expediteur_id,
-            destinataire_id,
-            type_message_id: data.type_message_id,
+            utilisateur_id: destinataire_id,
             contenu: data.contenu,
-            date_envoi: new Date(),
             lu: false,
-            supprime: false,
-            actif: true,
+            is_active: true,
           },
         });
 
@@ -664,26 +661,22 @@ export class MessagesPersonnalisesService {
       );
 
       // Récupérer le type de message "Rappel de paiement"
-      const typeMessage = await prisma.types_messages_personnalises.findFirst({
-        where: { titre: "Rappel de paiement" },
+      const typeRappel = await prisma.types_messages_personnalises.findFirst({
+        where: { title: "Rappel de paiement" },
       });
 
-      if (!typeMessage) {
+      if (!typeRappel) {
         throw new Error("Type de message 'Rappel de paiement' non trouvé");
       }
 
       const message = await prisma.messages_personnalises.create({
         data: {
-          expediteur_id: 1, // Admin système
-          destinataire_id: data.userId,
-          type_message_id: typeMessage.id,
+          utilisateur_id: data.userId,
           contenu:
             data.message ||
             `Rappel: Vous avez ${data.echeanceIds.length} échéance(s) à payer.`,
-          date_envoi: new Date(),
           lu: false,
-          supprime: false,
-          actif: true,
+          is_active: true,
         },
       });
 
@@ -736,8 +729,10 @@ export class MessagesPersonnalisesService {
       const [total, nonLus, supprimes, actifs] = await Promise.all([
         prisma.messages_personnalises.count(),
         prisma.messages_personnalises.count({ where: { lu: false } }),
-        prisma.messages_personnalises.count({ where: { supprime: true } }),
-        prisma.messages_personnalises.count({ where: { actif: true } }),
+        prisma.messages_personnalises.count({
+          where: { deleted_at: { not: null } },
+        }),
+        prisma.messages_personnalises.count({ where: { is_active: true } }),
       ]);
 
       return {

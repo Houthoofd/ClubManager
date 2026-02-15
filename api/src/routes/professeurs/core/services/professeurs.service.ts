@@ -411,7 +411,7 @@ export async function modifierStatutProfesseur(
     return {
       isConfirm: true,
       success: true,
-      message: `Statut du professeur modifié en ${status.nom}`,
+      message: `Statut du professeur modifié en ${status.nom_role}`,
       data: {
         id: updated.id,
         name: `${updated.first_name} ${updated.last_name}`,
@@ -503,8 +503,8 @@ export async function obtenirPlanningProfesseur(
           nom_cours: c.type_cours,
           description: undefined,
           jour_semaine: cr.jour_semaine.toString(),
-          heure_debut: c.heure_debut,
-          heure_fin: c.heure_fin,
+          heure_debut: c.heure_debut.toISOString(),
+          heure_fin: c.heure_fin.toISOString(),
           salle: undefined,
           niveau: undefined,
           capacite_max: undefined,

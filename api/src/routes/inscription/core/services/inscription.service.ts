@@ -7,12 +7,12 @@
  * @module inscription.service
  */
 
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
-import type { InscriptionData } from "@clubmanager/types/validators";
+} from "@/shared/config/sentry.config.js";
+import type { InscriptionData } from '@clubmanager/types/domains/inscription/validators';
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
@@ -420,7 +420,7 @@ export class InscriptionService {
           id: user.id,
           userId: user.userId,
           email: user.email,
-          status: user.status?.nom,
+          status: user.status?.nom_role,
           active: user.active,
         },
         message: "Un utilisateur avec ces informations existe déjà",

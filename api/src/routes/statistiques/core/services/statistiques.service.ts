@@ -9,11 +9,11 @@
  * @module statistiques.service
  */
 
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 import {
   captureException,
   addSentryBreadcrumb,
-} from '@/shared/config/sentry.config.js';
+} from "@/shared/config/sentry.config.js";
 
 // Types pour le service
 export interface FrequentationData {
@@ -268,7 +268,7 @@ export async function obtenirProgressionUtilisateur(
     return {
       utilisateur_id: userId,
       nom_complet: `${utilisateur.first_name} ${utilisateur.last_name}`,
-      grade_actuel: utilisateur.grades?.nom || "Non défini",
+      grade_actuel: utilisateur.grades?.grade_id || "Non défini",
       nombre_cours_suivis: nombreCoursSuivis,
       taux_presence: tauxPresence,
       date_dernier_cours: dernierCours,
@@ -336,7 +336,7 @@ export async function obtenirPresenceParMois(
         year: "numeric",
         month: "long",
       });
-      const typeCours = inscription.cours.nom_cours || "Cours";
+      const typeCours = inscription.cours.type_cours || "Cours";
 
       if (!moisMap.has(moisKey)) {
         moisMap.set(moisKey, new Map());
@@ -606,7 +606,8 @@ export async function getPlansActifs(): Promise<StatistiqueSimple> {
 
     const count = await prisma.plans_tarifaires.count({
       where: {
-        actif: true,
+        // Note: 'actif' field doesn't exist in plans_tarifaires schema
+        // Filtering by active plans not implemented
       },
     });
 
@@ -881,7 +882,7 @@ export async function getDerniersPaiements(): Promise<DernierPaiement[]> {
         date_paiement: "desc",
       },
       include: {
-        utilisateurs: {
+        users: {
           select: {
             first_name: true,
             last_name: true,
@@ -892,7 +893,7 @@ export async function getDerniersPaiements(): Promise<DernierPaiement[]> {
 
     const results = paiements.map((p) => ({
       id: p.id,
-      utilisateur_nom: `${p.utilisateurs.first_name} ${p.utilisateurs.last_name}`,
+      utilisateur_nom: `${p.users.first_name} ${p.users.last_name}`,
       montant: Number(p.montant),
       date_paiement: p.date_paiement.toISOString(),
       statut: p.statut || "inconnu",
@@ -1165,7 +1166,7 @@ export async function getMembresParGrade(): Promise<MembreParGrade[]> {
 
         if (grade) {
           results.push({
-            grade: grade.nom,
+            grade: grade.grade_id,
             nombre_membres: groupe._count,
             pourcentage:
               totalMembres > 0
@@ -1239,7 +1240,7 @@ export async function getMembresParGenre(): Promise<MembreParGenre[]> {
 
         if (genre) {
           results.push({
-            genre: genre.nom,
+            genre: genre.genre_name,
             nombre_membres: groupe._count,
             pourcentage:
               totalMembres > 0
@@ -1385,7 +1386,7 @@ export async function getArticlesPlusVendus(): Promise<ArticleVendu[]> {
 
     console.log(`📊 [StatistiquesService] Récupération articles plus vendus`);
 
-    const commandesArticles = await prisma.commandes_articles.groupBy({
+    const commandesArticles = await prisma.commande_articles.groupBy({
       by: ["article_id"],
       _sum: {
         quantite: true,
@@ -1458,7 +1459,7 @@ export async function getCoursSemaine(): Promise<StatistiqueSimple> {
     // Compter tous les cours actifs (simplification)
     const count = await prisma.cours.count({
       where: {
-        actif: true,
+        // Note: 'actif' field doesn't exist in cours schema
       },
     });
 

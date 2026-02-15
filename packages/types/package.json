@@ -25,15 +25,19 @@
       "types": "./dist/index.d.ts"
     },
     "./graphql": {
-      "import": "./dist/graphql.js",
-      "types": "./dist/graphql.d.ts"
+      "import": "./dist/core/graphql.js",
+      "types": "./dist/core/graphql.d.ts"
     },
-    "./validators": {
-      "import": "./dist/validators/index.js",
-      "types": "./dist/validators/index.d.ts"
+    "./domains/*": {
+      "import": "./dist/domains/*.js",
+      "types": "./dist/domains/*.d.ts"
     },
     "./dist/*": {
       "import": "./dist/*",
+      "types": "./dist/*"
+    },
+    "./*": {
+      "import": "./dist/*.js",
       "types": "./dist/*.d.ts"
     }
   },

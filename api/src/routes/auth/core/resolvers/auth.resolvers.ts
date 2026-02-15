@@ -31,7 +31,7 @@ import {
   validerResetPassword,
   validerVerifyToken,
   validerConfirmEmail,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/auth/validators';
 
 // Configuration
 import { TOKEN_CONFIG } from "../config/auth.config.js";

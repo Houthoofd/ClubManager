@@ -54,7 +54,7 @@ import {
   type EcheanceIdInput,
   type MarquerEcheancePayeeInput,
   type EcheancesFiltersInput,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/paiements/echeances.validators';
 import { validateInput } from "@/shared/middleware/validation.middleware.js";
 import { combineMiddlewares } from "@/shared/middleware/auth.middleware.js";
 import {
@@ -464,12 +464,19 @@ const modifierEcheanceResolver = async (
     // Extraire echeanceId de validatedInput et passer le reste au service
     const { echeanceId: _, ...updateData } = validatedInput;
 
-    // Mapper le statut si présent
-    const mappedUpdateData = {
-      ...updateData,
+    // Mapper le statut si présent et convertir date_paiement null en undefined
+    const mappedUpdateData: any = {
+      montant: updateData.montant,
+      date_echeance: updateData.date_echeance,
+      description: updateData.description,
       statut: updateData.statut
         ? mapStatutToPrisma(updateData.statut as any)
         : undefined,
+      date_paiement:
+        updateData.date_paiement === null
+          ? undefined
+          : updateData.date_paiement,
+      stripe_payment_intent_id: updateData.stripe_payment_intent_id,
     };
 
     const echeance = await modifierEcheance(echeanceId, mappedUpdateData);
@@ -492,8 +499,6 @@ const modifierEcheanceResolver = async (
         date_paiement: echeance!.date_paiement,
         statut: mapStatutToGraphQL(echeance!.statut),
         description: echeance!.description,
-        created_at: new Date(),
-        updated_at: new Date(),
       },
     };
   } catch (error: any) {
@@ -582,7 +587,6 @@ const marquerEcheancePayeeResolver = async (
         date_paiement: echeance.date_paiement,
         statut: mapStatutFromPrisma(echeance.statut),
         description: echeance.description,
-        created_at: echeance.created_at,
       },
     };
   } catch (error: any) {

@@ -175,8 +175,9 @@ export function getStatusUpgradeService(): StatusUpgradeServiceClass {
 }
 
 // Méthode getInstance pour compatibilité
-StatusUpgradeServiceClass.getInstance = function (): StatusUpgradeServiceClass {
-  return getStatusUpgradeService();
-};
+(StatusUpgradeServiceClass as any).getInstance =
+  function (): StatusUpgradeServiceClass {
+    return getStatusUpgradeService();
+  };
 
 export default getStatusUpgradeService;

@@ -5,14 +5,14 @@
 
 import { jest } from "@jest/globals";
 
-const mockQuery = jest.fn();
-const mockClosePool = jest.fn().mockResolvedValue(undefined);
-const mockWaitForConnection = jest.fn().mockResolvedValue(undefined);
-const mockClose = jest.fn().mockResolvedValue(undefined);
-const mockBeginTransaction = jest.fn();
-const mockCommit = jest.fn();
-const mockRollback = jest.fn();
-const mockGetPoolStatus = jest.fn(() => ({
+const mockQuery = jest.fn() as any;
+const mockClosePool = (jest.fn() as any).mockResolvedValue(undefined);
+const mockWaitForConnection = (jest.fn() as any).mockResolvedValue(undefined);
+const mockClose = (jest.fn() as any).mockResolvedValue(undefined);
+const mockBeginTransaction = jest.fn() as any;
+const mockCommit = jest.fn() as any;
+const mockRollback = jest.fn() as any;
+const mockGetPoolStatus = (jest.fn() as any)(() => ({
   total: 0,
   free: 0,
   used: 0,
@@ -21,7 +21,7 @@ const mockGetPoolStatus = jest.fn(() => ({
 
 const mockInstance = {
   query: mockQuery,
-  isPoolHealthy: jest.fn(() => true),
+  isPoolHealthy: (jest.fn() as any)(() => true),
   closePool: mockClosePool,
   waitForConnection: mockWaitForConnection,
   close: mockClose,

@@ -32,7 +32,7 @@ import {
   verifierArticleMagasinSchema,
   verifierArticleMagasinCategorieSchema,
   verifierProfesseursSchema,
-} from "@clubmanager/types/validators";
+} from '@clubmanager/types/domains/verification/validators';
 import {
   combineMiddlewares,
   withSentry,
