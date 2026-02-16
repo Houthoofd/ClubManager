@@ -1,0 +1,24 @@
+Plan d'Action Recommandé
+
+### Phase 1 - Quick Wins (1 semaine)
+1. ✅ Standardiser les noms de colonnes
+2. ✅ Ajouter indexes manquants
+3. ✅ Fusionner stocks/articles_tailles
+4. ✅ Normaliser methode_paiement, type_cours en enums
+
+### Phase 2 - Amélioration Structure (2 semaines)
+5. ✅ Implémenter soft delete généralisé
+6. ✅ Split table utilisateurs (profil, sécurité, préférences)
+7. ✅ Créer tables GDPR (consents, exports)
+8. ✅ Unifier Email/EmailQueue
+
+### Phase 3 - Performance (1 semaine)
+9. ✅ Stratégie archivage (audit_logs, emails)
+10. ✅ Optimisation requêtes N+1
+11. ✅ Partitionnement tables volumineuses
+
+### Phase 4 - Features (2 semaines)
+12. ✅ Table EmailTemplate
+13. ✅ Table ABTest (A/B testing emails)
+14. ✅ Table EmailMetrics (open rate, click rate)
+15. ✅ Table RateLimitConfig

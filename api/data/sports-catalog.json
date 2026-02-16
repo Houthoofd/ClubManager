@@ -1,0 +1,646 @@
+{
+  "sports": [
+    {
+      "code": "karate",
+      "name": "Karaté",
+      "name_en": "Karate",
+      "description": "Art martial japonais axé sur les techniques de frappe (coups de poing, coups de pied), les kata (enchaînements) et le kumite (combat).",
+      "color": "#DC2626",
+      "icon": "hand",
+      "min_age": 5,
+      "max_age": null,
+      "requires_belt": true,
+      "allow_competitions": true,
+      "federation": "FFK - Fédération Française de Karaté",
+      "configurations": {
+        "competition_categories": ["kumite", "kata"],
+        "belt_colors": ["blanc", "jaune", "orange", "vert", "bleu", "marron", "noir"],
+        "session_duration": 60,
+        "kyu_grades": 9,
+        "dan_grades": 10
+      },
+      "equipment": [
+        {
+          "name": "Kimono (Karategi)",
+          "description": "Tenue blanche traditionnelle composée d'une veste, d'un pantalon et d'une ceinture",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Ceinture",
+          "description": "Ceinture de couleur selon le grade",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Protège-tibias",
+          "description": "Protection pour les tibias en kumite",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Protège-poings",
+          "description": "Gants de protection pour le kumite",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Protège-dents",
+          "description": "Protection dentaire",
+          "is_mandatory": true,
+          "for_level": "competition"
+        },
+        {
+          "name": "Casque",
+          "description": "Protection de la tête (compétition)",
+          "is_mandatory": false,
+          "for_level": "competition"
+        },
+        {
+          "name": "Coquille",
+          "description": "Protection génitale",
+          "is_mandatory": true,
+          "for_level": "competition"
+        },
+        {
+          "name": "Plastron",
+          "description": "Protection du torse (femmes)",
+          "is_mandatory": true,
+          "for_level": "competition"
+        }
+      ],
+      "competition_rules": [
+        {
+          "rule_name": "Durée des combats",
+          "rule_type": "time",
+          "description": "Kumite: 3 minutes (seniors), 2 minutes (juniors), 1m30 (benjamins/minimes)",
+          "applies_to": "kumite"
+        },
+        {
+          "rule_name": "Système de points",
+          "rule_type": "scoring",
+          "description": "Ippon (3 pts): coup de pied au visage/tête, projection suivie de technique. Waza-ari (2 pts): coup de pied au tronc. Yuko (1 pt): coup de poing au tronc/visage",
+          "applies_to": "kumite"
+        },
+        {
+          "rule_name": "Zones interdites",
+          "rule_type": "safety",
+          "description": "Interdiction de frapper: nuque, gorge, articulations, parties génitales. Contrôle obligatoire au visage",
+          "applies_to": "kumite"
+        },
+        {
+          "rule_name": "Katas homologués",
+          "rule_type": "category",
+          "description": "Liste des 102 katas reconnus par la WKF (27 Shotokan, 18 Shito-ryu, 16 Goju-ryu, 41 Wado-ryu)",
+          "applies_to": "kata"
+        }
+      ]
+    },
+    {
+      "code": "judo",
+      "name": "Judo",
+      "name_en": "Judo",
+      "description": "Art martial japonais basé sur les projections, le combat au sol et les techniques de soumission.",
+      "color": "#2563EB",
+      "icon": "users",
+      "min_age": 4,
+      "max_age": null,
+      "requires_belt": true,
+      "allow_competitions": true,
+      "federation": "FFJDA - Fédération Française de Judo",
+      "configurations": {
+        "competition_categories": ["tachi-waza", "ne-waza", "kata"],
+        "belt_colors": ["blanc", "blanc-jaune", "jaune", "jaune-orange", "orange", "orange-vert", "vert", "bleu", "marron", "noir"],
+        "session_duration": 60,
+        "kyu_grades": 6,
+        "dan_grades": 10
+      },
+      "equipment": [
+        {
+          "name": "Judogi",
+          "description": "Kimono de judo épais (veste, pantalon, ceinture)",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Ceinture",
+          "description": "Ceinture de couleur selon le grade",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Zori (sandales)",
+          "description": "Sandales pour se déplacer hors du tatami",
+          "is_mandatory": false,
+          "for_level": "all"
+        }
+      ],
+      "competition_rules": [
+        {
+          "rule_name": "Durée des combats",
+          "rule_type": "time",
+          "description": "4 minutes (seniors), 3 minutes (juniors), 2 minutes (cadets/benjamins)",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Ippon",
+          "rule_type": "scoring",
+          "description": "Projection contrôlée sur le dos, immobilisation 20 secondes, abandon (étranglement/clé)",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Waza-ari",
+          "rule_type": "scoring",
+          "description": "Projection partielle, immobilisation 10-19 secondes. 2 waza-ari = 1 ippon",
+          "applies_to": "all"
+        }
+      ]
+    },
+    {
+      "code": "taekwondo",
+      "name": "Taekwondo",
+      "name_en": "Taekwondo",
+      "description": "Art martial coréen caractérisé par ses coups de pied sautés, tournés et acrobatiques spectaculaires.",
+      "color": "#7C3AED",
+      "icon": "zap",
+      "min_age": 5,
+      "max_age": null,
+      "requires_belt": true,
+      "allow_competitions": true,
+      "federation": "FFTDA - Fédération Française de Taekwondo",
+      "configurations": {
+        "competition_categories": ["combat", "poomsae", "casse"],
+        "belt_colors": ["blanc", "jaune", "vert", "bleu", "rouge", "noir"],
+        "session_duration": 60,
+        "kyu_grades": 10,
+        "dan_grades": 9
+      },
+      "equipment": [
+        {
+          "name": "Dobok",
+          "description": "Tenue de taekwondo (col blanc pour kyu, col noir pour dan)",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Ceinture",
+          "description": "Ceinture de couleur selon le grade",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Casque",
+          "description": "Protection de la tête",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Plastron",
+          "description": "Protection électronique du tronc (PSS)",
+          "is_mandatory": true,
+          "for_level": "competition"
+        },
+        {
+          "name": "Protège-avant-bras",
+          "description": "Protection des avant-bras",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Protège-tibias",
+          "description": "Protection des tibias et pieds",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Coquille",
+          "description": "Protection génitale",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Protège-dents",
+          "description": "Protection dentaire",
+          "is_mandatory": true,
+          "for_level": "competition"
+        }
+      ],
+      "competition_rules": [
+        {
+          "rule_name": "Durée des combats",
+          "rule_type": "time",
+          "description": "3 rounds de 2 minutes (seniors), 3 rounds de 1 minute (cadets)",
+          "applies_to": "combat"
+        },
+        {
+          "rule_name": "Système de points",
+          "rule_type": "scoring",
+          "description": "1 pt (poing au tronc), 2 pts (pied au tronc), 3 pts (pied tournant au tronc), 4 pts (pied à la tête), 5 pts (pied tournant à la tête)",
+          "applies_to": "combat"
+        },
+        {
+          "rule_name": "Zones de frappe",
+          "rule_type": "safety",
+          "description": "Autorisé: tronc (plastron) et tête (casque). Interdit: en dessous de la ceinture, nuque, dos",
+          "applies_to": "combat"
+        }
+      ]
+    },
+    {
+      "code": "bjj",
+      "name": "Jujitsu Brésilien",
+      "name_en": "Brazilian Jiu-Jitsu",
+      "description": "Art martial brésilien axé sur le combat au sol, les positions de contrôle et les techniques de soumission.",
+      "color": "#059669",
+      "icon": "shield",
+      "min_age": 6,
+      "max_age": null,
+      "requires_belt": true,
+      "allow_competitions": true,
+      "federation": "CFJJB - Confédération Française de Jiu-Jitsu Brésilien",
+      "configurations": {
+        "competition_categories": ["gi", "no-gi"],
+        "belt_colors": ["blanc", "bleu", "violet", "marron", "noir"],
+        "session_duration": 90,
+        "adult_belts": 5,
+        "kids_belts": 13
+      },
+      "equipment": [
+        {
+          "name": "Kimono BJJ (Gi)",
+          "description": "Kimono de jiu-jitsu brésilien avec pantalon renforcé",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Ceinture",
+          "description": "Ceinture de couleur selon le grade",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Rashguard",
+          "description": "Tee-shirt technique pour no-gi",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Spats (legging)",
+          "description": "Pantalon de compression pour no-gi",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Short de combat",
+          "description": "Short pour no-gi ou MMA",
+          "is_mandatory": false,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Protège-dents",
+          "description": "Protection dentaire recommandée",
+          "is_mandatory": false,
+          "for_level": "advanced"
+        }
+      ],
+      "competition_rules": [
+        {
+          "rule_name": "Durée des combats",
+          "rule_type": "time",
+          "description": "10 minutes (noir), 8 minutes (marron), 7 minutes (violet), 6 minutes (bleu), 5 minutes (blanc)",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Système de points",
+          "rule_type": "scoring",
+          "description": "2 pts (renversement, passage de garde), 3 pts (passage en side control), 4 pts (montée, dos)",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Soumissions autorisées",
+          "rule_type": "safety",
+          "description": "Variables selon le niveau: étranglements (tous), clés de bras (bleu+), clés de jambes (marron+)",
+          "applies_to": "all"
+        }
+      ]
+    },
+    {
+      "code": "boxe",
+      "name": "Boxe Anglaise",
+      "name_en": "Boxing",
+      "description": "Sport de combat utilisant uniquement les poings, axé sur l'esquive, le jeu de jambes et la précision.",
+      "color": "#F59E0B",
+      "icon": "target",
+      "min_age": 10,
+      "max_age": null,
+      "requires_belt": false,
+      "allow_competitions": true,
+      "federation": "FFB - Fédération Française de Boxe",
+      "configurations": {
+        "competition_categories": ["amateur", "professionnel"],
+        "weight_categories": [
+          "poids mi-mouche (-48kg)",
+          "poids mouche (-51kg)",
+          "poids coq (-54kg)",
+          "poids plume (-57kg)",
+          "poids léger (-60kg)",
+          "poids super-léger (-63.5kg)",
+          "poids welter (-67kg)",
+          "poids super-welter (-71kg)",
+          "poids moyen (-75kg)",
+          "poids super-moyen (-80kg)",
+          "poids mi-lourd (-86kg)",
+          "poids lourd (+86kg)"
+        ],
+        "session_duration": 60
+      },
+      "equipment": [
+        {
+          "name": "Gants de boxe",
+          "description": "Gants rembourrés (8-16 oz selon utilisation)",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Bandes",
+          "description": "Bandes de protection pour les mains et poignets",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Protège-dents",
+          "description": "Protection dentaire obligatoire",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Casque",
+          "description": "Protection de la tête (entraînement et amateur)",
+          "is_mandatory": true,
+          "for_level": "beginner"
+        },
+        {
+          "name": "Coquille",
+          "description": "Protection génitale",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Short de boxe",
+          "description": "Short ample pour liberté de mouvement",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Chaussures de boxe",
+          "description": "Chaussures montantes légères",
+          "is_mandatory": false,
+          "for_level": "intermediate"
+        }
+      ],
+      "competition_rules": [
+        {
+          "rule_name": "Durée des combats",
+          "rule_type": "time",
+          "description": "Amateur: 3 rounds de 3 min. Pro: 4-12 rounds de 3 min selon le niveau",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Zone de frappe",
+          "rule_type": "safety",
+          "description": "Autorisé: face avant de la tête et du corps au-dessus de la ceinture. Interdit: nuque, rein, dos, en dessous de la ceinture",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Techniques autorisées",
+          "rule_type": "category",
+          "description": "Uniquement les coups de poing portés avec la partie rembourrée des gants. Pas de coup de tête, coude, épaule",
+          "applies_to": "all"
+        }
+      ]
+    },
+    {
+      "code": "muay-thai",
+      "name": "Muay Thai",
+      "name_en": "Muay Thai",
+      "description": "Art martial thaïlandais utilisant poings, pieds, coudes, genoux et clinch. Surnommé 'l'art des huit membres'.",
+      "color": "#EF4444",
+      "icon": "flame",
+      "min_age": 10,
+      "max_age": null,
+      "requires_belt": false,
+      "allow_competitions": true,
+      "federation": "FFKMDA - Fédération Française de Kick-Boxing, Muay Thai et Disciplines Associées",
+      "configurations": {
+        "competition_categories": ["amateur", "professionnel"],
+        "session_duration": 90,
+        "weight_categories": [
+          "poids mini-mouche (-47.6kg)",
+          "poids mouche (-50.8kg)",
+          "poids coq (-53.5kg)",
+          "poids super-coq (-55.3kg)",
+          "poids plume (-57.1kg)",
+          "poids super-plume (-58.9kg)",
+          "poids léger (-61.2kg)",
+          "poids super-léger (-63.5kg)",
+          "poids welter (-66.6kg)",
+          "poids super-welter (-69.8kg)",
+          "poids moyen (-72.5kg)",
+          "poids super-moyen (-76.2kg)",
+          "poids mi-lourd (-79.3kg)",
+          "poids cruiser (-82.5kg)",
+          "poids lourd (-86.1kg)",
+          "poids super-lourd (+86.1kg)"
+        ]
+      },
+      "equipment": [
+        {
+          "name": "Short de Muay Thai",
+          "description": "Short traditionnel court et ample",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Gants de boxe",
+          "description": "Gants de boxe (8-16 oz)",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Bandes",
+          "description": "Bandes de protection mains/poignets",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Protège-tibias",
+          "description": "Protection tibias + pieds",
+          "is_mandatory": true,
+          "for_level": "beginner"
+        },
+        {
+          "name": "Protège-dents",
+          "description": "Protection dentaire",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Casque",
+          "description": "Protection de la tête (entraînement)",
+          "is_mandatory": true,
+          "for_level": "beginner"
+        },
+        {
+          "name": "Coquille",
+          "description": "Protection génitale",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Mongkon",
+          "description": "Bandeau traditionnel (cérémonial)",
+          "is_mandatory": false,
+          "for_level": "advanced"
+        }
+      ],
+      "competition_rules": [
+        {
+          "rule_name": "Durée des combats",
+          "rule_type": "time",
+          "description": "5 rounds de 3 minutes (professionnel), 3-5 rounds de 2-3 min (amateur)",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Techniques autorisées",
+          "rule_type": "category",
+          "description": "Poings, pieds, coudes, genoux, clinch. Pas de tête, pas de projection (sauf balayage)",
+          "applies_to": "all"
+        },
+        {
+          "rule_name": "Zones de frappe",
+          "rule_type": "safety",
+          "description": "Toutes zones sauf parties génitales et arrière de la tête. Low-kick autorisé sur cuisses",
+          "applies_to": "all"
+        }
+      ]
+    },
+    {
+      "code": "aikido",
+      "name": "Aïkido",
+      "name_en": "Aikido",
+      "description": "Art martial japonais non-violent basé sur la défense, les projections circulaires et les clés articulaires.",
+      "color": "#6366F1",
+      "icon": "circle",
+      "min_age": 6,
+      "max_age": null,
+      "requires_belt": true,
+      "allow_competitions": false,
+      "federation": "FFAAA - Fédération Française d'Aïkido, Aïkibudo et Affinitaires",
+      "configurations": {
+        "competition_categories": [],
+        "belt_colors": ["blanc", "jaune", "orange", "vert", "bleu", "marron", "noir"],
+        "session_duration": 60,
+        "kyu_grades": 6,
+        "dan_grades": 10
+      },
+      "equipment": [
+        {
+          "name": "Aikidogi",
+          "description": "Kimono d'aïkido (veste, pantalon, ceinture)",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Hakama",
+          "description": "Pantalon traditionnel japonais (à partir de 1er kyu ou selon le dojo)",
+          "is_mandatory": false,
+          "for_level": "advanced"
+        },
+        {
+          "name": "Ceinture",
+          "description": "Ceinture de couleur selon le grade",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Bokken",
+          "description": "Sabre en bois pour l'étude des armes",
+          "is_mandatory": false,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Jo",
+          "description": "Bâton en bois (128 cm)",
+          "is_mandatory": false,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Tanto",
+          "description": "Couteau en bois pour défense au couteau",
+          "is_mandatory": false,
+          "for_level": "intermediate"
+        }
+      ],
+      "competition_rules": []
+    },
+    {
+      "code": "krav-maga",
+      "name": "Krav Maga",
+      "name_en": "Krav Maga",
+      "description": "Système de self-défense israélien axé sur l'efficacité et la survie en situation réelle d'agression.",
+      "color": "#0F172A",
+      "icon": "alert-triangle",
+      "min_age": 12,
+      "max_age": null,
+      "requires_belt": true,
+      "allow_competitions": false,
+      "federation": "FEKM - Fédération Européenne de Krav Maga",
+      "configurations": {
+        "competition_categories": [],
+        "belt_colors": ["jaune", "orange", "vert", "bleu", "marron", "noir"],
+        "session_duration": 90,
+        "grade_levels": 5,
+        "instructor_levels": 5
+      },
+      "equipment": [
+        {
+          "name": "Tenue de sport",
+          "description": "T-shirt + pantalon de sport confortable",
+          "is_mandatory": true,
+          "for_level": "all"
+        },
+        {
+          "name": "Protège-dents",
+          "description": "Protection dentaire pour sparring",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Coquille",
+          "description": "Protection génitale",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Gants de MMA",
+          "description": "Gants ouverts pour sparring",
+          "is_mandatory": true,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Protège-tibias",
+          "description": "Protection pour travail de frappes",
+          "is_mandatory": false,
+          "for_level": "intermediate"
+        },
+        {
+          "name": "Casque",
+          "description": "Protection de la tête (sparring intensif)",
+          "is_mandatory": false,
+          "for_level": "advanced"
+        }
+      ],
+      "competition_rules": []
+    }
+  ]
+}

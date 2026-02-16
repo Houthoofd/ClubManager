@@ -1,0 +1,397 @@
+-- ============================================================================
+-- PHASE 5: MULTI-SPORTS SYSTEM
+-- ============================================================================
+-- Description: Rendre le système 100% flexible pour clubs multi-disciplines
+-- Tables créées: 7 nouvelles tables
+-- Colonnes ajoutées: sport_id à plusieurs tables existantes
+-- Impact: MOYEN - Nécessite migration des données existantes
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. TABLE PRINCIPALE: sports
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sports` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `code` VARCHAR(50) UNIQUE NOT NULL COMMENT 'Code unique (karate, judo, taekwondo, etc.)',
+  `name` VARCHAR(100) NOT NULL COMMENT 'Nom du sport',
+  `description` TEXT COMMENT 'Description du sport',
+  `color` VARCHAR(7) DEFAULT '#3B82F6' COMMENT 'Couleur hex pour l''interface',
+  `icon` VARCHAR(100) COMMENT 'Nom de l''icône (lucide, fontawesome, etc.)',
+  `image_url` VARCHAR(255) COMMENT 'URL de l''image du sport',
+  `is_active` BOOLEAN DEFAULT TRUE COMMENT 'Sport actuellement proposé',
+  `display_order` INT DEFAULT 0 COMMENT 'Ordre d''affichage',
+  `requires_belt` BOOLEAN DEFAULT TRUE COMMENT 'Si le sport utilise un système de grades/ceintures',
+  `allow_competitions` BOOLEAN DEFAULT TRUE COMMENT 'Si le sport peut avoir des compétitions',
+  `min_age` INT COMMENT 'Âge minimum recommandé',
+  `max_age` INT COMMENT 'Âge maximum recommandé (NULL = pas de limite)',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_sports_active` (`is_active`),
+  INDEX `idx_sports_order` (`display_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Sports/disciplines proposés par le club';
+
+-- ----------------------------------------------------------------------------
+-- 2. CONFIGURATION PAR SPORT
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sport_configurations` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sport_id` INT NOT NULL,
+  `config_key` VARCHAR(100) NOT NULL COMMENT 'Clé de configuration',
+  `config_value` TEXT COMMENT 'Valeur (JSON ou texte)',
+  `data_type` ENUM('string', 'number', 'boolean', 'json', 'text') DEFAULT 'string',
+  `description` VARCHAR(255) COMMENT 'Description de ce paramètre',
+  `is_public` BOOLEAN DEFAULT FALSE COMMENT 'Visible publiquement',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `unique_sport_config` (`sport_id`, `config_key`),
+  INDEX `idx_sport_configs_public` (`sport_id`, `is_public`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Configurations personnalisées par sport';
+
+-- ----------------------------------------------------------------------------
+-- 3. LIAISON UTILISATEURS ↔ SPORTS (many-to-many)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `user_sports` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `sport_id` INT NOT NULL,
+  `current_grade_id` INT COMMENT 'Grade actuel dans ce sport',
+  `started_at` DATE COMMENT 'Date de début de pratique',
+  `is_primary` BOOLEAN DEFAULT FALSE COMMENT 'Sport principal de l''utilisateur',
+  `is_active` BOOLEAN DEFAULT TRUE COMMENT 'Pratique actuellement ce sport',
+  `notes` TEXT COMMENT 'Notes spécifiques à ce sport',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `utilisateurs`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`current_grade_id`) REFERENCES `grades`(`id`) ON DELETE SET NULL,
+  UNIQUE KEY `unique_user_sport` (`user_id`, `sport_id`),
+  INDEX `idx_user_sports_active` (`user_id`, `is_active`),
+  INDEX `idx_user_sports_primary` (`user_id`, `is_primary`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Sports pratiqués par chaque utilisateur';
+
+-- ----------------------------------------------------------------------------
+-- 4. HISTORIQUE DES PASSAGES DE GRADES PAR SPORT
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `user_grade_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `sport_id` INT NOT NULL,
+  `grade_id` INT NOT NULL,
+  `obtained_at` DATE NOT NULL COMMENT 'Date d''obtention',
+  `examiner_id` INT COMMENT 'Professeur/examinateur',
+  `location` VARCHAR(255) COMMENT 'Lieu de l''examen',
+  `certificate_number` VARCHAR(100) COMMENT 'Numéro de diplôme/certificat',
+  `notes` TEXT COMMENT 'Notes sur l''examen',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_id`) REFERENCES `utilisateurs`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`grade_id`) REFERENCES `grades`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`examiner_id`) REFERENCES `utilisateurs`(`id`) ON DELETE SET NULL,
+  INDEX `idx_grade_history_user` (`user_id`, `sport_id`),
+  INDEX `idx_grade_history_date` (`obtained_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Historique des passages de grades';
+
+-- ----------------------------------------------------------------------------
+-- 5. ÉQUIPEMENTS REQUIS PAR SPORT
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sport_equipment` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sport_id` INT NOT NULL,
+  `name` VARCHAR(100) NOT NULL COMMENT 'Nom de l''équipement',
+  `description` TEXT COMMENT 'Description',
+  `is_mandatory` BOOLEAN DEFAULT FALSE COMMENT 'Obligatoire ou recommandé',
+  `for_level` ENUM('beginner', 'intermediate', 'advanced', 'competition', 'all') DEFAULT 'all',
+  `category_id` INT COMMENT 'Catégorie d''article associée',
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL,
+  INDEX `idx_sport_equipment_sport` (`sport_id`),
+  INDEX `idx_sport_equipment_mandatory` (`sport_id`, `is_mandatory`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Équipements requis/recommandés par sport';
+
+-- ----------------------------------------------------------------------------
+-- 6. RÈGLES DE COMPÉTITION PAR SPORT
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sport_competition_rules` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sport_id` INT NOT NULL,
+  `rule_name` VARCHAR(100) NOT NULL COMMENT 'Nom de la règle',
+  `rule_type` ENUM('scoring', 'time', 'safety', 'equipment', 'category', 'other') DEFAULT 'other',
+  `description` TEXT NOT NULL COMMENT 'Description de la règle',
+  `applies_to` VARCHAR(100) COMMENT 'À qui s''applique (tous, kata, kumite, etc.)',
+  `is_active` BOOLEAN DEFAULT TRUE,
+  `display_order` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+  INDEX `idx_competition_rules_sport` (`sport_id`, `is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Règles de compétition par sport';
+
+-- ----------------------------------------------------------------------------
+-- 7. STATISTIQUES PAR SPORT
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sport_statistics` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sport_id` INT NOT NULL,
+  `user_id` INT COMMENT 'Stat pour un utilisateur (NULL = global)',
+  `stat_date` DATE NOT NULL,
+  `total_members` INT DEFAULT 0 COMMENT 'Nombre de pratiquants',
+  `total_courses` INT DEFAULT 0 COMMENT 'Nombre de cours',
+  `total_hours` DECIMAL(10,2) DEFAULT 0 COMMENT 'Total heures de pratique',
+  `total_competitions` INT DEFAULT 0 COMMENT 'Nombre de compétitions',
+  `total_revenue` DECIMAL(10,2) DEFAULT 0 COMMENT 'Revenu généré',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `utilisateurs`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `unique_sport_stat` (`sport_id`, `user_id`, `stat_date`),
+  INDEX `idx_sport_stats_date` (`sport_id`, `stat_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+COMMENT='Statistiques par sport et par membre';
+
+-- ----------------------------------------------------------------------------
+-- 8. AJOUT DE sport_id AUX TABLES EXISTANTES
+-- ----------------------------------------------------------------------------
+
+-- 8.1 Grades liés à un sport
+ALTER TABLE `grades`
+ADD COLUMN `sport_id` INT AFTER `id`,
+ADD FOREIGN KEY `fk_grades_sport` (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+ADD INDEX `idx_grades_sport` (`sport_id`);
+
+-- 8.2 Cours liés à un sport
+ALTER TABLE `cours`
+ADD COLUMN `sport_id` INT AFTER `id`,
+ADD FOREIGN KEY `fk_cours_sport` (`sport_id`) REFERENCES `sports`(`id`) ON DELETE SET NULL,
+ADD INDEX `idx_cours_sport` (`sport_id`);
+
+-- 8.3 Types de cours liés à un sport
+ALTER TABLE `course_types`
+ADD COLUMN `sport_id` INT AFTER `id`,
+ADD FOREIGN KEY `fk_course_types_sport` (`sport_id`) REFERENCES `sports`(`id`) ON DELETE CASCADE,
+ADD INDEX `idx_course_types_sport` (`sport_id`);
+
+-- 8.4 Événements liés à un sport (si table events existe)
+-- Vérification conditionnelle
+SET @table_exists = (SELECT COUNT(*) FROM information_schema.tables
+                     WHERE table_schema = DATABASE() AND table_name = 'events');
+
+SET @sql_events = IF(@table_exists > 0,
+  'ALTER TABLE `events`
+   ADD COLUMN IF NOT EXISTS `sport_id` INT AFTER `id`,
+   ADD CONSTRAINT `fk_events_sport` FOREIGN KEY (`sport_id`) REFERENCES `sports`(`id`) ON DELETE SET NULL,
+   ADD INDEX `idx_events_sport` (`sport_id`)',
+  'SELECT "Table events does not exist, skipping" AS message');
+
+PREPARE stmt FROM @sql_events;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 8.5 Catégories d'articles liées à un sport (optionnel - NULL = tous sports)
+ALTER TABLE `categories`
+ADD COLUMN `sport_id` INT AFTER `id`,
+ADD FOREIGN KEY `fk_categories_sport` (`sport_id`) REFERENCES `sports`(`id`) ON DELETE SET NULL,
+ADD INDEX `idx_categories_sport` (`sport_id`);
+
+-- ----------------------------------------------------------------------------
+-- 9. DONNÉES INITIALES - KARATÉ (sport existant par défaut)
+-- ----------------------------------------------------------------------------
+INSERT INTO `sports`
+  (`code`, `name`, `description`, `color`, `icon`, `is_active`, `display_order`, `requires_belt`, `allow_competitions`, `min_age`)
+VALUES
+  ('karate', 'Karaté', 'Art martial japonais axé sur les techniques de frappe, kata et kumite', '#DC2626', 'hand', TRUE, 1, TRUE, TRUE, 5);
+
+-- Récupérer l'ID du karaté
+SET @karate_id = LAST_INSERT_ID();
+
+-- 9.1 Lier tous les grades existants au karaté
+UPDATE `grades` SET `sport_id` = @karate_id WHERE `sport_id` IS NULL;
+
+-- 9.2 Lier tous les cours existants au karaté
+UPDATE `cours` SET `sport_id` = @karate_id WHERE `sport_id` IS NULL;
+
+-- 9.3 Lier tous les types de cours existants au karaté
+UPDATE `course_types` SET `sport_id` = @karate_id WHERE `sport_id` IS NULL;
+
+-- 9.4 Lier tous les événements existants au karaté (si table existe)
+SET @sql_update_events = IF(@table_exists > 0,
+  'UPDATE `events` SET `sport_id` = @karate_id WHERE `sport_id` IS NULL',
+  'SELECT "Skipping events update" AS message');
+
+PREPARE stmt FROM @sql_update_events;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 9.5 Créer user_sports pour tous les utilisateurs actuels avec le karaté
+INSERT INTO `user_sports` (`user_id`, `sport_id`, `current_grade_id`, `is_primary`, `is_active`)
+SELECT
+  u.id,
+  @karate_id,
+  u.grade_id,
+  TRUE, -- Premier sport = sport principal
+  TRUE
+FROM `utilisateurs` u
+WHERE NOT EXISTS (
+  SELECT 1 FROM `user_sports` us
+  WHERE us.user_id = u.id AND us.sport_id = @karate_id
+);
+
+-- 9.6 Configuration par défaut pour le karaté
+INSERT INTO `sport_configurations` (`sport_id`, `config_key`, `config_value`, `data_type`, `description`, `is_public`)
+VALUES
+  (@karate_id, 'competition_categories', '["kumite", "kata"]', 'json', 'Catégories de compétition', TRUE),
+  (@karate_id, 'belt_colors', '["blanc", "jaune", "orange", "vert", "bleu", "marron", "noir"]', 'json', 'Couleurs de ceintures', TRUE),
+  (@karate_id, 'session_duration', '60', 'number', 'Durée standard d''une séance (minutes)', FALSE),
+  (@karate_id, 'federation', 'FFK', 'string', 'Fédération de rattachement', TRUE);
+
+-- 9.7 Équipements karaté
+INSERT INTO `sport_equipment` (`sport_id`, `name`, `description`, `is_mandatory`, `for_level`, `display_order`)
+VALUES
+  (@karate_id, 'Kimono (Karategi)', 'Tenue blanche traditionnelle', TRUE, 'all', 1),
+  (@karate_id, 'Ceinture', 'Ceinture de couleur selon le grade', TRUE, 'all', 2),
+  (@karate_id, 'Protège-tibias', 'Protection pour kumite', TRUE, 'intermediate', 3),
+  (@karate_id, 'Protège-poings', 'Gants de protection kumite', TRUE, 'intermediate', 4),
+  (@karate_id, 'Protège-dents', 'Protection dentaire', TRUE, 'competition', 5),
+  (@karate_id, 'Casque', 'Protection de la tête (compétition)', FALSE, 'competition', 6);
+
+-- 9.8 Règles de compétition karaté
+INSERT INTO `sport_competition_rules` (`sport_id`, `rule_name`, `rule_type`, `description`, `applies_to`, `display_order`)
+VALUES
+  (@karate_id, 'Durée des combats', 'time', 'Kumite: 3 minutes (seniors), 2 minutes (juniors), 1m30 (benjamins)', 'kumite', 1),
+  (@karate_id, 'Scoring kumite', 'scoring', 'Ippon (3 pts), Waza-ari (2 pts), Yuko (1 pt)', 'kumite', 2),
+  (@karate_id, 'Kata obligatoires', 'category', 'Liste des katas autorisés selon le niveau', 'kata', 3),
+  (@karate_id, 'Zones interdites', 'safety', 'Pas de frappe au visage, nuque, articulations, parties génitales', 'kumite', 4),
+  (@karate_id, 'Équipement obligatoire', 'equipment', 'Protections homologuées WKF pour les compétitions officielles', 'kumite', 5);
+
+-- ----------------------------------------------------------------------------
+-- 10. EXEMPLES DE DONNÉES POUR AUTRES SPORTS (commentés - à activer si besoin)
+-- ----------------------------------------------------------------------------
+
+-- JUDO
+-- INSERT INTO `sports` (`code`, `name`, `description`, `color`, `icon`, `is_active`, `display_order`, `requires_belt`, `allow_competitions`, `min_age`)
+-- VALUES ('judo', 'Judo', 'Art martial japonais basé sur les projections et le combat au sol', '#2563EB', 'users', TRUE, 2, TRUE, TRUE, 4);
+
+-- TAEKWONDO
+-- INSERT INTO `sports` (`code`, `name`, `description`, `color`, `icon`, `is_active`, `display_order`, `requires_belt`, `allow_competitions`, `min_age`)
+-- VALUES ('taekwondo', 'Taekwondo', 'Art martial coréen axé sur les coups de pied spectaculaires', '#7C3AED', 'zap', TRUE, 3, TRUE, TRUE, 5);
+
+-- BOXE
+-- INSERT INTO `sports` (`code`, `name`, `description`, `color`, `icon`, `is_active`, `display_order`, `requires_belt`, `allow_competitions`, `min_age`)
+-- VALUES ('boxe', 'Boxe', 'Sport de combat avec les poings', '#F59E0B', 'target', TRUE, 4, FALSE, TRUE, 10);
+
+-- JUJITSU BRÉSILIEN
+-- INSERT INTO `sports` (`code`, `name`, `description`, `color`, `icon`, `is_active`, `display_order`, `requires_belt`, `allow_competitions`, `min_age`)
+-- VALUES ('bjj', 'Jujitsu Brésilien', 'Art martial brésilien axé sur le combat au sol et les soumissions', '#059669', 'shield', TRUE, 5, TRUE, TRUE, 6);
+
+-- ----------------------------------------------------------------------------
+-- 11. VUES UTILES
+-- ----------------------------------------------------------------------------
+
+-- Vue: Sports actifs avec nombre de pratiquants
+CREATE OR REPLACE VIEW `v_sports_summary` AS
+SELECT
+  s.id,
+  s.code,
+  s.name,
+  s.color,
+  s.icon,
+  s.is_active,
+  COUNT(DISTINCT us.user_id) as total_members,
+  COUNT(DISTINCT c.id) as total_courses,
+  COUNT(DISTINCT g.id) as total_grades,
+  s.created_at
+FROM `sports` s
+LEFT JOIN `user_sports` us ON s.id = us.sport_id AND us.is_active = TRUE
+LEFT JOIN `cours` c ON s.id = c.sport_id
+LEFT JOIN `grades` g ON s.id = g.sport_id
+GROUP BY s.id, s.code, s.name, s.color, s.icon, s.is_active, s.created_at
+ORDER BY s.display_order;
+
+-- Vue: Utilisateurs avec leurs sports
+CREATE OR REPLACE VIEW `v_user_sports_details` AS
+SELECT
+  u.id as user_id,
+  u.nom,
+  u.prenom,
+  u.email,
+  s.id as sport_id,
+  s.code as sport_code,
+  s.name as sport_name,
+  us.is_primary,
+  us.is_active as practices_sport,
+  g.nom as current_grade,
+  us.started_at,
+  us.notes
+FROM `utilisateurs` u
+INNER JOIN `user_sports` us ON u.id = us.user_id
+INNER JOIN `sports` s ON us.sport_id = s.id
+LEFT JOIN `grades` g ON us.current_grade_id = g.id
+ORDER BY u.nom, u.prenom, us.is_primary DESC;
+
+-- ----------------------------------------------------------------------------
+-- 12. TRIGGERS POUR SYNCHRONISATION
+-- ----------------------------------------------------------------------------
+
+-- Trigger: Quand on change le grade d'un user, mettre à jour user_sports
+DELIMITER //
+
+CREATE TRIGGER `trg_update_user_sport_grade`
+AFTER UPDATE ON `utilisateurs`
+FOR EACH ROW
+BEGIN
+  IF OLD.grade_id != NEW.grade_id OR (OLD.grade_id IS NULL AND NEW.grade_id IS NOT NULL) THEN
+    -- Mettre à jour le grade dans user_sports pour le sport principal
+    UPDATE `user_sports`
+    SET `current_grade_id` = NEW.grade_id,
+        `updated_at` = CURRENT_TIMESTAMP
+    WHERE `user_id` = NEW.id
+      AND `is_primary` = TRUE;
+
+    -- Ajouter à l'historique si le nouveau grade est lié à un sport
+    IF NEW.grade_id IS NOT NULL THEN
+      INSERT INTO `user_grade_history` (`user_id`, `sport_id`, `grade_id`, `obtained_at`)
+      SELECT
+        NEW.id,
+        g.sport_id,
+        NEW.grade_id,
+        CURDATE()
+      FROM `grades` g
+      WHERE g.id = NEW.grade_id
+        AND g.sport_id IS NOT NULL;
+    END IF;
+  END IF;
+END//
+
+DELIMITER ;
+
+-- ----------------------------------------------------------------------------
+-- 13. INDEXES DE PERFORMANCE SUPPLÉMENTAIRES
+-- ----------------------------------------------------------------------------
+
+-- Index composites pour requêtes fréquentes
+CREATE INDEX `idx_user_sports_active_primary` ON `user_sports`(`is_active`, `is_primary`, `sport_id`);
+CREATE INDEX `idx_grade_history_composite` ON `user_grade_history`(`user_id`, `sport_id`, `obtained_at`);
+CREATE INDEX `idx_sport_equipment_level` ON `sport_equipment`(`sport_id`, `for_level`, `is_mandatory`);
+
+-- ----------------------------------------------------------------------------
+-- FIN DE LA MIGRATION PHASE 5
+-- ----------------------------------------------------------------------------
+
+-- Vérification du nombre de tables créées
+SELECT
+  'Phase 5 completed' as status,
+  (SELECT COUNT(*) FROM information_schema.tables
+   WHERE table_schema = DATABASE()
+   AND table_name IN ('sports', 'sport_configurations', 'user_sports', 'user_grade_history',
+                      'sport_equipment', 'sport_competition_rules', 'sport_statistics')) as new_tables,
+  (SELECT COUNT(*) FROM `sports`) as total_sports,
+  (SELECT COUNT(*) FROM `user_sports`) as user_sport_links;

@@ -1,0 +1,340 @@
+================================================================================
+PHASE 1 - QUICK WINS - CHECKLIST DE MIGRATION
+================================================================================
+
+Date de début: _______________
+Date de fin: _______________
+Responsable: _______________
+
+================================================================================
+AVANT LA MIGRATION
+================================================================================
+
+[ ] 1. Backup de la base de données créé
+    Commande: mysqldump -u [user] -p [database] > backup-phase1-YYYYMMDD.sql
+    Fichier: _______________________
+    Date: _______________________
+
+[ ] 2. Backup du schéma Prisma
+    Fichier: api/prisma/schema.prisma.backup
+    Date: _______________________
+
+[ ] 3. Environnement de test configuré
+    Base de test: _______________________
+    URL: _______________________
+
+[ ] 4. Dépendances installées
+    [ ] @prisma/client à jour
+    [ ] Node.js >= 16.x
+    [ ] MySQL >= 8.0
+
+[ ] 5. Code existant committé dans Git
+    Commit hash: _______________________
+    Branch: _______________________
+
+[ ] 6. Notification équipe envoyée
+    Date: _______________________
+
+================================================================================
+PHASE DE TEST (DRY RUN)
+================================================================================
+
+[ ] 7. Exécution en mode dry-run sur environnement de test
+    Commande: node scripts/migrate-phase1.js --dry-run
+    Date: _______________________
+    Résultat: [ ] Succès  [ ] Échec
+    Notes: _______________________
+
+[ ] 8. Vérification du script SQL
+    Fichier: api/prisma/migrations/20250220_phase1_quick_wins.sql
+    Vérifié par: _______________________
+    Date: _______________________
+
+[ ] 9. Test sur copie de production
+    Date: _______________________
+    Durée: _______________________
+    Résultat: [ ] Succès  [ ] Échec
+    Notes: _______________________
+
+================================================================================
+MIGRATION EN PRODUCTION
+================================================================================
+
+[ ] 10. Mise en maintenance de l'application
+    Début: _______________________
+    Fin prévue: _______________________
+
+[ ] 11. Backup final de production
+    Fichier: _______________________
+    Taille: _______________________
+    Vérifié: [ ] Oui  [ ] Non
+
+[ ] 12. Exécution de la migration
+    Commande: node scripts/migrate-phase1.js --force
+    Début: _______________________
+    Fin: _______________________
+    Durée totale: _______________________
+
+[ ] 13. Vérification des tables créées
+    [ ] payment_methods (nombre de lignes: _______)
+    [ ] course_types (nombre de lignes: _______)
+    [ ] article_stock (nombre de lignes: _______)
+
+[ ] 14. Vérification des colonnes ajoutées
+    [ ] paiements.payment_method_id
+    [ ] cours_recurrent.course_type_id
+
+[ ] 15. Vérification des indexes créés
+    [ ] email_queue.idx_user_status_created
+    [ ] commandes.idx_statut_date_total
+    [ ] commandes.idx_created_statut
+    [ ] paiements.idx_date_statut_montant
+    [ ] paiements.idx_user_date
+    [ ] articles.idx_categorie_prix
+    [ ] sessions.idx_expires_active
+    [ ] cours.idx_date_type_recurrent
+    [ ] inscriptions.idx_cours_status
+    [ ] echeances_paiements.idx_statut_date
+
+[ ] 16. Validation des données migrées
+    [ ] Paiements sans payment_method_id: 0
+    [ ] Cours sans course_type_id: 0
+    [ ] Stocks migrés correctement: ________ lignes
+    [ ] Aucune perte de données
+
+================================================================================
+MISE À JOUR DU CODE
+================================================================================
+
+[ ] 17. Mise à jour du schema.prisma
+    [ ] Modèle PaymentMethod ajouté
+    [ ] Modèle CourseType ajouté
+    [ ] Modèle ArticleStock ajouté
+    [ ] Relations mises à jour
+    [ ] Noms de colonnes standardisés (snake_case)
+    Commit: _______________________
+
+[ ] 18. Régénération du Prisma Client
+    Commande: npx prisma generate
+    Date: _______________________
+    Résultat: [ ] Succès  [ ] Échec
+
+[ ] 19. Mise à jour des resolvers GraphQL
+    [ ] paiements (utiliser paymentMethod relation)
+    [ ] cours_recurrent (utiliser courseType relation)
+    [ ] stocks (utiliser articleStock)
+    Commit: _______________________
+
+[ ] 20. Mise à jour des services
+    [ ] PaymentService
+    [ ] CourseService
+    [ ] StockService
+    [ ] EmailService (colonnes renommées)
+    Commit: _______________________
+
+[ ] 21. Mise à jour des tests
+    [ ] Tests unitaires PaymentService
+    [ ] Tests unitaires CourseService
+    [ ] Tests unitaires StockService
+    [ ] Tests d'intégration mis à jour
+    Commit: _______________________
+
+================================================================================
+TESTS POST-MIGRATION
+================================================================================
+
+[ ] 22. Tests fonctionnels
+    [ ] Création de commande avec articles
+    [ ] Création de paiement (Stripe)
+    [ ] Création de paiement (PayPal)
+    [ ] Gestion du stock (ajout/retrait)
+    [ ] Création de cours récurrent
+    [ ] Envoi d'emails (queue)
+
+[ ] 23. Tests de performance
+    [ ] Requêtes paiements (avec nouveaux indexes)
+    [ ] Requêtes commandes (avec nouveaux indexes)
+    [ ] Requêtes stocks (nouvelle table)
+    [ ] Temps de réponse acceptable: [ ] Oui  [ ] Non
+
+[ ] 24. Tests de régression
+    [ ] Suite de tests complète exécutée
+    Commande: npm test
+    Résultat: [ ] Succès (_____ tests)  [ ] Échec
+    Date: _______________________
+
+[ ] 25. Tests manuels par l'équipe
+    [ ] Testeur 1: _______________ [ ] OK  [ ] Issues
+    [ ] Testeur 2: _______________ [ ] OK  [ ] Issues
+    [ ] Testeur 3: _______________ [ ] OK  [ ] Issues
+
+================================================================================
+NETTOYAGE (APRÈS VALIDATION EN PRODUCTION)
+================================================================================
+
+⚠️  ATTENTION: Attendre au moins 1 semaine en production avant nettoyage
+
+[ ] 26. Supprimer les anciennes colonnes
+    Date: _______________________
+    [ ] ALTER TABLE paiements DROP COLUMN methode_paiement;
+    [ ] ALTER TABLE cours_recurrent DROP COLUMN type_cours;
+
+[ ] 27. Supprimer les anciennes tables
+    Date: _______________________
+    [ ] DROP VIEW IF EXISTS stocks;
+    [ ] DROP VIEW IF EXISTS articles_tailles;
+    [ ] DROP TABLE IF EXISTS stocks_old; (si renommé)
+    [ ] DROP TABLE IF EXISTS articles_tailles_old; (si renommé)
+
+[ ] 28. Mise à jour schema.prisma (suppression anciennes définitions)
+    Commit: _______________________
+
+[ ] 29. Régénération finale du Prisma Client
+    Commande: npx prisma generate
+    Date: _______________________
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+[ ] 30. Documentation technique mise à jour
+    [ ] Schema database documenté
+    [ ] Nouvelles tables documentées
+    [ ] Relations documentées
+    Fichier: _______________________
+
+[ ] 31. Documentation API mise à jour
+    [ ] GraphQL schema
+    [ ] Exemples de requêtes
+    [ ] Breaking changes documentés
+
+[ ] 32. Guide de migration créé
+    [ ] Pour les développeurs
+    [ ] Pour les DevOps
+    Fichier: _______________________
+
+[ ] 33. Changelog mis à jour
+    Version: _______________________
+    Date: _______________________
+
+================================================================================
+COMMUNICATION
+================================================================================
+
+[ ] 34. Notification équipe dev
+    Date: _______________________
+    [ ] Email envoyé
+    [ ] Slack/Discord notification
+    [ ] Réunion de débriefing
+
+[ ] 35. Notification stakeholders
+    Date: _______________________
+    [ ] Migration réussie
+    [ ] Améliorations implémentées
+    [ ] Métriques de performance
+
+================================================================================
+MÉTRIQUES POST-MIGRATION
+================================================================================
+
+Performance (à mesurer après 1 semaine):
+
+Avant migration:
+- Temps moyen requête paiements: _______ ms
+- Temps moyen requête commandes: _______ ms
+- Temps moyen requête stocks: _______ ms
+- Utilisation CPU moyenne: _______ %
+- Utilisation mémoire: _______ MB
+
+Après migration:
+- Temps moyen requête paiements: _______ ms (amélioration: _____%)
+- Temps moyen requête commandes: _______ ms (amélioration: _____%)
+- Temps moyen requête stocks: _______ ms (amélioration: _____%)
+- Utilisation CPU moyenne: _______ % (variation: _____%)
+- Utilisation mémoire: _______ MB (variation: _____%)
+
+Taille de la base de données:
+- Avant: _______ MB
+- Après: _______ MB
+- Différence: _______ MB
+
+================================================================================
+PROBLÈMES RENCONTRÉS
+================================================================================
+
+Problème 1:
+Description: _______________________
+Solution: _______________________
+Date: _______________________
+
+Problème 2:
+Description: _______________________
+Solution: _______________________
+Date: _______________________
+
+Problème 3:
+Description: _______________________
+Solution: _______________________
+Date: _______________________
+
+================================================================================
+VALIDATION FINALE
+================================================================================
+
+[ ] 35. Migration complète et validée
+    Validé par: _______________________
+    Date: _______________________
+
+[ ] 36. Application en production stable
+    Monitoring: [ ] OK  [ ] Issues
+    Logs: [ ] Normaux  [ ] Erreurs
+    Durée de stabilité: _______________________
+
+[ ] 37. Backup de nettoyage conservé
+    Fichier: _______________________
+    Durée de rétention: _______________________
+
+[ ] 38. Post-mortem réalisé
+    Date: _______________________
+    Participants: _______________________
+    Document: _______________________
+
+================================================================================
+SIGNATURES
+================================================================================
+
+Développeur principal:
+Nom: _______________________
+Signature: _______________________
+Date: _______________________
+
+Lead technique:
+Nom: _______________________
+Signature: _______________________
+Date: _______________________
+
+DevOps:
+Nom: _______________________
+Signature: _______________________
+Date: _______________________
+
+Product Owner:
+Nom: _______________________
+Signature: _______________________
+Date: _______________________
+
+================================================================================
+NOTES ADDITIONNELLES
+================================================================================
+
+_______________________________________________________________________________
+_______________________________________________________________________________
+_______________________________________________________________________________
+_______________________________________________________________________________
+_______________________________________________________________________________
+_______________________________________________________________________________
+_______________________________________________________________________________
+
+================================================================================
+FIN DE LA CHECKLIST PHASE 1
+================================================================================

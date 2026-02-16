@@ -1,0 +1,619 @@
+================================================================================
+GUIDE DE MIGRATION DU CODE - PHASE 1 - QUICK WINS
+================================================================================
+
+Date: 2025-02-20
+Version: 1.0
+Statut: Migration DB complétée ✓ | Code à migrer ⏳
+
+================================================================================
+RÉSUMÉ DES CHANGEMENTS DE BASE DE DONNÉES
+================================================================================
+
+✅ Tables créées:
+  - payment_methods (6 méthodes de paiement)
+  - course_types (types de cours)
+  - article_stock (remplacement de stocks + articles_tailles)
+
+✅ Colonnes ajoutées:
+  - paiements.payment_method_id (INT NOT NULL, FK vers payment_methods)
+  - cours_recurrent.course_type_id (INT NOT NULL, FK vers course_types)
+
+✅ Indexes ajoutés:
+  - 15+ nouveaux indexes pour optimisation
+
+✅ Noms standardisés (snake_case):
+  - userId → user_id
+  - utilisateurId → utilisateur_id
+  - correlationId → correlation_id
+  - eventType → event_type
+  - etc.
+
+================================================================================
+CHANGEMENTS DE CODE NÉCESSAIRES
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PRIORITÉ 1 - CRITIQUE (À FAIRE IMMÉDIATEMENT)                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. STOCKS → ARTICLE_STOCK
+─────────────────────────────────────────────────────────────────────────────
+
+Ancien modèle:
+  model stocks {
+    id               Int
+    article_id       Int
+    taille_id        Int
+    quantite         Int
+    stock_disponible Int
+  }
+
+Nouveau modèle:
+  model ArticleStock {
+    id                  Int
+    article_id          Int
+    taille_id           Int
+    quantity_total      Int
+    quantity_reserved   Int
+    quantity_available  Int
+    last_restock_at     DateTime?
+    low_stock_threshold Int
+  }
+
+FICHIERS À MODIFIER:
+
+A. api/src/routes/alertes/core/services/alertes.service.ts
+────────────────────────────────────────────────────────────
+
+Ligne ~385:
+AVANT:
+  const stocksBas = await prisma.stocks.findMany({
+    where: {
+      OR: [
+        { stock_disponible: { lte: 5 } },
+        { quantite: { lte: 10 } }
+      ]
+    }
+  });
+
+APRÈS:
+  const stocksBas = await prisma.articleStock.findMany({
+    where: {
+      OR: [
+        { quantity_available: { lte: 5 } },
+        { quantity_total: { lte: 10 } }
+      ]
+    },
+    include: {
+      article: true,
+      taille: true
+    }
+  });
+
+B. api/src/graphql/schema.ts
+────────────────────────────
+
+Ligne ~634 et ~648:
+AVANT:
+  stocks: {
+    include: {
+      tailles: true,
+    },
+  },
+
+APRÈS:
+  article_stock: {
+    include: {
+      taille: true,
+    },
+  },
+
+Ligne ~18:
+AVANT:
+  import { stocksResolvers } from "../routes/stocks/core/resolvers/index.js";
+
+APRÈS:
+  import { articleStockResolvers } from "../routes/stocks/core/resolvers/index.js";
+
+Ligne ~554 et ~701:
+AVANT:
+  ...stocksResolvers.Query,
+  ...stocksResolvers.Mutation,
+
+APRÈS:
+  ...articleStockResolvers.Query,
+  ...articleStockResolvers.Mutation,
+
+C. api/src/routes/magasin/core/resolvers/magasin.resolvers.ts
+──────────────────────────────────────────────────────────────
+
+Ligne ~415-448 (obtenirStocksArticleResolver):
+REMPLACER ENTIÈREMENT PAR:
+
+const obtenirStocksArticleResolver = async (
+  _: any,
+  args: { id: number },
+  context: any
+) => {
+  try {
+    console.log(`📦 [MagasinResolver] Récupération stocks article: ${args.id}`);
+
+    const stocks = await prisma.articleStock.findMany({
+      where: { article_id: args.id },
+      include: {
+        article: true,
+        taille: true
+      }
+    });
+
+    return {
+      success: true,
+      data: stocks.map(s => ({
+        id: s.id,
+        article_id: s.article_id,
+        taille_id: s.taille_id,
+        taille: s.taille,
+        quantity_total: s.quantity_total,
+        quantity_available: s.quantity_available,
+        quantity_reserved: s.quantity_reserved,
+        low_stock_threshold: s.low_stock_threshold,
+        last_restock_at: s.last_restock_at
+      })),
+      message: "Stocks récupérés avec succès"
+    };
+
+  } catch (error: any) {
+    console.error(`❌ [MagasinResolver] Erreur stocks:`, error);
+    throw new GraphQLError(
+      `Erreur lors de la récupération des stocks: ${error.message}`,
+      {
+        extensions: { code: "INTERNAL_SERVER_ERROR", originalError: error },
+      }
+    );
+  }
+};
+
+D. api/src/routes/stocks/ (TOUT LE MODULE)
+──────────────────────────────────────────
+
+FICHIERS À CRÉER/MODIFIER:
+
+1. api/src/routes/stocks/core/types/stock.types.ts
+CRÉER:
+  export interface ArticleStockData {
+    id: number;
+    article_id: number;
+    taille_id: number;
+    quantity_total: number;
+    quantity_reserved: number;
+    quantity_available: number;
+    last_restock_at?: Date | null;
+    low_stock_threshold: number;
+  }
+
+  export interface ArticleStockFilters {
+    article_id?: number;
+    taille_id?: number;
+    quantity_available_lt?: number; // Low stock
+    quantity_available_gt?: number;
+  }
+
+  export interface UpdateStockInput {
+    quantity_total?: number;
+    quantity_reserved?: number;
+    quantity_available?: number;
+    low_stock_threshold?: number;
+  }
+
+2. api/src/routes/stocks/core/services/stock.service.ts
+MODIFIER TOUTES LES MÉTHODES:
+
+  - prisma.stocks → prisma.articleStock
+  - quantite → quantity_total
+  - stock_disponible → quantity_available
+  - Ajouter gestion de quantity_reserved
+
+3. api/src/routes/stocks/core/resolvers/stock.resolvers.ts
+RENOMMER EN: article-stock.resolvers.ts
+EXPORTER: articleStockResolvers
+
+4. packages/types/src/domains/stocks/
+CRÉER LE DOMAINE COMPLET:
+  - types.ts (ArticleStock)
+  - validators.ts (ArticleStockSchema)
+  - graphql.typedefs.ts (type ArticleStock)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PRIORITÉ 2 - IMPORTANT (À FAIRE SOUS 48H)                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+2. PAIEMENTS - UTILISER payment_method_id
+─────────────────────────────────────────────────────────────────────────────
+
+NOTE: Les colonnes methode_paiement ET payment_method_id existent actuellement.
+      On garde methode_paiement pour compatibilité temporaire.
+
+A. api/src/routes/paiements/core/types/paiements.types.ts
+─────────────────────────────────────────────────────────
+
+AJOUTER:
+  export interface PaiementData {
+    id: number;
+    utilisateur_id: number;
+    montant: Decimal | number;
+    devise: string;
+    statut: string;
+
+    // AJOUTER CES LIGNES:
+    payment_method_id: number;
+    payment_method?: PaymentMethod; // Relation
+
+    // GARDER pour compatibilité temporaire:
+    methode_paiement?: string | null;
+
+    stripe_payment_intent_id?: string | null;
+    // ... reste inchangé
+  }
+
+  export interface CreatePaiementInput {
+    utilisateur_id: number;
+    montant: number;
+
+    // AJOUTER:
+    payment_method_id: number; // Obligatoire
+
+    // GARDER pour compatibilité:
+    methode_paiement?: string;
+
+    // ... reste
+  }
+
+B. api/src/routes/stripe/core/services/payment.service.ts
+─────────────────────────────────────────────────────────
+
+Ligne ~253 (enregistrerPaiement):
+AVANT:
+  async enregistrerPaiement(data: {
+    utilisateur_id: number;
+    montant: number;
+    methode_paiement: string;
+    // ...
+  }): Promise<number> {
+
+APRÈS:
+  async enregistrerPaiement(data: {
+    utilisateur_id: number;
+    montant: number;
+    payment_method_id: number;        // NOUVEAU (obligatoire)
+    methode_paiement?: string;        // ANCIEN (optionnel pour compatibilité)
+    // ...
+  }): Promise<number> {
+
+    // Dans le corps, créer avec payment_method_id:
+    const paiement = await prisma.paiements.create({
+      data: {
+        utilisateur_id: data.utilisateur_id,
+        montant: data.montant,
+        payment_method_id: data.payment_method_id,  // UTILISER ÇA
+        methode_paiement: data.methode_paiement,    // Optionnel
+        // ...
+      }
+    });
+  }
+
+Ligne ~339 (confirmerPaiementEcheance):
+AVANT:
+  const paiementId = await this.enregistrerPaiement({
+    utilisateur_id: data.userId,
+    montant: data.amount,
+    methode_paiement: "stripe",
+    // ...
+  });
+
+APRÈS:
+  // D'abord récupérer l'ID de Stripe dans payment_methods
+  const stripeMethod = await prisma.paymentMethod.findUnique({
+    where: { code: 'stripe' }
+  });
+
+  const paiementId = await this.enregistrerPaiement({
+    utilisateur_id: data.userId,
+    montant: data.amount,
+    payment_method_id: stripeMethod!.id,  // NOUVEAU
+    methode_paiement: "stripe",            // Pour compatibilité
+    // ...
+  });
+
+C. api/src/routes/paiements/core/resolvers/paiements.resolvers.ts
+─────────────────────────────────────────────────────────────────
+
+Ligne ~159 (historiquePaiements):
+AJOUTER include pour payment_method:
+
+  const paiements = await prisma.paiements.findMany({
+    where: { utilisateur_id },
+    include: {
+      commandes: true,
+      payment_method: true,  // AJOUTER
+    },
+    orderBy: { date_paiement: 'desc' }
+  });
+
+  // Dans le mapping:
+  paiements: paiements.map((p) => ({
+    id: p.id,
+    montant: Number(p.montant),
+    devise: "EUR",
+    statut: p.statut,
+    date_paiement: p.date_paiement,
+
+    // NOUVEAU (préférer ça):
+    moyen_paiement: p.payment_method?.name || p.methode_paiement || "Non spécifié",
+    payment_method_id: p.payment_method_id,
+    payment_method: p.payment_method,
+
+    // ANCIEN (garder pour compatibilité):
+    // moyen_paiement: p.methode_paiement || "stripe",
+
+    stripe_payment_intent_id: p.stripe_payment_intent_id,
+    // ...
+  }))
+
+D. packages/types/src/domains/paiements/types.ts
+────────────────────────────────────────────────
+
+AJOUTER les enums et types:
+
+  export enum PaymentMethodCode {
+    STRIPE = 'stripe',
+    PAYPAL = 'paypal',
+    BITCOIN = 'bitcoin',
+    MANUAL = 'manual',
+    BANK_TRANSFER = 'bank_transfer',
+    CASH = 'cash'
+  }
+
+  export type PaymentMethod = {
+    id: number;
+    code: PaymentMethodCode;
+    name: string;
+    active: boolean;
+    created_at: Date;
+  };
+
+  export type Paiement = {
+    id: number;
+    commande_id: number | null;
+    utilisateur_id: number;
+    montant: number;
+
+    // AJOUTER:
+    payment_method_id: number;
+    payment_method?: PaymentMethod;
+
+    // GARDER:
+    methode_paiement: string | null;
+
+    stripe_payment_intent_id: string | null;
+    // ... reste
+  };
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PRIORITÉ 3 - MOYEN (À FAIRE SOUS 1 SEMAINE)                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+3. COURS - UTILISER course_type_id
+─────────────────────────────────────────────────────────────────────────────
+
+Similar pattern que paiements:
+
+A. api/src/routes/cours/core/types/cours.types.ts
+AJOUTER:
+  course_type_id: number;
+  course_type?: CourseType;
+  type_cours?: string; // Garder temporairement
+
+B. api/src/routes/cours/core/services/cours.service.ts
+MODIFIER les create/update pour utiliser course_type_id
+
+C. packages/types/src/domains/cours/
+CRÉER:
+  export type CourseType = {
+    id: number;
+    code: string;
+    name: string;
+    description?: string | null;
+    active: boolean;
+    created_at: Date;
+  };
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PRIORITÉ 4 - OPTIONNEL (AMÉLIORATION)                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+4. NOMS DE COLONNES (snake_case)
+─────────────────────────────────────────────────────────────────────────────
+
+Ces colonnes ont été renommées dans la DB:
+
+Sessions:
+  - userId → user_id
+
+AuditLog:
+  - userId → user_id
+  - eventType → event_type
+
+WebhookLog:
+  - eventId → event_id
+  - eventType → event_type
+  - retryCount → retry_count
+  - nextRetryAt → next_retry_at
+  - processedAt → processed_at
+  - createdAt → created_at
+  - updatedAt → updated_at
+
+EmailQueue:
+  - utilisateurId → utilisateur_id
+  - correlationId → correlation_id
+
+Email:
+  - utilisateurId → utilisateur_id
+  - messageId → message_id
+
+NOTE: Prisma Client a été régénéré, donc les accès TypeScript utilisent
+      automatiquement les nouveaux noms. Vérifier qu'il n'y a pas de
+      $queryRaw qui utilisent les anciens noms.
+
+RECHERCHER DANS LE CODE:
+  - grep -r "userId" api/src/
+  - grep -r "eventType" api/src/
+  - grep -r "correlationId" api/src/
+
+Si trouvé dans des requêtes SQL brutes, remplacer par les versions snake_case.
+
+================================================================================
+TESTS À EFFECTUER APRÈS MIGRATION
+================================================================================
+
+1. TESTS UNITAIRES - Stocks
+───────────────────────────
+□ Créer un article avec stock
+□ Récupérer les stocks d'un article
+□ Mettre à jour quantity_available
+□ Détecter les stocks bas (< low_stock_threshold)
+□ Calculer quantity_available = quantity_total - quantity_reserved
+
+2. TESTS UNITAIRES - Paiements
+───────────────────────────────
+□ Créer un paiement avec payment_method_id
+□ Récupérer un paiement avec payment_method (include)
+□ Lister les paiements avec filtres
+□ Vérifier que payment_method.name s'affiche correctement
+
+3. TESTS UNITAIRES - Cours
+───────────────────────────
+□ Créer un cours récurrent avec course_type_id
+□ Récupérer cours avec course_type (include)
+□ Filtrer par type de cours
+
+4. TESTS D'INTÉGRATION
+───────────────────────
+□ Workflow complet: Créer commande → Créer paiement Stripe → Vérifier stock
+□ Workflow alertes: Stock bas détecté → Alerte créée
+□ Workflow email: EmailQueue avec utilisateur_id
+
+5. TESTS E2E
+────────────
+□ Interface admin: Voir les stocks d'un article
+□ Interface utilisateur: Payer avec Stripe (payment_method stripe)
+□ Dashboard: Stats paiements par méthode
+
+================================================================================
+COMMANDES UTILES
+================================================================================
+
+# Régénérer Prisma Client après modifications schema
+cd api && npx prisma generate
+
+# Voir la structure d'une table
+echo "DESCRIBE article_stock;" | npx prisma db execute --stdin
+
+# Vérifier les données migrées
+node api/scripts/check-stocks-structure.js
+
+# Tester les resolvers GraphQL
+npm run test:integration
+
+# Lancer l'API en mode dev
+npm run dev
+
+================================================================================
+ROLLBACK (EN CAS DE PROBLÈME)
+================================================================================
+
+Si problème majeur, restaurer depuis backup:
+
+1. Arrêter l'application
+2. Restaurer la DB depuis backup:
+   mysql -u root -p clubmanager < backup-phase1-YYYYMMDD.sql
+
+3. Restaurer l'ancien schema:
+   mv api/prisma/schema.prisma api/prisma/schema-phase1-broken.prisma
+   mv api/prisma/schema-old.prisma api/prisma/schema.prisma
+
+4. Régénérer Prisma Client:
+   cd api && npx prisma generate
+
+5. Redémarrer l'application
+
+================================================================================
+CHECKLIST DE VALIDATION
+================================================================================
+
+AVANT DE MERGER EN MAIN:
+
+□ Tous les tests unitaires passent
+□ Tous les tests d'intégration passent
+□ Tests E2E sur stocks validés
+□ Tests E2E sur paiements validés
+□ Interface admin fonctionne (stocks, paiements)
+□ Interface utilisateur fonctionne (commandes, paiements)
+□ Monitoring actif (logs, métriques)
+□ Documentation à jour
+□ Code review effectuée
+□ Migration testée en staging
+□ Backup production récent disponible
+
+APRÈS DÉPLOIEMENT EN PRODUCTION:
+
+□ Monitoring actif pendant 24h
+□ Aucune erreur critique dans les logs
+□ Métriques de performance normales
+□ Utilisateurs ne rapportent pas de bugs
+□ Attendre 1 semaine avant de supprimer les anciennes colonnes
+
+================================================================================
+NETTOYAGE FINAL (APRÈS 1 SEMAINE EN PRODUCTION)
+================================================================================
+
+Une fois validé en production pendant au moins 1 semaine:
+
+1. Supprimer les anciennes colonnes:
+   ALTER TABLE paiements DROP COLUMN methode_paiement;
+   ALTER TABLE cours_recurrent DROP COLUMN type_cours;
+
+2. Supprimer les anciennes tables:
+   DROP TABLE IF EXISTS stocks;
+   DROP TABLE IF EXISTS articles_tailles;
+
+3. Mettre à jour le schema.prisma:
+   - Supprimer model stocks
+   - Supprimer model articles_tailles
+   - Supprimer champ methode_paiement de paiements
+   - Supprimer champ type_cours de cours_recurrent
+
+4. Régénérer Prisma Client:
+   npx prisma generate
+
+5. Nettoyer le code:
+   - Supprimer les références à methode_paiement
+   - Supprimer les références à type_cours
+   - Supprimer les références à stocks/articles_tailles
+
+6. Commit final:
+   git commit -m "chore: Phase 1 cleanup - remove deprecated columns and tables"
+
+================================================================================
+CONTACT & SUPPORT
+================================================================================
+
+En cas de question ou problème:
+- Documentation: ClubManager/docs/
+- Logs migration: api/backups/
+- Schema backup: api/prisma/schema-old.prisma
+- Migration SQL: api/prisma/migrations/20250220_phase1_quick_wins.sql
+
+================================================================================
+FIN DU GUIDE DE MIGRATION PHASE 1
+================================================================================
