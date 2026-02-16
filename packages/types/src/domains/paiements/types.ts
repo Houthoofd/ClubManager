@@ -6,6 +6,52 @@
  * @module paiements/types
  */
 
+// ============================================================================
+// PAYMENT METHOD TYPES (Nouvelle table de référence - Phase 1)
+// ============================================================================
+
+/**
+ * Méthode de paiement (table de référence)
+ */
+export interface PaymentMethod {
+  /** Identifiant unique */
+  id: number;
+
+  /** Code unique de la méthode (STRIPE, PAYPAL, BITCOIN, etc.) */
+  code: string;
+
+  /** Nom de la méthode de paiement */
+  name: string;
+
+  /** La méthode est-elle active ? */
+  active: boolean;
+
+  /** Date de création */
+  created_at: Date;
+}
+
+/**
+ * Données pour créer une méthode de paiement
+ */
+export interface CreatePaymentMethodInput {
+  code: string;
+  name: string;
+  active?: boolean;
+}
+
+/**
+ * Données pour mettre à jour une méthode de paiement
+ */
+export interface UpdatePaymentMethodInput {
+  code?: string;
+  name?: string;
+  active?: boolean;
+}
+
+// ============================================================================
+// PAYMENT ENUMS
+// ============================================================================
+
 /**
  * Statut d'un paiement
  */
@@ -45,7 +91,8 @@ export type Paiement = {
   commande_id: number | null;
   utilisateur_id: number;
   montant: number;
-  methode_paiement: MethodePaiement | null;
+  methode_paiement: MethodePaiement | null; // DEPRECATED: Utiliser payment_method_id
+  payment_method_id: number; // Nouvelle FK vers PaymentMethod
   stripe_payment_intent_id: string | null;
   paypal_order_id: string | null;
   bitcoin_address: string | null;
@@ -81,6 +128,7 @@ export interface PaiementAvecDetails extends Paiement {
     montant: number;
     frequence: string;
   };
+  payment_method?: PaymentMethod;
 }
 
 /**

@@ -47,3 +47,7 @@ export * as Utilisateurs from "./utilisateurs/index.js";
 
 // Verification Domain
 export * as Verification from "./verification/index.js";
+export * as Sports from "./sports/index.js";
+export * as Sessions from "./sessions/index.js";
+export * as Audit from "./audit/index.js";
+export * as Gdpr from "./gdpr/index.js";

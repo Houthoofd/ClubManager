@@ -86,6 +86,12 @@ export { utilisateursTypeDefs } from "./domains/utilisateurs/index.js";
 export { verificationTypeDefs } from "./domains/verification/index.js";
 export { webhooksTypeDefs } from "./infrastructure/webhooks.js";
 
+// New domains
+export { sportsTypeDefs } from "./domains/sports/index.js";
+export { sessionsTypeDefs } from "./domains/sessions/index.js";
+export { auditTypeDefs } from "./domains/audit/index.js";
+export { gdprTypeDefs } from "./domains/gdpr/index.js";
+
 // ============================================================================
 // DOMAIN TYPES - Namespace Exports (RECOMMENDED WAY)
 // ============================================================================
@@ -107,6 +113,12 @@ export * as Statistiques from "./domains/statistiques/index.js";
 export * as Upload from "./domains/upload/index.js";
 export * as Utilisateurs from "./domains/utilisateurs/index.js";
 export * as Verification from "./domains/verification/index.js";
+
+// New domains
+export * as Sports from "./domains/sports/index.js";
+export * as Sessions from "./domains/sessions/index.js";
+export * as Audit from "./domains/audit/index.js";
+export * as Gdpr from "./domains/gdpr/index.js";
 
 // ============================================================================
 // LEGACY COMPATIBILITY - Direct path imports

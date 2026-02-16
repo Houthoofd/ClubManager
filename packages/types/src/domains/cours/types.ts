@@ -7,7 +7,73 @@
 
 import type { Professeur } from "../utilisateurs/types.js";
 
-// === Types principaux ===
+// ============================================================================
+// COURSE TYPE TYPES (Nouvelle table de référence - Phase 1)
+// ============================================================================
+
+/**
+ * Type de cours (table de référence)
+ */
+export interface CourseType {
+  /** Identifiant unique */
+  id: number;
+
+  /** ID du sport associé */
+  sport_id?: number | null;
+
+  /** Code unique du type de cours */
+  code: string;
+
+  /** Nom du type de cours */
+  name: string;
+
+  /** Description du type de cours */
+  description?: string | null;
+
+  /** Le type de cours est-il actif ? */
+  active: boolean;
+
+  /** Date de création */
+  created_at: Date;
+}
+
+/**
+ * Données pour créer un type de cours
+ */
+export interface CreateCourseTypeInput {
+  sport_id?: number;
+  code: string;
+  name: string;
+  description?: string;
+  active?: boolean;
+}
+
+/**
+ * Données pour mettre à jour un type de cours
+ */
+export interface UpdateCourseTypeInput {
+  sport_id?: number;
+  code?: string;
+  name?: string;
+  description?: string;
+  active?: boolean;
+}
+
+/**
+ * Type de cours avec informations du sport
+ */
+export interface CourseTypeWithSport extends CourseType {
+  sport?: {
+    id: number;
+    code: string;
+    name: string;
+    color: string;
+  };
+}
+
+// ============================================================================
+// COURSE TYPES (Types principaux)
+// ============================================================================
 
 export type CoursData = {
   id: number;
@@ -73,6 +139,7 @@ export type AjoutCours = {
 export type PlanningCoursProfesseur = {
   cours_recurrent_id: number;
   type_cours: string;
+  course_type_id?: number; // Nouvelle FK vers CourseType
   jour_semaine: number | string;
   heure_debut: string;
   heure_fin: string;
@@ -81,3 +148,18 @@ export type PlanningCoursProfesseur = {
   professeur_nom: string;
   professeur_prenom: string;
 };
+
+/**
+ * Cours récurrent avec type de cours détaillé
+ */
+export interface CoursRecurrentWithCourseType {
+  id: number;
+  type_cours?: string | null;
+  course_type_id: number;
+  jour_semaine: number;
+  heure_debut: string;
+  heure_fin: string;
+  places_max?: number | null;
+  active?: boolean;
+  course_type?: CourseType;
+}

@@ -5,6 +5,100 @@
  * @module magasin/types
  */
 
+// ============================================================================
+// ARTICLE STOCK TYPES (Nouvelle table unifiée - Phase 1)
+// ============================================================================
+
+/**
+ * Stock d'un article (table unifiée remplaçant stocks et articles_tailles)
+ */
+export interface ArticleStock {
+  /** Identifiant unique */
+  id: number;
+
+  /** ID de l'article */
+  article_id: number;
+
+  /** ID de la taille */
+  taille_id: number;
+
+  /** Quantité totale en stock */
+  quantity_total: number;
+
+  /** Quantité réservée */
+  quantity_reserved: number;
+
+  /** Quantité disponible */
+  quantity_available: number;
+
+  /** Date du dernier réapprovisionnement */
+  last_restock_at?: Date | null;
+
+  /** Seuil d'alerte stock faible */
+  low_stock_threshold: number;
+
+  /** Date de création */
+  created_at: Date;
+
+  /** Date de dernière modification */
+  updated_at: Date;
+}
+
+/**
+ * Données pour créer un stock d'article
+ */
+export interface CreateArticleStockInput {
+  article_id: number;
+  taille_id: number;
+  quantity_total?: number;
+  quantity_reserved?: number;
+  quantity_available?: number;
+  low_stock_threshold?: number;
+}
+
+/**
+ * Données pour mettre à jour un stock d'article
+ */
+export interface UpdateArticleStockInput {
+  quantity_total?: number;
+  quantity_reserved?: number;
+  quantity_available?: number;
+  last_restock_at?: Date | string;
+  low_stock_threshold?: number;
+}
+
+/**
+ * Stock d'article avec informations de l'article et de la taille
+ */
+export interface ArticleStockWithDetails extends ArticleStock {
+  article?: {
+    id: number;
+    nom: string;
+    prix: number;
+  };
+  taille?: {
+    id: number;
+    nom: string;
+  };
+}
+
+/**
+ * Alerte de stock faible
+ */
+export interface LowStockAlert {
+  article_id: number;
+  article_nom: string;
+  taille_id: number;
+  taille_nom: string;
+  quantity_available: number;
+  low_stock_threshold: number;
+  needs_restock: boolean;
+}
+
+// ============================================================================
+// LEGACY STOCK TYPES (Compatibilité)
+// ============================================================================
+
 // === Stocks ===
 export type Stock = {
   taille: string; // taille du produit en string (ex: "S", "M", "L")
@@ -14,18 +108,20 @@ export type Stock = {
 export type Taille = "S" | "M" | "L" | "XL";
 
 // === Articles ===
-// Article complet tel qu’en base ou affiché côté front
+// Article complet tel qu'en base ou affiché côté front
 export type Article = {
   id: number;
   nom: string;
   description: string;
   prix: number;
   images: string[];
-  stocks: Stock[];
+  stocks: Stock[]; // LEGACY: Utiliser article_stock à la place
   categorie_id: number;
   // propriétés optionnelles (ex: dans un panier)
   taille?: string;
   quantite?: number;
+  // Nouveau: stocks unifiés
+  article_stock?: ArticleStock[];
 };
 
 // Article simplifié ou spécifique à l’API (sans description complète ni stocks)
