@@ -14,5 +14,8 @@ export type {
 // Validators (has ResetPasswordInput and others)
 export * from "./validators.js";
 
+// Database types
+export * from "./database.types.js";
+
 // GraphQL typedefs only
 export { authTypeDefs } from "./graphql.typedefs.js";

@@ -1,9 +1,14 @@
-import { z } from 'zod';
+/**
+ * Types pour le module Magasin
+ * Les schémas Zod sont dans validators.ts
+ *
+ * @module magasin/types
+ */
 
 // === Stocks ===
 export type Stock = {
-  taille: string;       // taille du produit en string (ex: "S", "M", "L")
-  quantite: number;     // quantité disponible en stock
+  taille: string; // taille du produit en string (ex: "S", "M", "L")
+  quantite: number; // quantité disponible en stock
 };
 
 export type Taille = "S" | "M" | "L" | "XL";
@@ -49,7 +54,7 @@ export type Categorie = {
 // Article dans une commande (données envoyées à la création)
 export interface ArticleCommande {
   article_id: number;
-  taille_id?: number;    // optionnel (ex: taille choisie)
+  taille_id?: number; // optionnel (ex: taille choisie)
   quantite: number;
   prix: number;
 }
@@ -59,66 +64,34 @@ export type ArticleNomCategorie = {
   categorie_id: number;
 };
 
-// Schéma Zod pour la vérification d'un nom d'article dans une catégorie
-export const articleNomCategorieSchema = z.object({
-  nom: z.string(),
-  categorie_id: z.preprocess((val: any) => Number(val), z.number().int().positive()),
-});
+export type ArticleCreationData = {
+  nom: string;
+  description: string;
+  prix: number;
+  images: string[];
+  categorie_id: number;
+  stocks: {
+    taille: string;
+    quantite: number;
+  }[];
+};
 
-// === Validation Zod (importés pour inférence automatique) ===
+export type ArticleData = ArticleCreationData & {
+  id: number;
+};
 
-// Schéma création d’article (sans id)
-export const articleCreationSchema = z.object({
-  nom: z.string(),
-  description: z.string(),
-  prix: z.preprocess((val: any) => Number(val), z.number()),
-  images: z.array(z.string()).default([]), // Rendre optionnel avec valeur par défaut
-  categorie_id: z.preprocess((val: any) => Number(val), z.number()),
-  stocks: z.array(
-    z.object({
-      taille: z.string(),
-      quantite: z.preprocess((val: any) => Number(val), z.number().int().nonnegative()),
-    })
-  )
-});
-
-// Schéma article complet (avec id)
-export const articleDataValidationSchema = articleCreationSchema.extend({
-  id: z.number().int().positive(),
-});
-
-// Schéma création de commande
-export const nouvelleCommandeSchema = z.object({
-  utilisateur_id: z.preprocess((val: any) => Number(val), z.number().int().positive()),
-  articles: z.array(
-    z.object({
-      article_id: z.preprocess((val: any) => Number(val), z.number().int().positive()),
-      taille: z.string().optional(),
-      quantite: z.preprocess((val: any) => Number(val), z.number().int().positive()),
-      prix: z.preprocess((val: any) => Number(val), z.number().nonnegative()),
-    })
-  ),
-  statut: z.string().optional(),
-  date: z.string().datetime().optional(),
-  total: z.preprocess((val: any) => Number(val), z.number().nonnegative().optional()),
-});
-
-// Schéma ArticleCommande
-export const articleCommandeSchema = z.object({
-  article_id: z.preprocess((val: any) => Number(val), z.number().int().positive()),
-  taille_id: z.preprocess(
-    (val: any) => val === undefined || val === null || val === "" ? undefined : Number(val),
-    z.number().int().positive().optional()
-  ),
-  quantite: z.preprocess((val: any) => Number(val), z.number().int().positive()),
-  prix: z.preprocess((val: any) => Number(val), z.number().nonnegative()),
-});
-
-// === Types inférés depuis les schémas ===
-
-export type ArticleCreationData = z.infer<typeof articleCreationSchema>;
-export type ArticleData = z.infer<typeof articleDataValidationSchema>;
-export type NouvelleCommande = z.infer<typeof nouvelleCommandeSchema>;
+export type NouvelleCommande = {
+  utilisateur_id: number;
+  articles: {
+    article_id: number;
+    taille?: string;
+    quantite: number;
+    prix: number;
+  }[];
+  statut?: string;
+  date?: string;
+  total?: number;
+};
 
 // === Commandes complètes ===
 
@@ -187,11 +160,11 @@ export type CategoriesResponse = MagasinResponse<{
 // === Statuts et configuration ===
 
 export enum StatutCommande {
-  EN_ATTENTE = 'en_attente',
-  CONFIRMEE = 'confirmee',
-  EXPEDIEE = 'expediee',
-  LIVREE = 'livree',
-  ANNULEE = 'annulee'
+  EN_ATTENTE = "en_attente",
+  CONFIRMEE = "confirmee",
+  EXPEDIEE = "expediee",
+  LIVREE = "livree",
+  ANNULEE = "annulee",
 }
 
 export type FiltresArticles = {
@@ -203,8 +176,8 @@ export type FiltresArticles = {
 };
 
 export type OptionsTri = {
-  colonne: 'nom' | 'prix' | 'date_creation' | 'categorie';
-  direction: 'asc' | 'desc';
+  colonne: "nom" | "prix" | "date_creation" | "categorie";
+  direction: "asc" | "desc";
 };
 
 export type OptionsPagination = {
@@ -218,10 +191,10 @@ export class MagasinError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any
+    public readonly details?: any,
   ) {
     super(message);
-    this.name = 'MagasinError';
+    this.name = "MagasinError";
   }
 }
 
@@ -243,17 +216,17 @@ export type MappingTaille = {
 };
 
 export const TAILLES_MAPPING: MappingTaille = {
-  'S': 1,
-  'M': 2,
-  'L': 3,
-  'XL': 4
+  S: 1,
+  M: 2,
+  L: 3,
+  XL: 4,
 };
 
 export const TAILLES_REVERSE_MAPPING: { [id: number]: string } = {
-  1: 'S',
-  2: 'M',
-  3: 'L',
-  4: 'XL'
+  1: "S",
+  2: "M",
+  3: "L",
+  4: "XL",
 };
 
 // === Types utilitaires ===

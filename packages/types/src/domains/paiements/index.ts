@@ -2,7 +2,7 @@
  * Paiements Domain
  */
 
-// Base types (paiements.ts - avoid conflict types)
+// Base types
 export type {
   Paiement,
   EcheancePaiement,
@@ -13,14 +13,15 @@ export type {
 
 // Validators
 export * from "./validators.js";
-export * from "./echeances.validators.js";
-export * from "./confirmation.validators.js";
 
-// GraphQL
-export * from "./graphql.types.js";
-export * from "./echeances.graphql.typedefs.js";
-export * from "./confirmation.graphql.typedefs.js";
+// Subdomains (namespace exports)
+export * as Echeances from "./echeances/index.js";
+export * as Confirmation from "./confirmation/index.js";
 
-export { paiementsTypeDefs } from "./graphql.types.js";
-export { echeancesTypeDefs } from "./echeances.graphql.typedefs.js";
-export { confirmationTypeDefs } from "./confirmation.graphql.typedefs.js";
+// GraphQL types
+// export * from "./graphql.types.js"; // Importable directement si nécessaire
+
+// GraphQL typedefs
+export { paiementsTypeDefs } from "./graphql.typedefs.js";
+export { echeancesTypeDefs } from "./echeances/index.js";
+export { confirmationTypeDefs } from "./confirmation/index.js";

@@ -1,5 +1,101 @@
 import { z } from "zod";
 
+// ============================================
+// SCHEMAS DE DONNÉES (depuis types.ts)
+// ============================================
+
+/**
+ * Schéma pour la vérification d'un nom d'article dans une catégorie
+ */
+export const articleNomCategorieSchema = z.object({
+  nom: z.string(),
+  categorie_id: z.preprocess(
+    (val: any) => Number(val),
+    z.number().int().positive(),
+  ),
+});
+
+/**
+ * Schéma création d'article (sans id)
+ */
+export const articleCreationSchema = z.object({
+  nom: z.string(),
+  description: z.string(),
+  prix: z.preprocess((val: any) => Number(val), z.number()),
+  images: z.array(z.string()).default([]),
+  categorie_id: z.preprocess((val: any) => Number(val), z.number()),
+  stocks: z.array(
+    z.object({
+      taille: z.string(),
+      quantite: z.preprocess(
+        (val: any) => Number(val),
+        z.number().int().nonnegative(),
+      ),
+    }),
+  ),
+});
+
+/**
+ * Schéma article complet (avec id)
+ */
+export const articleDataValidationSchema = articleCreationSchema.extend({
+  id: z.number().int().positive(),
+});
+
+/**
+ * Schéma création de commande
+ */
+export const nouvelleCommandeSchema = z.object({
+  utilisateur_id: z.preprocess(
+    (val: any) => Number(val),
+    z.number().int().positive(),
+  ),
+  articles: z.array(
+    z.object({
+      article_id: z.preprocess(
+        (val: any) => Number(val),
+        z.number().int().positive(),
+      ),
+      taille: z.string().optional(),
+      quantite: z.preprocess(
+        (val: any) => Number(val),
+        z.number().int().positive(),
+      ),
+      prix: z.preprocess((val: any) => Number(val), z.number().nonnegative()),
+    }),
+  ),
+  statut: z.string().optional(),
+  date: z.string().datetime().optional(),
+  total: z.preprocess(
+    (val: any) => Number(val),
+    z.number().nonnegative().optional(),
+  ),
+});
+
+/**
+ * Schéma ArticleCommande (depuis types.ts)
+ */
+export const articleCommandeSchemaFromTypes = z.object({
+  article_id: z.preprocess(
+    (val: any) => Number(val),
+    z.number().int().positive(),
+  ),
+  taille_id: z.preprocess(
+    (val: any) =>
+      val === undefined || val === null || val === "" ? undefined : Number(val),
+    z.number().int().positive().optional(),
+  ),
+  quantite: z.preprocess(
+    (val: any) => Number(val),
+    z.number().int().positive(),
+  ),
+  prix: z.preprocess((val: any) => Number(val), z.number().nonnegative()),
+});
+
+// ============================================
+// SCHEMAS DE VALIDATION DE REQUÊTES
+// ============================================
+
 /**
  * Schema pour récupérer les articles
  */
@@ -343,9 +439,20 @@ export const getStatistiquesMagasinSchema = z.object({
     .optional(),
 });
 
-/**
- * Types TypeScript dérivés des schemas
- */
+// ============================================
+// TYPES TYPESCRIPT EXTRAITS DES SCHÉMAS ZOD
+// ============================================
+
+// Types de données
+export type ArticleNomCategorie = z.infer<typeof articleNomCategorieSchema>;
+export type ArticleCreationData = z.infer<typeof articleCreationSchema>;
+export type ArticleData = z.infer<typeof articleDataValidationSchema>;
+export type NouvelleCommande = z.infer<typeof nouvelleCommandeSchema>;
+export type ArticleCommandeFromTypes = z.infer<
+  typeof articleCommandeSchemaFromTypes
+>;
+
+// Types de validation de requêtes
 export type GetArticlesData = z.infer<typeof getArticlesSchema>;
 export type GetArticleByIdData = z.infer<typeof getArticleByIdSchema>;
 export type CreateArticleData = z.infer<typeof createArticleSchema>;

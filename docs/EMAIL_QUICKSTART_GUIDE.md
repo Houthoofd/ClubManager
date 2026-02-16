@@ -1,4 +1,4 @@
-# 🚀 Phase 3: Advanced Email Validation & A/B Testing - Guide de Démarrage Rapide
+# 🚀 Advanced Email Features: Validation & A/B Testing - Guide de Démarrage Rapide
 
 ## 📋 Vue d'ensemble
 
@@ -1080,7 +1080,7 @@ await recordIPSend({
 
 - **Phase 1**: [Fondations & Fiabilité](./QUICKSTART_PHASE1.md)
 - **Phase 2**: [Observabilité & Alertes](./QUICKSTART_PHASE2.md)
-- **Documentation API**: [GraphQL Schema](../packages/types/src/infrastructure/email-phase3.graphql.typedefs.ts)
+- **Documentation API**: [GraphQL Schema](../packages/types/src/infrastructure/email-advanced.graphql.typedefs.ts)
 - **Types TypeScript**: [Email Types](../packages/types/src/infrastructure/email.ts)
 
 ---

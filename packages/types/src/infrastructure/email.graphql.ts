@@ -1,6 +1,6 @@
-import { gql } from 'graphql-tag';
+import { gql } from "graphql-tag";
 
-export const emailPhase3TypeDefs = gql`
+export const emailGraphQLTypeDefs = gql`
   # ============================================
   # EMAIL VALIDATION
   # ============================================
@@ -527,7 +527,9 @@ export const emailPhase3TypeDefs = gql`
   extend type Query {
     # Email Validation
     validateEmail(email: String!): EmailValidationResult!
-    validateEmailBatch(input: BatchEmailValidationInput!): BatchEmailValidationResult!
+    validateEmailBatch(
+      input: BatchEmailValidationInput!
+    ): BatchEmailValidationResult!
 
     # Spam Checking
     checkSpamScore(input: SpamCheckInput!): SpamScoreResult!
@@ -553,7 +555,10 @@ export const emailPhase3TypeDefs = gql`
     getActiveIPWarmups: [IPWarmupStatus!]!
     getIPWarmupProgress(warmupId: String!): IPWarmupProgress!
     getIPWarmupQuota(warmupId: String!): IPWarmupQuota!
-    getIPReputationMetrics(warmupId: String!, days: Int): [IPReputationMetrics!]!
+    getIPReputationMetrics(
+      warmupId: String!
+      days: Int
+    ): [IPReputationMetrics!]!
   }
 
   # ============================================

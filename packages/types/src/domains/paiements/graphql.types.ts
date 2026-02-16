@@ -1,382 +1,324 @@
 /**
- * Schema GraphQL TypeDefs pour le module Paiements
- * ✅ Définition centralisée des types, queries et mutations pour les paiements
+ * Types GraphQL pour Paiements (camelCase pour GraphQL)
+ * Ces types correspondent aux schémas GraphQL définis dans graphql.typedefs.ts
  *
- * @package @clubmanager/types
+ * @module paiements/graphql.types
  */
 
-export const paiementsTypeDefs = `#graphql
-  """
-  Statut d'un paiement
-  """
-  enum StatutPaiement {
-    EN_ATTENTE
-    VALIDE
-    REFUSE
-    REMBOURSE
-    ANNULE
-  }
+/**
+ * Statut d'un paiement (GraphQL)
+ */
+export enum StatutPaiement {
+  EN_ATTENTE = 'en_attente',
+  VALIDE = 'valide',
+  REFUSE = 'refuse',
+  REMBOURSE = 'rembourse',
+  ANNULE = 'annule',
+}
 
-  """
-  Statut d'une échéance de paiement
-  """
-  enum StatutEcheance {
-    PAYE
-    EN_ATTENTE
-    ECHU
-  }
+/**
+ * Statut d'une échéance (GraphQL)
+ */
+export enum StatutEcheance {
+  PAYE = 'paye',
+  EN_ATTENTE = 'en_attente',
+  ECHU = 'echu',
+}
 
-  """
-  Méthode de paiement
-  """
-  enum MethodePaiement {
-    STRIPE
-    PAYPAL
-    BITCOIN
-    VIREMENT
-    AUTRE
-  }
+/**
+ * Méthode de paiement (GraphQL)
+ */
+export enum MethodePaiement {
+  STRIPE = 'stripe',
+  PAYPAL = 'paypal',
+  BITCOIN = 'bitcoin',
+  VIREMENT = 'virement',
+  AUTRE = 'autre',
+}
 
-  """
-  Type représentant un paiement
-  """
-  type Paiement {
-    id: Int!
-    commande_id: Int
-    utilisateur_id: Int!
-    montant: Float!
-    methode_paiement: MethodePaiement
-    stripe_payment_intent_id: String
-    paypal_order_id: String
-    bitcoin_address: String
-    date_paiement: String!
-    statut: StatutPaiement!
-    description: String
-    date_confirmation: String
-    date_modification: String
-    abonnement_id: Int
-    periode_debut: String
-    periode_fin: String
-  }
+/**
+ * Paiement (GraphQL)
+ */
+export interface Paiement {
+  id: number;
+  commandeId?: number;
+  utilisateurId: number;
+  montant: number;
+  methodePaiement?: MethodePaiement;
+  stripePaymentIntentId?: string;
+  paypalOrderId?: string;
+  bitcoinAddress?: string;
+  datePaiement: string;
+  statut: StatutPaiement;
+  description?: string;
+  dateConfirmation?: string;
+  dateModification?: string;
+  abonnementId?: number;
+  periodeDebut?: string;
+  periodeFin?: string;
+}
 
-  """
-  Paiement avec informations détaillées
-  """
-  type PaiementAvecDetails {
-    id: Int!
-    commande_id: Int
-    utilisateur_id: Int!
-    montant: Float!
-    methode_paiement: MethodePaiement
-    stripe_payment_intent_id: String
-    paypal_order_id: String
-    bitcoin_address: String
-    date_paiement: String!
-    statut: StatutPaiement!
-    description: String
-    date_confirmation: String
-    date_modification: String
-    abonnement_id: Int
-    periode_debut: String
-    periode_fin: String
-    utilisateur: UtilisateurPaiement
-    commande: CommandePaiement
-    abonnement: AbonnementPaiement
-  }
+/**
+ * Paiement avec détails (GraphQL)
+ */
+export interface PaiementAvecDetails {
+  id: number;
+  commandeId?: number;
+  utilisateurId: number;
+  utilisateurNom?: string;
+  utilisateurPrenom?: string;
+  utilisateurEmail?: string;
+  montant: number;
+  methodePaiement?: MethodePaiement;
+  stripePaymentIntentId?: string;
+  paypalOrderId?: string;
+  bitcoinAddress?: string;
+  datePaiement: string;
+  statut: StatutPaiement;
+  description?: string;
+  dateConfirmation?: string;
+  dateModification?: string;
+  abonnementId?: number;
+  abonnementNom?: string;
+  periodeDebut?: string;
+  periodeFin?: string;
+}
 
-  """
-  Informations utilisateur pour un paiement
-  """
-  type UtilisateurPaiement {
-    id: Int!
-    nom: String!
-    prenom: String!
-    email: String!
-  }
+/**
+ * Échéance de paiement (GraphQL)
+ */
+export interface EcheancePaiement {
+  id: number;
+  utilisateurId: number;
+  abonnementId: number;
+  dateEcheance: string;
+  montant: number;
+  statut: StatutEcheance;
+  datePaiement?: string;
+}
 
-  """
-  Informations commande pour un paiement
-  """
-  type CommandePaiement {
-    id: Int!
-    numero_commande: String!
-    montant_total: Float!
-    statut: String!
-  }
+/**
+ * Échéance avec détails (GraphQL)
+ */
+export interface EcheanceAvecDetails {
+  id: number;
+  utilisateurId: number;
+  utilisateurNom?: string;
+  utilisateurPrenom?: string;
+  utilisateurEmail?: string;
+  abonnementId: number;
+  abonnementNom?: string;
+  dateEcheance: string;
+  montant: number;
+  statut: StatutEcheance;
+  datePaiement?: string;
+}
 
-  """
-  Informations abonnement pour un paiement
-  """
-  type AbonnementPaiement {
-    id: Int!
-    nom: String!
-    montant: Float!
-    frequence: String!
-  }
+/**
+ * Résultat de création de Payment Intent (GraphQL)
+ */
+export interface CreatePaymentIntentResult {
+  success: boolean;
+  message: string;
+  clientSecret?: string;
+  paymentIntentId?: string;
+}
 
-  """
-  Type représentant une échéance de paiement
-  """
-  type EcheancePaiement {
-    id: Int!
-    utilisateur_id: Int!
-    abonnement_id: Int!
-    date_echeance: String!
-    montant: Float!
-    statut: StatutEcheance!
-    date_paiement: String
-  }
+/**
+ * Résultat de confirmation de paiement (GraphQL)
+ */
+export interface ConfirmPaymentResult {
+  success: boolean;
+  message: string;
+  paiement?: Paiement;
+}
 
-  """
-  Échéance avec informations détaillées
-  """
-  type EcheanceAvecDetails {
-    id: Int!
-    utilisateur_id: Int!
-    abonnement_id: Int!
-    date_echeance: String!
-    montant: Float!
-    statut: StatutEcheance!
-    date_paiement: String
-    utilisateur: UtilisateurPaiement
-    abonnement: AbonnementPaiement
-  }
+/**
+ * Résultat d'une opération sur paiement (GraphQL)
+ */
+export interface PaiementOperationResult {
+  success: boolean;
+  message: string;
+  paiement?: Paiement;
+}
 
-  """
-  Résultat de création d'un Payment Intent Stripe
-  """
-  type PaymentIntentResult {
-    success: Boolean!
-    clientSecret: String
-    paymentIntentId: String
-    message: String!
-  }
+/**
+ * Statistiques des paiements (GraphQL)
+ */
+export interface StatistiquesPaiements {
+  totalPaiements: number;
+  montantTotal: number;
+  paiementsValides: number;
+  paiementsEnAttente: number;
+  paiementsRefuses: number;
+  paiementsRembourses: number;
+  paiementsAnnules: number;
+  moyenneMontant: number;
+  montantParMois?: MontantParMois[];
+  repartitionMethodes?: RepartitionMethode[];
+}
 
-  """
-  Résultat de confirmation de paiement
-  """
-  type ConfirmationPaiementResult {
-    success: Boolean!
-    message: String!
-    paiementId: Int
-    statut: StatutPaiement
-  }
+/**
+ * Montant par mois (GraphQL)
+ */
+export interface MontantParMois {
+  mois: string;
+  montant: number;
+  count: number;
+}
 
-  """
-  Statistiques des paiements
-  """
-  type StatistiquesPaiements {
-    totalPaiements: Int!
-    montantTotal: Float!
-    paiementsValides: Int!
-    paiementsEnAttente: Int!
-    paiementsRefuses: Int!
-    paiementsRembourses: Int!
-    paiementsAnnules: Int!
-    moyenneMontant: Float!
-    montantParMois: [MontantParMois!]
-    repartitionMethodes: [RepartitionMethode!]
-  }
+/**
+ * Répartition par méthode (GraphQL)
+ */
+export interface RepartitionMethode {
+  methode: MethodePaiement;
+  count: number;
+  montantTotal: number;
+}
 
-  """
-  Montant par mois
-  """
-  type MontantParMois {
-    mois: String!
-    montant: Float!
-    count: Int!
-  }
+/**
+ * Statistiques paiements utilisateur (GraphQL)
+ */
+export interface StatistiquesPaiementsUtilisateur {
+  utilisateurId: number;
+  totalPaiements: number;
+  montantTotal: number;
+  dernierPaiement?: string;
+  paiementsEnRetard: number;
+  moyenneMontant: number;
+}
 
-  """
-  Répartition par méthode de paiement
-  """
-  type RepartitionMethode {
-    methode: MethodePaiement!
-    count: Int!
-    montantTotal: Float!
-  }
+/**
+ * Input pour créer un Payment Intent pour échéance (GraphQL)
+ */
+export interface CreatePaymentIntentEcheanceInput {
+  echeanceId: number;
+  userId: number;
+  amount: number;
+  currency?: string;
+  description?: string;
+}
 
-  """
-  Statistiques de paiements par utilisateur
-  """
-  type StatistiquesPaiementsUtilisateur {
-    utilisateurId: Int!
-    totalPaiements: Int!
-    montantTotal: Float!
-    dernierPaiement: String
-    paiementsEnRetard: Int!
-    moyenneMontant: Float!
-  }
+/**
+ * Input pour créer un Payment Intent pour commande (GraphQL)
+ */
+export interface CreatePaymentIntentCommandeInput {
+  commandeId: number;
+  userId: number;
+  amount: number;
+  currency?: string;
+  description?: string;
+}
 
-  """
-  Résultat d'une opération sur un paiement
-  """
-  type PaiementOperationResult {
-    success: Boolean!
-    message: String!
-    paiementId: Int
-  }
+/**
+ * Input pour confirmer un paiement d'échéance (GraphQL)
+ */
+export interface ConfirmEcheancePaymentInput {
+  paymentIntentId: string;
+  echeanceId: number;
+  userId: number;
+  amount: number;
+}
 
-  """
-  Historique des paiements
-  """
-  type HistoriquePaiements {
-    success: Boolean!
-    paiements: [PaiementAvecDetails!]!
-    total: Int!
-    limit: Int!
-    offset: Int!
-  }
+/**
+ * Input pour confirmer un paiement de commande (GraphQL)
+ */
+export interface ConfirmCommandePaymentInput {
+  paymentIntentId: string;
+  commandeId: number;
+  userId: number;
+  amount: number;
+}
 
-  """
-  Filtres pour les paiements
-  """
-  input PaiementsFiltresInput {
-    utilisateurId: Int
-    statut: StatutPaiement
-    dateDebut: String
-    dateFin: String
-    abonnementId: Int
-    montantMin: Float
-    montantMax: Float
-    limit: Int
-    offset: Int
-  }
+/**
+ * Input pour créer un paiement manuel (GraphQL)
+ */
+export interface CreerPaiementInput {
+  commandeId?: number;
+  utilisateurId: number;
+  montant: number;
+  methodePaiement?: MethodePaiement;
+  description?: string;
+  abonnementId?: number;
+}
 
-  """
-  Queries pour les paiements
-  """
-  extend type Query {
-    """
-    Récupérer un paiement par ID
-    """
-    paiement(id: Int!): PaiementAvecDetails!
+/**
+ * Input pour valider un paiement (GraphQL)
+ */
+export interface ValiderPaiementInput {
+  paiementId: number;
+  referenceTransaction?: string;
+}
 
-    """
-    Récupérer tous les paiements avec filtres
-    """
-    paiements(filtres: PaiementsFiltresInput): [PaiementAvecDetails!]!
+/**
+ * Input pour refuser un paiement (GraphQL)
+ */
+export interface RefuserPaiementInput {
+  paiementId: number;
+  raison?: string;
+}
 
-    """
-    Récupérer l'historique des paiements d'un utilisateur
-    """
-    historiquePaiements(
-      utilisateurId: Int
-      limit: Int
-      offset: Int
-    ): HistoriquePaiements!
+/**
+ * Input pour rembourser un paiement (GraphQL)
+ */
+export interface RembourserPaiementInput {
+  paiementId: number;
+  montant?: number;
+  raison?: string;
+}
 
-    """
-    Récupérer une échéance par ID
-    """
-    echeancePaiement(id: Int!, userId: Int!): EcheanceAvecDetails!
+/**
+ * Input pour annuler un paiement (GraphQL)
+ */
+export interface AnnulerPaiementInput {
+  paiementId: number;
+  raison?: string;
+}
 
-    """
-    Récupérer les échéances d'un utilisateur
-    """
-    echeancesPaiements(utilisateurId: Int!): [EcheanceAvecDetails!]!
+/**
+ * Filtres pour recherche de paiements (GraphQL)
+ */
+export interface PaiementsFiltres {
+  utilisateurId?: number;
+  statut?: StatutPaiement;
+  dateDebut?: string;
+  dateFin?: string;
+  abonnementId?: number;
+  montantMin?: number;
+  montantMax?: number;
+  limit?: number;
+  offset?: number;
+}
 
-    """
-    Récupérer les statistiques des paiements (Admin uniquement)
-    """
-    statistiquesPaiements(
-      dateDebut: String
-      dateFin: String
-    ): StatistiquesPaiements!
+/**
+ * Résultat de liste de paiements (GraphQL)
+ */
+export interface PaiementsListResult {
+  paiements: PaiementAvecDetails[];
+  total: number;
+  page?: number;
+  limit?: number;
+}
 
-    """
-    Récupérer les statistiques d'un utilisateur
-    """
-    statistiquesPaiementsUtilisateur(
-      utilisateurId: Int!
-    ): StatistiquesPaiementsUtilisateur!
-  }
+/**
+ * Résultat de liste d'échéances (GraphQL)
+ */
+export interface EcheancesListResult {
+  echeances: EcheanceAvecDetails[];
+  total: number;
+  page?: number;
+  limit?: number;
+}
 
-  """
-  Mutations pour les paiements
-  """
-  extend type Mutation {
-    """
-    Créer un Payment Intent pour une échéance
-    """
-    creerPaymentIntentEcheance(
-      amount: Float!
-      echeanceId: Int!
-      userId: Int!
-      currency: String
-      description: String
-    ): PaymentIntentResult!
-
-    """
-    Créer un Payment Intent pour une commande
-    """
-    creerPaymentIntentCommande(
-      amount: Float!
-      commandeId: Int!
-      userId: Int
-      currency: String
-      description: String
-    ): PaymentIntentResult!
-
-    """
-    Confirmer un paiement d'échéance
-    """
-    confirmerPaiementEcheance(
-      paymentIntentId: String!
-      echeanceId: Int!
-      userId: Int!
-      amount: Float!
-    ): ConfirmationPaiementResult!
-
-    """
-    Confirmer un paiement de commande
-    """
-    confirmerPaiementCommande(
-      paymentIntentId: String!
-      commandeId: Int!
-      userId: Int!
-      amount: Float!
-    ): ConfirmationPaiementResult!
-
-    """
-    Créer un paiement manuel (Admin uniquement)
-    """
-    creerPaiement(
-      commandeId: Int
-      utilisateurId: Int!
-      montant: Float!
-      methodePaiement: MethodePaiement
-      description: String
-      abonnementId: Int
-    ): PaiementOperationResult!
-
-    """
-    Valider un paiement (Admin uniquement)
-    """
-    validerPaiement(
-      paiementId: Int!
-      referenceTransaction: String
-    ): PaiementOperationResult!
-
-    """
-    Refuser un paiement (Admin uniquement)
-    """
-    refuserPaiement(paiementId: Int!, raison: String): PaiementOperationResult!
-
-    """
-    Rembourser un paiement (Admin uniquement)
-    """
-    rembourserPaiement(
-      paiementId: Int!
-      montant: Float
-      raison: String
-    ): PaiementOperationResult!
-
-    """
-    Annuler un paiement (Admin uniquement)
-    """
-    annulerPaiement(paiementId: Int!, raison: String): PaiementOperationResult!
-  }
-`;
-
-export default paiementsTypeDefs;
+/**
+ * Contexte GraphQL pour Paiements
+ */
+export interface PaiementsContext {
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+  };
+  req?: any;
+  res?: any;
+}

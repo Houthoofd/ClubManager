@@ -2,11 +2,8 @@
  * Upload Domain
  */
 
-// Validators
-export * from "./validators.js";
-
-// GraphQL - skip if duplicates validators
-// export * from "./graphql.types.js";
+// Base types (includes validators schemas)
+export type * from "./types.js";
 
 // Typedefs
 export { uploadTypeDefs } from "./graphql.typedefs.js";

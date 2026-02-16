@@ -6,4 +6,4 @@
 export * from "./types.js";
 
 // GraphQL typedefs only
-export { professeursTypeDefs } from "./graphql.types.js";
+export { professeursTypeDefs } from "./graphql.typedefs.js";

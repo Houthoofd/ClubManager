@@ -24,12 +24,14 @@ export type {
   EmailOperationResult,
 } from "./types.js";
 
-// Messagerie types
-export * from "./messagerie.types.js";
-
 // Validators
 export * from "./validators.js";
 
-// GraphQL
-export * from "./graphql.types.js";
-export { messagesTypeDefs } from "./graphql.types.js";
+// Messagerie subdomain (namespace export)
+export * as Messagerie from "./messagerie/index.js";
+
+// GraphQL types
+// export * from "./graphql.types.js"; // Importable directement si nécessaire
+
+// GraphQL typedefs
+export { messagesTypeDefs } from "./graphql.typedefs.js";

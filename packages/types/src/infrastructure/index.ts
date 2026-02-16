@@ -103,10 +103,6 @@ export {
   processWebhookManuallySchema,
 } from "./webhooks.js";
 
-// Database types
-export * from "./database/auth.types.js";
-export * from "./database/utilisateurs.types.js";
-
 // Alert types
 export type {
   CreateAlertInput,
@@ -135,5 +131,5 @@ export {
   getAlertTypeIcon,
 } from "./alerts.js";
 
-// Email Phase 3 GraphQL Types
-export { emailPhase3TypeDefs } from "./email-phase3.graphql.typedefs.js";
+// Email GraphQL Types
+export { emailGraphQLTypeDefs } from "./email.graphql.js";

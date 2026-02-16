@@ -1,4 +1,4 @@
-# 📊 Phase 3: Validation Avancée & A/B Testing - Résumé d'Implémentation
+# 📊 Advanced Email Features: Validation & A/B Testing - Résumé d'Implémentation
 
 ## ✅ Statut Global: **100% COMPLÉTÉ** 🎉
 
@@ -28,7 +28,7 @@
 
 | Fichier | Lignes | Description | Statut |
 |---------|--------|-------------|--------|
-| `email-phase3.graphql.typedefs.ts` | 604 | Types GraphQL complets | ✅ |
+| `email-advanced.graphql.typedefs.ts` | 604 | Types GraphQL complets | ✅ |
 | `routes/email/core/resolvers/index.ts` | 554 | Resolvers GraphQL + subscriptions | ✅ |
 
 **Total GraphQL**: 1,158 lignes
@@ -37,8 +37,8 @@
 
 | Fichier | Lignes | Description | Statut |
 |---------|--------|-------------|--------|
-| `QUICKSTART_PHASE3.md` | 1,102 | Guide complet avec exemples GraphQL | ✅ |
-| `PHASE3_IMPLEMENTATION_SUMMARY.md` | 275 | Ce document | ✅ |
+| `EMAIL_QUICKSTART_GUIDE.md` | 1,102 | Guide complet avec exemples GraphQL | ✅ |
+| `EMAIL_IMPLEMENTATION_SUMMARY.md` | 275 | Ce document | ✅ |
 
 **Total Documentation**: 1,377 lignes
 
@@ -349,7 +349,7 @@ mutation RecordIPSend($input: RecordIPSendInput!) {
 
 ### Types GraphQL (604 lignes)
 
-**Fichier**: `packages/types/src/infrastructure/email-phase3.graphql.typedefs.ts`
+**Fichier**: `packages/types/src/infrastructure/email-advanced.graphql.typedefs.ts`
 
 **Types définis**:
 - 45+ types GraphQL
@@ -402,7 +402,7 @@ subscription IPReputationAlert($warmupId: String!) {
 
 ## 📚 Documentation (1,377 lignes)
 
-### QUICKSTART_PHASE3.md (1,102 lignes)
+### EMAIL_QUICKSTART_GUIDE.md (1,102 lignes)
 
 **Sections**:
 1. Vue d'ensemble
@@ -544,26 +544,26 @@ npm install graphql-subscriptions
 
 ```typescript
 // api/src/graphql/schema.ts
-import { emailPhase3TypeDefs } from '@clubmanager/types';
-import { emailPhase3Resolvers } from './routes/email/core/resolvers';
+import { emailGraphQLTypeDefs } from '@clubmanager/types';
+import { emailResolvers } from './routes/email/core/resolvers';
 
 export const schema = createSchema({
   typeDefs: [
     // ... autres typedefs
-    emailPhase3TypeDefs,
+    emailGraphQLTypeDefs,
   ],
   resolvers: {
     Query: {
       // ... autres queries
-      ...emailPhase3Resolvers.Query,
+      ...emailResolvers.Query,
     },
     Mutation: {
       // ... autres mutations
-      ...emailPhase3Resolvers.Mutation,
+      ...emailResolvers.Mutation,
     },
     Subscription: {
       // ... autres subscriptions
-      ...emailPhase3Resolvers.Subscription,
+      ...emailResolvers.Subscription,
     },
   },
 });
@@ -674,7 +674,7 @@ Aucune variable supplémentaire requise ! Phase 3 utilise les mêmes variables q
 
 ## 📞 Support
 
-- **Documentation**: `QUICKSTART_PHASE3.md`
+- **Documentation**: `EMAIL_QUICKSTART_GUIDE.md`
 - **Types**: `packages/types/src/infrastructure/email.ts`
 - **Resolvers**: `api/src/routes/email/core/resolvers/index.ts`
 - **GraphQL Schema**: Voir Apollo Studio / GraphQL Playground

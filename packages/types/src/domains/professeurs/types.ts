@@ -1,38 +1,34 @@
 /**
  * Types pour le service Professeurs
  * Gestion des professeurs, leur planning et statistiques
+ * Les schémas Zod sont dans validators.ts
+ *
+ * @module professeurs/types
  */
-
-import { z } from 'zod';
 
 /**
  * Statut d'un professeur
  */
 export enum StatutProfesseur {
-  ACTIF = 'actif',
-  INACTIF = 'inactif',
-  SUSPENDU = 'suspendu'
+  ACTIF = "actif",
+  INACTIF = "inactif",
+  SUSPENDU = "suspendu",
 }
-
-/**
- * Schéma Zod pour validation d'un professeur
- */
-export const ProfesseurSchema = z.object({
-  id: z.number().int().positive(),
-  nom: z.string().min(1),
-  prenom: z.string().min(1),
-  nom_utilisateur: z.string().optional(),
-  email: z.string().email(),
-  genre_id: z.number().int().positive().optional(),
-  date_naissance: z.date().nullable(),
-  grade_id: z.number().int().positive().nullable(),
-  status_id: z.number().int().optional()
-});
 
 /**
  * Type Professeur
  */
-export type Professeur = z.infer<typeof ProfesseurSchema>;
+export type Professeur = {
+  id: number;
+  nom: string;
+  prenom: string;
+  nom_utilisateur?: string;
+  email: string;
+  genre_id?: number;
+  date_naissance: Date | null;
+  grade_id: number | null;
+  status_id?: number;
+};
 
 /**
  * Professeur avec détails complets
@@ -54,41 +50,32 @@ export interface ProfesseurAvecDetails extends Professeur {
 /**
  * Planning d'un cours pour un professeur
  */
-export const PlanningCoursProfSchema = z.object({
-  cours_recurrent_id: z.number().int().positive(),
-  type_cours: z.string(),
-  jour_semaine: z.number().int().min(0).max(6),
-  heure_debut: z.string(),
-  heure_fin: z.string(),
-  est_recurrent_actif: z.boolean(),
-  professeur_id: z.number().int().positive(),
-  professeur_nom: z.string(),
-  professeur_prenom: z.string()
-});
-
-export type PlanningCoursProf = z.infer<typeof PlanningCoursProfSchema>;
+export type PlanningCoursProf = {
+  cours_recurrent_id: number;
+  type_cours: string;
+  jour_semaine: number;
+  heure_debut: string;
+  heure_fin: string;
+  est_recurrent_actif: boolean;
+  professeur_id: number;
+  professeur_nom: string;
+  professeur_prenom: string;
+};
 
 /**
  * Input pour ajouter un professeur
  */
-export const AjouterProfesseurInputSchema = z.object({
-  utilisateurs: z.union([
-    z.array(z.number().int().positive()),
-    z.array(z.object({ id: z.number().int().positive() }))
-  ])
-});
-
-export type AjouterProfesseurInput = z.infer<typeof AjouterProfesseurInputSchema>;
+export type AjouterProfesseurInput = {
+  utilisateurs: number[] | Array<{ id: number }>;
+};
 
 /**
  * Input pour modifier le statut d'un professeur
  */
-export const ModifierStatutProfesseurInputSchema = z.object({
-  id: z.number().int().positive('ID professeur requis'),
-  status_id: z.number().int().positive('Statut requis')
-});
-
-export type ModifierStatutProfesseurInput = z.infer<typeof ModifierStatutProfesseurInputSchema>;
+export type ModifierStatutProfesseurInput = {
+  id: number;
+  status_id: number;
+};
 
 /**
  * Statistiques des professeurs
@@ -135,7 +122,7 @@ export class ProfesseursError extends Error {
 
   constructor(message: string, code: string) {
     super(message);
-    this.name = 'ProfesseursError';
+    this.name = "ProfesseursError";
     this.code = code;
     Object.setPrototypeOf(this, ProfesseursError.prototype);
   }

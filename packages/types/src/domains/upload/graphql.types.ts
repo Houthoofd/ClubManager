@@ -1,47 +1,12 @@
 /**
- * Types GraphQL pour le module Upload
- * Types TypeScript correspondant aux schémas GraphQL
+ * Types GraphQL pour Upload (camelCase pour GraphQL)
+ * Ces types correspondent aux schémas GraphQL définis dans graphql.typedefs.ts
+ *
+ * @module upload/graphql.types
  */
 
 /**
- * Contexte GraphQL pour Upload
- */
-export interface UploadContext {
-  prisma: any;
-  userId?: number;
-  userRole?: string;
-}
-
-/**
- * Input pour l'upload d'un fichier
- */
-export interface FileUploadInput {
-  filename: string;
-  mimetype: string;
-  encoding: string;
-  content: string; // Base64 encoded
-}
-
-/**
- * Input pour la suppression d'un fichier
- */
-export interface DeleteFileInput {
-  filename: string;
-}
-
-/**
- * Input pour lister les fichiers
- */
-export interface ListFilesInput {
-  limit?: number;
-  offset?: number;
-  sortBy?: "name" | "size" | "date";
-  sortOrder?: "asc" | "desc";
-  extension?: string;
-}
-
-/**
- * Informations sur un fichier
+ * Informations sur un fichier uploadé (GraphQL)
  */
 export interface FileInfo {
   filename: string;
@@ -50,12 +15,12 @@ export interface FileInfo {
   size: number;
   mimetype: string;
   extension: string;
-  uploadedAt: Date;
+  uploadedAt: string;
   uploadedBy?: number;
 }
 
 /**
- * Résultat d'upload
+ * Résultat d'un upload de fichier (GraphQL)
  */
 export interface UploadResult {
   success: boolean;
@@ -65,78 +30,111 @@ export interface UploadResult {
 }
 
 /**
- * Résultat de liste de fichiers
+ * Résultat de liste de fichiers (GraphQL)
  */
 export interface ListFilesResult {
   success: boolean;
   files: FileInfo[];
   total: number;
-  hasMore: boolean;
+  page?: number;
+  limit?: number;
 }
 
 /**
- * Résultat de suppression de fichier
+ * Résultat de suppression de fichier (GraphQL)
  */
 export interface DeleteFileResult {
   success: boolean;
   message: string;
+  deletedFile?: string;
 }
 
 /**
- * Résultat de vérification d'existence
- */
-export interface FileExistsResult {
-  exists: boolean;
-  filename: string;
-}
-
-/**
- * Statistiques d'upload
- */
-export interface UploadStats {
-  totalFiles: number;
-  totalSize: number;
-  averageSize: number;
-  filesByExtension: FilesByExtension[];
-  recentUploads: FileInfo[];
-}
-
-/**
- * Fichiers par extension
- */
-export interface FilesByExtension {
-  extension: string;
-  count: number;
-}
-
-/**
- * Health check du service upload
+ * Résultat du health check du service d'upload (GraphQL)
  */
 export interface UploadHealthResult {
   status: string;
   message: string;
-  uploadsDirectory: string;
-  isWritable: boolean;
-  diskSpace?: DiskSpace;
-  timestamp: Date;
+  checks: UploadHealthChecks;
+  timestamp?: string;
 }
 
 /**
- * Espace disque
+ * Détails des vérifications du health check (GraphQL)
  */
-export interface DiskSpace {
-  total: number;
-  used: number;
-  free: number;
-  percentUsed: number;
+export interface UploadHealthChecks {
+  storage: boolean;
+  permissions: boolean;
+  diskSpace: boolean;
 }
 
 /**
- * Résultat de nettoyage
+ * Options de filtrage pour la liste de fichiers (GraphQL)
  */
-export interface CleanupResult {
-  success: boolean;
-  message: string;
-  filesDeleted: string[];
-  count: number;
+export interface ListFilesOptions {
+  type?: string;
+  userId?: number;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Input pour l'upload de fichier (GraphQL)
+ */
+export interface UploadFileInput {
+  file: any; // File upload scalar
+  userId?: number;
+  folder?: string;
+}
+
+/**
+ * Input pour l'upload multiple (GraphQL)
+ */
+export interface UploadMultipleFilesInput {
+  files: any[]; // File upload scalar array
+  userId?: number;
+  folder?: string;
+}
+
+/**
+ * Input pour supprimer un fichier (GraphQL)
+ */
+export interface DeleteFileInput {
+  filename: string;
+  userId?: number;
+}
+
+/**
+ * Statistiques d'upload (GraphQL)
+ */
+export interface UploadStats {
+  totalFiles: number;
+  totalSize: number;
+  filesByType: Record<string, number>;
+  uploadsByUser?: Record<number, number>;
+}
+
+/**
+ * Configuration d'upload (GraphQL)
+ */
+export interface UploadConfig {
+  maxFileSize: number;
+  allowedTypes: string[];
+  uploadDir: string;
+  maxFiles?: number;
+}
+
+/**
+ * Contexte GraphQL pour Upload
+ */
+export interface UploadContext {
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+  };
+  req?: any;
+  res?: any;
 }

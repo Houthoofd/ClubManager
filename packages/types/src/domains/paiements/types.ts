@@ -1,67 +1,63 @@
 /**
  * Types pour le service Paiements
  * Gestion des paiements, abonnements et échéances
+ * Les schémas Zod et enums sont dans validators.ts
+ *
+ * @module paiements/types
  */
-
-import { z } from 'zod';
 
 /**
  * Statut d'un paiement
  */
 export enum StatutPaiement {
-  EN_ATTENTE = 'en attente',
-  VALIDE = 'validé',
-  REFUSE = 'refusé',
-  REMBOURSE = 'remboursé',
-  ANNULE = 'annulé'
+  EN_ATTENTE = "en attente",
+  VALIDE = "validé",
+  REFUSE = "refusé",
+  REMBOURSE = "remboursé",
+  ANNULE = "annulé",
 }
 
 /**
  * Statut d'une échéance de paiement
  */
 export enum StatutEcheance {
-  PAYE = 'payé',
-  EN_ATTENTE = 'en attente',
-  ECHU = 'échu'
+  PAYE = "payé",
+  EN_ATTENTE = "en attente",
+  ECHU = "échu",
 }
 
 /**
  * Méthode de paiement
  */
 export enum MethodePaiement {
-  STRIPE = 'stripe',
-  PAYPAL = 'paypal',
-  BITCOIN = 'bitcoin',
-  VIREMENT = 'virement',
-  AUTRE = 'autre'
+  STRIPE = "stripe",
+  PAYPAL = "paypal",
+  BITCOIN = "bitcoin",
+  VIREMENT = "virement",
+  AUTRE = "autre",
 }
-
-/**
- * Schéma Zod pour validation d'un paiement
- */
-export const PaiementSchema = z.object({
-  id: z.number().int().positive(),
-  commande_id: z.number().int().positive().nullable(),
-  utilisateur_id: z.number().int().positive(),
-  montant: z.number().positive(),
-  methode_paiement: z.nativeEnum(MethodePaiement).nullable(),
-  stripe_payment_intent_id: z.string().nullable(),
-  paypal_order_id: z.string().nullable(),
-  bitcoin_address: z.string().nullable(),
-  date_paiement: z.date(),
-  statut: z.nativeEnum(StatutPaiement),
-  description: z.string().nullable(),
-  date_confirmation: z.date().nullable(),
-  date_modification: z.date().nullable(),
-  abonnement_id: z.number().int().positive().nullable(),
-  periode_debut: z.date().nullable(),
-  periode_fin: z.date().nullable()
-});
 
 /**
  * Type Paiement
  */
-export type Paiement = z.infer<typeof PaiementSchema>;
+export type Paiement = {
+  id: number;
+  commande_id: number | null;
+  utilisateur_id: number;
+  montant: number;
+  methode_paiement: MethodePaiement | null;
+  stripe_payment_intent_id: string | null;
+  paypal_order_id: string | null;
+  bitcoin_address: string | null;
+  date_paiement: Date;
+  statut: StatutPaiement;
+  description: string | null;
+  date_confirmation: Date | null;
+  date_modification: Date | null;
+  abonnement_id: number | null;
+  periode_debut: Date | null;
+  periode_fin: Date | null;
+};
 
 /**
  * Paiement avec informations utilisateur, commande et abonnement
@@ -88,22 +84,17 @@ export interface PaiementAvecDetails extends Paiement {
 }
 
 /**
- * Schéma Zod pour validation d'une échéance de paiement
- */
-export const EcheancePaiementSchema = z.object({
-  id: z.number().int().positive(),
-  utilisateur_id: z.number().int().positive(),
-  abonnement_id: z.number().int().positive(),
-  date_echeance: z.date(),
-  montant: z.number().positive(),
-  statut: z.nativeEnum(StatutEcheance),
-  date_paiement: z.date().nullable()
-});
-
-/**
  * Type EcheancePaiement
  */
-export type EcheancePaiement = z.infer<typeof EcheancePaiementSchema>;
+export type EcheancePaiement = {
+  id: number;
+  utilisateur_id: number;
+  abonnement_id: number;
+  date_echeance: Date;
+  montant: number;
+  statut: StatutEcheance;
+  date_paiement: Date | null;
+};
 
 /**
  * Échéance avec informations utilisateur et abonnement
@@ -126,32 +117,28 @@ export interface EcheanceAvecDetails extends EcheancePaiement {
 /**
  * Input pour créer un paiement
  */
-export const CreerPaiementInputSchema = z.object({
-  commandeId: z.number().int().positive().optional(),
-  utilisateurId: z.number().int().positive('ID utilisateur requis'),
-  montant: z.number().positive('Montant doit être positif').max(999999.99, 'Montant trop élevé'),
-  methodePaiement: z.nativeEnum(MethodePaiement).optional(),
-  stripePaymentIntentId: z.string().optional(),
-  paypalOrderId: z.string().optional(),
-  bitcoinAddress: z.string().optional(),
-  datePaiement: z.date(),
-  description: z.string().optional(),
-  abonnementId: z.number().int().positive().optional(),
-  periodeDebut: z.date().optional(),
-  periodeFin: z.date().optional()
-});
-
-export type CreerPaiementInput = z.infer<typeof CreerPaiementInputSchema>;
+export type CreerPaiementInput = {
+  commandeId?: number;
+  utilisateurId: number;
+  montant: number;
+  methodePaiement?: MethodePaiement;
+  stripePaymentIntentId?: string;
+  paypalOrderId?: string;
+  bitcoinAddress?: string;
+  datePaiement: Date;
+  description?: string;
+  abonnementId?: number;
+  periodeDebut?: Date;
+  periodeFin?: Date;
+};
 
 /**
  * Input pour valider un paiement
  */
-export const ValiderPaiementInputSchema = z.object({
-  paiementId: z.number().int().positive('ID paiement requis'),
-  referenceTransaction: z.string().optional()
-});
-
-export type ValiderPaiementInput = z.infer<typeof ValiderPaiementInputSchema>;
+export type ValiderPaiementInput = {
+  paiementId: number;
+  referenceTransaction?: string;
+};
 
 /**
  * Statistiques des paiements
@@ -206,7 +193,7 @@ export class PaiementsError extends Error {
 
   constructor(message: string, code: string) {
     super(message);
-    this.name = 'PaiementsError';
+    this.name = "PaiementsError";
     this.code = code;
     Object.setPrototypeOf(this, PaiementsError.prototype);
   }

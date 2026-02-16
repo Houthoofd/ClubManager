@@ -7,6 +7,113 @@ import { z } from "zod";
  * @package @clubmanager/types
  */
 
+// ============================================
+// ENUMS
+// ============================================
+
+/**
+ * Statut d'un paiement
+ */
+export enum StatutPaiement {
+  EN_ATTENTE = "en attente",
+  VALIDE = "validé",
+  REFUSE = "refusé",
+  REMBOURSE = "remboursé",
+  ANNULE = "annulé",
+}
+
+/**
+ * Statut d'une échéance de paiement
+ */
+export enum StatutEcheance {
+  PAYE = "payé",
+  EN_ATTENTE = "en attente",
+  ECHU = "échu",
+}
+
+/**
+ * Méthode de paiement
+ */
+export enum MethodePaiement {
+  STRIPE = "stripe",
+  PAYPAL = "paypal",
+  BITCOIN = "bitcoin",
+  VIREMENT = "virement",
+  AUTRE = "autre",
+}
+
+// ============================================
+// SCHEMAS DE DONNÉES (depuis types.ts)
+// ============================================
+
+/**
+ * Schéma Zod pour validation d'un paiement
+ */
+export const PaiementSchema = z.object({
+  id: z.number().int().positive(),
+  commande_id: z.number().int().positive().nullable(),
+  utilisateur_id: z.number().int().positive(),
+  montant: z.number().positive(),
+  methode_paiement: z.nativeEnum(MethodePaiement).nullable(),
+  stripe_payment_intent_id: z.string().nullable(),
+  paypal_order_id: z.string().nullable(),
+  bitcoin_address: z.string().nullable(),
+  date_paiement: z.date(),
+  statut: z.nativeEnum(StatutPaiement),
+  description: z.string().nullable(),
+  date_confirmation: z.date().nullable(),
+  date_modification: z.date().nullable(),
+  abonnement_id: z.number().int().positive().nullable(),
+  periode_debut: z.date().nullable(),
+  periode_fin: z.date().nullable(),
+});
+
+/**
+ * Schéma Zod pour validation d'une échéance de paiement
+ */
+export const EcheancePaiementSchema = z.object({
+  id: z.number().int().positive(),
+  utilisateur_id: z.number().int().positive(),
+  abonnement_id: z.number().int().positive(),
+  date_echeance: z.date(),
+  montant: z.number().positive(),
+  statut: z.nativeEnum(StatutEcheance),
+  date_paiement: z.date().nullable(),
+});
+
+/**
+ * Input pour créer un paiement
+ */
+export const CreerPaiementInputSchema = z.object({
+  commandeId: z.number().int().positive().optional(),
+  utilisateurId: z.number().int().positive("ID utilisateur requis"),
+  montant: z
+    .number()
+    .positive("Montant doit être positif")
+    .max(999999.99, "Montant trop élevé"),
+  methodePaiement: z.nativeEnum(MethodePaiement).optional(),
+  stripePaymentIntentId: z.string().optional(),
+  paypalOrderId: z.string().optional(),
+  bitcoinAddress: z.string().optional(),
+  datePaiement: z.date(),
+  description: z.string().optional(),
+  abonnementId: z.number().int().positive().optional(),
+  periodeDebut: z.date().optional(),
+  periodeFin: z.date().optional(),
+});
+
+/**
+ * Input pour valider un paiement
+ */
+export const ValiderPaiementInputSchema = z.object({
+  paiementId: z.number().int().positive("ID paiement requis"),
+  referenceTransaction: z.string().optional(),
+});
+
+// ============================================
+// SCHEMAS DE VALIDATION DE REQUÊTES
+// ============================================
+
 /**
  * Utilitaire pour convertir un montant en centimes pour Stripe
  */
@@ -297,9 +404,17 @@ export const statistiquesPaiementsUtilisateurSchema = z.object({
   utilisateurId: z.number().int().positive("ID utilisateur requis"),
 });
 
-/**
- * Types TypeScript dérivés des schemas
- */
+// ============================================
+// TYPES TYPESCRIPT EXTRAITS DES SCHÉMAS ZOD
+// ============================================
+
+// Types de données
+export type Paiement = z.infer<typeof PaiementSchema>;
+export type EcheancePaiement = z.infer<typeof EcheancePaiementSchema>;
+export type CreerPaiementInput = z.infer<typeof CreerPaiementInputSchema>;
+export type ValiderPaiementInput = z.infer<typeof ValiderPaiementInputSchema>;
+
+// Types de validation de requêtes
 export type CreatePaymentIntentEcheanceInput = z.infer<
   typeof createPaymentIntentEcheanceSchema
 >;
@@ -314,8 +429,12 @@ export type ConfirmCommandePaymentInput = z.infer<
 >;
 export type GetEcheanceByIdInput = z.infer<typeof getEcheanceByIdSchema>;
 export type GetHistoriqueInput = z.infer<typeof getHistoriqueSchema>;
-export type CreerPaiementInput = z.infer<typeof creerPaiementSchema>;
-export type ValiderPaiementInput = z.infer<typeof validerPaiementSchema>;
+export type CreerPaiementInputFromValidator = z.infer<
+  typeof creerPaiementSchema
+>;
+export type ValiderPaiementInputFromValidator = z.infer<
+  typeof validerPaiementSchema
+>;
 export type RefuserPaiementInput = z.infer<typeof refuserPaiementSchema>;
 export type RembourserPaiementInput = z.infer<typeof rembourserPaiementSchema>;
 export type AnnulerPaiementInput = z.infer<typeof annulerPaiementSchema>;

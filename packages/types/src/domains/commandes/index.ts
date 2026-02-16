@@ -36,5 +36,5 @@ export * from "./validators.js";
 // ============================================================================
 // GRAPHQL
 // ============================================================================
-export * from "./graphql.types.js";
-export { commandesTypeDefs } from "./graphql.types.js";
+// export * from "./graphql.types.js"; // Importable directement si nécessaire
+export { commandesTypeDefs } from "./graphql.typedefs.js";

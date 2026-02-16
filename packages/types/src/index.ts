@@ -63,9 +63,6 @@ export {
   WebhookLogStatus,
 } from "./infrastructure/webhooks.js";
 
-export * from "./infrastructure/database/auth.types.js";
-export * from "./infrastructure/database/utilisateurs.types.js";
-
 // ============================================================================
 // GRAPHQL TYPEDEFS
 // ============================================================================

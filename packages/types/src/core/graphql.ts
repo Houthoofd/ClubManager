@@ -6,8 +6,8 @@
 // ============================================================================
 // TYPES DATABASE (snake_case pour Prisma/DB)
 // ============================================================================
-export * from "../infrastructure/database/auth.types.js";
-export * from "../infrastructure/database/utilisateurs.types.js";
+export * from "../domains/auth/database.types.js";
+export * from "../domains/utilisateurs/database.types.js";
 
 // ============================================================================
 // TYPES GRAPHQL (camelCase pour GraphQL)

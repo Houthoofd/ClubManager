@@ -17,5 +17,5 @@ export * from "./service.js";
 export * from "./validators.js";
 
 // GraphQL
-export * from "./graphql.types.js";
-export { inscriptionTypeDefs } from "./graphql.types.js";
+// export * from "./graphql.types.js"; // Importable directement si nécessaire
+export { inscriptionTypeDefs } from "./graphql.typedefs.js";

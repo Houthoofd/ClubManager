@@ -9,6 +9,77 @@
 
 import { z } from "zod";
 
+// ============================================
+// SCHEMAS DE DONNÉES (depuis types.ts)
+// ============================================
+
+/**
+ * Schéma pour FrequentationParCours
+ */
+export const frequentationParCoursSchema = z.object({
+  cours_id: z.preprocess((val) => Number(val), z.number().int().positive()),
+  titre: z.string(),
+  frequentation: z.preprocess(
+    (val) => Number(val),
+    z.number().int().nonnegative(),
+  ),
+});
+
+/**
+ * Schéma pour FrequentationParMois
+ */
+export const frequentationParMoisSchema = z.object({
+  mois: z.string(),
+  frequentation: z.preprocess(
+    (val) => Number(val),
+    z.number().int().nonnegative(),
+  ),
+});
+
+/**
+ * Schéma pour StatistiquesFrequentation
+ */
+export const statistiquesFrequentationSchema = z.object({
+  totalFrequentation: z.preprocess(
+    (val) => Number(val),
+    z.number().int().nonnegative(),
+  ),
+  frequentationParCours: z.array(frequentationParCoursSchema),
+  frequentationParMois: z.array(frequentationParMoisSchema),
+});
+
+/**
+ * Schéma pour ProgressionParCours
+ */
+export const progressionParCoursSchema = z.object({
+  cours_id: z.preprocess((val) => Number(val), z.number().int().positive()),
+  titre: z.string(),
+  progression: z.preprocess(
+    (val) => Number(val),
+    z.number().int().nonnegative(),
+  ),
+});
+
+/**
+ * Schéma pour StatistiquesProgressionUtilisateur
+ */
+export const statistiquesProgressionUtilisateurSchema = z.object({
+  utilisateur_id: z.preprocess(
+    (val) => Number(val),
+    z.number().int().positive(),
+  ),
+  coursSuivis: z.preprocess(
+    (val) => Number(val),
+    z.number().int().nonnegative(),
+  ),
+  progressionParCours: z.array(progressionParCoursSchema),
+  niveauActuel: z.string(),
+});
+
+// ============================================
+// SCHEMAS DE VALIDATION DE REQUÊTES
+// ============================================
+
 /**
  * Schéma de validation pour l'ID utilisateur (REST - string param)
  */
@@ -185,7 +256,22 @@ export const periodeSchema = z
     },
   );
 
-// Types TypeScript extraits des schémas Zod
+// ============================================
+// TYPES TYPESCRIPT EXTRAITS DES SCHÉMAS ZOD
+// ============================================
+
+// Types de données
+export type FrequentationParCours = z.infer<typeof frequentationParCoursSchema>;
+export type FrequentationParMois = z.infer<typeof frequentationParMoisSchema>;
+export type StatistiquesFrequentation = z.infer<
+  typeof statistiquesFrequentationSchema
+>;
+export type ProgressionParCours = z.infer<typeof progressionParCoursSchema>;
+export type StatistiquesProgressionUtilisateur = z.infer<
+  typeof statistiquesProgressionUtilisateurSchema
+>;
+
+// Types de validation de requêtes
 export type UtilisateurIdData = z.infer<typeof utilisateurIdSchema>;
 export type UserIdData = z.infer<typeof userIdSchema>;
 export type UtilisateurIdGraphQLData = z.infer<

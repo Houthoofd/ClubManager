@@ -1,5 +1,61 @@
 import { z } from "zod";
 
+// ============================================
+// SCHEMAS DE DONNÉES (depuis types.ts)
+// ============================================
+
+/**
+ * Schéma Zod pour validation d'un professeur
+ */
+export const ProfesseurSchema = z.object({
+  id: z.number().int().positive(),
+  nom: z.string().min(1),
+  prenom: z.string().min(1),
+  nom_utilisateur: z.string().optional(),
+  email: z.string().email(),
+  genre_id: z.number().int().positive().optional(),
+  date_naissance: z.date().nullable(),
+  grade_id: z.number().int().positive().nullable(),
+  status_id: z.number().int().optional(),
+});
+
+/**
+ * Planning d'un cours pour un professeur
+ */
+export const PlanningCoursProfSchema = z.object({
+  cours_recurrent_id: z.number().int().positive(),
+  type_cours: z.string(),
+  jour_semaine: z.number().int().min(0).max(6),
+  heure_debut: z.string(),
+  heure_fin: z.string(),
+  est_recurrent_actif: z.boolean(),
+  professeur_id: z.number().int().positive(),
+  professeur_nom: z.string(),
+  professeur_prenom: z.string(),
+});
+
+/**
+ * Input pour ajouter un professeur
+ */
+export const AjouterProfesseurInputSchema = z.object({
+  utilisateurs: z.union([
+    z.array(z.number().int().positive()),
+    z.array(z.object({ id: z.number().int().positive() })),
+  ]),
+});
+
+/**
+ * Input pour modifier le statut d'un professeur
+ */
+export const ModifierStatutProfesseurInputSchema = z.object({
+  id: z.number().int().positive("ID professeur requis"),
+  status_id: z.number().int().positive("Statut requis"),
+});
+
+// ============================================
+// SCHEMAS DE VALIDATION DE REQUÊTES
+// ============================================
+
 /**
  * Schema pour récupérer tous les professeurs
  */
@@ -174,9 +230,21 @@ export const coursSchema = z.object({
   professeur_id: z.number().int().positive(),
 });
 
-/**
- * Types TypeScript dérivés des schemas
- */
+// ============================================
+// TYPES TYPESCRIPT EXTRAITS DES SCHÉMAS ZOD
+// ============================================
+
+// Types de données
+export type Professeur = z.infer<typeof ProfesseurSchema>;
+export type PlanningCoursProf = z.infer<typeof PlanningCoursProfSchema>;
+export type AjouterProfesseurInput = z.infer<
+  typeof AjouterProfesseurInputSchema
+>;
+export type ModifierStatutProfesseurInput = z.infer<
+  typeof ModifierStatutProfesseurInputSchema
+>;
+
+// Types de validation de requêtes
 export type GetProfesseursData = z.infer<typeof getProfesseursSchema>;
 export type GetProfesseurByIdData = z.infer<typeof getProfesseurByIdSchema>;
 export type GetProfesseurByIdGraphQLData = z.infer<

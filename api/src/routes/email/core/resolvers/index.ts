@@ -1,11 +1,11 @@
-import { EmailValidator } from '../../../../infrastructure/external-services/email/email-validator';
-import { SpamScoreChecker } from '../../../../infrastructure/external-services/email/spam-score-checker';
-import { TemplateTester } from '../../../../infrastructure/external-services/email/template-tester';
-import { ABTestManager } from '../../../../infrastructure/external-services/email/ab-test-manager';
-import { RateLimiter } from '../../../../infrastructure/external-services/email/rate-limiter';
-import { IPWarmupManager } from '../../../../infrastructure/external-services/email/ip-warmup-manager';
-import { GraphQLError } from 'graphql';
-import { PubSub } from 'graphql-subscriptions';
+import { EmailValidator } from "../../../../infrastructure/external-services/email/email-validator.js";
+import { SpamScoreChecker } from "../../../../infrastructure/external-services/email/spam-score-checker.js";
+import { TemplateTester } from "../../../../infrastructure/external-services/email/template-tester.js";
+import { ABTestManager } from "../../../../infrastructure/external-services/email/ab-test-manager.js";
+import { RateLimiter } from "../../../../infrastructure/external-services/email/rate-limiter.js";
+import { IPWarmupManager } from "../../../../infrastructure/external-services/email/ip-warmup-manager.js";
+import { GraphQLError } from "graphql";
+import { PubSub } from "graphql-subscriptions";
 
 const pubsub = new PubSub();
 
@@ -18,35 +18,39 @@ const rateLimiter = RateLimiter.getInstance();
 const ipWarmupManager = IPWarmupManager.getInstance();
 
 // Subscribe to events for real-time updates
-abTestManager.on('test:started', (test) => {
+abTestManager.on("test:started", (test) => {
   pubsub.publish(`AB_TEST_UPDATED_${test.id}`, { abTestUpdated: test });
 });
 
-abTestManager.on('test:completed', (test) => {
+abTestManager.on("test:completed", (test) => {
   pubsub.publish(`AB_TEST_UPDATED_${test.id}`, { abTestUpdated: test });
 });
 
-rateLimiter.on('email:sent', ({ domain }) => {
+rateLimiter.on("email:sent", ({ domain }) => {
   const status = rateLimiter.getStatus(domain);
   if (status.utilization.perMinute > 80 || status.utilization.perHour > 80) {
     pubsub.publish(`RATE_LIMIT_ALERT_${domain}`, { rateLimitAlert: status });
-    pubsub.publish('RATE_LIMIT_ALERT', { rateLimitAlert: status });
+    pubsub.publish("RATE_LIMIT_ALERT", { rateLimitAlert: status });
   }
 });
 
-ipWarmupManager.on('warmup:started', (status) => {
+ipWarmupManager.on("warmup:started", (status) => {
   pubsub.publish(`IP_WARMUP_UPDATED_${status.id}`, { ipWarmupUpdated: status });
 });
 
-ipWarmupManager.on('reputation:warning', ({ warmupId, reputation }) => {
-  pubsub.publish(`IP_REPUTATION_ALERT_${warmupId}`, { ipReputationAlert: reputation });
+ipWarmupManager.on("reputation:warning", ({ warmupId, reputation }) => {
+  pubsub.publish(`IP_REPUTATION_ALERT_${warmupId}`, {
+    ipReputationAlert: reputation,
+  });
 });
 
-ipWarmupManager.on('reputation:critical', ({ warmupId, reputation }) => {
-  pubsub.publish(`IP_REPUTATION_ALERT_${warmupId}`, { ipReputationAlert: reputation });
+ipWarmupManager.on("reputation:critical", ({ warmupId, reputation }) => {
+  pubsub.publish(`IP_REPUTATION_ALERT_${warmupId}`, {
+    ipReputationAlert: reputation,
+  });
 });
 
-export const emailPhase3Resolvers = {
+export const emailResolvers = {
   Query: {
     // ============================================
     // EMAIL VALIDATION
@@ -56,13 +60,19 @@ export const emailPhase3Resolvers = {
       try {
         return await emailValidator.validateEmail(email);
       } catch (error) {
-        throw new GraphQLError(`Email validation failed: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'EMAIL_VALIDATION_ERROR' },
-        });
+        throw new GraphQLError(
+          `Email validation failed: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "EMAIL_VALIDATION_ERROR" },
+          },
+        );
       }
     },
 
-    validateEmailBatch: async (_: any, { input }: { input: { emails: string[] } }) => {
+    validateEmailBatch: async (
+      _: any,
+      { input }: { input: { emails: string[] } },
+    ) => {
       try {
         const results = await emailValidator.validateEmailBatch(input.emails);
         const summary = {
@@ -73,9 +83,12 @@ export const emailPhase3Resolvers = {
         };
         return { results, summary };
       } catch (error) {
-        throw new GraphQLError(`Batch validation failed: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'BATCH_VALIDATION_ERROR' },
-        });
+        throw new GraphQLError(
+          `Batch validation failed: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "BATCH_VALIDATION_ERROR" },
+          },
+        );
       }
     },
 
@@ -87,9 +100,12 @@ export const emailPhase3Resolvers = {
       try {
         return await spamChecker.checkSpamScore(input);
       } catch (error) {
-        throw new GraphQLError(`Spam check failed: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'SPAM_CHECK_ERROR' },
-        });
+        throw new GraphQLError(
+          `Spam check failed: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "SPAM_CHECK_ERROR" },
+          },
+        );
       }
     },
 
@@ -101,9 +117,12 @@ export const emailPhase3Resolvers = {
       try {
         return await templateTester.testTemplate(input);
       } catch (error) {
-        throw new GraphQLError(`Template test failed: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'TEMPLATE_TEST_ERROR' },
-        });
+        throw new GraphQLError(
+          `Template test failed: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "TEMPLATE_TEST_ERROR" },
+          },
+        );
       }
     },
 
@@ -113,9 +132,12 @@ export const emailPhase3Resolvers = {
         const statistics = templateTester.getTestStatistics(reports);
         return { reports, statistics };
       } catch (error) {
-        throw new GraphQLError(`Batch template test failed: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'BATCH_TEMPLATE_TEST_ERROR' },
-        });
+        throw new GraphQLError(
+          `Batch template test failed: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "BATCH_TEMPLATE_TEST_ERROR" },
+          },
+        );
       }
     },
 
@@ -128,9 +150,12 @@ export const emailPhase3Resolvers = {
         const tests = await abTestManager.listTests();
         return tests.find((t) => t.id === id) || null;
       } catch (error) {
-        throw new GraphQLError(`Failed to get A/B test: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_GET_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get A/B test: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_GET_ERROR" },
+          },
+        );
       }
     },
 
@@ -138,9 +163,12 @@ export const emailPhase3Resolvers = {
       try {
         return await abTestManager.listTests(filter);
       } catch (error) {
-        throw new GraphQLError(`Failed to list A/B tests: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_LIST_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to list A/B tests: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_LIST_ERROR" },
+          },
+        );
       }
     },
 
@@ -148,19 +176,28 @@ export const emailPhase3Resolvers = {
       try {
         return await abTestManager.getTestResult(testId);
       } catch (error) {
-        throw new GraphQLError(`Failed to get A/B test result: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_RESULT_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get A/B test result: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_RESULT_ERROR" },
+          },
+        );
       }
     },
 
-    getABTestVariant: async (_: any, { testId, userId }: { testId: string; userId: string }) => {
+    getABTestVariant: async (
+      _: any,
+      { testId, userId }: { testId: string; userId: string },
+    ) => {
       try {
         return abTestManager.getVariant(testId, userId);
       } catch (error) {
-        throw new GraphQLError(`Failed to get A/B test variant: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_VARIANT_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get A/B test variant: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_VARIANT_ERROR" },
+          },
+        );
       }
     },
 
@@ -172,9 +209,12 @@ export const emailPhase3Resolvers = {
       try {
         return await rateLimiter.checkLimit(email);
       } catch (error) {
-        throw new GraphQLError(`Rate limit check failed: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_CHECK_ERROR' },
-        });
+        throw new GraphQLError(
+          `Rate limit check failed: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_CHECK_ERROR" },
+          },
+        );
       }
     },
 
@@ -182,9 +222,12 @@ export const emailPhase3Resolvers = {
       try {
         return rateLimiter.getStatus(domain);
       } catch (error) {
-        throw new GraphQLError(`Failed to get rate limit status: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_STATUS_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get rate limit status: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_STATUS_ERROR" },
+          },
+        );
       }
     },
 
@@ -192,13 +235,19 @@ export const emailPhase3Resolvers = {
       try {
         return rateLimiter.getAllStatuses();
       } catch (error) {
-        throw new GraphQLError(`Failed to get all rate limit statuses: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_ALL_STATUS_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get all rate limit statuses: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_ALL_STATUS_ERROR" },
+          },
+        );
       }
     },
 
-    getBatchSendRecommendation: async (_: any, { emails }: { emails: string[] }) => {
+    getBatchSendRecommendation: async (
+      _: any,
+      { emails }: { emails: string[] },
+    ) => {
       try {
         const recommendation = await rateLimiter.getBatchRecommendation(emails);
         return {
@@ -207,9 +256,12 @@ export const emailPhase3Resolvers = {
           groupedByDomain: Object.fromEntries(recommendation.groupedByDomain),
         };
       } catch (error) {
-        throw new GraphQLError(`Failed to get batch recommendation: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'BATCH_RECOMMENDATION_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get batch recommendation: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "BATCH_RECOMMENDATION_ERROR" },
+          },
+        );
       }
     },
 
@@ -229,9 +281,12 @@ export const emailPhase3Resolvers = {
       try {
         return ipWarmupManager.getActiveWarmups();
       } catch (error) {
-        throw new GraphQLError(`Failed to get active IP warmups: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_LIST_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get active IP warmups: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_LIST_ERROR" },
+          },
+        );
       }
     },
 
@@ -239,9 +294,12 @@ export const emailPhase3Resolvers = {
       try {
         return ipWarmupManager.getProgress(warmupId);
       } catch (error) {
-        throw new GraphQLError(`Failed to get IP warmup progress: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_PROGRESS_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get IP warmup progress: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_PROGRESS_ERROR" },
+          },
+        );
       }
     },
 
@@ -249,19 +307,28 @@ export const emailPhase3Resolvers = {
       try {
         return ipWarmupManager.getDailyQuota(warmupId);
       } catch (error) {
-        throw new GraphQLError(`Failed to get IP warmup quota: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_QUOTA_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get IP warmup quota: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_QUOTA_ERROR" },
+          },
+        );
       }
     },
 
-    getIPReputationMetrics: async (_: any, { warmupId, days }: { warmupId: string; days?: number }) => {
+    getIPReputationMetrics: async (
+      _: any,
+      { warmupId, days }: { warmupId: string; days?: number },
+    ) => {
       try {
         return ipWarmupManager.getReputationMetrics(warmupId, days || 7);
       } catch (error) {
-        throw new GraphQLError(`Failed to get IP reputation metrics: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_REPUTATION_METRICS_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to get IP reputation metrics: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_REPUTATION_METRICS_ERROR" },
+          },
+        );
       }
     },
   },
@@ -275,9 +342,12 @@ export const emailPhase3Resolvers = {
       try {
         return await abTestManager.createTest(input);
       } catch (error) {
-        throw new GraphQLError(`Failed to create A/B test: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_CREATE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to create A/B test: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_CREATE_ERROR" },
+          },
+        );
       }
     },
 
@@ -285,9 +355,12 @@ export const emailPhase3Resolvers = {
       try {
         return await abTestManager.startTest(testId);
       } catch (error) {
-        throw new GraphQLError(`Failed to start A/B test: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_START_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to start A/B test: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_START_ERROR" },
+          },
+        );
       }
     },
 
@@ -295,19 +368,28 @@ export const emailPhase3Resolvers = {
       try {
         return await abTestManager.pauseTest(testId);
       } catch (error) {
-        throw new GraphQLError(`Failed to pause A/B test: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_PAUSE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to pause A/B test: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_PAUSE_ERROR" },
+          },
+        );
       }
     },
 
-    completeABTest: async (_: any, { testId, winnerId }: { testId: string; winnerId?: string }) => {
+    completeABTest: async (
+      _: any,
+      { testId, winnerId }: { testId: string; winnerId?: string },
+    ) => {
       try {
         return await abTestManager.completeTest(testId, winnerId);
       } catch (error) {
-        throw new GraphQLError(`Failed to complete A/B test: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_COMPLETE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to complete A/B test: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_COMPLETE_ERROR" },
+          },
+        );
       }
     },
 
@@ -316,9 +398,12 @@ export const emailPhase3Resolvers = {
         await abTestManager.deleteTest(testId);
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to delete A/B test: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_DELETE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to delete A/B test: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_DELETE_ERROR" },
+          },
+        );
       }
     },
 
@@ -327,35 +412,45 @@ export const emailPhase3Resolvers = {
         const { testId, variantId, userId, eventType, value, url } = input;
 
         switch (eventType) {
-          case 'sent':
+          case "sent":
             await abTestManager.trackSent(testId, variantId, userId);
             break;
-          case 'open':
+          case "open":
             await abTestManager.trackOpen(testId, variantId, userId);
             break;
-          case 'click':
+          case "click":
             await abTestManager.trackClick(testId, variantId, userId, url);
             break;
-          case 'conversion':
-            await abTestManager.trackConversion(testId, variantId, userId, value);
+          case "conversion":
+            await abTestManager.trackConversion(
+              testId,
+              variantId,
+              userId,
+              value,
+            );
             break;
-          case 'bounce':
-            await abTestManager.trackBounce(testId, variantId, userId, 'hard');
+          case "bounce":
+            await abTestManager.trackBounce(testId, variantId, userId, "hard");
             break;
-          case 'unsubscribe':
+          case "unsubscribe":
             await abTestManager.trackUnsubscribe(testId, variantId, userId);
             break;
         }
 
         // Publish updated result
         const result = await abTestManager.getTestResult(testId);
-        pubsub.publish(`AB_TEST_RESULT_UPDATED_${testId}`, { abTestResultUpdated: result });
+        pubsub.publish(`AB_TEST_RESULT_UPDATED_${testId}`, {
+          abTestResultUpdated: result,
+        });
 
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to track A/B test event: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'AB_TEST_TRACK_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to track A/B test event: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "AB_TEST_TRACK_ERROR" },
+          },
+        );
       }
     },
 
@@ -368,9 +463,12 @@ export const emailPhase3Resolvers = {
         await rateLimiter.recordSent(email);
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to record email sent: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_RECORD_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to record email sent: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_RECORD_ERROR" },
+          },
+        );
       }
     },
 
@@ -380,9 +478,12 @@ export const emailPhase3Resolvers = {
         rateLimiter.setDomainLimit(domain, limits);
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to set domain limit: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_SET_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to set domain limit: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_SET_ERROR" },
+          },
+        );
       }
     },
 
@@ -397,9 +498,12 @@ export const emailPhase3Resolvers = {
         });
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to enable warmup mode: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_WARMUP_ENABLE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to enable warmup mode: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_WARMUP_ENABLE_ERROR" },
+          },
+        );
       }
     },
 
@@ -408,9 +512,12 @@ export const emailPhase3Resolvers = {
         rateLimiter.disableWarmupMode(domain);
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to disable warmup mode: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_WARMUP_DISABLE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to disable warmup mode: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_WARMUP_DISABLE_ERROR" },
+          },
+        );
       }
     },
 
@@ -419,9 +526,12 @@ export const emailPhase3Resolvers = {
         rateLimiter.resetDomain(domain);
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to reset domain rate limit: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_RESET_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to reset domain rate limit: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_RESET_ERROR" },
+          },
+        );
       }
     },
 
@@ -430,9 +540,12 @@ export const emailPhase3Resolvers = {
         rateLimiter.clearAll();
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to clear all rate limits: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'RATE_LIMIT_CLEAR_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to clear all rate limits: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "RATE_LIMIT_CLEAR_ERROR" },
+          },
+        );
       }
     },
 
@@ -444,19 +557,28 @@ export const emailPhase3Resolvers = {
       try {
         return await ipWarmupManager.startWarmup(input);
       } catch (error) {
-        throw new GraphQLError(`Failed to start IP warmup: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_START_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to start IP warmup: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_START_ERROR" },
+          },
+        );
       }
     },
 
-    pauseIPWarmup: async (_: any, { warmupId, reason }: { warmupId: string; reason?: string }) => {
+    pauseIPWarmup: async (
+      _: any,
+      { warmupId, reason }: { warmupId: string; reason?: string },
+    ) => {
       try {
         return await ipWarmupManager.pauseWarmup(warmupId, reason);
       } catch (error) {
-        throw new GraphQLError(`Failed to pause IP warmup: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_PAUSE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to pause IP warmup: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_PAUSE_ERROR" },
+          },
+        );
       }
     },
 
@@ -464,9 +586,12 @@ export const emailPhase3Resolvers = {
       try {
         return await ipWarmupManager.resumeWarmup(warmupId);
       } catch (error) {
-        throw new GraphQLError(`Failed to resume IP warmup: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_RESUME_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to resume IP warmup: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_RESUME_ERROR" },
+          },
+        );
       }
     },
 
@@ -474,9 +599,12 @@ export const emailPhase3Resolvers = {
       try {
         return await ipWarmupManager.completeWarmup(warmupId);
       } catch (error) {
-        throw new GraphQLError(`Failed to complete IP warmup: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_COMPLETE_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to complete IP warmup: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_COMPLETE_ERROR" },
+          },
+        );
       }
     },
 
@@ -494,13 +622,18 @@ export const emailPhase3Resolvers = {
 
         // Publish updated status
         const status = ipWarmupManager.getStatus(input.warmupId);
-        pubsub.publish(`IP_WARMUP_UPDATED_${input.warmupId}`, { ipWarmupUpdated: status });
+        pubsub.publish(`IP_WARMUP_UPDATED_${input.warmupId}`, {
+          ipWarmupUpdated: status,
+        });
 
         return true;
       } catch (error) {
-        throw new GraphQLError(`Failed to record IP send: ${error instanceof Error ? error.message : String(error)}`, {
-          extensions: { code: 'IP_WARMUP_RECORD_ERROR' },
-        });
+        throw new GraphQLError(
+          `Failed to record IP send: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            extensions: { code: "IP_WARMUP_RECORD_ERROR" },
+          },
+        );
       }
     },
   },
@@ -531,7 +664,7 @@ export const emailPhase3Resolvers = {
         if (domain) {
           return pubsub.asyncIterator([`RATE_LIMIT_ALERT_${domain}`]);
         }
-        return pubsub.asyncIterator(['RATE_LIMIT_ALERT']);
+        return pubsub.asyncIterator(["RATE_LIMIT_ALERT"]);
       },
     },
 

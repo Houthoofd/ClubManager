@@ -1,0 +1,37 @@
+ Roadmap Recommandée
+
+### Phase 1 - Fondations Solides (1 semaine)
+1. ✅ **GraphQL Code Generator** (élimine duplication)
+2. ✅ **Tests de base** (validators + exports)
+3. ✅ **CI/CD** (validation automatique)
+
+### Phase 2 - Developer Experience (3-4 jours)
+4. ✅ **ESLint rules** (force conventions)
+5. ✅ **Type guards** (sécurité runtime)
+6. ✅ **Utils package** (helpers partagés)
+
+### Phase 3 - Polish (optionnel)
+7. 📖 **Documentation auto**
+8. ⚡ **Performance optimizations**
+9. 🔄 **Migration tool**
+
+---
+
+## 💬 Ma Recommandation
+
+**Commence par :**
+
+### 1️⃣ GraphQL Code Generator (2-3h)
+- **Impact immédiat** sur maintenance
+- **Élimine** ~50% code dupliqué
+- **Facile** à intégrer
+
+### 2️⃣ Tests (1 journée)
+- **Sécurise** l'architecture
+- **Prévient** les régressions
+- **Documente** le comportement attendu
+
+### 3️⃣ CI/CD (2h)
+- **Automatise** validation
+- **Catch** erreurs avant merge
+- **Standard** professionnel

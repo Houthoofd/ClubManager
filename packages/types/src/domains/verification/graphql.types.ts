@@ -1,10 +1,12 @@
 /**
- * Types GraphQL pour le module Vérification
- * Types TypeScript correspondant aux schémas GraphQL
+ * Types GraphQL pour Vérification (camelCase pour GraphQL)
+ * Ces types correspondent aux schémas GraphQL définis dans graphql.typedefs.ts
+ *
+ * @module verification/graphql.types
  */
 
 /**
- * Résultat standard d'une vérification
+ * Résultat standard d'une vérification (GraphQL)
  */
 export interface VerificationResult {
   exists: boolean;
@@ -12,7 +14,7 @@ export interface VerificationResult {
 }
 
 /**
- * Résultat du health check du service de vérification
+ * Résultat du health check du service de vérification (GraphQL)
  */
 export interface VerificationHealthResult {
   status: string;
@@ -21,7 +23,7 @@ export interface VerificationHealthResult {
 }
 
 /**
- * Détails des vérifications du health check
+ * Détails des vérifications du health check (GraphQL)
  */
 export interface VerificationChecks {
   database: boolean;
@@ -29,7 +31,7 @@ export interface VerificationChecks {
 }
 
 /**
- * Résultat de la vérification des professeurs
+ * Résultat de la vérification des professeurs (GraphQL)
  */
 export interface VerifierProfesseursResult {
   professeurs: ProfesseurStatus[];
@@ -37,7 +39,7 @@ export interface VerifierProfesseursResult {
 }
 
 /**
- * Statut de professeur d'un utilisateur
+ * Statut de professeur d'un utilisateur (GraphQL)
  */
 export interface ProfesseurStatus {
   nom: string;
@@ -46,7 +48,7 @@ export interface ProfesseurStatus {
 }
 
 /**
- * Input pour vérifier un utilisateur par prénom et nom
+ * Input pour vérifier un utilisateur par prénom et nom (GraphQL)
  */
 export interface VerifierPrenomNomInput {
   prenom: string;
@@ -54,7 +56,7 @@ export interface VerifierPrenomNomInput {
 }
 
 /**
- * Input pour vérifier un utilisateur par email, prénom et nom
+ * Input pour vérifier un utilisateur par email, prénom et nom (GraphQL)
  */
 export interface VerifierEmailPrenomNomInput {
   email: string;
@@ -63,40 +65,40 @@ export interface VerifierEmailPrenomNomInput {
 }
 
 /**
- * Input pour vérifier un cours dans le planning
+ * Input pour vérifier un cours dans le planning (GraphQL)
  */
 export interface VerifierPlanningInput {
   jour: string;
-  heure_debut: string;
-  heure_fin: string;
-  type_cours: string;
+  heureDebut: string;
+  heureFin: string;
+  typeCours: string;
 }
 
 /**
- * Input pour vérifier un article par nom et catégorie
+ * Input pour vérifier un article par nom et catégorie (GraphQL)
  */
 export interface VerifierArticleCategorieInput {
   nom: string;
-  categorie_id: number;
+  categorieId: number;
 }
 
 /**
- * Input pour un utilisateur (nom et prénom)
+ * Input pour un utilisateur (nom et prénom) (GraphQL)
  */
-export interface UtilisateurInput {
+export interface UtilisateurVerificationInput {
   nom: string;
   prenom: string;
 }
 
 /**
- * Input pour vérifier si des utilisateurs sont professeurs
+ * Input pour vérifier si des utilisateurs sont professeurs (GraphQL)
  */
 export interface VerifierProfesseursInput {
-  utilisateurs: UtilisateurInput[];
+  utilisateurs: UtilisateurVerificationInput[];
 }
 
 /**
- * Contexte GraphQL pour le module Vérification
+ * Contexte GraphQL pour Vérification
  */
 export interface VerificationContext {
   user?: {
