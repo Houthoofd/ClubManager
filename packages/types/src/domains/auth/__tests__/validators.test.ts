@@ -159,7 +159,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should validate valid password reset", () => {
     const validReset = {
       token: "valid-reset-token-123",
-      newPassword: "NewPass123",
+      new_password: "NewPass123",
     };
 
     const result = resetPasswordSchema.safeParse(validReset);
@@ -169,7 +169,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should reject password shorter than 8 characters", () => {
     const invalidReset = {
       token: "valid-token",
-      newPassword: "Pass1",
+      new_password: "Pass1",
     };
 
     const result = resetPasswordSchema.safeParse(invalidReset);
@@ -179,7 +179,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should reject password longer than 100 characters", () => {
     const invalidReset = {
       token: "valid-token",
-      newPassword: "A".repeat(101) + "a1",
+      new_password: "A".repeat(101) + "a1",
     };
 
     const result = resetPasswordSchema.safeParse(invalidReset);
@@ -189,7 +189,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should reject password without uppercase letter", () => {
     const invalidReset = {
       token: "valid-token",
-      newPassword: "password123",
+      new_password: "password123",
     };
 
     const result = resetPasswordSchema.safeParse(invalidReset);
@@ -199,7 +199,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should reject password without lowercase letter", () => {
     const invalidReset = {
       token: "valid-token",
-      newPassword: "PASSWORD123",
+      new_password: "PASSWORD123",
     };
 
     const result = resetPasswordSchema.safeParse(invalidReset);
@@ -209,7 +209,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should reject password without number", () => {
     const invalidReset = {
       token: "valid-token",
-      newPassword: "PasswordABC",
+      new_password: "PasswordABC",
     };
 
     const result = resetPasswordSchema.safeParse(invalidReset);
@@ -219,7 +219,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should accept password with special characters", () => {
     const validReset = {
       token: "valid-token",
-      newPassword: "Password123!@#",
+      new_password: "Password123!@#",
     };
 
     const result = resetPasswordSchema.safeParse(validReset);
@@ -228,7 +228,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
 
   it("should reject missing token", () => {
     const invalidReset = {
-      newPassword: "NewPass123",
+      new_password: "NewPass123",
     };
 
     const result = resetPasswordSchema.safeParse(invalidReset);
@@ -238,7 +238,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
   it("should reject empty token", () => {
     const invalidReset = {
       token: "",
-      newPassword: "NewPass123",
+      new_password: "NewPass123",
     };
 
     const result = resetPasswordSchema.safeParse(invalidReset);
@@ -256,7 +256,7 @@ describe("Auth Validators - resetPasswordSchema", () => {
     strongPasswords.forEach((password) => {
       const reset = {
         token: "valid-token",
-        newPassword: password,
+        new_password: password,
       };
 
       const result = resetPasswordSchema.safeParse(reset);
@@ -320,7 +320,7 @@ describe("Auth Validators - confirmEmailSchema", () => {
   it("should validate valid email confirmation", () => {
     const validConfirmation = {
       token: "confirmation-token-123",
-      userId: "user-123",
+      user_id: "user-123",
     };
 
     const result = confirmEmailSchema.safeParse(validConfirmation);
@@ -329,7 +329,7 @@ describe("Auth Validators - confirmEmailSchema", () => {
 
   it("should reject missing token", () => {
     const invalidConfirmation = {
-      userId: "user-123",
+      user_id: "user-123",
     };
 
     const result = confirmEmailSchema.safeParse(invalidConfirmation);
@@ -348,7 +348,7 @@ describe("Auth Validators - confirmEmailSchema", () => {
   it("should reject empty token", () => {
     const invalidConfirmation = {
       token: "",
-      userId: "user-123",
+      user_id: "user-123",
     };
 
     const result = confirmEmailSchema.safeParse(invalidConfirmation);
@@ -358,7 +358,7 @@ describe("Auth Validators - confirmEmailSchema", () => {
   it("should reject empty userId", () => {
     const invalidConfirmation = {
       token: "confirmation-token-123",
-      userId: "",
+      user_id: "",
     };
 
     const result = confirmEmailSchema.safeParse(invalidConfirmation);
@@ -437,7 +437,7 @@ describe("Auth Validators - validerResetPassword", () => {
   it("should return success for valid reset", () => {
     const validReset = {
       token: "valid-token",
-      newPassword: "NewPass123",
+      new_password: "NewPass123",
     };
 
     const result = validerResetPassword(validReset);
@@ -449,7 +449,7 @@ describe("Auth Validators - validerResetPassword", () => {
   it("should return errors for weak password", () => {
     const invalidReset = {
       token: "valid-token",
-      newPassword: "weak",
+      new_password: "weak",
     };
 
     const result = validerResetPassword(invalidReset);
@@ -485,7 +485,7 @@ describe("Auth Validators - validerConfirmEmail", () => {
   it("should return success for valid confirmation", () => {
     const validConfirmation = {
       token: "confirmation-token",
-      userId: "user-123",
+      user_id: "user-123",
     };
 
     const result = validerConfirmEmail(validConfirmation);
@@ -540,7 +540,7 @@ describe("Auth Validators - Edge Cases", () => {
   it("should accept exactly 8 character password", () => {
     const reset = {
       token: "valid-token",
-      newPassword: "Pass1234",
+      new_password: "Pass1234",
     };
 
     const result = resetPasswordSchema.safeParse(reset);
@@ -551,7 +551,7 @@ describe("Auth Validators - Edge Cases", () => {
     const password = "A" + "a".repeat(97) + "1";
     const reset = {
       token: "valid-token",
-      newPassword: password,
+      new_password: password,
     };
 
     const result = resetPasswordSchema.safeParse(reset);
@@ -561,7 +561,7 @@ describe("Auth Validators - Edge Cases", () => {
   it("should handle password with unicode characters", () => {
     const reset = {
       token: "valid-token",
-      newPassword: "Pàss1234",
+      new_password: "Pàss1234",
     };
 
     const result = resetPasswordSchema.safeParse(reset);

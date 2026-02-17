@@ -3,7 +3,7 @@
  * Utilise Zod pour valider les données d'entrée
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Schéma de validation pour la connexion
@@ -11,17 +11,18 @@ import { z } from 'zod';
 export const loginSchema = z.object({
   email: z
     .string({
-      required_error: 'Email requis',
-      invalid_type_error: 'Email doit être une chaîne de caractères',
+      required_error: "Email requis",
+      invalid_type_error: "Email doit être une chaîne de caractères",
     })
-    .email('Format email invalide')
-    .min(1, 'Email ne peut pas être vide'),
+    .trim()
+    .email("Format email invalide")
+    .min(1, "Email ne peut pas être vide"),
   password: z
     .string({
-      required_error: 'Mot de passe requis',
-      invalid_type_error: 'Mot de passe doit être une chaîne de caractères',
+      required_error: "Mot de passe requis",
+      invalid_type_error: "Mot de passe doit être une chaîne de caractères",
     })
-    .min(1, 'Mot de passe ne peut pas être vide'),
+    .min(1, "Mot de passe ne peut pas être vide"),
 });
 
 /**
@@ -30,11 +31,12 @@ export const loginSchema = z.object({
 export const forgotPasswordSchema = z.object({
   email: z
     .string({
-      required_error: 'Email requis',
-      invalid_type_error: 'Email doit être une chaîne de caractères',
+      required_error: "Email requis",
+      invalid_type_error: "Email doit être une chaîne de caractères",
     })
-    .email('Format email invalide')
-    .min(1, 'Email ne peut pas être vide'),
+    .trim()
+    .email("Format email invalide")
+    .min(1, "Email ne peut pas être vide"),
 });
 
 /**
@@ -43,20 +45,20 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   token: z
     .string({
-      required_error: 'Token requis',
-      invalid_type_error: 'Token doit être une chaîne de caractères',
+      required_error: "Token requis",
+      invalid_type_error: "Token doit être une chaîne de caractères",
     })
-    .min(1, 'Token ne peut pas être vide'),
-  newPassword: z
+    .min(1, "Token ne peut pas être vide"),
+  new_password: z
     .string({
-      required_error: 'Nouveau mot de passe requis',
-      invalid_type_error: 'Mot de passe doit être une chaîne de caractères',
+      required_error: "Nouveau mot de passe requis",
+      invalid_type_error: "Mot de passe doit être une chaîne de caractères",
     })
-    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
-    .max(100, 'Le mot de passe ne peut pas dépasser 100 caractères')
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+    .max(100, "Le mot de passe ne peut pas dépasser 100 caractères")
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre'
+      "Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre",
     ),
 });
 
@@ -66,10 +68,10 @@ export const resetPasswordSchema = z.object({
 export const verifyTokenSchema = z.object({
   token: z
     .string({
-      required_error: 'Token requis',
-      invalid_type_error: 'Token doit être une chaîne de caractères',
+      required_error: "Token requis",
+      invalid_type_error: "Token doit être une chaîne de caractères",
     })
-    .min(1, 'Token ne peut pas être vide'),
+    .min(1, "Token ne peut pas être vide"),
 });
 
 /**
@@ -78,16 +80,16 @@ export const verifyTokenSchema = z.object({
 export const confirmEmailSchema = z.object({
   token: z
     .string({
-      required_error: 'Token requis',
-      invalid_type_error: 'Token doit être une chaîne de caractères',
+      required_error: "Token requis",
+      invalid_type_error: "Token doit être une chaîne de caractères",
     })
-    .min(1, 'Token ne peut pas être vide'),
-  userId: z
+    .min(1, "Token ne peut pas être vide"),
+  user_id: z
     .string({
-      required_error: 'UserId requis',
-      invalid_type_error: 'UserId doit être une chaîne de caractères',
+      required_error: "UserId requis",
+      invalid_type_error: "UserId doit être une chaîne de caractères",
     })
-    .min(1, 'UserId ne peut pas être vide'),
+    .min(1, "UserId ne peut pas être vide"),
 });
 
 /**
@@ -127,7 +129,9 @@ export function validerLogin(data: unknown): {
     const validated = loginSchema.parse(data);
     return { success: true, data: validated };
   } catch (error: any) {
-    const errors = error.errors?.map((e: any) => e.message) || ['Validation échouée'];
+    const errors = error.errors?.map((e: any) => e.message) || [
+      "Validation échouée",
+    ];
     return { success: false, errors };
   }
 }
@@ -144,7 +148,9 @@ export function validerForgotPassword(data: unknown): {
     const validated = forgotPasswordSchema.parse(data);
     return { success: true, data: validated };
   } catch (error: any) {
-    const errors = error.errors?.map((e: any) => e.message) || ['Validation échouée'];
+    const errors = error.errors?.map((e: any) => e.message) || [
+      "Validation échouée",
+    ];
     return { success: false, errors };
   }
 }
@@ -161,7 +167,9 @@ export function validerResetPassword(data: unknown): {
     const validated = resetPasswordSchema.parse(data);
     return { success: true, data: validated };
   } catch (error: any) {
-    const errors = error.errors?.map((e: any) => e.message) || ['Validation échouée'];
+    const errors = error.errors?.map((e: any) => e.message) || [
+      "Validation échouée",
+    ];
     return { success: false, errors };
   }
 }
@@ -178,7 +186,9 @@ export function validerVerifyToken(data: unknown): {
     const validated = verifyTokenSchema.parse(data);
     return { success: true, data: validated };
   } catch (error: any) {
-    const errors = error.errors?.map((e: any) => e.message) || ['Validation échouée'];
+    const errors = error.errors?.map((e: any) => e.message) || [
+      "Validation échouée",
+    ];
     return { success: false, errors };
   }
 }
@@ -195,7 +205,9 @@ export function validerConfirmEmail(data: unknown): {
     const validated = confirmEmailSchema.parse(data);
     return { success: true, data: validated };
   } catch (error: any) {
-    const errors = error.errors?.map((e: any) => e.message) || ['Validation échouée'];
+    const errors = error.errors?.map((e: any) => e.message) || [
+      "Validation échouée",
+    ];
     return { success: false, errors };
   }
 }

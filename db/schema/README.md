@@ -4,7 +4,7 @@
 
 Ce répertoire contient les scripts SQL complets pour installer la base de données **ClubManager** avec toutes les tables et données de test enrichies.
 
-### 📦 Fichiers disponibles
+> ### 📦 Fichiers disponibles
 
 | Fichier | Description | Tables | Données de test |
 |---------|-------------|--------|-----------------|
@@ -23,27 +23,35 @@ Ce répertoire contient les scripts SQL complets pour installer la base de donn�
 ### Installation en 1 commande
 
 ```bash
-mysql -u root < db/creation/clubmanager_ultra_complete.sql
+mysql -u root < db/creation/clubmanager_full.sql
 ```
 
 ### Installation avec mot de passe
 
 ```bash
-mysql -u root -p < db/creation/clubmanager_ultra_complete.sql
+mysql -u root -p < db/creation/clubmanager_full.sql
 ```
 
 ### Installation via Laragon Terminal
 
 ```bash
 cd C:\laragon\www\votre-projet
-mysql -u root < db/creation/clubmanager_ultra_complete.sql
+mysql -u root < db/creation/clubmanager_full.sql
+```
+
+### Installation schéma uniquement (sans données)
+
+```bash
+mysql -u root < db/creation/clubmanager_schema.sql
 ```
 
 ---
 
 ## 📊 Contenu de la Base de Données
 
-### 🗂️ Tables Principales (88+)
+### 🗂️ Tables Principales (100 tables)
+
+**Note :** Tous les noms de tables, colonnes et valeurs ENUM sont en **anglais**. La base de données a été entièrement migrée pour assurer la cohérence et faciliter la collaboration internationale.
 
 #### Tables Core
 - `sports` - Sports disponibles (Karaté, Judo, Taekwondo, Kung Fu, Boxe)

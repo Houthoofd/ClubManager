@@ -1,5 +1,6 @@
 /**
  * Types pour l'authentification et la gestion des comptes
+ * Alignés avec le schéma Prisma
  */
 
 /**
@@ -12,9 +13,9 @@ export interface AuthResult {
   user?: {
     id: number;
     email: string;
-    firstName: string;
-    lastName: string;
-    statusId: number;
+    first_name: string;
+    last_name: string;
+    status_id: number;
   };
 }
 
@@ -22,8 +23,8 @@ export interface AuthResult {
  * Données pour créer un compte utilisateur
  */
 export interface CreateUserInput {
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
 }
@@ -32,9 +33,9 @@ export interface CreateUserInput {
  * Données pour modifier le mot de passe
  */
 export interface ChangePasswordInput {
-  userId: number;
-  currentPassword?: string;
-  newPassword: string;
+  user_id: number;
+  current_password?: string;
+  new_password: string;
 }
 
 /**
@@ -42,15 +43,16 @@ export interface ChangePasswordInput {
  */
 export interface PasswordResetToken {
   id: number;
-  userId: number;
+  utilisateur_id: number;
   token: string;
-  expiresAt: Date;
-  createdAt: Date;
-  user?: {
+  expires_at: Date;
+  created_at: Date;
+  used_at?: Date | null;
+  utilisateur?: {
     id: number;
     email: string;
-    firstName: string;
-    lastName: string;
+    first_name: string;
+    last_name: string;
   };
 }
 
@@ -60,13 +62,13 @@ export interface PasswordResetToken {
 export interface SecurityInfo {
   id: number;
   email: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: Date;
-  dateInscription: Date;
-  nbPaiements: number;
-  nbInscriptions: number;
-  dernierPaiement?: Date;
+  first_name: string;
+  last_name: string;
+  date_of_birth?: Date;
+  date_inscription: Date;
+  nb_paiements: number;
+  nb_inscriptions: number;
+  dernier_paiement?: Date;
 }
 
 /**
@@ -89,7 +91,7 @@ export interface CreateResetTokenInput {
  */
 export interface ResetPasswordInput {
   token: string;
-  newPassword: string;
+  new_password: string;
 }
 
 /**
@@ -98,8 +100,10 @@ export interface ResetPasswordInput {
 export interface AuthAttempt {
   id: number;
   email: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
   success: boolean;
-  attemptedAt: Date;
+  attempted_at: Date;
 }
 
 /**
@@ -107,14 +111,15 @@ export interface AuthAttempt {
  */
 export interface ManualRecoveryRequest {
   id: number;
-  userId: number;
+  utilisateur_id: number;
   reason: string;
-  verificationData: any;
-  status: "pending" | "approved" | "rejected";
-  createdAt: Date;
-  expiresAt: Date;
-  processedBy?: number;
-  processedAt?: Date;
+  verification_data?: any;
+  status: "pending" | "approved" | "rejected" | "expired";
+  admin_notes?: string | null;
+  processed_by?: number | null;
+  processed_at?: Date | null;
+  created_at: Date;
+  expires_at?: Date | null;
 }
 
 /**
@@ -129,11 +134,65 @@ export interface EmailCheckResult {
  * Statistiques d'authentification
  */
 export interface AuthStats {
-  totalUsers: number;
-  activeUsers: number;
-  authAttemptsToday: number;
-  successfulAuthsToday: number;
-  failedAuthsToday: number;
-  successRate: number;
-  resetTokensActive: number;
+  total_users: number;
+  active_users: number;
+  auth_attempts_today: number;
+  successful_auths_today: number;
+  failed_auths_today: number;
+  success_rate: number;
+  reset_tokens_active: number;
+}
+
+/**
+ * Token de validation d'email
+ */
+export interface EmailValidationToken {
+  id: number;
+  utilisateur_id: number;
+  token: string;
+  type: "email_confirmation" | "password_setup";
+  expires_at: Date;
+  used: boolean;
+  created_at: Date;
+}
+
+/**
+ * Refresh token
+ */
+export interface RefreshToken {
+  id: number;
+  utilisateur_id: number;
+  token: string;
+  expires_at: Date;
+  created_at: Date;
+  revoked_at?: Date | null;
+  replaced_by?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+}
+
+/**
+ * Code de récupération SMS
+ */
+export interface SmsRecoveryCode {
+  id: number;
+  utilisateur_id: number;
+  phone: string;
+  code: string;
+  attempts: number;
+  expires_at: Date;
+  created_at: Date;
+  used_at?: Date | null;
+}
+
+/**
+ * Tentative de réinitialisation de mot de passe
+ */
+export interface PasswordResetAttempt {
+  id: number;
+  email: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  success: boolean;
+  attempted_at: Date;
 }

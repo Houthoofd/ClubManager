@@ -139,6 +139,7 @@ describe("Utilisateurs Validators - inscriptionUtilisateurSchema", () => {
       email: "jean@example.com",
       password: "password123",
       genre_id: 1,
+      abonnement_id: 1,
       date_naissance: "1990-05-15",
       status_id: 1,
       grade_id: null,
@@ -347,11 +348,11 @@ describe("Utilisateurs Validators - miseAJourUtilisateurSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("should accept empty object (no updates)", () => {
+  it("should reject empty object (no updates)", () => {
     const validUpdate = {};
 
     const result = miseAJourUtilisateurSchema.safeParse(validUpdate);
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("should reject invalid email format", () => {
@@ -614,13 +615,13 @@ describe("Utilisateurs Validators - utilisateurIdParamSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("should accept negative id string", () => {
+  it("should reject negative id string", () => {
     const valid = {
-      id: "-5",
+      id: "-123",
     };
 
     const result = utilisateurIdParamSchema.safeParse(valid);
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("should handle whitespace in id string", () => {
@@ -683,20 +684,20 @@ describe("Utilisateurs Validators - Edge Cases", () => {
     });
   });
 
-  it("should handle long names", () => {
-    const longName = "A".repeat(100);
+  it("should reject excessively long names", () => {
+    const longName = "A".repeat(255);
     const result = inscriptionUtilisateurSchema.safeParse({
       prenom: longName,
       nom: longName,
-      nom_utilisateur: "username",
-      email: "user@example.com",
+      nom_utilisateur: "user123",
+      email: "test@example.com",
       password: "password123",
       genre_id: 1,
-      date_naissance: "1990-05-15",
-      status_id: 1,
+      abonnement_id: 1,
+      date_naissance: "1990-01-01",
     });
 
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("should handle special characters in names", () => {
@@ -707,6 +708,7 @@ describe("Utilisateurs Validators - Edge Cases", () => {
       email: "jp@example.com",
       password: "password123",
       genre_id: 1,
+      abonnement_id: 1,
       date_naissance: "1990-05-15",
       status_id: 1,
     });

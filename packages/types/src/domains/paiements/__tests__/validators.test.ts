@@ -40,7 +40,7 @@ import { MethodePaiement, StatutPaiement } from "../types.js";
 describe("Paiements Validators - toStripeAmount", () => {
   it("should convert euros to cents", () => {
     expect(toStripeAmount(10)).toBe(1000);
-    expect(toStripeAmount(25.50)).toBe(2550);
+    expect(toStripeAmount(25.5)).toBe(2550);
     expect(toStripeAmount(100)).toBe(10000);
   });
 
@@ -67,7 +67,7 @@ describe("Paiements Validators - creerPaiementSchema", () => {
   it("should validate valid payment creation", () => {
     const validPaiement = {
       utilisateurId: 1,
-      montant: 50.00,
+      montant: 50.0,
       methodePaiement: "carte_bancaire",
     };
 
@@ -79,7 +79,7 @@ describe("Paiements Validators - creerPaiementSchema", () => {
     const validPaiement = {
       commandeId: 10,
       utilisateurId: 1,
-      montant: 50.00,
+      montant: 50.0,
     };
 
     const result = creerPaiementSchema.safeParse(validPaiement);
@@ -89,7 +89,7 @@ describe("Paiements Validators - creerPaiementSchema", () => {
   it("should accept optional description", () => {
     const validPaiement = {
       utilisateurId: 1,
-      montant: 50.00,
+      montant: 50.0,
       description: "Paiement mensuel",
     };
 
@@ -119,7 +119,7 @@ describe("Paiements Validators - creerPaiementSchema", () => {
 
   it("should reject missing utilisateurId", () => {
     const invalid = {
-      montant: 50.00,
+      montant: 50.0,
     };
 
     const result = creerPaiementSchema.safeParse(invalid);
@@ -152,7 +152,7 @@ describe("Paiements Validators - CreerPaiementInputSchema", () => {
     const valid = {
       utilisateurId: 1,
       montant: 100,
-      methodePaiement: MethodePaiement.CARTE_BANCAIRE,
+      methodePaiement: MethodePaiement.STRIPE,
       stripePaymentIntentId: "pi_123abc",
     };
 
@@ -192,7 +192,7 @@ describe("Paiements Validators - CreerPaiementInputSchema", () => {
 describe("Paiements Validators - createPaymentIntentEcheanceSchema", () => {
   it("should validate valid payment intent for echeance", () => {
     const valid = {
-      amount: 50.00,
+      amount: 50.0,
       echeanceId: 10,
       userId: 1,
     };
@@ -263,6 +263,7 @@ describe("Paiements Validators - confirmEcheancePaymentSchema", () => {
       paymentIntentId: "pi_1234567890abcdef",
       echeanceId: 10,
       userId: 1,
+      amount: 50.0,
     };
 
     const result = confirmEcheancePaymentSchema.safeParse(valid);
@@ -274,6 +275,7 @@ describe("Paiements Validators - confirmEcheancePaymentSchema", () => {
       paymentIntentId: "invalid_123",
       echeanceId: 10,
       userId: 1,
+      amount: 50.0,
     };
 
     const result = confirmEcheancePaymentSchema.safeParse(invalid);
@@ -285,6 +287,7 @@ describe("Paiements Validators - confirmEcheancePaymentSchema", () => {
       paymentIntentId: "pi_short",
       echeanceId: 10,
       userId: 1,
+      amount: 50.0,
     };
 
     const result = confirmEcheancePaymentSchema.safeParse(invalid);
@@ -296,6 +299,7 @@ describe("Paiements Validators - confirmEcheancePaymentSchema", () => {
       paymentIntentId: "pi_invalid@#$",
       echeanceId: 10,
       userId: 1,
+      amount: 50.0,
     };
 
     const result = confirmEcheancePaymentSchema.safeParse(invalid);
@@ -309,6 +313,7 @@ describe("Paiements Validators - confirmCommandePaymentSchema", () => {
       paymentIntentId: "pi_1234567890abcdef",
       commandeId: 5,
       userId: 1,
+      amount: 100.0,
     };
 
     const result = confirmCommandePaymentSchema.safeParse(valid);
@@ -409,7 +414,7 @@ describe("Paiements Validators - rembourserPaiementSchema", () => {
   it("should validate partial refund", () => {
     const valid = {
       paiementId: 10,
-      montant: 25.00,
+      montant: 25.0,
       raison: "Remboursement partiel",
     };
 
@@ -644,6 +649,7 @@ describe("Paiements Validators - Edge Cases", () => {
       paymentIntentId: longId,
       echeanceId: 1,
       userId: 1,
+      amount: 100.0,
     });
     expect(result.success).toBe(true);
   });
@@ -660,16 +666,12 @@ describe("Paiements Validators - Edge Cases", () => {
 
   it("should properly convert small amounts to Stripe cents", () => {
     expect(toStripeAmount(0.01)).toBe(1);
-    expect(toStripeAmount(0.10)).toBe(10);
-    expect(toStripeAmount(1.00)).toBe(100);
+    expect(toStripeAmount(0.1)).toBe(10);
+    expect(toStripeAmount(1.0)).toBe(100);
   });
 
   it("should handle various date formats in filters", () => {
-    const dateFormats = [
-      "2024-01-01",
-      "2024-12-31",
-      "2024-06-15",
-    ];
+    const dateFormats = ["2024-01-01", "2024-12-31", "2024-06-15"];
 
     dateFormats.forEach((date) => {
       const result = paiementsFiltresSchema.safeParse({

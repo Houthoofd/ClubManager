@@ -346,7 +346,8 @@ if "%CHOICE%"=="3" (
 echo ════════════════════════════════════════════════════════════════
 echo.
 echo 📖 DOCUMENTATION:
-echo    • Scripts SQL: db/improvements/
+echo    • Scripts SQL: db/scripts/
+echo    • Documentation: db/docs/
 echo    • Backup: %BACKUP_FILE%
 echo    • Logs: Vérifier sortie ci-dessus
 echo.

@@ -7,757 +7,1932 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================================
-// NOUVELLES TABLES DE RÉFÉRENCE - PHASE 1
-// ============================================================================
+model ab_test_participants {
+  id               Int              @id @default(autoincrement())
+  test_id          Int
+  variant_id       Int
+  user_id          Int?
+  session_id       String?          @db.VarChar(255)
+  participated_at  DateTime         @default(now()) @db.Timestamp(0)
+  converted        Boolean?         @default(false)
+  converted_at     DateTime?        @db.Timestamp(0)
+  ip_address       String?          @db.VarChar(45)
+  user_agent       String?          @db.Text
+  ab_tests         ab_tests         @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ab_test_participants_ibfk_1")
+  ab_test_variants ab_test_variants @relation(fields: [variant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ab_test_participants_ibfk_2")
+  users            users?           @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "ab_test_participants_ibfk_3")
 
-model PaymentMethod {
-  id         Int          @id @default(autoincrement())
-  code       String       @unique @db.VarChar(50)
-  name       String       @db.VarChar(100)
-  active     Boolean      @default(true)
-  created_at DateTime     @default(now()) @db.Timestamp(0)
-
-  paiements  paiements[]
-
-  @@index([code], map: "idx_code")
-  @@index([active], map: "idx_active")
-  @@map("payment_methods")
+  @@index([converted], map: "idx_converted")
+  @@index([participated_at], map: "idx_participated_at")
+  @@index([session_id], map: "idx_session_id")
+  @@index([test_id, variant_id], map: "idx_test_variant")
+  @@index([user_id], map: "idx_user_id")
+  @@index([variant_id], map: "variant_id")
 }
 
-model CourseType {
+model ab_test_variants {
+  id                   Int                    @id @default(autoincrement())
+  test_id              Int
+  variant_name         String                 @db.VarChar(50)
+  content              Json
+  email_template_id    Int?
+  custom_subject       String?                @db.VarChar(500)
+  participants_count   Int?                   @default(0)
+  conversions_count    Int?                   @default(0)
+  conversion_rate      Decimal?               @default(0.00) @db.Decimal(5, 2)
+  created_at           DateTime               @default(now()) @db.Timestamp(0)
+  updated_at           DateTime               @default(now()) @db.Timestamp(0)
+  ab_test_participants ab_test_participants[]
+  ab_tests             ab_tests               @relation(fields: [test_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ab_test_variants_ibfk_1")
+  email_templates      email_templates?       @relation(fields: [email_template_id], references: [id], onUpdate: NoAction, map: "ab_test_variants_ibfk_2")
+
+  @@unique([test_id, variant_name], map: "uk_test_variant")
+  @@index([email_template_id], map: "email_template_id")
+  @@index([test_id], map: "idx_test_id")
+}
+
+model ab_tests {
+  id                       Int                    @id @default(autoincrement())
+  name                     String                 @db.VarChar(200)
+  description              String?                @db.Text
+  test_type                ab_tests_test_type
+  resource_type            String?                @db.VarChar(100)
+  resource_id              String?                @db.VarChar(100)
+  status                   ab_tests_status?       @default(DRAFT)
+  start_date               DateTime?              @db.Timestamp(0)
+  end_date                 DateTime?              @db.Timestamp(0)
+  traffic_split_percentage Int?                   @default(50)
+  primary_metric           String                 @db.VarChar(100)
+  winner_variant_id        Int?
+  confidence_level         Decimal?               @db.Decimal(5, 2)
+  created_by               Int?
+  created_at               DateTime               @default(now()) @db.Timestamp(0)
+  updated_at               DateTime               @default(now()) @db.Timestamp(0)
+  ab_test_participants     ab_test_participants[]
+  ab_test_variants         ab_test_variants[]
+  email_campaigns          email_campaigns[]
+
+  @@index([created_by], map: "idx_created_by")
+  @@index([start_date, end_date], map: "idx_dates")
+  @@index([status], map: "idx_status")
+  @@index([test_type], map: "idx_test_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model account_deletion_requests {
+  id                                                 Int                               @id @default(autoincrement())
+  user_id                                            Int
+  status                                             account_deletion_requests_status? @default(PENDING)
+  reason                                             String?                           @db.Text
+  requested_at                                       DateTime                          @default(now()) @db.Timestamp(0)
+  approved_at                                        DateTime?                         @db.Timestamp(0)
+  approved_by                                        Int?
+  completed_at                                       DateTime?                         @db.Timestamp(0)
+  rejection_reason                                   String?                           @db.Text
+  request_ip                                         String?                           @db.VarChar(45)
+  users_account_deletion_requests_approved_byTousers users?                            @relation("account_deletion_requests_approved_byTousers", fields: [approved_by], references: [id], onUpdate: Restrict, map: "fk_account_deletion_requests_approver")
+  users_account_deletion_requests_user_idTousers     users                             @relation("account_deletion_requests_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_account_deletion_requests_user")
+
+  @@index([approved_by], map: "idx_approved_by")
+  @@index([requested_at], map: "idx_requested_at")
+  @@index([status], map: "idx_status")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model alert_actions {
+  id           Int                       @id @default(autoincrement())
+  alert_id     Int
+  action_type  alert_actions_action_type
+  description  String?                   @db.Text
+  performed_by Int?
+  action_date  DateTime?                 @default(now()) @db.Timestamp(0)
+  user_alerts  user_alerts               @relation(fields: [alert_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alert_actions_ibfk_1")
+  users        users?                    @relation(fields: [performed_by], references: [id], onUpdate: Restrict, map: "alert_actions_ibfk_2")
+
+  @@index([performed_by], map: "effectue_par")
+  @@index([alert_id, action_date], map: "idx_alerte_date")
+}
+
+model alert_types {
+  id          Int                   @id @default(autoincrement())
+  type_code   String                @unique(map: "type_code") @db.VarChar(50)
+  name        String                @db.VarChar(100)
+  description String?               @db.Text
+  severity    alert_types_severity? @default(medium)
+  active      Boolean?              @default(true)
+  user_alerts user_alerts[]
+
+  @@index([active], map: "idx_actif")
+}
+
+model api_key_usage_logs {
+  id               BigInt   @id @default(autoincrement())
+  api_key_id       Int
+  endpoint         String   @db.VarChar(255)
+  method           String   @db.VarChar(10)
+  status_code      Int
+  response_time_ms Int?
+  ip_address       String?  @db.VarChar(45)
+  user_agent       String?  @db.Text
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+  api_keys         api_keys @relation(fields: [api_key_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "api_key_usage_logs_ibfk_1")
+
+  @@index([api_key_id], map: "idx_api_key_id")
+  @@index([created_at], map: "idx_created_at")
+  @@index([endpoint], map: "idx_endpoint")
+  @@index([status_code], map: "idx_status_code")
+}
+
+model api_keys {
+  id                  Int                  @id @default(autoincrement())
+  key_hash            String               @unique(map: "key_hash") @db.VarChar(255)
+  key_prefix          String               @db.VarChar(20)
+  name                String               @db.VarChar(200)
+  description         String?              @db.Text
+  user_id             Int?
+  scopes              Json?
+  allowed_ips         Json?
+  rate_limit_override Int?
+  active              Boolean?             @default(true)
+  last_used_at        DateTime?            @db.Timestamp(0)
+  usage_count         BigInt?              @default(0)
+  expires_at          DateTime?            @db.Timestamp(0)
+  created_at          DateTime             @default(now()) @db.Timestamp(0)
+  updated_at          DateTime             @default(now()) @db.Timestamp(0)
+  api_key_usage_logs  api_key_usage_logs[]
+  users               users?               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "api_keys_ibfk_1")
+
+  @@index([active], map: "idx_active")
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([key_hash], map: "idx_key_hash")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model archive_statistics {
+  id                 Int      @id @default(autoincrement())
+  table_name         String   @db.VarChar(100)
+  records_archived   Int
+  records_deleted    Int
+  execution_time_ms  Int?
+  archived_from_date DateTime @db.Date
+  archived_to_date   DateTime @db.Date
+  created_at         DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([table_name], map: "idx_table_name")
+}
+
+model article_categories {
   id              Int               @id @default(autoincrement())
-  sport_id        Int?
-  code            String            @unique @db.VarChar(50)
   name            String            @db.VarChar(100)
   description     String?           @db.Text
-  active          Boolean           @default(true)
-  created_at      DateTime          @default(now()) @db.Timestamp(0)
+  shop_articles   shop_articles[]
+  sport_equipment sport_equipment[]
 
-  cours_recurrent cours_recurrent[]
-  sport           Sport?            @relation(fields: [sport_id], references: [id], onDelete: Cascade, map: "fk_course_types_sport")
-
-  @@index([code], map: "idx_code")
-  @@index([active], map: "idx_active")
-  @@index([sport_id], map: "idx_course_types_sport")
-  @@map("course_types")
+  @@index([name], map: "idx_nom")
 }
 
-// ============================================================================
-// EMAIL QUEUE - File d'attente persistante pour les emails
-// ============================================================================
+model article_images {
+  id            Int           @id @default(autoincrement())
+  article_id    Int
+  url           String        @db.VarChar(255)
+  alt_text      String?       @db.VarChar(255)
+  sort_order    Int?          @default(0)
+  shop_articles shop_articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_images_ibfk_1")
 
-model EmailQueue {
-  id             Int              @id @default(autoincrement())
-  to             String           @db.VarChar(255)
-  subject        String?          @db.VarChar(500)
-  template_title String?          @db.VarChar(100)
-  variables      Json?
-  html_content   String?          @db.Text
-
-  // Gestion des tentatives
-  attempts       Int              @default(0)
-  max_attempts   Int              @default(5)
-  next_retry_at  DateTime?        @db.DateTime(0)
-
-  // Statut
-  status         EmailQueueStatus @default(PENDING)
-
-  // Métadonnées
-  priority       Int              @default(0) // 0=normal, 1=high, -1=low
-  created_at     DateTime         @default(now()) @db.DateTime(0)
-  updated_at     DateTime         @updatedAt @db.DateTime(0)
-  processed_at   DateTime?        @db.DateTime(0)
-
-  // Erreurs
-  last_error     String?          @db.Text
-  error_details  Json?
-
-  // Relations
-  utilisateur_id Int?
-  utilisateur    utilisateurs?    @relation(fields: [utilisateur_id], references: [id], onDelete: SetNull)
-
-  // Correlation pour tracing
-  correlation_id String?          @db.VarChar(36)
-
-  @@index([status, next_retry_at], map: "idx_status_retry")
-  @@index([status, priority, created_at], map: "idx_status_priority_created")
-  @@index([utilisateur_id, status, created_at], map: "idx_user_status_created")
-  @@index([correlation_id], map: "idx_correlation")
-  @@index([utilisateur_id], map: "idx_utilisateur")
-  @@map("email_queue")
+  @@index([article_id], map: "article_id")
 }
 
-enum EmailQueueStatus {
-  PENDING      // En attente d'envoi
-  PROCESSING   // En cours d'envoi
-  COMPLETED    // Envoyé avec succès
-  FAILED       // Échec définitif après max tentatives
+model article_sizes {
+  id            Int           @id @default(autoincrement())
+  article_id    Int
+  size_id       Int
+  shop_articles shop_articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_sizes_ibfk_1")
+  sizes         sizes         @relation(fields: [size_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "article_sizes_ibfk_2")
+
+  @@index([article_id], map: "article_id")
+  @@index([article_id, size_id], map: "idx_article_taille")
+  @@index([size_id], map: "taille_id")
 }
 
-// ============================================================================
-// WEBHOOKS - Logs et traçabilité des événements Stripe
-// ============================================================================
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model article_stock {
+  id                  Int           @id @default(autoincrement())
+  article_id          Int
+  size_id             Int
+  quantity_total      Int           @default(0)
+  quantity_reserved   Int           @default(0)
+  quantity_available  Int           @default(0)
+  last_restock_at     DateTime?     @db.DateTime(0)
+  low_stock_threshold Int           @default(5)
+  created_at          DateTime?     @default(now()) @db.Timestamp(0)
+  updated_at          DateTime?     @default(now()) @db.Timestamp(0)
+  shop_articles       shop_articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_article_stock_article")
+  sizes               sizes         @relation(fields: [size_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_article_stock_taille")
 
-model WebhookLog {
-  id            String           @id @default(cuid())
-  event_id      String           @unique @db.VarChar(255)
-  event_type    String           @db.VarChar(100)
-  status        WebhookLogStatus
-  payload       Json
-  error         String?          @db.Text
-  retry_count   Int              @default(0)
-  next_retry_at DateTime?        @db.DateTime(0)
-  processed_at  DateTime?        @db.DateTime(0)
-  created_at    DateTime         @default(now()) @db.DateTime(0)
-  updated_at    DateTime         @updatedAt @db.DateTime(0)
-
-  @@index([event_type, status], map: "idx_event_type_status")
-  @@index([status, created_at], map: "idx_status_created")
-  @@index([event_type, status, created_at], map: "idx_event_status_created")
-  @@index([created_at], map: "idx_created_at")
-  @@map("webhook_logs")
-}
-
-enum WebhookLogStatus {
-  PENDING
-  SUCCESS
-  FAILURE
-  RETRYING
-}
-
-// ============================================================================
-// SESSIONS - Gestion des sessions utilisateur
-// ============================================================================
-
-model Session {
-  id               String       @id @default(cuid())
-  token            String       @unique @db.VarChar(255)
-  user_id          Int
-  ip_address       String?      @db.VarChar(45)
-  user_agent       String?      @db.Text
-  device_type      String?      @db.VarChar(50)
-  browser          String?      @db.VarChar(50)
-  os               String?      @db.VarChar(50)
-  is_active        Boolean      @default(true)
-  last_activity_at DateTime     @default(now()) @db.DateTime(0)
-  expires_at       DateTime     @db.DateTime(0)
-  created_at       DateTime     @default(now()) @db.DateTime(0)
-  updated_at       DateTime     @updatedAt @db.DateTime(0)
-
-  utilisateur utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  @@index([user_id, is_active], map: "idx_user_active")
-  @@index([token], map: "idx_token")
-  @@index([expires_at], map: "idx_expires_at")
-  @@index([expires_at, is_active], map: "idx_expires_active")
-  @@map("sessions")
-}
-
-// ============================================================================
-// AUDIT LOGS - Journalisation des événements de sécurité et actions
-// ============================================================================
-
-model AuditLog {
-  id           String   @id @default(cuid())
-  event_type   String   @db.VarChar(100)
-  severity     String   @db.VarChar(20)
-  user_id      Int?
-  ip_address   String?  @db.VarChar(45)
-  user_agent   String?  @db.Text
-  resource     String?  @db.VarChar(100)
-  action       String?  @db.VarChar(100)
-  success      Boolean  @default(true)
-  error_code   String?  @db.VarChar(50)
-  message      String?  @db.Text
-  metadata     Json?
-  timestamp    DateTime @default(now()) @db.DateTime(0)
-
-  utilisateur utilisateurs? @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
-
-  @@index([event_type, timestamp], map: "idx_event_type_timestamp")
-  @@index([user_id, timestamp], map: "idx_user_timestamp")
-  @@index([user_id, event_type, timestamp], map: "idx_user_event_timestamp")
-  @@index([severity, timestamp], map: "idx_severity_timestamp")
-  @@index([severity, success, timestamp], map: "idx_severity_success")
-  @@index([timestamp], map: "idx_timestamp")
-  @@map("audit_logs")
-}
-
-// ============================================================================
-// EMAILS - Historique des emails envoyés
-// ============================================================================
-
-model Email {
-  id              String      @id @default(cuid())
-  to              String      @db.VarChar(255)
-  subject         String      @db.VarChar(500)
-  content         String      @db.Text
-  html_content    String?     @db.Text
-  status          EmailStatus @default(SENT)
-  provider        String?     @db.VarChar(50) // 'sendgrid', 'smtp', etc.
-  message_id      String?     @db.VarChar(255)
-  error           String?     @db.Text
-  utilisateur_id  Int?
-  metadata        Json?       // Données additionnelles (template, variables, etc.)
-  sent_at         DateTime    @default(now()) @db.DateTime(0)
-  created_at      DateTime    @default(now()) @db.DateTime(0)
-
-  utilisateur utilisateurs? @relation(fields: [utilisateur_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
-
-  @@index([utilisateur_id, sent_at], map: "idx_user_sent")
-  @@index([to, sent_at], map: "idx_to_sent")
-  @@index([status, sent_at], map: "idx_status_sent")
-  @@index([sent_at], map: "idx_sent_at")
-  @@map("emails")
-}
-
-enum EmailStatus {
-  PENDING
-  SENT
-  FAILED
-  BOUNCED
-  DELIVERED
-}
-
-// ============================================================================
-// ARTICLES - Boutique
-// ============================================================================
-
-model articles {
-  id           Int            @id @default(autoincrement())
-  nom          String         @db.VarChar(100)
-  description  String?        @db.Text
-  prix         Decimal        @db.Decimal(10, 2)
-  image_url    String?        @db.VarChar(255)
-  categorie_id Int?
-
-  categories        categories?         @relation(fields: [categorie_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "articles_ibfk_1")
-  commande_articles commande_articles[]
-  images            images[]
-  article_stock     ArticleStock[]
-
-  @@index([categorie_id], map: "categorie_id")
-  @@index([categorie_id, prix], map: "idx_categorie_prix")
-  @@index([nom], map: "idx_nom")
-}
-
-// ============================================================================
-// STOCK - Table unifiée (remplace stocks et articles_tailles)
-// ============================================================================
-
-model ArticleStock {
-  id                   Int       @id @default(autoincrement())
-  article_id           Int
-  taille_id            Int
-  quantity_total       Int       @default(0)
-  quantity_reserved    Int       @default(0)
-  quantity_available   Int       @default(0)
-  last_restock_at      DateTime? @db.DateTime(0)
-  low_stock_threshold  Int       @default(5)
-  created_at           DateTime  @default(now()) @db.Timestamp(0)
-  updated_at           DateTime  @default(now()) @updatedAt @db.Timestamp(0)
-
-  article articles @relation(fields: [article_id], references: [id], onDelete: Cascade)
-  taille  tailles  @relation(fields: [taille_id], references: [id], onDelete: Cascade)
-
-  @@unique([article_id, taille_id], map: "uk_article_taille")
+  @@unique([article_id, size_id], map: "uk_article_taille")
   @@index([article_id, quantity_available], map: "idx_article_available")
-  @@index([taille_id], map: "idx_taille")
-  @@map("article_stock")
+  @@index([size_id], map: "idx_taille")
 }
 
-// ============================================================================
-// COMMANDES
-// ============================================================================
+model audit_logs_archive {
+  id            String   @id @db.VarChar(255)
+  event_type    String   @db.VarChar(100)
+  user_id       Int?
+  resource_type String?  @db.VarChar(100)
+  resource_id   String?  @db.VarChar(100)
+  action        String   @db.VarChar(50)
+  details       Json?
+  ip_address    String?  @db.VarChar(45)
+  user_agent    String?  @db.Text
+  created_at    DateTime @db.Timestamp(0)
+  archived_at   DateTime @default(now()) @db.Timestamp(0)
 
-model commandes {
-  id                          Int                           @id @default(autoincrement())
-  unique_id                   String?                       @db.VarChar(255)
-  numero_commande             String?                       @db.VarChar(100)
-  utilisateur_id              Int
-  total                       Decimal                       @default(0.00) @db.Decimal(10, 2)
-  date_commande               DateTime                      @default(now()) @db.Timestamp(0)
-  statut                      commandes_statut?             @default(en_attente)
-  ip_address                  String?                       @db.VarChar(45)
-  user_agent                  String?                       @db.Text
-  created_at                  DateTime                      @default(now()) @db.Timestamp(0)
+  @@index([archived_at], map: "idx_archived_at")
+  @@index([created_at], map: "idx_archived_created_at")
+  @@index([event_type], map: "idx_archived_event_type")
+  @@index([user_id], map: "idx_archived_user_id")
+}
 
-  commande_articles           commande_articles[]
-  historique_statuts_commande historique_statuts_commande[]
-  users                       utilisateurs                  @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commandes_ibfk_1")
-  paiements                   paiements[]
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model audit_trail {
+  id          BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  table_name  String                  @db.VarChar(64)
+  record_id   Int                     @db.UnsignedInt
+  action_type audit_trail_action_type
+  old_values  Json?
+  new_values  Json?
+  changed_by  Int?                    @db.UnsignedInt
+  changed_at  DateTime?               @default(now()) @db.Timestamp(0)
+  ip_address  String?                 @db.VarChar(45)
+  user_agent  String?                 @db.Text
+
+  @@index([action_type], map: "idx_action_type")
+  @@index([changed_at], map: "idx_changed_at")
+  @@index([changed_by], map: "idx_changed_by")
+  @@index([table_name, record_id], map: "idx_table_record")
+}
+
+model belt_grades {
+  id                 Int                  @id @default(autoincrement())
+  sport_id           Int?
+  grade_id           String               @unique(map: "grade_id") @db.VarChar(100)
+  name               String?              @db.VarChar(100)
+  color              String?              @db.VarChar(7)
+  sort_order         Int?                 @default(0)
+  description        String?              @db.Text
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(0)
+  sports             sports?              @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "belt_grades_ibfk_1")
+  teachers           teachers[]
+  user_grade_history user_grade_history[]
+  user_profiles      user_profiles[]
+  user_sports        user_sports[]
+  users              users[]
+
+  @@index([sport_id], map: "idx_grades_sport")
+  @@index([sport_id, sort_order], map: "idx_grades_sport_order")
+}
+
+model bookings {
+  id               Int              @id @default(autoincrement())
+  user_id          Int?
+  course_id        Int
+  status           String?          @db.VarChar(50)
+  booking_date     DateTime?        @default(now()) @db.Timestamp(0)
+  users            users?           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookings_ibfk_1")
+  course_instances course_instances @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "bookings_ibfk_2")
+
+  @@index([course_id], map: "cours_id")
+  @@index([status], map: "idx_statut")
+  @@index([user_id, course_id], map: "idx_utilisateur_cours")
+}
+
+model course_instances {
+  id                  Int               @id @default(autoincrement())
+  sport_id            Int?
+  course_date         DateTime          @db.Date
+  course_type         String            @db.VarChar(50)
+  start_time          DateTime          @db.Time(0)
+  end_time            DateTime          @db.Time(0)
+  recurring_course_id Int
+  deleted_at          DateTime?         @db.Timestamp(0)
+  deleted_by          Int?
+  bookings            bookings[]
+  recurring_courses   recurring_courses @relation(fields: [recurring_course_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "course_instances_ibfk_1")
+  sports              sports?           @relation(fields: [sport_id], references: [id], onUpdate: NoAction, map: "course_instances_ibfk_2")
+  enrollments         enrollments[]
+
+  @@index([recurring_course_id], map: "cours_recurrent_id")
+  @@index([course_date], map: "idx_cours_date")
+  @@index([sport_id, course_date, start_time], map: "idx_cours_planning")
+  @@index([sport_id], map: "idx_cours_sport")
+  @@index([sport_id, course_date], map: "idx_cours_sport_date")
+  @@index([course_date, course_type], map: "idx_date_type")
+  @@index([course_date, course_type, recurring_course_id], map: "idx_date_type_recurrent")
+  @@index([deleted_at], map: "idx_deleted_at")
+}
+
+model course_types {
+  id                Int                 @id @default(autoincrement())
+  sport_id          Int?
+  code              String              @unique(map: "code") @db.VarChar(50)
+  name              String              @db.VarChar(100)
+  description       String?             @db.Text
+  active            Boolean?            @default(true)
+  created_at        DateTime?           @default(now()) @db.Timestamp(0)
+  sports            sports?             @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "course_types_ibfk_1")
+  recurring_courses recurring_courses[]
+
+  @@index([active], map: "idx_active")
+  @@index([code], map: "idx_code")
+  @@index([sport_id], map: "idx_course_types_sport")
+}
+
+model custom_message_types {
+  id          Int      @id @default(autoincrement())
+  type_code   String   @unique(map: "type_code") @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  active      Boolean? @default(true)
+}
+
+model custom_messages {
+  id                                      Int       @id @default(autoincrement())
+  user_id                                 Int?
+  type_id                                 Int?
+  title                                   String    @db.VarChar(255)
+  content                                 String    @db.Text
+  active                                  Boolean?  @default(true)
+  created_at                              DateTime  @default(now()) @db.Timestamp(0)
+  updated_at                              DateTime  @default(now()) @db.Timestamp(0)
+  deleted_at                              DateTime? @db.Timestamp(0)
+  deleted_by                              Int?
+  users_custom_messages_user_idTousers    users?    @relation("custom_messages_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "custom_messages_ibfk_1")
+  users_custom_messages_deleted_byTousers users?    @relation("custom_messages_deleted_byTousers", fields: [deleted_by], references: [id], onUpdate: Restrict, map: "custom_messages_ibfk_2")
+
+  @@index([deleted_by], map: "deleted_by")
+  @@index([type_id], map: "idx_type")
+  @@index([user_id, active], map: "idx_utilisateur_actif")
+}
+
+model data_export_requests {
+  id                    Int                          @id @default(autoincrement())
+  user_id               Int
+  status                data_export_requests_status? @default(PENDING)
+  requested_at          DateTime                     @default(now()) @db.Timestamp(0)
+  processing_started_at DateTime?                    @db.Timestamp(0)
+  completed_at          DateTime?                    @db.Timestamp(0)
+  expires_at            DateTime?                    @db.Timestamp(0)
+  file_path             String?                      @db.VarChar(500)
+  file_size_bytes       BigInt?
+  request_ip            String?                      @db.VarChar(45)
+  download_count        Int?                         @default(0)
+  last_downloaded_at    DateTime?                    @db.Timestamp(0)
+  error_message         String?                      @db.Text
+  users                 users                        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_data_export_requests_user")
+
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([expires_at, status], map: "idx_expires_status")
+  @@index([requested_at], map: "idx_requested_at")
+  @@index([status], map: "idx_status")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model direct_messages {
+  id                                       Int                   @id @default(autoincrement())
+  sender_id                                Int
+  receiver_id                              Int?
+  groupe_id                                Int?
+  subject                                  String?               @db.VarChar(255)
+  content                                  String                @db.Text
+  sent_at                                  DateTime?             @default(now()) @db.Timestamp(0)
+  read_at                                  DateTime?             @db.Timestamp(0)
+  deleted_by_sender                        Boolean?              @default(false)
+  deleted_by_receiver                      Boolean?              @default(false)
+  users_direct_messages_sender_idTousers   users                 @relation("direct_messages_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "direct_messages_ibfk_1")
+  users_direct_messages_receiver_idTousers users?                @relation("direct_messages_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "direct_messages_ibfk_2")
+  user_groups                              user_groups?          @relation(fields: [groupe_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "direct_messages_ibfk_3")
+  message_read_status                      message_read_status[]
+  user_notifications                       user_notifications[]
+
+  @@index([groupe_id], map: "groupe_id")
+  @@index([receiver_id, read_at], map: "idx_receiver_read")
+  @@index([sender_id, sent_at], map: "idx_sender_date")
+}
+
+model email_campaigns {
+  id                Int                     @id @default(autoincrement())
+  name              String                  @db.VarChar(200)
+  description       String?                 @db.Text
+  template_id       Int?
+  status            email_campaigns_status? @default(DRAFT)
+  scheduled_at      DateTime?               @db.Timestamp(0)
+  started_at        DateTime?               @db.Timestamp(0)
+  completed_at      DateTime?               @db.Timestamp(0)
+  target_segment    Json?
+  recipient_count   Int?                    @default(0)
+  emails_sent       Int?                    @default(0)
+  emails_delivered  Int?                    @default(0)
+  emails_bounced    Int?                    @default(0)
+  emails_opened     Int?                    @default(0)
+  emails_clicked    Int?                    @default(0)
+  unsubscribes      Int?                    @default(0)
+  spam_reports      Int?                    @default(0)
+  delivery_rate     Decimal?                @default(0.00) @db.Decimal(5, 2)
+  open_rate         Decimal?                @default(0.00) @db.Decimal(5, 2)
+  click_rate        Decimal?                @default(0.00) @db.Decimal(5, 2)
+  bounce_rate       Decimal?                @default(0.00) @db.Decimal(5, 2)
+  unsubscribe_rate  Decimal?                @default(0.00) @db.Decimal(5, 2)
+  ab_test_id        Int?
+  created_by        Int?
+  created_at        DateTime                @default(now()) @db.Timestamp(0)
+  updated_at        DateTime                @default(now()) @db.Timestamp(0)
+  email_templates   email_templates?        @relation(fields: [template_id], references: [id], onUpdate: NoAction, map: "email_campaigns_ibfk_1")
+  ab_tests          ab_tests?               @relation(fields: [ab_test_id], references: [id], onUpdate: NoAction, map: "email_campaigns_ibfk_2")
+  users             users?                  @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "email_campaigns_ibfk_3")
+  email_link_clicks email_link_clicks[]
+  email_tracking    email_tracking[]
+
+  @@index([created_by], map: "created_by")
+  @@index([ab_test_id], map: "idx_ab_test_id")
+  @@index([scheduled_at], map: "idx_scheduled_at")
+  @@index([status], map: "idx_status")
+  @@index([template_id], map: "idx_template_id")
+}
+
+model email_link_clicks {
+  id              Int              @id @default(autoincrement())
+  tracking_id     String           @db.VarChar(255)
+  campaign_id     Int?
+  url             String           @db.Text
+  url_hash        String           @db.VarChar(64)
+  link_label      String?          @db.VarChar(255)
+  clicked_at      DateTime         @default(now()) @db.Timestamp(0)
+  ip_address      String?          @db.VarChar(45)
+  user_agent      String?          @db.Text
+  email_tracking  email_tracking   @relation(fields: [tracking_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "email_link_clicks_ibfk_1")
+  email_campaigns email_campaigns? @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "email_link_clicks_ibfk_2")
+
+  @@index([campaign_id], map: "idx_campaign_id")
+  @@index([clicked_at], map: "idx_clicked_at")
+  @@index([tracking_id], map: "idx_tracking_id")
+  @@index([url_hash], map: "idx_url_hash")
+}
+
+model email_queue_archive {
+  id             Int                        @id
+  to_email       String                     @db.VarChar(255)
+  subject        String?                    @db.VarChar(500)
+  template_title String?                    @db.VarChar(100)
+  variables      Json?
+  html_content   String?                    @db.Text
+  attempts       Int?                       @default(0)
+  max_attempts   Int?                       @default(5)
+  status         email_queue_archive_status
+  priority       Int?                       @default(0)
+  created_at     DateTime                   @db.Timestamp(0)
+  processed_at   DateTime?                  @db.Timestamp(0)
+  last_error     String?                    @db.Text
+  user_id        Int?
+  archived_at    DateTime                   @default(now()) @db.Timestamp(0)
+
+  @@index([archived_at], map: "idx_archived_at")
+  @@index([created_at], map: "idx_archived_created_at")
+  @@index([status], map: "idx_archived_status")
+}
+
+model email_template_attachments {
+  id              Int             @id @default(autoincrement())
+  template_id     Int
+  file_name       String          @db.VarChar(255)
+  file_path       String          @db.VarChar(500)
+  file_size_bytes Int
+  mime_type       String          @db.VarChar(100)
+  created_at      DateTime        @default(now()) @db.Timestamp(0)
+  email_templates email_templates @relation(fields: [template_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "email_template_attachments_ibfk_1")
+
+  @@index([template_id], map: "idx_template_id")
+}
+
+model email_template_versions {
+  id                 Int             @id @default(autoincrement())
+  template_id        Int
+  version            Int
+  subject            String          @db.VarChar(500)
+  html_content       String          @db.Text
+  text_content       String?         @db.Text
+  change_description String?         @db.Text
+  created_by         Int?
+  created_at         DateTime        @default(now()) @db.Timestamp(0)
+  email_templates    email_templates @relation(fields: [template_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "email_template_versions_ibfk_1")
+
+  @@unique([template_id, version], map: "uk_template_version")
+  @@index([created_at], map: "idx_created_at")
+  @@index([template_id], map: "idx_template_id")
+}
+
+model email_templates {
+  id                         Int                          @id @default(autoincrement())
+  template_key               String                       @unique(map: "template_key") @db.VarChar(100)
+  name                       String                       @db.VarChar(200)
+  description                String?                      @db.Text
+  subject                    String                       @db.VarChar(500)
+  html_content               String                       @db.Text
+  text_content               String?                      @db.Text
+  available_variables        Json?
+  category                   email_templates_category?    @default(TRANSACTIONAL)
+  active                     Boolean?                     @default(true)
+  is_default                 Boolean?                     @default(false)
+  version                    Int?                         @default(1)
+  parent_template_id         Int?
+  preview_data               Json?
+  created_by                 Int?
+  updated_by                 Int?
+  created_at                 DateTime                     @default(now()) @db.Timestamp(0)
+  updated_at                 DateTime                     @default(now()) @db.Timestamp(0)
+  ab_test_variants           ab_test_variants[]
+  email_campaigns            email_campaigns[]
+  email_template_attachments email_template_attachments[]
+  email_template_versions    email_template_versions[]
+
+  @@index([active], map: "idx_active")
+  @@index([category], map: "idx_category")
+  @@index([created_by], map: "idx_created_by")
+  @@index([template_key], map: "idx_template_key")
+  @@index([version, parent_template_id], map: "idx_version")
+}
+
+model email_tracking {
+  id                    String                      @id @db.VarChar(255)
+  campaign_id           Int?
+  email_id              String?                     @db.VarChar(255)
+  user_id               Int?
+  email_address         String                      @db.VarChar(255)
+  sent_at               DateTime?                   @db.Timestamp(0)
+  delivered_at          DateTime?                   @db.Timestamp(0)
+  bounced_at            DateTime?                   @db.Timestamp(0)
+  bounce_type           email_tracking_bounce_type?
+  bounce_reason         String?                     @db.Text
+  opened                Boolean?                    @default(false)
+  first_opened_at       DateTime?                   @db.Timestamp(0)
+  open_count            Int?                        @default(0)
+  last_opened_at        DateTime?                   @db.Timestamp(0)
+  clicked               Boolean?                    @default(false)
+  first_clicked_at      DateTime?                   @db.Timestamp(0)
+  click_count           Int?                        @default(0)
+  last_clicked_at       DateTime?                   @db.Timestamp(0)
+  unsubscribed          Boolean?                    @default(false)
+  unsubscribed_at       DateTime?                   @db.Timestamp(0)
+  marked_as_spam        Boolean?                    @default(false)
+  spam_reported_at      DateTime?                   @db.Timestamp(0)
+  tracking_pixel_loaded Boolean?                    @default(false)
+  ip_address            String?                     @db.VarChar(45)
+  user_agent            String?                     @db.Text
+  email_link_clicks     email_link_clicks[]
+  email_campaigns       email_campaigns?            @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "email_tracking_ibfk_1")
+  users                 users?                      @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "email_tracking_ibfk_2")
+
+  @@index([campaign_id], map: "idx_campaign_id")
+  @@index([clicked], map: "idx_clicked")
+  @@index([email_address], map: "idx_email_address")
+  @@index([opened], map: "idx_opened")
+  @@index([sent_at], map: "idx_sent_at")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model email_validation_tokens_legacy {
+  id             Int       @id @default(autoincrement())
+  utilisateur_id Int
+  token          String    @unique(map: "token") @db.VarChar(255)
+  email          String    @db.VarChar(255)
+  expires_at     DateTime  @db.Timestamp(0)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  used_at        DateTime? @db.Timestamp(0)
+  users          users     @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "email_validation_tokens_legacy_ibfk_1")
+
+  @@index([email], map: "idx_email")
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([token, expires_at], map: "idx_token_expires")
+  @@index([utilisateur_id], map: "utilisateur_id")
+}
+
+model emails_archive {
+  id                  String                @id @db.VarChar(255)
+  to_email            String                @db.VarChar(255)
+  subject             String?               @db.VarChar(500)
+  template_title      String?               @db.VarChar(100)
+  variables           Json?
+  html_content        String?               @db.Text
+  status              emails_archive_status
+  sent_at             DateTime?             @db.Timestamp(0)
+  delivered_at        DateTime?             @db.Timestamp(0)
+  opened_at           DateTime?             @db.Timestamp(0)
+  clicked_at          DateTime?             @db.Timestamp(0)
+  bounced_at          DateTime?             @db.Timestamp(0)
+  error_message       String?               @db.Text
+  provider_message_id String?               @db.VarChar(255)
+  user_id             Int?
+  created_at          DateTime              @db.Timestamp(0)
+  archived_at         DateTime              @default(now()) @db.Timestamp(0)
+
+  @@index([archived_at], map: "idx_archived_at")
+  @@index([created_at], map: "idx_archived_created_at")
+  @@index([status], map: "idx_archived_status")
+  @@index([user_id], map: "idx_archived_user_id")
+}
+
+model enrollments {
+  id               Int              @id @default(autoincrement())
+  user_id          Int?
+  course_id        Int
+  enrollment_date  DateTime?        @default(now()) @db.Timestamp(0)
+  status           String?          @db.VarChar(50)
+  users            users?           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "enrollments_ibfk_1")
+  course_instances course_instances @relation(fields: [course_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "enrollments_ibfk_2")
+
+  @@index([course_id], map: "cours_id")
+  @@index([course_id, user_id], map: "idx_inscriptions_cours")
+  @@index([user_id, enrollment_date], map: "idx_inscriptions_user_date")
+  @@index([status], map: "idx_statut")
+  @@index([user_id, course_id], map: "idx_utilisateur_cours")
+}
+
+model event_competition_categories {
+  id               Int                                  @id @default(autoincrement())
+  event_id         Int
+  name             String                               @db.VarChar(200)
+  description      String?                              @db.Text
+  age_min          Int?
+  age_max          Int?
+  gender           event_competition_categories_gender? @default(ANY)
+  belt_level_min   String?                              @db.VarChar(50)
+  belt_level_max   String?                              @db.VarChar(50)
+  weight_class     String?                              @db.VarChar(100)
+  max_participants Int?
+  created_at       DateTime                             @default(now()) @db.Timestamp(0)
+  events           events                               @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_competition_categories_ibfk_1")
+
+  @@index([event_id], map: "idx_event_id")
+}
+
+model event_documents {
+  id              Int                           @id @default(autoincrement())
+  event_id        Int
+  document_type   event_documents_document_type
+  file_url        String                        @db.VarChar(500)
+  file_name       String                        @db.VarChar(255)
+  file_size_bytes BigInt
+  title           String                        @db.VarChar(200)
+  description     String?                       @db.Text
+  visibility      event_documents_visibility?   @default(PUBLIC)
+  version         String?                       @db.VarChar(20)
+  language        String?                       @default("fr") @db.VarChar(10)
+  uploaded_by     Int?
+  uploaded_at     DateTime                      @default(now()) @db.Timestamp(0)
+  events          events                        @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_documents_ibfk_1")
+  users           users?                        @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "event_documents_ibfk_2")
+
+  @@index([document_type], map: "idx_document_type")
+  @@index([event_id], map: "idx_event_id")
+  @@index([visibility], map: "idx_visibility")
+  @@index([uploaded_by], map: "uploaded_by")
+}
+
+model event_media {
+  id              Int                     @id @default(autoincrement())
+  event_id        Int
+  media_type      event_media_media_type
+  file_url        String                  @db.VarChar(500)
+  file_name       String                  @db.VarChar(255)
+  file_size_bytes BigInt
+  mime_type       String                  @db.VarChar(100)
+  thumbnail_url   String?                 @db.VarChar(500)
+  title           String?                 @db.VarChar(200)
+  description     String?                 @db.Text
+  alt_text        String?                 @db.VarChar(500)
+  display_order   Int?                    @default(0)
+  is_featured     Boolean?                @default(false)
+  visibility      event_media_visibility? @default(PUBLIC)
+  uploaded_by     Int?
+  uploaded_at     DateTime                @default(now()) @db.Timestamp(0)
+  events          events                  @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_media_ibfk_1")
+  users           users?                  @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "event_media_ibfk_2")
+
+  @@index([display_order], map: "idx_display_order")
+  @@index([event_id], map: "idx_event_id")
+  @@index([media_type], map: "idx_media_type")
+  @@index([visibility], map: "idx_visibility")
+  @@index([uploaded_by], map: "uploaded_by")
+}
+
+model event_registrations {
+  id                        Int                                 @id @default(autoincrement())
+  event_id                  Int
+  user_id                   Int
+  status                    event_registrations_status?         @default(PENDING)
+  participant_first_name    String?                             @db.VarChar(100)
+  participant_last_name     String?                             @db.VarChar(100)
+  participant_email         String?                             @db.VarChar(100)
+  participant_phone         String?                             @db.VarChar(20)
+  participant_date_of_birth DateTime?                           @db.Date
+  participant_belt_level    String?                             @db.VarChar(50)
+  category                  String?                             @db.VarChar(100)
+  payment_status            event_registrations_payment_status? @default(PENDING)
+  payment_amount            Decimal?                            @db.Decimal(10, 2)
+  payment_id                Int?
+  emergency_contact_name    String?                             @db.VarChar(100)
+  emergency_contact_phone   String?                             @db.VarChar(20)
+  medical_info              String?                             @db.Text
+  terms_accepted            Boolean?                            @default(false)
+  photo_consent             Boolean?                            @default(false)
+  notes                     String?                             @db.Text
+  admin_notes               String?                             @db.Text
+  registered_at             DateTime                            @default(now()) @db.Timestamp(0)
+  confirmed_at              DateTime?                           @db.Timestamp(0)
+  cancelled_at              DateTime?                           @db.Timestamp(0)
+  cancellation_reason       String?                             @db.Text
+  events                    events                              @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_registrations_ibfk_1")
+  users                     users                               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_registrations_ibfk_2")
+  payments                  payments?                           @relation(fields: [payment_id], references: [id], onUpdate: NoAction, map: "event_registrations_ibfk_3")
+
+  @@unique([event_id, user_id], map: "uk_event_user")
+  @@index([event_id], map: "idx_event_id")
+  @@index([event_id, status], map: "idx_event_reg_status")
+  @@index([event_id, status], map: "idx_event_registr_event")
+  @@index([payment_status], map: "idx_payment_status")
+  @@index([registered_at], map: "idx_registered_at")
+  @@index([status], map: "idx_status")
+  @@index([user_id], map: "idx_user_id")
+  @@index([payment_id], map: "payment_id")
+}
+
+model event_reminders {
+  id                    Int                             @id @default(autoincrement())
+  event_id              Int
+  reminder_type         event_reminders_reminder_type
+  send_at               DateTime                        @db.Timestamp(0)
+  days_before           Int?
+  target_audience       event_reminders_target_audience
+  subject               String?                         @db.VarChar(500)
+  message               String?                         @db.Text
+  notification_channels Json?
+  status                event_reminders_status?         @default(PENDING)
+  sent_at               DateTime?                       @db.Timestamp(0)
+  sent_count            Int?                            @default(0)
+  created_by            Int?
+  created_at            DateTime                        @default(now()) @db.Timestamp(0)
+  events                events                          @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_reminders_ibfk_1")
+  users                 users?                          @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "event_reminders_ibfk_2")
+
+  @@index([created_by], map: "created_by")
+  @@index([event_id], map: "idx_event_id")
+  @@index([send_at], map: "idx_send_at")
+  @@index([status], map: "idx_status")
+}
+
+model event_team_members {
+  id          Int                      @id @default(autoincrement())
+  team_id     Int
+  user_id     Int?
+  first_name  String?                  @db.VarChar(100)
+  last_name   String?                  @db.VarChar(100)
+  belt_level  String?                  @db.VarChar(50)
+  role        event_team_members_role? @default(MEMBER)
+  created_at  DateTime                 @default(now()) @db.Timestamp(0)
+  event_teams event_teams              @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_team_members_ibfk_1")
+  users       users?                   @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "event_team_members_ibfk_2")
+
+  @@index([team_id], map: "idx_team_id")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model event_teams {
+  id                 Int                  @id @default(autoincrement())
+  event_id           Int
+  team_name          String               @db.VarChar(200)
+  captain_user_id    Int?
+  club_name          String?              @db.VarChar(200)
+  category           String?              @db.VarChar(100)
+  status             event_teams_status?  @default(REGISTERED)
+  created_at         DateTime             @default(now()) @db.Timestamp(0)
+  updated_at         DateTime             @default(now()) @db.Timestamp(0)
+  event_team_members event_team_members[]
+  events             events               @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "event_teams_ibfk_1")
+  users              users?               @relation(fields: [captain_user_id], references: [id], onUpdate: NoAction, map: "event_teams_ibfk_2")
+
+  @@index([captain_user_id], map: "captain_user_id")
+  @@index([event_id], map: "idx_event_id")
+  @@index([status], map: "idx_status")
+}
+
+model event_types {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique(map: "code") @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  icon        String?  @db.VarChar(50)
+  color       String?  @db.VarChar(20)
+  active      Boolean? @default(true)
+  created_at  DateTime @default(now()) @db.Timestamp(0)
+  events      events[]
+
+  @@index([active], map: "idx_active")
+  @@index([code], map: "idx_code")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model events {
+  id                             Int                            @id @default(autoincrement())
+  event_type_id                  Int
+  venue_id                       Int?
+  title                          String                         @db.VarChar(200)
+  slug                           String                         @unique(map: "slug") @db.VarChar(250)
+  description                    String?                        @db.Text
+  short_description              String?                        @db.VarChar(500)
+  start_date                     DateTime                       @db.Date
+  end_date                       DateTime                       @db.Date
+  start_time                     DateTime?                      @db.Time(0)
+  end_time                       DateTime?                      @db.Time(0)
+  timezone                       String?                        @default("Europe/Brussels") @db.VarChar(50)
+  organizer_name                 String?                        @db.VarChar(200)
+  organizer_email                String?                        @db.VarChar(100)
+  organizer_phone                String?                        @db.VarChar(20)
+  organizer_website              String?                        @db.VarChar(500)
+  min_participants               Int?
+  max_participants               Int?
+  current_participants           Int?                           @default(0)
+  registration_required          Boolean?                       @default(true)
+  registration_start_date        DateTime?                      @db.Timestamp(0)
+  registration_end_date          DateTime?                      @db.Timestamp(0)
+  registration_fee               Decimal?                       @db.Decimal(10, 2)
+  categories                     Json?
+  belt_levels                    Json?
+  age_min                        Int?
+  age_max                        Int?
+  status                         events_status?                 @default(DRAFT)
+  visibility                     events_visibility?             @default(PUBLIC)
+  featured                       Boolean?                       @default(false)
+  cover_image_url                String?                        @db.VarChar(500)
+  banner_image_url               String?                        @db.VarChar(500)
+  meta_title                     String?                        @db.VarChar(200)
+  meta_description               String?                        @db.VarChar(500)
+  external_url                   String?                        @db.VarChar(500)
+  facebook_event_url             String?                        @db.VarChar(500)
+  deleted_at                     DateTime?                      @db.Timestamp(0)
+  deleted_by                     Int?
+  created_by                     Int?
+  updated_by                     Int?
+  created_at                     DateTime                       @default(now()) @db.Timestamp(0)
+  updated_at                     DateTime                       @default(now()) @db.Timestamp(0)
+  event_competition_categories   event_competition_categories[]
+  event_documents                event_documents[]
+  event_media                    event_media[]
+  event_registrations            event_registrations[]
+  event_reminders                event_reminders[]
+  event_teams                    event_teams[]
+  event_types                    event_types                    @relation(fields: [event_type_id], references: [id], onUpdate: NoAction, map: "events_ibfk_1")
+  venues                         venues?                        @relation(fields: [venue_id], references: [id], onUpdate: NoAction, map: "events_ibfk_2")
+  users_events_created_byTousers users?                         @relation("events_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction, map: "events_ibfk_3")
+  users_events_updated_byTousers users?                         @relation("events_updated_byTousers", fields: [updated_by], references: [id], onUpdate: NoAction, map: "events_ibfk_4")
+
+  @@index([created_by], map: "created_by")
+  @@index([title, description], map: "ft_events_search")
+  @@index([start_date, end_date], map: "idx_dates")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([event_type_id], map: "idx_event_type")
+  @@index([featured], map: "idx_featured")
+  @@index([slug], map: "idx_slug")
+  @@index([status], map: "idx_status")
+  @@index([venue_id], map: "idx_venue")
+  @@index([visibility], map: "idx_visibility")
+  @@index([updated_by], map: "updated_by")
+}
+
+model genders {
+  id         Int     @id @default(autoincrement())
+  genre_name String  @unique(map: "genre_name") @db.VarChar(50)
+  users      users[]
+}
+
+model legacy_statistics {
+  id              Int       @id @default(autoincrement())
+  type            String    @db.VarChar(50)
+  valeur          Json
+  collection_date DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([type, collection_date], map: "idx_type_date")
+}
+
+model login_attempts {
+  id           Int      @id @default(autoincrement())
+  email        String   @db.VarChar(255)
+  ip_address   String   @db.VarChar(45)
+  success      Boolean  @default(false)
+  attempt_time DateTime @default(now()) @db.Timestamp(0)
+  user_agent   String?  @db.Text
+
+  @@index([email, ip_address], map: "idx_email_ip")
+  @@index([ip_address, attempt_time], map: "idx_ip_time")
+}
+
+model manual_recovery_requests_legacy {
+  id                                                          Int                                     @id @default(autoincrement())
+  utilisateur_id                                              Int
+  request_token                                               String                                  @unique(map: "request_token") @db.VarChar(255)
+  verification_data                                           Json
+  status                                                      manual_recovery_requests_legacy_status? @default(pending)
+  submitted_at                                                DateTime                                @default(now()) @db.Timestamp(0)
+  processed_at                                                DateTime?                               @db.Timestamp(0)
+  processed_by                                                Int?
+  admin_notes                                                 String?                                 @db.Text
+  users_manual_recovery_requests_legacy_utilisateur_idTousers users                                   @relation("manual_recovery_requests_legacy_utilisateur_idTousers", fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "manual_recovery_requests_legacy_ibfk_1")
+  users_manual_recovery_requests_legacy_processed_byTousers   users?                                  @relation("manual_recovery_requests_legacy_processed_byTousers", fields: [processed_by], references: [id], onUpdate: Restrict, map: "manual_recovery_requests_legacy_ibfk_2")
+
+  @@index([status], map: "idx_status")
+  @@index([processed_by], map: "processed_by")
+  @@index([utilisateur_id], map: "utilisateur_id")
+}
+
+model message_read_status {
+  id              Int             @id @default(autoincrement())
+  message_id      Int
+  user_id         Int?
+  read_at         DateTime?       @db.Timestamp(0)
+  deleted_at      DateTime?       @db.Timestamp(0)
+  direct_messages direct_messages @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "message_read_status_ibfk_1")
+  users           users?          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "message_read_status_ibfk_2")
+
+  @@index([message_id, user_id], map: "idx_message_user")
+  @@index([user_id], map: "utilisateur_id")
+}
+
+model notification_templates {
+  id                  Int                                      @id @default(autoincrement())
+  template_key        String                                   @unique(map: "template_key") @db.VarChar(100)
+  name                String                                   @db.VarChar(200)
+  notification_type   notification_templates_notification_type
+  title               String?                                  @db.VarChar(255)
+  message             String                                   @db.Text
+  available_variables Json?
+  priority            notification_templates_priority?         @default(NORMAL)
+  category            String?                                  @db.VarChar(100)
+  action_url          String?                                  @db.VarChar(500)
+  action_label        String?                                  @db.VarChar(100)
+  active              Boolean?                                 @default(true)
+  created_at          DateTime                                 @default(now()) @db.Timestamp(0)
+  updated_at          DateTime                                 @default(now()) @db.Timestamp(0)
+
+  @@index([active], map: "idx_active")
+  @@index([category], map: "idx_category")
+  @@index([notification_type], map: "idx_notification_type")
+  @@index([template_key], map: "idx_template_key")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model order_items {
+  id            Int           @id @default(autoincrement())
+  order_id      Int
+  article_id    Int
+  quantity      Int?
+  unit_price    Decimal?      @db.Decimal(10, 2)
+  size_id       Int?
+  orders        orders        @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_order_items_order")
+  shop_articles shop_articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_items_ibfk_2")
+  sizes         sizes?        @relation(fields: [size_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "order_items_ibfk_3")
+
+  @@index([article_id], map: "article_id")
+  @@index([order_id, article_id], map: "idx_order_article")
+  @@index([size_id], map: "taille_id")
+}
+
+model order_status_history {
+  id         Int                              @id @default(autoincrement())
+  order_id   Int
+  old_status order_status_history_old_status?
+  new_status order_status_history_new_status?
+  changed_at DateTime                         @default(now()) @db.Timestamp(0)
+  orders     orders                           @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_order_status_history_order")
+
+  @@index([changed_at], map: "idx_date_changement")
+  @@index([order_id], map: "idx_order_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model orders {
+  id                   Int                    @id @default(autoincrement())
+  unique_id            String?                @db.VarChar(255)
+  order_number         String?                @db.VarChar(100)
+  user_id              Int?
+  total                Decimal                @default(0.00) @db.Decimal(10, 2)
+  order_date           DateTime               @default(now()) @db.Timestamp(0)
+  status               String?                @db.VarChar(50)
+  ip_address           String?                @db.VarChar(45)
+  user_agent           String?                @db.Text
+  created_at           DateTime               @default(now()) @db.Timestamp(0)
+  deleted_at           DateTime?              @db.Timestamp(0)
+  deleted_by           Int?
+  order_items          order_items[]
+  order_status_history order_status_history[]
+  users                users?                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "orders_ibfk_1")
+  payments             payments[]
 
   @@index([created_at], map: "idx_created_at")
-  @@index([numero_commande], map: "idx_numero_commande")
+  @@index([created_at, status], map: "idx_created_statut")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([order_number], map: "idx_order_number")
+  @@index([status, order_date, total], map: "idx_status_date_total")
   @@index([total], map: "idx_total")
   @@index([unique_id], map: "idx_unique_id")
-  @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
-  @@index([statut, date_commande, total], map: "idx_statut_date_total")
-  @@index([created_at, statut], map: "idx_created_statut")
+  @@index([user_id, status], map: "idx_utilisateur_statut")
 }
 
-model historique_statuts_commande {
-  id              Int              @id @default(autoincrement())
-  commande_id     Int
-  ancien_statut   commandes_statut
-  nouveau_statut  commandes_statut
-  date_changement DateTime         @default(now()) @db.Timestamp(0)
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model orders_archive {
+  id           Int       @id @default(autoincrement())
+  unique_id    String?   @db.VarChar(255)
+  order_number String?   @db.VarChar(100)
+  user_id      Int?
+  total        Decimal   @default(0.00) @db.Decimal(10, 2)
+  order_date   DateTime  @default(now()) @db.Timestamp(0)
+  status       String?   @db.VarChar(50)
+  ip_address   String?   @db.VarChar(45)
+  user_agent   String?   @db.Text
+  created_at   DateTime  @default(now()) @db.Timestamp(0)
+  deleted_at   DateTime? @db.Timestamp(0)
+  deleted_by   Int?
 
-  commandes commandes @relation(fields: [commande_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "historique_statuts_commande_ibfk_1")
-
-  @@index([commande_id], map: "idx_commande_id")
-  @@index([date_changement], map: "idx_date_changement")
+  @@index([created_at], map: "idx_created_at")
+  @@index([created_at, status], map: "idx_created_statut")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([order_number], map: "idx_order_number")
+  @@index([status, order_date, total], map: "idx_status_date_total")
+  @@index([total], map: "idx_total")
+  @@index([unique_id], map: "idx_unique_id")
+  @@index([user_id, status], map: "idx_utilisateur_statut")
 }
 
-// ============================================================================
-// COURS
-// ============================================================================
+model password_reset_rate_limits {
+  id           Int      @id @default(autoincrement())
+  email        String   @db.VarChar(255)
+  ip_address   String   @db.VarChar(45)
+  success      Boolean  @default(false)
+  attempt_time DateTime @default(now()) @db.Timestamp(0)
 
-model cours {
-  id                 Int             @id @default(autoincrement())
-  sport_id           Int?
-  date_cours         DateTime        @db.Date
-  type_cours         String          @db.VarChar(50)
-  heure_debut        DateTime        @db.Time(0)
-  heure_fin          DateTime        @db.Time(0)
-  cours_recurrent_id Int
-
-  cours_recurrent cours_recurrent @relation(fields: [cours_recurrent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cours_ibfk_1")
-  sport           Sport?          @relation(fields: [sport_id], references: [id], onDelete: SetNull, map: "fk_cours_sport")
-  inscriptions    inscriptions[]
-  reservations    reservations[]
-
-  @@index([cours_recurrent_id], map: "cours_recurrent_id")
-  @@index([sport_id], map: "idx_cours_sport")
-  @@index([date_cours, type_cours], map: "idx_date_type")
-  @@index([date_cours, type_cours, cours_recurrent_id], map: "idx_date_type_recurrent")
-  @@index([sport_id, date_cours], map: "idx_cours_sport_date")
-  @@index([sport_id, date_cours, heure_debut], map: "idx_cours_planning")
-  @@index([date_cours], map: "idx_cours_date")
+  @@index([email, ip_address, attempt_time], map: "idx_email_ip_time")
 }
 
-model cours_recurrent {
-  id                         Int                          @id @default(autoincrement())
-  type_cours                 String?                      @db.VarChar(255)
-  course_type_id             Int
-  jour_semaine               Int
-  heure_debut                DateTime                     @db.Time(0)
-  heure_fin                  DateTime                     @db.Time(0)
-  places_max                 Int?
-  active                     Boolean?                     @default(true)
+model password_reset_tokens_legacy {
+  id             Int       @id @default(autoincrement())
+  utilisateur_id Int
+  token          String    @unique(map: "token") @db.VarChar(255)
+  expires_at     DateTime  @db.Timestamp(0)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  used_at        DateTime? @db.Timestamp(0)
+  ip_address     String?   @db.VarChar(45)
+  users          users     @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "password_reset_tokens_legacy_ibfk_1")
 
-  course_type                CourseType                   @relation(fields: [course_type_id], references: [id], onDelete: Restrict, map: "fk_cours_recurrent_course_type")
-  cours                      cours[]
-  cours_recurrent_professeur cours_recurrent_professeur[]
-
-  @@index([jour_semaine, type_cours], map: "idx_jour_type")
-  @@index([course_type_id], map: "idx_course_type")
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([token, expires_at], map: "idx_token_expires")
+  @@index([utilisateur_id], map: "utilisateur_id")
 }
 
-model cours_recurrent_professeur {
-  id                 Int             @id @default(autoincrement())
-  cours_recurrent_id Int
-  professeur_id      Int
+model payment_methods {
+  id         Int        @id @default(autoincrement())
+  code       String     @unique(map: "code") @db.VarChar(50)
+  name       String     @db.VarChar(100)
+  active     Boolean?   @default(true)
+  created_at DateTime?  @default(now()) @db.Timestamp(0)
+  payments   payments[]
 
-  cours_recurrent cours_recurrent @relation(fields: [cours_recurrent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cours_recurrent_professeur_ibfk_1")
-  professeurs     professeurs     @relation(fields: [professeur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cours_recurrent_professeur_ibfk_2")
+  @@index([active], map: "idx_active")
+  @@index([code], map: "idx_code")
+}
 
-  @@unique([cours_recurrent_id, professeur_id], map: "uk_cours_professeur")
-  @@index([cours_recurrent_id, professeur_id], map: "idx_cours_professeur")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model payment_schedules {
+  id              Int           @id @default(autoincrement())
+  user_id         Int?
+  subscription_id Int
+  due_date        DateTime      @db.Date
+  amount          Decimal?      @db.Decimal(10, 2)
+  status          String?       @db.VarChar(50)
+  payment_date    DateTime?     @db.Date
+  pricing_plans   pricing_plans @relation(fields: [subscription_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_payment_schedules_subscription")
+  users           users?        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "payment_schedules_ibfk_1")
+
+  @@index([status, due_date], map: "idx_statut_date")
+  @@index([subscription_id, due_date], map: "idx_subscription_due_date")
+  @@index([user_id, due_date], map: "idx_utilisateur_echeance")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model payments {
+  id                    Int                   @id @default(autoincrement())
+  user_id               Int?
+  amount                Decimal?              @db.Decimal(10, 2)
+  payment_date          DateTime?             @default(now()) @db.Timestamp(0)
+  payment_method_legacy String?               @db.VarChar(50)
+  payment_method_id     Int
+  status                String?               @db.VarChar(50)
+  subscription_id       Int?
+  order_id              Int?
+  transaction_id        String?               @db.VarChar(255)
+  ip_address            String?               @db.VarChar(45)
+  deleted_at            DateTime?             @db.Timestamp(0)
+  deleted_by            Int?
+  event_registrations   event_registrations[]
+  payment_methods       payment_methods       @relation(fields: [payment_method_id], references: [id], onUpdate: NoAction, map: "fk_paiements_payment_method")
+  orders                orders?               @relation(fields: [order_id], references: [id], onDelete: NoAction, onUpdate: Restrict, map: "fk_payments_order")
+  pricing_plans         pricing_plans?        @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: Restrict, map: "fk_payments_subscription")
+  users                 users?                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "payments_ibfk_1")
+
+  @@index([payment_date, status, amount], map: "idx_date_statut_montant")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([order_id], map: "idx_order_id")
+  @@index([payment_date], map: "idx_paiements_date")
+  @@index([user_id, payment_date], map: "idx_paiements_user_date")
+  @@index([user_id, payment_date, amount], map: "idx_paiements_user_period")
+  @@index([payment_date], map: "idx_payment_date")
+  @@index([payment_method_id], map: "idx_payment_method")
+  @@index([status], map: "idx_statut")
+  @@index([subscription_id], map: "idx_subscription_id")
+  @@index([transaction_id], map: "idx_transaction")
+  @@index([user_id, payment_date], map: "idx_user_date")
+  @@index([user_id, payment_date], map: "idx_utilisateur_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model payments_archive {
+  id                    Int       @id @default(autoincrement())
+  user_id               Int?
+  amount                Decimal?  @db.Decimal(10, 2)
+  payment_date          DateTime? @default(now()) @db.Timestamp(0)
+  payment_method_legacy String?   @db.VarChar(50)
+  payment_method_id     Int
+  status                String?   @db.VarChar(50)
+  subscription_id       Int?
+  order_id              Int?
+  transaction_id        String?   @db.VarChar(255)
+  ip_address            String?   @db.VarChar(45)
+  deleted_at            DateTime? @db.Timestamp(0)
+  deleted_by            Int?
+
+  @@index([subscription_id], map: "abonnement_id")
+  @@index([order_id], map: "commande_id")
+  @@index([payment_date], map: "idx_date")
+  @@index([payment_date, status, amount], map: "idx_date_statut_montant")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([payment_date], map: "idx_paiements_date")
+  @@index([user_id, payment_date], map: "idx_paiements_user_date")
+  @@index([user_id, payment_date, amount], map: "idx_paiements_user_period")
+  @@index([payment_method_id], map: "idx_payment_method")
+  @@index([status], map: "idx_statut")
+  @@index([transaction_id], map: "idx_transaction")
+  @@index([user_id, payment_date], map: "idx_user_date")
+  @@index([user_id, payment_date], map: "idx_utilisateur_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pricing_plans {
+  id                 Int                  @id @default(autoincrement())
+  name               String?              @db.VarChar(200)
+  description        String?              @db.Text
+  price              Decimal?             @db.Decimal(10, 2)
+  duree_mois         Int
+  active             Boolean?             @default(true)
+  created_at         DateTime?            @default(now()) @db.Timestamp(0)
+  payment_schedules  payment_schedules[]
+  payments           payments[]
+  user_subscriptions user_subscriptions[]
+
+  @@index([active], map: "idx_actif")
+}
+
+model rate_limit_config {
+  id                     Int                       @id @default(autoincrement())
+  rule_name              String                    @unique(map: "rule_name") @db.VarChar(100)
+  description            String?                   @db.Text
+  endpoint_pattern       String                    @db.VarChar(255)
+  method                 String?                   @db.VarChar(10)
+  requests_per_minute    Int?
+  requests_per_hour      Int?
+  requests_per_day       Int?
+  scope                  rate_limit_config_scope?  @default(IP)
+  action                 rate_limit_config_action? @default(THROTTLE)
+  block_duration_seconds Int?                      @default(3600)
+  whitelist              Json?
+  blacklist              Json?
+  active                 Boolean?                  @default(true)
+  created_at             DateTime                  @default(now()) @db.Timestamp(0)
+  updated_at             DateTime                  @default(now()) @db.Timestamp(0)
+  rate_limit_counters    rate_limit_counters[]
+  rate_limit_violations  rate_limit_violations[]
+
+  @@index([active], map: "idx_active")
+  @@index([endpoint_pattern], map: "idx_endpoint_pattern")
+  @@index([scope], map: "idx_scope")
+}
+
+model rate_limit_counters {
+  id                String            @id @db.VarChar(255)
+  rule_id           Int
+  identifier        String            @db.VarChar(255)
+  window_start      DateTime          @db.Timestamp(0)
+  window_end        DateTime          @db.Timestamp(0)
+  request_count     Int?              @default(0)
+  last_request_at   DateTime          @default(now()) @db.Timestamp(0)
+  rate_limit_config rate_limit_config @relation(fields: [rule_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rate_limit_counters_ibfk_1")
+
+  @@index([rule_id, identifier], map: "idx_rule_identifier")
+  @@index([window_end], map: "idx_window_end")
+}
+
+model rate_limit_violations {
+  id                Int                                   @id @default(autoincrement())
+  rule_id           Int
+  identifier        String                                @db.VarChar(255)
+  identifier_type   rate_limit_violations_identifier_type
+  endpoint          String                                @db.VarChar(255)
+  method            String                                @db.VarChar(10)
+  current_count     Int
+  limit_exceeded    Int
+  window_type       rate_limit_violations_window_type
+  action_taken      rate_limit_violations_action_taken
+  blocked_until     DateTime?                             @db.Timestamp(0)
+  ip_address        String?                               @db.VarChar(45)
+  user_agent        String?                               @db.Text
+  violated_at       DateTime                              @default(now()) @db.Timestamp(0)
+  rate_limit_config rate_limit_config                     @relation(fields: [rule_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rate_limit_violations_ibfk_1")
+
+  @@index([blocked_until], map: "idx_blocked_until")
+  @@index([identifier, identifier_type], map: "idx_identifier")
+  @@index([rule_id], map: "idx_rule_id")
+  @@index([violated_at], map: "idx_violated_at")
+}
+
+model recurring_course_teachers {
+  id                  Int               @id @default(autoincrement())
+  recurring_course_id Int
+  professeur_id       Int
+  start_date          DateTime?         @db.Date
+  end_date            DateTime?         @db.Date
+  recurring_courses   recurring_courses @relation(fields: [recurring_course_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "recurring_course_teachers_ibfk_1")
+  teachers            teachers          @relation(fields: [professeur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "recurring_course_teachers_ibfk_2")
+
+  @@index([recurring_course_id], map: "cours_recurrent_id")
+  @@index([recurring_course_id, professeur_id], map: "idx_cours_professeur")
   @@index([professeur_id], map: "professeur_id")
 }
 
-// ============================================================================
-// PAIEMENTS
-// ============================================================================
+model recurring_courses {
+  id                        Int                           @id @default(autoincrement())
+  name                      String                        @db.VarChar(100)
+  day_of_week               recurring_courses_day_of_week
+  start_time                DateTime                      @db.Time(0)
+  end_time                  DateTime                      @db.Time(0)
+  course_type               String                        @db.VarChar(50)
+  course_type_id            Int
+  max_capacity              Int?
+  active                    Boolean?                      @default(true)
+  deleted_at                DateTime?                     @db.Timestamp(0)
+  deleted_by                Int?
+  course_instances          course_instances[]
+  recurring_course_teachers recurring_course_teachers[]
+  course_types              course_types                  @relation(fields: [course_type_id], references: [id], onUpdate: NoAction, map: "fk_cours_recurrent_course_type")
 
-model paiements {
-  id                       Int              @id @default(autoincrement())
-  commande_id              Int?
-  utilisateur_id           Int
-  montant                  Decimal          @db.Decimal(10, 2)
-  methode_paiement         String?          @db.VarChar(50)
-  payment_method_id        Int
-  stripe_payment_intent_id String?          @db.VarChar(255)
-  paypal_order_id          String?          @db.VarChar(255)
-  bitcoin_address          String?          @db.VarChar(255)
-  date_paiement            DateTime         @db.Date
-  statut                   String?          @default("en_attente") @db.VarChar(50)
-  description              String?          @db.Text
-  date_confirmation        DateTime?        @db.Timestamp(0)
-  date_modification        DateTime?        @default(now()) @db.Timestamp(0)
-  abonnement_id            Int?
-  periode_debut            DateTime?        @db.Date
-  periode_fin              DateTime?        @db.Date
-
-  payment_method   PaymentMethod     @relation(fields: [payment_method_id], references: [id], onDelete: Restrict, map: "fk_paiements_payment_method")
-  users            utilisateurs      @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "paiements_ibfk_1")
-  plans_tarifaires plans_tarifaires? @relation(fields: [abonnement_id], references: [id], onUpdate: Restrict, map: "paiements_ibfk_2")
-  commandes        commandes?        @relation(fields: [commande_id], references: [id], onUpdate: Restrict, map: "paiements_ibfk_3")
-
-  @@unique([utilisateur_id, periode_debut, abonnement_id], map: "uk_utilisateur_periode_abonnement")
-  @@index([abonnement_id], map: "abonnement_id")
-  @@index([commande_id], map: "idx_commande_id")
-  @@index([methode_paiement], map: "idx_methode_paiement")
-  @@index([payment_method_id], map: "idx_payment_method")
-  @@index([paypal_order_id], map: "idx_paypal_order_id")
-  @@index([stripe_payment_intent_id], map: "idx_stripe_payment_intent_id")
-  @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
-  @@index([date_paiement, statut, montant], map: "idx_date_statut_montant")
-  @@index([utilisateur_id, date_paiement], map: "idx_user_date")
-  @@index([date_paiement], map: "idx_paiements_date")
-  @@index([utilisateur_id, date_paiement], map: "idx_paiements_user_date")
-  @@index([utilisateur_id, date_paiement, montant], map: "idx_paiements_user_period")
+  @@index([active], map: "idx_actif")
+  @@index([day_of_week, active], map: "idx_cours_recur_jour_actif")
+  @@index([course_type_id], map: "idx_course_type")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([day_of_week, start_time], map: "idx_jour_heure")
 }
 
-model echeances_paiements {
-  id               Int                         @id @default(autoincrement())
-  utilisateur_id   Int
-  abonnement_id    Int
-  date_echeance    DateTime                    @db.Date
-  montant          Decimal                     @db.Decimal(10, 2)
-  statut           echeances_paiements_statut? @default(en_attente)
-  date_paiement    DateTime?                   @db.Date
+model refresh_tokens_legacy {
+  id             Int       @id @default(autoincrement())
+  utilisateur_id Int
+  token          String    @unique(map: "token") @db.VarChar(512)
+  expires_at     DateTime  @db.Timestamp(0)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  revoked_at     DateTime? @db.Timestamp(0)
+  ip_address     String?   @db.VarChar(45)
+  user_agent     String?   @db.Text
+  users          users     @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "refresh_tokens_legacy_ibfk_1")
 
-  utilisateurs     utilisateurs     @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "echeances_paiements_ibfk_1")
-  plans_tarifaires plans_tarifaires @relation(fields: [abonnement_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "echeances_paiements_ibfk_2")
-
-  @@index([abonnement_id, date_echeance], map: "idx_abonnement_echeance")
-  @@index([utilisateur_id, date_echeance], map: "idx_utilisateur_echeance")
-  @@index([statut, date_echeance], map: "idx_statut_date")
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([token, expires_at], map: "idx_token_expires")
+  @@index([utilisateur_id, expires_at], map: "idx_utilisateur_expires")
 }
 
-// ============================================================================
-// MESSAGERIE
-// ============================================================================
+model sessions_archive {
+  id            String    @id @db.VarChar(255)
+  token         String    @db.VarChar(255)
+  user_id       Int
+  ip_address    String?   @db.VarChar(45)
+  user_agent    String?   @db.Text
+  expires_at    DateTime  @db.Timestamp(0)
+  created_at    DateTime  @db.Timestamp(0)
+  last_activity DateTime? @db.Timestamp(0)
+  archived_at   DateTime  @default(now()) @db.Timestamp(0)
 
-model messages {
-  id                                              Int              @id @default(autoincrement())
-  sender_id                                       Int
-  receiver_id                                     Int?
-  groupe_id                                       Int?
-  contenu                                         String           @db.Text
-  created_at                                      DateTime         @default(now()) @db.Timestamp(0)
+  @@index([archived_at], map: "idx_archived_at")
+  @@index([created_at], map: "idx_archived_created_at")
+  @@index([user_id], map: "idx_archived_user_id")
+}
 
-  message_status                                  message_status[]
-  utilisateurs_messages_sender_idToutilisateurs   utilisateurs     @relation("messages_sender_idToutilisateurs", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_ibfk_1")
-  utilisateurs_messages_receiver_idToutilisateurs utilisateurs?    @relation("messages_receiver_idToutilisateurs", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_ibfk_2")
-  groupes                                         groupes?         @relation(fields: [groupe_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_ibfk_3")
-  notifications                                   notifications[]
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model shop_articles {
+  id                 Int                 @id @default(autoincrement())
+  name               String?             @db.VarChar(200)
+  description        String?             @db.Text
+  price              Decimal?            @db.Decimal(10, 2)
+  image_url          String?             @db.VarChar(255)
+  category_id        Int?
+  deleted_at         DateTime?           @db.Timestamp(0)
+  deleted_by         Int?
+  article_images     article_images[]
+  article_sizes      article_sizes[]
+  article_stock      article_stock[]
+  order_items        order_items[]
+  article_categories article_categories? @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "shop_articles_ibfk_1")
+  stocks             stocks[]
+
+  @@index([category_id], map: "categorie_id")
+  @@index([name, description], map: "ft_articles_search")
+  @@index([category_id, price], map: "idx_categorie_prix")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([name], map: "idx_nom")
+}
+
+model sizes {
+  id            Int             @id @default(autoincrement())
+  size          String          @unique(map: "taille") @db.VarChar(10)
+  article_sizes article_sizes[]
+  article_stock article_stock[]
+  order_items   order_items[]
+  stocks        stocks[]
+}
+
+model sms_recovery_codes_legacy {
+  id             Int       @id @default(autoincrement())
+  utilisateur_id Int
+  code           String    @db.VarChar(10)
+  phone_number   String    @db.VarChar(20)
+  expires_at     DateTime  @db.Timestamp(0)
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  used_at        DateTime? @db.Timestamp(0)
+  users          users     @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "sms_recovery_codes_legacy_ibfk_1")
+
+  @@index([code, expires_at], map: "idx_code_expires")
+  @@index([created_at], map: "idx_created_at")
+  @@index([phone_number], map: "idx_phone")
+  @@index([utilisateur_id], map: "utilisateur_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sport_competition_rules {
+  id            Int                                @id @default(autoincrement())
+  sport_id      Int
+  rule_name     String                             @db.VarChar(100)
+  rule_type     sport_competition_rules_rule_type? @default(other)
+  description   String                             @db.Text
+  applies_to    String?                            @db.VarChar(100)
+  is_active     Boolean?                           @default(true)
+  display_order Int?                               @default(0)
+  created_at    DateTime?                          @default(now()) @db.Timestamp(0)
+  updated_at    DateTime?                          @default(now()) @db.Timestamp(0)
+  sports        sports                             @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sport_competition_rules_ibfk_1")
+
+  @@index([sport_id, is_active], map: "idx_competition_rules_sport")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sport_configurations {
+  id           Int                             @id @default(autoincrement())
+  sport_id     Int
+  config_key   String                          @db.VarChar(100)
+  config_value String?                         @db.Text
+  data_type    sport_configurations_data_type? @default(string)
+  description  String?                         @db.VarChar(255)
+  is_public    Boolean?                        @default(false)
+  created_at   DateTime?                       @default(now()) @db.Timestamp(0)
+  updated_at   DateTime?                       @default(now()) @db.Timestamp(0)
+  sports       sports                          @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sport_configurations_ibfk_1")
+
+  @@unique([sport_id, config_key], map: "unique_sport_config")
+  @@index([sport_id, is_public], map: "idx_sport_configs_public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sport_equipment {
+  id                 Int                        @id @default(autoincrement())
+  sport_id           Int
+  name               String                     @db.VarChar(100)
+  description        String?                    @db.Text
+  is_mandatory       Boolean?                   @default(false)
+  for_level          sport_equipment_for_level? @default(all)
+  category_id        Int?
+  display_order      Int?                       @default(0)
+  created_at         DateTime?                  @default(now()) @db.Timestamp(0)
+  updated_at         DateTime?                  @default(now()) @db.Timestamp(0)
+  sports             sports                     @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sport_equipment_ibfk_1")
+  article_categories article_categories?        @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "sport_equipment_ibfk_2")
+
+  @@index([category_id], map: "category_id")
+  @@index([sport_id, is_mandatory], map: "idx_sport_equipment_mandatory")
+  @@index([sport_id], map: "idx_sport_equipment_sport")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sport_statistics {
+  id                 Int       @id @default(autoincrement())
+  sport_id           Int
+  user_id            Int?
+  stat_date          DateTime  @db.Date
+  total_members      Int?      @default(0)
+  total_courses      Int?      @default(0)
+  total_hours        Decimal?  @default(0.00) @db.Decimal(10, 2)
+  total_competitions Int?      @default(0)
+  total_revenue      Decimal?  @default(0.00) @db.Decimal(10, 2)
+  created_at         DateTime? @default(now()) @db.Timestamp(0)
+  updated_at         DateTime? @default(now()) @db.Timestamp(0)
+  sports             sports    @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sport_statistics_ibfk_1")
+  users              users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sport_statistics_ibfk_2")
+
+  @@unique([sport_id, user_id, stat_date], map: "unique_sport_stat")
+  @@index([sport_id, stat_date], map: "idx_sport_stats_date")
+  @@index([user_id], map: "user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sports {
+  id                      Int                       @id @default(autoincrement())
+  code                    String                    @unique(map: "code") @db.VarChar(50)
+  name                    String                    @db.VarChar(100)
+  description             String?                   @db.Text
+  color                   String?                   @default("#3B82F6") @db.VarChar(7)
+  icon                    String?                   @db.VarChar(100)
+  image_url               String?                   @db.VarChar(255)
+  is_active               Boolean?                  @default(true)
+  display_order           Int?                      @default(0)
+  requires_belt           Boolean?                  @default(true)
+  allow_competitions      Boolean?                  @default(true)
+  min_age                 Int?
+  max_age                 Int?
+  created_at              DateTime?                 @default(now()) @db.Timestamp(0)
+  updated_at              DateTime?                 @default(now()) @db.Timestamp(0)
+  belt_grades             belt_grades[]
+  course_instances        course_instances[]
+  course_types            course_types[]
+  sport_competition_rules sport_competition_rules[]
+  sport_configurations    sport_configurations[]
+  sport_equipment         sport_equipment[]
+  sport_statistics        sport_statistics[]
+  user_grade_history      user_grade_history[]
+  user_sports             user_sports[]
+
+  @@index([is_active], map: "idx_sports_active")
+  @@index([display_order], map: "idx_sports_order")
+}
+
+model stocks {
+  id            Int           @id @default(autoincrement())
+  article_id    Int
+  size_id       Int?
+  quantity      Int?
+  updated_at    DateTime?     @default(now()) @db.Timestamp(0)
+  shop_articles shop_articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_1")
+  sizes         sizes?        @relation(fields: [size_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_2")
+
+  @@index([article_id], map: "article_id")
+  @@index([article_id, size_id], map: "idx_article_taille")
+  @@index([size_id], map: "taille_id")
+}
+
+model teachers {
+  id                        Int                         @id @default(autoincrement())
+  last_name                 String                      @db.VarChar(100)
+  first_name                String?                     @db.VarChar(100)
+  email                     String?                     @db.VarChar(255)
+  phone                     String?                     @db.VarChar(20)
+  grade_id                  Int
+  status_id                 Int
+  hire_date                 DateTime?                   @db.Date
+  specialty                 String?                     @db.VarChar(100)
+  created_at                DateTime?                   @default(now()) @db.Timestamp(0)
+  updated_at                DateTime?                   @default(now()) @db.Timestamp(0)
+  recurring_course_teachers recurring_course_teachers[]
+  belt_grades               belt_grades                 @relation(fields: [grade_id], references: [id], onUpdate: Restrict, map: "teachers_ibfk_1")
+  user_roles                user_roles                  @relation(fields: [status_id], references: [id], onUpdate: Restrict, map: "teachers_ibfk_2")
+
+  @@index([grade_id], map: "grade_id")
+  @@index([email], map: "idx_email")
+  @@index([last_name, first_name], map: "idx_nom_prenom")
+  @@index([status_id], map: "status_id")
+}
+
+model user_alerts {
+  id                                  Int                 @id @default(autoincrement())
+  user_id                             Int?
+  alert_type_id                       Int
+  status                              user_alerts_status?
+  donnees_contexte                    Json?
+  detected_at                         DateTime?           @default(now()) @db.Timestamp(0)
+  resolved_at                         DateTime?           @db.Timestamp(0)
+  resolu_par                          Int?
+  notes                               String?             @db.Text
+  alert_actions                       alert_actions[]
+  users_user_alerts_user_idTousers    users?              @relation("user_alerts_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_alerts_ibfk_1")
+  alert_types                         alert_types         @relation(fields: [alert_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_alerts_ibfk_2")
+  users_user_alerts_resolu_parTousers users?              @relation("user_alerts_resolu_parTousers", fields: [resolu_par], references: [id], onUpdate: Restrict, map: "user_alerts_ibfk_3")
+
+  @@index([alert_type_id, status], map: "idx_type_statut")
+  @@index([user_id, status], map: "idx_utilisateur_statut")
+  @@index([resolu_par], map: "resolu_par")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_consents {
+  id           Int                        @id @default(autoincrement())
+  user_id      Int
+  consent_type user_consents_consent_type
+  given        Boolean                    @default(false)
+  ip_address   String?                    @db.VarChar(45)
+  user_agent   String?                    @db.Text
+  given_at     DateTime                   @default(now()) @db.Timestamp(0)
+  revoked_at   DateTime?                  @db.Timestamp(0)
+  version      String?                    @db.VarChar(20)
+  users        users                      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_user_consents_user")
+
+  @@index([consent_type], map: "idx_consent_type")
+  @@index([given], map: "idx_given")
+  @@index([given_at], map: "idx_given_at")
+  @@index([user_id, consent_type, given], map: "idx_user_consent")
+  @@index([user_id], map: "idx_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_grade_history {
+  id                                          Int         @id @default(autoincrement())
+  user_id                                     Int
+  sport_id                                    Int
+  grade_id                                    Int
+  obtained_at                                 DateTime    @db.Date
+  examiner_id                                 Int?
+  location                                    String?     @db.VarChar(255)
+  certificate_number                          String?     @db.VarChar(100)
+  notes                                       String?     @db.Text
+  created_at                                  DateTime?   @default(now()) @db.Timestamp(0)
+  users_user_grade_history_user_idTousers     users       @relation("user_grade_history_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_grade_history_ibfk_1")
+  sports                                      sports      @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_grade_history_ibfk_2")
+  belt_grades                                 belt_grades @relation(fields: [grade_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_grade_history_ibfk_3")
+  users_user_grade_history_examiner_idTousers users?      @relation("user_grade_history_examiner_idTousers", fields: [examiner_id], references: [id], onUpdate: NoAction, map: "user_grade_history_ibfk_4")
+
+  @@index([examiner_id], map: "examiner_id")
+  @@index([grade_id], map: "grade_id")
+  @@index([obtained_at], map: "idx_grade_history_date")
+  @@index([user_id, sport_id], map: "idx_grade_history_user")
+  @@index([user_id, obtained_at], map: "idx_hist_grades_user_date")
+  @@index([sport_id], map: "sport_id")
+}
+
+model user_group_members {
+  id          Int         @id @default(autoincrement())
+  groupe_id   Int
+  user_id     Int?
+  added_at    DateTime?   @default(now()) @db.Timestamp(0)
+  user_groups user_groups @relation(fields: [groupe_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_group_members_ibfk_1")
+  users       users?      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_group_members_ibfk_2")
 
   @@index([groupe_id], map: "groupe_id")
-  @@index([sender_id, receiver_id], map: "idx_sender_receiver")
-  @@index([receiver_id], map: "receiver_id")
+  @@index([groupe_id, user_id], map: "idx_groupe_utilisateur")
+  @@index([user_id], map: "utilisateur_id")
 }
 
-model messages_personnalises {
-  id                                                               Int                                  @id @default(autoincrement())
-  utilisateur_id                                                   Int
-  contenu                                                          String                               @db.Text
-  created_at                                                       DateTime                             @default(now()) @db.Timestamp(0)
-  deleted_at                                                       DateTime?                            @db.DateTime(0)
-  deleted_by                                                       Int?
-  is_active                                                        Boolean?                             @default(true)
-  lu                                                               Boolean?                             @default(false)
-  date_lecture                                                     DateTime?                            @db.DateTime(0)
-  status_envoi                                                     messages_personnalises_status_envoi? @default(pending)
-  sendgrid_message_id                                              String?                              @db.VarChar(255)
-  error_details                                                    String?                              @db.Text
-  updated_at                                                       DateTime                             @default(now()) @db.Timestamp(0)
-
-  utilisateurs_messages_personnalises_utilisateur_idToutilisateurs utilisateurs  @relation("messages_personnalises_utilisateur_idToutilisateurs", fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_personnalises_ibfk_1")
-  utilisateurs_messages_personnalises_deleted_byToutilisateurs     utilisateurs? @relation("messages_personnalises_deleted_byToutilisateurs", fields: [deleted_by], references: [id], onUpdate: Restrict, map: "messages_personnalises_ibfk_2")
-
-  @@index([deleted_by], map: "deleted_by")
-  @@index([utilisateur_id, is_active], map: "idx_messages_personnalises_active")
-  @@index([date_lecture], map: "idx_messages_personnalises_date_lecture")
-  @@index([utilisateur_id, deleted_at], map: "idx_messages_personnalises_deleted")
-  @@index([utilisateur_id, lu], map: "idx_messages_personnalises_lu")
-  @@index([sendgrid_message_id], map: "idx_messages_personnalises_sendgrid_id")
-  @@index([status_envoi], map: "idx_messages_personnalises_status_envoi")
-  @@index([utilisateur_id, status_envoi, created_at], map: "idx_user_status_date")
-  @@index([updated_at], map: "idx_messages_personnalises_updated")
-  @@index([utilisateur_id], map: "idx_utilisateur")
+model user_groups {
+  id                 Int                  @id @default(autoincrement())
+  name               String               @db.VarChar(100)
+  description        String?              @db.Text
+  direct_messages    direct_messages[]
+  user_group_members user_group_members[]
 }
 
-// ============================================================================
-// UTILISATEURS
-// ============================================================================
+model user_notifications {
+  id              Int              @id @default(autoincrement())
+  user_id         Int?
+  message_id      Int?
+  type            String           @db.VarChar(50)
+  content         String           @db.Text
+  lu              Boolean?         @default(false)
+  created_at      DateTime?        @default(now()) @db.Timestamp(0)
+  users           users?           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_notifications_ibfk_1")
+  direct_messages direct_messages? @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_notifications_ibfk_2")
 
-model utilisateurs {
-  id                                                                             Int                        @id @default(autoincrement())
-  user_id                                                                        String                     @unique(map: "unique_user_id") @db.VarChar(20)
-  user_sports                                                                    UserSport[]
-  grade_history                                                                  UserGradeHistory[]
-  examined_grades                                                                UserGradeHistory[]         @relation("GradeExaminer")
-  sport_statistics                                                               SportStatistic[]
-  first_name                                                                     String                     @db.VarChar(50)
-  last_name                                                                      String                     @db.VarChar(50)
-  nom_utilisateur                                                                String                     @db.VarChar(50)
-  email                                                                          String                     @db.VarChar(100)
-  genre_id                                                                       Int?
-  date_of_birth                                                                  DateTime                   @db.Date
-
-  // DEPRECATED - Use new tables instead
-  password                                                                       String                     @db.VarChar(255) // DEPRECATED: Use user_security.password
-  status_id                                                                      Int?                       @default(1) // DEPRECATED: Use user_subscriptions.status_id
-  active                                                                         Boolean                    @default(true)
-  grade_id                                                                       Int?                       @default(1) // DEPRECATED: Use user_profiles.grade_id
-  abonnement_id                                                                  Int?                       // DEPRECATED: Use user_subscriptions.abonnement_id
-  stripe_customer_id                                                             String?                    @unique(map: "unique_stripe_customer_id") @db.VarChar(255) // DEPRECATED: Use user_subscriptions.stripe_customer_id
-  stripe_subscription_id                                                         String?                    @db.VarChar(255) // DEPRECATED: Use user_subscriptions.stripe_subscription_id
-  date_inscription                                                               DateTime                   @default(now()) @db.Timestamp(0)
-  email_verified                                                                 Boolean?                   @default(false) // DEPRECATED: Use user_security.email_verified
-  email_verified_at                                                              DateTime?                  @db.Timestamp(0) // DEPRECATED: Use user_security.email_verified_at
-
-  // Soft delete - Phase 2
-  deleted_at                                                                     DateTime?                  @db.Timestamp(0)
-  deleted_by                                                                     Int?
-  deletion_reason                                                                String?                    @db.Text
-
-  // Phase 2 - New relations
-  user_profile                                                                   UserProfile?
-  user_security                                                                  UserSecurity?
-  user_subscription                                                              UserSubscription?
-  user_preferences                                                               UserPreferences?
-  user_consents                                                                  UserConsent[]
-  data_export_requests                                                           DataExportRequest[]
-  account_deletion_requests                                                      AccountDeletionRequest[]   @relation("account_deletion_user")
-  approved_deletions                                                             AccountDeletionRequest[]   @relation("account_deletion_approver")
-
-  // Existing relations
-  alertes_actions                                                                alertes_actions[]
-  alertes_utilisateurs                                                           alertes_utilisateurs[]
-  alertes_utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs             alertes_utilisateurs[]     @relation("alertes_utilisateurs_resolu_parToutilisateurs")
-  commandes                                                                      commandes[]
-  echeances_paiements                                                            echeances_paiements[]
-  email_validation_tokens                                                        email_validation_tokens[]
-  groupes_utilisateurs                                                           groupes_utilisateurs[]
-  inscriptions                                                                   inscriptions[]
-  manual_recovery_requests_manual_recovery_requests_utilisateur_idToutilisateurs manual_recovery_requests[] @relation("manual_recovery_requests_utilisateur_idToutilisateurs")
-  manual_recovery_requests_manual_recovery_requests_processed_byToutilisateurs   manual_recovery_requests[] @relation("manual_recovery_requests_processed_byToutilisateurs")
-  message_status                                                                 message_status[]
-  messages_messages_sender_idToutilisateurs                                      messages[]                 @relation("messages_sender_idToutilisateurs")
-  messages_messages_receiver_idToutilisateurs                                    messages[]                 @relation("messages_receiver_idToutilisateurs")
-  messages_personnalises_messages_personnalises_utilisateur_idToutilisateurs     messages_personnalises[]   @relation("messages_personnalises_utilisateur_idToutilisateurs")
-  messages_personnalises_messages_personnalises_deleted_byToutilisateurs         messages_personnalises[]   @relation("messages_personnalises_deleted_byToutilisateurs")
-  notifications                                                                  notifications[]
-  paiements                                                                      paiements[]
-  password_reset_tokens                                                          password_reset_tokens[]
-  refresh_tokens                                                                 refresh_tokens[]
-  reservations                                                                   reservations[]
-  sms_recovery_codes                                                             sms_recovery_codes[]
-  sessions                                                                       Session[]
-  audit_logs                                                                     AuditLog[]
-  emails                                                                         Email[]
-  emailQueue                                                                     EmailQueue[]
-  genres                                                                         genres?                    @relation(fields: [genre_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_1")
-  status                                                                         status?                    @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_2")
-  grades                                                                         grades?                    @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_3")
-  plans_tarifaires                                                               plans_tarifaires?          @relation(fields: [abonnement_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_4")
-
-  @@index([abonnement_id], map: "abonnement_id")
-  @@index([genre_id], map: "genre_id")
-  @@index([grade_id], map: "grade_id")
-  @@index([active], map: "idx_active")
-  @@index([active, status_id], map: "idx_active_status")
-  @@index([email], map: "idx_email")
-  @@index([email_verified], map: "idx_email_verified")
-  @@index([nom_utilisateur], map: "idx_nom_utilisateur")
-  @@index([last_name, first_name, date_of_birth], map: "idx_person_lookup")
-  @@index([status_id], map: "idx_status")
-  @@index([stripe_customer_id], map: "idx_stripe_customer_id")
-  @@index([stripe_subscription_id], map: "idx_stripe_subscription_id")
-  @@index([deleted_at], map: "idx_deleted_at")
-  @@index([deleted_at], map: "idx_users_deleted_at")
-  @@index([email, deleted_at], map: "idx_users_email_active")
+  @@index([user_id, lu], map: "idx_utilisateur_lu")
+  @@index([message_id], map: "message_id")
 }
 
-// ============================================================================
-// PHASE 2 - USER SPLIT TABLES
-// ============================================================================
+model user_preferences {
+  id                  Int      @id @default(autoincrement())
+  user_id             Int      @unique(map: "user_id")
+  language            String?  @default("fr") @db.VarChar(10)
+  timezone            String?  @default("Europe/Brussels") @db.VarChar(50)
+  notifications_email Boolean? @default(true)
+  notifications_sms   Boolean? @default(false)
+  notifications_push  Boolean? @default(true)
+  theme               String?  @default("light") @db.VarChar(20)
+  date_format         String?  @default("DD/MM/YYYY") @db.VarChar(20)
+  created_at          DateTime @default(now()) @db.Timestamp(0)
+  updated_at          DateTime @default(now()) @db.Timestamp(0)
+  users               users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_user_preferences_user")
 
-model UserProfile {
-  id                      Int       @id @default(autoincrement())
-  user_id                 Int       @unique
+  @@index([language], map: "idx_language")
+  @@index([user_id], map: "idx_user_id")
+}
+
+model user_profiles {
+  id                      Int          @id @default(autoincrement())
+  user_id                 Int          @unique(map: "user_id")
   grade_id                Int?
-  bio                     String?   @db.Text
-  avatar_url              String?   @db.VarChar(500)
-  phone                   String?   @db.VarChar(20)
-  emergency_contact_name  String?   @db.VarChar(100)
-  emergency_contact_phone String?   @db.VarChar(20)
-  created_at              DateTime  @default(now()) @db.Timestamp(0)
-  updated_at              DateTime  @updatedAt @db.Timestamp(0)
+  bio                     String?      @db.Text
+  avatar_url              String?      @db.VarChar(500)
+  phone                   String?      @db.VarChar(20)
+  emergency_contact_name  String?      @db.VarChar(100)
+  emergency_contact_phone String?      @db.VarChar(20)
+  created_at              DateTime     @default(now()) @db.Timestamp(0)
+  updated_at              DateTime     @default(now()) @db.Timestamp(0)
+  belt_grades             belt_grades? @relation(fields: [grade_id], references: [id], onUpdate: Restrict, map: "fk_user_profiles_grade")
+  users                   users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_user_profiles_user")
 
-  user                    utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  grade                   grades?      @relation(fields: [grade_id], references: [id], onDelete: SetNull)
-
-  @@index([user_id], map: "idx_user_id")
   @@index([grade_id], map: "idx_grade_id")
-  @@map("user_profiles")
+  @@index([user_id], map: "idx_user_id")
 }
 
-model UserSecurity {
-  id                     Int       @id @default(autoincrement())
-  user_id                Int       @unique
-  password               String    @db.VarChar(255)
-  email_verified         Boolean   @default(false)
-  email_verified_at      DateTime? @db.Timestamp(0)
-  last_login_at          DateTime? @db.Timestamp(0)
-  failed_login_attempts  Int       @default(0)
-  locked_until           DateTime? @db.Timestamp(0)
-  two_factor_enabled     Boolean   @default(false)
-  two_factor_secret      String?   @db.VarChar(255)
-  password_changed_at    DateTime? @db.Timestamp(0)
-  created_at             DateTime  @default(now()) @db.Timestamp(0)
-  updated_at             DateTime  @updatedAt @db.Timestamp(0)
+model user_roles {
+  id                 Int                  @id @default(autoincrement())
+  status_name        String               @unique(map: "status_name") @db.VarChar(50)
+  teachers           teachers[]
+  user_subscriptions user_subscriptions[]
+  users              users[]
+}
 
-  user                   utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_security {
+  id                    Int       @id @default(autoincrement())
+  user_id               Int       @unique(map: "user_id")
+  password              String    @db.VarChar(255)
+  email_verified        Boolean?  @default(false)
+  email_verified_at     DateTime? @db.Timestamp(0)
+  last_login_at         DateTime? @db.Timestamp(0)
+  failed_login_attempts Int?      @default(0)
+  locked_until          DateTime? @db.Timestamp(0)
+  two_factor_enabled    Boolean?  @default(false)
+  two_factor_secret     String?   @db.VarChar(255)
+  password_changed_at   DateTime? @db.Timestamp(0)
+  created_at            DateTime  @default(now()) @db.Timestamp(0)
+  updated_at            DateTime  @default(now()) @db.Timestamp(0)
+  users                 users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_user_security_user")
 
-  @@index([user_id], map: "idx_user_id")
   @@index([email_verified], map: "idx_email_verified")
-  @@index([locked_until], map: "idx_locked_until")
   @@index([last_login_at], map: "idx_last_login")
-  @@map("user_security")
+  @@index([locked_until], map: "idx_locked_until")
+  @@index([user_id], map: "idx_user_id")
 }
 
-model UserSubscription {
-  id                     Int       @id @default(autoincrement())
-  user_id                Int       @unique
-  abonnement_id          Int?
-  status_id              Int?      @default(1)
-  stripe_customer_id     String?   @unique @db.VarChar(255)
-  stripe_subscription_id String?   @db.VarChar(255)
-  subscription_start_at  DateTime? @db.Timestamp(0)
-  subscription_end_at    DateTime? @db.Timestamp(0)
-  auto_renew             Boolean   @default(true)
-  cancellation_reason    String?   @db.Text
-  cancelled_at           DateTime? @db.Timestamp(0)
-  created_at             DateTime  @default(now()) @db.Timestamp(0)
-  updated_at             DateTime  @updatedAt @db.Timestamp(0)
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_sports {
+  id               Int          @id @default(autoincrement())
+  user_id          Int
+  sport_id         Int
+  current_grade_id Int?
+  started_at       DateTime?    @db.Date
+  is_primary       Boolean?     @default(false)
+  is_active        Boolean?     @default(true)
+  notes            String?      @db.Text
+  created_at       DateTime?    @default(now()) @db.Timestamp(0)
+  updated_at       DateTime?    @default(now()) @db.Timestamp(0)
+  users            users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_sports_ibfk_1")
+  sports           sports       @relation(fields: [sport_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_sports_ibfk_2")
+  belt_grades      belt_grades? @relation(fields: [current_grade_id], references: [id], onUpdate: NoAction, map: "user_sports_ibfk_3")
 
-  user                   utilisateurs      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  plan                   plans_tarifaires? @relation(fields: [abonnement_id], references: [id], onDelete: SetNull)
-  status                 status?           @relation(fields: [status_id], references: [id], onDelete: SetNull)
+  @@unique([user_id, sport_id], map: "unique_user_sport")
+  @@index([current_grade_id], map: "current_grade_id")
+  @@index([user_id, is_active], map: "idx_user_sports_active")
+  @@index([sport_id, is_active, user_id], map: "idx_user_sports_lookup")
+  @@index([user_id, is_primary], map: "idx_user_sports_primary")
+  @@index([sport_id, is_active], map: "idx_user_sports_sport_active")
+}
 
-  @@index([user_id], map: "idx_user_id")
-  @@index([abonnement_id], map: "idx_abonnement_id")
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_subscriptions {
+  id                     Int            @id @default(autoincrement())
+  user_id                Int            @unique(map: "user_id")
+  subscription_id        Int?
+  status_id              Int?           @default(1)
+  stripe_customer_id     String?        @unique(map: "stripe_customer_id") @db.VarChar(255)
+  stripe_subscription_id String?        @db.VarChar(255)
+  subscription_start_at  DateTime?      @db.Timestamp(0)
+  subscription_end_at    DateTime?      @db.Timestamp(0)
+  auto_renew             Boolean?       @default(true)
+  cancellation_reason    String?        @db.Text
+  cancelled_at           DateTime?      @db.Timestamp(0)
+  created_at             DateTime       @default(now()) @db.Timestamp(0)
+  updated_at             DateTime       @default(now()) @db.Timestamp(0)
+  user_roles             user_roles?    @relation(fields: [status_id], references: [id], onUpdate: Restrict, map: "fk_user_subscriptions_status")
+  pricing_plans          pricing_plans? @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: Restrict, map: "fk_user_subscriptions_subscription")
+  users                  users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_user_subscriptions_user")
+
   @@index([status_id], map: "idx_status_id")
   @@index([stripe_customer_id], map: "idx_stripe_customer")
   @@index([stripe_subscription_id], map: "idx_stripe_subscription")
   @@index([subscription_end_at], map: "idx_subscription_end")
-  @@map("user_subscriptions")
-}
-
-model UserPreferences {
-  id                  Int      @id @default(autoincrement())
-  user_id             Int      @unique
-  language            String   @default("fr") @db.VarChar(10)
-  timezone            String   @default("Europe/Brussels") @db.VarChar(50)
-  notifications_email Boolean  @default(true)
-  notifications_sms   Boolean  @default(false)
-  notifications_push  Boolean  @default(true)
-  theme               String   @default("light") @db.VarChar(20)
-  date_format         String   @default("DD/MM/YYYY") @db.VarChar(20)
-  created_at          DateTime @default(now()) @db.Timestamp(0)
-  updated_at          DateTime @updatedAt @db.Timestamp(0)
-
-  user                utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
+  @@index([subscription_id], map: "idx_subscription_id")
   @@index([user_id], map: "idx_user_id")
-  @@index([language], map: "idx_language")
-  @@map("user_preferences")
 }
 
-// ============================================================================
-// PHASE 2 - GDPR TABLES
-// ============================================================================
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id                                                                                    Int                               @id @default(autoincrement())
+  last_name                                                                             String?                           @db.VarChar(100)
+  first_name                                                                            String?                           @db.VarChar(100)
+  birth_date                                                                            DateTime?                         @db.Date
+  email                                                                                 String                            @unique(map: "email") @db.VarChar(255)
+  phone                                                                                 String?                           @db.VarChar(20)
+  address                                                                               String?                           @db.Text
+  password                                                                              String?                           @db.VarChar(255)
+  role                                                                                  users_role?                       @default(eleve)
+  genre_id                                                                              Int?
+  grade_id                                                                              Int?
+  status_id                                                                             Int?
+  email_verified                                                                        Boolean?
+  two_factor_enabled                                                                    Boolean?                          @default(false)
+  two_factor_secret                                                                     String?                           @db.VarChar(255)
+  recovery_email                                                                        String?                           @db.VarChar(255)
+  registration_date                                                                     DateTime?                         @db.Timestamp(0)
+  updated_at                                                                            DateTime?                         @default(now()) @db.Timestamp(0)
+  last_login                                                                            DateTime?                         @db.Timestamp(0)
+  deleted_at                                                                            DateTime?                         @db.Timestamp(0)
+  deleted_by                                                                            Int?
+  ab_test_participants                                                                  ab_test_participants[]
+  account_deletion_requests_account_deletion_requests_approved_byTousers                account_deletion_requests[]       @relation("account_deletion_requests_approved_byTousers")
+  account_deletion_requests_account_deletion_requests_user_idTousers                    account_deletion_requests[]       @relation("account_deletion_requests_user_idTousers")
+  alert_actions                                                                         alert_actions[]
+  api_keys                                                                              api_keys[]
+  bookings                                                                              bookings[]
+  custom_messages_custom_messages_user_idTousers                                        custom_messages[]                 @relation("custom_messages_user_idTousers")
+  custom_messages_custom_messages_deleted_byTousers                                     custom_messages[]                 @relation("custom_messages_deleted_byTousers")
+  data_export_requests                                                                  data_export_requests[]
+  direct_messages_direct_messages_sender_idTousers                                      direct_messages[]                 @relation("direct_messages_sender_idTousers")
+  direct_messages_direct_messages_receiver_idTousers                                    direct_messages[]                 @relation("direct_messages_receiver_idTousers")
+  email_campaigns                                                                       email_campaigns[]
+  email_tracking                                                                        email_tracking[]
+  email_validation_tokens_legacy                                                        email_validation_tokens_legacy[]
+  enrollments                                                                           enrollments[]
+  event_documents                                                                       event_documents[]
+  event_media                                                                           event_media[]
+  event_registrations                                                                   event_registrations[]
+  event_reminders                                                                       event_reminders[]
+  event_team_members                                                                    event_team_members[]
+  event_teams                                                                           event_teams[]
+  events_events_created_byTousers                                                       events[]                          @relation("events_created_byTousers")
+  events_events_updated_byTousers                                                       events[]                          @relation("events_updated_byTousers")
+  manual_recovery_requests_legacy_manual_recovery_requests_legacy_utilisateur_idTousers manual_recovery_requests_legacy[] @relation("manual_recovery_requests_legacy_utilisateur_idTousers")
+  manual_recovery_requests_legacy_manual_recovery_requests_legacy_processed_byTousers   manual_recovery_requests_legacy[] @relation("manual_recovery_requests_legacy_processed_byTousers")
+  message_read_status                                                                   message_read_status[]
+  orders                                                                                orders[]
+  password_reset_tokens_legacy                                                          password_reset_tokens_legacy[]
+  payment_schedules                                                                     payment_schedules[]
+  payments                                                                              payments[]
+  refresh_tokens_legacy                                                                 refresh_tokens_legacy[]
+  sms_recovery_codes_legacy                                                             sms_recovery_codes_legacy[]
+  sport_statistics                                                                      sport_statistics[]
+  user_alerts_user_alerts_user_idTousers                                                user_alerts[]                     @relation("user_alerts_user_idTousers")
+  user_alerts_user_alerts_resolu_parTousers                                             user_alerts[]                     @relation("user_alerts_resolu_parTousers")
+  user_consents                                                                         user_consents[]
+  user_grade_history_user_grade_history_user_idTousers                                  user_grade_history[]              @relation("user_grade_history_user_idTousers")
+  user_grade_history_user_grade_history_examiner_idTousers                              user_grade_history[]              @relation("user_grade_history_examiner_idTousers")
+  user_group_members                                                                    user_group_members[]
+  user_notifications                                                                    user_notifications[]
+  user_preferences                                                                      user_preferences?
+  user_profiles                                                                         user_profiles?
+  user_security                                                                         user_security?
+  user_sports                                                                           user_sports[]
+  user_subscriptions                                                                    user_subscriptions?
+  genders                                                                               genders?                          @relation(fields: [genre_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "users_ibfk_1")
+  belt_grades                                                                           belt_grades?                      @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "users_ibfk_2")
+  user_roles                                                                            user_roles?                       @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "users_ibfk_3")
 
-model UserConsent {
-  id           Int                @id @default(autoincrement())
-  user_id      Int
-  consent_type UserConsentType
-  given        Boolean            @default(false)
-  ip_address   String?            @db.VarChar(45)
-  user_agent   String?            @db.Text
-  given_at     DateTime           @default(now()) @db.Timestamp(0)
-  revoked_at   DateTime?          @db.Timestamp(0)
-  version      String?            @db.VarChar(20)
-
-  user         utilisateurs       @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id], map: "idx_user_id")
-  @@index([consent_type], map: "idx_consent_type")
-  @@index([given], map: "idx_given")
-  @@index([user_id, consent_type, given], map: "idx_user_consent")
-  @@index([given_at], map: "idx_given_at")
-  @@map("user_consents")
+  @@index([last_name, first_name], map: "ft_users_search")
+  @@index([genre_id], map: "genre_id")
+  @@index([grade_id], map: "grade_id")
+  @@index([deleted_at], map: "idx_deleted_at")
+  @@index([email], map: "idx_email")
+  @@index([last_name, first_name], map: "idx_nom_prenom")
+  @@index([role], map: "idx_role")
+  @@index([deleted_at], map: "idx_users_deleted_at")
+  @@index([email, deleted_at], map: "idx_users_email_active")
+  @@index([status_id], map: "status_id")
 }
 
-enum UserConsentType {
-  MARKETING
-  ANALYTICS
-  TERMS
-  PRIVACY
-  DATA_PROCESSING
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model v_active_students_by_sport {
+  id                  Int       @id @default(autoincrement()) @db.UnsignedInt
+  sport_name          String    @db.VarChar(100)
+  discipline_name     String?   @db.VarChar(100)
+  total_students      Int?      @default(0) @db.UnsignedInt
+  active_enrollments  Int?      @default(0) @db.UnsignedInt
+  pending_enrollments Int?      @default(0) @db.UnsignedInt
+  total_revenue       Decimal?  @default(0.00) @db.Decimal(12, 2)
+  avg_age             Decimal?  @db.Decimal(5, 2)
+  male_count          Int?      @default(0) @db.UnsignedInt
+  female_count        Int?      @default(0) @db.UnsignedInt
+  other_count         Int?      @default(0) @db.UnsignedInt
+  last_updated        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([sport_name, discipline_name], map: "idx_sport_discipline")
+  @@index([last_updated], map: "idx_last_updated")
 }
 
-model DataExportRequest {
-  id                    Int                    @id @default(autoincrement())
-  user_id               Int
-  status                DataExportStatus       @default(PENDING)
-  requested_at          DateTime               @default(now()) @db.Timestamp(0)
-  processing_started_at DateTime?              @db.Timestamp(0)
-  completed_at          DateTime?              @db.Timestamp(0)
-  expires_at            DateTime?              @db.Timestamp(0)
-  file_path             String?                @db.VarChar(500)
-  file_size_bytes       BigInt?
-  request_ip            String?                @db.VarChar(45)
-  download_count        Int                    @default(0)
-  last_downloaded_at    DateTime?              @db.Timestamp(0)
-  error_message         String?                @db.Text
-
-  user                  utilisateurs           @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@index([user_id], map: "idx_user_id")
-  @@index([status], map: "idx_status")
-  @@index([expires_at], map: "idx_expires_at")
-  @@index([requested_at], map: "idx_requested_at")
-  @@map("data_export_requests")
+model v_dashboard_stats {
+  id                   Int       @id @default(autoincrement()) @db.UnsignedInt
+  stat_date            DateTime  @unique(map: "idx_stat_date") @db.Date
+  total_users          Int?      @default(0)
+  active_users         Int?      @default(0)
+  new_users_today      Int?      @default(0)
+  total_enrollments    Int?      @default(0)
+  active_enrollments   Int?      @default(0)
+  total_revenue_today  Decimal?  @default(0.00) @db.Decimal(10, 2)
+  total_revenue_month  Decimal?  @default(0.00) @db.Decimal(10, 2)
+  total_revenue_year   Decimal?  @default(0.00) @db.Decimal(10, 2)
+  pending_payments     Int?      @default(0)
+  upcoming_events_week Int?      @default(0)
+  active_courses       Int?      @default(0)
+  shop_orders_pending  Int?      @default(0)
+  low_stock_items      Int?      @default(0)
+  last_updated         DateTime? @default(now()) @db.Timestamp(0)
 }
 
-enum DataExportStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-  EXPIRED
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model v_upcoming_schedule {
+  id              Int                            @id @default(autoincrement()) @db.UnsignedInt
+  event_date      DateTime                       @db.Date
+  event_time      DateTime?                      @db.Time(0)
+  event_type      v_upcoming_schedule_event_type
+  event_id        Int                            @db.UnsignedInt
+  event_name      String                         @db.VarChar(255)
+  location        String?                        @db.VarChar(255)
+  instructor_name String?                        @db.VarChar(255)
+  enrolled_count  Int?                           @default(0) @db.UnsignedInt
+  capacity        Int?                           @db.UnsignedInt
+  status          String?                        @db.VarChar(50)
+  last_updated    DateTime?                      @default(now()) @db.Timestamp(0)
+
+  @@index([event_date, event_time], map: "idx_event_date")
+  @@index([event_type], map: "idx_event_type")
+  @@index([last_updated], map: "idx_last_updated")
 }
 
-model AccountDeletionRequest {
-  id               Int                      @id @default(autoincrement())
-  user_id          Int
-  status           AccountDeletionStatus    @default(PENDING)
-  reason           String?                  @db.Text
-  requested_at     DateTime                 @default(now()) @db.Timestamp(0)
-  approved_at      DateTime?                @db.Timestamp(0)
-  approved_by      Int?
-  completed_at     DateTime?                @db.Timestamp(0)
-  rejection_reason String?                  @db.Text
-  request_ip       String?                  @db.VarChar(45)
+model validation_tokens_legacy {
+  id             Int                           @id @default(autoincrement())
+  utilisateur_id Int
+  token          String                        @unique(map: "token") @db.VarChar(255)
+  type           validation_tokens_legacy_type
+  expires_at     DateTime                      @db.Timestamp(0)
+  created_at     DateTime                      @default(now()) @db.Timestamp(0)
+  used_at        DateTime?                     @db.Timestamp(0)
 
-  user             utilisateurs             @relation("account_deletion_user", fields: [user_id], references: [id], onDelete: Cascade)
-  approver         utilisateurs?            @relation("account_deletion_approver", fields: [approved_by], references: [id], onDelete: SetNull)
-
-  @@index([user_id], map: "idx_user_id")
-  @@index([status], map: "idx_status")
-  @@index([requested_at], map: "idx_requested_at")
-  @@index([approved_by], map: "idx_approved_by")
-  @@map("account_deletion_requests")
+  @@index([token, type, expires_at], map: "idx_token_type_expires")
+  @@index([utilisateur_id], map: "utilisateur_id")
 }
 
-enum AccountDeletionStatus {
+model venues {
+  id                    Int      @id @default(autoincrement())
+  name                  String   @db.VarChar(200)
+  address               String   @db.Text
+  city                  String   @db.VarChar(100)
+  postal_code           String   @db.VarChar(20)
+  country               String?  @default("Belgique") @db.VarChar(100)
+  latitude              Decimal? @db.Decimal(10, 8)
+  longitude             Decimal? @db.Decimal(11, 8)
+  phone                 String?  @db.VarChar(20)
+  email                 String?  @db.VarChar(100)
+  website               String?  @db.VarChar(500)
+  capacity              Int?
+  facilities            Json?
+  wheelchair_accessible Boolean? @default(false)
+  public_transport_info String?  @db.Text
+  parking_info          String?  @db.Text
+  notes                 String?  @db.Text
+  created_at            DateTime @default(now()) @db.Timestamp(0)
+  updated_at            DateTime @default(now()) @db.Timestamp(0)
+  events                events[]
+
+  @@index([city], map: "idx_city")
+  @@index([name], map: "idx_name")
+}
+
+enum account_deletion_requests_status {
   PENDING
   APPROVED
   PROCESSING
@@ -766,626 +1941,164 @@ enum AccountDeletionStatus {
   CANCELLED
 }
 
-// ============================================================================
-// AUTRES TABLES (sans modifications Phase 1)
-// ============================================================================
-
-model genres {
-  id           Int            @id @default(autoincrement())
-  genre_name   String         @unique(map: "genre_name") @db.VarChar(50)
-  utilisateurs utilisateurs[]
+enum alert_actions_action_type {
+  message_sent
+  information_updated
+  payment_received
+  other
 }
 
-model grades {
-  id            Int            @id @default(autoincrement())
-  grade_id      String         @unique(map: "grade_id") @db.VarChar(100)
-  nom           String?        @db.VarChar(100)
-  couleur       String?        @db.VarChar(7)
-  ordre         Int            @default(0)
-  description   String?        @db.Text
-  sport_id      Int?
-  created_at    DateTime?      @default(now()) @db.Timestamp(0)
-  updated_at    DateTime?      @default(now()) @updatedAt @db.Timestamp(0)
-
-  professeurs   professeurs[]
-  utilisateurs  utilisateurs[]
-  user_profiles UserProfile[]
-  sport         Sport?         @relation(fields: [sport_id], references: [id], onDelete: Cascade, map: "fk_grades_sport")
-  user_sports   UserSport[]    @relation("UserSportCurrentGrade")
-  grade_history UserGradeHistory[]
-
-  @@index([sport_id], map: "idx_grades_sport")
-  @@index([sport_id, ordre], map: "idx_grades_sport_order")
+enum data_export_requests_status {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
 }
 
-model groupes {
-  id                   Int                    @id @default(autoincrement())
-  nom                  String                 @db.VarChar(100)
-  description          String?                @db.Text
-  created_at           DateTime               @default(now()) @db.Timestamp(0)
-  groupes_utilisateurs groupes_utilisateurs[]
-  messages             messages[]
-
-  @@index([nom], map: "idx_nom")
+enum event_documents_document_type {
+  RULES
+  SCHEDULE
+  CERTIFICATE
+  INVOICE
+  FORM
+  OTHER
 }
 
-model groupes_utilisateurs {
-  id             Int          @id @default(autoincrement())
-  groupe_id      Int
-  utilisateur_id Int
-  date_ajout     DateTime     @default(now()) @db.Timestamp(0)
-  groupes        groupes      @relation(fields: [groupe_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "groupes_utilisateurs_ibfk_1")
-  users          utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "groupes_utilisateurs_ibfk_2")
-
-  @@unique([groupe_id, utilisateur_id], map: "uk_groupe_utilisateur")
-  @@index([groupe_id, utilisateur_id], map: "idx_groupe_utilisateur")
-  @@index([utilisateur_id], map: "utilisateur_id")
+enum event_media_media_type {
+  PHOTO
+  VIDEO
+  DOCUMENT
 }
 
-model inscriptions {
-  id               Int          @id @default(autoincrement())
-  utilisateur_id   Int
-  cours_id         Int
-  date_inscription DateTime     @default(now()) @db.Timestamp(0)
-  status_id        Boolean?
-  users            utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "inscriptions_ibfk_1")
-  cours            cours        @relation(fields: [cours_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "inscriptions_ibfk_2")
-
-  @@unique([utilisateur_id, cours_id], map: "uk_utilisateur_cours")
-  @@index([cours_id], map: "cours_id")
-  @@index([utilisateur_id, cours_id], map: "idx_utilisateur_cours")
-  @@index([cours_id, status_id], map: "idx_cours_status")
-  @@index([cours_id, utilisateur_id], map: "idx_inscriptions_cours")
-  @@index([utilisateur_id, date_inscription], map: "idx_inscriptions_user_date")
+enum event_reminders_reminder_type {
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSING
+  EVENT_APPROACHING
+  EVENT_TODAY
+  CUSTOM
 }
 
-model notifications {
-  id             Int          @id @default(autoincrement())
-  utilisateur_id Int
-  message_id     Int
-  vu             Boolean?     @default(false)
-  created_at     DateTime     @default(now()) @db.Timestamp(0)
-  users          utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "notifications_ibfk_1")
-  messages       messages     @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "notifications_ibfk_2")
-
-  @@index([utilisateur_id, vu], map: "idx_utilisateur_vu")
-  @@index([message_id], map: "message_id")
+enum order_status_history_old_status {
+  en_attente
+  paye
+  annule
+  rembourse
 }
 
-model password_reset_tokens {
-  id             Int          @id @default(autoincrement())
-  utilisateur_id Int
-  token          String       @unique(map: "token") @db.VarChar(64)
-  expires_at     DateTime     @default(now()) @db.Timestamp(0)
-  created_at     DateTime     @default(now()) @db.Timestamp(0)
-  used_at        DateTime?    @db.Timestamp(0)
-  utilisateurs   utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "password_reset_tokens_ibfk_1")
-
-  @@index([expires_at], map: "idx_expires_at")
-  @@index([token], map: "idx_token")
-  @@index([utilisateur_id], map: "idx_utilisateur_id")
+enum recurring_courses_day_of_week {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  sunday
 }
 
-model plans_tarifaires {
-  id                  Int                   @id @default(autoincrement())
-  nom_plan            String                @unique(map: "nom_plan") @db.VarChar(50)
-  prix                Decimal               @db.Decimal(10, 2)
-  periode             String                @db.VarChar(20)
-  description         String?               @db.Text
-  echeances_paiements echeances_paiements[]
-  paiements           paiements[]
-  utilisateurs        utilisateurs[]
-  user_subscriptions  UserSubscription[]
+enum user_consents_consent_type {
+  MARKETING
+  ANALYTICS
+  TERMS
+  PRIVACY
+  DATA_PROCESSING
 }
 
-model reservations {
-  id             Int          @id @default(autoincrement())
-  utilisateur_id Int
-  cours_id       Int
-  users          utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reservations_ibfk_1")
-  cours          cours        @relation(fields: [cours_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reservations_ibfk_2")
-
-  @@unique([utilisateur_id, cours_id], map: "uk_utilisateur_cours")
-  @@index([cours_id], map: "cours_id")
-  @@index([utilisateur_id, cours_id], map: "idx_utilisateur_cours")
+enum ab_tests_test_type {
+  EMAIL_SUBJECT
+  EMAIL_CONTENT
+  LANDING_PAGE
+  CTA_BUTTON
+  PRICING
+  OTHER
 }
 
-model status {
-  id                 Int                @id @default(autoincrement())
-  nom_role           String             @unique(map: "nom_role") @db.VarChar(50)
-  description        String?            @db.Text
-  professeurs        professeurs[]
-  utilisateurs       utilisateurs[]
-  user_subscriptions UserSubscription[]
+enum audit_trail_action_type {
+  INSERT
+  UPDATE
+  DELETE
+  SOFT_DELETE
 }
 
-model tailles {
-  id                Int                 @id @default(autoincrement())
-  nom               String              @unique(map: "nom") @db.VarChar(20)
-  commande_articles commande_articles[]
-  article_stock     ArticleStock[]
+enum event_registrations_status {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  WAITLIST
+  REJECTED
 }
 
-model categories {
-  id          Int              @id @default(autoincrement())
-  nom         String           @unique(map: "nom") @db.VarChar(100)
-  sport_id    Int?
-  description String?          @db.Text
-  articles    articles[]
-  sport       Sport?           @relation(fields: [sport_id], references: [id], onDelete: SetNull, map: "fk_categories_sport")
-  equipment   SportEquipment[]
-
-  @@index([sport_id], map: "idx_categories_sport")
+enum notification_templates_notification_type {
+  IN_APP
+  PUSH
+  SMS
+  EMAIL
 }
 
-model commande_articles {
-  id          Int       @id @default(autoincrement())
-  commande_id Int
-  article_id  Int
-  taille_id   Int
-  quantite    Int
-  prix        Decimal   @db.Decimal(10, 2)
-  commandes   commandes @relation(fields: [commande_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commande_articles_ibfk_1")
-  articles    articles  @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commande_articles_ibfk_2")
-  tailles     tailles   @relation(fields: [taille_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commande_articles_ibfk_3")
-
-  @@index([article_id], map: "article_id")
-  @@index([commande_id, article_id], map: "idx_commande_article")
-  @@index([taille_id], map: "taille_id")
+enum order_status_history_new_status {
+  en_attente
+  paye
+  annule
+  rembourse
 }
 
-model email_validation_tokens {
-  id             Int                          @id @default(autoincrement())
-  utilisateur_id Int
-  token          String                       @unique(map: "token") @db.VarChar(255)
-  type           email_validation_tokens_type
-  expires_at     DateTime                     @default(now()) @db.Timestamp(0)
-  used           Boolean?                     @default(false)
-  created_at     DateTime                     @default(now()) @db.Timestamp(0)
-  utilisateurs   utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "email_validation_tokens_ibfk_1")
-
-  @@index([expires_at], map: "idx_expires")
-  @@index([token], map: "idx_token")
-  @@index([utilisateur_id, type], map: "idx_utilisateur_type")
+enum rate_limit_violations_identifier_type {
+  IP
+  USER
+  API_KEY
 }
 
-model images {
-  id         Int      @id @default(autoincrement())
-  article_id Int
-  url        String   @db.Text
-  is_main    Boolean? @default(false)
-  articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "images_ibfk_1")
-
-  @@index([article_id], map: "idx_article")
+enum sport_competition_rules_rule_type {
+  scoring
+  time
+  safety
+  equipment
+  category
+  other
 }
 
-model manual_recovery_requests {
-  id                                                                 Int                              @id @default(autoincrement())
-  utilisateur_id                                                     Int
-  reason                                                             String                           @db.Text
-  verification_data                                                  String?                          @db.LongText
-  status                                                             manual_recovery_requests_status? @default(pending)
-  admin_notes                                                        String?                          @db.Text
-  processed_by                                                       Int?
-  processed_at                                                       DateTime?                        @db.Timestamp(0)
-  created_at                                                         DateTime                         @default(now()) @db.Timestamp(0)
-  expires_at                                                         DateTime?                        @db.Timestamp(0)
-  utilisateurs_manual_recovery_requests_utilisateur_idToutilisateurs utilisateurs                     @relation("manual_recovery_requests_utilisateur_idToutilisateurs", fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "manual_recovery_requests_ibfk_1")
-  utilisateurs_manual_recovery_requests_processed_byToutilisateurs   utilisateurs?                    @relation("manual_recovery_requests_processed_byToutilisateurs", fields: [processed_by], references: [id], onUpdate: Restrict, map: "manual_recovery_requests_ibfk_2")
-
-  @@index([created_at], map: "idx_created_at")
-  @@index([expires_at], map: "idx_expires_at")
-  @@index([utilisateur_id, status], map: "idx_utilisateur_status")
-  @@index([processed_by], map: "processed_by")
+enum user_alerts_status {
+  non_lu
+  lu
+  archive
 }
 
-model message_status {
-  id             Int                    @id @default(autoincrement())
-  message_id     Int
-  utilisateur_id Int
-  status         message_status_status? @default(non_vu)
-  updated_at     DateTime               @default(now()) @db.Timestamp(0)
-  messages       messages               @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "message_status_ibfk_1")
-  utilisateurs   utilisateurs           @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "message_status_ibfk_2")
-
-  @@unique([message_id, utilisateur_id], map: "uk_message_utilisateur")
-  @@index([message_id, utilisateur_id], map: "idx_message_utilisateur")
-  @@index([utilisateur_id], map: "utilisateur_id")
+enum v_upcoming_schedule_event_type {
+  course
+  session
+  event
+  booking
 }
 
-model auth_attempts {
-  id           Int      @id @default(autoincrement())
-  email        String   @db.VarChar(255)
-  ip_address   String?  @db.VarChar(45)
-  user_agent   String?  @db.Text
-  success      Boolean  @default(false)
-  attempted_at DateTime @default(now()) @db.Timestamp(0)
-
-  @@index([email, attempted_at], map: "idx_auth_email_time")
-  @@index([ip_address, attempted_at], map: "idx_auth_ip_time")
+enum validation_tokens_legacy_type {
+  email
+  phone
+  password_reset
 }
 
-model refresh_tokens {
-  id             Int          @id @default(autoincrement())
-  utilisateur_id Int
-  token          String       @unique(map: "refresh_token") @db.VarChar(255)
-  expires_at     DateTime     @db.Timestamp(0)
-  created_at     DateTime     @default(now()) @db.Timestamp(0)
-  revoked_at     DateTime?    @db.Timestamp(0)
-  replaced_by    String?      @db.VarChar(255)
-  ip_address     String?      @db.VarChar(45)
-  user_agent     String?      @db.Text
-  utilisateurs   utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "refresh_tokens_ibfk_1")
-
-  @@index([utilisateur_id], map: "idx_refresh_user_id")
-  @@index([token], map: "idx_refresh_token")
-  @@index([expires_at], map: "idx_refresh_expires")
+enum alert_types_severity {
+  low
+  medium
+  high
+  critical
 }
 
-model password_reset_attempts {
-  id           Int      @id @default(autoincrement())
-  email        String   @db.VarChar(255)
-  ip_address   String?  @db.VarChar(45)
-  user_agent   String?  @db.Text
-  success      Boolean? @default(false)
-  attempted_at DateTime @default(now()) @db.Timestamp(0)
-
-  @@index([email, attempted_at], map: "idx_email_time")
-  @@index([ip_address, attempted_at], map: "idx_ip_time")
+enum email_campaigns_status {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
 }
 
-model professeurs {
-  id                         Int                          @id @default(autoincrement())
-  nom                        String                       @db.VarChar(255)
-  prenom                     String                       @db.VarChar(255)
-  email                      String?                      @unique(map: "email") @db.VarChar(255)
-  grade_id                   Int?
-  status_id                  Int?
-  cours_recurrent_professeur cours_recurrent_professeur[]
-  grades                     grades?                      @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "professeurs_ibfk_1")
-  status                     status?                      @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "professeurs_ibfk_2")
-
-  @@index([grade_id], map: "grade_id")
-  @@index([email], map: "idx_email")
-  @@index([status_id], map: "status_id")
-}
-
-model sms_recovery_codes {
-  id             Int          @id @default(autoincrement())
-  utilisateur_id Int
-  phone          String       @db.VarChar(20)
-  code           String       @db.VarChar(6)
-  attempts       Int?         @default(0)
-  expires_at     DateTime     @default(now()) @db.Timestamp(0)
-  created_at     DateTime     @default(now()) @db.Timestamp(0)
-  used_at        DateTime?    @db.Timestamp(0)
-  utilisateurs   utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "sms_recovery_codes_ibfk_1")
-
-  @@unique([utilisateur_id, phone], map: "unique_utilisateur_phone")
-  @@index([expires_at], map: "idx_expires_at")
-  @@index([phone, code], map: "idx_phone_code")
-}
-
-model statistiques {
-  id               Int      @id @default(autoincrement())
-  type_statistique String   @db.VarChar(50)
-  periode_debut    DateTime @db.Date
-  periode_fin      DateTime @db.Date
-  valeur           Decimal? @db.Decimal(10, 2)
-  description      String?  @db.Text
-  date_creation    DateTime @default(now()) @db.Timestamp(0)
-
-  @@index([type_statistique, periode_debut, periode_fin], map: "idx_type_periode")
-}
-
-model types_messages_personnalises {
-  id         Int      @id @default(autoincrement())
-  title      String   @unique(map: "title") @db.VarChar(255)
-  content    String   @db.Text
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @db.Timestamp(0)
-}
-
-model validation_tokens {
-  id             Int                     @id @default(autoincrement())
-  utilisateur_id Int
-  token          String                  @unique(map: "token") @db.VarChar(255)
-  user_id_string String?                 @db.VarChar(50)
-  token_hash     String?                 @db.VarChar(64)
-  type           validation_tokens_type? @default(email_confirmation)
-  expires_at     DateTime                @default(now()) @db.Timestamp(0)
-  used           Boolean?                @default(false)
-  used_at        DateTime?               @db.Timestamp(0)
-  created_at     DateTime                @default(now()) @db.Timestamp(0)
-
-  @@index([token], map: "idx_token")
-  @@index([token_hash], map: "idx_token_hash")
-  @@index([token, user_id_string], map: "idx_token_userid")
-  @@index([user_id_string], map: "idx_user_id_string")
-  @@index([utilisateur_id], map: "idx_utilisateur_id")
-}
-
-model alertes_actions {
-  id                   Int                         @id @default(autoincrement())
-  alerte_id            Int
-  action_type          alertes_actions_action_type
-  description          String?                     @db.Text
-  effectue_par         Int?
-  date_action          DateTime?                   @default(now()) @db.Timestamp(0)
-  alertes_utilisateurs alertes_utilisateurs        @relation(fields: [alerte_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_actions_ibfk_1")
-  utilisateurs         utilisateurs?               @relation(fields: [effectue_par], references: [id], onUpdate: Restrict, map: "alertes_actions_ibfk_2")
-
-  @@index([effectue_par], map: "effectue_par")
-  @@index([alerte_id, date_action], map: "idx_alerte_date")
-}
-
-model alertes_types {
-  id                   Int                     @id @default(autoincrement())
-  code                 String                  @unique(map: "code") @db.VarChar(50)
-  nom                  String                  @db.VarChar(100)
-  description          String?                 @db.Text
-  priorite             alertes_types_priorite? @default(normale)
-  actif                Boolean?                @default(true)
-  created_at           DateTime?               @default(now()) @db.Timestamp(0)
-  alertes_utilisateurs alertes_utilisateurs[]
-}
-
-model alertes_utilisateurs {
-  id                                                         Int                          @id @default(autoincrement())
-  utilisateur_id                                             Int
-  alerte_type_id                                             Int
-  statut                                                     alertes_utilisateurs_statut? @default(active)
-  donnees_contexte                                           Json?
-  date_detection                                             DateTime?                    @default(now()) @db.Timestamp(0)
-  date_resolution                                            DateTime?                    @db.Timestamp(0)
-  resolu_par                                                 Int?
-  notes                                                      String?                      @db.Text
-  alertes_actions                                            alertes_actions[]
-  utilisateurs                                               utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_1")
-  alertes_types                                              alertes_types                @relation(fields: [alerte_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_2")
-  utilisateurs_alertes_utilisateurs_resolu_parToutilisateurs utilisateurs?                @relation("alertes_utilisateurs_resolu_parToutilisateurs", fields: [resolu_par], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_3")
-
-  @@index([alerte_type_id, statut], map: "idx_type_statut")
-  @@index([resolu_par], map: "resolu_par")
-  @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
-}
-
-// ============================================================================
-// ENUMS
-// ============================================================================
-
-enum email_validation_tokens_type {
-  email_confirmation
-  password_setup
-}
-
-enum message_status_status {
-  vu
-  non_vu @map("non vu")
-}
-
-enum manual_recovery_requests_status {
+enum manual_recovery_requests_legacy_status {
   pending
   approved
   rejected
   expired
 }
 
-enum echeances_paiements_statut {
-  pay_       @map("payé")
-  en_attente @map("en attente")
-  chu        @map("échu")
-}
-
-enum validation_tokens_type {
-  email_confirmation
-  password_setup
-}
-
-enum commandes_statut {
-  en_attente @map("en attente")
-  pay_e      @map("payée")
-  exp_di_e   @map("expédiée")
-  annul_e    @map("annulée")
-}
-
-enum messages_personnalises_status_envoi {
-  pending
-  sent
-  failed
-  delivered
-  bounced
-}
-
-enum alertes_actions_action_type {
-  message_envoye
-  information_mise_a_jour
-  paiement_recu
-  autre
-}
-
-enum alertes_utilisateurs_statut {
-  active
-  resolue
-  ignoree
-}
-
-enum alertes_types_priorite {
-  basse
-  normale
-  haute
-  critique
-}
-
-// ============================================================================
-// PHASE 5: MULTI-SPORTS SYSTEM
-// ============================================================================
-
-model Sport {
-  id                      Int                       @id @default(autoincrement())
-  code                    String                    @unique @db.VarChar(50)
-  name                    String                    @db.VarChar(100)
-  description             String?                   @db.Text
-  color                   String                    @default("#3B82F6") @db.VarChar(7)
-  icon                    String?                   @db.VarChar(100)
-  image_url               String?                   @db.VarChar(255)
-  is_active               Boolean                   @default(true)
-  display_order           Int                       @default(0)
-  requires_belt           Boolean                   @default(true)
-  allow_competitions      Boolean                   @default(true)
-  min_age                 Int?
-  max_age                 Int?
-  created_at              DateTime                  @default(now()) @db.Timestamp(0)
-  updated_at              DateTime                  @default(now()) @updatedAt @db.Timestamp(0)
-
-  // Relations
-  configurations          SportConfiguration[]
-  user_sports             UserSport[]
-  grades                  grades[]
-  courses                 cours[]
-  course_types            CourseType[]
-  categories              categories[]
-  equipment               SportEquipment[]
-  competition_rules       SportCompetitionRule[]
-  statistics              SportStatistic[]
-  grade_history           UserGradeHistory[]
-
-  @@index([is_active], map: "idx_sports_active")
-  @@index([display_order], map: "idx_sports_order")
-  @@map("sports")
-}
-
-model SportConfiguration {
-  id          Int      @id @default(autoincrement())
-  sport_id    Int
-  config_key  String   @db.VarChar(100)
-  config_value String? @db.Text
-  data_type   SportConfigDataType @default(string)
-  description String?  @db.VarChar(255)
-  is_public   Boolean  @default(false)
-  created_at  DateTime @default(now()) @db.Timestamp(0)
-  updated_at  DateTime @default(now()) @updatedAt @db.Timestamp(0)
-
-  sport       Sport    @relation(fields: [sport_id], references: [id], onDelete: Cascade)
-
-  @@unique([sport_id, config_key], map: "unique_sport_config")
-  @@index([sport_id, is_public], map: "idx_sport_configs_public")
-  @@map("sport_configurations")
-}
-
-model UserSport {
-  id               Int       @id @default(autoincrement())
-  user_id          Int
-  sport_id         Int
-  current_grade_id Int?
-  started_at       DateTime? @db.Date
-  is_primary       Boolean   @default(false)
-  is_active        Boolean   @default(true)
-  notes            String?   @db.Text
-  created_at       DateTime  @default(now()) @db.Timestamp(0)
-  updated_at       DateTime  @default(now()) @updatedAt @db.Timestamp(0)
-
-  user             utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  sport            Sport        @relation(fields: [sport_id], references: [id], onDelete: Cascade)
-  current_grade    grades?      @relation("UserSportCurrentGrade", fields: [current_grade_id], references: [id], onDelete: SetNull)
-
-  @@unique([user_id, sport_id], map: "unique_user_sport")
-  @@index([user_id, is_active], map: "idx_user_sports_active")
-  @@index([user_id, is_primary], map: "idx_user_sports_primary")
-  @@index([is_active, is_primary, sport_id], map: "idx_user_sports_active_primary")
-  @@index([sport_id, is_active], map: "idx_user_sports_sport_active")
-  @@index([sport_id, is_active, user_id], map: "idx_user_sports_lookup")
-  @@map("user_sports")
-}
-
-model UserGradeHistory {
-  id                  Int       @id @default(autoincrement())
-  user_id             Int
-  sport_id            Int
-  grade_id            Int
-  obtained_at         DateTime  @db.Date
-  examiner_id         Int?
-  location            String?   @db.VarChar(255)
-  certificate_number  String?   @db.VarChar(100)
-  notes               String?   @db.Text
-  created_at          DateTime  @default(now()) @db.Timestamp(0)
-
-  user                utilisateurs @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  sport               Sport        @relation(fields: [sport_id], references: [id], onDelete: Cascade)
-  grade               grades       @relation(fields: [grade_id], references: [id], onDelete: Cascade)
-  examiner            utilisateurs? @relation("GradeExaminer", fields: [examiner_id], references: [id], onDelete: SetNull)
-
-  @@index([user_id, sport_id], map: "idx_grade_history_user")
-  @@index([obtained_at], map: "idx_grade_history_date")
-  @@index([user_id, sport_id, obtained_at], map: "idx_grade_history_composite")
-  @@index([user_id, obtained_at], map: "idx_hist_grades_user_date")
-  @@map("user_grade_history")
-}
-
-model SportEquipment {
-  id            Int       @id @default(autoincrement())
-  sport_id      Int
-  name          String    @db.VarChar(100)
-  description   String?   @db.Text
-  is_mandatory  Boolean   @default(false)
-  for_level     SportEquipmentLevel @default(all)
-  category_id   Int?
-  display_order Int       @default(0)
-  created_at    DateTime  @default(now()) @db.Timestamp(0)
-  updated_at    DateTime  @default(now()) @updatedAt @db.Timestamp(0)
-
-  sport         Sport        @relation(fields: [sport_id], references: [id], onDelete: Cascade)
-  category      categories?  @relation(fields: [category_id], references: [id], onDelete: SetNull)
-
-  @@index([sport_id], map: "idx_sport_equipment_sport")
-  @@index([sport_id, is_mandatory], map: "idx_sport_equipment_mandatory")
-  @@index([sport_id, for_level, is_mandatory], map: "idx_sport_equipment_level")
-  @@map("sport_equipment")
-}
-
-model SportCompetitionRule {
-  id            Int       @id @default(autoincrement())
-  sport_id      Int
-  rule_name     String    @db.VarChar(100)
-  rule_type     CompetitionRuleType @default(other)
-  description   String    @db.Text
-  applies_to    String?   @db.VarChar(100)
-  is_active     Boolean   @default(true)
-  display_order Int       @default(0)
-  created_at    DateTime  @default(now()) @db.Timestamp(0)
-  updated_at    DateTime  @default(now()) @updatedAt @db.Timestamp(0)
-
-  sport         Sport     @relation(fields: [sport_id], references: [id], onDelete: Cascade)
-
-  @@index([sport_id, is_active], map: "idx_competition_rules_sport")
-  @@map("sport_competition_rules")
-}
-
-model SportStatistic {
-  id                Int       @id @default(autoincrement())
-  sport_id          Int
-  user_id           Int?
-  stat_date         DateTime  @db.Date
-  total_members     Int       @default(0)
-  total_courses     Int       @default(0)
-  total_hours       Decimal   @default(0) @db.Decimal(10, 2)
-  total_competitions Int      @default(0)
-  total_revenue     Decimal   @default(0) @db.Decimal(10, 2)
-  created_at        DateTime  @default(now()) @db.Timestamp(0)
-  updated_at        DateTime  @default(now()) @updatedAt @db.Timestamp(0)
-
-  sport             Sport     @relation(fields: [sport_id], references: [id], onDelete: Cascade)
-  user              utilisateurs? @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  @@unique([sport_id, user_id, stat_date], map: "unique_sport_stat")
-  @@index([sport_id, stat_date], map: "idx_sport_stats_date")
-  @@map("sport_statistics")
-}
-
-
-
-// Enums for Multi-Sports System
-enum SportConfigDataType {
+enum sport_configurations_data_type {
   string
   number
   boolean
@@ -1393,7 +2106,15 @@ enum SportConfigDataType {
   text
 }
 
-enum SportEquipmentLevel {
+enum event_reminders_target_audience {
+  ALL_REGISTERED
+  CONFIRMED_ONLY
+  PENDING_ONLY
+  ALL_MEMBERS
+  CUSTOM
+}
+
+enum sport_equipment_for_level {
   beginner
   intermediate
   advanced
@@ -1401,11 +2122,135 @@ enum SportEquipmentLevel {
   all
 }
 
-enum CompetitionRuleType {
-  scoring
-  time
-  safety
-  equipment
-  category
-  other
+enum ab_tests_status {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum emails_archive_status {
+  SENT
+  FAILED
+  BOUNCED
+  DELIVERED
+}
+
+enum event_competition_categories_gender {
+  MALE
+  FEMALE
+  MIXED
+  ANY
+}
+
+enum event_team_members_role {
+  MEMBER
+  CAPTAIN
+  SUBSTITUTE
+}
+
+enum event_teams_status {
+  REGISTERED
+  CONFIRMED
+  CANCELLED
+}
+
+enum notification_templates_priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum email_queue_archive_status {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum email_templates_category {
+  TRANSACTIONAL
+  MARKETING
+  NOTIFICATION
+  SYSTEM
+}
+
+enum email_tracking_bounce_type {
+  HARD
+  SOFT
+  COMPLAINT
+}
+
+enum event_documents_visibility {
+  PUBLIC
+  MEMBERS_ONLY
+  REGISTERED_ONLY
+  PRIVATE
+}
+
+enum rate_limit_config_scope {
+  GLOBAL
+  IP
+  USER
+  API_KEY
+}
+
+enum rate_limit_violations_window_type {
+  MINUTE
+  HOUR
+  DAY
+}
+
+enum users_role {
+  admin
+  professeur
+  eleve
+}
+
+enum event_reminders_status {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+enum rate_limit_config_action {
+  THROTTLE
+  BLOCK
+  LOG_ONLY
+}
+
+enum rate_limit_violations_action_taken {
+  THROTTLED
+  BLOCKED
+  LOGGED
+}
+
+enum event_registrations_payment_status {
+  PENDING
+  PAID
+  REFUNDED
+  WAIVED
+}
+
+enum event_media_visibility {
+  PUBLIC
+  MEMBERS_ONLY
+  PRIVATE
+}
+
+enum events_status {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+  ARCHIVED
+}
+
+enum events_visibility {
+  PUBLIC
+  MEMBERS_ONLY
+  PRIVATE
 }

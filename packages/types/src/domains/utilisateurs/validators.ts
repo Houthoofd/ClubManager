@@ -246,11 +246,18 @@ export const verifierUtilisateurSchema = z.object({
  * Schéma pour l'inscription d'un utilisateur
  */
 export const inscriptionUtilisateurSchema = z.object({
-  prenom: z.string().min(1, "Le prénom est requis"),
-  nom: z.string().min(1, "Le nom est requis"),
+  prenom: z
+    .string()
+    .min(1, "Le prénom est requis")
+    .max(50, "Le prénom ne peut pas dépasser 50 caractères"),
+  nom: z
+    .string()
+    .min(1, "Le nom est requis")
+    .max(50, "Le nom ne peut pas dépasser 50 caractères"),
   nom_utilisateur: z
     .string()
-    .min(3, "Le nom d'utilisateur doit contenir au moins 3 caractères"),
+    .min(3, "Le nom d'utilisateur doit contenir au moins 3 caractères")
+    .max(50, "Le nom d'utilisateur ne peut pas dépasser 50 caractères"),
   email: z.string().email("Email invalide"),
   password: z
     .string()
@@ -276,9 +283,11 @@ export const inscriptionUtilisateurSchema = z.object({
     .positive("L'ID du status doit être positif")
     .optional(),
   grade_id: z
-    .number()
-    .int()
-    .positive("L'ID du grade doit être positif")
+    .union([
+      z.number().int().positive("L'ID du grade doit être positif"),
+      z.null(),
+      z.undefined(),
+    ])
     .optional(),
 });
 

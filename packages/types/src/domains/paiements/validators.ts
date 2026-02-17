@@ -95,7 +95,7 @@ export const CreerPaiementInputSchema = z.object({
   stripePaymentIntentId: z.string().optional(),
   paypalOrderId: z.string().optional(),
   bitcoinAddress: z.string().optional(),
-  datePaiement: z.date(),
+  datePaiement: z.date().optional().default(new Date()),
   description: z.string().optional(),
   abonnementId: z.number().int().positive().optional(),
   periodeDebut: z.date().optional(),
