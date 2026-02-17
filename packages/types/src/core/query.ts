@@ -1,42 +1,39 @@
-// Types spécifiques de réponse API
-import type { CoursData } from "../domains/cours/types.js";
-import type { Utilisateur } from "../domains/utilisateurs/service.js";
+/**
+ * Core API response types
+ * Generic response types for database operations
+ */
 
 export interface InsertResult {
   insertId: number;
   affectedRows: number;
 }
 
-export interface VerifyResult {
-  isFind: boolean;
-  message: string;
+export interface UpdateResult {
+  affectedRows: number;
+  changedRows: number;
 }
 
-export interface VerifyResultWithData<T = any> extends VerifyResult {
-  data: T;
+export interface DeleteResult {
+  affectedRows: number;
 }
 
-export interface Book<T = any> {
-  isBooked: boolean;
-  message: string;
-  data: T;
-}
-
-export type BookResult<T = any> = Book<T> & VerifyResult;
-
-export interface ConfirmationResult {
-  isConfirm: boolean;
-  message: string;
-}
-
-export type CoursApiResponse = {
+export interface ApiResponse<T = any> {
   success: boolean;
-  data: {
-    Cours: CoursData;
-  };
-  message: string;
-};
+  data?: T;
+  message?: string;
+  error?: string;
+}
 
-export type UtilisateurApiResponse = VerifyResultWithData<{
-  utilisateurs: Utilisateur[];
-}>;
+export interface PaginatedResponse<T = any> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: any;
+}

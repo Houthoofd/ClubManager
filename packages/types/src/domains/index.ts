@@ -1,53 +1,16 @@
 /**
- * Domains Index
- * Re-exports all domain types organized by bounded context
+ * Domain exports
  */
 
-// Alertes Domain
-export * as Alertes from "./alertes/index.js";
-
-// Auth Domain
-export * as Auth from "./auth/index.js";
-
-// Commandes Domain
-export * as Commandes from "./commandes/index.js";
-
-// Compte Domain
-export * as Compte from "./compte/index.js";
-
-// Cours Domain
-export * as Cours from "./cours/index.js";
-
-// Informations Domain
-export * as Informations from "./informations/index.js";
-
-// Inscription Domain
-export * as Inscription from "./inscription/index.js";
-
-// Magasin Domain
-export * as Magasin from "./magasin/index.js";
-
-// Messages Domain
-export * as Messages from "./messages/index.js";
-
-// Paiements Domain
-export * as Paiements from "./paiements/index.js";
-
-// Professeurs Domain
-export * as Professeurs from "./professeurs/index.js";
-
-// Statistiques Domain
-export * as Statistiques from "./statistiques/index.js";
-
-// Upload Domain
-export * as Upload from "./upload/index.js";
-
-// Utilisateurs Domain
-export * as Utilisateurs from "./utilisateurs/index.js";
-
-// Verification Domain
-export * as Verification from "./verification/index.js";
-export * as Sports from "./sports/index.js";
-export * as Sessions from "./sessions/index.js";
-export * as Audit from "./audit/index.js";
-export * as Gdpr from "./gdpr/index.js";
+export * as users from './users/index.js';
+export * as activities from './activities/index.js';
+export * as sessions from './sessions/index.js';
+export * as memberships from './memberships/index.js';
+export * as shop from './shop/index.js';
+export * as communications from './communications/index.js';
+export * as events from './events/index.js';
+export * as documents from './documents/index.js';
+export * as gdpr from './gdpr/index.js';
+export * as settings from './settings/index.js';
+export * as statistics from './statistics/index.js';
+export * as audit from './audit/index.js';

@@ -50,7 +50,7 @@ export interface CursorPaginatedResponse<T> {
 // SORTING TYPES
 // ============================================================================
 
-export type SortOrder = 'asc' | 'desc' | 'ASC' | 'DESC';
+export type SortOrder = "asc" | "desc" | "ASC" | "DESC";
 
 export interface SortInput {
   field: string;
@@ -66,20 +66,20 @@ export interface MultiSortInput {
 // ============================================================================
 
 export type FilterOperator =
-  | 'eq'
-  | 'ne'
-  | 'gt'
-  | 'gte'
-  | 'lt'
-  | 'lte'
-  | 'in'
-  | 'notIn'
-  | 'contains'
-  | 'startsWith'
-  | 'endsWith'
-  | 'between'
-  | 'isNull'
-  | 'isNotNull';
+  | "eq"
+  | "ne"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "in"
+  | "notIn"
+  | "contains"
+  | "startsWith"
+  | "endsWith"
+  | "between"
+  | "isNull"
+  | "isNotNull";
 
 export interface FilterInput {
   field: string;
@@ -89,7 +89,7 @@ export interface FilterInput {
 
 export interface MultiFilterInput {
   filters: FilterInput[];
-  logic?: 'AND' | 'OR';
+  logic?: "AND" | "OR";
 }
 
 // ============================================================================
@@ -286,7 +286,7 @@ export interface JsonField {
 // STATUS TYPES
 // ============================================================================
 
-export type Status = 'active' | 'inactive' | 'pending' | 'deleted' | 'archived';
+export type Status = "active" | "inactive" | "pending" | "deleted" | "archived";
 
 export interface HasStatus {
   status: Status;
@@ -364,7 +364,7 @@ export type RequireOnlyOne<T, Keys extends keyof T = keyof T> = Pick<
 // LOCALE TYPES
 // ============================================================================
 
-export type Locale = 'fr' | 'en' | 'nl' | 'de';
+export type Locale = "fr" | "en" | "nl" | "de";
 
 export interface LocalizedString {
   [locale: string]: string;
@@ -450,7 +450,7 @@ export interface GroupedAggregateResult {
 
 export interface AsyncOperationStatus {
   id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   progress?: number;
   result?: any;
   error?: string;
@@ -460,7 +460,7 @@ export interface AsyncOperationStatus {
 
 export interface JobResult<T = any> {
   id: string;
-  status: 'completed' | 'failed';
+  status: "completed" | "failed";
   data?: T;
   error?: string;
 }
@@ -470,12 +470,12 @@ export interface JobResult<T = any> {
 // ============================================================================
 
 export interface HealthCheckResult {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   timestamp: Date;
   services: Record<
     string,
     {
-      status: 'up' | 'down';
+      status: "up" | "down";
       latency?: number;
       error?: string;
     }
@@ -513,12 +513,6 @@ export interface Archivable {
 export interface NotificationPayload {
   title: string;
   message: string;
-  type?: 'info' | 'success' | 'warning' | 'error';
+  type?: "info" | "success" | "warning" | "error";
   data?: Record<string, any>;
 }
-
-// ============================================================================
-// EXPORT ALL FROM query.ts FOR BACKWARD COMPATIBILITY
-// ============================================================================
-
-export type { CoursApiResponse, UtilisateurApiResponse } from './query.js';

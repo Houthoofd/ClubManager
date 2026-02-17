@@ -106,7 +106,9 @@ export { AuditEventType, AuditSeverity } from "./services.js";
 // ============================================================================
 export type {
   InsertResult,
-  VerifyResult,
-  VerifyResultWithData,
-  UtilisateurApiResponse,
+  UpdateResult,
+  DeleteResult,
+  ApiResponse,
+  PaginatedResponse,
+  ApiError,
 } from "./query.js";
