@@ -30,7 +30,7 @@ export interface Users {
   address?: string;
   gender_id?: number;
   /** admin=administrateur, instructor=enseignant/coach, member=adhérent */
-  role?: 'admin' | 'instructor' | 'member';
+  role?: "admin" | "instructor" | "member";
   active?: boolean;
   email_verified?: boolean;
   created_at?: string;
@@ -47,7 +47,7 @@ export interface UsersInsert {
   address?: string;
   gender_id?: number;
   /** admin=administrateur, instructor=enseignant/coach, member=adhérent */
-  role?: 'admin' | 'instructor' | 'member';
+  role?: "admin" | "instructor" | "member";
   active?: boolean;
   email_verified?: boolean;
 }
@@ -62,7 +62,7 @@ export interface UsersUpdate {
   address?: string;
   gender_id?: number;
   /** admin=administrateur, instructor=enseignant/coach, member=adhérent */
-  role?: 'admin' | 'instructor' | 'member';
+  role?: "admin" | "instructor" | "member";
   active?: boolean;
   email_verified?: boolean;
   created_at?: string;
@@ -164,7 +164,7 @@ export interface AccountDeletionRequests {
   id: number;
   user_id: number;
   reason?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'completed';
+  status?: "pending" | "approved" | "rejected" | "completed";
   requested_at?: string;
   processed_at?: string;
   processed_by?: number;
@@ -174,7 +174,7 @@ export interface AccountDeletionRequests {
 export interface AccountDeletionRequestsInsert {
   user_id: number;
   reason?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'completed';
+  status?: "pending" | "approved" | "rejected" | "completed";
   requested_at?: string;
   processed_at?: string;
   processed_by?: number;
@@ -184,10 +184,137 @@ export interface AccountDeletionRequestsInsert {
 export interface AccountDeletionRequestsUpdate {
   user_id?: number;
   reason?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'completed';
+  status?: "pending" | "approved" | "rejected" | "completed";
   requested_at?: string;
   processed_at?: string;
   processed_by?: number;
   notes?: string;
 }
 
+// ============================================
+// Authentication & Session Types
+// ============================================
+
+export interface AuthToken {
+  token: string;
+  type: "access" | "refresh";
+  expiresAt: string;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  tokenType: "Bearer";
+}
+
+export interface JWTPayload {
+  userId: number;
+  email: string;
+  role: "admin" | "instructor" | "member";
+  iat?: number;
+  exp?: number;
+}
+
+export interface RefreshToken {
+  id: number;
+  user_id: number;
+  token: string;
+  expires_at: string;
+  revoked_at?: string;
+  created_at?: string;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+export interface RefreshTokenInsert {
+  user_id: number;
+  token: string;
+  expires_at: string;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+export interface RefreshTokenUpdate {
+  revoked_at?: string;
+  updated_at?: string;
+}
+
+export interface UserSession {
+  id: number;
+  user_id: number;
+  session_token: string;
+  ip_address?: string;
+  user_agent?: string;
+  expires_at: string;
+  last_activity?: string;
+  created_at?: string;
+}
+
+export interface UserSessionInsert {
+  user_id: number;
+  session_token: string;
+  ip_address?: string;
+  user_agent?: string;
+  expires_at: string;
+}
+
+export interface UserSessionUpdate {
+  last_activity?: string;
+  expires_at?: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  user: Users;
+  tokens: AuthTokens;
+  session?: UserSession;
+}
+
+export interface RegisterInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  birth_date?: string;
+  address?: string;
+  gender_id?: number;
+}
+
+export interface PasswordChangeInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetConfirm {
+  token: string;
+  newPassword: string;
+}
+
+export interface EmailVerificationToken {
+  id: number;
+  user_id: number;
+  token: string;
+  expires_at: string;
+  verified_at?: string;
+  created_at?: string;
+}
+
+export interface EmailVerificationTokenInsert {
+  user_id: number;
+  token: string;
+  expires_at: string;
+}
+
+export interface EmailVerificationTokenUpdate {
+  verified_at?: string;
+}
