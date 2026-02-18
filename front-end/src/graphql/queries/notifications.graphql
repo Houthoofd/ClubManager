@@ -1,0 +1,52 @@
+# ============================================================================
+# Notifications Queries
+# ============================================================================
+
+query Notifications($userId: Int!) {
+  notifications(userId: $userId) {
+    id
+    user_id
+    title
+    message
+    type
+    read
+    read_at
+    created_at
+    user {
+      id
+      first_name
+      last_name
+      email
+    }
+  }
+}
+
+# ============================================================================
+# Notifications Mutations
+# ============================================================================
+
+mutation CreateNotification($input: CreateNotificationInput!) {
+  createNotification(input: $input) {
+    id
+    user_id
+    title
+    message
+    type
+    read
+    read_at
+    created_at
+  }
+}
+
+mutation MarkNotificationAsRead($notificationId: Int!) {
+  markNotificationAsRead(notificationId: $notificationId) {
+    id
+    user_id
+    title
+    message
+    type
+    read
+    read_at
+    created_at
+  }
+}

@@ -1,0 +1,307 @@
+import {
+  useGetDashboardAlertesQuery,
+  useGetAlertesActivesQuery,
+  useGetAlertesUtilisateurQuery,
+  useGetStatistiquesAlertesQuery,
+  useDetecterAlertesMutation,
+  useResoudreAlerteMutation,
+  useIgnorerAlerteMutation,
+  useCreerAlerteMutation,
+} from "@/lib/apollo/generated/graphql";
+import type {
+  GetDashboardAlertesQuery,
+  GetAlertesActivesQuery,
+  GetAlertesUtilisateurQuery,
+  GetStatistiquesAlertesQuery,
+  ResoudreAlerteInput,
+  IgnorerAlerteInput,
+  CreateAlerteInput,
+} from "@/lib/apollo/generated/graphql";
+
+// ============================================================================
+// Types
+// ============================================================================
+
+type AlerteDashboard = NonNullable<
+  GetDashboardAlertesQuery["dashboardAlertes"]
+>;
+type AlerteUtilisateur = NonNullable<
+  GetAlertesActivesQuery["alertesActives"]
+>[number];
+type AlerteStats = NonNullable<
+  GetStatistiquesAlertesQuery["statistiquesAlertes"]
+>;
+
+type UseDashboardAlertesReturn = {
+  dashboard: AlerteDashboard | null;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+};
+
+type UseAlertesActivesReturn = {
+  alertes: AlerteUtilisateur[];
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+};
+
+type UseAlertesUtilisateurReturn = {
+  alertes: AlerteUtilisateur[];
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+};
+
+type UseStatistiquesAlertesReturn = {
+  stats: AlerteStats | null;
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
+};
+
+// ============================================================================
+// Query Hooks
+// ============================================================================
+
+/**
+ * Hook to fetch dashboard alertes summary
+ *
+ * @returns Dashboard alertes data with statistics and recent alerts
+ *
+ * @example
+ * ```tsx
+ * const { dashboard, isLoading } = useDashboardAlertes();
+ * console.log(dashboard?.totalAlertes);
+ * ```
+ */
+export const useDashboardAlertes = (): UseDashboardAlertesReturn => {
+  const { data, loading, error, refetch } = useGetDashboardAlertesQuery({
+    fetchPolicy: "cache-and-network",
+  });
+
+  return {
+    dashboard: data?.dashboardAlertes ?? null,
+    isLoading: loading,
+    error: error ?? null,
+    refetch,
+  };
+};
+
+/**
+ * Hook to fetch all active alerts
+ *
+ * @returns List of active alerts
+ *
+ * @example
+ * ```tsx
+ * const { alertes, isLoading } = useAlertesActives();
+ * ```
+ */
+export const useAlertesActives = (): UseAlertesActivesReturn => {
+  const { data, loading, error, refetch } = useGetAlertesActivesQuery({
+    fetchPolicy: "cache-and-network",
+  });
+
+  return {
+    alertes: data?.alertesActives ?? [],
+    isLoading: loading,
+    error: error ?? null,
+    refetch,
+  };
+};
+
+/**
+ * Hook to fetch alerts for a specific user
+ *
+ * @param utilisateurId - User ID
+ * @returns List of user alerts
+ *
+ * @example
+ * ```tsx
+ * const { alertes, isLoading } = useAlertesUtilisateur(123);
+ * ```
+ */
+export const useAlertesUtilisateur = (
+  utilisateurId: number | undefined,
+): UseAlertesUtilisateurReturn => {
+  const { data, loading, error, refetch } = useGetAlertesUtilisateurQuery({
+    variables: { utilisateurId: utilisateurId! },
+    skip: !utilisateurId,
+    fetchPolicy: "cache-and-network",
+  });
+
+  return {
+    alertes: data?.alertesUtilisateur ?? [],
+    isLoading: loading,
+    error: error ?? null,
+    refetch,
+  };
+};
+
+/**
+ * Hook to fetch alert statistics
+ *
+ * @returns Alert statistics
+ *
+ * @example
+ * ```tsx
+ * const { stats, isLoading } = useStatistiquesAlertes();
+ * console.log(stats?.alertesActives);
+ * ```
+ */
+export const useStatistiquesAlertes = (): UseStatistiquesAlertesReturn => {
+  const { data, loading, error, refetch } = useGetStatistiquesAlertesQuery({
+    fetchPolicy: "cache-and-network",
+  });
+
+  return {
+    stats: data?.statistiquesAlertes ?? null,
+    isLoading: loading,
+    error: error ?? null,
+    refetch,
+  };
+};
+
+// ============================================================================
+// Mutation Hooks
+// ============================================================================
+
+/**
+ * Hook to trigger alert detection
+ *
+ * @returns Mutation function to detect alerts
+ *
+ * @example
+ * ```tsx
+ * const { detecter, isLoading } = useDetecterAlertes();
+ * await detecter();
+ * ```
+ */
+export const useDetecterAlertes = () => {
+  const [detecterMutation, { loading, error }] = useDetecterAlertesMutation({
+    refetchQueries: [
+      "GetDashboardAlertes",
+      "GetAlertesActives",
+      "GetStatistiquesAlertes",
+    ],
+  });
+
+  const detecter = async () => {
+    const result = await detecterMutation();
+    return result.data?.detecterAlertes;
+  };
+
+  return {
+    detecter,
+    isLoading: loading,
+    error: error ?? null,
+  };
+};
+
+/**
+ * Hook to resolve an alert
+ *
+ * @returns Mutation function to resolve alert
+ *
+ * @example
+ * ```tsx
+ * const { resoudre, isLoading } = useResoudreAlerte();
+ * await resoudre({
+ *   alerteId: 123,
+ *   notes: "Problème résolu",
+ *   effectuePar: 456,
+ * });
+ * ```
+ */
+export const useResoudreAlerte = () => {
+  const [resoudreMutation, { loading, error }] = useResoudreAlerteMutation({
+    refetchQueries: [
+      "GetDashboardAlertes",
+      "GetAlertesActives",
+      "GetStatistiquesAlertes",
+    ],
+  });
+
+  const resoudre = async (input: ResoudreAlerteInput) => {
+    const result = await resoudreMutation({ variables: { input } });
+    return result.data?.resoudreAlerte;
+  };
+
+  return {
+    resoudre,
+    isLoading: loading,
+    error: error ?? null,
+  };
+};
+
+/**
+ * Hook to ignore an alert
+ *
+ * @returns Mutation function to ignore alert
+ *
+ * @example
+ * ```tsx
+ * const { ignorer, isLoading } = useIgnorerAlerte();
+ * await ignorer({
+ *   alerteId: 123,
+ *   notes: "Faux positif",
+ * });
+ * ```
+ */
+export const useIgnorerAlerte = () => {
+  const [ignorerMutation, { loading, error }] = useIgnorerAlerteMutation({
+    refetchQueries: [
+      "GetDashboardAlertes",
+      "GetAlertesActives",
+      "GetStatistiquesAlertes",
+    ],
+  });
+
+  const ignorer = async (input: IgnorerAlerteInput) => {
+    const result = await ignorerMutation({ variables: { input } });
+    return result.data?.ignorerAlerte;
+  };
+
+  return {
+    ignorer,
+    isLoading: loading,
+    error: error ?? null,
+  };
+};
+
+/**
+ * Hook to create a new alert
+ *
+ * @returns Mutation function to create alert
+ *
+ * @example
+ * ```tsx
+ * const { creer, isLoading } = useCreerAlerte();
+ * const newAlerte = await creer({
+ *   utilisateurId: 123,
+ *   typeAlerteId: 1,
+ *   donneesContexte: "Contexte de l'alerte",
+ * });
+ * ```
+ */
+export const useCreerAlerte = () => {
+  const [creerMutation, { loading, error }] = useCreerAlerteMutation({
+    refetchQueries: [
+      "GetDashboardAlertes",
+      "GetAlertesActives",
+      "GetStatistiquesAlertes",
+    ],
+  });
+
+  const creer = async (input: CreateAlerteInput) => {
+    const result = await creerMutation({ variables: { input } });
+    return result.data?.creerAlerte;
+  };
+
+  return {
+    creer,
+    isLoading: loading,
+    error: error ?? null,
+  };
+};

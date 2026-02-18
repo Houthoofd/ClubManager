@@ -1,0 +1,184 @@
+# ============================================================================
+# Statistics Queries - Attendance
+# ============================================================================
+
+query AttendanceStats($userId: Int!) {
+  attendanceStats(userId: $userId) {
+    user_id
+    total_presences
+    current_month
+    monthly_average
+    last_session
+  }
+}
+
+query TopMembers($limit: Int) {
+  topMembers(limit: $limit) {
+    user_id
+    first_name
+    last_name
+    total_presences
+    attendance_rate
+  }
+}
+
+# ============================================================================
+# Statistics Queries - Members
+# ============================================================================
+
+query MembersCount {
+  membersCount {
+    count
+  }
+}
+
+query MembersByGrade {
+  membersByGrade {
+    grade_name
+    count
+  }
+}
+
+query MembersByGender {
+  membersByGender {
+    gender_name
+    count
+  }
+}
+
+query Birthdays {
+  birthdays {
+    user_id
+    first_name
+    last_name
+    birth_date
+    age
+  }
+}
+
+query NewMembers($limit: Int) {
+  newMembers(limit: $limit) {
+    id
+    first_name
+    last_name
+    email
+    phone
+    birth_date
+    created_at
+  }
+}
+
+# ============================================================================
+# Statistics Queries - Products
+# ============================================================================
+
+query TopProducts($limit: Int) {
+  topProducts(limit: $limit) {
+    product_id
+    name
+    quantity_sold
+    total_revenue
+  }
+}
+
+# ============================================================================
+# Statistics Queries - Sessions
+# ============================================================================
+
+query WeeklySessions {
+  weeklySessions {
+    total
+    by_day
+  }
+}
+
+# ============================================================================
+# Statistics Queries - Payments
+# ============================================================================
+
+query MonthlyPayments {
+  monthlyPayments {
+    total
+    count
+  }
+}
+
+query RecentPayments($limit: Int) {
+  recentPayments(limit: $limit) {
+    id
+    user_id
+    amount
+    payment_date
+    status
+    user_first_name
+    user_last_name
+  }
+}
+
+query PendingPayments {
+  pendingPayments {
+    id
+    user_id
+    amount
+    payment_date
+    status
+    user_first_name
+    user_last_name
+  }
+}
+
+query OverduePayments {
+  overduePayments {
+    id
+    user_id
+    amount
+    payment_date
+    status
+    user_first_name
+    user_last_name
+  }
+}
+
+query LastPayments($limit: Int) {
+  lastPayments(limit: $limit) {
+    id
+    user_id
+    amount
+    payment_date
+    status
+    user_first_name
+    user_last_name
+  }
+}
+
+query PaymentsByMonth {
+  paymentsByMonth {
+    month
+    total
+    count
+  }
+}
+
+# ============================================================================
+# Statistics Queries - Plans
+# ============================================================================
+
+query ActivePlans {
+  activePlans {
+    plan_name
+    count
+  }
+}
+
+query RenewalRate {
+  renewalRate {
+    rate
+  }
+}
+
+query MembersByPlan {
+  membersByPlan {
+    plan_name
+    count
+  }
+}

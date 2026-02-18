@@ -1,44 +1,42 @@
-import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import {
   Page,
   PageSection,
   PageGroup,
   PageSidebar,
-} from '@patternfly/react-core';
-import { OPEN_RIGHT_NAVBAR } from '../redux/actions';
-import AppPanelHeader from './header';
-import AppSidebar from './sidebar';
+} from "@patternfly/react-core";
+import { useNavigation } from "../context/NavigationContext";
+import { useCart } from "../context/CartContext";
+import AppPanelHeader from "./header";
+import AppSidebar from "./sidebar";
+import RightSidePanel from "./common/panel/rightSidePanel";
+import { getUser } from "../utils/storage";
 
 const MainLayout = () => {
-  const dispatch = useDispatch();
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // État pour gérer la sidebar
-  const notificationsCount = useSelector(
-    (state: any) => state.notifications.notifications.length
-  );
+  const { isSidebarOpen, toggleSidebar } = useNavigation();
+  const { isOpen: isCartOpen, closeCart } = useCart();
 
-  const userData = useSelector((state: any) => state.auth?.user) || JSON.parse(localStorage.getItem('userData') || '{}');
+  const userData = getUser();
 
   const username =
-    userData && (userData.first_name || userData.last_name)
-      ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim()
-      : userData?.email || 'Utilisateur';
+    userData?.first_name && userData?.last_name
+      ? `${userData.first_name} ${userData.last_name}`
+      : userData?.email || "Utilisateur";
 
-  const onSidebarToggle = () => {
-    setIsSidebarOpen(prev => !prev); // Inverse l'état de la sidebar
-  };
-
+  // Fermer le panier automatiquement lors du changement de page
   useEffect(() => {
-    dispatch(OPEN_RIGHT_NAVBAR(notificationsCount > 0));
-  }, [notificationsCount, dispatch]);
+    if (isCartOpen) {
+      closeCart();
+    }
+  }, [location.pathname]);
 
   return (
     <>
       <AppPanelHeader
         username={username}
-        onSidebarToggle={onSidebarToggle} // Passez la fonction pour basculer la sidebar
+        onSidebarToggle={toggleSidebar}
         userData={userData}
       />
       <Page
@@ -55,6 +53,9 @@ const MainLayout = () => {
           </PageSection>
         </PageGroup>
       </Page>
+
+      {/* Panier - affiché en overlay quand isCartOpen est true */}
+      {isCartOpen && <RightSidePanel />}
     </>
   );
 };

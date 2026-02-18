@@ -1,0 +1,894 @@
+================================================================================
+GUIDE DE MAPPING BASE DE DONNÉES → GRAPHQL
+================================================================================
+
+Ce document explique comment mapper les tables de la base de données existante
+vers les types GraphQL attendus par le frontend, SANS modifier le schéma DB.
+
+================================================================================
+1. MESSAGES - Mapping direct_messages → Messages/MessageRecipients
+================================================================================
+
+📊 STRUCTURE DB EXISTANTE
+--------------------------
+
+Table: direct_messages
+- id: INT
+- sender_id: INT
+- receiver_id: INT (1 seul destinataire par message)
+- groupe_id: INT
+- subject: VARCHAR(255)
+- content: TEXT
+- sent_at: TIMESTAMP
+- read_at: TIMESTAMP
+- deleted_by_sender: BOOLEAN
+- deleted_by_receiver: BOOLEAN
+
+Table: message_read_status
+- id: INT
+- message_id: INT (FK → direct_messages.id)
+- user_id: INT (le destinataire)
+- read_at: TIMESTAMP
+- deleted_at: TIMESTAMP
+
+Table: custom_messages (messages système/annonces)
+- id: INT
+- user_id: INT (créateur)
+- type_id: INT (FK → custom_message_types.id)
+- title: VARCHAR(255)
+- content: TEXT
+- active: BOOLEAN
+- created_at: TIMESTAMP
+- updated_at: TIMESTAMP
+- deleted_at: TIMESTAMP
+- deleted_by: INT
+
+Table: custom_message_types
+- id: INT
+- type_code: VARCHAR(50)
+- name: VARCHAR(100)
+- description: TEXT
+- active: BOOLEAN
+
+
+🎯 TYPES GRAPHQL ATTENDUS PAR LE FRONTEND
+------------------------------------------
+
+type MessageTypes {
+  id: Int!
+  type_name: String!
+  description: String
+  active: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type Messages {
+  id: Int!
+  sender_id: Int!
+  type_message_id: Int
+  subject: String
+  content: String!
+  sent_at: String
+  created_at: String
+  sender: Users
+  messageType: MessageTypes
+  recipients: [MessageRecipients!]
+}
+
+type MessageRecipients {
+  id: Int!
+  message_id: Int!
+  recipient_id: Int!
+  read: Boolean
+  read_at: String
+  deleted: Boolean
+  created_at: String
+  recipient: Users
+  message: Messages
+}
+
+
+🔄 MAPPING DANS LES RESOLVERS
+------------------------------
+
+Query: messageTypes
+-------------------
+SELECT * FROM custom_message_types
+→ Mapper vers MessageTypes {
+    id: custom_message_types.id,
+    type_name: custom_message_types.name,
+    description: custom_message_types.description,
+    active: custom_message_types.active,
+    created_at: NULL (pas dans la table),
+    updated_at: NULL (pas dans la table)
+  }
+
+
+Query: messagesReceived(userId: Int!)
+--------------------------------------
+SELECT
+  mrs.id,
+  mrs.message_id,
+  mrs.user_id as recipient_id,
+  mrs.read_at,
+  mrs.deleted_at,
+  dm.id as message_id,
+  dm.sender_id,
+  dm.subject,
+  dm.content,
+  dm.sent_at
+FROM message_read_status mrs
+JOIN direct_messages dm ON mrs.message_id = dm.id
+WHERE mrs.user_id = userId
+  AND mrs.deleted_at IS NULL
+ORDER BY dm.sent_at DESC;
+
+→ Mapper vers [MessageRecipients!] {
+    id: mrs.id,
+    message_id: mrs.message_id,
+    recipient_id: mrs.user_id,
+    read: mrs.read_at !== null,
+    read_at: mrs.read_at,
+    deleted: false (car deleted_at IS NULL dans WHERE),
+    created_at: dm.sent_at (pas de created_at dans mrs),
+    message: {
+      id: dm.id,
+      sender_id: dm.sender_id,
+      type_message_id: null (direct_messages n'a pas de type),
+      subject: dm.subject,
+      content: dm.content,
+      sent_at: dm.sent_at,
+      created_at: dm.sent_at
+    }
+  }
+
+
+Query: messagesTrashed(userId: Int!)
+-------------------------------------
+SELECT * FROM message_read_status mrs
+JOIN direct_messages dm ON mrs.message_id = dm.id
+WHERE mrs.user_id = userId
+  AND mrs.deleted_at IS NOT NULL
+ORDER BY mrs.deleted_at DESC;
+
+→ Mapper de la même façon que messagesReceived mais avec deleted: true
+
+
+Query: unreadMessagesCount(userId: Int!)
+-----------------------------------------
+SELECT COUNT(*)
+FROM message_read_status
+WHERE user_id = userId
+  AND read_at IS NULL
+  AND deleted_at IS NULL;
+
+→ Mapper vers UnreadMessagesCount {
+    count: result
+  }
+
+
+Mutation: sendMessage(input: SendMessageInput!)
+------------------------------------------------
+Input: {
+  sender_id: Int!
+  type_message_id: Int (ignoré pour messages directs)
+  subject: String
+  content: String!
+  recipient_ids: [Int!]!
+}
+
+ÉTAPES:
+1. Créer le message dans direct_messages:
+   INSERT INTO direct_messages (sender_id, receiver_id, subject, content, sent_at)
+   VALUES (input.sender_id, NULL, input.subject, input.content, NOW());
+   -- Note: receiver_id = NULL car on utilise message_read_status pour les destinataires
+
+2. Créer les statuts de lecture pour chaque destinataire:
+   INSERT INTO message_read_status (message_id, user_id, read_at, deleted_at)
+   VALUES
+     (message_id, recipient_ids[0], NULL, NULL),
+     (message_id, recipient_ids[1], NULL, NULL),
+     ...
+
+3. Retourner le message créé avec ses recipients
+
+
+Mutation: markMessageAsRead(recipientId: Int!)
+-----------------------------------------------
+UPDATE message_read_status
+SET read_at = NOW()
+WHERE id = recipientId;
+
+→ Retourner le MessageRecipients mis à jour
+
+
+Mutation: deleteReceivedMessage(recipientId: Int!)
+---------------------------------------------------
+UPDATE message_read_status
+SET deleted_at = NOW()
+WHERE id = recipientId;
+
+→ Retourner { success: true, message: "Message supprimé" }
+
+
+Mutation: restoreMessage(recipientId: Int!)
+--------------------------------------------
+UPDATE message_read_status
+SET deleted_at = NULL
+WHERE id = recipientId;
+
+→ Retourner le MessageRecipients restauré
+
+
+================================================================================
+2. NOTIFICATIONS - Mapping user_notifications → Notifications
+================================================================================
+
+📊 STRUCTURE DB EXISTANTE
+--------------------------
+
+Table: user_notifications
+- id: INT
+- user_id: INT
+- message_id: INT
+- type: VARCHAR(50)
+- content: TEXT (contient tout le texte)
+- lu: BOOLEAN (nom en français!)
+- created_at: TIMESTAMP
+
+
+🎯 TYPE GRAPHQL ATTENDU
+------------------------
+
+type Notifications {
+  id: Int!
+  user_id: Int!
+  title: String!
+  message: String!
+  type: String!
+  read: Boolean
+  read_at: String
+  created_at: String
+  user: Users
+}
+
+
+🔄 MAPPING DANS LES RESOLVERS
+------------------------------
+
+Query: notifications(userId: Int!)
+-----------------------------------
+SELECT * FROM user_notifications
+WHERE user_id = userId
+ORDER BY created_at DESC;
+
+→ Mapper vers [Notifications!] {
+    id: user_notifications.id,
+    user_id: user_notifications.user_id,
+    title: extractTitle(user_notifications.content), // Extraire les 100 premiers caractères
+    message: user_notifications.content,
+    type: user_notifications.type,
+    read: user_notifications.lu,  // ⚠️ Renommer lu → read
+    read_at: user_notifications.lu ? user_notifications.created_at : null,
+    created_at: user_notifications.created_at
+  }
+
+Fonction helper extractTitle():
+  - Prendre les 100 premiers caractères du content
+  - Ou jusqu'au premier point/retour à la ligne
+  - Ou parser si format structuré (JSON)
+
+
+Mutation: createNotification(input: CreateNotificationInput!)
+--------------------------------------------------------------
+Input: {
+  user_id: Int
+  user_ids: [Int!] (pour notifications multiples)
+  title: String!
+  message: String!
+  type: String!
+}
+
+Si user_id fourni:
+  INSERT INTO user_notifications (user_id, type, content, lu, created_at)
+  VALUES (input.user_id, input.type, input.message, false, NOW());
+
+Si user_ids fourni (notification de masse):
+  INSERT INTO user_notifications (user_id, type, content, lu, created_at)
+  VALUES
+    (user_ids[0], input.type, input.message, false, NOW()),
+    (user_ids[1], input.type, input.message, false, NOW()),
+    ...
+
+⚠️ NOTE: On stocke seulement "message" dans "content",
+         le "title" est recréé à la lecture via extractTitle()
+
+
+Mutation: markNotificationAsRead(notificationId: Int!)
+-------------------------------------------------------
+UPDATE user_notifications
+SET lu = true
+WHERE id = notificationId;
+
+→ Retourner la notification mise à jour avec mapping
+
+
+================================================================================
+3. STATISTICS - Calculs dynamiques (pas de tables dédiées)
+================================================================================
+
+Les statistiques ne sont PAS stockées dans des tables, elles sont calculées
+à la demande via des requêtes d'agrégation.
+
+
+Query: membersCount
+-------------------
+SELECT COUNT(*) FROM users WHERE active = true;
+
+→ Mapper vers MembersCountStats {
+    count: result
+  }
+
+
+Query: membersByGrade
+---------------------
+SELECT
+  g.grade_name,
+  COUNT(u.id) as count
+FROM users u
+JOIN grades g ON u.grade_id = g.id
+WHERE u.active = true
+GROUP BY g.id, g.grade_name
+ORDER BY count DESC;
+
+→ Mapper vers [MembersByGradeStats!] {
+    grade_name: g.grade_name,
+    count: count
+  }
+
+
+Query: membersByGender
+----------------------
+SELECT
+  gen.gender_name,
+  COUNT(u.id) as count
+FROM users u
+JOIN genders gen ON u.gender_id = gen.id
+WHERE u.active = true
+GROUP BY gen.id, gen.gender_name;
+
+→ Mapper vers [MembersByGenderStats!] {
+    gender_name: gen.gender_name,
+    count: count
+  }
+
+
+Query: birthdays
+----------------
+SELECT
+  id as user_id,
+  first_name,
+  last_name,
+  birth_date,
+  YEAR(CURDATE()) - YEAR(birth_date) as age
+FROM users
+WHERE MONTH(birth_date) = MONTH(CURDATE())
+  AND DAY(birth_date) >= DAY(CURDATE())
+  AND active = true
+ORDER BY MONTH(birth_date), DAY(birth_date)
+LIMIT 10;
+
+→ Mapper vers [BirthdayInfo!]
+
+
+Query: newMembers(limit: Int)
+------------------------------
+SELECT * FROM users
+WHERE active = true
+ORDER BY created_at DESC
+LIMIT limit;
+
+→ Mapper vers [Users!]
+
+
+Query: topMembers(limit: Int)
+------------------------------
+SELECT
+  u.id as user_id,
+  u.first_name,
+  u.last_name,
+  COUNT(se.id) as total_presences,
+  (COUNT(se.id) * 100.0 / (SELECT COUNT(*) FROM sessions)) as attendance_rate
+FROM users u
+JOIN session_enrollments se ON u.id = se.user_id
+WHERE se.presence_validated = true
+  AND u.active = true
+GROUP BY u.id, u.first_name, u.last_name
+ORDER BY total_presences DESC
+LIMIT limit;
+
+→ Mapper vers [TopMemberStats!]
+
+
+Query: attendanceStats(userId: Int!)
+-------------------------------------
+SELECT
+  user_id,
+  COUNT(*) as total_presences,
+  SUM(CASE WHEN MONTH(session_date) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as current_month,
+  AVG(monthly_count) as monthly_average,
+  MAX(session_date) as last_session
+FROM (
+  SELECT
+    se.user_id,
+    s.date as session_date,
+    COUNT(*) OVER (PARTITION BY YEAR(s.date), MONTH(s.date)) as monthly_count
+  FROM session_enrollments se
+  JOIN sessions s ON se.session_id = s.id
+  WHERE se.user_id = userId
+    AND se.presence_validated = true
+) subquery
+GROUP BY user_id;
+
+→ Mapper vers AttendanceStats
+
+
+Query: monthlyPayments
+----------------------
+SELECT
+  SUM(amount) as total,
+  COUNT(*) as count
+FROM payments
+WHERE YEAR(payment_date) = YEAR(CURDATE())
+  AND MONTH(payment_date) = MONTH(CURDATE())
+  AND status = 'completed';
+
+→ Mapper vers MonthlyPaymentsStats
+
+
+Query: recentPayments(limit: Int)
+----------------------------------
+SELECT
+  p.id,
+  p.user_id,
+  p.amount,
+  p.payment_date,
+  p.status,
+  u.first_name as user_first_name,
+  u.last_name as user_last_name
+FROM payments p
+JOIN users u ON p.user_id = u.id
+ORDER BY p.payment_date DESC
+LIMIT limit;
+
+→ Mapper vers [PaymentInfo!]
+
+
+Query: pendingPayments
+----------------------
+SELECT ... FROM payments
+WHERE status = 'pending'
+ORDER BY payment_date ASC;
+
+→ Mapper vers [PaymentInfo!]
+
+
+Query: overduePayments
+----------------------
+SELECT ... FROM payments
+WHERE status = 'pending'
+  AND payment_date < CURDATE() - INTERVAL 30 DAY
+ORDER BY payment_date ASC;
+
+→ Mapper vers [PaymentInfo!]
+
+
+Query: paymentsByMonth
+----------------------
+SELECT
+  DATE_FORMAT(payment_date, '%Y-%m') as month,
+  SUM(amount) as total,
+  COUNT(*) as count
+FROM payments
+WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+  AND status = 'completed'
+GROUP BY DATE_FORMAT(payment_date, '%Y-%m')
+ORDER BY month DESC;
+
+→ Mapper vers [MonthlyPaymentsBreakdown!]
+
+
+Query: activePlans
+------------------
+SELECT
+  sp.subscription_name as plan_name,
+  COUNT(us.id) as count
+FROM user_subscriptions us
+JOIN subscription_plans sp ON us.subscription_id = sp.id
+WHERE us.active = true
+  AND us.end_date >= CURDATE()
+GROUP BY sp.id, sp.subscription_name;
+
+→ Mapper vers [ActivePlanStats!]
+
+
+Query: renewalRate
+------------------
+SELECT
+  (COUNT(CASE WHEN renewed = true THEN 1 END) * 100.0 / COUNT(*)) as rate
+FROM (
+  SELECT
+    user_id,
+    COUNT(*) > 1 as renewed
+  FROM user_subscriptions
+  WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
+  GROUP BY user_id
+) subquery;
+
+→ Mapper vers RenewalRateStats { rate: result }
+
+
+Query: membersByPlan
+--------------------
+SELECT
+  sp.subscription_name as plan_name,
+  COUNT(DISTINCT us.user_id) as count
+FROM user_subscriptions us
+JOIN subscription_plans sp ON us.subscription_id = sp.id
+WHERE us.active = true
+GROUP BY sp.id, sp.subscription_name
+ORDER BY count DESC;
+
+→ Mapper vers [MembersByPlanStats!]
+
+
+Query: topProducts(limit: Int)
+-------------------------------
+SELECT
+  p.id as product_id,
+  p.name,
+  SUM(oi.quantity) as quantity_sold,
+  SUM(oi.quantity * oi.price) as total_revenue
+FROM products p
+JOIN order_items oi ON p.id = oi.product_id
+JOIN orders o ON oi.order_id = o.id
+WHERE o.status = 'completed'
+GROUP BY p.id, p.name
+ORDER BY quantity_sold DESC
+LIMIT limit;
+
+→ Mapper vers [TopProductStats!]
+
+
+Query: weeklySessions
+---------------------
+SELECT
+  COUNT(*) as total,
+  JSON_OBJECT(
+    'Monday', SUM(CASE WHEN DAYNAME(date) = 'Monday' THEN 1 ELSE 0 END),
+    'Tuesday', SUM(CASE WHEN DAYNAME(date) = 'Tuesday' THEN 1 ELSE 0 END),
+    'Wednesday', SUM(CASE WHEN DAYNAME(date) = 'Wednesday' THEN 1 ELSE 0 END),
+    'Thursday', SUM(CASE WHEN DAYNAME(date) = 'Thursday' THEN 1 ELSE 0 END),
+    'Friday', SUM(CASE WHEN DAYNAME(date) = 'Friday' THEN 1 ELSE 0 END),
+    'Saturday', SUM(CASE WHEN DAYNAME(date) = 'Saturday' THEN 1 ELSE 0 END),
+    'Sunday', SUM(CASE WHEN DAYNAME(date) = 'Sunday' THEN 1 ELSE 0 END)
+  ) as by_day
+FROM sessions
+WHERE date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+  AND date <= CURDATE();
+
+→ Mapper vers WeeklySessionsStats
+
+
+================================================================================
+4. REFERENCE DATA - Tables simples (mapping direct)
+================================================================================
+
+Query: grades
+-------------
+SELECT * FROM grades WHERE active = true;
+
+→ Mapper vers [Grades!] {
+    id: grades.id,
+    grade_name: grades.grade_name,
+    description: grades.description,
+    level_order: grades.level_order,
+    active: grades.active,
+    created_at: grades.created_at,
+    updated_at: grades.updated_at
+  }
+
+
+Query: statuses
+---------------
+SELECT * FROM statuses WHERE active = true;
+
+→ Mapper directement
+
+
+Query: genders
+--------------
+SELECT * FROM genders WHERE active = true;
+
+→ Mapper directement
+
+
+Query: subscriptions
+--------------------
+SELECT * FROM subscription_plans WHERE active = true;
+
+→ Mapper vers [SubscriptionPlans!]
+
+
+================================================================================
+5. PRISMA HELPERS - Exemples de code
+================================================================================
+
+EXEMPLE RESOLVER MESSAGES (Prisma)
+-----------------------------------
+const messagesResolvers = {
+  Query: {
+    messagesReceived: async (_parent, { userId }, { prisma }) => {
+      const recipients = await prisma.message_read_status.findMany({
+        where: {
+          user_id: userId,
+          deleted_at: null
+        },
+        include: {
+          direct_messages: {
+            include: {
+              users_direct_messages_sender_idTousers: {
+                select: {
+                  id: true,
+                  first_name: true,
+                  last_name: true,
+                  email: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          direct_messages: {
+            sent_at: 'desc'
+          }
+        }
+      });
+
+      return recipients.map(r => ({
+        id: r.id,
+        message_id: r.message_id,
+        recipient_id: userId,
+        read: r.read_at !== null,
+        read_at: r.read_at?.toISOString(),
+        deleted: false,
+        created_at: r.direct_messages.sent_at?.toISOString(),
+        message: {
+          id: r.direct_messages.id,
+          sender_id: r.direct_messages.sender_id,
+          type_message_id: null,
+          subject: r.direct_messages.subject,
+          content: r.direct_messages.content,
+          sent_at: r.direct_messages.sent_at?.toISOString(),
+          created_at: r.direct_messages.sent_at?.toISOString(),
+          sender: r.direct_messages.users_direct_messages_sender_idTousers
+        }
+      }));
+    },
+
+    unreadMessagesCount: async (_parent, { userId }, { prisma }) => {
+      const count = await prisma.message_read_status.count({
+        where: {
+          user_id: userId,
+          read_at: null,
+          deleted_at: null
+        }
+      });
+
+      return { count };
+    }
+  },
+
+  Mutation: {
+    sendMessage: async (_parent, { input }, { prisma }) => {
+      const { sender_id, recipient_ids, content, subject } = input;
+
+      // Transaction pour créer le message + tous les statuts
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Créer le message
+        const message = await tx.direct_messages.create({
+          data: {
+            sender_id,
+            content,
+            subject,
+            sent_at: new Date()
+          }
+        });
+
+        // 2. Créer les statuts de lecture
+        await tx.message_read_status.createMany({
+          data: recipient_ids.map(recipient_id => ({
+            message_id: message.id,
+            user_id: recipient_id
+          }))
+        });
+
+        return message;
+      });
+
+      return result;
+    },
+
+    markMessageAsRead: async (_parent, { recipientId }, { prisma }) => {
+      const updated = await prisma.message_read_status.update({
+        where: { id: recipientId },
+        data: { read_at: new Date() },
+        include: {
+          direct_messages: true
+        }
+      });
+
+      return {
+        id: updated.id,
+        message_id: updated.message_id,
+        recipient_id: updated.user_id,
+        read: true,
+        read_at: updated.read_at?.toISOString(),
+        deleted: updated.deleted_at !== null,
+        created_at: updated.direct_messages.sent_at?.toISOString()
+      };
+    }
+  }
+};
+
+
+EXEMPLE RESOLVER NOTIFICATIONS (Prisma)
+----------------------------------------
+const notificationsResolvers = {
+  Query: {
+    notifications: async (_parent, { userId }, { prisma }) => {
+      const notifs = await prisma.user_notifications.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+        include: {
+          users: {
+            select: {
+              id: true,
+              first_name: true,
+              last_name: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      return notifs.map(n => ({
+        id: n.id,
+        user_id: n.user_id,
+        title: extractTitle(n.content),
+        message: n.content,
+        type: n.type,
+        read: n.lu,
+        read_at: n.lu ? n.created_at?.toISOString() : null,
+        created_at: n.created_at?.toISOString(),
+        user: n.users
+      }));
+    }
+  },
+
+  Mutation: {
+    createNotification: async (_parent, { input }, { prisma }) => {
+      const { user_id, user_ids, title, message, type } = input;
+
+      if (user_id) {
+        // Notification pour un seul utilisateur
+        const notif = await prisma.user_notifications.create({
+          data: {
+            user_id,
+            type,
+            content: message,
+            lu: false
+          }
+        });
+
+        return {
+          id: notif.id,
+          user_id: notif.user_id,
+          title: extractTitle(notif.content),
+          message: notif.content,
+          type: notif.type,
+          read: false,
+          read_at: null,
+          created_at: notif.created_at?.toISOString()
+        };
+      } else if (user_ids) {
+        // Notifications multiples
+        await prisma.user_notifications.createMany({
+          data: user_ids.map(uid => ({
+            user_id: uid,
+            type,
+            content: message,
+            lu: false
+          }))
+        });
+
+        return { success: true };
+      }
+    },
+
+    markNotificationAsRead: async (_parent, { notificationId }, { prisma }) => {
+      const updated = await prisma.user_notifications.update({
+        where: { id: notificationId },
+        data: { lu: true }
+      });
+
+      return {
+        id: updated.id,
+        user_id: updated.user_id,
+        title: extractTitle(updated.content),
+        message: updated.content,
+        type: updated.type,
+        read: true,
+        read_at: updated.created_at?.toISOString(),
+        created_at: updated.created_at?.toISOString()
+      };
+    }
+  }
+};
+
+// Helper function
+function extractTitle(content: string): string {
+  // Extraire les 100 premiers caractères ou jusqu'au premier point
+  const maxLength = 100;
+  const firstDot = content.indexOf('.');
+
+  if (firstDot > 0 && firstDot < maxLength) {
+    return content.substring(0, firstDot);
+  }
+
+  if (content.length <= maxLength) {
+    return content;
+  }
+
+  return content.substring(0, maxLength) + '...';
+}
+
+
+================================================================================
+6. RÉSUMÉ DES ACTIONS REQUISES
+================================================================================
+
+✅ AUCUNE MIGRATION DB NÉCESSAIRE
+
+Les tables existantes supportent déjà toutes les fonctionnalités:
+- message_read_status permet le système 1-N (1 message → N destinataires)
+- user_notifications contient toutes les données (title extrait du content)
+- Les statistiques sont calculées dynamiquement
+
+🔧 ACTIONS BACKEND:
+
+1. Créer messages.resolvers.ts avec:
+   - messagesReceived
+   - messagesTrashed
+   - unreadMessagesCount
+   - sendMessage
+   - markMessageAsRead
+   - deleteReceivedMessage
+   - restoreMessage
+
+2. Créer notifications.resolvers.ts avec:
+   - notifications
+   - createNotification
+   - markNotificationAsRead
+   + Helper: extractTitle()
+
+3. Créer statistics.resolvers.ts avec 25+ queries
+
+4. Mettre à jour schema.ts pour inclure tous les resolvers
+
+5. Tester avec les queries frontend
+
+================================================================================
+FIN DU GUIDE
+================================================================================

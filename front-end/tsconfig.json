@@ -12,6 +12,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+    },
+
     // Mode strict activé
     "strict": true,
 
@@ -31,11 +37,9 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "allowUnusedLabels": false,
-    "allowUnreachableCode": false
+    "allowUnreachableCode": false,
   },
   "include": ["src"],
-  "references": [
-    { "path": "./tsconfig.node.json" }
-  ],
-  "exclude": ["src/__tests__", "src/__mocks__"]
+  "references": [{ "path": "./tsconfig.node.json" }],
+  "exclude": ["src/__tests__", "src/__mocks__"],
 }

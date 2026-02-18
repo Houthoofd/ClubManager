@@ -1,0 +1,110 @@
+# ============================================================================
+# Authentication Queries - English Schema
+# ============================================================================
+
+query CheckEmail($email: String!) {
+  checkEmail(email: $email) {
+    exists
+    email
+  }
+}
+
+query VerifyResetToken($token: String!) {
+  verifyResetToken(token: $token) {
+    valid
+    userId
+    expiresAt
+  }
+}
+
+query GetMe {
+  me {
+    id
+    first_name
+    last_name
+    email
+    phone
+    birth_date
+    address
+    gender_id
+    role
+    active
+    email_verified
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# Authentication Mutations
+# ============================================================================
+
+mutation Login($email: String!, $password: String!) {
+  login(email: $email, password: $password) {
+    success
+    message
+    token
+    user {
+      id
+      first_name
+      last_name
+      email
+      phone
+      role
+      active
+    }
+  }
+}
+
+mutation Register($input: RegisterInput!) {
+  register(input: $input) {
+    success
+    message
+    token
+    user {
+      id
+      first_name
+      last_name
+      email
+      phone
+      role
+      active
+    }
+  }
+}
+
+mutation Logout {
+  logout {
+    success
+    message
+  }
+}
+
+mutation RequestPasswordReset($email: String!) {
+  requestPasswordReset(email: $email) {
+    success
+    message
+  }
+}
+
+mutation ResetPassword($token: String!, $newPassword: String!) {
+  resetPassword(token: $token, newPassword: $newPassword) {
+    success
+    message
+    token
+    user {
+      id
+      first_name
+      last_name
+      email
+    }
+  }
+}
+
+mutation ChangePassword($userId: Int!, $currentPassword: String!, $newPassword: String!) {
+  changePassword(userId: $userId, currentPassword: $currentPassword, newPassword: $newPassword) {
+    success
+    message
+    token
+  }
+}

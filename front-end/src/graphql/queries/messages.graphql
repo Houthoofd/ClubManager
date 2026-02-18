@@ -1,0 +1,174 @@
+# ============================================================================
+# Message Types Queries
+# ============================================================================
+
+query MessageTypes {
+  messageTypes {
+    id
+    type_name
+    description
+    active
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# Messages Queries
+# ============================================================================
+
+query MessagesReceived($userId: Int!) {
+  messagesReceived(userId: $userId) {
+    id
+    message_id
+    recipient_id
+    read
+    read_at
+    deleted
+    created_at
+    message {
+      id
+      sender_id
+      type_message_id
+      subject
+      content
+      sent_at
+      created_at
+      sender {
+        id
+        first_name
+        last_name
+        email
+      }
+      messageType {
+        id
+        type_name
+        description
+      }
+    }
+  }
+}
+
+query MessagesTrashed($userId: Int!) {
+  messagesTrashed(userId: $userId) {
+    id
+    message_id
+    recipient_id
+    read
+    read_at
+    deleted
+    created_at
+    message {
+      id
+      sender_id
+      type_message_id
+      subject
+      content
+      sent_at
+      created_at
+      sender {
+        id
+        first_name
+        last_name
+        email
+      }
+      messageType {
+        id
+        type_name
+        description
+      }
+    }
+  }
+}
+
+query UnreadMessagesCount($userId: Int!) {
+  unreadMessagesCount(userId: $userId) {
+    count
+  }
+}
+
+# ============================================================================
+# Message Types Mutations
+# ============================================================================
+
+mutation CreateMessageType($input: CreateMessageTypeInput!) {
+  createMessageType(input: $input) {
+    id
+    type_name
+    description
+    active
+    created_at
+    updated_at
+  }
+}
+
+mutation UpdateMessageType($id: Int!, $input: UpdateMessageTypeInput!) {
+  updateMessageType(id: $id, input: $input) {
+    id
+    type_name
+    description
+    active
+    created_at
+    updated_at
+  }
+}
+
+mutation DeleteMessageType($id: Int!) {
+  deleteMessageType(id: $id) {
+    success
+    message
+  }
+}
+
+# ============================================================================
+# Messages Mutations
+# ============================================================================
+
+mutation SendMessage($input: SendMessageInput!) {
+  sendMessage(input: $input) {
+    id
+    sender_id
+    type_message_id
+    subject
+    content
+    sent_at
+    created_at
+    sender {
+      id
+      first_name
+      last_name
+      email
+    }
+  }
+}
+
+mutation MarkMessageAsRead($recipientId: Int!) {
+  markMessageAsRead(recipientId: $recipientId) {
+    id
+    message_id
+    recipient_id
+    read
+    read_at
+    deleted
+    created_at
+  }
+}
+
+mutation DeleteReceivedMessage($recipientId: Int!) {
+  deleteReceivedMessage(recipientId: $recipientId) {
+    success
+    message
+  }
+}
+
+mutation RestoreMessage($recipientId: Int!) {
+  restoreMessage(recipientId: $recipientId) {
+    id
+    message_id
+    recipient_id
+    read
+    read_at
+    deleted
+    created_at
+  }
+}

@@ -1,0 +1,226 @@
+# ============================================================================
+# Users Queries - English Schema
+# ============================================================================
+
+query GetUsers($take: Int, $skip: Int) {
+  users(take: $take, skip: $skip) {
+    id
+    first_name
+    last_name
+    email
+    phone
+    birth_date
+    address
+    gender_id
+    role
+    active
+    email_verified
+    created_at
+    updated_at
+  }
+}
+
+query GetUser($id: Int!) {
+  user(id: $id) {
+    id
+    first_name
+    last_name
+    email
+    phone
+    birth_date
+    address
+    gender_id
+    role
+    active
+    email_verified
+    created_at
+    updated_at
+  }
+}
+
+query GetMe {
+  me {
+    id
+    first_name
+    last_name
+    email
+    phone
+    birth_date
+    address
+    gender_id
+    role
+    active
+    email_verified
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# Users Mutations
+# ============================================================================
+
+mutation CreateUser($input: CreateUserInput!) {
+  createUser(input: $input) {
+    id
+    first_name
+    last_name
+    email
+    phone
+    role
+    active
+    created_at
+  }
+}
+
+mutation UpdateUser($id: Int!, $input: UpdateUserInput!) {
+  updateUser(id: $id, input: $input) {
+    id
+    first_name
+    last_name
+    email
+    phone
+    birth_date
+    address
+    active
+    updated_at
+  }
+}
+
+mutation DeleteUser($id: Int!) {
+  deleteUser(id: $id) {
+    success
+    message
+  }
+}
+
+# ============================================================================
+# Subscriptions Queries
+# ============================================================================
+
+query GetSubscriptions {
+  subscriptions {
+    id
+    subscription_name
+    price
+    duration_months
+    description
+    active
+    created_at
+    updated_at
+  }
+}
+
+query GetSubscription($id: Int!) {
+  subscription(id: $id) {
+    id
+    subscription_name
+    price
+    duration_months
+    description
+    active
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# Grades Queries
+# ============================================================================
+
+query GetGrades {
+  grades {
+    id
+    grade_name
+    description
+    level_order
+    active
+    created_at
+    updated_at
+  }
+}
+
+query GetGrade($id: Int!) {
+  grade(id: $id) {
+    id
+    grade_name
+    description
+    level_order
+    active
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# Status Queries
+# ============================================================================
+
+query GetStatuses {
+  statuses {
+    id
+    status_name
+    description
+    active
+    created_at
+    updated_at
+  }
+}
+
+query GetStatus($id: Int!) {
+  status(id: $id) {
+    id
+    status_name
+    description
+    active
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# Genders Queries
+# ============================================================================
+
+query GetGenders {
+  genders {
+    id
+    gender_name
+    active
+    created_at
+    updated_at
+  }
+}
+
+query GetGender($id: Int!) {
+  gender(id: $id) {
+    id
+    gender_name
+    active
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# User Subscriptions (User's active subscription)
+# ============================================================================
+
+query GetUserSubscription($userId: Int!) {
+  userSubscription(userId: $userId) {
+    id
+    user_id
+    subscription_id
+    start_date
+    end_date
+    active
+    created_at
+    updated_at
+    subscription {
+      id
+      subscription_name
+      price
+      duration_months
+    }
+  }
+}

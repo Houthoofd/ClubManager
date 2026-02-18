@@ -1,0 +1,743 @@
+# ============================================================================
+# ClubManager GraphQL Schema - English Only
+# ============================================================================
+
+scalar DateTime
+scalar Decimal
+scalar JSON
+
+# ============================================================================
+# Users Domain
+# ============================================================================
+
+type Users {
+  id: Int!
+  first_name: String!
+  last_name: String!
+  email: String!
+  password: String!
+  phone: String
+  birth_date: String
+  address: String
+  gender_id: Int
+  role: String
+  active: Boolean
+  email_verified: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type Genders {
+  id: Int!
+  gender_name: String!
+  active: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type Grades {
+  id: Int!
+  grade_name: String!
+  description: String
+  level_order: Int
+  active: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type Statuses {
+  id: Int!
+  status_name: String!
+  description: String
+  active: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type UserProfiles {
+  id: Int!
+  user_id: Int!
+  bio: String
+  avatar_url: String
+  emergency_contact_name: String
+  emergency_contact_phone: String
+  preferences: String
+  created_at: String
+  updated_at: String
+}
+
+type UserSecurity {
+  id: Int!
+  user_id: Int!
+  failed_login_attempts: Int
+  last_login_at: String
+  last_login_ip: String
+  account_locked_until: String
+  password_changed_at: String
+  created_at: String
+  updated_at: String
+}
+
+type PasswordResetTokens {
+  id: Int!
+  user_id: Int!
+  token: String!
+  expires_at: String!
+  used_at: String
+  created_at: String
+}
+
+# ============================================================================
+# Sessions Domain (Courses)
+# ============================================================================
+
+type Instructors {
+  id: Int!
+  user_id: Int!
+  specialization: String
+  bio: String
+  certifications: String
+  active: Boolean
+  created_at: String
+}
+
+type SessionTypes {
+  id: Int!
+  activity_id: Int!
+  name: String!
+  description: String
+  duration_minutes: Int
+  max_participants: Int
+  price: Float
+  active: Boolean
+}
+
+type Sessions {
+  id: Int!
+  session_type_id: Int!
+  instructor_id: Int!
+  date: String!
+  start_time: String!
+  end_time: String!
+  location: String
+  max_participants: Int
+  current_participants: Int
+  status: String
+  notes: String
+  created_at: String
+}
+
+type SessionEnrollments {
+  id: Int!
+  user_id: Int!
+  session_id: Int!
+  status: String
+  enrolled_at: String
+  notes: String
+}
+
+# ============================================================================
+# Shop Domain
+# ============================================================================
+
+type Products {
+  id: Int!
+  name: String!
+  description: String
+  price: Float!
+  category_id: Int
+  image_url: String
+  active: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type ProductCategories {
+  id: Int!
+  name: String!
+  description: String
+  active: Boolean
+}
+
+type ProductStocks {
+  id: Int!
+  product_id: Int!
+  size_id: Int
+  quantity: Int!
+  min_quantity: Int
+  updated_at: String
+}
+
+type StockSizes {
+  id: Int!
+  name: String!
+  code: String
+}
+
+# ============================================================================
+# Orders Domain
+# ============================================================================
+
+type Orders {
+  id: Int!
+  user_id: Int!
+  total_amount: Float!
+  status: String!
+  delivery_address: String
+  notes: String
+  created_at: String
+  updated_at: String
+}
+
+type OrderItems {
+  id: Int!
+  order_id: Int!
+  product_id: Int!
+  stock_id: Int
+  quantity: Int!
+  price: Float!
+}
+
+# ============================================================================
+# Payments Domain
+# ============================================================================
+
+type Payments {
+  id: Int!
+  user_id: Int!
+  order_id: Int
+  subscription_id: Int
+  amount: Float!
+  payment_method: String!
+  status: String!
+  payment_date: String
+  stripe_payment_intent_id: String
+  created_at: String
+}
+
+# ============================================================================
+# Subscriptions/Memberships Domain
+# ============================================================================
+
+type SubscriptionPlans {
+  id: Int!
+  subscription_name: String!
+  description: String
+  price: Float!
+  duration_months: Int!
+  features: String
+  active: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type UserSubscriptions {
+  id: Int!
+  user_id: Int!
+  subscription_id: Int!
+  start_date: String!
+  end_date: String!
+  active: Boolean
+  created_at: String
+  updated_at: String
+  subscription: SubscriptionPlans
+}
+
+# ============================================================================
+# Communication Domain
+# ============================================================================
+
+type MessageTypes {
+  id: Int!
+  type_name: String!
+  description: String
+  active: Boolean
+  created_at: String
+  updated_at: String
+}
+
+type Messages {
+  id: Int!
+  sender_id: Int!
+  type_message_id: Int
+  subject: String
+  content: String!
+  sent_at: String
+  created_at: String
+  sender: Users
+  messageType: MessageTypes
+  recipients: [MessageRecipients!]
+}
+
+type MessageRecipients {
+  id: Int!
+  message_id: Int!
+  recipient_id: Int!
+  read: Boolean
+  read_at: String
+  deleted: Boolean
+  created_at: String
+  recipient: Users
+  message: Messages
+}
+
+type Notifications {
+  id: Int!
+  user_id: Int!
+  title: String!
+  message: String!
+  type: String!
+  read: Boolean
+  read_at: String
+  created_at: String
+  user: Users
+}
+
+type UnreadMessagesCount {
+  count: Int!
+}
+
+# ============================================================================
+# Statistics Domain
+# ============================================================================
+
+type AttendanceStats {
+  user_id: Int!
+  total_presences: Int!
+  current_month: Int!
+  monthly_average: Float!
+  last_session: String
+}
+
+type TopMemberStats {
+  user_id: Int!
+  first_name: String!
+  last_name: String!
+  total_presences: Int!
+  attendance_rate: Float!
+}
+
+type MembersByGradeStats {
+  grade_name: String!
+  count: Int!
+}
+
+type MembersByGenderStats {
+  gender_name: String!
+  count: Int!
+}
+
+type BirthdayInfo {
+  user_id: Int!
+  first_name: String!
+  last_name: String!
+  birth_date: String!
+  age: Int!
+}
+
+type TopProductStats {
+  product_id: Int!
+  name: String!
+  quantity_sold: Int!
+  total_revenue: Float!
+}
+
+type WeeklySessionsStats {
+  total: Int!
+  by_day: JSON
+}
+
+type MembersCountStats {
+  count: Int!
+}
+
+type MonthlyPaymentsStats {
+  total: Float!
+  count: Int!
+}
+
+type PaymentInfo {
+  id: Int!
+  user_id: Int!
+  amount: Float!
+  payment_date: String!
+  status: String!
+  user_first_name: String
+  user_last_name: String
+}
+
+type ActivePlanStats {
+  plan_name: String!
+  count: Int!
+}
+
+type RenewalRateStats {
+  rate: Float!
+}
+
+type MonthlyPaymentsBreakdown {
+  month: String!
+  total: Float!
+  count: Int!
+}
+
+type MembersByPlanStats {
+  plan_name: String!
+  count: Int!
+}
+
+# ============================================================================
+# Upload Domain
+# ============================================================================
+
+type UploadedFile {
+  url: String!
+  name: String!
+}
+
+type UploadResponse {
+  files: [UploadedFile!]!
+}
+
+# ============================================================================
+# Root Query Type
+# ============================================================================
+
+type Query {
+  # Health check
+  health: String!
+
+  # Users
+  users(take: Int, skip: Int): [Users!]!
+  user(id: Int!): Users
+  me: Users
+
+  # Sessions (Courses)
+  sessions(take: Int, skip: Int): [Sessions!]!
+  session(id: Int!): Sessions
+  sessionTypes: [SessionTypes!]!
+  instructors(take: Int, skip: Int): [Instructors!]!
+
+  # Shop
+  products(take: Int, skip: Int): [Products!]!
+  product(id: Int!): Products
+  productCategories: [ProductCategories!]!
+  productStocks(productId: Int!): [ProductStocks!]!
+  stockSizes: [StockSizes!]!
+
+  # Enrollments
+  sessionEnrollments(sessionId: Int!): [SessionEnrollments!]!
+  userEnrollments(userId: Int!): [SessionEnrollments!]!
+
+  # Memberships & Subscriptions
+  subscriptions: [SubscriptionPlans!]!
+  subscription(id: Int!): SubscriptionPlans
+  userSubscription(userId: Int!): UserSubscriptions
+
+  # Grades, Statuses, Genders
+  grades: [Grades!]!
+  grade(id: Int!): Grades
+  statuses: [Statuses!]!
+  status(id: Int!): Statuses
+  genders: [Genders!]!
+  gender(id: Int!): Genders
+
+  # Payments
+  payments(userId: Int, take: Int, skip: Int): [Payments!]!
+  payment(id: Int!): Payments
+
+  # Orders
+  orders(userId: Int, take: Int, skip: Int): [Orders!]!
+  order(id: Int!): Orders
+
+  # Auth
+  checkEmail(email: String!): EmailCheckResult!
+  verifyResetToken(token: String!): PasswordResetTokenValidation
+
+  # Messages
+  messageTypes: [MessageTypes!]!
+  messagesReceived(userId: Int!): [MessageRecipients!]!
+  messagesTrashed(userId: Int!): [MessageRecipients!]!
+  unreadMessagesCount(userId: Int!): UnreadMessagesCount!
+
+  # Notifications
+  notifications(userId: Int!): [Notifications!]!
+
+  # Statistics - Attendance
+  attendanceStats(userId: Int!): AttendanceStats
+  topMembers(limit: Int): [TopMemberStats!]!
+
+  # Statistics - Members
+  membersCount: MembersCountStats!
+  membersByGrade: [MembersByGradeStats!]!
+  membersByGender: [MembersByGenderStats!]!
+  birthdays: [BirthdayInfo!]!
+  newMembers(limit: Int): [Users!]!
+
+  # Statistics - Products
+  topProducts(limit: Int): [TopProductStats!]!
+
+  # Statistics - Sessions
+  weeklySessions: WeeklySessionsStats!
+
+  # Statistics - Payments
+  monthlyPayments: MonthlyPaymentsStats!
+  recentPayments(limit: Int): [PaymentInfo!]!
+  pendingPayments: [PaymentInfo!]!
+  overduePayments: [PaymentInfo!]!
+  lastPayments(limit: Int): [PaymentInfo!]!
+  paymentsByMonth: [MonthlyPaymentsBreakdown!]!
+
+  # Statistics - Plans
+  activePlans: [ActivePlanStats!]!
+  renewalRate: RenewalRateStats!
+  membersByPlan: [MembersByPlanStats!]!
+}
+
+# ============================================================================
+# Root Mutation Type
+# ============================================================================
+
+type Mutation {
+  # Authentication
+  login(email: String!, password: String!): AuthResult!
+  register(input: RegisterInput!): AuthResult!
+  logout: AuthResult!
+  requestPasswordReset(email: String!): AuthResult!
+  resetPassword(token: String!, newPassword: String!): AuthResult!
+  changePassword(userId: Int!, currentPassword: String!, newPassword: String!): AuthResult!
+
+  # Users
+  createUser(input: CreateUserInput!): Users!
+  updateUser(id: Int!, input: UpdateUserInput!): Users!
+  deleteUser(id: Int!): MutationResult!
+
+  # Sessions (Courses)
+  createSession(input: CreateSessionInput!): Sessions!
+  updateSession(id: Int!, input: UpdateSessionInput!): Sessions!
+  deleteSession(id: Int!): MutationResult!
+
+  # Enrollments
+  enrollUser(userId: Int!, sessionId: Int!): SessionEnrollments!
+  cancelEnrollment(enrollmentId: Int!): MutationResult!
+  updateEnrollmentStatus(enrollmentId: Int!, status: String!): SessionEnrollments!
+
+  # Instructors
+  createInstructor(input: CreateInstructorInput!): Instructors!
+  updateInstructor(id: Int!, input: UpdateInstructorInput!): Instructors!
+  deleteInstructor(id: Int!): MutationResult!
+
+  # Shop
+  createProduct(input: CreateProductInput!): Products!
+  updateProduct(id: Int!, input: UpdateProductInput!): Products!
+  deleteProduct(id: Int!): MutationResult!
+
+  # Orders
+  createOrder(input: CreateOrderInput!): Orders!
+  updateOrderStatus(orderId: Int!, status: String!): Orders!
+
+  # Payments
+  createPayment(input: CreatePaymentInput!): Payments!
+  processPayment(paymentId: Int!): PaymentResult!
+
+  # Subscriptions
+  createSubscription(userId: Int!, planId: Int!): UserSubscriptions!
+  cancelSubscription(subscriptionId: Int!): MutationResult!
+
+  # Messages
+  createMessageType(input: CreateMessageTypeInput!): MessageTypes!
+  updateMessageType(id: Int!, input: UpdateMessageTypeInput!): MessageTypes!
+  deleteMessageType(id: Int!): MutationResult!
+  sendMessage(input: SendMessageInput!): Messages!
+  markMessageAsRead(recipientId: Int!): MessageRecipients!
+  deleteReceivedMessage(recipientId: Int!): MutationResult!
+  restoreMessage(recipientId: Int!): MessageRecipients!
+
+  # Notifications
+  createNotification(input: CreateNotificationInput!): Notifications!
+  markNotificationAsRead(notificationId: Int!): Notifications!
+
+  # Upload
+  uploadFiles(files: [Upload!]!): UploadResponse!
+}
+
+# ============================================================================
+# Input Types
+# ============================================================================
+
+input RegisterInput {
+  email: String!
+  password: String!
+  first_name: String!
+  last_name: String!
+  phone: String
+  birth_date: String
+  gender_id: Int
+}
+
+input CreateUserInput {
+  email: String!
+  password: String!
+  first_name: String!
+  last_name: String!
+  phone: String
+  birth_date: String
+  address: String
+  gender_id: Int
+  role: String
+}
+
+input UpdateUserInput {
+  email: String
+  first_name: String
+  last_name: String
+  phone: String
+  birth_date: String
+  address: String
+  gender_id: Int
+  active: Boolean
+}
+
+input CreateSessionInput {
+  session_type_id: Int!
+  instructor_id: Int!
+  date: String!
+  start_time: String!
+  end_time: String!
+  location: String
+  max_participants: Int
+  notes: String
+}
+
+input UpdateSessionInput {
+  session_type_id: Int
+  instructor_id: Int
+  date: String
+  start_time: String
+  end_time: String
+  location: String
+  max_participants: Int
+  status: String
+  notes: String
+}
+
+input CreateInstructorInput {
+  user_id: Int!
+  specialization: String
+  bio: String
+  certifications: String
+  active: Boolean
+}
+
+input UpdateInstructorInput {
+  user_id: Int
+  specialization: String
+  bio: String
+  certifications: String
+  active: Boolean
+}
+
+input CreateProductInput {
+  name: String!
+  description: String
+  price: Float!
+  category_id: Int!
+  image_url: String
+  active: Boolean
+}
+
+input UpdateProductInput {
+  name: String
+  description: String
+  price: Float
+  category_id: Int
+  image_url: String
+  active: Boolean
+}
+
+input CreateOrderInput {
+  user_id: Int!
+  items: [OrderItemInput!]!
+  delivery_address: String
+  notes: String
+}
+
+input OrderItemInput {
+  product_id: Int!
+  stock_id: Int
+  quantity: Int!
+  price: Float!
+}
+
+input CreatePaymentInput {
+  user_id: Int!
+  order_id: Int
+  subscription_id: Int
+  amount: Float!
+  payment_method: String!
+  stripe_payment_intent_id: String
+}
+
+input CreateMessageTypeInput {
+  type_name: String!
+  description: String
+  active: Boolean
+}
+
+input UpdateMessageTypeInput {
+  type_name: String
+  description: String
+  active: Boolean
+}
+
+input SendMessageInput {
+  sender_id: Int!
+  type_message_id: Int
+  subject: String
+  content: String!
+  recipient_ids: [Int!]!
+}
+
+input CreateNotificationInput {
+  user_id: Int
+  user_ids: [Int!]
+  title: String!
+  message: String!
+  type: String!
+}
+
+scalar Upload
+
+# ============================================================================
+# Response Types
+# ============================================================================
+
+type AuthResult {
+  success: Boolean!
+  message: String!
+  token: String
+  user: Users
+}
+
+type MutationResult {
+  success: Boolean!
+  message: String!
+}
+
+type PaymentResult {
+  success: Boolean!
+  message: String!
+  payment: Payments
+  clientSecret: String
+}
+
+type EmailCheckResult {
+  exists: Boolean!
+  email: String!
+}
+
+type PasswordResetTokenValidation {
+  valid: Boolean!
+  userId: Int
+  expiresAt: DateTime
+}

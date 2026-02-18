@@ -1,0 +1,219 @@
+# ============================================================================
+# Shop (Products) Queries - English Schema
+# ============================================================================
+
+query GetProducts($take: Int, $skip: Int) {
+  products(take: $take, skip: $skip) {
+    id
+    name
+    description
+    price
+    category_id
+    image_url
+    active
+    created_at
+    updated_at
+  }
+}
+
+query GetProduct($id: Int!) {
+  product(id: $id) {
+    id
+    name
+    description
+    price
+    category_id
+    image_url
+    active
+    created_at
+    updated_at
+  }
+}
+
+query GetProductCategories {
+  productCategories {
+    id
+    name
+    description
+    active
+  }
+}
+
+# ============================================================================
+# Shop Mutations
+# ============================================================================
+
+mutation CreateProduct($input: CreateProductInput!) {
+  createProduct(input: $input) {
+    id
+    name
+    description
+    price
+    category_id
+    image_url
+    active
+    created_at
+  }
+}
+
+mutation UpdateProduct($id: Int!, $input: UpdateProductInput!) {
+  updateProduct(id: $id, input: $input) {
+    id
+    name
+    description
+    price
+    category_id
+    image_url
+    active
+    updated_at
+  }
+}
+
+mutation DeleteProduct($id: Int!) {
+  deleteProduct(id: $id) {
+    success
+    message
+  }
+}
+
+# ============================================================================
+# Orders Queries
+# ============================================================================
+
+query GetOrders($userId: Int, $take: Int, $skip: Int) {
+  orders(userId: $userId, take: $take, skip: $skip) {
+    id
+    user_id
+    total_amount
+    status
+    delivery_address
+    notes
+    created_at
+    updated_at
+  }
+}
+
+query GetOrder($id: Int!) {
+  order(id: $id) {
+    id
+    user_id
+    total_amount
+    status
+    delivery_address
+    notes
+    created_at
+    updated_at
+  }
+}
+
+# ============================================================================
+# Orders Mutations
+# ============================================================================
+
+mutation CreateOrder($input: CreateOrderInput!) {
+  createOrder(input: $input) {
+    id
+    user_id
+    total_amount
+    status
+    delivery_address
+    created_at
+  }
+}
+
+mutation UpdateOrderStatus($orderId: Int!, $status: String!) {
+  updateOrderStatus(orderId: $orderId, status: $status) {
+    id
+    user_id
+    total_amount
+    status
+    updated_at
+  }
+}
+
+# ============================================================================
+# Payments Queries
+# ============================================================================
+
+query GetPayments($userId: Int, $take: Int, $skip: Int) {
+  payments(userId: $userId, take: $take, skip: $skip) {
+    id
+    user_id
+    order_id
+    subscription_id
+    amount
+    payment_method
+    status
+    payment_date
+    stripe_payment_intent_id
+    created_at
+  }
+}
+
+query GetPayment($id: Int!) {
+  payment(id: $id) {
+    id
+    user_id
+    order_id
+    subscription_id
+    amount
+    payment_method
+    status
+    payment_date
+    stripe_payment_intent_id
+    created_at
+  }
+}
+
+# ============================================================================
+# Payments Mutations
+# ============================================================================
+
+mutation CreatePayment($input: CreatePaymentInput!) {
+  createPayment(input: $input) {
+    id
+    user_id
+    order_id
+    subscription_id
+    amount
+    payment_method
+    status
+    created_at
+  }
+}
+
+mutation ProcessPayment($paymentId: Int!) {
+  processPayment(paymentId: $paymentId) {
+    success
+    message
+    payment {
+      id
+      status
+      payment_date
+    }
+    clientSecret
+  }
+}
+
+# ============================================================================
+# Stock Queries
+# ============================================================================
+
+query GetProductStocks($productId: Int!) {
+  productStocks(productId: $productId) {
+    id
+    product_id
+    size_id
+    quantity
+    min_quantity
+    updated_at
+  }
+}
+
+query GetStockSizes {
+  stockSizes {
+    id
+    name
+    code
+  }
+}

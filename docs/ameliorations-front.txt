@@ -1,0 +1,61 @@
+ **PLAN D'ACTION PRIORITAIRE**
+
+### Phase 1 - Nettoyage Critique (1 jour)
+1. ✅ **Supprimer Redux** complètement
+2. ✅ **Supprimer les doublons** de fichiers
+3. ✅ **Créer utils/storage.ts** pour localStorage
+4. ✅ **Supprimer les console.log**
+
+### Phase 2 - Types (2 jours)
+5. ✅ **Créer les interfaces** pour Cours, Article, User, etc.
+6. ✅ **Remplacer tous les `any`**
+7. ✅ **Typer le localStorage**
+
+### Phase 3 - Structure (1 jour)
+8. ✅ **Réorganiser les pages** (tout dans des dossiers)
+9. ✅ **Déplacer header/sidebar** dans layout/
+10. ✅ **Uniformiser le naming** (PascalCase partout)
+
+### Phase 4 - Optimisation (1 jour)
+11. ✅ **Réduire les invalidateQueries**
+12. ✅ **Ajouter error boundaries**
+13. ✅ **Ajouter retry logic**
+
+---
+
+## 📋 **CHECKLIST QUALITÉ CODE**
+
+| Critère | Note | Commentaire |
+|---------|------|-------------|
+| **TypeScript Usage** | 3/10 | `any` partout ❌ |
+| **Architecture** | 8/10 | React Query = ✅ |
+| **Organisation** | 4/10 | Doublons + incohérent |
+| **Performance** | 6/10 | Over-invalidation |
+| **Maintenabilité** | 5/10 | Code dupliqué |
+| **Sécurité** | 4/10 | Logs sensibles |
+| **UX** | 7/10 | PatternFly = ✅ |
+
+**NOTE GLOBALE : 6/10**
+
+---
+
+## 💡 **RECOMMANDATIONS POUR LE TFE**
+
+### ✅ **À Garder**
+1. React Query (moderne !)
+2. TypeScript (si bien utilisé)
+3. PatternFly UI
+4. Structure des hooks
+5. Vite
+
+### ❌ **À Supprimer**
+1. Redux (obsolète avec React Query)
+2. Doublons de fichiers
+3. `any` types
+4. console.log
+
+### 🔧 **À Améliorer**
+1. Typage complet
+2. Gestion d'erreurs
+3. Structure des dossiers
+4. Validation des données

@@ -1,10 +1,11 @@
 import { createSchema } from "graphql-yoga";
 import { DateTimeResolver } from "graphql-scalars";
-import { prisma } from '@/infrastructure/database/prisma-client.js';
+import { prisma } from "@/infrastructure/database/prisma-client.js";
 
 // Import des resolvers et typedefs des modules migrés
 import { createAuthResolvers } from "../routes/auth/core/resolvers/index.js";
 import { messagesResolvers } from "../routes/messages/core/resolvers/index.js";
+import { combinedCommunicationsResolvers } from "../routes/communications/core/resolvers/index.js";
 import { alertesResolvers as alertesResolversNew } from "../routes/alertes/core/resolvers/index.js";
 import { commandesResolvers } from "../routes/commandes/core/resolvers/index.js";
 import { compteResolvers } from "../routes/compte/core/resolvers/index.js";
@@ -16,7 +17,7 @@ import { inscriptionResolvers } from "../routes/inscription/core/resolvers/index
 import { magasinResolvers } from "../routes/magasin/core/resolvers/index.js";
 import { paiementsResolvers } from "../routes/paiements/core/resolvers/index.js";
 import { professeursResolvers } from "../routes/professeurs/core/resolvers/index.js";
-import { statistiquesResolvers } from "../routes/statistiques/core/resolvers/index.js";
+import { statisticsResolvers } from "../routes/statistics/core/resolvers/index.js";
 import { stocksResolvers } from "../routes/stocks/core/resolvers/index.js";
 import { utilisateursResolvers } from "../routes/utilisateurs/core/resolvers/index.js";
 import { verificationResolvers } from "../routes/verification/core/resolvers/index.js";
@@ -138,6 +139,45 @@ export const schema = createSchema({
       getFileInfo(filename: String!): FileInfo!
       uploadStats: UploadStats!
       fileExists(filename: String!): FileExistsResult!
+
+      # Messages
+      messageTypes: [MessageTypes!]!
+      messagesReceived(userId: Int!): [MessageRecipients!]!
+      messagesTrashed(userId: Int!): [MessageRecipients!]!
+      unreadMessagesCount(userId: Int!): UnreadMessagesCount!
+
+      # Notifications
+      notifications(userId: Int!): [Notifications!]!
+
+      # Statistics - Attendance
+      attendanceStats(userId: Int!): AttendanceStatsResult!
+      topMembers(limit: Int): [TopMemberResult!]!
+
+      # Statistics - Members
+      membersCount: MembersCountResult!
+      membersByGrade: [MembersByGradeResult!]!
+      membersByGender: [MembersByGenderResult!]!
+      birthdays: [BirthdayResult!]!
+      newMembers(limit: Int): [NewMemberResult!]!
+
+      # Statistics - Products
+      topProducts(limit: Int): [TopProductResult!]!
+
+      # Statistics - Sessions
+      weeklySessions: WeeklySessionsResult!
+
+      # Statistics - Payments
+      monthlyPayments: MonthlyPaymentsResult!
+      recentPayments(limit: Int): [PaymentResult!]!
+      pendingPayments: [PaymentResult!]!
+      overduePayments: [PaymentResult!]!
+      lastPayments(limit: Int): [PaymentResult!]!
+      paymentsByMonth: [PaymentsByMonthResult!]!
+
+      # Statistics - Plans
+      activePlans: [ActivePlanResult!]!
+      renewalRate: RenewalRateResult!
+      membersByPlan: [MembersByPlanResult!]!
     }
 
     type Mutation {
@@ -169,6 +209,22 @@ export const schema = createSchema({
       uploadFile(input: FileUploadInput!): UploadResult!
       deleteFile(input: DeleteFileInput!): UploadResult!
       cleanupOldFiles(daysOld: Int): CleanupResult!
+
+      # Messages
+      createMessageType(input: CreateMessageTypeInput!): MessageTypes!
+      updateMessageType(id: Int!, input: UpdateMessageTypeInput!): MessageTypes!
+      deleteMessageType(id: Int!): MutationResult!
+      sendMessage(input: SendMessageInput!): Messages!
+      markMessageAsRead(recipientId: Int!): MessageRecipients!
+      deleteReceivedMessage(recipientId: Int!): MutationResult!
+      restoreMessage(recipientId: Int!): MessageRecipients!
+
+      # Notifications
+      createNotification(input: CreateNotificationInput!): Notifications!
+      markNotificationAsRead(notificationId: Int!): Notifications!
+      markAllNotificationsAsRead(userId: Int!): MutationResult!
+      deleteNotification(notificationId: Int!): MutationResult!
+      deleteReadNotifications(userId: Int!): MutationResult!
     }
 
     # Types de base
@@ -247,9 +303,205 @@ export const schema = createSchema({
       taille: Taille!
     }
 
+    # ======================================
+    # Messages & Notifications Types
+    # ======================================
+
+    type MessageTypes {
+      id: Int!
+      type_name: String!
+      description: String
+      active: Boolean
+      created_at: String
+      updated_at: String
+    }
+
+    type Messages {
+      id: Int!
+      sender_id: Int!
+      type_message_id: Int
+      subject: String
+      content: String!
+      sent_at: String
+      created_at: String
+      sender: User
+      messageType: MessageTypes
+      recipients: [MessageRecipients!]
+    }
+
+    type MessageRecipients {
+      id: Int!
+      message_id: Int!
+      recipient_id: Int!
+      read: Boolean
+      read_at: String
+      deleted: Boolean
+      created_at: String
+      recipient: User
+      message: Messages
+    }
+
+    type Notifications {
+      id: Int!
+      user_id: Int!
+      title: String!
+      message: String!
+      type: String!
+      read: Boolean
+      read_at: String
+      created_at: String
+      user: User
+    }
+
+    type UnreadMessagesCount {
+      count: Int!
+    }
+
+    # ======================================
+    # Input Types for Messages & Notifications
+    # ======================================
+
+    input CreateMessageTypeInput {
+      type_name: String!
+      description: String
+      active: Boolean
+    }
+
+    input UpdateMessageTypeInput {
+      type_name: String
+      description: String
+      active: Boolean
+    }
+
+    input SendMessageInput {
+      sender_id: Int!
+      type_message_id: Int
+      subject: String
+      content: String!
+      recipient_ids: [Int!]!
+    }
+
+    input CreateNotificationInput {
+      user_id: Int
+      user_ids: [Int!]
+      title: String!
+      message: String!
+      type: String!
+    }
+
+    type MutationResult {
+      success: Boolean!
+      message: String!
+    }
+
     type Taille {
       id: Int!
       taille: String!
+    }
+
+    # ======================================
+    # Statistics Types
+    # ======================================
+
+    # Attendance Statistics
+    type AttendanceStatsResult {
+      user_id: Int!
+      total_presences: Int!
+      current_month: Int!
+      monthly_average: Int!
+      last_session: DateTime
+    }
+
+    type TopMemberResult {
+      user_id: Int!
+      first_name: String!
+      last_name: String!
+      total_presences: Int!
+      attendance_rate: Int!
+    }
+
+    # Member Statistics
+    type MembersCountResult {
+      count: Int!
+    }
+
+    type MembersByGradeResult {
+      grade_name: String!
+      count: Int!
+    }
+
+    type MembersByGenderResult {
+      gender_name: String!
+      count: Int!
+    }
+
+    type BirthdayResult {
+      user_id: Int!
+      first_name: String!
+      last_name: String!
+      birth_date: DateTime!
+      age: Int!
+    }
+
+    type NewMemberResult {
+      id: Int!
+      first_name: String
+      last_name: String
+      email: String
+      phone: String
+      birth_date: DateTime
+      created_at: DateTime
+    }
+
+    # Product Statistics
+    type TopProductResult {
+      product_id: Int!
+      name: String!
+      quantity_sold: Int!
+      total_revenue: Float!
+    }
+
+    # Session Statistics
+    type WeeklySessionsResult {
+      total: Int!
+      by_day: [Int!]!
+    }
+
+    # Payment Statistics
+    type MonthlyPaymentsResult {
+      total: Float!
+      count: Int!
+    }
+
+    type PaymentResult {
+      id: Int!
+      user_id: Int
+      amount: Float!
+      payment_date: DateTime!
+      status: String!
+      user_first_name: String!
+      user_last_name: String!
+    }
+
+    type PaymentsByMonthResult {
+      month: String!
+      total: Float!
+      count: Int!
+    }
+
+    # Plan Statistics
+    type ActivePlanResult {
+      plan_name: String!
+      count: Int!
+    }
+
+    type RenewalRateResult {
+      rate: Int!
+    }
+
+    type MembersByPlanResult {
+      plan_name: String!
+      count: Int!
     }
 
     # Types pour les alertes
@@ -517,8 +769,11 @@ export const schema = createSchema({
       // Alertes (nouveaux resolvers avec middlewares)
       ...alertesResolversNew.Query,
 
-      // Messages (nouveaux resolvers avec middlewares)
+      // Messages (anciens resolvers - à migrer)
       ...messagesResolvers.Query,
+
+      // Communications (nouveaux resolvers Messages + Notifications)
+      ...combinedCommunicationsResolvers.Query,
 
       // Commandes (nouveaux resolvers avec middlewares)
       ...commandesResolvers.Query,
@@ -551,7 +806,7 @@ export const schema = createSchema({
       ...professeursResolvers.Query,
 
       // Statistiques (nouveaux resolvers avec middlewares)
-      ...statistiquesResolvers.Query,
+      ...statisticsResolvers.Query,
 
       // Stocks (nouveaux resolvers avec middlewares)
       ...stocksResolvers.Query,
@@ -664,8 +919,11 @@ export const schema = createSchema({
       // Alertes (nouveaux resolvers avec middlewares)
       ...alertesResolversNew.Mutation,
 
-      // Messages (nouveaux resolvers avec middlewares)
+      // Messages (anciens resolvers - à migrer)
       ...messagesResolvers.Mutation,
+
+      // Communications (nouveaux resolvers Messages + Notifications)
+      ...combinedCommunicationsResolvers.Mutation,
 
       // Commandes (nouveaux resolvers avec middlewares)
       ...commandesResolvers.Mutation,
@@ -698,7 +956,7 @@ export const schema = createSchema({
       ...professeursResolvers.Mutation,
 
       // Statistiques (nouveaux resolvers avec middlewares)
-      ...statistiquesResolvers.Mutation,
+      ...statisticsResolvers.Mutation,
 
       // Stocks (nouveaux resolvers avec middlewares)
       ...stocksResolvers.Mutation,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   PageSection,
   Title,
@@ -7,31 +7,31 @@ import {
   FlexItem,
   Grid,
   GridItem,
-} from '@patternfly/react-core';
-import { PlusIcon, CreditCardIcon, EditIcon } from '@patternfly/react-icons';
-import { useNavigate } from 'react-router-dom';
+} from "@patternfly/react-core";
+import { PlusIcon, CreditCardIcon, EditIcon } from "@patternfly/react-icons";
+import { useNavigate } from "react-router-dom";
 import {
-  useMembresCount,
-  usePaiementsMois,
-  usePaiementsRecents,
-  usePaiementsEnAttente,
-  usePlansActifs,
-  useTauxRenouvellement,
-  usePaiementsParMois,
-  useMembresParPlan,
-  useDerniersPaiements,
-  usePaiementsEchus,
-  useNouveauxMembres,
-} from '../hooks/useDashboard';
-import { MetricCard } from '../components/dashboard/MetricCard';
-import { ChartCard } from '../components/dashboard/ChartCard';
-import { DataTable } from '../components/dashboard/DataTable';
-import { ActionButton } from '../components/common/ActionButton';
-import { ExpandableDataSection } from '../components/dashboard/ExpandableDataSection';
-import { PageHeader } from '../components/common/PageHeader';
-import { useAuthRedirect } from '../hooks/useAuthRedirect';
-import AuthRequiredModal from '../components/common/modal/AuthRequiredModal';
-import AuthGuard from '../components/auth/AuthGuard';
+  useMembersCount,
+  useMonthlyPayments,
+  useRecentPayments,
+  usePendingPayments,
+  useActivePlans,
+  useRenewalRate,
+  usePaymentsByMonth,
+  useMembersByPlan,
+  useLastPayments,
+  useOverduePayments,
+  useNewMembers,
+} from "../hooks";
+import { MetricCard } from "../components/dashboard/MetricCard";
+import { ChartCard } from "../components/dashboard/ChartCard";
+import { DataTable } from "../components/dashboard/DataTable";
+import { ActionButton } from "../components/common/ActionButton";
+import { ExpandableDataSection } from "../components/dashboard/ExpandableDataSection";
+import { PageHeader } from "../components/common/PageHeader";
+import { useAuthRedirect } from "../hooks/useAuthRedirect";
+import AuthRequiredModal from "../components/common/modal/AuthRequiredModal";
+import AuthGuard from "../components/auth/AuthGuard";
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -40,139 +40,230 @@ const DashboardPage: React.FC = () => {
   const [isNewMembersExpanded, setIsNewMembersExpanded] = useState(false);
 
   // NOUVEAU: Hook pour gérer l'authentification et la redirection
-  const { 
-    showAuthModal, 
-    redirectToLogin, 
-    customMessage, 
-    autoRedirectDelay 
-  } = useAuthRedirect({
-    autoRedirectDelay: 5,
-    checkInterval: 60000, // Vérifier chaque minute sur le dashboard
-    customMessage: "Votre session a expiré. Vous devez vous reconnecter pour accéder au tableau de bord."
-  });
+  const { showAuthModal, redirectToLogin, customMessage, autoRedirectDelay } =
+    useAuthRedirect({
+      autoRedirectDelay: 5,
+      checkInterval: 60000, // Vérifier chaque minute sur le dashboard
+      customMessage:
+        "Votre session a expiré. Vous devez vous reconnecter pour accéder au tableau de bord.",
+    });
 
-  console.log('🏠 DashboardPage mounted');
+  console.log("🏠 DashboardPage mounted");
 
-  // Utilisation des hooks React Query avec logs
-  const { data: membresCount = 0, isLoading: loadingMembres, error: errorMembres } = useMembresCount();
-  const { data: paiementsMois = 0, isLoading: loadingPaiementsMois, error: errorPaiementsMois } = usePaiementsMois();
-  const { data: paiementsRecents = 0, isLoading: loadingPaiementsRecents, error: errorPaiementsRecents } = usePaiementsRecents();
-  const { data: paiementsEnAttente = 0, isLoading: loadingPaiementsAttente, error: errorPaiementsAttente } = usePaiementsEnAttente();
-  const { data: plansActifs = 0, isLoading: loadingPlans, error: errorPlans } = usePlansActifs();
-  const { data: tauxRenouvellement = 0, isLoading: loadingTaux, error: errorTaux } = useTauxRenouvellement();
-  const { data: paiementsParMois = [] } = usePaiementsParMois();
-  const { data: membresParPlan = [] } = useMembresParPlan();
-  const { data: derniersPaiements = [] } = useDerniersPaiements();
-  const { data: paiementsEchus = [] } = usePaiementsEchus();
-  const { data: nouveauxMembres = [] } = useNouveauxMembres();
+  // Utilisation des hooks GraphQL Apollo
+  const {
+    data: membersCountData,
+    loading: loadingMembres,
+    error: errorMembres,
+  } = useMembersCount();
+  const {
+    data: monthlyPaymentsData,
+    loading: loadingPaiementsMois,
+    error: errorPaiementsMois,
+  } = useMonthlyPayments();
+  const {
+    data: recentPaymentsData,
+    loading: loadingPaiementsRecents,
+    error: errorPaiementsRecents,
+  } = useRecentPayments(7);
+  const {
+    data: pendingPaymentsData,
+    loading: loadingPaiementsAttente,
+    error: errorPaiementsAttente,
+  } = usePendingPayments();
+  const {
+    data: activePlansData,
+    loading: loadingPlans,
+    error: errorPlans,
+  } = useActivePlans();
+  const {
+    data: renewalRateData,
+    loading: loadingTaux,
+    error: errorTaux,
+  } = useRenewalRate();
+  const { data: paymentsByMonthData } = usePaymentsByMonth();
+  const { data: membersByPlanData } = useMembersByPlan();
+  const { data: lastPaymentsData } = useLastPayments(10);
+  const { data: overduePaymentsData } = useOverduePayments();
+  const { data: newMembersData } = useNewMembers(10);
+
+  // Extract data from GraphQL responses
+  const membresCount = membersCountData?.membersCount?.count ?? 0;
+  const paiementsMois = monthlyPaymentsData?.monthlyPayments?.total ?? 0;
+  const paiementsRecents = recentPaymentsData?.recentPayments?.length ?? 0;
+  const paiementsEnAttente = pendingPaymentsData?.pendingPayments?.length ?? 0;
+  const plansActifs = activePlansData?.activePlans?.length ?? 0;
+  const tauxRenouvellement = renewalRateData?.renewalRate?.rate ?? 0;
+  const paiementsParMois = paymentsByMonthData?.paymentsByMonth ?? [];
+  const membresParPlan = membersByPlanData?.membersByPlan ?? [];
+  const derniersPaiements = lastPaymentsData?.lastPayments ?? [];
+  const paiementsEchus = overduePaymentsData?.overduePayments ?? [];
+  const nouveauxMembres = newMembersData?.newMembers ?? [];
 
   // Debug logs pour les données finales
-  console.log('📊 Dashboard Data Summary:');
-  console.log('- Membres Count:', membresCount, 'Loading:', loadingMembres, 'Error:', errorMembres);
-  console.log('- Paiements Mois:', paiementsMois, 'Loading:', loadingPaiementsMois, 'Error:', errorPaiementsMois);
-  console.log('- Paiements Récents:', paiementsRecents, 'Loading:', loadingPaiementsRecents, 'Error:', errorPaiementsRecents);
-  console.log('- Paiements Attente:', paiementsEnAttente, 'Loading:', loadingPaiementsAttente, 'Error:', errorPaiementsAttente);
-  console.log('- Plans Actifs:', plansActifs, 'Loading:', loadingPlans, 'Error:', errorPlans);
-  console.log('- Taux Renouvellement:', tauxRenouvellement, 'Loading:', loadingTaux, 'Error:', errorTaux);
-  console.log('- Paiements Par Mois:', paiementsParMois);
-  console.log('- Membres Par Plan:', membresParPlan);
-  console.log('- Derniers Paiements:', derniersPaiements);
-  console.log('- Paiements Échus:', paiementsEchus);
-  console.log('- Nouveaux Membres:', nouveauxMembres);
+  console.log("📊 Dashboard Data Summary:");
+  console.log(
+    "- Membres Count:",
+    membresCount,
+    "Loading:",
+    loadingMembres,
+    "Error:",
+    errorMembres,
+  );
+  console.log(
+    "- Paiements Mois:",
+    paiementsMois,
+    "Loading:",
+    loadingPaiementsMois,
+    "Error:",
+    errorPaiementsMois,
+  );
+  console.log(
+    "- Paiements Récents:",
+    paiementsRecents,
+    "Loading:",
+    loadingPaiementsRecents,
+    "Error:",
+    errorPaiementsRecents,
+  );
+  console.log(
+    "- Paiements Attente:",
+    paiementsEnAttente,
+    "Loading:",
+    loadingPaiementsAttente,
+    "Error:",
+    errorPaiementsAttente,
+  );
+  console.log(
+    "- Plans Actifs:",
+    plansActifs,
+    "Loading:",
+    loadingPlans,
+    "Error:",
+    errorPlans,
+  );
+  console.log(
+    "- Taux Renouvellement:",
+    tauxRenouvellement,
+    "Loading:",
+    loadingTaux,
+    "Error:",
+    errorTaux,
+  );
+  console.log("- Paiements Par Mois:", paiementsParMois);
+  console.log("- Membres Par Plan:", membresParPlan);
+  console.log("- Derniers Paiements:", derniersPaiements);
+  console.log("- Paiements Échus:", paiementsEchus);
+  console.log("- Nouveaux Membres:", nouveauxMembres);
 
   const metrics = [
     {
-      title: 'Membres inscrits',
+      title: "Membres inscrits",
       value: membresCount,
-      type: 'number' as const,
-      trend: '+5.2%',
-      trendType: 'positive' as const,
+      type: "number" as const,
+      trend: "+5.2%",
+      trendType: "positive" as const,
     },
     {
-      title: 'Total encaissé ce mois',
+      title: "Total encaissé ce mois",
       value: paiementsMois,
-      type: 'currency' as const,
-      trend: '+12.3%',
-      trendType: 'positive' as const,
+      type: "currency" as const,
+      trend: "+12.3%",
+      trendType: "positive" as const,
     },
     {
-      title: 'Paiements récents (7j)',
+      title: "Paiements récents (7j)",
       value: paiementsRecents,
-      type: 'number' as const,
-      suffix: 'paiements',
+      type: "number" as const,
+      suffix: "paiements",
     },
     {
-      title: 'Paiements en attente',
+      title: "Paiements en attente",
       value: paiementsEnAttente,
-      type: 'number' as const,
-      suffix: 'membres',
-      trend: '-3.1%',
-      trendType: 'negative' as const,
+      type: "number" as const,
+      suffix: "membres",
+      trend: "-3.1%",
+      trendType: "negative" as const,
     },
     {
-      title: 'Plans actifs',
+      title: "Plans actifs",
       value: plansActifs,
-      type: 'number' as const,
-      suffix: 'plans',
+      type: "number" as const,
+      suffix: "plans",
     },
     {
-      title: 'Taux de renouvellement',
+      title: "Taux de renouvellement",
       value: tauxRenouvellement,
-      type: 'percentage' as const,
-      trend: '+2.4%',
-      trendType: 'positive' as const,
+      type: "percentage" as const,
+      trend: "+2.4%",
+      trendType: "positive" as const,
     },
   ];
 
-  console.log('📈 Final Metrics Configuration:', metrics);
+  console.log("📈 Final Metrics Configuration:", metrics);
 
   const paymentsColumns = [
-    { key: 'user', label: 'Utilisateur' },
-    { key: 'amount', label: 'Montant' },
-    { key: 'date', label: 'Date' },
-    { key: 'status', label: 'Statut' },
+    { key: "user", label: "Utilisateur" },
+    { key: "amount", label: "Montant" },
+    { key: "date", label: "Date" },
+    { key: "status", label: "Statut" },
   ];
 
   const overdueColumns = [
-    { key: 'user', label: 'Utilisateur' },
-    { key: 'amount', label: 'Montant' },
-    { key: 'dueDate', label: 'Date d\'échéance' },
-    { key: 'status', label: 'Statut' },
+    { key: "user", label: "Utilisateur" },
+    { key: "amount", label: "Montant" },
+    { key: "dueDate", label: "Date d'échéance" },
+    { key: "status", label: "Statut" },
   ];
 
   const newMembersColumns = [
-    { key: 'name', label: 'Nom' },
-    { key: 'email', label: 'Email' },
-    { key: 'registrationDate', label: 'Date d\'inscription' },
-    { key: 'plan', label: 'Plan' },
+    { key: "name", label: "Nom" },
+    { key: "email", label: "Email" },
+    { key: "registrationDate", label: "Date d'inscription" },
+    { key: "plan", label: "Plan" },
   ];
 
   const formatPaymentsData = (payments: any[]) => {
-    return payments.map(p => ({
-      user: p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : 'N/A',
-      amount: p.montant ? `${p.montant} €` : 'N/A',
-      date: p.date_paiement || 'N/A',
-      status: p.statut || 'N/A',
+    return payments.map((p) => ({
+      user:
+        p.user_first_name && p.user_last_name
+          ? `${p.user_first_name} ${p.user_last_name}`
+          : "N/A",
+      amount: p.amount ? `${p.amount} €` : "N/A",
+      date: p.payment_date
+        ? new Date(p.payment_date).toLocaleDateString("fr-FR")
+        : "N/A",
+      status: p.status || "N/A",
     }));
   };
 
   const formatOverdueData = (overdue: any[]) => {
-    return overdue.map(p => ({
-      user: p.first_name && p.last_name 
-        ? `${p.first_name.charAt(0).toUpperCase()}${p.first_name.slice(1)} ${p.last_name.charAt(0).toUpperCase()}${p.last_name.slice(1)}`
-        : p.nom_utilisateur?.replace(/_/g, ' ') || p.utilisateur_id,
-      amount: `${p.montant} €`,
-      dueDate: p.date_echeance ? new Date(p.date_echeance).toLocaleDateString('fr-FR') : 'N/A',
-      status: p.statut === 'payé' ? '✅ Payé' : p.statut === 'échu' ? '❌ Échu' : '⏳ En attente'
+    return overdue.map((p) => ({
+      user:
+        p.user_first_name && p.user_last_name
+          ? `${p.user_first_name.charAt(0).toUpperCase()}${p.user_first_name.slice(1)} ${p.user_last_name.charAt(0).toUpperCase()}${p.user_last_name.slice(1)}`
+          : `User ${p.user_id}`,
+      amount: `${p.amount} €`,
+      dueDate: p.payment_date
+        ? new Date(p.payment_date).toLocaleDateString("fr-FR")
+        : "N/A",
+      status:
+        p.status === "completed"
+          ? "✅ Payé"
+          : p.status === "pending"
+            ? "⏳ En attente"
+            : "❌ Échu",
     }));
   };
 
   const formatNewMembersData = (members: any[]) => {
-    return members.map(m => ({
-      name: `${m.first_name} ${m.last_name}`,
-      email: m.email || 'N/A',
-      registrationDate: m.date_inscription ? new Date(m.date_inscription).toLocaleDateString() : 'N/A',
-      plan: m.plan_name || 'N/A',
+    return members.map((m) => ({
+      name: `${m.first_name || ""} ${m.last_name || ""}`.trim() || "N/A",
+      email: m.email || "N/A",
+      registrationDate: m.created_at
+        ? new Date(m.created_at).toLocaleDateString("fr-FR")
+        : "N/A",
+      plan: "N/A", // Plan info not included in newMembers query
     }));
   };
 
@@ -194,12 +285,14 @@ const DashboardPage: React.FC = () => {
 
       {/* Actions rapides */}
       <PageSection className="dashboard-actions">
-        <Flex gap={{ default: 'gapMd' }} wrap={{ default: 'wrap' }}>
+        <Flex gap={{ default: "gapMd" }} wrap={{ default: "wrap" }}>
           <FlexItem>
             <ActionButton
               icon={<PlusIcon />}
               variant="primary"
-              onClick={() => navigate('/pages/utilisateurs/ajouter-utilisateur')}
+              onClick={() =>
+                navigate("/pages/utilisateurs/ajouter-utilisateur")
+              }
             >
               Ajouter un membre
             </ActionButton>
@@ -208,7 +301,7 @@ const DashboardPage: React.FC = () => {
             <ActionButton
               icon={<CreditCardIcon />}
               variant="secondary"
-              onClick={() => navigate('/pages/paiements')}
+              onClick={() => navigate("/pages/paiements")}
             >
               Enregistrer un paiement
             </ActionButton>
@@ -217,7 +310,7 @@ const DashboardPage: React.FC = () => {
             <ActionButton
               icon={<EditIcon />}
               variant="tertiary"
-              onClick={() => navigate('/pages/plans/ajouter')}
+              onClick={() => navigate("/pages/plans/ajouter")}
             >
               Créer un plan
             </ActionButton>
@@ -242,7 +335,10 @@ const DashboardPage: React.FC = () => {
           <GridItem span={6}>
             <ChartCard
               title="Évolution des paiements"
-              data={paiementsParMois}
+              data={paiementsParMois.map((p: any) => ({
+                mois: p.month,
+                total: p.total,
+              }))}
               type="line"
               dataKey="total"
               xAxisKey="mois"
@@ -252,7 +348,10 @@ const DashboardPage: React.FC = () => {
           <GridItem span={6}>
             <ChartCard
               title="Répartition par plan"
-              data={membresParPlan}
+              data={membresParPlan.map((p) => ({
+                plan: p.plan_name,
+                value: p.count,
+              }))}
               type="pie"
               dataKey="value"
               nameKey="plan"
@@ -318,4 +417,3 @@ const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
-
