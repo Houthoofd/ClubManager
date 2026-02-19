@@ -108,3 +108,24 @@ mutation ChangePassword($userId: Int!, $currentPassword: String!, $newPassword: 
     token
   }
 }
+
+# ⚠️ TEMPORARILY COMMENTED OUT - Backend implementation pending
+# See: ClubManager/BACKEND_GRAPHQL_MIGRATION_NEEDED
+#
+# TODO: Uncomment when backend adds verifyEmail mutation
+
+# mutation VerifyEmail($token: String!, $userId: Int!) {
+#   verifyEmail(token: $token, userId: $userId) {
+#     success
+#     message
+#     token
+#     user {
+#       id
+#       first_name
+#       last_name
+#       email
+#       email_verified
+#       active
+#     }
+#   }
+# }

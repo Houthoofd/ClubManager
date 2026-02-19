@@ -53,6 +53,31 @@ export type BirthdayInfo = {
   user_id: Scalars['Int']['output'];
 };
 
+export type CheckCourseScheduleInput = {
+  courseType?: InputMaybe<Scalars['String']['input']>;
+  day: Scalars['String']['input'];
+  endTime: Scalars['String']['input'];
+  excludeOriginal?: InputMaybe<Scalars['Boolean']['input']>;
+  originalDay?: InputMaybe<Scalars['String']['input']>;
+  originalEndTime?: InputMaybe<Scalars['String']['input']>;
+  originalStartTime?: InputMaybe<Scalars['String']['input']>;
+  originalType?: InputMaybe<Scalars['String']['input']>;
+  startTime: Scalars['String']['input'];
+};
+
+export type ConfirmOrderPaymentInput = {
+  orderId: Scalars['Int']['input'];
+  paymentIntentId: Scalars['String']['input'];
+  paymentMethod: Scalars['String']['input'];
+  userId: Scalars['Int']['input'];
+};
+
+export type CourseCheckResult = {
+  __typename?: 'CourseCheckResult';
+  conflictingCourses?: Maybe<Array<RecurringCourses>>;
+  exists: Scalars['Boolean']['output'];
+};
+
 export type CreateInstructorInput = {
   active?: InputMaybe<Scalars['Boolean']['input']>;
   bio?: InputMaybe<Scalars['String']['input']>;
@@ -89,6 +114,14 @@ export type CreatePaymentInput = {
   stripe_payment_intent_id?: InputMaybe<Scalars['String']['input']>;
   subscription_id?: InputMaybe<Scalars['Int']['input']>;
   user_id: Scalars['Int']['input'];
+};
+
+export type CreatePaymentIntentForOrderInput = {
+  amount: Scalars['Float']['input'];
+  currency?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  orderId: Scalars['Int']['input'];
+  userId: Scalars['Int']['input'];
 };
 
 export type CreateProductInput = {
@@ -238,11 +271,13 @@ export type Mutation = {
   cancelEnrollment: MutationResult;
   cancelSubscription: MutationResult;
   changePassword: AuthResult;
+  confirmOrderPayment: OrderPaymentConfirmResult;
   createInstructor: Instructors;
   createMessageType: MessageTypes;
   createNotification: Notifications;
   createOrder: Orders;
   createPayment: Payments;
+  createPaymentIntentForOrder: PaymentIntentResult;
   createProduct: Products;
   createSession: Sessions;
   createSubscription: UserSubscriptions;
@@ -292,6 +327,11 @@ export type MutationChangePasswordArgs = {
 };
 
 
+export type MutationConfirmOrderPaymentArgs = {
+  input: ConfirmOrderPaymentInput;
+};
+
+
 export type MutationCreateInstructorArgs = {
   input: CreateInstructorInput;
 };
@@ -314,6 +354,11 @@ export type MutationCreateOrderArgs = {
 
 export type MutationCreatePaymentArgs = {
   input: CreatePaymentInput;
+};
+
+
+export type MutationCreatePaymentIntentForOrderArgs = {
+  input: CreatePaymentIntentForOrderInput;
 };
 
 
@@ -503,6 +548,14 @@ export type OrderItems = {
   stock_id?: Maybe<Scalars['Int']['output']>;
 };
 
+export type OrderPaymentConfirmResult = {
+  __typename?: 'OrderPaymentConfirmResult';
+  message: Scalars['String']['output'];
+  order?: Maybe<Orders>;
+  payment?: Maybe<Payments>;
+  success: Scalars['Boolean']['output'];
+};
+
 export type Orders = {
   __typename?: 'Orders';
   created_at?: Maybe<Scalars['String']['output']>;
@@ -517,7 +570,7 @@ export type Orders = {
 
 export type PasswordResetTokenValidation = {
   __typename?: 'PasswordResetTokenValidation';
-  expiresAt?: Maybe<Scalars['DateTime']['output']>;
+  expiresAt?: Maybe<Scalars['String']['output']>;
   userId?: Maybe<Scalars['Int']['output']>;
   valid: Scalars['Boolean']['output'];
 };
@@ -541,6 +594,15 @@ export type PaymentInfo = {
   user_first_name?: Maybe<Scalars['String']['output']>;
   user_id: Scalars['Int']['output'];
   user_last_name?: Maybe<Scalars['String']['output']>;
+};
+
+export type PaymentIntentResult = {
+  __typename?: 'PaymentIntentResult';
+  amount?: Maybe<Scalars['Float']['output']>;
+  clientSecret?: Maybe<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
+  paymentIntentId?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
 };
 
 export type PaymentResult = {
@@ -573,6 +635,12 @@ export type ProductCategories = {
   name: Scalars['String']['output'];
 };
 
+export type ProductCheckResult = {
+  __typename?: 'ProductCheckResult';
+  exists: Scalars['Boolean']['output'];
+  product?: Maybe<Products>;
+};
+
 export type ProductStocks = {
   __typename?: 'ProductStocks';
   id: Scalars['Int']['output'];
@@ -601,7 +669,10 @@ export type Query = {
   activePlans: Array<ActivePlanStats>;
   attendanceStats?: Maybe<AttendanceStats>;
   birthdays: Array<BirthdayInfo>;
+  checkCourseSchedule: CourseCheckResult;
   checkEmail: EmailCheckResult;
+  checkProductByName: ProductCheckResult;
+  checkProductByNameAndCategory: ProductCheckResult;
   gender?: Maybe<Genders>;
   genders: Array<Genders>;
   grade?: Maybe<Grades>;
@@ -659,8 +730,24 @@ export type QueryAttendanceStatsArgs = {
 };
 
 
+export type QueryCheckCourseScheduleArgs = {
+  input: CheckCourseScheduleInput;
+};
+
+
 export type QueryCheckEmailArgs = {
   email: Scalars['String']['input'];
+};
+
+
+export type QueryCheckProductByNameArgs = {
+  name: Scalars['String']['input'];
+};
+
+
+export type QueryCheckProductByNameAndCategoryArgs = {
+  categoryId: Scalars['Int']['input'];
+  name: Scalars['String']['input'];
 };
 
 
@@ -814,6 +901,16 @@ export type QueryUsersArgs = {
 
 export type QueryVerifyResetTokenArgs = {
   token: Scalars['String']['input'];
+};
+
+export type RecurringCourses = {
+  __typename?: 'RecurringCourses';
+  course_type: Scalars['String']['output'];
+  day: Scalars['String']['output'];
+  end_time: Scalars['String']['output'];
+  id: Scalars['Int']['output'];
+  instructor_id?: Maybe<Scalars['Int']['output']>;
+  start_time: Scalars['String']['output'];
 };
 
 export type RegisterInput = {
@@ -1411,6 +1508,20 @@ export type GetStockSizesQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetStockSizesQuery = { __typename?: 'Query', stockSizes: Array<{ __typename?: 'StockSizes', id: number, name: string, code?: string | null }> };
 
+export type CreatePaymentIntentForOrderMutationVariables = Exact<{
+  input: CreatePaymentIntentForOrderInput;
+}>;
+
+
+export type CreatePaymentIntentForOrderMutation = { __typename?: 'Mutation', createPaymentIntentForOrder: { __typename?: 'PaymentIntentResult', success: boolean, message: string, clientSecret?: string | null, paymentIntentId?: string | null, amount?: number | null } };
+
+export type ConfirmOrderPaymentMutationVariables = Exact<{
+  input: ConfirmOrderPaymentInput;
+}>;
+
+
+export type ConfirmOrderPaymentMutation = { __typename?: 'Mutation', confirmOrderPayment: { __typename?: 'OrderPaymentConfirmResult', success: boolean, message: string, payment?: { __typename?: 'Payments', id: number, user_id: number, order_id?: number | null, amount: number, payment_method: string, status: string, payment_date?: string | null, stripe_payment_intent_id?: string | null } | null, order?: { __typename?: 'Orders', id: number, user_id: number, total_amount: number, status: string, updated_at?: string | null } | null } };
+
 export type AttendanceStatsQueryVariables = Exact<{
   userId: Scalars['Int']['input'];
 }>;
@@ -1604,6 +1715,28 @@ export type GetUserSubscriptionQueryVariables = Exact<{
 
 
 export type GetUserSubscriptionQuery = { __typename?: 'Query', userSubscription?: { __typename?: 'UserSubscriptions', id: number, user_id: number, subscription_id: number, start_date: string, end_date: string, active?: boolean | null, created_at?: string | null, updated_at?: string | null, subscription?: { __typename?: 'SubscriptionPlans', id: number, subscription_name: string, price: number, duration_months: number } | null } | null };
+
+export type CheckProductByNameAndCategoryQueryVariables = Exact<{
+  name: Scalars['String']['input'];
+  categoryId: Scalars['Int']['input'];
+}>;
+
+
+export type CheckProductByNameAndCategoryQuery = { __typename?: 'Query', checkProductByNameAndCategory: { __typename?: 'ProductCheckResult', exists: boolean, product?: { __typename?: 'Products', id: number, name: string, category_id?: number | null, price: number } | null } };
+
+export type CheckProductByNameQueryVariables = Exact<{
+  name: Scalars['String']['input'];
+}>;
+
+
+export type CheckProductByNameQuery = { __typename?: 'Query', checkProductByName: { __typename?: 'ProductCheckResult', exists: boolean, product?: { __typename?: 'Products', id: number, name: string, category_id?: number | null, price: number } | null } };
+
+export type CheckCourseScheduleQueryVariables = Exact<{
+  input: CheckCourseScheduleInput;
+}>;
+
+
+export type CheckCourseScheduleQuery = { __typename?: 'Query', checkCourseSchedule: { __typename?: 'CourseCheckResult', exists: boolean, conflictingCourses?: Array<{ __typename?: 'RecurringCourses', id: number, day: string, start_time: string, end_time: string, course_type: string, instructor_id?: number | null }> | null } };
 
 
 export const CheckEmailDocument = gql`
@@ -3873,6 +4006,94 @@ export type GetStockSizesQueryHookResult = ReturnType<typeof useGetStockSizesQue
 export type GetStockSizesLazyQueryHookResult = ReturnType<typeof useGetStockSizesLazyQuery>;
 export type GetStockSizesSuspenseQueryHookResult = ReturnType<typeof useGetStockSizesSuspenseQuery>;
 export type GetStockSizesQueryResult = Apollo.QueryResult<GetStockSizesQuery, GetStockSizesQueryVariables>;
+export const CreatePaymentIntentForOrderDocument = gql`
+    mutation CreatePaymentIntentForOrder($input: CreatePaymentIntentForOrderInput!) {
+  createPaymentIntentForOrder(input: $input) {
+    success
+    message
+    clientSecret
+    paymentIntentId
+    amount
+  }
+}
+    `;
+export type CreatePaymentIntentForOrderMutationFn = Apollo.MutationFunction<CreatePaymentIntentForOrderMutation, CreatePaymentIntentForOrderMutationVariables>;
+
+/**
+ * __useCreatePaymentIntentForOrderMutation__
+ *
+ * To run a mutation, you first call `useCreatePaymentIntentForOrderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePaymentIntentForOrderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPaymentIntentForOrderMutation, { data, loading, error }] = useCreatePaymentIntentForOrderMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreatePaymentIntentForOrderMutation(baseOptions?: Apollo.MutationHookOptions<CreatePaymentIntentForOrderMutation, CreatePaymentIntentForOrderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreatePaymentIntentForOrderMutation, CreatePaymentIntentForOrderMutationVariables>(CreatePaymentIntentForOrderDocument, options);
+      }
+export type CreatePaymentIntentForOrderMutationHookResult = ReturnType<typeof useCreatePaymentIntentForOrderMutation>;
+export type CreatePaymentIntentForOrderMutationResult = Apollo.MutationResult<CreatePaymentIntentForOrderMutation>;
+export type CreatePaymentIntentForOrderMutationOptions = Apollo.BaseMutationOptions<CreatePaymentIntentForOrderMutation, CreatePaymentIntentForOrderMutationVariables>;
+export const ConfirmOrderPaymentDocument = gql`
+    mutation ConfirmOrderPayment($input: ConfirmOrderPaymentInput!) {
+  confirmOrderPayment(input: $input) {
+    success
+    message
+    payment {
+      id
+      user_id
+      order_id
+      amount
+      payment_method
+      status
+      payment_date
+      stripe_payment_intent_id
+    }
+    order {
+      id
+      user_id
+      total_amount
+      status
+      updated_at
+    }
+  }
+}
+    `;
+export type ConfirmOrderPaymentMutationFn = Apollo.MutationFunction<ConfirmOrderPaymentMutation, ConfirmOrderPaymentMutationVariables>;
+
+/**
+ * __useConfirmOrderPaymentMutation__
+ *
+ * To run a mutation, you first call `useConfirmOrderPaymentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConfirmOrderPaymentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [confirmOrderPaymentMutation, { data, loading, error }] = useConfirmOrderPaymentMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useConfirmOrderPaymentMutation(baseOptions?: Apollo.MutationHookOptions<ConfirmOrderPaymentMutation, ConfirmOrderPaymentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ConfirmOrderPaymentMutation, ConfirmOrderPaymentMutationVariables>(ConfirmOrderPaymentDocument, options);
+      }
+export type ConfirmOrderPaymentMutationHookResult = ReturnType<typeof useConfirmOrderPaymentMutation>;
+export type ConfirmOrderPaymentMutationResult = Apollo.MutationResult<ConfirmOrderPaymentMutation>;
+export type ConfirmOrderPaymentMutationOptions = Apollo.BaseMutationOptions<ConfirmOrderPaymentMutation, ConfirmOrderPaymentMutationVariables>;
 export const AttendanceStatsDocument = gql`
     query AttendanceStats($userId: Int!) {
   attendanceStats(userId: $userId) {
@@ -5355,3 +5576,153 @@ export type GetUserSubscriptionHookResult = ReturnType<typeof useGetUserSubscrip
 export type GetUserSubscriptionLazyQueryHookResult = ReturnType<typeof useGetUserSubscriptionLazyQuery>;
 export type GetUserSubscriptionSuspenseQueryHookResult = ReturnType<typeof useGetUserSubscriptionSuspenseQuery>;
 export type GetUserSubscriptionQueryResult = Apollo.QueryResult<GetUserSubscriptionQuery, GetUserSubscriptionQueryVariables>;
+export const CheckProductByNameAndCategoryDocument = gql`
+    query CheckProductByNameAndCategory($name: String!, $categoryId: Int!) {
+  checkProductByNameAndCategory(name: $name, categoryId: $categoryId) {
+    exists
+    product {
+      id
+      name
+      category_id
+      price
+    }
+  }
+}
+    `;
+
+/**
+ * __useCheckProductByNameAndCategoryQuery__
+ *
+ * To run a query within a React component, call `useCheckProductByNameAndCategoryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCheckProductByNameAndCategoryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCheckProductByNameAndCategoryQuery({
+ *   variables: {
+ *      name: // value for 'name'
+ *      categoryId: // value for 'categoryId'
+ *   },
+ * });
+ */
+export function useCheckProductByNameAndCategoryQuery(baseOptions: Apollo.QueryHookOptions<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables> & ({ variables: CheckProductByNameAndCategoryQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>(CheckProductByNameAndCategoryDocument, options);
+      }
+export function useCheckProductByNameAndCategoryLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>(CheckProductByNameAndCategoryDocument, options);
+        }
+// @ts-ignore
+export function useCheckProductByNameAndCategorySuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>): Apollo.UseSuspenseQueryResult<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>;
+export function useCheckProductByNameAndCategorySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>): Apollo.UseSuspenseQueryResult<CheckProductByNameAndCategoryQuery | undefined, CheckProductByNameAndCategoryQueryVariables>;
+export function useCheckProductByNameAndCategorySuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>(CheckProductByNameAndCategoryDocument, options);
+        }
+export type CheckProductByNameAndCategoryQueryHookResult = ReturnType<typeof useCheckProductByNameAndCategoryQuery>;
+export type CheckProductByNameAndCategoryLazyQueryHookResult = ReturnType<typeof useCheckProductByNameAndCategoryLazyQuery>;
+export type CheckProductByNameAndCategorySuspenseQueryHookResult = ReturnType<typeof useCheckProductByNameAndCategorySuspenseQuery>;
+export type CheckProductByNameAndCategoryQueryResult = Apollo.QueryResult<CheckProductByNameAndCategoryQuery, CheckProductByNameAndCategoryQueryVariables>;
+export const CheckProductByNameDocument = gql`
+    query CheckProductByName($name: String!) {
+  checkProductByName(name: $name) {
+    exists
+    product {
+      id
+      name
+      category_id
+      price
+    }
+  }
+}
+    `;
+
+/**
+ * __useCheckProductByNameQuery__
+ *
+ * To run a query within a React component, call `useCheckProductByNameQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCheckProductByNameQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCheckProductByNameQuery({
+ *   variables: {
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useCheckProductByNameQuery(baseOptions: Apollo.QueryHookOptions<CheckProductByNameQuery, CheckProductByNameQueryVariables> & ({ variables: CheckProductByNameQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CheckProductByNameQuery, CheckProductByNameQueryVariables>(CheckProductByNameDocument, options);
+      }
+export function useCheckProductByNameLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CheckProductByNameQuery, CheckProductByNameQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CheckProductByNameQuery, CheckProductByNameQueryVariables>(CheckProductByNameDocument, options);
+        }
+// @ts-ignore
+export function useCheckProductByNameSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CheckProductByNameQuery, CheckProductByNameQueryVariables>): Apollo.UseSuspenseQueryResult<CheckProductByNameQuery, CheckProductByNameQueryVariables>;
+export function useCheckProductByNameSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CheckProductByNameQuery, CheckProductByNameQueryVariables>): Apollo.UseSuspenseQueryResult<CheckProductByNameQuery | undefined, CheckProductByNameQueryVariables>;
+export function useCheckProductByNameSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CheckProductByNameQuery, CheckProductByNameQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CheckProductByNameQuery, CheckProductByNameQueryVariables>(CheckProductByNameDocument, options);
+        }
+export type CheckProductByNameQueryHookResult = ReturnType<typeof useCheckProductByNameQuery>;
+export type CheckProductByNameLazyQueryHookResult = ReturnType<typeof useCheckProductByNameLazyQuery>;
+export type CheckProductByNameSuspenseQueryHookResult = ReturnType<typeof useCheckProductByNameSuspenseQuery>;
+export type CheckProductByNameQueryResult = Apollo.QueryResult<CheckProductByNameQuery, CheckProductByNameQueryVariables>;
+export const CheckCourseScheduleDocument = gql`
+    query CheckCourseSchedule($input: CheckCourseScheduleInput!) {
+  checkCourseSchedule(input: $input) {
+    exists
+    conflictingCourses {
+      id
+      day
+      start_time
+      end_time
+      course_type
+      instructor_id
+    }
+  }
+}
+    `;
+
+/**
+ * __useCheckCourseScheduleQuery__
+ *
+ * To run a query within a React component, call `useCheckCourseScheduleQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCheckCourseScheduleQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCheckCourseScheduleQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCheckCourseScheduleQuery(baseOptions: Apollo.QueryHookOptions<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables> & ({ variables: CheckCourseScheduleQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>(CheckCourseScheduleDocument, options);
+      }
+export function useCheckCourseScheduleLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>(CheckCourseScheduleDocument, options);
+        }
+// @ts-ignore
+export function useCheckCourseScheduleSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>): Apollo.UseSuspenseQueryResult<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>;
+export function useCheckCourseScheduleSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>): Apollo.UseSuspenseQueryResult<CheckCourseScheduleQuery | undefined, CheckCourseScheduleQueryVariables>;
+export function useCheckCourseScheduleSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>(CheckCourseScheduleDocument, options);
+        }
+export type CheckCourseScheduleQueryHookResult = ReturnType<typeof useCheckCourseScheduleQuery>;
+export type CheckCourseScheduleLazyQueryHookResult = ReturnType<typeof useCheckCourseScheduleLazyQuery>;
+export type CheckCourseScheduleSuspenseQueryHookResult = ReturnType<typeof useCheckCourseScheduleSuspenseQuery>;
+export type CheckCourseScheduleQueryResult = Apollo.QueryResult<CheckCourseScheduleQuery, CheckCourseScheduleQueryVariables>;

@@ -454,6 +454,11 @@ type Query {
   checkEmail(email: String!): EmailCheckResult!
   verifyResetToken(token: String!): PasswordResetTokenValidation
 
+  # Verification
+  checkProductByNameAndCategory(name: String!, categoryId: Int!): ProductCheckResult!
+  checkProductByName(name: String!): ProductCheckResult!
+  checkCourseSchedule(input: CheckCourseScheduleInput!): CourseCheckResult!
+
   # Messages
   messageTypes: [MessageTypes!]!
   messagesReceived(userId: Int!): [MessageRecipients!]!
@@ -556,6 +561,10 @@ type Mutation {
   # Notifications
   createNotification(input: CreateNotificationInput!): Notifications!
   markNotificationAsRead(notificationId: Int!): Notifications!
+
+  # Payments (Stripe)
+  createPaymentIntentForOrder(input: CreatePaymentIntentForOrderInput!): PaymentIntentResult!
+  confirmOrderPayment(input: ConfirmOrderPaymentInput!): OrderPaymentConfirmResult!
 
   # Upload
   uploadFiles(files: [Upload!]!): UploadResponse!
@@ -739,5 +748,74 @@ type EmailCheckResult {
 type PasswordResetTokenValidation {
   valid: Boolean!
   userId: Int
-  expiresAt: DateTime
+  expiresAt: String
+}
+
+# ============================================================================
+# Verification Types
+# ============================================================================
+
+type ProductCheckResult {
+  exists: Boolean!
+  product: Products
+}
+
+type CourseCheckResult {
+  exists: Boolean!
+  conflictingCourses: [RecurringCourses!]
+}
+
+input CheckCourseScheduleInput {
+  day: String!
+  startTime: String!
+  endTime: String!
+  courseType: String
+  excludeOriginal: Boolean
+  originalDay: String
+  originalType: String
+  originalStartTime: String
+  originalEndTime: String
+}
+
+type RecurringCourses {
+  id: Int!
+  day: String!
+  start_time: String!
+  end_time: String!
+  course_type: String!
+  instructor_id: Int
+}
+
+# ============================================================================
+# Payment Intent Types
+# ============================================================================
+
+type PaymentIntentResult {
+  success: Boolean!
+  message: String!
+  clientSecret: String
+  paymentIntentId: String
+  amount: Float
+}
+
+type OrderPaymentConfirmResult {
+  success: Boolean!
+  message: String!
+  payment: Payments
+  order: Orders
+}
+
+input CreatePaymentIntentForOrderInput {
+  orderId: Int!
+  userId: Int!
+  amount: Float!
+  currency: String
+  metadata: JSON
+}
+
+input ConfirmOrderPaymentInput {
+  orderId: Int!
+  userId: Int!
+  paymentIntentId: String!
+  paymentMethod: String!
 }

@@ -1,0 +1,353 @@
+================================================================================
+BACKEND GRAPHQL MIGRATION NEEDED - Complete TODO List
+================================================================================
+
+OVERVIEW
+--------
+This document lists all backend GraphQL schema additions and resolvers that
+need to be implemented to complete the frontend REST → GraphQL migration.
+
+The frontend has already been prepared with GraphQL queries/mutations, but the
+backend schema doesn't support them yet.
+
+================================================================================
+PRIORITY 1 - VERIFICATION MODULE (Required for product/course forms)
+================================================================================
+
+STATUS: ✅ Partially implemented (typeDefs + resolvers created)
+
+Location: ClubManager/api/src/routes/verification/
+
+Files Created:
+  ✅ core/typedefs.ts - GraphQL type definitions
+  ✅ core/resolvers/index.ts - Resolver implementations
+  ✅ index.ts - Module exports
+
+TODO Backend Actions:
+  1. Export verificationTypeDefs from packages/types (if using centralized types)
+  2. Verify Prisma schema has required fields:
+     - products.name (string, for case-insensitive search)
+     - products.category_id (int)
+     - recurring_courses.day_of_week (string)
+     - recurring_courses.start_time (string)
+     - recurring_courses.end_time (string)
+     - recurring_courses.course_type (string)
+     - recurring_courses.instructor_id (int)
+  3. Test resolvers with actual Prisma queries
+  4. Add to main schema.ts (already referenced but not yet exported)
+
+Queries Implemented:
+  ✅ checkProductByNameAndCategory(name: String!, categoryId: Int!): ProductCheckResult!
+  ✅ checkProductByName(name: String!): ProductCheckResult!
+  ✅ checkCourseSchedule(input: CheckCourseScheduleInput!): CourseCheckResult!
+
+Frontend Ready:
+  ✅ graphql/queries/verification.graphql created
+  ⚠️  Hooks still use REST until backend is deployed
+
+================================================================================
+PRIORITY 2 - AUTH MODULE (Email verification & password reset)
+================================================================================
+
+STATUS: ⚠️ Partially exists - needs additional mutations
+
+Location: ClubManager/api/src/routes/users/core/resolvers/auth.resolvers.ts
+
+Mutations Needed:
+  ⚠️  verifyEmail(token: String!, userId: Int!): AuthResult!
+      Currently: verifyEmailToken(token: String!) exists
+      Action: Add userId parameter or create new mutation
+
+Frontend GraphQL Query Added:
+  mutation VerifyEmail($token: String!, $userId: Int!) {
+    verifyEmail(token: $token, userId: $userId) {
+      success
+      message
+      token
+      user { ... }
+    }
+  }
+
+Current Frontend Usage:
+  - pages/verifyemail.tsx - Uses REST GET auth/confirm-email
+  - pages/auth/ForgotPassword.tsx - Uses REST POST auth/forgot-password
+  - pages/auth/ResetPassword.tsx - Uses REST GET/POST auth/verify-token & auth/reset-password
+
+Backend TODO:
+  1. Add verifyEmail mutation to auth.resolvers.ts
+  2. Update authTypeDefs to include verifyEmail mutation signature
+  3. Ensure AuthResult type includes all required fields
+
+Recommendation: Keep auth flow as REST (simpler for email links)
+Alternative: Implement GraphQL mutations if consistency is preferred
+
+================================================================================
+PRIORITY 3 - PAYMENT/STRIPE MODULE (Payment intents & confirmations)
+================================================================================
+
+STATUS: ❌ Not implemented in GraphQL
+
+Location: Would need ClubManager/api/src/routes/shop/ or payments/
+
+Mutations Needed:
+
+  1. createPaymentIntentForOrder(input: CreatePaymentIntentForOrderInput!): PaymentIntentResult!
+
+     Input Type Needed:
+       input CreatePaymentIntentForOrderInput {
+         orderId: Int!
+         userId: Int!
+         amount: Float!
+         currency: String
+         metadata: JSON
+       }
+
+     Result Type Needed:
+       type PaymentIntentResult {
+         success: Boolean!
+         message: String!
+         clientSecret: String
+         paymentIntentId: String
+         amount: Float
+       }
+
+  2. confirmOrderPayment(input: ConfirmOrderPaymentInput!): OrderPaymentConfirmResult!
+
+     Input Type Needed:
+       input ConfirmOrderPaymentInput {
+         orderId: Int!
+         userId: Int!
+         paymentIntentId: String!
+         paymentMethod: String!
+       }
+
+     Result Type Needed:
+       type OrderPaymentConfirmResult {
+         success: Boolean!
+         message: String!
+         payment: Payments
+         order: Orders
+       }
+
+Current Frontend Usage:
+  - pages/paiement/paiement.tsx - POST paiements/stripe/create-payment-intent-commande
+  - pages/paiement/paiement.tsx - POST paiements/confirmation/confirm-payment-commande
+  - components/common/panel/rightSidePanel.tsx - POST paiements/stripe/create-payment-intent-commande
+
+Backend TODO:
+  1. Create PaymentIntentResult and OrderPaymentConfirmResult types in schema
+  2. Create CreatePaymentIntentForOrderInput and ConfirmOrderPaymentInput input types
+  3. Implement resolvers in shop/core/resolvers or create payments/core/resolvers
+  4. Integrate with existing Stripe service logic
+  5. Add mutations to shopTypeDefs or create paymentTypeDefs
+
+Frontend GraphQL Queries Added:
+  ✅ mutation CreatePaymentIntentForOrder in shop.graphql
+  ✅ mutation ConfirmOrderPayment in shop.graphql
+
+Recommendation:
+  - Keep Stripe webhooks as REST (required by Stripe)
+  - Migrate payment intents to GraphQL for consistency
+  - Use existing Stripe service, wrap in GraphQL resolvers
+
+================================================================================
+PRIORITY 4 - MESSAGES MODULE (Payment reminders & unread count)
+================================================================================
+
+STATUS: ⚠️ Partially implemented - needs SendPaymentReminder
+
+Location: ClubManager/api/src/routes/communications/core/resolvers/
+
+Mutations Needed:
+
+  1. sendPaymentReminder(input: SendPaymentReminderInput!): PaymentReminderResult!
+
+     Input Type Needed:
+       input SendPaymentReminderInput {
+         userIds: [Int!]!
+         messageTypeId: Int
+         templateId: Int
+         customMessage: String
+       }
+
+     Result Type Needed:
+       type PaymentReminderResult {
+         success: Boolean!
+         message: String!
+         sentCount: Int
+       }
+
+Queries Already Exist:
+  ✅ unreadMessagesCount(userId: Int!): UnreadCountResult
+  ✅ messagesReceived(userId: Int!): [MessageRecipient]
+
+Current Frontend Usage:
+  - components/utilisateurs/EcheancesPaiement.tsx - POST messages/envoyer-rappel
+  - components/layout/Header.tsx - GET messages/non-lus/{id}
+
+Backend TODO:
+  1. Add SendPaymentReminderInput to messagesTypeDefs
+  2. Add PaymentReminderResult type
+  3. Implement sendPaymentReminder mutation resolver
+  4. Reuse existing message sending service logic
+
+Frontend GraphQL Query Added:
+  ✅ mutation SendPaymentReminder in messages.graphql
+
+================================================================================
+PRIORITY 5 - UPLOAD MODULE (File uploads)
+================================================================================
+
+STATUS: ⚠️ Keep as REST (Recommended)
+
+Current Frontend Usage:
+  - hooks/utils/useUpload.ts - POST upload (multipart/form-data)
+
+Why Keep REST:
+  - GraphQL file uploads require additional libraries (apollo-upload-client)
+  - REST multipart/form-data is simpler and more standard
+  - Smaller files, less complexity
+  - Already working well
+
+Alternative (if GraphQL required):
+  1. Install apollo-upload-server on backend
+  2. Add Upload scalar type
+  3. Create mutation uploadFiles(files: [Upload!]!): UploadResult!
+  4. Install apollo-upload-client on frontend
+
+Recommendation: ❌ DO NOT MIGRATE - Keep REST for file uploads
+
+================================================================================
+PRIORITY 6 - COMPONENT DIRECT FETCH CALLS (Refactoring needed)
+================================================================================
+
+These components bypass hooks and call REST directly:
+
+1. components/common/panel/rightSidePanel.tsx
+   - GET magasin/tailles → Should use useGetStockSizesQuery() (already available)
+   - POST paiements/stripe/... → Migrate when PRIORITY 3 done
+
+2. components/layout/Header.tsx
+   - GET messages/non-lus/{id} → Should use useUnreadMessagesCountQuery() (already available)
+
+3. components/utilisateurs/EcheancesPaiement.tsx
+   - POST messages/envoyer-rappel → Migrate when PRIORITY 4 done
+
+Action Required: Refactor components to use hooks instead of direct fetch()
+
+================================================================================
+IMPLEMENTATION CHECKLIST
+================================================================================
+
+PHASE 1 - Verification (High Priority)
+  [ ] 1. Export verificationTypeDefs from main schema
+  [ ] 2. Test verification resolvers with Prisma
+  [ ] 3. Verify all Prisma schema fields exist
+  [ ] 4. Deploy and test verification queries
+  [ ] 5. Update frontend hooks to use GraphQL
+
+PHASE 2 - Messages & Components
+  [ ] 1. Add SendPaymentReminderInput and PaymentReminderResult types
+  [ ] 2. Implement sendPaymentReminder mutation
+  [ ] 3. Refactor rightSidePanel.tsx to use useGetStockSizesQuery()
+  [ ] 4. Refactor Header.tsx to use useUnreadMessagesCountQuery()
+  [ ] 5. Update EcheancesPaiement.tsx to use sendPaymentReminder mutation
+
+PHASE 3 - Payments (Medium Priority)
+  [ ] 1. Create payment intent types and inputs
+  [ ] 2. Implement createPaymentIntentForOrder mutation
+  [ ] 3. Implement confirmOrderPayment mutation
+  [ ] 4. Test Stripe integration with GraphQL
+  [ ] 5. Migrate payment pages to use GraphQL
+
+PHASE 4 - Auth (Optional - can stay REST)
+  [ ] 1. Decide: Keep REST or migrate to GraphQL
+  [ ] 2. If migrating: Add verifyEmail mutation
+  [ ] 3. Update email verification pages
+  [ ] 4. Test email verification flow
+
+PHASE 5 - Testing & Cleanup
+  [ ] 1. Run full integration tests
+  [ ] 2. Remove unused REST endpoints
+  [ ] 3. Remove React Query if no longer used
+  [ ] 4. Update API documentation
+  [ ] 5. Clean up apiUrl() calls that are no longer needed
+
+================================================================================
+CODEGEN ERRORS TO FIX
+================================================================================
+
+When running: npm run codegen
+
+Current Errors (11 total):
+  1. verifyEmail mutation not in schema
+  2. SendPaymentReminderInput type missing
+  3. sendPaymentReminder mutation not in schema
+  4. CreatePaymentIntentForOrderInput type missing
+  5. createPaymentIntentForOrder mutation not in schema
+  6. ConfirmOrderPaymentInput type missing
+  7. confirmOrderPayment mutation not in schema
+  8. checkProductByNameAndCategory query not in schema
+  9. checkProductByName query not in schema
+  10. CheckCourseScheduleInput type missing
+  11. checkCourseSchedule query not in schema
+
+Once backend implements the types/mutations above, codegen will succeed.
+
+================================================================================
+TESTING STRATEGY
+================================================================================
+
+For Each Module:
+  1. Add types to schema
+  2. Implement resolvers
+  3. Run: npm run codegen (frontend)
+  4. Test with GraphQL Playground
+  5. Update frontend hooks
+  6. Test in actual UI
+  7. Verify cache invalidation works
+  8. Check error handling
+
+GraphQL Playground Testing URLs:
+  - Products: Test checkProductByName, checkProductByNameAndCategory
+  - Courses: Test checkCourseSchedule with various time conflicts
+  - Payments: Test payment intent creation and confirmation flow
+  - Messages: Test sendPaymentReminder with multiple recipients
+
+================================================================================
+NOTES & RECOMMENDATIONS
+================================================================================
+
+✅ COMPLETED:
+  - All shop hooks migrated to GraphQL (products, categories, sizes, orders)
+  - checkEmail verification migrated to GraphQL
+  - Verification module structure created (typedefs + resolvers)
+  - Frontend GraphQL queries prepared for all needed operations
+
+⚠️  IN PROGRESS:
+  - Backend implementation of verification resolvers
+  - Payment/Stripe GraphQL integration
+  - Message reminder GraphQL mutation
+
+❌ NOT STARTED:
+  - Auth flow GraphQL migration (optional)
+  - Upload GraphQL migration (not recommended)
+
+TIMELINE ESTIMATE:
+  - Phase 1 (Verification): 2-4 hours
+  - Phase 2 (Messages): 2-3 hours
+  - Phase 3 (Payments): 4-6 hours (Stripe integration complex)
+  - Phase 4 (Auth): 2-3 hours (if doing it)
+  - Phase 5 (Testing): 3-5 hours
+
+  Total: 13-21 hours for complete migration
+
+RISK AREAS:
+  - Stripe integration with GraphQL (webhooks must stay REST)
+  - Cache invalidation between REST and GraphQL during transition
+  - Breaking changes if schema types don't match Prisma exactly
+  - Email verification flow if migrated to GraphQL
+
+================================================================================
+END OF MIGRATION PLAN
+================================================================================

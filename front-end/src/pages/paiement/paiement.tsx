@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Page,
   PageSection,
@@ -14,25 +14,33 @@ import {
   Spinner,
   Bullseye,
   Modal,
-  ModalVariant
-} from '@patternfly/react-core';
-import { CreditCardIcon, CheckCircleIcon, ExclamationTriangleIcon, ArrowLeftIcon, ShieldAltIcon } from '@patternfly/react-icons';
-import { PageHeader } from '../../components/common/PageHeader';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import PaymentForm from '../../components/form/PaymentForm';
-import { apiUrl } from '../../pages/apiUrl';
+  ModalVariant,
+} from "@patternfly/react-core";
+import {
+  CreditCardIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ArrowLeftIcon,
+  ShieldAltIcon,
+} from "@patternfly/react-icons";
+import { PageHeader } from "../../components/common/PageHeader";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import PaymentForm from "../../components/form/PaymentForm";
+import { apiUrl } from "../../utils/apiUrl";
 
 // AJOUTÉ: Import des hooks de paiement
-import { 
+import {
   useEcheanceDetails,
   useCreatePaymentIntentSecurise,
   useConfirmPayment,
-  obtenirIdUtilisateur
-} from '../../hooks/usePaiements';
+  obtenirIdUtilisateur,
+} from "../../hooks/usePaiements";
 
 // Charger Stripe avec votre clé publique
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_...');
+const stripePromise = loadStripe(
+  import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_test_...",
+);
 
 const PaiementPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -42,11 +50,13 @@ const PaiementPage: React.FC = () => {
   // États locaux
   const [loading, setLoading] = useState(true);
   const [commandeData, setCommandeData] = useState<any>(null);
-  const [error, setError] = useState<string>('');
-  const [clientSecret, setClientSecret] = useState<string>('');
+  const [error, setError] = useState<string>("");
+  const [clientSecret, setClientSecret] = useState<string>("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
-  const [paymentType, setPaymentType] = useState<'echeance' | 'commande'>('echeance');
+  const [paymentIntentId, setPaymentIntentId] = useState<string>("");
+  const [paymentType, setPaymentType] = useState<"echeance" | "commande">(
+    "echeance",
+  );
   const [securityError, setSecurityError] = useState<string | null>(null);
   const [isVerifyingAccess, setIsVerifyingAccess] = useState(true);
   const [userIdMismatch, setUserIdMismatch] = useState<boolean>(false);
@@ -61,10 +71,10 @@ const PaiementPage: React.FC = () => {
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
 
   // Paramètres URL (pas des hooks, juste des getters)
-  const echeanceId = searchParams.get('echeance');
-  const commandeId = searchParams.get('commande');
-  const userId = searchParams.get('userId') || searchParams.get('user');
-  const token = searchParams.get('token');
+  const echeanceId = searchParams.get("echeance");
+  const commandeId = searchParams.get("commande");
+  const userId = searchParams.get("userId") || searchParams.get("user");
+  const token = searchParams.get("token");
 
   // Conversions (calculs simples)
   const userIdNumber = userId ? parseInt(userId) : null;
@@ -75,16 +85,16 @@ const PaiementPage: React.FC = () => {
     data: echeanceData,
     isLoading: echeanceLoading,
     error: echeanceError,
-    isError: echeanceIsError
+    isError: echeanceIsError,
   } = useEcheanceDetails(
-    echeanceId && paymentType === 'echeance' ? echeanceId : null,
-    userIdNumber
+    echeanceId && paymentType === "echeance" ? echeanceId : null,
+    userIdNumber,
   );
 
   const createPaymentIntentEcheance = useCreatePaymentIntentSecurise(
-    echeanceId && paymentType === 'echeance' ? echeanceId : '',
+    echeanceId && paymentType === "echeance" ? echeanceId : "",
     echeanceData?.montant || 0,
-    userIdNumber || 0
+    userIdNumber || 0,
   );
 
   const confirmPaymentMutation = useConfirmPayment();
@@ -98,21 +108,21 @@ const PaiementPage: React.FC = () => {
   // ====================== TOUS LES useEffect ======================
   // 1. Détection du type de paiement
   useEffect(() => {
-    console.log('🎯 [PaiementPage] Détection type de paiement:', {
+    console.log("🎯 [PaiementPage] Détection type de paiement:", {
       commandeId,
-      echeanceId
+      echeanceId,
     });
 
-    if (commandeId && commandeId !== 'null' && !echeanceId) {
-      setPaymentType('commande');
-    } else if (echeanceId && echeanceId !== 'null' && !commandeId) {
-      setPaymentType('echeance');
-    } else if (commandeId && commandeId !== 'null') {
-      setPaymentType('commande');
-    } else if (echeanceId && echeanceId !== 'null') {
-      setPaymentType('echeance');
+    if (commandeId && commandeId !== "null" && !echeanceId) {
+      setPaymentType("commande");
+    } else if (echeanceId && echeanceId !== "null" && !commandeId) {
+      setPaymentType("echeance");
+    } else if (commandeId && commandeId !== "null") {
+      setPaymentType("commande");
+    } else if (echeanceId && echeanceId !== "null") {
+      setPaymentType("echeance");
     } else {
-      setPaymentType('echeance');
+      setPaymentType("echeance");
     }
   }, [commandeId, echeanceId]);
 
@@ -124,9 +134,9 @@ const PaiementPage: React.FC = () => {
         setConnectedUserId(userIdFromSession);
 
         if (!userIdFromSession) {
-          setSecurityError('Session expirée. Veuillez vous reconnecter.');
+          setSecurityError("Session expirée. Veuillez vous reconnecter.");
           setLoading(false);
-          setTimeout(() => navigate('/pages/connexion'), 2000);
+          setTimeout(() => navigate("/pages/connexion"), 2000);
           return;
         }
 
@@ -139,7 +149,7 @@ const PaiementPage: React.FC = () => {
               userConnected: userIdFromSession,
               userTarget: userIdFromUrl,
               echeanceId: echeanceId || undefined,
-              commandeId: commandeId || undefined
+              commandeId: commandeId || undefined,
             });
             setShowSecurityModal(true);
             setUserIdMismatch(true);
@@ -148,8 +158,10 @@ const PaiementPage: React.FC = () => {
         }
       } catch (error) {
         setLoading(false);
-        setSecurityError('Erreur de vérification d\'identité. Veuillez vous reconnecter.');
-        setTimeout(() => navigate('/pages/connexion'), 2000);
+        setSecurityError(
+          "Erreur de vérification d'identité. Veuillez vous reconnecter.",
+        );
+        setTimeout(() => navigate("/pages/connexion"), 2000);
       }
     };
 
@@ -158,9 +170,11 @@ const PaiementPage: React.FC = () => {
 
   // 3. Gestion des données d'échéance
   useEffect(() => {
-    if (paymentType === 'echeance') {
+    if (paymentType === "echeance") {
       if (echeanceIsError && echeanceError) {
-        setError(`Erreur de chargement de l'échéance: ${echeanceError.message}`);
+        setError(
+          `Erreur de chargement de l'échéance: ${echeanceError.message}`,
+        );
         setLoading(false);
         return;
       }
@@ -169,43 +183,75 @@ const PaiementPage: React.FC = () => {
         setLoading(false);
       }
 
-      if (!echeanceLoading && !echeanceData && !echeanceIsError && echeanceId && userIdNumber) {
-        setError('Impossible de charger l\'échéance - paramètres manquants');
+      if (
+        !echeanceLoading &&
+        !echeanceData &&
+        !echeanceIsError &&
+        echeanceId &&
+        userIdNumber
+      ) {
+        setError("Impossible de charger l'échéance - paramètres manquants");
         setLoading(false);
       }
     } else {
-      if (paymentType === 'commande' && commandeId && userIdNumber && connectedUserId) {
+      if (
+        paymentType === "commande" &&
+        commandeId &&
+        userIdNumber &&
+        connectedUserId
+      ) {
         setLoading(false);
       }
     }
-  }, [paymentType, echeanceData, echeanceLoading, echeanceError, echeanceIsError, echeanceId, userIdNumber, commandeId, connectedUserId]);
+  }, [
+    paymentType,
+    echeanceData,
+    echeanceLoading,
+    echeanceError,
+    echeanceIsError,
+    echeanceId,
+    userIdNumber,
+    commandeId,
+    connectedUserId,
+  ]);
 
   // 4. Création du PaymentIntent
   useEffect(() => {
     const creerPaymentIntent = async () => {
-      if (userIdMismatch || securityError || showSecurityModal || !connectedUserId || !userIdNumber) {
+      if (
+        userIdMismatch ||
+        securityError ||
+        showSecurityModal ||
+        !connectedUserId ||
+        !userIdNumber
+      ) {
         return;
       }
 
       try {
-        if (paymentType === 'echeance' && echeanceData && !clientSecret) {
+        if (paymentType === "echeance" && echeanceData && !clientSecret) {
           const result = await createPaymentIntentEcheance.mutateAsync({
-            currency: 'eur',
-            description: `Paiement échéance #${echeanceId} - ${echeanceData.description || 'Cotisation'}`
+            currency: "eur",
+            description: `Paiement échéance #${echeanceId} - ${echeanceData.description || "Cotisation"}`,
           });
 
           setClientSecret(result.client_secret);
           setPaymentIntentId(result.payment_intent_id);
+        } else if (paymentType === "commande" && commandeId && !clientSecret) {
+          console.log(
+            "🛒 [PaiementPage] Création PaymentIntent pour commande ID:",
+            commandeId,
+          );
 
-        } else if (paymentType === 'commande' && commandeId && !clientSecret) {
-          console.log('🛒 [PaiementPage] Création PaymentIntent pour commande ID:', commandeId);
-          
-          let token = localStorage.getItem('token') || 
-                     JSON.parse(localStorage.getItem('userData') || '{}').token ||
-                     localStorage.getItem('authToken');
+          let token =
+            localStorage.getItem("token") ||
+            JSON.parse(localStorage.getItem("userData") || "{}").token ||
+            localStorage.getItem("authToken");
 
           if (!token) {
-            throw new Error('Token d\'authentification manquant - reconnectez-vous');
+            throw new Error(
+              "Token d'authentification manquant - reconnectez-vous",
+            );
           }
 
           setLoading(false);
@@ -219,77 +265,101 @@ const PaiementPage: React.FC = () => {
           // CORRIGÉ: Envoyer l'ID de commande comme nombre avec validation
           const requestBody = {
             commande: commandeIdNumber, // ID de commande existante
-            currency: 'eur',
-            description: `Paiement commande #${commandeIdNumber}`
+            currency: "eur",
+            description: `Paiement commande #${commandeIdNumber}`,
           };
 
-          console.log('📤 [PaiementPage] Données envoyées (corrigées):', requestBody);
+          console.log(
+            "📤 [PaiementPage] Données envoyées (corrigées):",
+            requestBody,
+          );
 
-          const response = await fetch(apiUrl('paiements/stripe/create-payment-intent-commande'), {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
+          const response = await fetch(
+            apiUrl("paiements/stripe/create-payment-intent-commande"),
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify(requestBody),
             },
-            credentials: 'include',
-            body: JSON.stringify(requestBody)
-          });
+          );
 
-          console.log('📡 [PaiementPage] Réponse status:', response.status);
+          console.log("📡 [PaiementPage] Réponse status:", response.status);
 
           if (!response.ok) {
             let errorData;
             try {
               errorData = await response.json();
             } catch (parseError) {
-              errorData = { 
-                error: 'Erreur de parsing de la réponse', 
+              errorData = {
+                error: "Erreur de parsing de la réponse",
                 status: response.status,
-                statusText: response.statusText 
+                statusText: response.statusText,
               };
             }
-            
-            console.error('❌ [PaiementPage] Erreur API commande détaillée:', {
+
+            console.error("❌ [PaiementPage] Erreur API commande détaillée:", {
               status: response.status,
               statusText: response.statusText,
               error: errorData,
               requestBody,
               commandeId,
               commandeIdNumber,
-              url: apiUrl('paiements/stripe/create-payment-intent-commande')
+              url: apiUrl("paiements/stripe/create-payment-intent-commande"),
             });
-            
+
             // CORRIGÉ: Messages d'erreur plus spécifiques
             if (response.status === 401) {
-              throw new Error('Session expirée - veuillez vous reconnecter');
+              throw new Error("Session expirée - veuillez vous reconnecter");
             } else if (response.status === 404) {
-              throw new Error(`Commande #${commandeIdNumber} non trouvée - elle a peut-être été supprimée`);
+              throw new Error(
+                `Commande #${commandeIdNumber} non trouvée - elle a peut-être été supprimée`,
+              );
             } else if (response.status === 403) {
-              throw new Error('Cette commande ne vous appartient pas');
+              throw new Error("Cette commande ne vous appartient pas");
             } else if (response.status === 400) {
-              const errorMsg = errorData?.error || 'Données de commande invalides';
-              if (errorMsg.includes('Format de commande non reconnu')) {
-                throw new Error(`Format de commande incorrect. ID envoyé: ${commandeIdNumber} (type: ${typeof commandeIdNumber})`);
-              } else if (errorMsg.includes('déjà traitée') || errorMsg.includes('déjà payée')) {
+              const errorMsg =
+                errorData?.error || "Données de commande invalides";
+              if (errorMsg.includes("Format de commande non reconnu")) {
+                throw new Error(
+                  `Format de commande incorrect. ID envoyé: ${commandeIdNumber} (type: ${typeof commandeIdNumber})`,
+                );
+              } else if (
+                errorMsg.includes("déjà traitée") ||
+                errorMsg.includes("déjà payée")
+              ) {
                 throw new Error(`Cette commande a déjà été payée ou traitée`);
               }
               throw new Error(errorMsg);
             } else {
-              throw new Error(`Erreur serveur (${response.status}): ${errorData?.error || response.statusText}`);
+              throw new Error(
+                `Erreur serveur (${response.status}): ${errorData?.error || response.statusText}`,
+              );
             }
           }
 
           const paymentIntentData = await response.json();
-          console.log('✅ [PaiementPage] PaymentIntent commande créé:', paymentIntentData);
-          
+          console.log(
+            "✅ [PaiementPage] PaymentIntent commande créé:",
+            paymentIntentData,
+          );
+
           if (!paymentIntentData.client_secret) {
-            console.error('❌ [PaiementPage] client_secret manquant dans la réponse:', paymentIntentData);
-            throw new Error('client_secret manquant dans la réponse du serveur');
+            console.error(
+              "❌ [PaiementPage] client_secret manquant dans la réponse:",
+              paymentIntentData,
+            );
+            throw new Error(
+              "client_secret manquant dans la réponse du serveur",
+            );
           }
-          
+
           setClientSecret(paymentIntentData.client_secret);
           setPaymentIntentId(paymentIntentData.payment_intent_id);
-          
+
           // CORRIGÉ: Utiliser les données de commande de la réponse avec validation
           if (paymentIntentData.commande && paymentIntentData.commande.id) {
             setCommandeData({
@@ -297,46 +367,59 @@ const PaiementPage: React.FC = () => {
               total: paymentIntentData.commande.total,
               utilisateur_id: paymentIntentData.commande.utilisateur_id,
               statut: paymentIntentData.commande.statut,
-              numero_commande: `CMD-${paymentIntentData.commande.id}`
+              numero_commande: `CMD-${paymentIntentData.commande.id}`,
             });
-            console.log('📦 [PaiementPage] Données commande configurées depuis réponse:', paymentIntentData.commande);
+            console.log(
+              "📦 [PaiementPage] Données commande configurées depuis réponse:",
+              paymentIntentData.commande,
+            );
           } else {
             // Fallback avec les données de base
             setCommandeData({
               id: paymentIntentData.commande_id || commandeIdNumber,
               total: paymentIntentData.amount / 100,
               utilisateur_id: userIdNumber,
-              statut: 'en_attente',
-              numero_commande: `CMD-${commandeIdNumber}`
+              statut: "en_attente",
+              numero_commande: `CMD-${commandeIdNumber}`,
             });
-            console.log('📦 [PaiementPage] Données commande configurées en fallback');
+            console.log(
+              "📦 [PaiementPage] Données commande configurées en fallback",
+            );
           }
-          
+
           setLoading(false);
         }
       } catch (paymentIntentError: any) {
-        console.error('❌ [PaiementPage] Erreur création PaymentIntent:', paymentIntentError);
-        setError(`Erreur d'initialisation du paiement: ${paymentIntentError.message}`);
+        console.error(
+          "❌ [PaiementPage] Erreur création PaymentIntent:",
+          paymentIntentError,
+        );
+        setError(
+          `Erreur d'initialisation du paiement: ${paymentIntentError.message}`,
+        );
         setLoading(false);
       }
     };
 
-    const shouldCreatePaymentIntent = (
+    const shouldCreatePaymentIntent =
       paymentType &&
       connectedUserId &&
       userIdNumber &&
       !userIdMismatch &&
       !showSecurityModal &&
       !clientSecret &&
-      (
-        (paymentType === 'echeance' && echeanceData) ||
-        (paymentType === 'commande' && commandeId)
-      )
-    );
+      ((paymentType === "echeance" && echeanceData) ||
+        (paymentType === "commande" && commandeId));
 
     if (shouldCreatePaymentIntent) {
       creerPaymentIntent();
-    } else if (paymentType === 'commande' && commandeId && connectedUserId && userIdNumber && !clientSecret) {
+    } else if (
+      paymentType === "commande" &&
+      commandeId &&
+      connectedUserId &&
+      userIdNumber &&
+      !clientSecret
+    ) {
       creerPaymentIntent();
     }
   }, [
@@ -349,7 +432,7 @@ const PaiementPage: React.FC = () => {
     showSecurityModal,
     clientSecret,
     createPaymentIntentEcheance,
-    echeanceId
+    echeanceId,
   ]);
 
   // ====================== FONCTIONS HANDLERS ======================
@@ -357,32 +440,35 @@ const PaiementPage: React.FC = () => {
     try {
       let amount = 0;
 
-      if (paymentType === 'echeance' && echeanceData) {
+      if (paymentType === "echeance" && echeanceData) {
         amount = echeanceData.montant;
-      } else if (paymentType === 'commande' && commandeData) {
+      } else if (paymentType === "commande" && commandeData) {
         amount = commandeData.total;
       } else {
-        amount = paymentResult?.amount || paymentResult?.paymentIntent?.amount / 100 || 0;
+        amount =
+          paymentResult?.amount ||
+          paymentResult?.paymentIntent?.amount / 100 ||
+          0;
       }
 
-      if (paymentType === 'echeance') {
+      if (paymentType === "echeance") {
         const confirmData = {
           paymentIntentId: paymentResult.paymentIntent.id,
           echeanceId: echeanceId!,
           userId: userIdNumber!,
-          amount: amount
+          amount: amount,
         };
 
         const result = await confirmPaymentMutation.mutateAsync(confirmData);
         setConfirmationResult(result);
         setPaymentSuccess(true);
-
-      } else if (paymentType === 'commande') {
-        const token = localStorage.getItem('token') ||
-          JSON.parse(localStorage.getItem('userData') || '{}').token;
+      } else if (paymentType === "commande") {
+        const token =
+          localStorage.getItem("token") ||
+          JSON.parse(localStorage.getItem("userData") || "{}").token;
 
         if (!token) {
-          throw new Error('Token manquant pour la confirmation');
+          throw new Error("Token manquant pour la confirmation");
         }
 
         const realCommandeId = commandeData?.id || parseInt(commandeId!);
@@ -391,25 +477,33 @@ const PaiementPage: React.FC = () => {
           paymentIntentId: paymentResult.paymentIntent.id,
           commandeId: realCommandeId,
           userId: userIdNumber!,
-          amount: amount
+          amount: amount,
         };
 
-        const response = await fetch(apiUrl('paiements/confirmation/confirm-payment-commande'), {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        const response = await fetch(
+          apiUrl("paiements/confirmation/confirm-payment-commande"),
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify(confirmData),
           },
-          credentials: 'include',
-          body: JSON.stringify(confirmData)
-        });
+        );
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           if (response.status === 404) {
-            throw new Error('Route de confirmation non trouvée - module confirmation non chargé');
+            throw new Error(
+              "Route de confirmation non trouvée - module confirmation non chargé",
+            );
           }
-          throw new Error(errorData.error || `Erreur ${response.status}: ${response.statusText}`);
+          throw new Error(
+            errorData.error ||
+              `Erreur ${response.status}: ${response.statusText}`,
+          );
         }
 
         const result = await response.json();
@@ -418,25 +512,30 @@ const PaiementPage: React.FC = () => {
       }
 
       setTimeout(() => {
-        const currentUserData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const isAdmin = currentUserData?.status === 'administrateur' || currentUserData?.status === 'super-administrateur';
+        const currentUserData = JSON.parse(
+          localStorage.getItem("userData") || "{}",
+        );
+        const isAdmin =
+          currentUserData?.status === "administrateur" ||
+          currentUserData?.status === "super-administrateur";
 
-        if (paymentType === 'commande') {
-          navigate('/pages/magasin/magasin?payment_success=true');
+        if (paymentType === "commande") {
+          navigate("/pages/magasin/magasin?payment_success=true");
         } else {
           if (isAdmin && currentUserData?.id !== parseInt(userId!)) {
-            navigate(`/pages/utilisateurs/consulter/${userId}?tab=2&payment_success=true`);
+            navigate(
+              `/pages/utilisateurs/consulter/${userId}?tab=2&payment_success=true`,
+            );
           } else {
-            navigate('/pages/compte?tab=2&success=true');
+            navigate("/pages/compte?tab=2&success=true");
           }
         }
       }, 3000);
-
     } catch (error: any) {
       let displayAmount = 0;
-      if (paymentType === 'echeance' && echeanceData) {
+      if (paymentType === "echeance" && echeanceData) {
         displayAmount = echeanceData.montant;
-      } else if (paymentType === 'commande' && commandeData) {
+      } else if (paymentType === "commande" && commandeData) {
         displayAmount = commandeData.total;
       }
 
@@ -451,21 +550,27 @@ const PaiementPage: React.FC = () => {
       setError(errorMessage);
 
       setTimeout(() => {
-        if (paymentType === 'commande') {
-          navigate('/pages/magasin/magasin?payment_success=partial&ref=' + paymentResult.paymentIntent.id);
+        if (paymentType === "commande") {
+          navigate(
+            "/pages/magasin/magasin?payment_success=partial&ref=" +
+              paymentResult.paymentIntent.id,
+          );
         } else {
-          navigate('/pages/compte?tab=2&payment_success=partial&ref=' + paymentResult.paymentIntent.id);
+          navigate(
+            "/pages/compte?tab=2&payment_success=partial&ref=" +
+              paymentResult.paymentIntent.id,
+          );
         }
       }, 3000);
     }
   };
 
   const handlePaymentError = (error: any) => {
-    let errorMessage = 'Erreur inconnue';
+    let errorMessage = "Erreur inconnue";
 
-    if (error?.type === 'card_error') {
+    if (error?.type === "card_error") {
       errorMessage = `Erreur de carte: ${error.message}`;
-    } else if (error?.type === 'validation_error') {
+    } else if (error?.type === "validation_error") {
       errorMessage = `Erreur de validation: ${error.message}`;
     } else if (error?.message) {
       errorMessage = error.message;
@@ -476,11 +581,11 @@ const PaiementPage: React.FC = () => {
 
   // ====================== FONCTIONS UTILITAIRES ======================
   const formatMontant = (montant: number) => {
-    if (typeof montant !== 'number' || isNaN(montant)) return '0,00 €';
+    if (typeof montant !== "number" || isNaN(montant)) return "0,00 €";
     try {
-      return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR'
+      return new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "EUR",
       }).format(montant);
     } catch (e) {
       return `${montant} €`;
@@ -488,33 +593,58 @@ const PaiementPage: React.FC = () => {
   };
 
   // ====================== VARIABLES CALCULÉES ======================
-  const currentData = paymentType === 'echeance' ? echeanceData : commandeData;
-  const currentId = paymentType === 'echeance' ? echeanceId : (commandeData?.unique_id || commandeData?.numero_commande || commandeId);
-  const currentAmount = paymentType === 'echeance' ? currentData?.montant : currentData?.total;
-  const currentDescription = paymentType === 'echeance' ?
-    (currentData?.description || 'Description non disponible') :
-    (`${currentData?.numero_commande || 'Commande magasin'} #${commandeId}`);
+  const currentData = paymentType === "echeance" ? echeanceData : commandeData;
+  const currentId =
+    paymentType === "echeance"
+      ? echeanceId
+      : commandeData?.unique_id || commandeData?.numero_commande || commandeId;
+  const currentAmount =
+    paymentType === "echeance" ? currentData?.montant : currentData?.total;
+  const currentDescription =
+    paymentType === "echeance"
+      ? currentData?.description || "Description non disponible"
+      : `${currentData?.numero_commande || "Commande magasin"} #${commandeId}`;
 
-  const isLoading = loading || 
-    (paymentType === 'echeance' && echeanceLoading) ||
+  const isLoading =
+    loading ||
+    (paymentType === "echeance" && echeanceLoading) ||
     createPaymentIntentEcheance.isPending ||
     confirmPaymentMutation.isPending;
 
   // ====================== RENDERS CONDITIONNELS ======================
-  
+
   // Modal de sécurité
   if (showSecurityModal && securityModalData) {
     return (
       <Page>
-        <PageHeader title="⚠️ Accès non autorisé" subtitle="Vérification de sécurité" variant="danger" />
+        <PageHeader
+          title="⚠️ Accès non autorisé"
+          subtitle="Vérification de sécurité"
+          variant="danger"
+        />
         <PageSection>
           <Alert variant="danger" title="Accès non autorisé">
-            <p>Vous essayez d'accéder à un paiement qui ne vous appartient pas.</p>
-            <div style={{ marginTop: '1rem' }}>
-              <Button variant="primary" onClick={() => { setShowSecurityModal(false); navigate('/pages/compte'); }}>
+            <p>
+              Vous essayez d'accéder à un paiement qui ne vous appartient pas.
+            </p>
+            <div style={{ marginTop: "1rem" }}>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setShowSecurityModal(false);
+                  navigate("/pages/compte");
+                }}
+              >
                 🏠 Aller à mon compte
               </Button>
-              <Button variant="secondary" onClick={() => { setShowSecurityModal(false); navigate('/pages/connexion'); }} style={{ marginLeft: '1rem' }}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowSecurityModal(false);
+                  navigate("/pages/connexion");
+                }}
+                style={{ marginLeft: "1rem" }}
+              >
                 🔐 Se reconnecter
               </Button>
             </div>
@@ -525,15 +655,32 @@ const PaiementPage: React.FC = () => {
   }
 
   // Erreur de sécurité ou paramètres manquants
-  if (securityError || !userId || userId === 'null' || userId === '' || userId === 'undefined') {
+  if (
+    securityError ||
+    !userId ||
+    userId === "null" ||
+    userId === "" ||
+    userId === "undefined"
+  ) {
     return (
       <Page>
-        <PageHeader title="Paiement en ligne" subtitle="Erreur d'accès" variant="payment" />
+        <PageHeader
+          title="Paiement en ligne"
+          subtitle="Erreur d'accès"
+          variant="payment"
+        />
         <PageSection>
           <Alert variant="danger" title="Accès non autorisé">
-            <p>{securityError || 'Impossible de vérifier votre identité. Veuillez vous reconnecter.'}</p>
-            <div style={{ marginTop: '1rem' }}>
-              <Button variant="primary" icon={<ArrowLeftIcon />} onClick={() => navigate('/pages/connexion')}>
+            <p>
+              {securityError ||
+                "Impossible de vérifier votre identité. Veuillez vous reconnecter."}
+            </p>
+            <div style={{ marginTop: "1rem" }}>
+              <Button
+                variant="primary"
+                icon={<ArrowLeftIcon />}
+                onClick={() => navigate("/pages/connexion")}
+              >
                 Se connecter
               </Button>
             </div>
@@ -544,15 +691,23 @@ const PaiementPage: React.FC = () => {
   }
 
   // Échéance manquante
-  if (paymentType === 'echeance' && (!echeanceId || echeanceId === 'null')) {
+  if (paymentType === "echeance" && (!echeanceId || echeanceId === "null")) {
     return (
       <Page>
-        <PageHeader title="Paiement en ligne" subtitle="Erreur de chargement de l'échéance" variant="payment" />
+        <PageHeader
+          title="Paiement en ligne"
+          subtitle="Erreur de chargement de l'échéance"
+          variant="payment"
+        />
         <PageSection>
           <Alert variant="danger" title="Échéance introuvable">
             <p>Impossible de charger les détails de l'échéance.</p>
-            <div style={{ marginTop: '1rem' }}>
-              <Button variant="primary" icon={<ArrowLeftIcon />} onClick={() => navigate('/pages/compte?tab=2')}>
+            <div style={{ marginTop: "1rem" }}>
+              <Button
+                variant="primary"
+                icon={<ArrowLeftIcon />}
+                onClick={() => navigate("/pages/compte?tab=2")}
+              >
                 Retour à mon compte
               </Button>
             </div>
@@ -563,15 +718,23 @@ const PaiementPage: React.FC = () => {
   }
 
   // Commande manquante
-  if (paymentType === 'commande' && (!commandeId || commandeId === 'null')) {
+  if (paymentType === "commande" && (!commandeId || commandeId === "null")) {
     return (
       <Page>
-        <PageHeader title="Paiement en ligne" subtitle="Erreur de chargement de la commande" variant="payment" />
+        <PageHeader
+          title="Paiement en ligne"
+          subtitle="Erreur de chargement de la commande"
+          variant="payment"
+        />
         <PageSection>
           <Alert variant="danger" title="Commande introuvable">
             <p>Impossible de charger les détails de la commande.</p>
-            <div style={{ marginTop: '1rem' }}>
-              <Button variant="primary" icon={<ArrowLeftIcon />} onClick={() => navigate('/pages/magasin/magasin')}>
+            <div style={{ marginTop: "1rem" }}>
+              <Button
+                variant="primary"
+                icon={<ArrowLeftIcon />}
+                onClick={() => navigate("/pages/magasin/magasin")}
+              >
                 Retour au magasin
               </Button>
             </div>
@@ -585,16 +748,27 @@ const PaiementPage: React.FC = () => {
   if (isLoading) {
     return (
       <Page>
-        <PageHeader title="Paiement en ligne" subtitle="Régularisez votre situation rapidement et en toute sécurité" variant="payment" />
+        <PageHeader
+          title="Paiement en ligne"
+          subtitle="Régularisez votre situation rapidement et en toute sécurité"
+          variant="payment"
+        />
         <PageSection>
           <Bullseye>
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: "center" }}>
               <Spinner size="xl" />
-              <div style={{ marginTop: '1rem' }}>
-                {paymentType === 'echeance' && echeanceLoading && 'Chargement de l\'échéance...'}
-                {createPaymentIntentEcheance.isPending && 'Initialisation du paiement...'}
-                {confirmPaymentMutation.isPending && 'Confirmation du paiement...'}
-                {!echeanceLoading && !createPaymentIntentEcheance.isPending && !confirmPaymentMutation.isPending && 'Chargement des informations de paiement...'}
+              <div style={{ marginTop: "1rem" }}>
+                {paymentType === "echeance" &&
+                  echeanceLoading &&
+                  "Chargement de l'échéance..."}
+                {createPaymentIntentEcheance.isPending &&
+                  "Initialisation du paiement..."}
+                {confirmPaymentMutation.isPending &&
+                  "Confirmation du paiement..."}
+                {!echeanceLoading &&
+                  !createPaymentIntentEcheance.isPending &&
+                  !confirmPaymentMutation.isPending &&
+                  "Chargement des informations de paiement..."}
               </div>
             </div>
           </Bullseye>
@@ -607,13 +781,30 @@ const PaiementPage: React.FC = () => {
   if (!currentData) {
     return (
       <Page>
-        <PageHeader title="Paiement en ligne" subtitle="Erreur de chargement des données" variant="payment" />
+        <PageHeader
+          title="Paiement en ligne"
+          subtitle="Erreur de chargement des données"
+          variant="payment"
+        />
         <PageSection>
           <Alert variant="danger" title="Données manquantes">
-            <p>Impossible de charger les données de {paymentType === 'echeance' ? 'l\'échéance' : 'la commande'}.</p>
-            <div style={{ marginTop: '1rem' }}>
-              <Button variant="primary" icon={<ArrowLeftIcon />} onClick={() => navigate(paymentType === 'echeance' ? '/pages/compte?tab=2' : '/pages/magasin/magasin')}>
-                Retour {paymentType === 'echeance' ? 'au compte' : 'au magasin'}
+            <p>
+              Impossible de charger les données de{" "}
+              {paymentType === "echeance" ? "l'échéance" : "la commande"}.
+            </p>
+            <div style={{ marginTop: "1rem" }}>
+              <Button
+                variant="primary"
+                icon={<ArrowLeftIcon />}
+                onClick={() =>
+                  navigate(
+                    paymentType === "echeance"
+                      ? "/pages/compte?tab=2"
+                      : "/pages/magasin/magasin",
+                  )
+                }
+              >
+                Retour {paymentType === "echeance" ? "au compte" : "au magasin"}
               </Button>
             </div>
           </Alert>
@@ -626,14 +817,34 @@ const PaiementPage: React.FC = () => {
   if (error) {
     return (
       <Page>
-        <PageHeader title="Paiement en ligne" subtitle="Information sur le traitement de votre paiement" variant="payment" />
+        <PageHeader
+          title="Paiement en ligne"
+          subtitle="Information sur le traitement de votre paiement"
+          variant="payment"
+        />
         <PageSection>
-          <Alert variant={error.includes('⚠️') ? "warning" : "danger"} title={error.includes('⚠️') ? "Information importante" : "Erreur"} style={{ whiteSpace: 'pre-line', lineHeight: '1.6' }}>
+          <Alert
+            variant={error.includes("⚠️") ? "warning" : "danger"}
+            title={error.includes("⚠️") ? "Information importante" : "Erreur"}
+            style={{ whiteSpace: "pre-line", lineHeight: "1.6" }}
+          >
             {error}
           </Alert>
-          <div style={{ marginTop: '2rem' }}>
-            <Button variant="primary" icon={<ArrowLeftIcon />} onClick={() => navigate(paymentType === 'echeance' ? '/pages/compte?tab=2' : '/pages/magasin/magasin')}>
-              {paymentType === 'echeance' ? 'Accéder à mon compte' : 'Retour au magasin'}
+          <div style={{ marginTop: "2rem" }}>
+            <Button
+              variant="primary"
+              icon={<ArrowLeftIcon />}
+              onClick={() =>
+                navigate(
+                  paymentType === "echeance"
+                    ? "/pages/compte?tab=2"
+                    : "/pages/magasin/magasin",
+                )
+              }
+            >
+              {paymentType === "echeance"
+                ? "Accéder à mon compte"
+                : "Retour au magasin"}
             </Button>
           </div>
         </PageSection>
@@ -645,22 +856,60 @@ const PaiementPage: React.FC = () => {
   if (paymentSuccess) {
     return (
       <Page>
-        <PageHeader title="Paiement réussi" subtitle="Votre paiement a été traité avec succès" variant="success" />
+        <PageHeader
+          title="Paiement réussi"
+          subtitle="Votre paiement a été traité avec succès"
+          variant="success"
+        />
         <PageSection>
-          <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+          <div
+            style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}
+          >
             <Card>
               <CardBody>
-                <div style={{ padding: '2rem' }}>
-                  <CheckCircleIcon size="xl" style={{ color: '#28a745', fontSize: '4rem', marginBottom: '1rem' }} />
-                  <Title headingLevel="h2" size="xl" style={{ marginBottom: '1rem', color: '#28a745' }}>
+                <div style={{ padding: "2rem" }}>
+                  <CheckCircleIcon
+                    size="xl"
+                    style={{
+                      color: "#28a745",
+                      fontSize: "4rem",
+                      marginBottom: "1rem",
+                    }}
+                  />
+                  <Title
+                    headingLevel="h2"
+                    size="xl"
+                    style={{ marginBottom: "1rem", color: "#28a745" }}
+                  >
                     Paiement confirmé !
                   </Title>
-                  <Alert variant="success" title="Succès" style={{ marginBottom: '2rem' }}>
-                    <p>Votre paiement de <strong>{formatMontant(currentAmount || 0)}</strong> a été traité avec succès.</p>
-                    <p>Référence : <strong>#{currentId}</strong></p>
+                  <Alert
+                    variant="success"
+                    title="Succès"
+                    style={{ marginBottom: "2rem" }}
+                  >
+                    <p>
+                      Votre paiement de{" "}
+                      <strong>{formatMontant(currentAmount || 0)}</strong> a été
+                      traité avec succès.
+                    </p>
+                    <p>
+                      Référence : <strong>#{currentId}</strong>
+                    </p>
                   </Alert>
-                  <Button variant="primary" onClick={() => navigate(paymentType === 'echeance' ? '/pages/compte?tab=2&success=true' : '/pages/magasin/magasin?payment_success=true')}>
-                    {paymentType === 'echeance' ? 'Accéder à mon compte' : 'Retour au magasin'}
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      navigate(
+                        paymentType === "echeance"
+                          ? "/pages/compte?tab=2&success=true"
+                          : "/pages/magasin/magasin?payment_success=true",
+                      )
+                    }
+                  >
+                    {paymentType === "echeance"
+                      ? "Accéder à mon compte"
+                      : "Retour au magasin"}
                   </Button>
                 </div>
               </CardBody>
@@ -676,11 +925,11 @@ const PaiementPage: React.FC = () => {
     <Page>
       <PageHeader
         title="Paiement en ligne"
-        subtitle={`Finalisez votre ${paymentType === 'echeance' ? 'paiement d\'échéance' : 'commande'} rapidement et en toute sécurité`}
+        subtitle={`Finalisez votre ${paymentType === "echeance" ? "paiement d'échéance" : "commande"} rapidement et en toute sécurité`}
         variant="payment"
       />
       <PageSection>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           {clientSecret && stripePromise ? (
             <Elements options={options} stripe={stripePromise}>
               <PaymentForm
@@ -689,16 +938,18 @@ const PaiementPage: React.FC = () => {
                 description={currentDescription}
                 onSuccess={handlePaymentSuccess}
                 onError={handlePaymentError}
-                echeanceId={paymentType === 'echeance' ? echeanceId : undefined}
-                commandeId={paymentType === 'commande' ? commandeId : undefined}
+                echeanceId={paymentType === "echeance" ? echeanceId : undefined}
+                commandeId={paymentType === "commande" ? commandeId : undefined}
                 userId={userId}
                 returnUrl={`${window.location.origin}/pages/paiement?${paymentType}=${currentId}&userId=${userId}&payment_return=true`}
               />
             </Elements>
           ) : (
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div style={{ textAlign: "center", padding: "2rem" }}>
               <Spinner size="lg" />
-              <div style={{ marginTop: '1rem' }}>Initialisation du paiement sécurisé...</div>
+              <div style={{ marginTop: "1rem" }}>
+                Initialisation du paiement sécurisé...
+              </div>
             </div>
           )}
         </div>

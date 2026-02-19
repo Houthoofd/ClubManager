@@ -217,3 +217,41 @@ query GetStockSizes {
     code
   }
 }
+
+# ============================================================================
+# Stripe Payment Mutations
+# ============================================================================
+
+mutation CreatePaymentIntentForOrder($input: CreatePaymentIntentForOrderInput!) {
+  createPaymentIntentForOrder(input: $input) {
+    success
+    message
+    clientSecret
+    paymentIntentId
+    amount
+  }
+}
+
+mutation ConfirmOrderPayment($input: ConfirmOrderPaymentInput!) {
+  confirmOrderPayment(input: $input) {
+    success
+    message
+    payment {
+      id
+      user_id
+      order_id
+      amount
+      payment_method
+      status
+      payment_date
+      stripe_payment_intent_id
+    }
+    order {
+      id
+      user_id
+      total_amount
+      status
+      updated_at
+    }
+  }
+}

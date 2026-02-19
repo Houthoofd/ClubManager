@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiUrl } from "../../../pages/apiUrl"; // AJOUTÉ: Import de la fonction apiUrl
+import { apiUrl } from "../../../utils/apiUrl";
+import { useGetStockSizesQuery } from "@/lib/apollo/generated/graphql";
 import {
   Drawer,
   DrawerContent,
@@ -48,6 +49,10 @@ const RightSidePanel = ({
   onViderPanier,
   children,
 }: RightSidePanelProps) => {
+  // Récupérer les tailles disponibles avec GraphQL
+  const { data: sizesData } = useGetStockSizesQuery({
+    fetchPolicy: "cache-first",
+  });
   const navigate = useNavigate();
   const {
     articles,
@@ -428,50 +433,40 @@ const RightSidePanel = ({
 
     console.log("✅ [Panier] Utilisateur validé:", utilisateur_id);
 
-    // CRITIQUE: Fonction pour récupérer taille_id depuis l'API
+    // CRITIQUE: Fonction pour récupérer taille_id depuis GraphQL (migré)
     const getTailleIdFromAPI = async (
       tailleName: string,
     ): Promise<number | null> => {
       try {
-        console.log(`🔍 [Panier] Recherche taille_id pour "${tailleName}"`);
+        console.log(
+          `🔍 [Panier] Recherche taille_id pour "${tailleName}" (GraphQL)`,
+        );
 
-        const token =
-          localStorage.getItem("token") ||
-          localStorage.getItem("authToken") ||
-          JSON.parse(localStorage.getItem("userData") || "{}").token;
-
-        const response = await fetch(apiUrl("magasin/tailles"), {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          console.warn(`⚠️ [Panier] API tailles failed (${response.status})`);
+        if (!sizesData?.stockSizes) {
+          console.warn(`⚠️ [Panier] Tailles GraphQL non chargées`);
           return null;
         }
 
-        const tailles = await response.json();
-        console.log(`📋 [Panier] Tailles API:`, tailles);
+        console.log(`📋 [Panier] Tailles GraphQL:`, sizesData.stockSizes);
 
-        const tailleTrouvee = tailles.find(
-          (t: any) => t.nom && t.nom.toLowerCase() === tailleName.toLowerCase(),
+        const tailleTrouvee = sizesData.stockSizes.find(
+          (t: any) =>
+            t.name && t.name.toLowerCase() === tailleName.toLowerCase(),
         );
 
         if (tailleTrouvee?.id) {
           console.log(
-            `✅ [Panier] taille_id trouvé: "${tailleName}" -> ${tailleTrouvee.id}`,
+            `✅ [Panier] taille_id trouvé (GraphQL): "${tailleName}" -> ${tailleTrouvee.id}`,
           );
           return Number(tailleTrouvee.id);
         }
 
-        console.warn(`⚠️ [Panier] Taille "${tailleName}" non trouvée`);
+        console.warn(
+          `⚠️ [Panier] Taille "${tailleName}" non trouvée dans GraphQL`,
+        );
         return null;
       } catch (error) {
-        console.error(`❌ [Panier] Erreur API tailles:`, error);
+        console.error(`❌ [Panier] Erreur GraphQL tailles:`, error);
         return null;
       }
     };

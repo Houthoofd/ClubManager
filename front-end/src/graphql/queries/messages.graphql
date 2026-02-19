@@ -172,3 +172,16 @@ mutation RestoreMessage($recipientId: Int!) {
     created_at
   }
 }
+
+# ⚠️ TEMPORARILY COMMENTED OUT - Backend implementation pending
+# See: ClubManager/BACKEND_GRAPHQL_MIGRATION_NEEDED
+#
+# TODO: Uncomment when backend adds SendPaymentReminderInput type and sendPaymentReminder mutation
+
+# mutation SendPaymentReminder($input: SendPaymentReminderInput!) {
+#   sendPaymentReminder(input: $input) {
+#     success
+#     message
+#     sentCount
+#   }
+# }

@@ -1,70 +1,70 @@
 // router.tsx
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
-import MainLayout from './components/mainLayout';
-import DashboardPage from './pages/dashboard';
-import LoginPage from './pages/connexion';
-import ProtectedRoute from './pages/protectedroute';
+import MainLayout from "./components/layout/MainLayout";
+import DashboardPage from "./pages/dashboard";
+import LoginPage from "./pages/login";
+import ProtectedRoute from "./pages/protectedroute";
 
-import Inscription from './pages/cours/inscription';
-import AjouterCours from './pages/cours/ajouterCours';
-import AjouterProfesseur from './pages/professeurs/ajouterProf';
-import PlanningCours from './pages/professeurs/PlanningCours';
-import Participants from './pages/cours/consulterParticipants';
+import CoursesEnrollPage from "./pages/courses-enroll";
+import CoursesManagePage from "./pages/courses-manage";
+import CoursesParticipantsPage from "./pages/courses-participants";
+import TeachersManagePage from "./pages/teachers-manage";
+import TeacherPlanningPage from "./pages/teachers-planning";
 
-import Magasin from './pages/magasin/magasin';
-import AjouterArticle from './pages/magasin/ajouterArticle';
-import Commandes from './pages/commandes/commandes';
+import Magasin from "./pages/shop";
+import AjouterArticle from "./pages/shop-add-product";
+import OrdersManagementPage from "./pages/orders";
 
-import Utilisateur from './pages/utilisateurs/ajouterUtilisateur';
-import ConsulterUtilisateur from './pages/utilisateurs/consulterUtilisateur';
+import UsersManagePage from "./pages/users-manage";
+import UsersDetailPage from "./pages/users-detail";
 
-import Compte from './pages/compte';
+import Compte from "./pages/compte";
 
-import Settings from './pages/settings';
+import Settings from "./pages/settings";
 
-import Paiements from './pages/paiements';
+import Paiements from "./pages/paiements";
 
-import Messages from './pages/messages';
+import Messages from "./pages/messages";
 
-import InscriptionPage from './pages/inscription';
-import VerifyEmail from './pages/verifyemail';
+import InscriptionPage from "./pages/register";
+import VerifyEmail from "./pages/verify-email";
 
-import StatistiquesPage from './pages/statistiques';
+import StatistiquesPage from "./pages/statistiques";
 
-import PaymentSuccessPage from './pages/magasin/success';
-import PaiementPage from './pages/paiement/paiement';
-import ConnexionPage from './pages/connexion';
-import ForgotPasswordPage from './pages/auth/ForgotPassword';
-import ResetPasswordPage from './pages/auth/ResetPassword';
+import PaymentSuccessPage from "./pages/shop-success";
+import PaiementPage from "./pages/paiement/paiement";
+import ConnexionPage from "./pages/login";
+import ForgotPasswordPage from "./pages/auth-forgot-password";
+import ResetPasswordPage from "./pages/auth-reset-password";
 
 const router = createBrowserRouter([
   // Routes publiques pour l'authentification (HORS de l'app)
   {
-    path: '/pages/connexion',
+    path: "/pages/connexion",
     element: <LoginPage />,
   },
   {
-    path: '/pages/inscription',
+    path: "/pages/inscription",
     element: <InscriptionPage />,
   },
   {
-    path: '/pages/verify-email',
+    path: "/pages/verify-email",
     element: <VerifyEmail />,
   },
   // CORRIGÉ: Routes de récupération de mot de passe avec les bonnes paths
   {
-    path: '/pages/auth/forgot-password',
+    path: "/pages/auth/forgot-password",
     element: <ForgotPasswordPage />,
   },
   {
-    path: '/pages/auth/reset-password',
+    path: "/pages/auth/reset-password",
     element: <ResetPasswordPage />,
   },
-  
+
   // Route principale avec layout protégé
   {
-    path: '/',
+    path: "/",
     element: <MainLayout />,
     children: [
       // ✅ Redirection par défaut vers la page d'inscription
@@ -73,7 +73,7 @@ const router = createBrowserRouter([
         element: <Navigate to="pages/cours/inscription" replace />,
       },
       {
-        path: 'pages/dashboard',
+        path: "pages/dashboard",
         element: (
           <ProtectedRoute>
             <DashboardPage />
@@ -81,47 +81,47 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/cours/inscription',
+        path: "pages/cours/inscription",
         element: (
           <ProtectedRoute>
-            <Inscription />
+            <CoursesEnrollPage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/cours/:id/participants',
+        path: "pages/cours/:id/participants",
         element: (
           <ProtectedRoute>
-            <Participants />
+            <CoursesParticipantsPage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/cours/ajouter-cours',
+        path: "pages/cours/ajouter-cours",
         element: (
           <ProtectedRoute>
-            <AjouterCours />
+            <CoursesManagePage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/cours/ajouter-professeur',
+        path: "pages/cours/ajouter-professeur",
         element: (
           <ProtectedRoute>
-            <AjouterProfesseur />
+            <TeachersManagePage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/professeurs/planning',
+        path: "pages/professeurs/planning",
         element: (
           <ProtectedRoute>
-            <PlanningCours />
+            <TeacherPlanningPage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/magasin/ajouter-article',
+        path: "pages/magasin/ajouter-article",
         element: (
           <ProtectedRoute>
             <AjouterArticle />
@@ -129,7 +129,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/magasin/magasin',
+        path: "pages/magasin/magasin",
         element: (
           <ProtectedRoute>
             <Magasin />
@@ -137,31 +137,31 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/magasin/commandes',
+        path: "pages/magasin/commandes",
         element: (
           <ProtectedRoute>
-            <Commandes />
+            <OrdersManagementPage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/utilisateurs/ajouter-utilisateur',
+        path: "pages/utilisateurs/ajouter-utilisateur",
         element: (
           <ProtectedRoute>
-            <Utilisateur />
+            <UsersManagePage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/utilisateurs/consulter/:id',
+        path: "pages/utilisateurs/consulter/:id",
         element: (
           <ProtectedRoute>
-            <ConsulterUtilisateur />
+            <UsersDetailPage />
           </ProtectedRoute>
         ),
       },
       {
-        path: 'pages/compte',
+        path: "pages/compte",
         element: (
           <ProtectedRoute>
             <Compte />
@@ -169,7 +169,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/settings',
+        path: "pages/settings",
         element: (
           <ProtectedRoute>
             <Settings />
@@ -177,7 +177,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/paiements',
+        path: "pages/paiements",
         element: (
           <ProtectedRoute>
             <Paiements />
@@ -185,7 +185,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/messages',
+        path: "pages/messages",
         element: (
           <ProtectedRoute>
             <Messages />
@@ -193,7 +193,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/notifications',
+        path: "pages/notifications",
         element: (
           <ProtectedRoute>
             <Paiements />
@@ -201,7 +201,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'pages/statistiques',
+        path: "pages/statistiques",
         element: (
           <ProtectedRoute>
             <StatistiquesPage />
@@ -209,15 +209,15 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: '/pages/magasin/success',
+        path: "/pages/magasin/success",
         element: <PaymentSuccessPage />,
       },
       {
-        path: 'pages/paiement',
+        path: "pages/paiement",
         element: <PaiementPage />,
       },
       {
-        path: '/connexion',
+        path: "/connexion",
         element: <ConnexionPage />,
       },
       // SUPPRIMÉ: Routes de récupération déplacées vers les routes publiques
@@ -231,16 +231,16 @@ const router = createBrowserRouter([
       // },
       // AJOUTÉ: Route catch-all pour gérer les 404 dans l'app
       {
-        path: '*',
-        element: <Navigate to="/pages/cours/inscription" replace />
-      }
+        path: "*",
+        element: <Navigate to="/pages/cours/inscription" replace />,
+      },
     ],
   },
   // AJOUTÉ: Route catch-all globale pour rediriger vers connexion
   {
-    path: '*',
-    element: <Navigate to="/pages/connexion" replace />
-  }
+    path: "*",
+    element: <Navigate to="/pages/connexion" replace />,
+  },
 ]);
 
 export default router;

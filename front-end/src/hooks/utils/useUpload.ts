@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { apiUrl } from "@/pages/apiUrl";
+import { apiUrl } from "@/utils/apiUrl";
 
 interface UploadResponse {
   files: {

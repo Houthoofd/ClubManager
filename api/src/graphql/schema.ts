@@ -14,13 +14,17 @@ import { coursResolvers } from "../routes/cours/core/resolvers/index.js";
 import { echeancesResolvers } from "../routes/echeances/core/resolvers/index.js";
 import { informationsResolvers } from "../routes/informations/core/resolvers/index.js";
 import { inscriptionResolvers } from "../routes/inscription/core/resolvers/index.js";
-import { magasinResolvers } from "../routes/magasin/core/resolvers/index.js";
+import {
+  shopResolvers,
+  paymentResolvers,
+} from "../routes/shop/core/resolvers/index.js";
 import { paiementsResolvers } from "../routes/paiements/core/resolvers/index.js";
 import { professeursResolvers } from "../routes/professeurs/core/resolvers/index.js";
 import { statisticsResolvers } from "../routes/statistics/core/resolvers/index.js";
 import { stocksResolvers } from "../routes/stocks/core/resolvers/index.js";
 import { utilisateursResolvers } from "../routes/utilisateurs/core/resolvers/index.js";
 import { verificationResolvers } from "../routes/verification/core/resolvers/index.js";
+import { verificationTypeDefs } from "../routes/verification/core/typedefs.js";
 import { uploadResolvers } from "../routes/upload/core/resolvers/index.js";
 import { webhooksResolvers } from "../routes/stripe/core/webhooks/index.js";
 
@@ -42,7 +46,7 @@ import {
   statistiquesTypeDefs,
   stocksTypeDefs,
   utilisateursTypeDefs,
-  verificationTypeDefs,
+  // verificationTypeDefs, // ⚠️ Imported directly from module instead
   uploadTypeDefs,
   webhooksTypeDefs,
 } from "@clubmanager/types";
@@ -225,6 +229,14 @@ export const schema = createSchema({
       markAllNotificationsAsRead(userId: Int!): MutationResult!
       deleteNotification(notificationId: Int!): MutationResult!
       deleteReadNotifications(userId: Int!): MutationResult!
+
+      # Payments (Stripe)
+      createPaymentIntentForOrder(
+        input: CreatePaymentIntentForOrderInput!
+      ): PaymentIntentResult!
+      confirmOrderPayment(
+        input: ConfirmOrderPaymentInput!
+      ): OrderPaymentConfirmResult!
     }
 
     # Types de base
@@ -487,6 +499,37 @@ export const schema = createSchema({
       month: String!
       total: Float!
       count: Int!
+    }
+
+    # Payment Intent Types
+    type PaymentIntentResult {
+      success: Boolean!
+      message: String!
+      clientSecret: String
+      paymentIntentId: String
+      amount: Float
+    }
+
+    type OrderPaymentConfirmResult {
+      success: Boolean!
+      message: String!
+      payment: Payments
+      order: Orders
+    }
+
+    input CreatePaymentIntentForOrderInput {
+      orderId: Int!
+      userId: Int!
+      amount: Float!
+      currency: String
+      metadata: JSON
+    }
+
+    input ConfirmOrderPaymentInput {
+      orderId: Int!
+      userId: Int!
+      paymentIntentId: String!
+      paymentMethod: String!
     }
 
     # Plan Statistics
@@ -946,8 +989,9 @@ export const schema = createSchema({
       // Inscription (nouveaux resolvers avec middlewares)
       ...inscriptionResolvers.Mutation,
 
-      // Magasin (nouveaux resolvers avec middlewares)
-      ...magasinResolvers.Mutation,
+      // Shop (nouveaux resolvers avec middlewares)
+      ...shopResolvers.Mutation,
+      ...paymentResolvers.Mutation,
 
       // Paiements (nouveaux resolvers avec middlewares)
       ...paiementsResolvers.Mutation,

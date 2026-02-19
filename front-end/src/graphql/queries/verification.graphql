@@ -1,0 +1,44 @@
+# ============================================================================
+# Verification Queries - Check for duplicates and conflicts
+# ============================================================================
+
+# Check if a product exists by name and category
+query CheckProductByNameAndCategory($name: String!, $categoryId: Int!) {
+  checkProductByNameAndCategory(name: $name, categoryId: $categoryId) {
+    exists
+    product {
+      id
+      name
+      category_id
+      price
+    }
+  }
+}
+
+# Check if a product exists by name only
+query CheckProductByName($name: String!) {
+  checkProductByName(name: $name) {
+    exists
+    product {
+      id
+      name
+      category_id
+      price
+    }
+  }
+}
+
+# Check if a course schedule conflicts with existing courses
+query CheckCourseSchedule($input: CheckCourseScheduleInput!) {
+  checkCourseSchedule(input: $input) {
+    exists
+    conflictingCourses {
+      id
+      day
+      start_time
+      end_time
+      course_type
+      instructor_id
+    }
+  }
+}
