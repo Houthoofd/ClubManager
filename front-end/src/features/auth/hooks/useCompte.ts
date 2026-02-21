@@ -1,22 +1,21 @@
 import {
   useGetMeQuery,
   useUpdateUserMutation,
-  useGetSubscriptionsQuery,
+  useGetSubscriptions,
   useGetGradesQuery,
   useGetStatusesQuery,
   useGetGendersQuery,
-  useGetUserSubscriptionQuery,
-} from "@/lib/apollo/generated/graphql";
+  useGetUserSubscription,
+} from "@/core/api/apollo/generated/graphql";
 import type {
   GetMeQuery,
-  UpdateUserMutation,
   UpdateUserInput,
   GetSubscriptionsQuery,
   GetGradesQuery,
   GetStatusesQuery,
   GetGendersQuery,
   GetUserSubscriptionQuery,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 
 // ============================================================================
 // Types
@@ -180,7 +179,7 @@ export const useUpdateCompte = (): UseUpdateCompteReturn => {
  * ```
  */
 export const useSubscriptions = (): UseSubscriptionsReturn => {
-  const { data, loading, error, refetch } = useGetSubscriptionsQuery({
+  const { data, loading, error, refetch } = useGetSubscriptions({
     fetchPolicy: "cache-and-network",
   });
 
@@ -283,7 +282,7 @@ export const useUserSubscription = (
 
   const effectiveUserId = userId ?? meData?.me?.id;
 
-  const { data, loading, error, refetch } = useGetUserSubscriptionQuery({
+  const { data, loading, error, refetch } = useGetUserSubscription({
     variables: { userId: effectiveUserId! },
     skip: !effectiveUserId,
     fetchPolicy: "cache-and-network",

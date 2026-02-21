@@ -1,21 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import {
-  PageSection,
-  Stepper,
-  Step,
-  StepperStep,
-  Button,
-  Alert,
-} from "@patternfly/react-core";
-import { PageHeader } from "../../../components/common/PageHeader";
+import { PageSection, Stepper, Step, StepperStep, Button, Alert } from "@patternfly/react-core";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { CheckoutForm, StripePaymentForm } from "../components";
 import type { CheckoutFormData } from "../components/CheckoutForm";
-import { RootState } from "../../../redux/store";
-import { viderPanier } from "../../../redux/slices/panierSlice";
+import { useCartItems, useCartStore } from "@/store/cartStore";
 
 // Chargez votre clé publique Stripe
 const stripePromise = loadStripe(
@@ -24,22 +15,18 @@ const stripePromise = loadStripe(
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const panier = useSelector((state: RootState) => state.panier.articles);
+  // Optimisation: utiliser les hooks de convenience
+  const panier = useCartItems();
+  const clearCart = useCartStore((state) => state.clearCart);
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [customerInfo, setCustomerInfo] = useState<CheckoutFormData | null>(
-    null,
-  );
+  const [customerInfo, setCustomerInfo] = useState<CheckoutFormData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   const calculerTotal = () => {
-    return panier.reduce(
-      (total, article) => total + article.prix * (article.quantite || 1),
-      0,
-    );
+    return panier.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const handleCustomerInfoSubmit = (formData: CheckoutFormData) => {
@@ -67,7 +54,7 @@ const CheckoutPage: React.FC = () => {
       });
 
       if (response.ok) {
-        dispatch(viderPanier());
+        clearCart();
         setOrderSuccess(true);
         setCurrentStep(3);
       } else {
@@ -87,20 +74,12 @@ const CheckoutPage: React.FC = () => {
   if (panier.length === 0 && !orderSuccess) {
     return (
       <div className="checkout-page">
-        <PageHeader
-          title="Commande"
-          subtitle="Finalisez votre achat"
-          variant="store"
-        />
+        <PageHeader title="Commande" subtitle="Finalisez votre achat" variant="store" />
         <PageSection>
           <Alert variant="warning" title="Panier vide">
-            Votre panier est vide. Retournez au magasin pour ajouter des
-            articles.
+            Votre panier est vide. Retournez au magasin pour ajouter des articles.
           </Alert>
-          <Button
-            variant="primary"
-            onClick={() => navigate("/pages/magasin/magasin")}
-          >
+          <Button variant="primary" onClick={() => navigate("/pages/magasin/magasin")}>
             Retour au magasin
           </Button>
         </PageSection>
@@ -131,21 +110,13 @@ const CheckoutPage: React.FC = () => {
           </Stepper>
 
           {currentStep === 1 && (
-            <CheckoutForm
-              onSubmit={handleCustomerInfoSubmit}
-              isLoading={isLoading}
-              error={error}
-            />
+            <CheckoutForm onSubmit={handleCustomerInfoSubmit} isLoading={isLoading} error={error} />
           )}
 
           {currentStep === 2 && customerInfo && (
             <div>
               <div style={{ marginBottom: "1rem" }}>
-                <Button
-                  variant="link"
-                  onClick={() => setCurrentStep(1)}
-                  style={{ padding: 0 }}
-                >
+                <Button variant="link" onClick={() => setCurrentStep(1)} style={{ padding: 0 }}>
                   ← Retour aux informations de livraison
                 </Button>
               </div>
@@ -164,14 +135,10 @@ const CheckoutPage: React.FC = () => {
           {currentStep === 3 && orderSuccess && (
             <div style={{ textAlign: "center", padding: "2rem" }}>
               <Alert variant="success" title="Commande confirmée !" isInline>
-                Votre paiement a été traité avec succès. Vous recevrez un email
-                de confirmation.
+                Votre paiement a été traité avec succès. Vous recevrez un email de confirmation.
               </Alert>
               <div style={{ marginTop: "2rem" }}>
-                <Button
-                  variant="primary"
-                  onClick={() => navigate("/pages/magasin/magasin")}
-                >
+                <Button variant="primary" onClick={() => navigate("/pages/magasin/magasin")}>
                   Retour au magasin
                 </Button>
               </div>
@@ -179,12 +146,7 @@ const CheckoutPage: React.FC = () => {
           )}
 
           {error && currentStep !== 1 && (
-            <Alert
-              variant="danger"
-              title="Erreur"
-              isInline
-              style={{ marginTop: "1rem" }}
-            >
+            <Alert variant="danger" title="Erreur" isInline style={{ marginTop: "1rem" }}>
               {error}
             </Alert>
           )}

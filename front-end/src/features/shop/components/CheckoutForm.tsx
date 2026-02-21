@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Form,
   FormGroup,
@@ -11,10 +11,8 @@ import {
   Alert,
   Select,
   SelectOption,
-  SelectVariant
-} from '@patternfly/react-core';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../redux/store';
+} from "@patternfly/react-core";
+import { useCartItems } from "@/store/cartStore";
 
 interface CheckoutFormProps {
   onSubmit: (formData: CheckoutFormData) => void;
@@ -34,26 +32,24 @@ export interface CheckoutFormData {
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false, error }) => {
-  const panier = useSelector((state: RootState) => state.panier.articles);
+  const panier = useCartItems();
   const [formData, setFormData] = useState<CheckoutFormData>({
-    email: '',
-    prenom: '',
-    nom: '',
-    adresse: '',
-    ville: '',
-    codePostal: '',
-    pays: 'Belgique',
-    telephone: ''
+    email: "",
+    prenom: "",
+    nom: "",
+    adresse: "",
+    ville: "",
+    codePostal: "",
+    pays: "Belgique",
+    telephone: "",
   });
 
   const [isCountryOpen, setIsCountryOpen] = useState(false);
 
-  const countries = [
-    'Belgique', 'France', 'Pays-Bas', 'Luxembourg', 'Allemagne', 'Suisse'
-  ];
+  const countries = ["Belgique", "France", "Pays-Bas", "Luxembourg", "Allemagne", "Suisse"];
 
   const handleInputChange = (value: string, field: keyof CheckoutFormData) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -62,20 +58,20 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
   };
 
   const calculerTotal = () => {
-    return panier.reduce((total, article) => total + (article.prix * (article.quantite || 1)), 0).toFixed(2);
+    return panier.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2);
   };
 
   return (
-    <div style={{ display: 'flex', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ display: "flex", gap: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
       {/* Formulaire de livraison */}
       <Card style={{ flex: 2 }}>
         <CardBody>
-          <Title headingLevel="h2" size="lg" style={{ marginBottom: '1.5rem' }}>
+          <Title headingLevel="h2" size="lg" style={{ marginBottom: "1.5rem" }}>
             Informations de livraison
           </Title>
 
           {error && (
-            <Alert variant="danger" title="Erreur" isInline style={{ marginBottom: '1rem' }}>
+            <Alert variant="danger" title="Erreur" isInline style={{ marginBottom: "1rem" }}>
               {error}
             </Alert>
           )}
@@ -87,19 +83,19 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
                 type="email"
                 id="email"
                 value={formData.email}
-                onChange={(e) => handleInputChange(e.currentTarget.value, 'email')}
+                onChange={(e) => handleInputChange(e.currentTarget.value, "email")}
                 placeholder="votre@email.com"
               />
             </FormGroup>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ display: "flex", gap: "1rem" }}>
               <FormGroup label="Prénom" isRequired fieldId="prenom" style={{ flex: 1 }}>
                 <TextInput
                   isRequired
                   type="text"
                   id="prenom"
                   value={formData.prenom}
-                  onChange={(e) => handleInputChange(e.currentTarget.value, 'prenom')}
+                  onChange={(e) => handleInputChange(e.currentTarget.value, "prenom")}
                   placeholder="Prénom"
                 />
               </FormGroup>
@@ -110,7 +106,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
                   type="text"
                   id="nom"
                   value={formData.nom}
-                  onChange={(e) => handleInputChange(e.currentTarget.value, 'nom')}
+                  onChange={(e) => handleInputChange(e.currentTarget.value, "nom")}
                   placeholder="Nom"
                 />
               </FormGroup>
@@ -122,19 +118,19 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
                 type="text"
                 id="adresse"
                 value={formData.adresse}
-                onChange={(e) => handleInputChange(e.currentTarget.value, 'adresse')}
+                onChange={(e) => handleInputChange(e.currentTarget.value, "adresse")}
                 placeholder="123 Rue de la Paix"
               />
             </FormGroup>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ display: "flex", gap: "1rem" }}>
               <FormGroup label="Code postal" isRequired fieldId="codePostal" style={{ flex: 1 }}>
                 <TextInput
                   isRequired
                   type="text"
                   id="codePostal"
                   value={formData.codePostal}
-                  onChange={(e) => handleInputChange(e.currentTarget.value, 'codePostal')}
+                  onChange={(e) => handleInputChange(e.currentTarget.value, "codePostal")}
                   placeholder="1000"
                 />
               </FormGroup>
@@ -145,7 +141,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
                   type="text"
                   id="ville"
                   value={formData.ville}
-                  onChange={(e) => handleInputChange(e.currentTarget.value, 'ville')}
+                  onChange={(e) => handleInputChange(e.currentTarget.value, "ville")}
                   placeholder="Bruxelles"
                 />
               </FormGroup>
@@ -158,11 +154,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
                 onToggle={setIsCountryOpen}
                 selections={formData.pays}
                 onSelect={(_, selection) => {
-                  handleInputChange(selection as string, 'pays');
+                  handleInputChange(selection as string, "pays");
                   setIsCountryOpen(false);
                 }}
               >
-                {countries.map(country => (
+                {countries.map((country) => (
                   <SelectOption key={country} value={country}>
                     {country}
                   </SelectOption>
@@ -175,7 +171,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
                 type="tel"
                 id="telephone"
                 value={formData.telephone}
-                onChange={(e) => handleInputChange(e.currentTarget.value, 'telephone')}
+                onChange={(e) => handleInputChange(e.currentTarget.value, "telephone")}
                 placeholder="+32 123 45 67 89"
               />
             </FormGroup>
@@ -186,55 +182,56 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading = false
               size="lg"
               isLoading={isLoading}
               isDisabled={isLoading || panier.length === 0}
-              style={{ width: '100%', marginTop: '1rem' }}
+              style={{ width: "100%", marginTop: "1rem" }}
             >
-              {isLoading ? 'Traitement...' : `Payer ${calculerTotal()}€`}
+              {isLoading ? "Traitement..." : `Payer ${calculerTotal()}€`}
             </Button>
           </Form>
         </CardBody>
       </Card>
 
       {/* Résumé de commande */}
-      <Card style={{ flex: 1, height: 'fit-content' }}>
+      <Card style={{ flex: 1, height: "fit-content" }}>
         <CardBody>
-          <Title headingLevel="h3" size="md" style={{ marginBottom: '1rem' }}>
+          <Title headingLevel="h3" size="md" style={{ marginBottom: "1rem" }}>
             Résumé de commande
           </Title>
 
-          <div style={{ marginBottom: '1rem' }}>
-            {panier.map((article, index) => (
-              <div key={index} style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                padding: '0.5rem 0',
-                borderBottom: '1px solid #f0f0f0'
-              }}>
+          <div style={{ marginBottom: "1rem" }}>
+            {panier.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "0.5rem 0",
+                  borderBottom: "1px solid #f0f0f0",
+                }}
+              >
                 <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>
-                    {article.nom}
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#666' }}>
-                    Taille: {article.taille} | Qté: {article.quantite || 1}
+                  <div style={{ fontSize: "0.9rem", fontWeight: "bold" }}>{item.productName}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#666" }}>
+                    {item.size && `Taille: ${item.size} | `}Qté: {item.quantity}
                   </div>
                 </div>
-                <div style={{ fontWeight: 'bold' }}>
-                  {(article.prix * (article.quantite || 1)).toFixed(2)}€
-                </div>
+                <div style={{ fontWeight: "bold" }}>{(item.price * item.quantity).toFixed(2)}€</div>
               </div>
             ))}
           </div>
 
           <Divider />
 
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            padding: '1rem 0',
-            fontSize: '1.2rem',
-            fontWeight: 'bold'
-          }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "1rem 0",
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+            }}
+          >
             <span>Total</span>
             <span>{calculerTotal()}€</span>
           </div>

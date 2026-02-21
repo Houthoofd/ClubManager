@@ -4,6 +4,8 @@
  * This file contains all TypeScript types and interfaces used in the courses domain.
  */
 
+import type { Sessions } from "@/core/api/apollo/generated/graphql";
+
 // ============================================================================
 // Feature-Specific Types
 // ============================================================================
@@ -45,7 +47,7 @@ export interface PlanningCheckOptions {
  * Professor dissociation data
  */
 export interface ProfesseurDissociation {
-  cours: any; // TODO: Type this properly with Cours type
+  cours: Sessions;
   prof: {
     id: number;
     name: string;

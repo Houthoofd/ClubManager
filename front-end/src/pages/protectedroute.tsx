@@ -1,7 +1,7 @@
 // components/ProtectedRoute.tsx
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuthentifie } from '../hooks/useAuth';
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuthentifie } from "@/features/auth/hooks/useAuth";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { data, isLoading } = useAuthentifie();

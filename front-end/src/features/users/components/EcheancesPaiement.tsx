@@ -22,19 +22,16 @@ import {
   CalendarAltIcon,
   DollarSignIcon, // CORRIGÉ: Utiliser DollarSignIcon au lieu de EuroIcon
 } from "@patternfly/react-icons";
-import { apiUrl } from "../../utils/apiUrl";
-import "../../styles/echeances.css";
-import ResultModal from "../common/modal/ResultModal"; // AJOUTÉ: Import du composant modal
+import { apiUrl } from "@/shared/utils/apiUrl";
+import "@/styles/echeances.css";
+import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
 
 interface EcheancesPaiementProps {
   paiementsEcheances: any[];
   userId?: number;
 }
 
-const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
-  paiementsEcheances,
-  userId,
-}) => {
+const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({ paiementsEcheances, userId }) => {
   const location = useLocation();
   const [rappelLoading, setRappelLoading] = useState<{
     [key: number]: boolean;
@@ -46,9 +43,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
   const [modalTitle, setModalTitle] = useState("");
 
   // AJOUTÉ: Déterminer le type de page selon l'URL
-  const isConsultationPage = location.pathname.includes(
-    "/utilisateurs/consulter/",
-  );
+  const isConsultationPage = location.pathname.includes("/utilisateurs/consulter/");
   const isComptePage = location.pathname.includes("/compte");
 
   console.log("🔍 [EcheancesPaiement] Type de page détecté:", {
@@ -70,9 +65,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
 
   // AJOUTÉ: Vérification de sécurité critique
   if (!paiementsEcheances) {
-    console.warn(
-      "⚠️ [EcheancesPaiement] paiementsEcheances est undefined/null",
-    );
+    console.warn("⚠️ [EcheancesPaiement] paiementsEcheances est undefined/null");
     return (
       <Alert variant="info" title="Chargement des échéances...">
         <p>Les données des échéances sont en cours de chargement.</p>
@@ -81,13 +74,10 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
   }
 
   if (!Array.isArray(paiementsEcheances)) {
-    console.error(
-      "❌ [EcheancesPaiement] paiementsEcheances n'est pas un tableau:",
-      {
-        type: typeof paiementsEcheances,
-        value: paiementsEcheances,
-      },
-    );
+    console.error("❌ [EcheancesPaiement] paiementsEcheances n'est pas un tableau:", {
+      type: typeof paiementsEcheances,
+      value: paiementsEcheances,
+    });
     return (
       <Alert variant="danger" title="Erreur de données">
         <p>Les données des échéances ne sont pas dans le format attendu.</p>
@@ -163,8 +153,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
             successMessage += `\n\n⚠️ Problème lors de l'envoi de l'email : ${data.data.emailEnvoye.error}`;
           }
         } else {
-          successMessage +=
-            "\n\n⚠️ Aucune adresse email configurée pour cet utilisateur";
+          successMessage += "\n\n⚠️ Aucune adresse email configurée pour cet utilisateur";
         }
 
         // AJOUTÉ: Afficher la modal de succès
@@ -174,9 +163,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
         setShowResultModal(true);
       } else {
         console.error("❌ Erreur serveur:", data);
-        throw new Error(
-          data.message || `Erreur ${response.status}: ${response.statusText}`,
-        );
+        throw new Error(data.message || `Erreur ${response.status}: ${response.statusText}`);
       }
     } catch (error: any) {
       console.error("❌ Erreur envoi rappel:", error);
@@ -184,10 +171,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       let errorMessage = "Erreur lors de l'envoi du rappel.";
       let errorTitle = "Erreur d'envoi";
 
-      if (
-        error.message.includes("403") ||
-        error.message.includes("Permissions")
-      ) {
+      if (error.message.includes("403") || error.message.includes("Permissions")) {
         errorTitle = "Permissions insuffisantes";
         errorMessage =
           "Vous n'avez pas les permissions nécessaires pour envoyer des rappels de paiement.";
@@ -225,8 +209,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       echeanceId,
       userId: userIdToUse,
       userIdProp: userId,
-      fromEcheance: paiementsEcheances.find((e) => e?.id === echeanceId)
-        ?.utilisateur_id,
+      fromEcheance: paiementsEcheances.find((e) => e?.id === echeanceId)?.utilisateur_id,
     });
 
     if (userIdToUse) {
@@ -234,9 +217,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
       console.log(`✅ [EcheancesPaiement] Redirection vers: ${urlPaiement}`);
       window.location.href = urlPaiement;
     } else {
-      console.error(
-        `❌ [EcheancesPaiement] Aucun userId trouvé pour l'échéance ${echeanceId}`,
-      );
+      console.error(`❌ [EcheancesPaiement] Aucun userId trouvé pour l'échéance ${echeanceId}`);
       window.location.href = `/pages/paiement?echeance=${echeanceId}`;
     }
   };
@@ -274,19 +255,11 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
   if (paiementsEcheances.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "3rem" }}>
-        <CreditCardIcon
-          style={{ fontSize: "3rem", color: "#6c757d", marginBottom: "1rem" }}
-        />
-        <Title
-          headingLevel="h3"
-          size="lg"
-          style={{ color: "#6c757d", marginBottom: "0.5rem" }}
-        >
+        <CreditCardIcon style={{ fontSize: "3rem", color: "#6c757d", marginBottom: "1rem" }} />
+        <Title headingLevel="h3" size="lg" style={{ color: "#6c757d", marginBottom: "0.5rem" }}>
           Aucune échéance
         </Title>
-        <p style={{ color: "#6c757d" }}>
-          Vous n'avez actuellement aucune échéance de paiement.
-        </p>
+        <p style={{ color: "#6c757d" }}>Vous n'avez actuellement aucune échéance de paiement.</p>
       </div>
     );
   }
@@ -304,18 +277,13 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
         }}
       >
         <CreditCardIcon style={{ color: "#0066cc" }} />
-        {isConsultationPage
-          ? "Échéances de paiement"
-          : "Mes échéances de paiement"}
+        {isConsultationPage ? "Échéances de paiement" : "Mes échéances de paiement"}
       </Title>
 
       <div style={{ display: "grid", gap: "1.5rem" }}>
         {paiementsEcheances.map((echeance, index) => {
           if (!echeance || typeof echeance !== "object") {
-            console.warn(
-              `⚠️ [EcheancesPaiement] Échéance invalide à l'index ${index}:`,
-              echeance,
-            );
+            console.warn(`⚠️ [EcheancesPaiement] Échéance invalide à l'index ${index}:`, echeance);
             return null;
           }
 
@@ -328,8 +296,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
               case "payé":
                 return {
                   cardStyle: {
-                    background:
-                      "linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)",
+                    background: "linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)",
                     border: "2px solid #28a745",
                     boxShadow: "0 8px 25px rgba(40, 167, 69, 0.15)",
                     position: "relative" as const,
@@ -337,11 +304,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                     transition: "all 0.3s ease",
                   },
                   badgeVariant: "success" as const,
-                  icon: (
-                    <CheckCircleIcon
-                      style={{ color: "#28a745", fontSize: "1.2rem" }}
-                    />
-                  ),
+                  icon: <CheckCircleIcon style={{ color: "#28a745", fontSize: "1.2rem" }} />,
                   badgeText: "✅ Payé",
                   headerStyle: {
                     background: "rgba(40, 167, 69, 0.1)",
@@ -353,17 +316,12 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
               case "en attente":
                 return {
                   cardStyle: {
-                    background:
-                      "linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)",
+                    background: "linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)",
                     border: "2px solid #ffc107",
                     boxShadow: "0 4px 15px rgba(255, 193, 7, 0.2)",
                   },
                   badgeVariant: "warning" as const,
-                  icon: (
-                    <ClockIcon
-                      style={{ color: "#ffc107", fontSize: "1.2rem" }}
-                    />
-                  ),
+                  icon: <ClockIcon style={{ color: "#ffc107", fontSize: "1.2rem" }} />,
                   badgeText: "⏳ En attente",
                   headerStyle: {
                     background: "rgba(255, 193, 7, 0.1)",
@@ -375,16 +333,13 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
               case "échu":
                 return {
                   cardStyle: {
-                    background:
-                      "linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)",
+                    background: "linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%)",
                     border: "2px solid #dc3545",
                     boxShadow: "0 4px 15px rgba(220, 53, 69, 0.2)",
                   },
                   badgeVariant: "danger" as const,
                   icon: (
-                    <ExclamationTriangleIcon
-                      style={{ color: "#dc3545", fontSize: "1.2rem" }}
-                    />
+                    <ExclamationTriangleIcon style={{ color: "#dc3545", fontSize: "1.2rem" }} />
                   ),
                   badgeText: "❌ Échu",
                   headerStyle: {
@@ -408,8 +363,9 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
             }
           };
 
-          const { cardStyle, badgeVariant, icon, badgeText, headerStyle } =
-            getStatutStyle(echeance.statut);
+          const { cardStyle, badgeVariant, icon, badgeText, headerStyle } = getStatutStyle(
+            echeance.statut,
+          );
 
           return (
             <Card
@@ -477,10 +433,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                 </div>
 
                 {/* Informations principales */}
-                <Flex
-                  direction={{ default: "column" }}
-                  spaceItems={{ default: "spaceItemsMd" }}
-                >
+                <Flex direction={{ default: "column" }} spaceItems={{ default: "spaceItemsMd" }}>
                   {/* Montant */}
                   <FlexItem>
                     <Flex
@@ -521,14 +474,10 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                       spaceItems={{ default: "spaceItemsSm" }}
                     >
                       <FlexItem>
-                        <CalendarAltIcon
-                          style={{ color: "#6c757d", fontSize: "1.1rem" }}
-                        />
+                        <CalendarAltIcon style={{ color: "#6c757d", fontSize: "1.1rem" }} />
                       </FlexItem>
                       <FlexItem>
-                        <span style={{ fontWeight: "bold" }}>
-                          Date d'échéance:
-                        </span>{" "}
+                        <span style={{ fontWeight: "bold" }}>Date d'échéance:</span>{" "}
                         {formatDate(echeance.date_echeance)}
                       </FlexItem>
                     </Flex>
@@ -548,12 +497,9 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                           gap: "0.5rem",
                         }}
                       >
-                        <CheckCircleIcon
-                          style={{ color: "#28a745", fontSize: "1.1rem" }}
-                        />
+                        <CheckCircleIcon style={{ color: "#28a745", fontSize: "1.1rem" }} />
                         <span style={{ color: "#28a745", fontWeight: "500" }}>
-                          <strong>Payé le:</strong>{" "}
-                          {formatDate(echeance.date_paiement)}
+                          <strong>Payé le:</strong> {formatDate(echeance.date_paiement)}
                         </span>
                       </div>
                     </FlexItem>
@@ -600,18 +546,14 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                                   isLoading={rappelLoading[echeance.id]}
                                   isDisabled={rappelLoading[echeance.id]}
                                   style={{
-                                    background:
-                                      "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
+                                    background: "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
                                     border: "none",
                                     color: "white",
-                                    boxShadow:
-                                      "0 4px 12px rgba(108, 117, 125, 0.3)",
+                                    boxShadow: "0 4px 12px rgba(108, 117, 125, 0.3)",
                                     transition: "all 0.3s ease",
                                   }}
                                 >
-                                  {rappelLoading[echeance.id]
-                                    ? "Envoi..."
-                                    : "Envoyer rappel"}
+                                  {rappelLoading[echeance.id] ? "Envoi..." : "Envoyer rappel"}
                                 </Button>
                               </FlexItem>
                             )}
@@ -643,9 +585,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                                     color: isEchu ? "#dc3545" : "#007bff",
                                   }}
                                 >
-                                  {isEchu
-                                    ? "Paiement en retard"
-                                    : "En attente de paiement"}
+                                  {isEchu ? "Paiement en retard" : "En attente de paiement"}
                                 </span>
                               </div>
                             </FlexItem>
@@ -675,18 +615,14 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                                   isLoading={rappelLoading[echeance.id]}
                                   isDisabled={rappelLoading[echeance.id]}
                                   style={{
-                                    background:
-                                      "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
+                                    background: "linear-gradient(135deg, #6c757d 0%, #495057 100%)",
                                     border: "none",
                                     color: "white",
-                                    boxShadow:
-                                      "0 4px 12px rgba(108, 117, 125, 0.3)",
+                                    boxShadow: "0 4px 12px rgba(108, 117, 125, 0.3)",
                                     transition: "all 0.3s ease",
                                   }}
                                 >
-                                  {rappelLoading[echeance.id]
-                                    ? "Envoi..."
-                                    : "Envoyer rappel"}
+                                  {rappelLoading[echeance.id] ? "Envoi..." : "Envoyer rappel"}
                                 </Button>
                               </FlexItem>
                             )}
@@ -709,9 +645,7 @@ const EcheancesPaiement: React.FC<EcheancesPaiementProps> = ({
                                   transition: "all 0.3s ease",
                                 }}
                               >
-                                {isEchu
-                                  ? "Payer en retard"
-                                  : "Payer maintenant"}
+                                {isEchu ? "Payer en retard" : "Payer maintenant"}
                               </Button>
                             </FlexItem>
                           </Flex>

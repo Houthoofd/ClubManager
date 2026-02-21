@@ -1,29 +1,21 @@
 import React, { useState, useEffect } from "react";
-import {
-  Tabs,
-  Tab,
-  TabTitleText,
-  Spinner,
-  PageSection,
-} from "@patternfly/react-core";
+import { Tabs, Tab, TabTitleText, Spinner, PageSection } from "@patternfly/react-core";
 import {
   useAjouterCours,
   useProfesseurs,
   useJoursDeCours,
   useModifierCours,
 } from "../hooks/useCours";
-import {
-  useSupprimerCoursRecurrent,
-  useRetirerProfesseursDuCours,
-} from "../hooks/useProfesseurs";
-import { useCheckCoursPlanning } from "@/hooks/useVerification";
+import { useSupprimerCoursRecurrent, useRetirerProfesseursDuCours } from "../hooks/useProfesseurs";
+import { useCheckCoursPlanning } from "@/features/auth/hooks/useVerification";
 import CoursForm from "../components/CoursForm";
 import CoursList from "../components/CoursList";
 import CoursModals from "../components/CoursModals";
-import { PageHeader } from "@/components/common/PageHeader";
-import { safeSubstring } from "@/utils/safeSubstring";
-import ResultModal from "@/components/common/modal/ResultModal";
-import { LastProfessorWarningModal } from "@/components/modals/LastProfessorWarningModal";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import { safeSubstring } from "@/shared/utils/safeSubstring";
+import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
+import { LastProfessorWarningModal } from "@/shared/components/modals/LastProfessorWarningModal";
+import { useToggle } from "@/shared/hooks/utils";
 
 const AjouterCoursPage: React.FC = () => {
   // États pour la gestion des onglets, formulaires et modales
@@ -33,48 +25,39 @@ const AjouterCoursPage: React.FC = () => {
   const [nom, setNom] = useState("");
   const [heureDebut, setHeureDebut] = useState("");
   const [heureFin, setHeureFin] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState<
-    { id: number; name: string }[]
-  >([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<{ id: number; name: string }[]>([]);
+  const [isModalOpen, toggleModalOpen] = useToggle(false);
   const [professeurADissocier, setProfesseurADissocier] = useState<{
     cours: any;
     prof: any;
   } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [coursASupprimer, setCoursASupprimer] = useState<any | null>(null);
-  const [showSupprimerModal, setShowSupprimerModal] = useState(false);
-  const [showAjoutModal, setShowAjoutModal] = useState(false);
+  const [showSupprimerModal, toggleSupprimerModal] = useToggle(false);
+  const [showAjoutModal, toggleAjoutModal] = useToggle(false);
   const [ajoutMessage, setAjoutMessage] = useState<string | null>(null);
   const [ajoutSuccess, setAjoutSuccess] = useState<boolean>(false);
   const [isModifying, setIsModifying] = useState(false);
   const [originalCours, setOriginalCours] = useState<any | null>(null);
-  const [showConfirmModificationModal, setShowConfirmModificationModal] =
-    useState(false);
+  const [showConfirmModificationModal, toggleConfirmModificationModal] = useToggle(false);
   const [modificationsResume, setModificationsResume] = useState<string[]>([]);
 
   // Nouveaux états pour ResultModal
-  const [showResultModal, setShowResultModal] = useState(false);
+  const [showResultModal, toggleResultModal] = useToggle(false);
   const [resultModalMessage, setResultModalMessage] = useState("");
   const [resultModalSuccess, setResultModalSuccess] = useState(false);
 
   // Nouveaux états pour la modal d'avertissement du dernier professeur
-  const [showLastProfessorWarning, setShowLastProfessorWarning] =
-    useState(false);
-  const [
-    pendingLastProfessorDissociation,
-    setPendingLastProfessorDissociation,
-  ] = useState<{
+  const [showLastProfessorWarning, toggleLastProfessorWarning] = useToggle(false);
+  const [pendingLastProfessorDissociation, setPendingLastProfessorDissociation] = useState<{
     cours: any;
     prof: any;
     isLastProfessor: boolean;
   } | null>(null);
 
   // Hooks React Query
-  const { data: professeurs = [], isLoading: loadingProfesseurs } =
-    useProfesseurs();
-  const { data: planningCours = [], isLoading: loadingPlanning } =
-    useJoursDeCours();
+  const { data: professeurs = [], isLoading: loadingProfesseurs } = useProfesseurs();
+  const { data: planningCours = [], isLoading: loadingPlanning } = useJoursDeCours();
 
   const ajouterCours = useAjouterCours();
   const modifierCours = useModifierCours();
@@ -103,22 +86,14 @@ const AjouterCoursPage: React.FC = () => {
           0,
           5,
         );
-        const originalHeureFinFormatted = safeSubstring(
-          originalCours?.heure_fin || "00:00",
-          0,
-          5,
-        );
+        const originalHeureFinFormatted = safeSubstring(originalCours?.heure_fin || "00:00", 0, 5);
 
         if (heureDebut !== originalHeureDebutFormatted) {
-          modifications.push(
-            `Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`,
-          );
+          modifications.push(`Heure de début: "${originalHeureDebutFormatted}" → "${heureDebut}"`);
         }
 
         if (heureFin !== originalHeureFinFormatted) {
-          modifications.push(
-            `Heure de fin: "${originalHeureFinFormatted}" → "${heureFin}"`,
-          );
+          modifications.push(`Heure de fin: "${originalHeureFinFormatted}" → "${heureFin}"`);
         }
 
         // Comparaison du nom
@@ -128,9 +103,7 @@ const AjouterCoursPage: React.FC = () => {
 
         // Comparaison du type de cours
         if (selectedType !== originalCours?.type_cours) {
-          modifications.push(
-            `Type: "${originalCours?.type_cours}" → "${selectedType}"`,
-          );
+          modifications.push(`Type: "${originalCours?.type_cours}" → "${selectedType}"`);
         }
 
         // Comparaison du jour
@@ -144,8 +117,7 @@ const AjouterCoursPage: React.FC = () => {
           .map((prof: any) => {
             if (typeof prof === "string") return prof;
             if (prof?.prenom && prof?.nom) return `${prof.prenom} ${prof.nom}`;
-            if (prof?.first_name && prof?.last_name)
-              return `${prof.first_name} ${prof.last_name}`;
+            if (prof?.first_name && prof?.last_name) return `${prof.first_name} ${prof.last_name}`;
             if (prof?.name) return prof.name;
             return "";
           })
@@ -154,16 +126,9 @@ const AjouterCoursPage: React.FC = () => {
 
         const professeursActuels = selectedUsers.map((u) => u.name).sort();
 
-        if (
-          JSON.stringify(professeursOriginaux) !==
-          JSON.stringify(professeursActuels)
-        ) {
-          const ajouts = professeursActuels.filter(
-            (p) => !professeursOriginaux.includes(p),
-          );
-          const retraits = professeursOriginaux.filter(
-            (p) => !professeursActuels.includes(p),
-          );
+        if (JSON.stringify(professeursOriginaux) !== JSON.stringify(professeursActuels)) {
+          const ajouts = professeursActuels.filter((p) => !professeursOriginaux.includes(p));
+          const retraits = professeursOriginaux.filter((p) => !professeursActuels.includes(p));
 
           if (ajouts.length > 0) {
             modifications.push(`Professeurs ajoutés: ${ajouts.join(", ")}`);
@@ -176,26 +141,21 @@ const AjouterCoursPage: React.FC = () => {
         // Affichage des modifications ou message si aucune modification
         if (modifications.length > 0) {
           setModificationsResume(modifications);
-          setShowConfirmModificationModal(true);
+          toggleConfirmModificationModal(true);
         } else {
           setAjoutSuccess(false);
           setAjoutMessage("Aucune modification détectée.");
-          setShowAjoutModal(true);
+          toggleAjoutModal(true);
         }
       } else {
         // Vérification si un cours existe déjà au même créneau
-        const coursExiste = await checkCoursPlanning(
-          jour,
-          heureDebut,
-          heureFin,
-          selectedType,
-        );
+        const coursExiste = await checkCoursPlanning(jour, heureDebut, heureFin, selectedType);
         if (coursExiste) {
           setAjoutSuccess(false);
           setAjoutMessage(
             `Un cours existe déjà le ${jour} de ${heureDebut} à ${heureFin}. Veuillez choisir un autre créneau.`,
           );
-          setShowAjoutModal(true);
+          toggleAjoutModal(true);
           return;
         }
         await executerAjoutCours();
@@ -203,10 +163,8 @@ const AjouterCoursPage: React.FC = () => {
     } catch (error: any) {
       console.error("Erreur lors de l'ajout/modification du cours:", error);
       setAjoutSuccess(false);
-      setAjoutMessage(
-        error?.message || "Erreur lors de l'ajout/modification du cours.",
-      );
-      setShowAjoutModal(true);
+      setAjoutMessage(error?.message || "Erreur lors de l'ajout/modification du cours.");
+      toggleAjoutModal(true);
     }
   };
 
@@ -225,52 +183,35 @@ const AjouterCoursPage: React.FC = () => {
   // Confirmation des modifications
   const confirmerModification = async () => {
     try {
-      setShowConfirmModificationModal(false);
+      toggleConfirmModificationModal(false);
       const horaireChange =
-        heureDebut !==
-          safeSubstring(originalCours?.heure_debut || "00:00", 0, 5) ||
+        heureDebut !== safeSubstring(originalCours?.heure_debut || "00:00", 0, 5) ||
         heureFin !== safeSubstring(originalCours?.heure_fin || "00:00", 0, 5) ||
         jour !== originalCours?.jour;
 
       if (horaireChange && originalCours) {
-        const coursExiste = await checkCoursPlanning(
-          jour,
-          heureDebut,
-          heureFin,
-          "",
-          {
-            excludeOriginal: true,
-            originalJour: originalCours?.jour,
-            originalType: originalCours?.type_cours,
-            originalHeureDebut: safeSubstring(
-              originalCours?.heure_debut || "00:00",
-              0,
-              5,
-            ),
-            originalHeureFin: safeSubstring(
-              originalCours?.heure_fin || "00:00",
-              0,
-              5,
-            ),
-          },
-        );
+        const coursExiste = await checkCoursPlanning(jour, heureDebut, heureFin, "", {
+          excludeOriginal: true,
+          originalJour: originalCours?.jour,
+          originalType: originalCours?.type_cours,
+          originalHeureDebut: safeSubstring(originalCours?.heure_debut || "00:00", 0, 5),
+          originalHeureFin: safeSubstring(originalCours?.heure_fin || "00:00", 0, 5),
+        });
 
         if (coursExiste) {
           setAjoutSuccess(false);
           setAjoutMessage(
             `Un cours existe déjà le ${jour} de ${heureDebut} à ${heureFin}. Veuillez choisir un autre créneau.`,
           );
-          setShowAjoutModal(true);
+          toggleAjoutModal(true);
           return;
         }
       }
       await executerModificationCours();
     } catch (error: any) {
       setAjoutSuccess(false);
-      setAjoutMessage(
-        error?.message || "Erreur lors de la modification du cours.",
-      );
-      setShowAjoutModal(true);
+      setAjoutMessage(error?.message || "Erreur lors de la modification du cours.");
+      toggleAjoutModal(true);
     }
   };
 
@@ -279,10 +220,8 @@ const AjouterCoursPage: React.FC = () => {
     // Validation : Vérifier qu'au moins un professeur est sélectionné
     if (selectedUsers.length === 0) {
       setAjoutSuccess(false);
-      setAjoutMessage(
-        "Veuillez sélectionner au moins un professeur pour ce cours.",
-      );
-      setShowAjoutModal(true);
+      setAjoutMessage("Veuillez sélectionner au moins un professeur pour ce cours.");
+      toggleAjoutModal(true);
       return;
     }
 
@@ -302,10 +241,8 @@ const AjouterCoursPage: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       setAjoutSuccess(true);
-      setAjoutMessage(
-        `Le cours ${selectedType} du ${jour} a été ajouté avec succès !`,
-      );
-      setShowAjoutModal(true);
+      setAjoutMessage(`Le cours ${selectedType} du ${jour} a été ajouté avec succès !`);
+      toggleAjoutModal(true);
       resetFormulaire();
     } catch (error) {
       console.error("Erreur lors de l'ajout du cours:", error);
@@ -321,7 +258,7 @@ const AjouterCoursPage: React.FC = () => {
     if (selectedUsers.length === 0) {
       setAjoutSuccess(false);
       setAjoutMessage("Un cours doit avoir au moins un professeur assigné.");
-      setShowAjoutModal(true);
+      toggleAjoutModal(true);
       return;
     }
 
@@ -337,9 +274,7 @@ const AjouterCoursPage: React.FC = () => {
       heure_debut_original: originalCours?.heure_debut
         ? originalCours.heure_debut.substring(0, 5)
         : "",
-      heure_fin_original: originalCours?.heure_fin
-        ? originalCours.heure_fin.substring(0, 5)
-        : "",
+      heure_fin_original: originalCours?.heure_fin ? originalCours.heure_fin.substring(0, 5) : "",
     };
 
     console.log("Données du cours à modifier:", coursData);
@@ -352,10 +287,8 @@ const AjouterCoursPage: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       setAjoutSuccess(true);
-      setAjoutMessage(
-        `Le cours ${selectedType} du ${jour} a été modifié avec succès !`,
-      );
-      setShowAjoutModal(true);
+      setAjoutMessage(`Le cours ${selectedType} du ${jour} a été modifié avec succès !`);
+      toggleAjoutModal(true);
       resetFormulaire();
     } catch (error) {
       console.error("Erreur lors de la modification du cours:", error);
@@ -380,9 +313,7 @@ const AjouterCoursPage: React.FC = () => {
   // Ouverture de la modale de modification
   const ouvrirModalModification = (cours: any) => {
     console.log("Cours à modifier:", cours);
-    setNom(
-      cours.nom || `${cours.type_cours} - ${cours.jour || cours.jour_semaine}`,
-    );
+    setNom(cours.nom || `${cours.type_cours} - ${cours.jour || cours.jour_semaine}`);
     setSelectedType(cours.type_cours);
 
     let jourToUse = cours.jour_semaine || cours.jour;
@@ -503,10 +434,7 @@ const AjouterCoursPage: React.FC = () => {
     const isLast = professeursValides.length === 1 && professeurTrouve;
 
     console.log("🔍 RÉSULTAT - Est le dernier professeur:", isLast);
-    console.log(
-      "🔍 Logique: professeursValides.length === 1 &&",
-      professeursValides.length === 1,
-    );
+    console.log("🔍 Logique: professeursValides.length === 1 &&", professeursValides.length === 1);
     console.log("🔍 Logique: professeurTrouve &&", professeurTrouve);
 
     return isLast;
@@ -535,13 +463,10 @@ const AjouterCoursPage: React.FC = () => {
       professeurName = professeurOuCours.prof.name;
       console.log("✅ Format détecté: {prof: {name}, cours: {}}");
     } else {
-      console.error(
-        "❌ Format de données invalide pour la dissociation:",
-        professeurOuCours,
-      );
+      console.error("❌ Format de données invalide pour la dissociation:", professeurOuCours);
       setResultModalMessage("Erreur: Données de dissociation invalides.");
       setResultModalSuccess(false);
-      setShowResultModal(true);
+      toggleResultModal(true);
       return;
     }
 
@@ -560,10 +485,7 @@ const AjouterCoursPage: React.FC = () => {
 
       if (coursComplet && coursComplet.professeurs) {
         cours.professeurs = coursComplet.professeurs;
-        console.log(
-          "✅ Professeurs enrichis depuis planningCours:",
-          cours.professeurs,
-        );
+        console.log("✅ Professeurs enrichis depuis planningCours:", cours.professeurs);
       } else {
         console.log(
           "⚠️ Cours complet non trouvé dans planningCours, recherche par jour uniquement",
@@ -585,7 +507,7 @@ const AjouterCoursPage: React.FC = () => {
       console.error("❌ Nom du professeur manquant ou vide");
       setResultModalMessage("Erreur: Nom du professeur manquant.");
       setResultModalSuccess(false);
-      setShowResultModal(true);
+      toggleResultModal(true);
       return;
     }
 
@@ -593,7 +515,7 @@ const AjouterCoursPage: React.FC = () => {
       console.error("❌ Informations du cours manquantes");
       setResultModalMessage("Erreur: Informations du cours manquantes.");
       setResultModalSuccess(false);
-      setShowResultModal(true);
+      toggleResultModal(true);
       return;
     }
 
@@ -602,9 +524,7 @@ const AjouterCoursPage: React.FC = () => {
     console.log("🔍 Cours avec professeurs enrichis:", cours);
     const isLast = isLastProfessorForCourse(cours, professeurName);
     console.log("🔍 === RÉSULTAT FINAL ===");
-    console.log(
-      `🔍 Est le dernier professeur: ${isLast ? "✅ OUI" : "❌ NON"}`,
-    );
+    console.log(`🔍 Est le dernier professeur: ${isLast ? "✅ OUI" : "❌ NON"}`);
 
     if (isLast) {
       // C'est le dernier professeur - afficher l'avertissement spécial
@@ -614,7 +534,7 @@ const AjouterCoursPage: React.FC = () => {
         prof: { name: professeurName },
         isLastProfessor: true,
       });
-      setShowLastProfessorWarning(true);
+      toggleLastProfessorWarning(true);
     } else {
       // Dissociation normale
       console.log("👍 ACTIVATION Modal normale");
@@ -622,7 +542,7 @@ const AjouterCoursPage: React.FC = () => {
         cours: { ...cours, jour: cours.jour_semaine || cours.jour },
         prof: { name: professeurName },
       });
-      setIsModalOpen(true);
+      toggleModalOpen(true);
     }
 
     console.log("🔍 === FIN DISSOCIATION ===");
@@ -643,8 +563,8 @@ const AjouterCoursPage: React.FC = () => {
       console.error("❌ Nom du professeur invalide lors de la confirmation");
       setResultModalMessage("Erreur: Nom du professeur invalide.");
       setResultModalSuccess(false);
-      setShowResultModal(true);
-      setIsModalOpen(false);
+      toggleResultModal(true);
+      toggleModalOpen(false);
       setProfesseurADissocier(null);
       return;
     }
@@ -675,21 +595,19 @@ const AjouterCoursPage: React.FC = () => {
         `Le professeur ${professeurName} a bien été dissocié du cours ${coursInfo.type_cours} du ${jourCours} (${coursInfo.heure_debut}-${coursInfo.heure_fin}).`,
       );
       setResultModalSuccess(true);
-      setShowResultModal(true);
+      toggleResultModal(true);
 
       // Fermer la modal de confirmation
-      setIsModalOpen(false);
+      toggleModalOpen(false);
       setProfesseurADissocier(null);
     } catch (error: any) {
       console.error("Erreur lors de la dissociation du professeur:", error);
-      setResultModalMessage(
-        error?.message || "Erreur lors de la dissociation du professeur.",
-      );
+      setResultModalMessage(error?.message || "Erreur lors de la dissociation du professeur.");
       setResultModalSuccess(false);
-      setShowResultModal(true);
+      toggleResultModal(true);
 
       // Fermer la modal de confirmation
-      setIsModalOpen(false);
+      toggleModalOpen(false);
       setProfesseurADissocier(null);
     }
   };
@@ -701,26 +619,21 @@ const AjouterCoursPage: React.FC = () => {
     const professeurName = pendingLastProfessorDissociation.prof.name;
     const coursInfo = pendingLastProfessorDissociation.cours;
 
-    console.log(
-      "🔍 Confirmation dernier professeur - Professeur:",
-      professeurName,
-    );
+    console.log("🔍 Confirmation dernier professeur - Professeur:", professeurName);
     console.log("🔍 Confirmation dernier professeur - Cours:", coursInfo);
 
     // Validation finale
     if (!professeurName || professeurName.trim() === "") {
-      console.error(
-        "❌ Nom du professeur invalide lors de la confirmation du dernier professeur",
-      );
+      console.error("❌ Nom du professeur invalide lors de la confirmation du dernier professeur");
       setResultModalMessage("Erreur: Nom du professeur invalide.");
       setResultModalSuccess(false);
-      setShowResultModal(true);
-      setShowLastProfessorWarning(false);
+      toggleResultModal(true);
+      toggleLastProfessorWarning(false);
       setPendingLastProfessorDissociation(null);
       return;
     }
 
-    setShowLastProfessorWarning(false);
+    toggleLastProfessorWarning(false);
 
     try {
       const jourCours = coursInfo.jour;
@@ -750,26 +663,21 @@ const AjouterCoursPage: React.FC = () => {
       setResultModalMessage(
         `Le professeur ${professeurName} a été dissocié et le cours "${coursInfo.type_cours} - ${coursInfo.jour}" a été supprimé car il n'avait plus de professeur assigné.`,
       );
-      setShowResultModal(true);
+      toggleResultModal(true);
     } catch (error: any) {
-      console.error(
-        "Erreur lors de la dissociation du dernier professeur:",
-        error,
-      );
+      console.error("Erreur lors de la dissociation du dernier professeur:", error);
       setResultModalSuccess(false);
       setResultModalMessage(
-        error?.message ||
-          "Erreur lors de la dissociation du dernier professeur",
+        error?.message || "Erreur lors de la dissociation du dernier professeur",
       );
-      setShowResultModal(true);
+      toggleResultModal(true);
     } finally {
       setPendingLastProfessorDissociation(null);
     }
   };
 
   // Vérification si les données sont en cours de chargement ou non disponibles
-  const isLoadingData =
-    loadingProfesseurs || loadingPlanning || !planningCours || !professeurs;
+  const isLoadingData = loadingProfesseurs || loadingPlanning || !planningCours || !professeurs;
   const [isDataReady, setIsDataReady] = useState(false);
 
   useEffect(() => {
@@ -800,9 +708,7 @@ const AjouterCoursPage: React.FC = () => {
   // Permettre l'affichage même si planningCours est vide
   const filteredPlanningCours = planningCours
     ? planningCours.filter((cours) => {
-        return (
-          cours.heure_debut && cours.heure_fin && cours.jour && cours.type_cours
-        );
+        return cours.heure_debut && cours.heure_fin && cours.jour && cours.type_cours;
       })
     : [];
 
@@ -811,9 +717,7 @@ const AjouterCoursPage: React.FC = () => {
     heure_debut: cours.heure_debut || "00:00",
     heure_fin: cours.heure_fin || "00:00",
     professeurs:
-      cours.professeurs &&
-      cours.professeurs.length > 0 &&
-      cours.professeurs[0] !== null
+      cours.professeurs && cours.professeurs.length > 0 && cours.professeurs[0] !== null
         ? cours.professeurs
         : ["Aucun professeur"],
   }));
@@ -838,7 +742,7 @@ const AjouterCoursPage: React.FC = () => {
   const ouvrirModalSuppression = (cours: any) => {
     console.log("🗑️ Ouverture modal suppression pour:", cours);
     setCoursASupprimer({ ...cours, jour: cours.jour_semaine || cours.jour });
-    setShowSupprimerModal(true);
+    toggleSupprimerModal(true);
   };
 
   // Confirmation de la suppression
@@ -846,32 +750,27 @@ const AjouterCoursPage: React.FC = () => {
     if (!coursASupprimer) return;
 
     try {
-      const jourASupprimer =
-        coursASupprimer.jour_semaine || coursASupprimer.jour;
+      const jourASupprimer = coursASupprimer.jour_semaine || coursASupprimer.jour;
       console.log("🗑️ Suppression du cours:", jourASupprimer);
 
-      await supprimerCoursRecurrent.mutateAsync(
-        jourASupprimer.toLowerCase().trim(),
-      );
+      await supprimerCoursRecurrent.mutateAsync(jourASupprimer.toLowerCase().trim());
 
       // Remplacer setSuccessMessage par ResultModal
       setResultModalMessage(
         `Le cours ${coursASupprimer.type_cours} du ${jourASupprimer} a bien été supprimé.`,
       );
       setResultModalSuccess(true);
-      setShowResultModal(true);
+      toggleResultModal(true);
 
-      setShowSupprimerModal(false);
+      toggleSupprimerModal(false);
       setCoursASupprimer(null);
     } catch (error: any) {
       console.error("Erreur lors de la suppression du cours:", error);
-      setResultModalMessage(
-        error?.message || "Erreur lors de la suppression du cours.",
-      );
+      setResultModalMessage(error?.message || "Erreur lors de la suppression du cours.");
       setResultModalSuccess(false);
-      setShowResultModal(true);
+      toggleResultModal(true);
 
-      setShowSupprimerModal(false);
+      toggleSupprimerModal(false);
       setCoursASupprimer(null);
     }
   };
@@ -928,10 +827,7 @@ const AjouterCoursPage: React.FC = () => {
             onSelect={(_e, key) => setActiveTabKey(key as number)}
             className="modern-tabs"
           >
-            <Tab
-              eventKey={0}
-              title={<TabTitleText>Ajouter un cours</TabTitleText>}
-            >
+            <Tab eventKey={0} title={<TabTitleText>Ajouter un cours</TabTitleText>}>
               <CoursForm
                 nom={nom}
                 setNom={setNom}
@@ -952,10 +848,7 @@ const AjouterCoursPage: React.FC = () => {
                 onAnnulerModification={resetFormulaire}
               />
             </Tab>
-            <Tab
-              eventKey={1}
-              title={<TabTitleText>Voir les cours</TabTitleText>}
-            >
+            <Tab eventKey={1} title={<TabTitleText>Voir les cours</TabTitleText>}>
               <CoursList
                 cours={filteredPlanningCours}
                 onModifierCours={ouvrirModalModification}
@@ -992,9 +885,7 @@ const AjouterCoursPage: React.FC = () => {
             onClose={annulerDissociationDernierProfesseur}
             onConfirm={confirmerDissociationDernierProfesseur}
             professorName={
-              pendingLastProfessorDissociation
-                ? pendingLastProfessorDissociation.prof.name
-                : ""
+              pendingLastProfessorDissociation ? pendingLastProfessorDissociation.prof.name : ""
             }
             courseName={
               pendingLastProfessorDissociation

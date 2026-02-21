@@ -10,6 +10,8 @@
  * - HALF_OPEN : Test après timeout, essai d'une requête
  */
 
+import { alertService, AlertType } from "../../services/alert.service.js";
+
 export class CircuitBreakerOpenError extends Error {
   constructor(
     message: string,
@@ -17,11 +19,11 @@ export class CircuitBreakerOpenError extends Error {
     public readonly state: CircuitBreakerState,
   ) {
     super(message);
-    this.name = 'CircuitBreakerOpenError';
+    this.name = "CircuitBreakerOpenError";
   }
 }
 
-export type CircuitBreakerState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+export type CircuitBreakerState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
 export interface CircuitBreakerConfig {
   failureThreshold: number; // Nombre d'échecs avant ouverture
@@ -49,7 +51,7 @@ const DEFAULT_CONFIG: CircuitBreakerConfig = {
 };
 
 export class CircuitBreaker {
-  private state: CircuitBreakerState = 'CLOSED';
+  private state: CircuitBreakerState = "CLOSED";
   private failureCount = 0;
   private successCount = 0;
   private nextAttemptTime: number | null = null;
@@ -66,7 +68,7 @@ export class CircuitBreaker {
 
   constructor(
     private readonly config: CircuitBreakerConfig = DEFAULT_CONFIG,
-    private readonly name: string = 'CircuitBreaker',
+    private readonly name: string = "CircuitBreaker",
   ) {
     console.log(
       `🔌 [${this.name}] Initialized with config:`,
@@ -84,7 +86,7 @@ export class CircuitBreaker {
     this.cleanOldFailures();
 
     // État OPEN : Circuit coupé
-    if (this.state === 'OPEN') {
+    if (this.state === "OPEN") {
       const now = Date.now();
 
       if (this.nextAttemptTime && now < this.nextAttemptTime) {
@@ -99,7 +101,7 @@ export class CircuitBreaker {
       }
 
       // Timeout écoulé : passer en HALF_OPEN
-      this.transitionTo('HALF_OPEN');
+      this.transitionTo("HALF_OPEN");
       console.log(`⚡ [${this.name}] OPEN → HALF_OPEN (testing connection)`);
     }
 
@@ -112,7 +114,7 @@ export class CircuitBreaker {
       return result;
     } catch (error) {
       // Échec
-      this.onFailure(error);
+      await this.onFailure(error);
       throw error;
     }
   }
@@ -125,7 +127,7 @@ export class CircuitBreaker {
     this.lastSuccessTime = Date.now();
     this.failureCount = 0; // Reset le compteur d'échecs
 
-    if (this.state === 'HALF_OPEN') {
+    if (this.state === "HALF_OPEN") {
       this.successCount++;
 
       console.log(
@@ -134,13 +136,11 @@ export class CircuitBreaker {
 
       if (this.successCount >= this.config.successThreshold) {
         // Assez de succès : fermer le circuit
-        this.transitionTo('CLOSED');
+        this.transitionTo("CLOSED");
         this.successCount = 0;
-        console.log(
-          `✅ [${this.name}] HALF_OPEN → CLOSED (service recovered)`,
-        );
+        console.log(`✅ [${this.name}] HALF_OPEN → CLOSED (service recovered)`);
       }
-    } else if (this.state === 'CLOSED') {
+    } else if (this.state === "CLOSED") {
       // Tout va bien, rien de spécial
       console.log(`✅ [${this.name}] Request successful (state: CLOSED)`);
     }
@@ -149,7 +149,7 @@ export class CircuitBreaker {
   /**
    * Appelé en cas d'échec
    */
-  private onFailure(error: any): void {
+  private async onFailure(error: any): Promise<void> {
     this.totalFailures++;
     this.lastFailureTime = Date.now();
     this.successCount = 0; // Reset le compteur de succès
@@ -157,7 +157,7 @@ export class CircuitBreaker {
     // Enregistrer l'échec
     this.recentFailures.push({
       timestamp: Date.now(),
-      error: error?.message || 'Unknown error',
+      error: error?.message || "Unknown error",
     });
 
     // Limiter l'historique
@@ -165,16 +165,18 @@ export class CircuitBreaker {
       this.recentFailures = this.recentFailures.slice(-50);
     }
 
-    if (this.state === 'HALF_OPEN') {
+    if (this.state === "HALF_OPEN") {
       // Échec en HALF_OPEN : réouvrir immédiatement
-      this.transitionTo('OPEN');
+      this.transitionTo("OPEN");
       this.nextAttemptTime = Date.now() + this.config.timeout;
 
       console.error(
         `❌ [${this.name}] Failure in HALF_OPEN → OPEN (service still unavailable)`,
       );
-      console.error(`⏰ [${this.name}] Next attempt at ${new Date(this.nextAttemptTime).toISOString()}`);
-    } else if (this.state === 'CLOSED') {
+      console.error(
+        `⏰ [${this.name}] Next attempt at ${new Date(this.nextAttemptTime).toISOString()}`,
+      );
+    } else if (this.state === "CLOSED") {
       this.failureCount++;
 
       console.error(
@@ -183,16 +185,18 @@ export class CircuitBreaker {
 
       if (this.failureCount >= this.config.failureThreshold) {
         // Trop d'échecs : ouvrir le circuit
-        this.transitionTo('OPEN');
+        this.transitionTo("OPEN");
         this.nextAttemptTime = Date.now() + this.config.timeout;
 
         console.error(
           `⛔ [${this.name}] CLOSED → OPEN (failure threshold reached: ${this.failureCount} failures)`,
         );
-        console.error(`⏰ [${this.name}] Next attempt at ${new Date(this.nextAttemptTime).toISOString()}`);
+        console.error(
+          `⏰ [${this.name}] Next attempt at ${new Date(this.nextAttemptTime).toISOString()}`,
+        );
 
         // Alerter l'admin
-        this.alertAdmin();
+        await this.alertAdmin();
       }
     }
   }
@@ -214,26 +218,28 @@ export class CircuitBreaker {
     const oldState = this.state;
     this.state = newState;
 
-    if (newState === 'CLOSED') {
+    if (newState === "CLOSED") {
       this.failureCount = 0;
       this.successCount = 0;
       this.nextAttemptTime = null;
-    } else if (newState === 'OPEN') {
+    } else if (newState === "OPEN") {
       this.successCount = 0;
-    } else if (newState === 'HALF_OPEN') {
+    } else if (newState === "HALF_OPEN") {
       this.successCount = 0;
       this.failureCount = 0;
     }
 
-    console.log(`🔄 [${this.name}] State transition: ${oldState} → ${newState}`);
+    console.log(
+      `🔄 [${this.name}] State transition: ${oldState} → ${newState}`,
+    );
   }
 
   /**
    * Alerte l'administrateur (à implémenter selon vos besoins)
    */
-  private alertAdmin(): void {
+  private async alertAdmin(): Promise<void> {
     const alert = {
-      level: 'critical',
+      level: "critical",
       service: this.name,
       message: `Circuit Breaker is OPEN - Service unavailable`,
       failureCount: this.failureCount,
@@ -243,13 +249,36 @@ export class CircuitBreaker {
         : null,
     };
 
-    console.error('🚨 [ALERT]', JSON.stringify(alert, null, 2));
+    console.error("🚨 [ALERT]", JSON.stringify(alert, null, 2));
 
-    // TODO: Implémenter notification (email, Slack, Discord, etc.)
-    // Exemples :
-    // - await sendSlackNotification(alert);
-    // - await sendEmailToAdmin(alert);
-    // - await sendDiscordWebhook(alert);
+    // Send alert notification to admin via alert service
+    try {
+      // Find system admin user (ID 1 is typically the main admin)
+      // In production, you might want to query for all admin users
+      const adminUserId = 1;
+
+      await alertService.createAlert({
+        utilisateurId: adminUserId,
+        typeCode: AlertType.SYSTEM_ERROR,
+        priority: "critique" as any,
+        context: {
+          service: this.name,
+          failureCount: this.failureCount,
+          recentErrors: this.recentFailures.slice(-5),
+          nextAttemptTime: this.nextAttemptTime
+            ? new Date(this.nextAttemptTime).toISOString()
+            : null,
+        },
+        notes: `Circuit Breaker is OPEN - Service ${this.name} unavailable after ${this.failureCount} failures`,
+      });
+
+      console.log("✅ [CircuitBreaker] Alert notification sent to admin");
+    } catch (error) {
+      console.error(
+        "❌ [CircuitBreaker] Failed to send alert notification:",
+        error,
+      );
+    }
   }
 
   /**
@@ -282,7 +311,7 @@ export class CircuitBreaker {
     const failureRate =
       this.totalRequests > 0
         ? ((this.totalFailures / this.totalRequests) * 100).toFixed(2)
-        : '0.00';
+        : "0.00";
 
     return {
       state: this.state,
@@ -315,12 +344,10 @@ export class CircuitBreaker {
           ? new Date(this.lastSuccessTime).toISOString()
           : null,
       },
-      recentErrors: this.recentFailures
-        .slice(-10)
-        .map((f) => ({
-          timestamp: new Date(f.timestamp).toISOString(),
-          error: f.error,
-        })),
+      recentErrors: this.recentFailures.slice(-10).map((f) => ({
+        timestamp: new Date(f.timestamp).toISOString(),
+        error: f.error,
+      })),
     };
   }
 
@@ -329,7 +356,7 @@ export class CircuitBreaker {
    */
   reset(): void {
     console.log(`🔄 [${this.name}] Manual reset`);
-    this.state = 'CLOSED';
+    this.state = "CLOSED";
     this.failureCount = 0;
     this.successCount = 0;
     this.nextAttemptTime = null;
@@ -340,8 +367,10 @@ export class CircuitBreaker {
    * Forcer l'ouverture du circuit (pour tests ou maintenance)
    */
   forceOpen(durationMs?: number): void {
-    console.warn(`⚠️ [${this.name}] Force OPEN for ${durationMs || this.config.timeout}ms`);
-    this.state = 'OPEN';
+    console.warn(
+      `⚠️ [${this.name}] Force OPEN for ${durationMs || this.config.timeout}ms`,
+    );
+    this.state = "OPEN";
     this.nextAttemptTime = Date.now() + (durationMs || this.config.timeout);
   }
 
@@ -350,7 +379,7 @@ export class CircuitBreaker {
    */
   forceClose(): void {
     console.log(`✅ [${this.name}] Force CLOSED`);
-    this.state = 'CLOSED';
+    this.state = "CLOSED";
     this.failureCount = 0;
     this.successCount = 0;
     this.nextAttemptTime = null;
@@ -365,12 +394,12 @@ export const sendGridCircuitBreaker = new CircuitBreaker(
     timeout: 5 * 60 * 1000, // 5 minutes
     monitoringWindow: 60 * 1000, // 1 minute
   },
-  'SendGrid',
+  "SendGrid",
 );
 
 // Helper pour vérifier si le circuit est ouvert
 export function isCircuitOpen(): boolean {
-  return sendGridCircuitBreaker.getStatus().state === 'OPEN';
+  return sendGridCircuitBreaker.getStatus().state === "OPEN";
 }
 
 // Helper pour obtenir le statut

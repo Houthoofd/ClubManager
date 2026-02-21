@@ -1,12 +1,18 @@
 import {
   useGetUsersQuery,
   useGetUserQuery,
-} from "@/lib/apollo/generated/graphql";
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useDeleteUserMutation,
+  useCheckEmailLazyQuery,
+} from "@/core/api/apollo/generated/graphql";
 import type {
   GetUsersQuery,
   GetUserQuery,
   GetUsersQueryVariables,
-} from "@/lib/apollo/generated/graphql";
+  CreateUserInput,
+  UpdateUserInput,
+} from "@/core/api/apollo/generated/graphql";
 
 // ============================================================================
 // Types
@@ -99,4 +105,149 @@ export const useUserById = (id: number | undefined): UseUserByIdReturn => {
  */
 export const useAllUsers = (): UseUsersReturn => {
   return useUsers();
+};
+
+/**
+ * Legacy alias for useUsers
+ * @deprecated Use useUsers instead
+ */
+export const useUtilisateurs = useUsers;
+
+/**
+ * Legacy alias for useUserById
+ * @deprecated Use useUserById instead
+ */
+export const useUtilisateurById = useUserById;
+
+/**
+ * Hook to update a user
+ */
+export const useUpdateUtilisateur = () => {
+  const [updateUserMutation, { loading, error }] = useUpdateUserMutation();
+
+  const updateUtilisateur = async (id: number, input: UpdateUserInput) => {
+    console.log("📝 [useUpdateUtilisateur] Updating user:", { id, input });
+
+    const result = await updateUserMutation({
+      variables: { id, input },
+      refetchQueries: ["GetUsers", "GetUser"],
+    });
+
+    if (!result.data?.updateUser) {
+      throw new Error("User update failed");
+    }
+
+    console.log("✅ [useUpdateUtilisateur] User updated:", result.data.updateUser.id);
+  };
+
+  return {
+    updateUtilisateur,
+    isLoading: loading,
+    error: error ?? null,
+    success: !loading && !error,
+  };
+};
+
+/**
+ * Hook to delete a user
+ */
+export const useDeleteUtilisateur = () => {
+  const [deleteUserMutation, { loading, error }] = useDeleteUserMutation();
+
+  const deleteUtilisateur = async (id: number) => {
+    console.log("🗑️ [useDeleteUtilisateur] Deleting user:", id);
+
+    const result = await deleteUserMutation({
+      variables: { id },
+      refetchQueries: ["GetUsers"],
+    });
+
+    if (!result.data?.deleteUser?.success) {
+      throw new Error(result.data?.deleteUser?.message || "User deletion failed");
+    }
+
+    console.log("✅ [useDeleteUtilisateur] User deleted:", id);
+  };
+
+  return {
+    deleteUtilisateur,
+    isLoading: loading,
+    error: error ?? null,
+    success: !loading && !error,
+  };
+};
+
+/**
+ * Hook to add/create a user
+ */
+export const useAjouterUtilisateur = () => {
+  const [createUserMutation, { loading, error }] = useCreateUserMutation();
+
+  const ajouterUtilisateur = async (input: CreateUserInput) => {
+    console.log("📝 [useAjouterUtilisateur] Adding user:", input);
+
+    const result = await createUserMutation({
+      variables: { input },
+      refetchQueries: ["GetUsers"],
+    });
+
+    if (!result.data?.createUser) {
+      throw new Error("User creation failed");
+    }
+
+    console.log("✅ [useAjouterUtilisateur] User created:", result.data.createUser.id);
+    return result.data.createUser;
+  };
+
+  return {
+    ajouterUtilisateur,
+    isLoading: loading,
+    error: error ?? null,
+    success: !loading && !error,
+  };
+};
+
+/**
+ * Hook to check if email exists
+ */
+export const useCheckEmailExists = () => {
+  const [checkEmail] = useCheckEmailLazyQuery({
+    fetchPolicy: "network-only",
+  });
+
+  return async (email: string): Promise<boolean> => {
+    try {
+      console.log("🔍 [checkEmailExists] Checking email:", email);
+      const result = await checkEmail({
+        variables: { email },
+      });
+      const exists = result.data?.checkEmail?.exists ?? false;
+      console.log("✅ [checkEmailExists] Result:", exists);
+      return exists;
+    } catch (error) {
+      console.error("❌ [checkEmailExists] Error:", error);
+      return false;
+    }
+  };
+};
+
+/**
+ * Function to check if email exists (legacy function wrapper)
+ * @deprecated Use useCheckEmailExists hook instead
+ */
+export const checkEmailExists = async (email: string): Promise<boolean> => {
+  console.warn(
+    "⚠️ [checkEmailExists] This function is deprecated. Use useCheckEmailExists hook instead.",
+  );
+  // Fallback implementation
+  try {
+    const response = await fetch(`/api/check-email?email=${encodeURIComponent(email)}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.exists ?? false;
+    }
+  } catch (error) {
+    console.error("Error checking email:", error);
+  }
+  return false;
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   PageSection,
   Form,
@@ -10,32 +10,32 @@ import {
   Card,
   CardBody,
   Title,
-  Divider
-} from '@patternfly/react-core';
-import { PageHeader } from '../components/common/PageHeader';
-import ModalWithHelp from '../components/common/modal/modalwithhelp'; // Utilisez la casse correcte
+  Divider,
+} from "@patternfly/react-core";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import ModalWithHelp from "@/shared/components/common-legacy/modal/modalwithhelp";
 
 const Settings = () => {
   const [notifications, setNotifications] = useState(true);
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState("light");
   const [showModal, setShowModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
-  const [modalVariant, setModalVariant] = useState<'confirmation' | 'success' | 'error'>('success');
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalVariant, setModalVariant] = useState<"confirmation" | "success" | "error">("success");
 
   const handleSave = () => {
-    console.log('Notifications activées:', notifications);
-    console.log('Thème:', theme);
-    setModalMessage('Vos paramètres ont été sauvegardés avec succès !');
-    setModalVariant('success');
+    console.log("Notifications activées:", notifications);
+    console.log("Thème:", theme);
+    setModalMessage("Vos paramètres ont été sauvegardés avec succès !");
+    setModalVariant("success");
     setShowModal(true);
   };
 
   // Applique le thème choisi
   React.useEffect(() => {
-    document.body.classList.remove('theme-light', 'theme-dark', 'theme-system');
-    if (theme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
+    document.body.classList.remove("theme-light", "theme-dark", "theme-system");
+    if (theme === "system") {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.body.classList.add(prefersDark ? "theme-dark" : "theme-light");
     } else {
       document.body.classList.add(`theme-${theme}`);
     }
@@ -65,15 +65,15 @@ const Settings = () => {
 
                 <Form className="settings-form">
                   <div className="settings-form-group">
-                    <FormGroup 
-                      label="Notifications par e‑mail" 
+                    <FormGroup
+                      label="Notifications par e‑mail"
                       fieldId="notifications"
                       className="settings-form-field"
                     >
                       <div className="settings-switch-container">
                         <Switch
                           id="notifications"
-                          label={notifications ? 'Activées' : 'Désactivées'}
+                          label={notifications ? "Activées" : "Désactivées"}
                           isChecked={notifications}
                           onChange={(_e, checked) => setNotifications(checked)}
                           className="settings-switch"
@@ -88,8 +88,8 @@ const Settings = () => {
                   <Divider className="settings-divider" />
 
                   <div className="settings-form-group">
-                    <FormGroup 
-                      label="Thème d'affichage" 
+                    <FormGroup
+                      label="Thème d'affichage"
                       fieldId="theme-select"
                       className="settings-form-field"
                     >
@@ -114,11 +114,7 @@ const Settings = () => {
                   <Divider className="settings-divider" />
 
                   <div className="settings-actions">
-                    <Button 
-                      variant="primary" 
-                      onClick={handleSave}
-                      className="settings-save-button"
-                    >
+                    <Button variant="primary" onClick={handleSave} className="settings-save-button">
                       Sauvegarder les modifications
                     </Button>
                   </div>

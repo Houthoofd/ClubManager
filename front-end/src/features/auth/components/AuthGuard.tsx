@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getUser, setUser as saveUser, clearAuth } from "../../utils/storage";
+import { getUser, setUser as saveUser, clearAuth } from "@/shared/utils/storage";
 import {
   Card,
   CardBody,
@@ -12,7 +12,7 @@ import {
   Spinner,
 } from "@patternfly/react-core";
 import { LockIcon, UserIcon, PlusCircleIcon } from "@patternfly/react-icons";
-import logger from "../../utils/logger";
+import logger from "@/shared/utils/logger";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -71,9 +71,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   const verifyAuthentication = async () => {
     try {
-      console.log(
-        "🔐 [AuthGuard] Vérification authentification (production mode)...",
-      );
+      console.log("🔐 [AuthGuard] Vérification authentification (production mode)...");
 
       // ÉTAPE 1: Vérifier d'abord localStorage
       const localUserData = localStorage.getItem("userData");
@@ -84,9 +82,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         hasUserData: !!localUserData,
         hasLocalStorageToken: !!authToken,
         hasCookieToken: !!cookieToken,
-        userDataPreview: localUserData
-          ? JSON.parse(localUserData).email
-          : "none",
+        userDataPreview: localUserData ? JSON.parse(localUserData).email : "none",
       });
 
       // MODIFIÉ: Considérer comme authentifié si on a userData ET un token
@@ -98,41 +94,32 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           const userData = JSON.parse(localUserData);
 
           if (userData.id && userData.email && userData.status) {
-            console.log(
-              "✅ [AuthGuard] Données locales ET token valides trouvés",
-            );
+            console.log("✅ [AuthGuard] Données locales ET token valides trouvés");
 
             const userDataToSave = {
               id: userData.id,
               email: userData.email,
               first_name: userData.first_name || userData.firstName || "",
               last_name: userData.last_name || userData.lastName || "",
-              nom_utilisateur:
-                userData.nom_utilisateur || userData.userName || "",
+              nom_utilisateur: userData.nom_utilisateur || userData.userName || "",
               status: userData.status,
               genres: userData.genres || null,
               grades: userData.grades || null,
               abonnement: userData.abonnement || null,
-              date_of_birth:
-                userData.date_of_birth || userData.dateOfBirth || null,
+              date_of_birth: userData.date_of_birth || userData.dateOfBirth || null,
             };
             saveUser(userDataToSave);
             setUserState(userDataToSave);
 
             setAuthError(null);
             setRetryCount(0);
-            console.log(
-              "✅ [AuthGuard] Authentification locale réussie (userData + token)",
-            );
+            console.log("✅ [AuthGuard] Authentification locale réussie (userData + token)");
             return true;
           } else {
             console.warn("⚠️ [AuthGuard] Données locales incomplètes");
           }
         } catch (parseError) {
-          console.error(
-            "❌ [AuthGuard] Erreur parsing données locales:",
-            parseError,
-          );
+          console.error("❌ [AuthGuard] Erreur parsing données locales:", parseError);
           localStorage.removeItem("userData");
           localStorage.removeItem("authToken");
         }
@@ -179,16 +166,10 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
             const testData = await testResponse.json();
             console.log("✅ [AuthGuard] API accessible:", testData.message);
           } else {
-            console.warn(
-              "⚠️ [AuthGuard] API répond mais avec erreur:",
-              testResponse.status,
-            );
+            console.warn("⚠️ [AuthGuard] API répond mais avec erreur:", testResponse.status);
           }
         } catch (testError) {
-          console.warn(
-            "⚠️ [AuthGuard] API non accessible pour test:",
-            testError,
-          );
+          console.warn("⚠️ [AuthGuard] API non accessible pour test:", testError);
         }
 
         // Maintenant tester la route auth/status
@@ -237,12 +218,8 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                 signal: AbortSignal.timeout(8000),
               });
 
-              const altContentType =
-                altResponse.headers.get("content-type") || "";
-              if (
-                altResponse.ok &&
-                altContentType.includes("application/json")
-              ) {
+              const altContentType = altResponse.headers.get("content-type") || "";
+              if (altResponse.ok && altContentType.includes("application/json")) {
                 console.log("✅ [AuthGuard] URL alternative fonctionne");
                 const data = await altResponse.json();
 
@@ -283,17 +260,12 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
                   setAuthError(null);
                   setRetryCount(0);
-                  console.log(
-                    "✅ [AuthGuard] Authentification serveur réussie (URL alternative)",
-                  );
+                  console.log("✅ [AuthGuard] Authentification serveur réussie (URL alternative)");
                   return true;
                 }
               }
             } catch (altError) {
-              console.warn(
-                "❌ [AuthGuard] URL alternative échouée aussi:",
-                altError,
-              );
+              console.warn("❌ [AuthGuard] URL alternative échouée aussi:", altError);
             }
           }
 
@@ -309,14 +281,12 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               email: userData.email,
               first_name: userData.first_name || userData.firstName || "",
               last_name: userData.last_name || userData.lastName || "",
-              nom_utilisateur:
-                userData.nom_utilisateur || userData.userName || "",
+              nom_utilisateur: userData.nom_utilisateur || userData.userName || "",
               status: userData.status,
               genres: userData.genres || null,
               grades: userData.grades || null,
               abonnement: userData.abonnement || null,
-              date_of_birth:
-                userData.date_of_birth || userData.dateOfBirth || null,
+              date_of_birth: userData.date_of_birth || userData.dateOfBirth || null,
             };
             saveUser(userDataToSave);
             setUserState(userDataToSave);
@@ -372,9 +342,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
             console.log("✅ [AuthGuard] Authentification serveur réussie");
             return true;
           } else {
-            console.warn(
-              "⚠️ [AuthGuard] Serveur indique utilisateur non authentifié",
-            );
+            console.warn("⚠️ [AuthGuard] Serveur indique utilisateur non authentifié");
             return false;
           }
         } else if (response.status === 401) {
@@ -385,9 +353,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
           // AJOUTÉ: En cas de 404, utiliser les données locales si disponibles
           if (localUserData && hasValidToken) {
-            console.log(
-              "🔄 [AuthGuard] Fallback 404 - utilisation des données locales",
-            );
+            console.log("🔄 [AuthGuard] Fallback 404 - utilisation des données locales");
             const userData = JSON.parse(localUserData);
 
             const userDataToSave = {
@@ -395,14 +361,12 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               email: userData.email,
               first_name: userData.first_name || userData.firstName || "",
               last_name: userData.last_name || userData.lastName || "",
-              nom_utilisateur:
-                userData.nom_utilisateur || userData.userName || "",
+              nom_utilisateur: userData.nom_utilisateur || userData.userName || "",
               status: userData.status,
               genres: userData.genres || null,
               grades: userData.grades || null,
               abonnement: userData.abonnement || null,
-              date_of_birth:
-                userData.date_of_birth || userData.dateOfBirth || null,
+              date_of_birth: userData.date_of_birth || userData.dateOfBirth || null,
             };
             saveUser(userDataToSave);
             setUserState(userDataToSave);
@@ -412,22 +376,15 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
           return false;
         } else {
-          throw new Error(
-            `Erreur serveur: ${response.status} ${response.statusText}`,
-          );
+          throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
         }
       } catch (fetchError: any) {
         console.error("❌ [AuthGuard] Erreur fetch:", fetchError);
 
         // AJOUTÉ: Gestion spécifique des erreurs
         if (fetchError.message.includes("HTML au lieu de JSON")) {
-          setAuthError(
-            "Configuration serveur incorrecte - Routes API non accessibles",
-          );
-        } else if (
-          fetchError.name === "TypeError" &&
-          fetchError.message.includes("fetch")
-        ) {
+          setAuthError("Configuration serveur incorrecte - Routes API non accessibles");
+        } else if (fetchError.name === "TypeError" && fetchError.message.includes("fetch")) {
           setAuthError("Impossible de contacter le serveur d'authentification");
         } else if (fetchError.name === "TimeoutError") {
           setAuthError("Délai de connexion au serveur dépassé");
@@ -440,23 +397,19 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           try {
             const userData = JSON.parse(localUserData);
             if (userData.id && userData.email) {
-              console.log(
-                "⚠️ [AuthGuard] Fallback sur données locales suite à erreur serveur",
-              );
+              console.log("⚠️ [AuthGuard] Fallback sur données locales suite à erreur serveur");
 
               const userDataToSave = {
                 id: userData.id,
                 email: userData.email,
                 first_name: userData.first_name || userData.firstName || "",
                 last_name: userData.last_name || userData.lastName || "",
-                nom_utilisateur:
-                  userData.nom_utilisateur || userData.userName || "",
+                nom_utilisateur: userData.nom_utilisateur || userData.userName || "",
                 status: userData.status,
                 genres: userData.genres || null,
                 grades: userData.grades || null,
                 abonnement: userData.abonnement || null,
-                date_of_birth:
-                  userData.date_of_birth || userData.dateOfBirth || null,
+                date_of_birth: userData.date_of_birth || userData.dateOfBirth || null,
               };
               saveUser(userDataToSave);
               setUserState(userDataToSave);
@@ -464,20 +417,14 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               return true;
             }
           } catch (parseError) {
-            console.error(
-              "❌ [AuthGuard] Erreur parsing fallback:",
-              parseError,
-            );
+            console.error("❌ [AuthGuard] Erreur parsing fallback:", parseError);
           }
         }
 
         return false;
       }
     } catch (error: any) {
-      console.error(
-        "❌ [AuthGuard] Erreur générale vérification authentification:",
-        error,
-      );
+      console.error("❌ [AuthGuard] Erreur générale vérification authentification:", error);
       setAuthError(`Erreur système: ${error.message}`);
       return false;
     }
@@ -501,9 +448,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       return;
     }
 
-    console.log(
-      "🔐 [AuthGuard] Route protégée - vérification authentification complète...",
-    );
+    console.log("🔐 [AuthGuard] Route protégée - vérification authentification complète...");
 
     const checkAuthentication = async () => {
       // Vérifier d'abord Redux
@@ -587,9 +532,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                 color: "#adb5bd",
               }}
             >
-              {process.env.NODE_ENV === "production"
-                ? "Mode production"
-                : "Mode développement"}
+              {process.env.NODE_ENV === "production" ? "Mode production" : "Mode développement"}
             </div>
           </CardBody>
         </Card>
@@ -631,10 +574,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           }}
         >
           <CardBody style={{ padding: "3rem", textAlign: "center" }}>
-            <Flex
-              direction={{ default: "column" }}
-              alignItems={{ default: "alignItemsCenter" }}
-            >
+            <Flex direction={{ default: "column" }} alignItems={{ default: "alignItemsCenter" }}>
               <FlexItem>
                 <Icon size="xl" status="warning">
                   <LockIcon />
@@ -642,11 +582,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               </FlexItem>
 
               <FlexItem spacer={{ default: "spacerMd" }}>
-                <Title
-                  headingLevel="h1"
-                  size="2xl"
-                  style={{ color: "#2c3e50" }}
-                >
+                <Title headingLevel="h1" size="2xl" style={{ color: "#2c3e50" }}>
                   Authentification requise
                 </Title>
               </FlexItem>
@@ -665,10 +601,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               </FlexItem>
 
               {authError && (
-                <FlexItem
-                  spacer={{ default: "spacerMd" }}
-                  style={{ width: "100%" }}
-                >
+                <FlexItem spacer={{ default: "spacerMd" }} style={{ width: "100%" }}>
                   <Alert
                     variant="warning"
                     title="Problème d'authentification"
@@ -677,8 +610,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                     {authError}
                     {authError.includes("hors ligne") && (
                       <div style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
-                        ℹ️ L'application fonctionne avec vos données
-                        sauvegardées
+                        ℹ️ L'application fonctionne avec vos données sauvegardées
                       </div>
                     )}
                   </Alert>
@@ -687,10 +619,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
               {/* AJOUTÉ: Debug info en développement */}
               {process.env.NODE_ENV === "development" && (
-                <FlexItem
-                  spacer={{ default: "spacerMd" }}
-                  style={{ width: "100%" }}
-                >
+                <FlexItem spacer={{ default: "spacerMd" }} style={{ width: "100%" }}>
                   <Alert
                     variant="info"
                     title="Debug Authentication (Dev Mode)"
@@ -701,9 +630,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                     }}
                   >
                     <div>userData: {!!userData ? "✅" : "❌"}</div>
-                    <div>
-                      authToken (localStorage): {!!authToken ? "✅" : "❌"}
-                    </div>
+                    <div>authToken (localStorage): {!!authToken ? "✅" : "❌"}</div>
                     <div>token (cookie): {!!cookieToken ? "✅" : "❌"}</div>
                     <div>Redux user: {!!user ? "✅" : "❌"}</div>
                   </Alert>
@@ -711,10 +638,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               )}
 
               <FlexItem spacer={{ default: "spacerLg" }}>
-                <Flex
-                  gap={{ default: "gapLg" }}
-                  direction={{ default: "column", md: "row" }}
-                >
+                <Flex gap={{ default: "gapLg" }} direction={{ default: "column", md: "row" }}>
                   <FlexItem>
                     <Button
                       variant="primary"
@@ -787,9 +711,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     );
   }
 
-  console.log(
-    "✅ [AuthGuard] Utilisateur authentifié avec données complètes, accès accordé",
-  );
+  console.log("✅ [AuthGuard] Utilisateur authentifié avec données complètes, accès accordé");
   return <>{children}</>;
 };
 

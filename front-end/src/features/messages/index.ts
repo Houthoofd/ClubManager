@@ -10,24 +10,25 @@
 // ============================================================================
 // Pages
 // ============================================================================
-export { default as MessagesPage } from './pages/MessagesPage';
+export { default as MessagesPage } from "./pages/MessagesPage";
+export { default as NotificationsPage } from "./pages/NotificationsPage";
 
 // ============================================================================
 // Components
 // ============================================================================
-export { default as MessageCard } from './components/MessageCard';
-export { default as MessageDetailModal } from './components/MessageDetailModal';
-export { default as MessageTypeCard } from './components/MessageTypeCard';
-export { default as MessageTypeSelector } from './components/MessageTypeSelector';
-export { default as MessageTypesListTab } from './components/MessageTypesListTab';
-export { default as MessagesReceivedTab } from './components/MessagesReceivedTab';
-export { default as MessagesReadTab } from './components/MessagesReadTab';
-export { default as SendMessageForm } from './components/SendMessageForm';
-export { default as SendMessageModal } from './components/SendMessageModal';
-export { default as SendMessageConfirmModal } from './components/SendMessageConfirmModal';
-export { default as DeleteMessageModal } from './components/DeleteMessageModal';
-export { default as CreateMessageTypeForm } from './components/CreateMessageTypeForm';
-export { default as UserSelector } from './components/UserSelector';
+export { default as MessageCard } from "./components/MessageCard";
+export { default as MessageDetailModal } from "./components/MessageDetailModal";
+export { default as MessageTypeCard } from "./components/MessageTypeCard";
+export { default as MessageTypeSelector } from "./components/MessageTypeSelector";
+export { default as MessageTypesListTab } from "./components/MessageTypesListTab";
+export { default as MessagesReceivedTab } from "./components/MessagesReceivedTab";
+export { default as MessagesReadTab } from "./components/MessagesReadTab";
+export { default as SendMessageForm } from "./components/SendMessageForm";
+export { default as SendMessageModal } from "./components/SendMessageModal";
+export { default as SendMessageConfirmModal } from "./components/SendMessageConfirmModal";
+export { default as DeleteMessageModal } from "./components/DeleteMessageModal";
+export { default as CreateMessageTypeForm } from "./components/CreateMessageTypeForm";
+export { default as UserSelector } from "./components/UserSelector";
 
 // ============================================================================
 // Hooks
@@ -64,7 +65,7 @@ export {
   useSupprimerTypeMessage,
   useMessagesUtilisateur,
   useEnvoyerMessageGroupe,
-} from './hooks';
+} from "./hooks";
 
 // ============================================================================
 // Types
@@ -84,7 +85,7 @@ export type {
   MessageTypesTabProps,
   SendMessageFormProps,
   MessagesPageState,
-} from './types';
+} from "./types";
 
 // ============================================================================
 // Constants
@@ -107,4 +108,4 @@ export {
   NOTIFICATION_TYPE_LABELS,
   MESSAGE_VARIANTS,
   MESSAGE_CLASSES,
-} from './constants';
+} from "./constants";

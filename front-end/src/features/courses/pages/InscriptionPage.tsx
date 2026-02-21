@@ -1,27 +1,15 @@
 import { useState, useEffect } from "react";
-import { Provider } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import store from "@/redux/store";
-import {
-  PageSection,
-  Button,
-  Spinner,
-  Alert,
-  Title,
-} from "@patternfly/react-core";
+import { PageSection, Button, Alert, Title } from "@patternfly/react-core";
 import { CalendarAltIcon, ClockIcon, UserIcon } from "@patternfly/react-icons";
-import {
-  useCours,
-  useCoursPlanning,
-  useCoursInscritsUtilisateur,
-} from "../hooks/useCours";
+import { useCours, useCoursPlanning, useCoursInscritsUtilisateur } from "../hooks/useCours";
 import {
   useUtilisateursPourTousLesCours,
   useInscrireUtilisateurReservation,
   useAnnulerInscriptionParNomPrenom,
 } from "../hooks/useInscriptions";
-import { datareservationSchema } from "@clubmanager/types";
-import { PageHeader } from "@/components/common/PageHeader";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import { SkeletonDataList } from "@/shared/components/ui";
 import CoursModals from "../components/CoursModals";
 import "@/styles/inscription.css";
 
@@ -58,26 +46,18 @@ const Inscription = () => {
   const [modalSuccess, setModalSuccess] = useState<boolean>(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [successType, setSuccessType] = useState<
-    "inscription" | "desinscription" | null
-  >(null);
+  const [successType, setSuccessType] = useState<"inscription" | "desinscription" | null>(null);
   const [coursInscrit, setCoursInscrit] = useState<any | null>(null);
   const navigate = useNavigate();
 
   // Utilisation des hooks React Query
-  const {
-    data: cours = [],
-    isLoading: loadingCours,
-    error: errorCours,
-  } = useCours();
+  const { data: cours = [], isLoading: loadingCours, error: errorCours } = useCours();
   const {
     data: planning = [],
     isLoading: loadingPlanning,
     error: errorPlanning,
   } = useCoursPlanning();
-  const { data: coursInscrits = [] } = useCoursInscritsUtilisateur(
-    userData?.id,
-  );
+  const { data: coursInscrits = [] } = useCoursInscritsUtilisateur(userData?.id);
   const inscrireUtilisateur = useInscrireUtilisateurReservation();
   const annulerInscription = useAnnulerInscriptionParNomPrenom();
 
@@ -103,12 +83,7 @@ const Inscription = () => {
 
   const handleInscription = async (coursId: number) => {
     // Utilise first_name et last_name pour l'inscription
-    if (
-      !userData?.first_name ||
-      !userData?.last_name ||
-      !coursId ||
-      isNaN(coursId)
-    ) {
+    if (!userData?.first_name || !userData?.last_name || !coursId || isNaN(coursId)) {
       setModalMessage("Utilisateur ou cours invalide.");
       setModalSuccess(false);
       setShowModal(true);
@@ -143,12 +118,7 @@ const Inscription = () => {
   };
 
   const handleAnnulation = async (coursId: number) => {
-    if (
-      !userData?.first_name ||
-      !userData?.last_name ||
-      !coursId ||
-      isNaN(coursId)
-    ) {
+    if (!userData?.first_name || !userData?.last_name || !coursId || isNaN(coursId)) {
       setModalMessage("Utilisateur ou cours invalide.");
       setModalSuccess(false);
       setShowModal(true);
@@ -169,9 +139,7 @@ const Inscription = () => {
       utilisateursCoursQueries.forEach((q) => q.refetch && q.refetch());
     } catch (error) {
       console.error("Erreur lors de l'annulation de l'inscription:", error);
-      setSuccessMessage(
-        "Erreur lors de la désinscription. Veuillez réessayer.",
-      );
+      setSuccessMessage("Erreur lors de la désinscription. Veuillez réessayer.");
       setSuccessType("desinscription");
       setShowSuccessModal(true);
       setModalSuccess(false);
@@ -201,12 +169,12 @@ const Inscription = () => {
       <div className="inscription-page">
         <PageHeader
           title="Inscriptions aux cours"
-          subtitle="Inscrivez-vous aux cours disponibles et gérez vos participations"
+          subtitle="Gérez les inscriptions des utilisateurs"
           variant="courses"
         />
         <PageSection className="inscription-content">
-          <div className="inscription-loading">
-            <Spinner size="xl" />
+          <div className="pf-v5-u-p-lg">
+            <SkeletonDataList items={6} />
           </div>
         </PageSection>
       </div>
@@ -222,10 +190,7 @@ const Inscription = () => {
           variant="courses"
         />
         <PageSection className="inscription-content">
-          <Alert
-            variant="danger"
-            title="Erreur lors du chargement des données."
-          />
+          <Alert variant="danger" title="Erreur lors du chargement des données." />
         </PageSection>
       </div>
     );
@@ -244,23 +209,15 @@ const Inscription = () => {
           {/* Grid des cours */}
           <div className="inscription-cards-grid">
             {cours?.map((c: any) => {
-              const estInscrit = coursInscrits.some(
-                (ci: any) => ci.id === c.id,
-              );
+              const estInscrit = coursInscrits.some((ci: any) => ci.id === c.id);
 
               return (
                 <div key={c.id} className="inscription-card">
                   {/* Header avec type de cours */}
                   <div className="inscription-card-header">
                     <div style={{ display: "flex", alignItems: "center" }}>
-                      <span className={getTypeCoursClass(c.type_cours)}>
-                        {c.type_cours}
-                      </span>
-                      {estInscrit && (
-                        <span className="inscription-inscrit-badge">
-                          ✓ Inscrit
-                        </span>
-                      )}
+                      <span className={getTypeCoursClass(c.type_cours)}>{c.type_cours}</span>
+                      {estInscrit && <span className="inscription-inscrit-badge">✓ Inscrit</span>}
                     </div>
                   </div>
 
@@ -272,8 +229,7 @@ const Inscription = () => {
                       <span className="inscription-date-text">
                         {c.date_cours ? (
                           <>
-                            {c.jour_semaine} -{" "}
-                            {formatDateSansJour(c.date_cours)}
+                            {c.jour_semaine} - {formatDateSansJour(c.date_cours)}
                           </>
                         ) : (
                           c.jour_semaine || c.jour
@@ -299,10 +255,7 @@ const Inscription = () => {
                           </span>
                           <div className="inscription-professeurs-container">
                             {c.professeurs.map((prof: any, idx: number) => (
-                              <span
-                                key={idx}
-                                className="inscription-professeur-badge"
-                              >
+                              <span key={idx} className="inscription-professeur-badge">
                                 {prof.prenom} {prof.nom}
                               </span>
                             ))}
@@ -316,19 +269,11 @@ const Inscription = () => {
                   <div className="inscription-card-footer">
                     <div className="inscription-actions">
                       {estInscrit ? (
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleAnnulation(c.id)}
-                        >
+                        <Button variant="danger" size="sm" onClick={() => handleAnnulation(c.id)}>
                           Se désinscrire
                         </Button>
                       ) : (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleInscription(c.id)}
-                        >
+                        <Button variant="primary" size="sm" onClick={() => handleInscription(c.id)}>
                           S'inscrire
                         </Button>
                       )}
@@ -338,9 +283,7 @@ const Inscription = () => {
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() =>
-                            navigate(`/pages/cours/${c.id}/participants`)
-                          }
+                          onClick={() => navigate(`/pages/cours/${c.id}/participants`)}
                         >
                           Voir les participants
                         </Button>
@@ -350,12 +293,8 @@ const Inscription = () => {
                     {/* Affichage du nombre d'inscrits - visible pour tous */}
                     {utilisateursCoursQueries[cours.indexOf(c)]?.data && (
                       <span className="inscription-participants-count">
-                        {utilisateursCoursQueries[cours.indexOf(c)].data.length}{" "}
-                        inscrit
-                        {utilisateursCoursQueries[cours.indexOf(c)].data
-                          .length > 1
-                          ? "s"
-                          : ""}
+                        {utilisateursCoursQueries[cours.indexOf(c)].data.length} inscrit
+                        {utilisateursCoursQueries[cours.indexOf(c)].data.length > 1 ? "s" : ""}
                       </span>
                     )}
                   </div>
@@ -366,15 +305,10 @@ const Inscription = () => {
 
           {cours?.length === 0 && (
             <div className="inscription-empty-state">
-              <Title
-                headingLevel="h3"
-                style={{ color: "#6c757d", marginBottom: "1rem" }}
-              >
+              <Title headingLevel="h3" style={{ color: "#6c757d", marginBottom: "1rem" }}>
                 Aucun cours disponible
               </Title>
-              <p>
-                Il n'y a actuellement aucun cours disponible pour l'inscription.
-              </p>
+              <p>Il n'y a actuellement aucun cours disponible pour l'inscription.</p>
             </div>
           )}
         </PageSection>

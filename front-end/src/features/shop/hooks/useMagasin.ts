@@ -6,14 +6,10 @@ import {
   useUpdateProductMutation,
   useDeleteProductMutation,
   useCreateOrderMutation,
-} from "@/lib/apollo/generated/graphql";
-import type {
-  Products,
-  ProductsInsert,
-  ProductCategories,
-} from "@clubmanager/types";
-import { apolloClient } from "@/lib/apollo/apollo-client";
-import { useToast } from "../utils/useToast";
+} from "@/core/api/apollo/generated/graphql";
+import type { Products, ProductsInsert, ProductCategories } from "@clubmanager/types";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
+import { useToast } from "@/shared/hooks/utils/useToast";
 
 type ArticlesByCategory = {
   [categoryName: string]: Products[];
@@ -73,8 +69,7 @@ export const useArticlesParCategorie = () => {
 
     // Grouper les articles par nom de catégorie
     data.products.forEach((product: any) => {
-      const categoryName =
-        categoriesMap.get(product.category_id) || "Non catégorisé";
+      const categoryName = categoriesMap.get(product.category_id) || "Non catégorisé";
       if (!articlesByCategory[categoryName as string]) {
         articlesByCategory[categoryName as string] = [];
       }
@@ -142,10 +137,7 @@ export const useAjouterArticleMagasin = () => {
     },
     onError: (error: any) => {
       console.error("❌ Erreur lors de l'ajout de l'article:", error);
-      showToast(
-        error.message || "Erreur lors de l'ajout de l'article",
-        "danger",
-      );
+      showToast(error.message || "Erreur lors de l'ajout de l'article", "danger");
     },
   });
 
@@ -194,10 +186,7 @@ export const useModifierArticleMagasin = () => {
     },
     onError: (error: any) => {
       console.error("❌ Erreur lors de la modification:", error);
-      showToast(
-        error.message || "Erreur lors de la modification de l'article",
-        "danger",
-      );
+      showToast(error.message || "Erreur lors de la modification de l'article", "danger");
     },
   });
 
@@ -257,10 +246,7 @@ export const useSupprimerArticleMagasin = () => {
     },
     onError: (error: any) => {
       console.error("❌ Erreur lors de la suppression:", error);
-      showToast(
-        error.message || "Erreur lors de la suppression de l'article",
-        "danger",
-      );
+      showToast(error.message || "Erreur lors de la suppression de l'article", "danger");
     },
   });
 
@@ -302,24 +288,17 @@ export const useCreerCommande = () => {
     },
     onError: (error: any) => {
       console.error("❌ Erreur création commande:", error);
-      showToast(
-        error.message || "Erreur lors de la création de la commande",
-        "danger",
-      );
+      showToast(error.message || "Erreur lors de la création de la commande", "danger");
     },
   });
 
-  const mutate = async (
-    commandeData: CommandeData,
-  ): Promise<CommandeResponse | null> => {
+  const mutate = async (commandeData: CommandeData): Promise<CommandeResponse | null> => {
     // Créer une clé unique pour cette commande (protection doublon côté client)
     const cacheKey = `${commandeData.user_id}-${JSON.stringify(commandeData.items)}`;
 
     // Vérifier si une soumission identique est en cours
     if (soumissionsEnCours.has(cacheKey)) {
-      console.log(
-        "⚠️ [Hook GraphQL] Soumission identique en cours, attente...",
-      );
+      console.log("⚠️ [Hook GraphQL] Soumission identique en cours, attente...");
       const existingPromise = soumissionsEnCours.get(cacheKey);
       if (existingPromise) {
         return await existingPromise;
@@ -348,10 +327,7 @@ export const useCreerCommande = () => {
         });
 
         if (result.data?.createOrder) {
-          console.log(
-            "✅ [Hook GraphQL] Commande créée:",
-            result.data.createOrder,
-          );
+          console.log("✅ [Hook GraphQL] Commande créée:", result.data.createOrder);
           return result.data.createOrder as CommandeResponse;
         }
 

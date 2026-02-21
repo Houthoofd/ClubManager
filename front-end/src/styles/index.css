@@ -1,0 +1,66 @@
+/**
+ * ====================================================================
+ * STYLES CENTRALISÉS - CLUBMANAGER
+ * ====================================================================
+ *
+ * Point d'entrée unique pour tous les styles de l'application.
+ * Ce fichier importe tous les autres fichiers CSS dans l'ordre approprié.
+ *
+ * Organisation:
+ * 1. Base styles (reset, variables, global)
+ * 2. Layout (sidebar, panels)
+ * 3. Components (cards, modals, forms, tables, tabs)
+ * 4. Features (participants, professeurs, cours, etc.)
+ * 5. Pages (dashboard, auth, users, etc.)
+ */
+
+/* ====================================================================
+   1. BASE STYLES
+   ==================================================================== */
+
+/* Styles globaux et variables CSS */
+@import './global.css';
+
+/* ====================================================================
+   2. LAYOUT
+   ==================================================================== */
+
+/* Sidebar et navigation */
+@import './sidebar.css';
+@import './sidebar-initial.css';
+
+/* Panels et conteneurs */
+@import './panel.css';
+
+/* ====================================================================
+   3. COMPONENTS
+   ==================================================================== */
+
+/* Composants UI de base */
+@import './cards.css';
+@import './modals.css';
+@import './forms.css';
+@import './tables.css';
+@import './tabs.css';
+
+/* ====================================================================
+   4. FEATURES
+   ==================================================================== */
+
+/* Feature: Courses (Cours) */
+@import './cours.css';
+@import './inscription.css';
+@import './participants.css';
+
+/* Feature: Teachers (Professeurs) */
+@import './professeurs.css';
+
+/* ====================================================================
+   5. PAGES
+   ==================================================================== */
+
+/* Pages spécifiques */
+@import './dashboard.css';
+@import './users.css';
+@import './pages.css';
+@import './auth-guard.css';

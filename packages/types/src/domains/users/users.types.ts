@@ -318,3 +318,147 @@ export interface EmailVerificationTokenInsert {
 export interface EmailVerificationTokenUpdate {
   verified_at?: string;
 }
+
+// ============================================
+// Inscription/Registration Form Types
+// ============================================
+
+/**
+ * Form data for user inscription/registration
+ */
+export interface InscriptionFormData {
+  prenom: string;
+  nom: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  date_naissance: string;
+  abonnement: string;
+  genre: string;
+  nom_utilisateur: string;
+  telephone?: string;
+  adresse?: string;
+}
+
+/**
+ * Validation state for inscription form fields
+ */
+export interface InscriptionValidationState {
+  prenom: {
+    isValid: boolean;
+    message: string;
+  };
+  nom: {
+    isValid: boolean;
+    message: string;
+  };
+  email: {
+    isValid: boolean;
+    message: string;
+  };
+  password: {
+    isValid: boolean;
+    message: string;
+  };
+  confirmPassword: {
+    isValid: boolean;
+    message: string;
+  };
+  date_naissance: {
+    isValid: boolean;
+    message: string;
+  };
+  abonnement: {
+    isValid: boolean;
+    message: string;
+  };
+  genre: {
+    isValid: boolean;
+    message: string;
+  };
+  nom_utilisateur: {
+    isValid: boolean;
+    message: string;
+  };
+  telephone?: {
+    isValid: boolean;
+    message: string;
+  };
+  adresse?: {
+    isValid: boolean;
+    message: string;
+  };
+}
+
+/**
+ * Information modal data structure for inscription flow
+ */
+export interface InscriptionInformationModalData {
+  title: string;
+  message: string;
+  type: "success" | "danger" | "warning" | "info";
+  details?: {
+    actions?: Array<{
+      label: string;
+      action: () => void;
+      variant?: "primary" | "secondary" | "danger" | "link";
+    }>;
+  };
+}
+
+/**
+ * Backend verification data for inscription
+ */
+export interface InscriptionVerificationData {
+  nom: string;
+  prenom: string;
+  date_naissance: string;
+}
+
+/**
+ * Backend verification response for inscription
+ */
+export interface InscriptionVerificationResponse {
+  exists: boolean;
+  user?: {
+    id: number;
+    nom: string;
+    prenom: string;
+    email?: string;
+    date_naissance: string;
+    status?: string;
+  };
+  message?: string;
+}
+
+/**
+ * Inscription submit data
+ */
+export interface InscriptionSubmitData {
+  prenom: string;
+  nom: string;
+  nom_utilisateur: string;
+  email: string;
+  password: string;
+  genre_id: number;
+  abonnement_id: number;
+  date_naissance: string;
+  date_inscription: string;
+  status_id: number;
+  grade_id: number;
+}
+
+/**
+ * Inscription response
+ */
+export interface InscriptionResponse {
+  success: boolean;
+  message: string;
+  user?: {
+    id: number;
+    email: string;
+    prenom: string;
+    nom: string;
+  };
+  token?: string;
+}

@@ -1,42 +1,39 @@
 import { useState, useEffect } from "react";
-import { Spinner, Alert } from "@patternfly/react-core";
-import RightSidePanel from "../../../components/common/panel/rightSidePanel";
-import {
-  useArticlesParCategorie,
-  useCategoriesMagasin,
-} from "../hooks/useMagasin";
-import {
-  ToolbarMagasin,
-  CatalogueMagasin,
-  DetailArticleModal,
-} from "../components";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../../../redux/store";
-import {
-  ajouterArticle,
-  supprimerArticle,
-  modifierTaille,
-  modifierQuantite,
-  fermerPanier,
-  synchroniserArticle,
-  viderPanier, // AJOUTÉ: Import de la nouvelle action
-} from "../../../redux/slices/panierSlice";
+import { Alert } from "@patternfly/react-core";
+import { SkeletonCard } from "@/shared/components/ui";
+import RightSidePanel from "@/shared/components/common-legacy/panel/rightSidePanel";
+import { useArticlesParCategorie, useCategoriesMagasin } from "../hooks/useMagasin";
+import { ToolbarMagasin, CatalogueMagasin, DetailArticleModal } from "../components";
 import React from "react";
 import { PageSection } from "@patternfly/react-core";
-import { PageHeader } from "../../../components/common/PageHeader";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useNavigate } from "react-router-dom";
+import { useCartStore } from "@/store/cartStore";
+import { shallow } from "zustand/shallow";
 
 // Import des types
 import type { Article } from "@clubmanager/types";
 
 const MagasinPage: React.FC = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const panier = useSelector((state: RootState) => state.panier.articles);
-  const isPanelOpen = useSelector((state: RootState) => state.panier.isOpen);
-  const [expandedCategories, setExpandedCategories] = useState<
-    Record<string, boolean>
-  >({});
+
+  // Zustand store - remplacement de Redux
+  // Optimisation: sélection du state uniquement (reactive)
+  const cartItems = useCartStore((state) => state.items);
+  const isPanelOpen = useCartStore((state) => state.isOpen);
+
+  // Optimisation: sélection des actions avec shallow (non-reactive, stable references)
+  const { addItem, removeItem, updateQuantity, clearCart, closeCart } = useCartStore(
+    (state) => ({
+      addItem: state.addItem,
+      removeItem: state.removeItem,
+      updateQuantity: state.updateQuantity,
+      clearCart: state.clearCart,
+      closeCart: state.closeCart,
+    }),
+    shallow,
+  );
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [selectedTaille, setSelectedTaille] = useState<string | null>(null);
@@ -67,64 +64,42 @@ const MagasinPage: React.FC = () => {
 
   // AJOUTÉ: Synchroniser le panier quand les articles sont rechargés
   useEffect(() => {
-    if (articlesParCategorie && panier.length > 0) {
+    if (articlesParCategorie && cartItems.length > 0) {
       console.log("🔄 [Magasin] Synchronisation panier avec nouveaux articles");
 
       // Récupérer tous les articles à plat
       const tousLesArticles = Object.values(articlesParCategorie).flat();
 
       // Pour chaque article du panier, vérifier s'il faut le synchroniser
-      panier.forEach((articlePanier, index) => {
-        const articleActuel = tousLesArticles.find(
-          (a: any) => a.id === articlePanier.id,
-        );
+      cartItems.forEach((cartItem) => {
+        const articleActuel = tousLesArticles.find((a: any) => a.id === cartItem.productId);
 
         if (articleActuel) {
-          // Vérifier si les stocks ont changé (comparer les stocks de base, pas ajustés)
-          const stocksOriginals = JSON.stringify(
-            articleActuel.stocks?.map((s: any) => ({
-              taille: s.taille,
-              quantite: s.quantite,
-            })),
-          );
-          const stocksPanier = JSON.stringify(
-            articlePanier.stocks?.map((s: any) => ({
-              taille: s.taille,
-              quantite: s.quantiteOriginale || s.quantite,
-            })),
-          );
+          // Vérifier si le prix ou les stocks ont changé
+          const prixChange = articleActuel.prix !== cartItem.price;
 
-          if (stocksOriginals !== stocksPanier) {
-            console.log(
-              "🔄 [Panier] Synchronisation article:",
-              articleActuel.nom,
-            );
+          if (prixChange) {
+            console.log("🔄 [Panier] Synchronisation prix article:", cartItem.productName);
 
-            // Synchroniser avec les stocks de base (pas ajustés)
-            const articleSynchronise = {
-              ...articleActuel,
-              // Garder les propriétés du panier
-              taille: articlePanier.taille,
-              quantite: articlePanier.quantite,
-            };
-
-            dispatch(
-              synchroniserArticle({
-                index,
-                articleMisAJour: articleSynchronise,
-              }),
-            );
+            // Mettre à jour l'article avec le nouveau prix
+            removeItem(cartItem.id);
+            addItem({
+              productId: cartItem.productId,
+              productName: articleActuel.nom || cartItem.productName,
+              price: articleActuel.prix,
+              quantity: cartItem.quantity,
+              stockId: cartItem.stockId,
+              size: cartItem.size,
+              imageUrl: cartItem.imageUrl,
+              maxQuantity: cartItem.maxQuantity,
+            });
           }
         }
       });
     }
-  }, [articlesParCategorie, dispatch]); // MODIFIÉ: Enlever panier des dépendances pour éviter les boucles
+  }, [articlesParCategorie]); // MODIFIÉ: Enlever cartItems des dépendances pour éviter les boucles
 
-  const ajouterAuPanier = (
-    article: Article,
-    taille: string,
-    quantite: number = 1,
-  ) => {
+  const ajouterAuPanier = (article: Article, taille: string, quantite: number = 1) => {
     console.log("🛒 [Magasin] === AJOUT AU PANIER ===");
     console.log("🛒 [Magasin] Article à ajouter:", {
       id: article.id,
@@ -134,45 +109,67 @@ const MagasinPage: React.FC = () => {
       stocks: article.stocks,
     });
 
-    const nouvelArticle: Article = {
-      ...article,
-      taille,
-      quantite,
-      // S'assurer que les stocks sont bien copiés
-      stocks: article.stocks ? [...article.stocks] : [],
-    };
+    // Trouver le stock correspondant à la taille
+    const stock = article.stocks?.find((s: any) => s.taille === taille);
 
-    console.log("🛒 [Magasin] Nouvel article pour panier:", nouvelArticle);
-    dispatch(ajouterArticle(nouvelArticle));
+    addItem({
+      productId: article.id,
+      productName: article.nom,
+      price: article.prix || 0,
+      quantity: quantite,
+      stockId: stock?.id || null,
+      size: taille,
+      imageUrl: article.images?.[0]?.url || null,
+      maxQuantity: stock?.quantite || 999,
+    });
 
     // Debug: afficher l'état du panier après ajout
     setTimeout(() => {
-      console.log("🛒 [Magasin] Panier après ajout:", panier);
+      console.log("🛒 [Magasin] Panier après ajout:", cartItems);
     }, 100);
   };
 
   const supprimerDuPanier = (index: number) => {
-    dispatch(supprimerArticle(index));
+    const item = cartItems[index];
+    if (item) {
+      removeItem(item.id);
+    }
   };
 
   const changerTailleArticle = (index: number, nouvelleTaille: string) => {
-    dispatch(modifierTaille({ index, taille: nouvelleTaille }));
+    const item = cartItems[index];
+    if (item) {
+      // Supprimer l'ancien item et ajouter un nouveau avec la nouvelle taille
+      removeItem(item.id);
+      addItem({
+        productId: item.productId,
+        productName: item.productName,
+        price: item.price,
+        quantity: item.quantity,
+        stockId: item.stockId,
+        size: nouvelleTaille,
+        imageUrl: item.imageUrl,
+        maxQuantity: item.maxQuantity,
+      });
+    }
   };
 
-  const changerQuantiteArticle = (
-    index: number,
-    quantite: number,
-    taille: string,
-  ) => {
+  const changerQuantiteArticle = (index: number, quantite: number, taille: string) => {
     console.log("🔄 [Magasin] Changement quantité article:", {
       index,
       quantite,
       taille,
     });
 
-    // MODIFIÉ: Utiliser la nouvelle signature avec taille
-    dispatch(modifierQuantite({ index, quantite }));
-    dispatch(modifierTaille({ index, taille }));
+    const item = cartItems[index];
+    if (item) {
+      updateQuantity(item.id, quantite);
+
+      // Si la taille a changé aussi, mettre à jour
+      if (item.size !== taille) {
+        changerTailleArticle(index, taille);
+      }
+    }
 
     console.log("✅ [Magasin] Article mis à jour dans le panier");
   };
@@ -199,7 +196,7 @@ const MagasinPage: React.FC = () => {
     const articleAvecStocksAjustes = articleActuel
       ? {
           ...articleActuel,
-          stocks: calculerStocksAjustes(articleActuel, panier),
+          stocks: calculerStocksAjustes(articleActuel, cartItems),
         }
       : article;
 
@@ -209,24 +206,23 @@ const MagasinPage: React.FC = () => {
   };
 
   // AJOUTÉ: Fonction pour calculer les stocks en tenant compte des articles dans le panier
-  const calculerStocksAjustes = (article: any, panier: Article[]) => {
+  const calculerStocksAjustes = (article: any, items: any[]) => {
     if (!article.stocks) return [];
 
     console.log("🔍 [Stocks] Calcul pour article:", article.nom);
     console.log("🔍 [Stocks] Stocks originaux:", article.stocks);
-    console.log("🔍 [Panier] Articles dans le panier:", panier);
+    console.log("🔍 [Panier] Articles dans le panier:", items);
 
     // Calculer les quantités réservées dans le panier pour cet article
     const quantitesReservees: Record<string, number> = {};
 
-    panier
-      .filter((item) => item.id === article.id)
+    items
+      .filter((item) => item.productId === article.id)
       .forEach((item) => {
-        if (item.taille) {
-          quantitesReservees[item.taille] =
-            (quantitesReservees[item.taille] || 0) + item.quantite;
+        if (item.size) {
+          quantitesReservees[item.size] = (quantitesReservees[item.size] || 0) + item.quantity;
           console.log(
-            `🔍 [Panier] Taille ${item.taille}: +${item.quantite} (total: ${quantitesReservees[item.taille]})`,
+            `🔍 [Panier] Taille ${item.size}: +${item.quantity} (total: ${quantitesReservees[item.size]})`,
           );
         }
       });
@@ -276,7 +272,7 @@ const MagasinPage: React.FC = () => {
 
       if (articleActuel) {
         // Recalculer les stocks ajustés avec le panier actuel
-        const stocksMisAJour = calculerStocksAjustes(articleActuel, panier);
+        const stocksMisAJour = calculerStocksAjustes(articleActuel, cartItems);
 
         // Mettre à jour l'article sélectionné avec les nouveaux stocks
         setSelectedArticle({
@@ -287,7 +283,7 @@ const MagasinPage: React.FC = () => {
         console.log("✅ [Modal] Stocks mis à jour en temps réel");
       }
     }
-  }, [panier, isInfoModalOpen]); // AJOUTÉ: Se déclenche quand le panier change
+  }, [cartItems, isInfoModalOpen]); // AJOUTÉ: Se déclenche quand le panier change
 
   // AJOUTÉ: Vérifier si le panier doit être vidé après un paiement réussi
   useEffect(() => {
@@ -300,7 +296,7 @@ const MagasinPage: React.FC = () => {
         console.log("✅ [Magasin] Paiement réussi - vidage du panier");
 
         // Vider le panier
-        dispatch(viderPanier());
+        clearCart();
 
         // Nettoyer le localStorage
         localStorage.removeItem("pendingOrderClearCart");
@@ -313,7 +309,7 @@ const MagasinPage: React.FC = () => {
     };
 
     checkPaymentSuccess();
-  }, [dispatch]);
+  }, [clearCart]);
 
   // AJOUTÉ: Écouter les changements d'URL pour détecter le retour de paiement
   useEffect(() => {
@@ -323,10 +319,8 @@ const MagasinPage: React.FC = () => {
       const shouldClearCart = localStorage.getItem("pendingOrderClearCart");
 
       if (paymentSuccess === "true" && shouldClearCart === "true") {
-        console.log(
-          "✅ [Magasin] Retour de paiement réussi - vidage du panier",
-        );
-        dispatch(viderPanier());
+        console.log("✅ [Magasin] Retour de paiement réussi - vidage du panier");
+        clearCart();
         localStorage.removeItem("pendingOrderClearCart");
         localStorage.removeItem("dernierPanier");
       }
@@ -334,7 +328,7 @@ const MagasinPage: React.FC = () => {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [dispatch]);
+  }, [clearCart]);
 
   if (loadingArticles || loadingCategories) {
     return (
@@ -347,13 +341,18 @@ const MagasinPage: React.FC = () => {
         <PageSection className="store-content">
           <div
             style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "50vh",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+              gap: "1rem",
+              padding: "1rem",
             }}
           >
-            <Spinner size="xl" />
+            <SkeletonCard hasImage hasTitle hasDescription />
+            <SkeletonCard hasImage hasTitle hasDescription />
+            <SkeletonCard hasImage hasTitle hasDescription />
+            <SkeletonCard hasImage hasTitle hasDescription />
+            <SkeletonCard hasImage hasTitle hasDescription />
+            <SkeletonCard hasImage hasTitle hasDescription />
           </div>
         </PageSection>
       </div>
@@ -390,12 +389,12 @@ const MagasinPage: React.FC = () => {
       <PageSection className="store-content">
         <RightSidePanel
           isExpanded={isPanelOpen}
-          onClose={() => dispatch(fermerPanier())}
-          articles={panier}
+          onClose={() => closeCart()}
+          articles={cartItems}
           onRemoveArticle={supprimerDuPanier}
           onUpdateTaille={changerTailleArticle}
           onUpdateQuantite={changerQuantiteArticle}
-          onCheckout={allerAuCheckout} // Garde l'ancien système si besoin
+          onCheckout={allerAuCheckout}
         >
           <div className="main-content-scrollable">
             <CatalogueMagasin

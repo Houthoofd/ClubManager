@@ -61,18 +61,24 @@ export {
   useModifierCours,
   useSupprimerCours,
   useJoursDeCours,
+  useCours,
 
   // Professor hooks
   useProfesseurs,
-  useSupprimerCoursRecurrent,
-  useRetirerProfesseursDuCours,
+  useAjouterProfesseur,
+  useModifierProfesseur,
+  useSupprimerProfesseur,
 
   // Inscription hooks
-  useInscriptions,
+  useInscriptionsCours,
+  useInscriptionsUtilisateur,
+  useInscrireUtilisateurCours,
+  useAnnulerInscription,
   useInscriptionValidation,
 
   // Participant hooks
   useParticipants,
+  useParticipantsCours,
 } from "./hooks/index";
 
 // ============================================================================
@@ -151,3 +157,9 @@ export {
   // All constants grouped
   COURSES_CONSTANTS,
 } from "./constants";
+
+// ============================================================================
+// Routes
+// ============================================================================
+
+export { default as coursesRoutes } from "./routes";

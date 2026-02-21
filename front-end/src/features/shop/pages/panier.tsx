@@ -7,12 +7,8 @@ import {
   Label,
   TextInput, // AJOUTÉ: Import de TextInput
 } from "@patternfly/react-core";
-import {
-  ShoppingCartIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "@patternfly/react-icons";
-import BaseModal from "../common/modal/BaseModal";
+import { ShoppingCartIcon, ChevronLeftIcon, ChevronRightIcon } from "@patternfly/react-icons";
+import BaseModal from "@/shared/components/common-legacy/modal/BaseModal";
 
 interface DetailArticleModalProps {
   isOpen: boolean;
@@ -38,34 +34,25 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedQuantite, setSelectedQuantite] = useState(1);
   // AJOUTÉ: État local pour les stocks qui se met à jour automatiquement
-  const [stocksActuels, setStocksActuels] = useState(
-    selectedArticle?.stocks || [],
-  );
+  const [stocksActuels, setStocksActuels] = useState(selectedArticle?.stocks || []);
 
   // AJOUTÉ: Mettre à jour les stocks locaux quand l'article change
   React.useEffect(() => {
     if (selectedArticle?.stocks) {
-      console.log(
-        "📊 [Modal] Mise à jour stocks article:",
-        selectedArticle.nom,
-      );
+      console.log("📊 [Modal] Mise à jour stocks article:", selectedArticle.nom);
       setStocksActuels(selectedArticle.stocks);
     }
   }, [selectedArticle?.stocks]);
 
   const nextImage = () => {
     if (selectedArticle?.images?.length > 1) {
-      setCurrentImageIndex((prev) =>
-        prev === selectedArticle.images.length - 1 ? 0 : prev + 1,
-      );
+      setCurrentImageIndex((prev) => (prev === selectedArticle.images.length - 1 ? 0 : prev + 1));
     }
   };
 
   const prevImage = () => {
     if (selectedArticle?.images?.length > 1) {
-      setCurrentImageIndex((prev) =>
-        prev === 0 ? selectedArticle.images.length - 1 : prev - 1,
-      );
+      setCurrentImageIndex((prev) => (prev === 0 ? selectedArticle.images.length - 1 : prev - 1));
     }
   };
 
@@ -99,10 +86,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
   }, [isOpen, selectedArticle?.id]); // MODIFIÉ: Se déclencher à chaque ouverture
 
   // CORRIGÉ: Fonction pour gérer les changements de quantité avec NumberInput
-  const handleQuantiteChange = (
-    event: React.FormEvent<HTMLInputElement>,
-    value: number,
-  ) => {
+  const handleQuantiteChange = (event: React.FormEvent<HTMLInputElement>, value: number) => {
     const maxStock = getMaxStock();
     if (value >= 1 && value <= maxStock) {
       setSelectedQuantite(value);
@@ -138,11 +122,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
         stocks: selectedArticle.stocks || [],
       };
 
-      onAjouterAuPanier(
-        articleAvecStockActuel,
-        selectedTaille,
-        selectedQuantite,
-      );
+      onAjouterAuPanier(articleAvecStockActuel, selectedTaille, selectedQuantite);
 
       // Reset des valeurs pour la prochaine utilisation
       setSelectedQuantite(1);
@@ -287,14 +267,11 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                         height: "12px",
                         borderRadius: "50%",
                         border: "none",
-                        backgroundColor:
-                          index === currentImageIndex ? "#007bff" : "#dee2e6",
+                        backgroundColor: index === currentImageIndex ? "#007bff" : "#dee2e6",
                         cursor: "pointer",
                         transition: "background-color 0.2s",
                         boxShadow:
-                          index === currentImageIndex
-                            ? "0 0 0 2px rgba(0, 123, 255, 0.3)"
-                            : "none",
+                          index === currentImageIndex ? "0 0 0 2px rgba(0, 123, 255, 0.3)" : "none",
                       }}
                     />
                   ))}
@@ -346,9 +323,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
               {/* MODIFIÉ: Utiliser stocksActuels au lieu de selectedArticle.stocks */}
               {stocksActuels
                 ?.reduce((acc: any[], stock: any) => {
-                  const existingStock = acc.find(
-                    (s) => s.taille === stock.taille,
-                  );
+                  const existingStock = acc.find((s) => s.taille === stock.taille);
                   if (existingStock) {
                     existingStock.quantite += stock.quantite;
                   } else {
@@ -374,19 +349,18 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                   >
                     Taille {stock.taille} : {stock.quantite} en stock
                     {/* Indicateur si stock ajusté */}
-                    {stock.quantite !== stock.quantiteOriginale &&
-                      stock.quantiteOriginale && (
-                        <span
-                          style={{
-                            fontSize: "0.8rem",
-                            fontWeight: "normal",
-                            color: "#666",
-                            marginLeft: "0.25rem",
-                          }}
-                        >
-                          (était {stock.quantiteOriginale})
-                        </span>
-                      )}
+                    {stock.quantite !== stock.quantiteOriginale && stock.quantiteOriginale && (
+                      <span
+                        style={{
+                          fontSize: "0.8rem",
+                          fontWeight: "normal",
+                          color: "#666",
+                          marginLeft: "0.25rem",
+                        }}
+                      >
+                        (était {stock.quantiteOriginale})
+                      </span>
+                    )}
                   </div>
                 ))}
             </div>
@@ -399,8 +373,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                 fontStyle: "italic",
               }}
             >
-              * Les stocks affichés se mettent à jour en temps réel selon votre
-              panier
+              * Les stocks affichés se mettent à jour en temps réel selon votre panier
             </div>
           </div>
 
@@ -444,9 +417,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                 {/* MODIFIÉ: Utiliser stocksActuels et s'assurer que toutes les tailles disponibles sont affichées */}
                 {stocksActuels
                   ?.reduce((acc: any[], stock: any) => {
-                    const existingStock = acc.find(
-                      (s) => s.taille === stock.taille,
-                    );
+                    const existingStock = acc.find((s) => s.taille === stock.taille);
                     if (existingStock) {
                       existingStock.quantite += stock.quantite;
                     } else if (stock.quantite > 0) {
@@ -460,10 +431,7 @@ const DetailArticleModal: React.FC<DetailArticleModalProps> = ({
                   }, [])
                   ?.sort((a, b) => a.taille.localeCompare(b.taille)) // AJOUTÉ: Trier les tailles
                   ?.map((stock: any, i: any) => (
-                    <SelectOption
-                      key={`option-${stock.taille}-${i}`}
-                      value={stock.taille}
-                    >
+                    <SelectOption key={`option-${stock.taille}-${i}`} value={stock.taille}>
                       Taille {stock.taille} ({stock.quantite} en stock)
                     </SelectOption>
                   ))}

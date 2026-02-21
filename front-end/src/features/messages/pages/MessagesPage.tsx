@@ -1,20 +1,9 @@
 import React, { useState, useEffect } from "react";
-import {
-  PageSection,
-  Tabs,
-  Tab,
-  TabTitleText,
-  Alert,
-  Spinner,
-} from "@patternfly/react-core";
-import {
-  InboxIcon,
-  CheckCircleIcon,
-  PaperPlaneIcon,
-  ListIcon,
-} from "@patternfly/react-icons";
-import { PageHeader } from "@/components/common/PageHeader";
-import { useAuth } from "@/hooks/useAuth";
+import { PageSection, Tabs, Tab, TabTitleText, Alert, Spinner } from "@patternfly/react-core";
+import { InboxIcon, CheckCircleIcon, PaperPlaneIcon, ListIcon } from "@patternfly/react-icons";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import { useAuth } from "@/features/auth/hooks";
+import { useAllUsers } from "@/features/users/hooks";
 import {
   useMessagesReceived,
   useMessageTypes,
@@ -83,13 +72,12 @@ const MessagesPage: React.FC = () => {
   const userId = user?.id || 0;
   const messagesQuery = useMessagesReceived(userId);
   const messageTypesQuery = useMessageTypes();
+  const allUsersQuery = useAllUsers();
 
   const { sendMessage, loading: sendingMessage } = useSendMessage();
   const { markAsRead } = useMarkMessageAsRead();
-  const { deleteMessage, loading: deletingMessage } =
-    useDeleteReceivedMessage();
-  const { createMessageType, loading: creatingMessageType } =
-    useCreateMessageType();
+  const { deleteMessage, loading: deletingMessage } = useDeleteReceivedMessage();
+  const { createMessageType, loading: creatingMessageType } = useCreateMessageType();
   const { updateMessageType } = useUpdateMessageType();
   const { deleteMessageType } = useDeleteMessageType();
 
@@ -98,27 +86,23 @@ const MessagesPage: React.FC = () => {
   // ============================================================================
   const messagesRecipients = messagesQuery.data?.messagesReceived || [];
   const messageTypes = messageTypesQuery.data?.messageTypes || [];
+  const allUsers = allUsersQuery.data?.users || [];
 
   // Transform messages to UI format
-  const transformedMessages: MessageWithStatus[] = messagesRecipients.map(
-    (recipient: any) => ({
-      id: recipient.id,
-      message_id: recipient.message_id,
-      recipient_id: recipient.recipient_id,
-      title:
-        recipient.message?.subject ||
-        recipient.message?.messageType?.type_name ||
-        "Sans objet",
-      content: recipient.message?.content || "",
-      sender: recipient.message?.sender
-        ? `${recipient.message.sender.first_name} ${recipient.message.sender.last_name}`
-        : "Système",
-      date_envoi: recipient.message?.sent_at || recipient.created_at || "",
-      lu: recipient.read || false,
-      date_lecture: recipient.read_at || undefined,
-      type: recipient.message?.messageType?.type_name,
-    }),
-  );
+  const transformedMessages: MessageWithStatus[] = messagesRecipients.map((recipient: any) => ({
+    id: recipient.id,
+    message_id: recipient.message_id,
+    recipient_id: recipient.recipient_id,
+    title: recipient.message?.subject || recipient.message?.messageType?.type_name || "Sans objet",
+    content: recipient.message?.content || "",
+    sender: recipient.message?.sender
+      ? `${recipient.message.sender.first_name} ${recipient.message.sender.last_name}`
+      : "Système",
+    date_envoi: recipient.message?.sent_at || recipient.created_at || "",
+    lu: recipient.read || false,
+    date_lecture: recipient.read_at || undefined,
+    type: recipient.message?.messageType?.type_name,
+  }));
 
   const messagesNonLus = transformedMessages.filter((msg) => !msg.lu);
   const messagesLus = transformedMessages.filter((msg) => msg.lu);
@@ -367,9 +351,7 @@ const MessagesPage: React.FC = () => {
   };
 
   const handleDeleteMessageType = async (id: number) => {
-    if (
-      !window.confirm("Êtes-vous sûr de vouloir supprimer ce type de message ?")
-    ) {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce type de message ?")) {
       return;
     }
 
@@ -475,19 +457,19 @@ const MessagesPage: React.FC = () => {
             variant={notification.type}
             title={notification.message}
             isInline
-            style={{ marginBottom: "1.5rem" }}
-            onClose={() => setNotification(null)}
-            isClosable
+            style={{ marginBottom: "1rem" }}
+            actionClose={
+              <button onClick={() => setNotification(null)} aria-label="Close">
+                ×
+              </button>
+            }
           />
         )}
 
         {/* Tabs Navigation */}
         <Tabs
           activeKey={state.activeTabKey}
-          onSelect={(
-            _event: React.MouseEvent<HTMLElement>,
-            tabKey: string | number,
-          ) =>
+          onSelect={(_event: React.MouseEvent, tabKey: string | number) =>
             setState((prev) => ({ ...prev, activeTabKey: tabKey as string }))
           }
           className="messages-tabs"
@@ -549,7 +531,7 @@ const MessagesPage: React.FC = () => {
             }
           >
             <SendMessageForm
-              utilisateurs={[]} // TODO: Fetch users from appropriate query
+              utilisateurs={allUsers}
               typesMessages={messageTypes}
               selectedUsers={sendFormData.selectedUsers}
               selectedType={sendFormData.selectedType}
@@ -597,9 +579,7 @@ const MessagesPage: React.FC = () => {
       {/* Modals */}
       <MessageDetailModal
         isOpen={state.isDetailModalOpen}
-        onClose={() =>
-          setState((prev) => ({ ...prev, isDetailModalOpen: false }))
-        }
+        onClose={() => setState((prev) => ({ ...prev, isDetailModalOpen: false }))}
         message={state.selectedMessage}
         onMarkAsRead={handleMarkAsRead}
         onDelete={(id) => {

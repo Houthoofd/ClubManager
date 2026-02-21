@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Form,
   FormGroup,
@@ -6,8 +6,8 @@ import {
   FormSelect,
   FormSelectOption,
   Button,
-} from '@patternfly/react-core';
-import DualListSelectorGeneric from '../dualListSelector';
+} from "@patternfly/react-core";
+import DualListSelectorGeneric from "@/shared/components/common-legacy/dualListSelector";
 
 interface FormulairesCoursProps {
   nom: string;
@@ -34,20 +34,34 @@ interface FormulairesCoursProps {
 }
 
 const FormulaireCours: React.FC<FormulairesCoursProps> = ({
-  nom, setNom, selectedType, setSelectedType, jour, setJour,
-  heureDebut, setHeureDebut, heureFin, setHeureFin,
-  selectedUsers, setSelectedUsers, professeurs, isModifying, originalCours,
-  onSubmit, onAnnulerModification,
-  typesCours = ['Judo', 'JJB', 'Grappling'],
-  joursSemaine = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
-  submitButtonText, cancelButtonText = "Annuler la modification"
+  nom,
+  setNom,
+  selectedType,
+  setSelectedType,
+  jour,
+  setJour,
+  heureDebut,
+  setHeureDebut,
+  heureFin,
+  setHeureFin,
+  selectedUsers,
+  setSelectedUsers,
+  professeurs,
+  isModifying,
+  originalCours,
+  onSubmit,
+  onAnnulerModification,
+  typesCours = ["Judo", "JJB", "Grappling"],
+  joursSemaine = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"],
+  submitButtonText,
+  cancelButtonText = "Annuler la modification",
 }) => {
   return (
     <Form onSubmit={onSubmit}>
       <FormGroup label="Type de cours" isRequired fieldId="type-cours">
         <FormSelect
           id="type-cours"
-          value={selectedType || ''}
+          value={selectedType || ""}
           onChange={(_event, value) => setSelectedType(value)}
           aria-label="Type de cours"
         >
@@ -57,7 +71,7 @@ const FormulaireCours: React.FC<FormulairesCoursProps> = ({
           ))}
         </FormSelect>
       </FormGroup>
-      
+
       <FormGroup label="Nom du cours" isRequired fieldId="nom-cours">
         <TextInput
           isRequired
@@ -67,11 +81,11 @@ const FormulaireCours: React.FC<FormulairesCoursProps> = ({
           onChange={(_e, value) => setNom(value)}
         />
       </FormGroup>
-      
+
       <FormGroup label="Jour" isRequired fieldId="jour-cours">
         <FormSelect
           id="jour-cours"
-          value={jour || ''}
+          value={jour || ""}
           onChange={(_event, value) => setJour(value)}
           aria-label="Jour du cours"
         >
@@ -81,9 +95,9 @@ const FormulaireCours: React.FC<FormulairesCoursProps> = ({
           ))}
         </FormSelect>
       </FormGroup>
-      
+
       <FormGroup label="Horaire" isRequired fieldId="horaire-cours">
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: "flex", gap: "1rem" }}>
           <TextInput
             isRequired
             type="time"
@@ -100,33 +114,35 @@ const FormulaireCours: React.FC<FormulairesCoursProps> = ({
           />
         </div>
       </FormGroup>
-      
+
       <FormGroup label="Professeurs" fieldId="professeurs-cours">
         <DualListSelectorGeneric
-          key={isModifying ? `modif-${originalCours?.id || 'new'}` : 'ajout'}
+          key={isModifying ? `modif-${originalCours?.id || "new"}` : "ajout"}
           availableItems={professeurs}
           assignedItems={selectedUsers}
-          onChange={(newAssigned) => setSelectedUsers(newAssigned.map((u: any) => ({ 
-            id: u.id, 
-            name: u.first_name ? `${u.first_name} ${u.last_name}` : u.name 
-          })))}
-          getText={(item: any) => item.first_name ? `${item.first_name} ${item.last_name}` : item.name}
+          onChange={(newAssigned) =>
+            setSelectedUsers(
+              newAssigned.map((u: any) => ({
+                id: u.id,
+                name: u.first_name ? `${u.first_name} ${u.last_name}` : u.name,
+              })),
+            )
+          }
+          getText={(item: any) =>
+            item.first_name ? `${item.first_name} ${item.last_name}` : item.name
+          }
           getKey={(item: any) => item.id}
           availableTitle="Professeurs disponibles"
           assignedTitle="Professeurs assignés"
         />
       </FormGroup>
-      
+
       <Button type="submit" variant="primary">
-        {submitButtonText || (isModifying ? 'Modifier le cours' : 'Ajouter le cours')}
+        {submitButtonText || (isModifying ? "Modifier le cours" : "Ajouter le cours")}
       </Button>
 
       {isModifying && (
-        <Button 
-          variant="secondary" 
-          style={{ marginLeft: '1rem' }}
-          onClick={onAnnulerModification}
-        >
+        <Button variant="secondary" style={{ marginLeft: "1rem" }} onClick={onAnnulerModification}>
           {cancelButtonText}
         </Button>
       )}

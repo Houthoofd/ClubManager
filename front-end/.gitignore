@@ -1,31 +1,147 @@
-# Variables d'environnement Frontend
+# ============================================================================
+# ClubManager Front-End - .gitignore
+# ============================================================================
+
+# ────────────────────────────────────────────────────────────────────────────
+# Dependencies
+# ────────────────────────────────────────────────────────────────────────────
+node_modules/
+bower_components/
+
+# ────────────────────────────────────────────────────────────────────────────
+# Build Output
+# ────────────────────────────────────────────────────────────────────────────
+dist/
+dist-ssr/
+build/
+.output/
+out/
+
+# ────────────────────────────────────────────────────────────────────────────
+# Environment Variables
+# ────────────────────────────────────────────────────────────────────────────
 .env
 .env.local
 .env.development
 .env.production
 .env.test
+.env*.local
 
-# Build - COMMENTÉ POUR PERMETTRE COMMIT DE DIST/
-# dist/
-build/
+# ────────────────────────────────────────────────────────────────────────────
+# Logs
+# ────────────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+build.log
 
-# Node modules
-node_modules/
-
-# Cache
+# ────────────────────────────────────────────────────────────────────────────
+# Cache & Temporary Files
+# ────────────────────────────────────────────────────────────────────────────
 .cache/
 .vite/
+.vite-cache/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnp.*
+.tmp/
+.temp/
 
-# Logs
-*.log
+# ────────────────────────────────────────────────────────────────────────────
+# Testing
+# ────────────────────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+playwright-report/
+test-results/
 
-# Editor directories and files
+# ────────────────────────────────────────────────────────────────────────────
+# IDE & Editors
+# ────────────────────────────────────────────────────────────────────────────
+# VSCode
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+!.vscode/launch.json
+
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# WebStorm
+.webstorm/
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ────────────────────────────────────────────────────────────────────────────
+# OS Files
+# ────────────────────────────────────────────────────────────────────────────
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ────────────────────────────────────────────────────────────────────────────
+# Development Files (Archivés)
+# ────────────────────────────────────────────────────────────────────────────
+# Notes de développement (archivés dans docs/archive/)
+*.txt
+!docs/**/*.txt
+!README.txt
+
+# ────────────────────────────────────────────────────────────────────────────
+# Sentry
+# ────────────────────────────────────────────────────────────────────────────
+.sentryclirc
+.sentry-native/
+
+# ────────────────────────────────────────────────────────────────────────────
+# Misc
+# ────────────────────────────────────────────────────────────────────────────
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.vercel/

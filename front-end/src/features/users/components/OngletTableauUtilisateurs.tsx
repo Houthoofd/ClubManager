@@ -1,12 +1,14 @@
-import React from 'react';
-import { Bullseye, Title, Badge } from '@patternfly/react-core';
-import { useNavigate } from 'react-router-dom';
-import EditableTable from '../common/table/editableTable';
-import SearchInput from '../common/input/SearchInput';
-import AlertesBadge from '../gestion/AlertesBadge';
-import KebabMenu from '../common/menu/KebabMenu';
-import { EnvelopeIcon } from '@patternfly/react-icons';
-import type { UserData } from '@clubmanager/types';
+import React, { useMemo } from "react";
+import { Bullseye, Title, Badge } from "@patternfly/react-core";
+import { useNavigate } from "react-router-dom";
+import EditableTable from "@/shared/components/common-legacy/table/editableTable";
+import SearchInput from "@/shared/components/common-legacy/input/SearchInput";
+import AlertesBadge from "@/shared/components/gestion/AlertesBadge";
+import KebabMenu from "@/shared/components/common-legacy/menu/KebabMenu";
+import { EnvelopeIcon } from "@patternfly/react-icons";
+import type { UserData } from "@clubmanager/types";
+import { useDebounce, useLocalStorage } from "@/shared/hooks/utils";
+import { SkeletonTable } from "@/shared/components/ui";
 
 export interface OngletTableauUtilisateursProps {
   utilisateurs: UserData[];
@@ -35,23 +37,49 @@ const OngletTableauUtilisateurs: React.FC<OngletTableauUtilisateursProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Filtre les utilisateurs selon le terme de recherche
-  const filteredUtilisateurs = utilisateurs.filter(u => {
-    if (!u) return false;
+  // Persister le terme de recherche dans localStorage
+  const [savedSearchTerm, setSavedSearchTerm] = useLocalStorage("users-search-term", "");
 
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      (u.nom_utilisateur && u.nom_utilisateur.toString().toLowerCase().includes(searchLower)) ||
-      (u.email && u.email.toString().toLowerCase().includes(searchLower)) ||
-      (u.first_name && u.first_name.toString().toLowerCase().includes(searchLower)) ||
-      (u.last_name && u.last_name.toString().toLowerCase().includes(searchLower)) ||
-      (u.status && u.status.toString().toLowerCase().includes(searchLower))
-    );
-  });
+  // Sync searchTerm avec localStorage
+  React.useEffect(() => {
+    if (searchTerm !== savedSearchTerm) {
+      setSavedSearchTerm(searchTerm);
+    }
+  }, [searchTerm, savedSearchTerm, setSavedSearchTerm]);
+
+  // Debounce le terme de recherche pour optimiser les performances
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Filtre les utilisateurs selon le terme de recherche debounced
+  const filteredUtilisateurs = useMemo(() => {
+    return utilisateurs.filter((u) => {
+      if (!u) return false;
+
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return (
+        (u.nom_utilisateur && u.nom_utilisateur.toString().toLowerCase().includes(searchLower)) ||
+        (u.email && u.email.toString().toLowerCase().includes(searchLower)) ||
+        (u.first_name && u.first_name.toString().toLowerCase().includes(searchLower)) ||
+        (u.last_name && u.last_name.toString().toLowerCase().includes(searchLower)) ||
+        (u.status && u.status.toString().toLowerCase().includes(searchLower))
+      );
+    });
+  }, [utilisateurs, debouncedSearchTerm]);
 
   // Vérification de sécurité pour éviter les erreurs
   if (isLoading) {
-    return <Bullseye>Chargement...</Bullseye>;
+    return (
+      <div className="pf-v5-u-p-lg">
+        <div className="pf-v5-u-mb-md">
+          <SearchInput
+            value={searchTerm}
+            onChange={onSearchChange}
+            placeholder="Rechercher un utilisateur..."
+          />
+        </div>
+        <SkeletonTable rows={8} columns={propColumns.length} />
+      </div>
+    );
   }
 
   if (!utilisateurs || utilisateurs.length === 0) {
@@ -65,20 +93,20 @@ const OngletTableauUtilisateurs: React.FC<OngletTableauUtilisateursProps> = ({
   // Fonction pour formater les valeurs d'affichage
   const formatDisplayValue = (user: UserData, key: string) => {
     const value = user[key as keyof UserData];
-    
-    if (value === null || value === undefined || value === '') {
-      return 'Non renseigné';
+
+    if (value === null || value === undefined || value === "") {
+      return "Non renseigné";
     }
 
     // Formatage spécial pour certains champs
     switch (key) {
-      case 'status_id':
+      case "status_id":
         const statusNames = {
-          1: 'Visiteur',
-          2: 'Utilisateur', 
-          3: 'Administrateur',
-          4: 'Super-administrateur',
-          5: 'Professeur'
+          1: "Visiteur",
+          2: "Utilisateur",
+          3: "Administrateur",
+          4: "Super-administrateur",
+          5: "Professeur",
         };
         return statusNames[value as keyof typeof statusNames] || `Statut ${value}`;
       default:
@@ -93,28 +121,24 @@ const OngletTableauUtilisateurs: React.FC<OngletTableauUtilisateursProps> = ({
     const menuItems = [
       {
         title: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <EnvelopeIcon />
             Envoyer un message
             {suggestedMessages.length > 0 && (
-              <Badge variant="warning" style={{ fontSize: '0.75rem' }}>
+              <Badge variant="warning" style={{ fontSize: "0.75rem" }}>
                 {suggestedMessages.length}
               </Badge>
             )}
           </div>
         ),
-        onClick: () => onSendMessage(user)
+        onClick: () => onSendMessage(user),
       },
-      { title: 'Modifier', onClick: () => onEdit(user) },
-      { 
-        title: (
-          <span style={{ color: 'var(--pf-global--danger-color--100)' }}>
-            Supprimer
-          </span>
-        ), 
+      { title: "Modifier", onClick: () => onEdit(user) },
+      {
+        title: <span style={{ color: "var(--pf-global--danger-color--100)" }}>Supprimer</span>,
         onClick: () => onDeleteUser && onDeleteUser(user),
-        isDanger: true
-      }
+        isDanger: true,
+      },
     ];
 
     return menuItems;
@@ -129,70 +153,72 @@ const OngletTableauUtilisateurs: React.FC<OngletTableauUtilisateursProps> = ({
   // Configuration des colonnes simplifiée - avec le kebab menu fonctionnel
   const tableColumns = [
     {
-      key: 'first_name',
-      label: 'Prénom',
-      ariaLabel: 'Prénom',
-      cell: (user: UserData) => user.first_name || 'Non renseigné'
+      key: "first_name",
+      label: "Prénom",
+      ariaLabel: "Prénom",
+      cell: (user: UserData) => user.first_name || "Non renseigné",
     },
     {
-      key: 'last_name',
-      label: 'Nom',
-      ariaLabel: 'Nom',
-      cell: (user: UserData) => user.last_name || 'Non renseigné'
+      key: "last_name",
+      label: "Nom",
+      ariaLabel: "Nom",
+      cell: (user: UserData) => user.last_name || "Non renseigné",
     },
     {
-      key: 'email',
-      label: 'Email',
-      ariaLabel: 'Email',
-      cell: (user: UserData) => user.email || 'Non renseigné'
+      key: "email",
+      label: "Email",
+      ariaLabel: "Email",
+      cell: (user: UserData) => user.email || "Non renseigné",
     },
     {
-      key: 'status_id',
-      label: 'Statut',
-      ariaLabel: 'Statut',
-      cell: (user: UserData) => formatDisplayValue(user, 'status_id')
+      key: "status_id",
+      label: "Statut",
+      ariaLabel: "Statut",
+      cell: (user: UserData) => formatDisplayValue(user, "status_id"),
     },
     {
-      key: 'alertes',
-      label: 'Alertes',
-      ariaLabel: 'Alertes',
+      key: "alertes",
+      label: "Alertes",
+      ariaLabel: "Alertes",
       cell: (user: UserData) => {
         const alertes = getUserAlertes(user.id);
-        return alertes.length > 0 ? <AlertesBadge alertes={alertes} /> : (
-          <span style={{ color: '#6a6e73', fontSize: '0.875rem' }}>Aucune</span>
+        return alertes.length > 0 ? (
+          <AlertesBadge alertes={alertes} />
+        ) : (
+          <span style={{ color: "#6a6e73", fontSize: "0.875rem" }}>Aucune</span>
         );
-      }
+      },
     },
     {
-      key: 'actions',
-      label: 'Actions',
-      ariaLabel: 'Actions',
-      cell: (user: UserData) => (
-        <KebabMenu items={getKebabMenuItems(user)} />
-      )
-    }
+      key: "actions",
+      label: "Actions",
+      ariaLabel: "Actions",
+      cell: (user: UserData) => <KebabMenu items={getKebabMenuItems(user)} />,
+    },
   ];
 
-  console.log('Utilisateurs data:', utilisateurs.slice(0, 2)); // Debug pour voir les données
+  console.log("Utilisateurs data:", utilisateurs.slice(0, 2)); // Debug pour voir les données
 
   return (
     <div>
-      <div style={{ marginBottom: '1rem' }}>
+      <div style={{ marginBottom: "1rem" }}>
         <SearchInput
           value={searchTerm}
           onChange={onSearchChange}
           placeholder="Rechercher par nom, prénom, email ou statut..."
         />
-        <div style={{ 
-          marginTop: '0.5rem', 
-          fontSize: '0.875rem', 
-          color: '#6a6e73',
-          fontStyle: 'italic' 
-        }}>
+        <div
+          style={{
+            marginTop: "0.5rem",
+            fontSize: "0.875rem",
+            color: "#6a6e73",
+            fontStyle: "italic",
+          }}
+        >
           💡 Cliquez sur une ligne pour voir le profil utilisateur
         </div>
       </div>
-      
+
       <EditableTable
         data={filteredUtilisateurs}
         columns={tableColumns}

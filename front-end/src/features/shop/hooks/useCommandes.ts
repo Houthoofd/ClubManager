@@ -1,14 +1,15 @@
+import { useMemo } from "react";
 import {
   useGetOrdersQuery,
   useGetOrderQuery,
   useCreateOrderMutation,
   useUpdateOrderStatusMutation,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 import type {
   GetOrdersQuery,
   GetOrderQuery,
   CreateOrderInput,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 
 // ============================================================================
 // Types
@@ -62,11 +63,7 @@ type UseUpdateOrderStatusReturn = {
  * const { orders, isLoading } = useOrders(undefined, 10, 0);
  * ```
  */
-export const useOrders = (
-  userId?: number,
-  take?: number,
-  skip?: number,
-): UseOrdersReturn => {
+export const useOrders = (userId?: number, take?: number, skip?: number): UseOrdersReturn => {
   const variables: { userId?: number; take?: number; skip?: number } = {};
 
   if (userId !== undefined) variables.userId = userId;
@@ -179,10 +176,7 @@ export const useCreateOrder = (): UseCreateOrderReturn => {
       throw new Error("Order creation failed");
     }
 
-    console.log(
-      "✅ [useCreateOrder] Order created:",
-      result.data.createOrder.id,
-    );
+    console.log("✅ [useCreateOrder] Order created:", result.data.createOrder.id);
 
     return result.data.createOrder as OrderDetail;
   };
@@ -208,13 +202,9 @@ export const useCreateOrder = (): UseCreateOrderReturn => {
  * ```
  */
 export const useUpdateOrderStatus = (): UseUpdateOrderStatusReturn => {
-  const [updateOrderStatusMutation, { loading, error }] =
-    useUpdateOrderStatusMutation();
+  const [updateOrderStatusMutation, { loading, error }] = useUpdateOrderStatusMutation();
 
-  const updateStatus = async (
-    orderId: number,
-    status: string,
-  ): Promise<void> => {
+  const updateStatus = async (orderId: number, status: string): Promise<void> => {
     console.log("📝 [useUpdateOrderStatus] Updating order status:", {
       orderId,
       status,
@@ -229,10 +219,7 @@ export const useUpdateOrderStatus = (): UseUpdateOrderStatusReturn => {
       throw new Error("Order status update failed");
     }
 
-    console.log(
-      "✅ [useUpdateOrderStatus] Status updated:",
-      result.data.updateOrderStatus.id,
-    );
+    console.log("✅ [useUpdateOrderStatus] Status updated:", result.data.updateOrderStatus.id);
   };
 
   return {
@@ -254,15 +241,12 @@ export const useUpdateOrderStatus = (): UseUpdateOrderStatusReturn => {
  * const { orders, isLoading } = useOrdersByStatus('pending');
  * ```
  */
-export const useOrdersByStatus = (
-  status: string | undefined,
-): UseOrdersReturn => {
+export const useOrdersByStatus = (status: string | undefined): UseOrdersReturn => {
   const { data, loading, error, refetch } = useGetOrdersQuery({
     fetchPolicy: "cache-and-network",
   });
 
-  const filteredOrders =
-    data?.orders.filter((order) => order.status === status) ?? [];
+  const filteredOrders = data?.orders.filter((order: Order) => order.status === status) ?? [];
 
   return {
     orders: status ? filteredOrders : (data?.orders ?? []),
@@ -329,3 +313,51 @@ export const useCreerCommande = useCreateOrder;
  * @deprecated Use useUpdateOrderStatus instead
  */
 export const useModifierStatutCommande = useUpdateOrderStatus;
+
+/**
+ * Legacy alias for useUpdateOrderStatus
+ * @deprecated Use useUpdateOrderStatus instead
+ */
+export const useUpdateCommandeStatut = useUpdateOrderStatus;
+
+/**
+ * Hook to get order statistics (calculated client-side)
+ *
+ * @returns Order statistics with loading state
+ *
+ * @example
+ * ```tsx
+ * const { totalOrders, completedOrders, totalRevenue, isLoading } = useCommandesStats();
+ * ```
+ */
+export const useCommandesStats = () => {
+  const { orders, isLoading } = useOrders();
+
+  const stats = useMemo(() => {
+    const totalOrders = orders.length;
+    const pendingOrders = orders.filter((o) => o.status === "pending").length;
+    const completedOrders = orders.filter((o) => o.status === "completed").length;
+    const cancelledOrders = orders.filter((o) => o.status === "cancelled").length;
+
+    const totalRevenue = orders
+      .filter((o) => o.status === "completed")
+      .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+
+    const averageOrderValue = completedOrders > 0 ? totalRevenue / completedOrders : 0;
+
+    return {
+      totalOrders,
+      pendingOrders,
+      completedOrders,
+      cancelledOrders,
+      totalRevenue,
+      averageOrderValue,
+    };
+  }, [orders]);
+
+  return {
+    ...stats,
+    isLoading,
+    error: null,
+  };
+};

@@ -473,48 +473,34 @@
   .dashboard-actions {
     padding: 1rem;
   }
-  
+
   .dashboard-metrics,
   .dashboard-charts,
   .dashboard-tables {
     padding: 1rem;
   }
-  
+
   .metric-card__value {
     font-size: 1.5rem;
   }
-  
+
   .data-table__header-cell,
   .data-table__cell {
     padding: 0.75rem 1rem;
   }
-  
+
   .dashboard-expandable-sections {
     padding: 0 1rem 1rem;
   }
-  
+
   .expandable-data-section__header {
     padding: 1rem 1.5rem;
   }
-  
+
   .expandable-data-section__title {
     font-size: 1rem;
   }
-  
-  .expandable-data-section__toggle-text {
-    display: none;
-  }
-}
-  
-  .expandable-data-section__title {
-    font-size: 1rem;
-  }
-  
-  .expandable-data-section__toggle-text {
-    display: none;
-  }
-}
-  
+
   .expandable-data-section__toggle-text {
     display: none;
   }

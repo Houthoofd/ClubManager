@@ -28,9 +28,9 @@ import {
   DataTable,
   ExpandableDataSection,
 } from "../components";
-import { ActionButton } from "@/components/common/ActionButton";
-import { PageHeader } from "@/components/common/PageHeader";
-import AuthRequiredModal from "@/components/common/modal/AuthRequiredModal";
+import { ActionButton } from "@/shared/components/common-legacy/ActionButton";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import AuthRequiredModal from "@/shared/components/common-legacy/modal/AuthRequiredModal";
 import { DASHBOARD_ROUTES, DEFAULT_LIMITS, AUTO_REDIRECT_DELAY, AUTH_CHECK_INTERVAL } from "../constants";
 import type { DashboardMetric, PaymentData, MemberData, TableColumn } from "../types";
 

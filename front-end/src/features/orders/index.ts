@@ -12,15 +12,16 @@
 // Pages
 // ============================================================================
 
-export { default as OrdersPage } from './pages/OrdersPage';
+export { default as OrdersPage } from "./pages/OrdersPage";
+export { default as PaymentPage } from "./pages/PaymentPage";
 
 // ============================================================================
 // Components
 // ============================================================================
 
-export { default as FiltrageCommandes } from './components/FiltrageCommandes';
-export { default as StatistiquesCommandes } from './components/StatistiquesCommandes';
-export { default as TableauCommandes } from './components/TableauCommandes';
+export { default as FiltrageCommandes } from "./components/FiltrageCommandes";
+export { default as StatistiquesCommandes } from "./components/StatistiquesCommandes";
+export { default as TableauCommandes } from "./components/TableauCommandes";
 
 // ============================================================================
 // Hooks (re-exported from shop feature)
@@ -62,7 +63,7 @@ export type {
 
   // Validation
   OrderValidationErrors,
-} from './types';
+} from "./types";
 
 // ============================================================================
 // Constants
@@ -114,4 +115,4 @@ export {
 
   // All constants grouped
   ORDERS_CONSTANTS,
-} from './constants';
+} from "./constants";

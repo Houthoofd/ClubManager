@@ -3,12 +3,12 @@ import {
   useCreateInstructorMutation,
   useUpdateInstructorMutation,
   useDeleteInstructorMutation,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 import type {
   GetInstructorsQuery,
   CreateInstructorInput,
   UpdateInstructorInput,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 
 // ============================================================================
 // Types
@@ -60,10 +60,7 @@ type UseDeleteInstructorReturn = {
  * const { instructors, isLoading } = useInstructors(10, 0);
  * ```
  */
-export const useInstructors = (
-  take?: number,
-  skip?: number,
-): UseInstructorsReturn => {
+export const useInstructors = (take?: number, skip?: number): UseInstructorsReturn => {
   const variables: { take?: number; skip?: number } = {};
 
   if (take !== undefined) variables.take = take;
@@ -101,27 +98,21 @@ export const useInstructors = (
  * ```
  */
 export const useCreateInstructor = (): UseCreateInstructorReturn => {
-  const [createInstructorMutation, { loading, error }] =
-    useCreateInstructorMutation();
+  const [createInstructorMutation, { loading, error }] = useCreateInstructorMutation();
 
-  const createInstructor = async (
-    input: CreateInstructorInput,
-  ): Promise<void> => {
+  const createInstructor = async (input: CreateInstructorInput): Promise<void> => {
     console.log("📝 [useCreateInstructor] Creating instructor:", input);
 
     const result = await createInstructorMutation({
       variables: { input },
-      refetchQueries: ["GetInstructors"],
+      refetchQueries: ["GetInstructors", "GetSessions"],
     });
 
     if (!result.data?.createInstructor) {
       throw new Error("Instructor creation failed");
     }
 
-    console.log(
-      "✅ [useCreateInstructor] Instructor created:",
-      result.data.createInstructor.id,
-    );
+    console.log("✅ [useCreateInstructor] Instructor created:", result.data.createInstructor.id);
   };
 
   return {
@@ -148,28 +139,21 @@ export const useCreateInstructor = (): UseCreateInstructorReturn => {
  * ```
  */
 export const useUpdateInstructor = (): UseUpdateInstructorReturn => {
-  const [updateInstructorMutation, { loading, error }] =
-    useUpdateInstructorMutation();
+  const [updateInstructorMutation, { loading, error }] = useUpdateInstructorMutation();
 
-  const updateInstructor = async (
-    id: number,
-    input: UpdateInstructorInput,
-  ): Promise<void> => {
+  const updateInstructor = async (id: number, input: UpdateInstructorInput): Promise<void> => {
     console.log("📝 [useUpdateInstructor] Updating instructor:", id, input);
 
     const result = await updateInstructorMutation({
       variables: { id, input },
-      refetchQueries: ["GetInstructors"],
+      refetchQueries: ["GetInstructors", "GetSessions"],
     });
 
     if (!result.data?.updateInstructor) {
       throw new Error("Instructor update failed");
     }
 
-    console.log(
-      "✅ [useUpdateInstructor] Instructor updated:",
-      result.data.updateInstructor.id,
-    );
+    console.log("✅ [useUpdateInstructor] Instructor updated:", result.data.updateInstructor.id);
   };
 
   return {
@@ -193,21 +177,18 @@ export const useUpdateInstructor = (): UseUpdateInstructorReturn => {
  * ```
  */
 export const useDeleteInstructor = (): UseDeleteInstructorReturn => {
-  const [deleteInstructorMutation, { loading, error }] =
-    useDeleteInstructorMutation();
+  const [deleteInstructorMutation, { loading, error }] = useDeleteInstructorMutation();
 
   const deleteInstructor = async (id: number): Promise<void> => {
     console.log("🗑️ [useDeleteInstructor] Deleting instructor:", id);
 
     const result = await deleteInstructorMutation({
       variables: { id },
-      refetchQueries: ["GetInstructors"],
+      refetchQueries: ["GetInstructors", "GetSessions"],
     });
 
     if (!result.data?.deleteInstructor?.success) {
-      throw new Error(
-        result.data?.deleteInstructor?.message || "Instructor deletion failed",
-      );
+      throw new Error(result.data?.deleteInstructor?.message || "Instructor deletion failed");
     }
 
     console.log("✅ [useDeleteInstructor] Instructor deleted:", id);
@@ -240,6 +221,101 @@ export const useAllInstructors = (): UseInstructorsReturn => {
  * @deprecated Use useInstructors instead
  */
 export const useProfesseurs = useInstructors;
+
+/**
+ * Hook to delete a recurring course
+ *
+ * WORKAROUND: Uses standard session deletion until recurring course
+ * management is added to the schema
+ *
+ * @returns Delete function with loading state
+ *
+ * @example
+ * ```tsx
+ * const { supprimerCoursRecurrent, isLoading } = useSupprimerCoursRecurrent();
+ *
+ * await supprimerCoursRecurrent(123);
+ * ```
+ */
+export const useSupprimerCoursRecurrent = () => {
+  console.warn(
+    "⚠️ [useSupprimerCoursRecurrent] Workaround - uses standard session deletion. " +
+      "Recurring course schema not yet implemented.",
+  );
+
+  const supprimerCoursRecurrent = async (coursId: number): Promise<void> => {
+    console.log("🗑️ [useSupprimerCoursRecurrent] Deleting recurring course:", coursId);
+
+    // WORKAROUND: This should delete a recurring course template
+    // For now, suggest using DeleteSession mutation instead
+    console.warn(
+      "Use DeleteSession mutation for individual sessions. " +
+        "Recurring course deletion requires backend implementation.",
+    );
+
+    throw new Error(
+      "Recurring course deletion not implemented. Use session deletion for individual sessions.",
+    );
+  };
+
+  return {
+    supprimerCoursRecurrent,
+    isLoading: false,
+    error: null,
+    success: false,
+  };
+};
+
+/**
+ * Hook to remove instructors from a course
+ *
+ * WORKAROUND: Uses session update to change instructor
+ * Multi-instructor support requires schema changes
+ *
+ * @returns Remove instructors function with loading state
+ *
+ * @example
+ * ```tsx
+ * const { retirerProfesseurs, isLoading } = useRetirerProfesseursDuCours();
+ *
+ * await retirerProfesseurs(456, [1, 2, 3]);
+ * ```
+ */
+export const useRetirerProfesseursDuCours = () => {
+  console.warn(
+    "⚠️ [useRetirerProfesseursDuCours] Workaround - schema only supports single instructor. " +
+      "Use UpdateSession to change instructor_id instead.",
+  );
+
+  const retirerProfesseurs = async (coursId: number, professeurIds: number[]): Promise<void> => {
+    console.log("🗑️ [useRetirerProfesseursDuCours] Removing instructors from course:", {
+      coursId,
+      professeurIds,
+    });
+
+    // WORKAROUND: Current schema only supports one instructor per session
+    // Sessions table has instructor_id (singular), not a many-to-many relationship
+    // To remove an instructor, you would need to:
+    // 1. Use UpdateSession mutation to set instructor_id to null or another instructor
+    // 2. Backend needs to support multiple instructors per session first
+
+    console.warn(
+      "Current schema only supports single instructor_id per session. " +
+        "Use UpdateSession mutation to change the instructor instead.",
+    );
+
+    throw new Error(
+      "Multi-instructor removal not supported. Use UpdateSession to change instructor_id.",
+    );
+  };
+
+  return {
+    retirerProfesseurs,
+    isLoading: false,
+    error: null,
+    success: false,
+  };
+};
 
 /**
  * Legacy alias for useCreateInstructor

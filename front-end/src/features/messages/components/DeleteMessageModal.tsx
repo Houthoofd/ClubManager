@@ -1,5 +1,5 @@
 import React from "react";
-import { BaseModal } from "@/components/common/modal/BaseModal";
+import { BaseModal } from "@/shared/components/common-legacy/modal/BaseModal";
 import { Button, Alert } from "@patternfly/react-core";
 import { ExclamationTriangleIcon } from "@patternfly/react-icons";
 

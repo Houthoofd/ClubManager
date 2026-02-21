@@ -3,7 +3,8 @@
  * GraphQL resolvers for system monitoring and health checks
  */
 
-import monitoringService from '../services/monitoring.service.js';
+import monitoringService from "../services/monitoring.service.js";
+import { alertService } from "../../../../infrastructure/services/alert.service.js";
 
 export const monitoringResolvers = {
   Query: {
@@ -22,7 +23,8 @@ export const monitoringResolvers = {
       } catch (error) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : 'Health check failed',
+          message:
+            error instanceof Error ? error.message : "Health check failed",
         };
       }
     },
@@ -33,21 +35,22 @@ export const monitoringResolvers = {
     systemMetrics: async (_parent: any, _args: any, context: any) => {
       try {
         // Only allow admins to view metrics
-        if (!context.user || context.user.role !== 'admin') {
-          throw new Error('Admin access required');
+        if (!context.user || context.user.role !== "admin") {
+          throw new Error("Admin access required");
         }
 
         const metrics = await monitoringService.getMetrics();
 
         return {
           success: true,
-          message: 'Metrics retrieved successfully',
+          message: "Metrics retrieved successfully",
           data: metrics,
         };
       } catch (error) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : 'Failed to get metrics',
+          message:
+            error instanceof Error ? error.message : "Failed to get metrics",
         };
       }
     },
@@ -57,26 +60,42 @@ export const monitoringResolvers = {
      */
     getAlerts: async (
       _parent: any,
-      { status }: { status?: string },
-      context: any
+      {
+        status,
+        limit = 50,
+        offset = 0,
+      }: { status?: string; limit?: number; offset?: number },
+      context: any,
     ) => {
       try {
-        if (!context.user || context.user.role !== 'admin') {
-          throw new Error('Admin access required');
+        if (!context.user || context.user.role !== "admin") {
+          throw new Error("Admin access required");
         }
 
-        // TODO: Implement get alerts from database
-        // const alerts = await monitoringService.getAlerts(status);
+        // Fetch alerts from database
+        let result;
+        if (status === "active" || !status) {
+          result = await alertService.getAllActiveAlerts(limit, offset);
+        } else {
+          // For other statuses, could add more methods to alertService
+          result = await alertService.getAllActiveAlerts(limit, offset);
+        }
 
         return {
           success: true,
-          message: 'Alerts retrieved successfully',
-          alerts: [],
+          message: "Alerts retrieved successfully",
+          alerts: result.alertes,
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
         };
       } catch (error) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : 'Failed to get alerts',
+          message:
+            error instanceof Error ? error.message : "Failed to get alerts",
+          alerts: [],
+          total: 0,
         };
       }
     },
@@ -86,21 +105,17 @@ export const monitoringResolvers = {
     /**
      * Log an error (for client-side error reporting)
      */
-    logError: async (
-      _parent: any,
-      { error }: { error: any },
-      context: any
-    ) => {
+    logError: async (_parent: any, { error }: { error: any }, context: any) => {
       try {
         const errorLog = {
-          error_type: error.type || 'client_error',
+          error_type: error.type || "client_error",
           error_message: error.message,
           stack_trace: error.stack,
           request_path: error.path,
           user_id: context.user?.id,
           ip_address: context.req?.ip,
-          user_agent: context.req?.headers['user-agent'],
-          severity: error.severity || 'medium',
+          user_agent: context.req?.headers["user-agent"],
+          severity: error.severity || "medium",
           metadata: error.metadata,
         };
 
@@ -108,12 +123,12 @@ export const monitoringResolvers = {
 
         return {
           success: true,
-          message: 'Error logged successfully',
+          message: "Error logged successfully",
         };
       } catch (err) {
         return {
           success: false,
-          message: err instanceof Error ? err.message : 'Failed to log error',
+          message: err instanceof Error ? err.message : "Failed to log error",
         };
       }
     },
@@ -124,24 +139,25 @@ export const monitoringResolvers = {
     createAlert: async (
       _parent: any,
       { alert }: { alert: any },
-      context: any
+      context: any,
     ) => {
       try {
-        if (!context.user || context.user.role !== 'admin') {
-          throw new Error('Admin access required');
+        if (!context.user || context.user.role !== "admin") {
+          throw new Error("Admin access required");
         }
 
         const createdAlert = await monitoringService.createAlert(alert);
 
         return {
           success: true,
-          message: 'Alert created successfully',
+          message: "Alert created successfully",
           alert: createdAlert,
         };
       } catch (error) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : 'Failed to create alert',
+          message:
+            error instanceof Error ? error.message : "Failed to create alert",
         };
       }
     },
@@ -152,24 +168,35 @@ export const monitoringResolvers = {
     acknowledgeAlert: async (
       _parent: any,
       { alertId }: { alertId: number },
-      context: any
+      context: any,
     ) => {
       try {
-        if (!context.user || context.user.role !== 'admin') {
-          throw new Error('Admin access required');
+        if (!context.user || context.user.role !== "admin") {
+          throw new Error("Admin access required");
         }
 
-        // TODO: Implement acknowledge alert
-        // await monitoringService.acknowledgeAlert(alertId);
+        // Acknowledge alert (same as resolve for now, could add separate status)
+        const success = await alertService.resolveAlert(
+          alertId,
+          context.user.id,
+          "Alert acknowledged by admin",
+        );
+
+        if (!success) {
+          throw new Error("Failed to acknowledge alert");
+        }
 
         return {
           success: true,
-          message: 'Alert acknowledged successfully',
+          message: "Alert acknowledged successfully",
         };
       } catch (error) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : 'Failed to acknowledge alert',
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to acknowledge alert",
         };
       }
     },
@@ -179,25 +206,33 @@ export const monitoringResolvers = {
      */
     resolveAlert: async (
       _parent: any,
-      { alertId }: { alertId: number },
-      context: any
+      { alertId, notes }: { alertId: number; notes?: string },
+      context: any,
     ) => {
       try {
-        if (!context.user || context.user.role !== 'admin') {
-          throw new Error('Admin access required');
+        if (!context.user || context.user.role !== "admin") {
+          throw new Error("Admin access required");
         }
 
-        // TODO: Implement resolve alert
-        // await monitoringService.resolveAlert(alertId);
+        const success = await alertService.resolveAlert(
+          alertId,
+          context.user.id,
+          notes || "Alert resolved by admin",
+        );
+
+        if (!success) {
+          throw new Error("Failed to resolve alert in database");
+        }
 
         return {
           success: true,
-          message: 'Alert resolved successfully',
+          message: "Alert resolved successfully",
         };
       } catch (error) {
         return {
           success: false,
-          message: error instanceof Error ? error.message : 'Failed to resolve alert',
+          message:
+            error instanceof Error ? error.message : "Failed to resolve alert",
         };
       }
     },

@@ -2,10 +2,11 @@ import {
   useLoginMutation,
   useLogoutMutation,
   useGetMeQuery,
-} from "@/lib/apollo/generated/graphql";
-import type { LoginMutation, GetMeQuery } from "@/lib/apollo/generated/graphql";
-import { apolloClient } from "@/lib/apollo/apollo-client";
+} from "@/core/api/apollo/generated/graphql";
+import type { LoginMutation, GetMeQuery } from "@/core/api/apollo/generated/graphql";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/store/authStore";
 
 // ============================================================================
 // Types
@@ -54,11 +55,9 @@ type UseAuthStatusReturn = {
  */
 export const useLogin = (): UseLoginReturn => {
   const [loginMutation, { data, loading, error }] = useLoginMutation();
+  const authStore = useAuthStore();
 
-  const login = async (
-    email: string,
-    password: string,
-  ): Promise<LoginResult> => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     const result = await loginMutation({
       variables: { email, password },
     });
@@ -69,14 +68,9 @@ export const useLogin = (): UseLoginReturn => {
 
     const loginResult = result.data.login;
 
-    // Store token in localStorage
-    if (loginResult.token) {
-      localStorage.setItem("authToken", loginResult.token);
-    }
-
-    // Store user data
-    if (loginResult.user) {
-      localStorage.setItem("userData", JSON.stringify(loginResult.user));
+    // Store in Zustand (which persists to localStorage automatically)
+    if (loginResult.token && loginResult.user) {
+      authStore.login(loginResult.user as any, loginResult.token);
     }
 
     // Reset Apollo cache after login to refetch protected queries
@@ -109,14 +103,14 @@ export const useLogin = (): UseLoginReturn => {
 export const useLogout = (): UseLogoutReturn => {
   const [logoutMutation, { loading, error }] = useLogoutMutation();
   const navigate = useNavigate();
+  const authStore = useAuthStore();
 
   const logout = async (): Promise<void> => {
     try {
       await logoutMutation();
 
-      // Clear local storage
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("userData");
+      // Clear Zustand store (which also clears persisted localStorage)
+      authStore.logout();
 
       // Clear Apollo cache
       await apolloClient.clearStore();
@@ -126,8 +120,7 @@ export const useLogout = (): UseLogoutReturn => {
     } catch (err) {
       console.error("Logout error:", err);
       // Even if server logout fails, clear local data
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("userData");
+      authStore.logout();
       await apolloClient.clearStore();
       navigate("/connexion");
     }
@@ -156,14 +149,15 @@ export const useLogout = (): UseLogoutReturn => {
  * ```
  */
 export const useAuthStatus = (): UseAuthStatusReturn => {
+  const { token, isAuthenticated: storeIsAuthenticated } = useAuthStore();
   const { data, loading, error, refetch } = useGetMeQuery({
     fetchPolicy: "network-only",
     errorPolicy: "all",
-    skip: !localStorage.getItem("authToken"),
+    skip: !token,
   });
 
   return {
-    isAuthenticated: !!data?.me,
+    isAuthenticated: storeIsAuthenticated && !!data?.me,
     user: data?.me ?? null,
     isLoading: loading,
     error: error ?? null,
@@ -184,13 +178,14 @@ export const useAuthStatus = (): UseAuthStatusReturn => {
  * ```
  */
 export const useProfile = (): UseAuthStatusReturn => {
+  const { token, isAuthenticated: storeIsAuthenticated } = useAuthStore();
   const { data, loading, error, refetch } = useGetMeQuery({
     fetchPolicy: "cache-first",
-    skip: !localStorage.getItem("authToken"),
+    skip: !token,
   });
 
   return {
-    isAuthenticated: !!data?.me,
+    isAuthenticated: storeIsAuthenticated && !!data?.me,
     user: data?.me ?? null,
     isLoading: loading,
     error: error ?? null,
@@ -209,11 +204,17 @@ export const useProfile = (): UseAuthStatusReturn => {
  * ```
  */
 export const useIsAuthenticated = (): boolean => {
-  const hasToken = !!localStorage.getItem("authToken");
-  const { data } = useGetMeQuery({
-    skip: !hasToken,
-    fetchPolicy: "cache-only",
-  });
-
-  return hasToken && !!data?.me;
+  const { isAuthenticated } = useAuthStore();
+  return isAuthenticated;
 };
+
+/**
+ * Legacy alias for useIsAuthenticated
+ * @deprecated Use useIsAuthenticated instead
+ */
+export const useAuthentifie = useIsAuthenticated;
+
+/**
+ * Alias for useAuthStatus
+ */
+export const useAuth = useAuthStatus;

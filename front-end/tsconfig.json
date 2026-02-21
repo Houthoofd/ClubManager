@@ -16,7 +16,17 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
+      "@/app/*": ["src/app/*"],
+      "@/core/*": ["src/core/*"],
+      "@/shared/*": ["src/shared/*"],
+      "@/features/*": ["src/features/*"],
+      "@/pages/*": ["src/pages/*"],
+      "@/assets/*": ["src/assets/*"],
+      "@/styles/*": ["src/styles/*"],
     },
+
+    // Type declarations
+    "typeRoots": ["./node_modules/@types", "./src/shared/types"],
 
     // Mode strict activé
     "strict": true,

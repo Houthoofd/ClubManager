@@ -13,20 +13,14 @@ import {
   ToolbarContent,
   ToolbarItem,
   EmptyState,
-  EmptyStateIcon,
   Title,
   EmptyStateBody,
 } from "@patternfly/react-core";
 import { UserIcon, SearchIcon } from "@patternfly/react-icons";
-import { PageHeader } from "@/components/common/PageHeader";
-import ResultModal from "@/components/common/modal/ResultModal";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
 import { useInstructors } from "../hooks";
-import {
-  TEACHER_TABS,
-  TEACHER_TAB_LABELS,
-  ERROR_MESSAGES,
-  INFO_MESSAGES,
-} from "../constants";
+import { TEACHER_TABS, TEACHER_TAB_LABELS, ERROR_MESSAGES, INFO_MESSAGES } from "../constants";
 import type { TeachersManagePageState, TeacherListItem } from "../types";
 
 const TeachersManagePage: React.FC = () => {
@@ -72,8 +66,7 @@ const TeachersManagePage: React.FC = () => {
 
     const searchTerm = state.searchValue.toLowerCase().trim();
     return teachers.filter((teacher) => {
-      const fullName =
-        `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
+      const fullName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase();
       const email = teacher.email?.toLowerCase() || "";
       const specialization = teacher.specialization?.toLowerCase() || "";
 
@@ -85,10 +78,7 @@ const TeachersManagePage: React.FC = () => {
     });
   }, [teachers, state.searchValue]);
 
-  const handleTabClick = (
-    _event: React.MouseEvent,
-    tabIndex: string | number,
-  ) => {
+  const handleTabClick = (_event: React.MouseEvent, tabIndex: string | number) => {
     if (typeof tabIndex === "number") {
       setState((prev) => ({
         ...prev,
@@ -162,11 +152,7 @@ const TeachersManagePage: React.FC = () => {
       />
 
       <PageSection className="teachers-content">
-        <Tabs
-          activeKey={state.activeTabKey}
-          onSelect={handleTabClick}
-          className="modern-tabs"
-        >
+        <Tabs activeKey={state.activeTabKey} onSelect={handleTabClick} className="modern-tabs">
           {/* Tab: Liste des professeurs */}
           <Tab
             eventKey={TEACHER_TABS.LIST}
@@ -185,10 +171,9 @@ const TeachersManagePage: React.FC = () => {
                       <SearchInput
                         placeholder="Rechercher un professeur (nom, email, spécialisation)..."
                         value={state.searchValue}
-                        onChange={(
-                          _event: React.FormEvent<HTMLInputElement>,
-                          value: string,
-                        ) => handleSearchChange(value)}
+                        onChange={(_event: React.FormEvent<HTMLInputElement>, value: string) =>
+                          handleSearchChange(value)
+                        }
                         onClear={handleClearSearch}
                         style={{ width: "100%" }}
                       />
@@ -202,8 +187,7 @@ const TeachersManagePage: React.FC = () => {
                     <span style={{ fontSize: "0.875rem", color: "#6a6e73" }}>
                       {filteredTeachers.length} professeur
                       {filteredTeachers.length > 1 ? "s" : ""} trouvé
-                      {filteredTeachers.length > 1 ? "s" : ""} sur{" "}
-                      {teachers.length}
+                      {filteredTeachers.length > 1 ? "s" : ""} sur {teachers.length}
                     </span>
                   </div>
                 )}
@@ -211,9 +195,11 @@ const TeachersManagePage: React.FC = () => {
                 {/* Teachers list */}
                 {filteredTeachers.length === 0 ? (
                   <EmptyState>
-                    <EmptyStateIcon
-                      icon={state.searchValue ? SearchIcon : UserIcon}
-                    />
+                    {state.searchValue ? (
+                      <SearchIcon size="xl" style={{ marginBottom: "16px", fontSize: "48px" }} />
+                    ) : (
+                      <UserIcon size="xl" style={{ marginBottom: "16px", fontSize: "48px" }} />
+                    )}
                     <Title headingLevel="h4" size="lg">
                       {state.searchValue
                         ? INFO_MESSAGES.NO_SEARCH_RESULTS
@@ -270,22 +256,18 @@ const TeachersManagePage: React.FC = () => {
                                 </div>
                                 {teacher.specialization && (
                                   <div style={{ marginTop: "0.25rem" }}>
-                                    <strong>Spécialisation:</strong>{" "}
-                                    {teacher.specialization}
+                                    <strong>Spécialisation:</strong> {teacher.specialization}
                                   </div>
                                 )}
                                 {teacher.certifications && (
                                   <div style={{ marginTop: "0.25rem" }}>
-                                    <strong>Certifications:</strong>{" "}
-                                    {teacher.certifications}
+                                    <strong>Certifications:</strong> {teacher.certifications}
                                   </div>
                                 )}
                                 {teacher.hire_date && (
                                   <div style={{ marginTop: "0.25rem" }}>
                                     <strong>Date d'embauche:</strong>{" "}
-                                    {new Date(
-                                      teacher.hire_date,
-                                    ).toLocaleDateString("fr-FR")}
+                                    {new Date(teacher.hire_date).toLocaleDateString("fr-FR")}
                                   </div>
                                 )}
                               </div>
@@ -301,9 +283,7 @@ const TeachersManagePage: React.FC = () => {
                                   }}
                                 >
                                   <strong>Bio:</strong>
-                                  <div style={{ marginTop: "0.25rem" }}>
-                                    {teacher.bio}
-                                  </div>
+                                  <div style={{ marginTop: "0.25rem" }}>{teacher.bio}</div>
                                 </div>
                               )}
                             </div>
@@ -328,13 +308,9 @@ const TeachersManagePage: React.FC = () => {
           >
             <Card>
               <CardBody>
-                <Alert
-                  variant="info"
-                  title="Fonctionnalité en cours de développement"
-                  isInline
-                >
-                  Cette fonctionnalité nécessite l'implémentation des hooks de
-                  promotion et de gestion des utilisateurs.
+                <Alert variant="info" title="Fonctionnalité en cours de développement" isInline>
+                  Cette fonctionnalité nécessite l'implémentation des hooks de promotion et de
+                  gestion des utilisateurs.
                 </Alert>
               </CardBody>
             </Card>
@@ -343,9 +319,7 @@ const TeachersManagePage: React.FC = () => {
 
         <ResultModal
           isOpen={state.showResultModal}
-          onClose={() =>
-            setState((prev) => ({ ...prev, showResultModal: false }))
-          }
+          onClose={() => setState((prev) => ({ ...prev, showResultModal: false }))}
           title={state.resultModalSuccess ? "Succès" : "Erreur"}
           message={state.resultModalMessage}
           isSuccess={state.resultModalSuccess}

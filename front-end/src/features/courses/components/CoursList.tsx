@@ -1,6 +1,6 @@
-import React from 'react';
-import { Title } from '@patternfly/react-core';
-import CoursCard from './CoursCard';
+import React from "react";
+import CoursCard from "./CoursCard";
+import { EmptyList } from "@/shared/components/ui";
 
 interface CoursListProps {
   cours: any[];
@@ -13,30 +13,21 @@ const CoursList: React.FC<CoursListProps> = ({
   cours,
   onModifierCours,
   onSupprimerCours,
-  onDissocierProfesseur
+  onDissocierProfesseur,
 }) => {
   if (cours.length === 0) {
-    return (
-      <div className="cours-empty-state">
-        <Title headingLevel="h3" style={{ color: '#6c757d', marginBottom: '1rem' }}>
-          Aucun cours planifié
-        </Title>
-        <p>
-          Il n'y a actuellement aucun cours dans le planning.
-        </p>
-      </div>
-    );
+    return <EmptyList entityName="cours" addButtonText="Ajouter un cours" />;
   }
 
   const handleDissocierProfesseur = (professeur: string, cours: any) => {
-    console.log('🎯 Dissociation avec contexte complet:', {
+    console.log("🎯 Dissociation avec contexte complet:", {
       professeur,
       cours: {
         jour: cours.jour,
         type_cours: cours.type_cours,
         heure_debut: cours.heure_debut,
-        heure_fin: cours.heure_fin
-      }
+        heure_fin: cours.heure_fin,
+      },
     });
 
     onDissocierProfesseur({
@@ -46,8 +37,8 @@ const CoursList: React.FC<CoursListProps> = ({
         jour: cours.jour,
         type_cours: cours.type_cours,
         heure_debut: cours.heure_debut,
-        heure_fin: cours.heure_fin
-      }
+        heure_fin: cours.heure_fin,
+      },
     });
   };
 

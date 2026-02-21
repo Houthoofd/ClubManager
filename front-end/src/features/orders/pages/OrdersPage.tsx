@@ -21,21 +21,19 @@ import {
   useCommandesStats,
   // SUPPRIMÉ: useBatchUpdateStatuts
 } from "@/features/shop/hooks/useCommandes";
-import { useToast } from "@/hooks/useToast";
+import { useToast } from "@/shared/hooks/utils/useToast";
 import TableauCommandes from "../components/TableauCommandes";
 import FiltrageCommandes from "../components/FiltrageCommandes";
 import StatistiquesCommandes from "../components/StatistiquesCommandes";
-import { PageHeader } from "@/components/common/PageHeader";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 
 const Commandes = () => {
   const [filterInput, setFilterInput] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  const [activeSortIndex, setActiveSortIndex] = useState<number | undefined>(
+  const [activeSortIndex, setActiveSortIndex] = useState<number | undefined>(undefined);
+  const [activeSortDirection, setActiveSortDirection] = useState<"asc" | "desc" | undefined>(
     undefined,
   );
-  const [activeSortDirection, setActiveSortDirection] = useState<
-    "asc" | "desc" | undefined
-  >(undefined);
   const [isUpdatingStatut, setIsUpdatingStatut] = useState<string | null>(null);
 
   // Hooks React Query
@@ -93,9 +91,7 @@ const Commandes = () => {
       const bValue = getSortableRowValues(b)[activeSortIndex];
 
       if (typeof aValue === "number" && typeof bValue === "number") {
-        return activeSortDirection === "asc"
-          ? aValue - bValue
-          : bValue - aValue;
+        return activeSortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
       return activeSortDirection === "asc"
         ? String(aValue).localeCompare(String(bValue))
@@ -123,9 +119,7 @@ const Commandes = () => {
           c.id || "",
           c.numero_commande || c.unique_id || "",
           new Date(c.date_commande || c.created_at).toLocaleDateString("fr-FR"),
-          `${c.first_name || ""} ${c.last_name || ""}`.trim() ||
-            c.nom_utilisateur ||
-            "Inconnu",
+          `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.nom_utilisateur || "Inconnu",
           c.statut || "",
           c.total || "0",
         ].join(","),
@@ -184,10 +178,7 @@ const Commandes = () => {
 
       // Message d'erreur plus spécifique
       if (error.message.includes("timeout") || error.message.includes("lock")) {
-        showToast(
-          "Serveur occupé, veuillez réessayer dans quelques secondes",
-          "warning",
-        );
+        showToast("Serveur occupé, veuillez réessayer dans quelques secondes", "warning");
       } else {
         showToast("Erreur lors de la mise à jour", "danger");
       }
@@ -204,12 +195,8 @@ const Commandes = () => {
       console.log("📊 [Commandes] Données avec détails et impact stocks:", {
         total: commandes.length,
         statuts: statistiques.repartitionStatuts,
-        totalArticles: commandes.reduce(
-          (sum, c) => sum + (c.articles?.length || 0),
-          0,
-        ),
-        commandesExpediees: commandes.filter((c) => c.statut === "expédiée")
-          .length,
+        totalArticles: commandes.reduce((sum, c) => sum + (c.articles?.length || 0), 0),
+        commandesExpediees: commandes.filter((c) => c.statut === "expédiée").length,
         sample: commandes.slice(0, 2).map((c) => ({
           id: c.id,
           numero: c.numero_commande,
@@ -217,9 +204,7 @@ const Commandes = () => {
           total: c.total,
           nbArticles: c.articles?.length || 0,
           impactStockSiExpediee:
-            c.statut !== "expédiée"
-              ? "Décrémentera les stocks"
-              : "Déjà expédiée",
+            c.statut !== "expédiée" ? "Décrémentera les stocks" : "Déjà expédiée",
         })),
       });
     }
@@ -235,11 +220,7 @@ const Commandes = () => {
     setExpandedRows(newExpanded);
   };
 
-  const onSort = (
-    _event: React.MouseEvent,
-    index: number,
-    direction: "asc" | "desc",
-  ) => {
+  const onSort = (_event: React.MouseEvent, index: number, direction: "asc" | "desc") => {
     setActiveSortIndex(index);
     setActiveSortDirection(direction);
   };
@@ -287,10 +268,7 @@ const Commandes = () => {
             title="Erreur lors du chargement des commandes"
             style={{ borderRadius: "8px" }}
           >
-            <p>
-              {error?.message ||
-                "Une erreur est survenue lors du chargement des données."}
-            </p>
+            <p>{error?.message || "Une erreur est survenue lors du chargement des données."}</p>
             <div style={{ marginTop: "1rem" }}>
               <Button variant="primary" onClick={() => refetch()}>
                 Réessayer
@@ -303,10 +281,7 @@ const Commandes = () => {
   }
 
   return (
-    <div
-      className="commandes-page"
-      style={{ background: "#f8f9fa", minHeight: "100vh" }}
-    >
+    <div className="commandes-page" style={{ background: "#f8f9fa", minHeight: "100vh" }}>
       <PageHeader
         title="Gestion des commandes"
         subtitle={
@@ -316,13 +291,9 @@ const Commandes = () => {
           >
             <FlexItem>{statistiques.total} commandes au total</FlexItem>
             <FlexItem>•</FlexItem>
-            <FlexItem>
-              {statistiques.chiffreAffaires.toFixed(2)}€ de chiffre d'affaires
-            </FlexItem>
+            <FlexItem>{statistiques.chiffreAffaires.toFixed(2)}€ de chiffre d'affaires</FlexItem>
             <FlexItem>•</FlexItem>
-            <FlexItem>
-              Dernière MAJ: {new Date().toLocaleTimeString("fr-FR")}
-            </FlexItem>
+            <FlexItem>Dernière MAJ: {new Date().toLocaleTimeString("fr-FR")}</FlexItem>
           </Flex>
         }
         variant="commandes"
@@ -344,10 +315,7 @@ const Commandes = () => {
                 </Title>
               </CardTitle>
               <CardBody>
-                <StatistiquesCommandes
-                  commandes={commandes}
-                  statistiques={statistiques}
-                />
+                <StatistiquesCommandes commandes={commandes} statistiques={statistiques} />
               </CardBody>
             </Card>
           </GridItem>

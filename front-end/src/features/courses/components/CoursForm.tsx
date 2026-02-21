@@ -1,13 +1,7 @@
-import React from 'react';
-import {
-  FormSelect,
-  FormSelectOption,
-  TextInput,
-  Button,
-  Alert
-} from '@patternfly/react-core';
-import { SaveIcon, TimesIcon } from '@patternfly/react-icons';
-import DualListSelectorGeneric from '../dualListSelector';
+import React from "react";
+import { FormSelect, FormSelectOption, TextInput, Button, Alert } from "@patternfly/react-core";
+import { SaveIcon, TimesIcon } from "@patternfly/react-icons";
+import DualListSelectorGeneric from "@/shared/components/common-legacy/dualListSelector";
 
 interface CoursFormProps {
   nom: string;
@@ -30,24 +24,37 @@ interface CoursFormProps {
 }
 
 const CoursForm: React.FC<CoursFormProps> = ({
-  nom, setNom, selectedType, setSelectedType, jour, setJour,
-  heureDebut, setHeureDebut, heureFin, setHeureFin,
-  selectedUsers, setSelectedUsers, professeurs,
-  isModifying, originalCours, onSubmit, onAnnulerModification
+  nom,
+  setNom,
+  selectedType,
+  setSelectedType,
+  jour,
+  setJour,
+  heureDebut,
+  setHeureDebut,
+  heureFin,
+  setHeureFin,
+  selectedUsers,
+  setSelectedUsers,
+  professeurs,
+  isModifying,
+  originalCours,
+  onSubmit,
+  onAnnulerModification,
 }) => {
   // Convertir les selectedUsers en format pour le DualListSelector
-  const selectedProfesseurs = selectedUsers.map(user => ({
+  const selectedProfesseurs = selectedUsers.map((user) => ({
     id: user.id,
-    name: user.name
+    name: user.name,
   }));
 
   // Calculer les professeurs disponibles (ceux qui ne sont pas déjà sélectionnés)
-  const availableProfesseurs = professeurs.filter(prof => 
-    !selectedProfesseurs.some(selected => selected.id === prof.id)
-  ).map(prof => ({
-    id: prof.id,
-    name: `${prof.first_name} ${prof.last_name}`
-  }));
+  const availableProfesseurs = professeurs
+    .filter((prof) => !selectedProfesseurs.some((selected) => selected.id === prof.id))
+    .map((prof) => ({
+      id: prof.id,
+      name: `${prof.first_name} ${prof.last_name}`,
+    }));
 
   const handleProfesseursChange = (newAssignedProfesseurs: { id: number; name: string }[]) => {
     setSelectedUsers(newAssignedProfesseurs);
@@ -81,7 +88,7 @@ const CoursForm: React.FC<CoursFormProps> = ({
         <div className="cours-form-field">
           <label className="cours-form-label">Type de cours :</label>
           <FormSelect
-            value={selectedType || ''}
+            value={selectedType || ""}
             onChange={(_event, value) => setSelectedType(value)}
             aria-label="Type de cours"
             className="form-field"
@@ -96,7 +103,7 @@ const CoursForm: React.FC<CoursFormProps> = ({
         <div className="cours-form-field">
           <label className="cours-form-label">Jour de la semaine :</label>
           <FormSelect
-            value={jour || ''}
+            value={jour || ""}
             onChange={(_event, value) => setJour(value)}
             aria-label="Jour de la semaine"
             className="form-field"
@@ -153,11 +160,7 @@ const CoursForm: React.FC<CoursFormProps> = ({
 
         <div className="cours-form-actions">
           {isModifying && (
-            <Button
-              variant="secondary"
-              onClick={onAnnulerModification}
-              icon={<TimesIcon />}
-            >
+            <Button variant="secondary" onClick={onAnnulerModification} icon={<TimesIcon />}>
               Annuler
             </Button>
           )}
@@ -167,7 +170,7 @@ const CoursForm: React.FC<CoursFormProps> = ({
             icon={<SaveIcon />}
             isDisabled={!nom || !selectedType || !jour || !heureDebut || !heureFin}
           >
-            {isModifying ? 'Modifier le cours' : 'Ajouter le cours'}
+            {isModifying ? "Modifier le cours" : "Ajouter le cours"}
           </Button>
         </div>
       </form>
@@ -176,4 +179,3 @@ const CoursForm: React.FC<CoursFormProps> = ({
 };
 
 export default CoursForm;
-          

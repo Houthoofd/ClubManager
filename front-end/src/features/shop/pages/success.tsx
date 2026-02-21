@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageSection, Title, Alert, Spinner } from "@patternfly/react-core";
-import { PageHeader } from "../../../components/common/PageHeader";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 
 const PaymentSuccessPage: React.FC = () => {
   const navigate = useNavigate();

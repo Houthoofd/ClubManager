@@ -4,15 +4,15 @@ import {
   useRequestPasswordResetMutation,
   useResetPasswordMutation,
   useCheckEmailQuery,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 import type {
   LoginMutation,
   RegisterMutation,
   RequestPasswordResetMutation,
   ResetPasswordMutation,
   RegisterInput,
-} from "@/lib/apollo/generated/graphql";
-import { apolloClient } from "@/lib/apollo/apollo-client";
+} from "@/core/api/apollo/generated/graphql";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
 
 // ============================================================================
 // Types
@@ -205,12 +205,9 @@ export const useRegisterForm = (): UseRegisterReturn => {
  * ```
  */
 export const usePasswordResetRequest = (): UsePasswordResetRequestReturn => {
-  const [requestResetMutation, { loading, error }] =
-    useRequestPasswordResetMutation();
+  const [requestResetMutation, { loading, error }] = useRequestPasswordResetMutation();
 
-  const requestReset = async (
-    data: PasswordResetRequestData,
-  ): Promise<void> => {
+  const requestReset = async (data: PasswordResetRequestData): Promise<void> => {
     const result = await requestResetMutation({
       variables: {
         email: data.email,
@@ -218,10 +215,7 @@ export const usePasswordResetRequest = (): UsePasswordResetRequestReturn => {
     });
 
     if (!result.data?.requestPasswordReset.success) {
-      throw new Error(
-        result.data?.requestPasswordReset.message ||
-          "Password reset request failed",
-      );
+      throw new Error(result.data?.requestPasswordReset.message || "Password reset request failed");
     }
   };
 
@@ -251,8 +245,7 @@ export const usePasswordResetRequest = (): UsePasswordResetRequestReturn => {
  * ```
  */
 export const usePasswordReset = (): UsePasswordResetReturn => {
-  const [resetPasswordMutation, { loading, error }] =
-    useResetPasswordMutation();
+  const [resetPasswordMutation, { loading, error }] = useResetPasswordMutation();
 
   const resetPassword = async (data: PasswordResetData): Promise<void> => {
     const result = await resetPasswordMutation({
@@ -263,9 +256,7 @@ export const usePasswordReset = (): UsePasswordResetReturn => {
     });
 
     if (!result.data?.resetPassword.success) {
-      throw new Error(
-        result.data?.resetPassword.message || "Password reset failed",
-      );
+      throw new Error(result.data?.resetPassword.message || "Password reset failed");
     }
 
     const resetResult = result.data.resetPassword;
@@ -325,3 +316,13 @@ export const useCheckEmail = (): UseCheckEmailReturn => {
     checkEmail,
   };
 };
+
+// ============================================================================
+// Alias Exports for backward compatibility
+// ============================================================================
+
+/**
+ * Alias for useLoginForm
+ * @deprecated Use useLoginForm instead
+ */
+export const useConnexion = useLoginForm;

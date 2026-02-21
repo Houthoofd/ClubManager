@@ -7,8 +7,8 @@ import {
   Spinner,
   Alert,
 } from "@patternfly/react-core";
-import { PageHeader } from "@/components/common/PageHeader";
-import ResultModal from "@/components/common/modal/ResultModal";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
 import PlanningFilter from "../components/PlanningFilter";
 import PlanningGrid from "../components/PlanningGrid";
 import PlanningStatistics from "../components/PlanningStatistics";
@@ -24,8 +24,9 @@ const TeacherPlanningPage: React.FC = () => {
     resultModalSuccess: false,
   });
 
-  // TODO: Replace with actual GraphQL hook when available
-  // const { data: planningData = [], isLoading: loading, error } = useMonPlanningCours();
+  // NOTE: Planning data hook will be available when the GraphQL schema includes
+  // instructor/teacher planning queries. For now using empty data.
+  // Future implementation: const { data: planningData = [], isLoading: loading, error } = useInstructorPlanning();
   const planningData: PlanningCourse[] = [];
   const loading = false;
   const error = null;
@@ -64,12 +65,12 @@ const TeacherPlanningPage: React.FC = () => {
     state.filtreJour === "tous"
       ? planningData
       : planningData.filter(
-          (c) => convertirJourSemaine(c.jour_semaine) === state.filtreJour
+          (c) => convertirJourSemaine(c.jour_semaine) === state.filtreJour,
         );
 
   const handleTabClick = (
     _event: React.MouseEvent,
-    tabIndex: string | number
+    tabIndex: string | number,
   ) => {
     if (typeof tabIndex === "number") {
       setState((prev) => ({

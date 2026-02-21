@@ -18,22 +18,22 @@ import {
   useUpdateUtilisateur,
   checkEmailExists,
 } from "../hooks/useUtilisateurs";
-import { useFrequentationByUserId } from "@/hooks/useStatistiques";
+import { useFrequentationByUserId } from "@/features/stats/hooks-legacy/useStatistiques";
 import {
   useAbonnements,
   useGrades,
   useStatus,
   useGenres,
-} from "@/hooks/useInformations";
-import { useEcheancesByUserId } from "@/hooks/usePaiements";
+} from "@/shared/hooks/utils/useInformations";
+import { useEcheancesByUserId } from "@/features/shop/hooks/usePaiements";
 import FormulaireUtilisateur from "../components/FormulaireUtilisateur";
 import EcheancesPaiement from "../components/EcheancesPaiement";
-import StatistiquesTab from "@/components/compte/StatistiquesTab";
-import ConfirmModal from "@/components/common/modal/ConfirmModal";
-import ResultModal from "@/components/common/modal/ResultModal";
-import ResumeConfirmModal from "@/components/common/modal/ResumeConfirmModal";
-import { apiUrl } from "@/utils/apiUrl";
-import { useCheckEmail } from "@/hooks/useVerification";
+import StatistiquesTab from "@/features/stats/components/StatistiquesTab";
+import ConfirmModal from "@/shared/components/common-legacy/modal/ConfirmModal";
+import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
+import ResumeConfirmModal from "@/shared/components/common-legacy/modal/ResumeConfirmModal";
+import { apiUrl } from "@/shared/utils/apiUrl";
+import { useCheckEmail } from "@/features/auth/hooks/useVerification";
 
 function formatDateForInput(isoDateString: string): string {
   const date = new Date(isoDateString);
@@ -60,12 +60,9 @@ const ConsulterUtilisateurPage = () => {
   const [showResultModal, setShowResultModal] = useState(false);
   const [modalMessage, setModalMessage] = useState<string>("");
   const [modalSuccess, setModalSuccess] = useState<boolean>(false);
-  const [modificationsResume, setModificationsResume] = useState<
-    ModificationItem[]
-  >([]);
+  const [modificationsResume, setModificationsResume] = useState<ModificationItem[]>([]);
   const [emailCheckMessage, setEmailCheckMessage] = useState<string>("");
-  const [emailCheckTimeout, setEmailCheckTimeout] =
-    useState<NodeJS.Timeout | null>(null);
+  const [emailCheckTimeout, setEmailCheckTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState("");
   const [chartType, setChartType] = useState<"line" | "area" | "bar">("line");
@@ -74,13 +71,8 @@ const ConsulterUtilisateurPage = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   // Hooks React Query
-  const {
-    data: userData,
-    isLoading: loadingUser,
-    error: userError,
-  } = useUtilisateurById(id);
-  const { data: statFrequentation, isLoading: loadingStats } =
-    useFrequentationByUserId(id);
+  const { data: userData, isLoading: loadingUser, error: userError } = useUtilisateurById(id);
+  const { data: statFrequentation, isLoading: loadingStats } = useFrequentationByUserId(id);
   const { data: abonnements = [] } = useAbonnements();
   const { data: gradesList = [] } = useGrades();
   const { data: statusList = [] } = useStatus();
@@ -151,9 +143,7 @@ const ConsulterUtilisateurPage = () => {
 
   // Transformation des données pour GraphiqueLineaire
   const statsDataReady =
-    statFrequentation &&
-    Array.isArray(statFrequentation.mois) &&
-    statFrequentation.mois.length > 0;
+    statFrequentation && Array.isArray(statFrequentation.mois) && statFrequentation.mois.length > 0;
 
   const statFrequentationForGraph = statsDataReady
     ? {
@@ -177,9 +167,7 @@ const ConsulterUtilisateurPage = () => {
   const handleEditClick = (field: string) => {
     // Empêcher l'édition du statut si l'utilisateur n'a pas les droits
     if (field === "status" && !canEditStatus()) {
-      setModalMessage(
-        "Vous n'avez pas les permissions pour modifier le statut/rôle.",
-      );
+      setModalMessage("Vous n'avez pas les permissions pour modifier le statut/rôle.");
       setModalSuccess(false);
       setShowResultModal(true);
       return;
@@ -251,13 +239,10 @@ const ConsulterUtilisateurPage = () => {
         console.log("❌ handleEmailValidation: Email déjà utilisé");
         setEmailValidation({
           isValid: false,
-          message:
-            "Cette adresse email est déjà utilisée par un autre utilisateur",
+          message: "Cette adresse email est déjà utilisée par un autre utilisateur",
           isChecking: false,
         });
-        setEmailCheckMessage(
-          "Cette adresse email est déjà utilisée par un autre utilisateur",
-        );
+        setEmailCheckMessage("Cette adresse email est déjà utilisée par un autre utilisateur");
         return false;
       }
 
@@ -297,10 +282,7 @@ const ConsulterUtilisateurPage = () => {
     }
   };
 
-  const handleInputChange = (
-    value: string,
-    event: React.FormEvent<HTMLInputElement>,
-  ) => {
+  const handleInputChange = (value: string, event: React.FormEvent<HTMLInputElement>) => {
     const name = event.currentTarget.name;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -313,17 +295,10 @@ const ConsulterUtilisateurPage = () => {
         setEditingFields({});
       }
       if (updateUtilisateur.isError) {
-        setConfirmModalMessage(
-          updateUtilisateur.error?.message || "Échec de la modification.",
-        );
+        setConfirmModalMessage(updateUtilisateur.error?.message || "Échec de la modification.");
       }
     }
-  }, [
-    updateUtilisateur.isSuccess,
-    updateUtilisateur.isError,
-    updateUtilisateur.error,
-    modalStep,
-  ]);
+  }, [updateUtilisateur.isSuccess, updateUtilisateur.isError, updateUtilisateur.error, modalStep]);
 
   // Fonction pour vérifier si l'utilisateur peut modifier le statut
   const canEditStatus = () => {
@@ -343,10 +318,7 @@ const ConsulterUtilisateurPage = () => {
       });
     }
 
-    if (
-      editingFields["date_naissance"] &&
-      form.date_naissance !== originalData?.date_of_birth
-    ) {
+    if (editingFields["date_naissance"] && form.date_naissance !== originalData?.date_of_birth) {
       const originalDate = originalData?.date_of_birth
         ? formatDateForInput(originalData.date_of_birth)
         : "Non défini";
@@ -357,17 +329,12 @@ const ConsulterUtilisateurPage = () => {
       });
     }
 
-    if (
-      editingFields["status"] &&
-      form.status !== String(originalData?.status || "")
-    ) {
+    if (editingFields["status"] && form.status !== String(originalData?.status || "")) {
       // Trouver le nom du statut original
       const originalStatusId = originalData?.status;
       let originalStatusName = "Non défini";
       if (originalStatusId && statusList) {
-        const status = statusList.find(
-          (s) => String(s.id) === String(originalStatusId),
-        );
+        const status = statusList.find((s) => String(s.id) === String(originalStatusId));
         originalStatusName = status?.nom_status || String(originalStatusId);
       }
 
@@ -385,17 +352,12 @@ const ConsulterUtilisateurPage = () => {
       });
     }
 
-    if (
-      editingFields["genres"] &&
-      form.genres !== String(originalData?.genres || "")
-    ) {
+    if (editingFields["genres"] && form.genres !== String(originalData?.genres || "")) {
       // Trouver le nom du genre original
       const originalGenreId = originalData?.genres;
       let originalGenreName = "Non défini";
       if (originalGenreId && genresList) {
-        const genre = genresList.find(
-          (g) => String(g.id) === String(originalGenreId),
-        );
+        const genre = genresList.find((g) => String(g.id) === String(originalGenreId));
         originalGenreName = genre?.genre_name || String(originalGenreId);
       }
 
@@ -413,10 +375,7 @@ const ConsulterUtilisateurPage = () => {
       });
     }
 
-    if (
-      editingFields["grades"] &&
-      form.grades !== String(originalData?.grades || "")
-    ) {
+    if (editingFields["grades"] && form.grades !== String(originalData?.grades || "")) {
       const originalGrade = String(originalData?.grades || "Non défini");
       modifications.push({
         field: "Grade",
@@ -425,27 +384,19 @@ const ConsulterUtilisateurPage = () => {
       });
     }
 
-    if (
-      editingFields["abonnement"] &&
-      form.abonnement !== String(originalData?.abonnement || "")
-    ) {
+    if (editingFields["abonnement"] && form.abonnement !== String(originalData?.abonnement || "")) {
       // Trouver le nom de l'abonnement original
       const originalAbonnementId = originalData?.abonnement;
       let originalAbonnementName = "Non défini";
       if (originalAbonnementId && abonnements) {
-        const abonnement = abonnements.find(
-          (a) => String(a.id) === String(originalAbonnementId),
-        );
-        originalAbonnementName =
-          abonnement?.nom_plan || String(originalAbonnementId);
+        const abonnement = abonnements.find((a) => String(a.id) === String(originalAbonnementId));
+        originalAbonnementName = abonnement?.nom_plan || String(originalAbonnementId);
       }
 
       // Trouver le nom du nouvel abonnement
       let newAbonnementName = form.abonnement;
       if (abonnements) {
-        const abonnement = abonnements.find(
-          (a) => String(a.id) === form.abonnement,
-        );
+        const abonnement = abonnements.find((a) => String(a.id) === form.abonnement);
         newAbonnementName = abonnement?.nom_plan || form.abonnement;
       }
 
@@ -475,26 +426,19 @@ const ConsulterUtilisateurPage = () => {
 
       // Vérification de l'unicité
       try {
-        console.log(
-          "🔍 Vérification unicité email avant sauvegarde:",
-          form.email,
-        );
+        console.log("🔍 Vérification unicité email avant sauvegarde:", form.email);
         const emailExists = await checkEmail(form.email);
         console.log("📧 Email exists result:", emailExists);
 
         if (emailExists) {
-          setModalMessage(
-            "Cette adresse email est déjà utilisée par un autre utilisateur.",
-          );
+          setModalMessage("Cette adresse email est déjà utilisée par un autre utilisateur.");
           setModalSuccess(false);
           setShowResultModal(true);
           return;
         }
       } catch (error) {
         console.error("❌ Erreur vérification email:", error);
-        setModalMessage(
-          "Erreur lors de la vérification de l'email. Veuillez réessayer.",
-        );
+        setModalMessage("Erreur lors de la vérification de l'email. Veuillez réessayer.");
         setModalSuccess(false);
         setShowResultModal(true);
         return;
@@ -523,19 +467,15 @@ const ConsulterUtilisateurPage = () => {
     const changes: any = { id: form.id };
 
     if (editingFields["email"]) changes.email = form.email;
-    if (editingFields["date_naissance"])
-      changes.date_of_birth = form.date_naissance;
+    if (editingFields["date_naissance"]) changes.date_of_birth = form.date_naissance;
     if (editingFields["genres"]) changes.genres = form.genres;
     if (editingFields["grades"]) changes.grades = form.grades;
     if (editingFields["abonnement"]) changes.abonnement = form.abonnement;
-    if (editingFields["status"] && canEditStatus())
-      changes.status = form.status; // Ajout du statut
+    if (editingFields["status"] && canEditStatus()) changes.status = form.status; // Ajout du statut
 
     try {
       await updateUtilisateur.mutateAsync(changes);
-      setModalMessage(
-        "Les modifications apportées ont été sauvegardées avec succès.",
-      );
+      setModalMessage("Les modifications apportées ont été sauvegardées avec succès.");
       setModalSuccess(true);
       setEditingFields({});
     } catch (error) {
@@ -573,13 +513,9 @@ const ConsulterUtilisateurPage = () => {
       // Format demandé: /pages/paiement?echeance=XXXX&userId=154
       // Pour l'instant, sans échéance spécifique, on peut juste inclure l'userId
       window.location.href = `/pages/paiement?userId=${userId}`;
-      console.log(
-        `🔗 [ConsulterUtilisateur] Redirection vers paiement avec userId: ${userId}`,
-      );
+      console.log(`🔗 [ConsulterUtilisateur] Redirection vers paiement avec userId: ${userId}`);
     } else {
-      console.error(
-        "❌ [ConsulterUtilisateur] Aucun userId trouvé pour la redirection",
-      );
+      console.error("❌ [ConsulterUtilisateur] Aucun userId trouvé pour la redirection");
       window.location.href = "/pages/paiement";
     }
   };
@@ -587,10 +523,7 @@ const ConsulterUtilisateurPage = () => {
   if (loadingUser) return <Spinner size="xl" />;
   if (userError)
     return (
-      <Alert
-        variant="danger"
-        title={(userError as Error).message || "Une erreur est survenue"}
-      />
+      <Alert variant="danger" title={(userError as Error).message || "Une erreur est survenue"} />
     );
 
   const userName = userData?.utilisateur
@@ -614,11 +547,7 @@ const ConsulterUtilisateurPage = () => {
         <FlexItem>
           {/* MODIFIÉ: Seul le bouton Payer reste pour la page compte */}
           {isComptePage && (
-            <Button
-              variant="primary"
-              icon={<CreditCardIcon />}
-              onClick={handleAllerPaiement}
-            >
+            <Button variant="primary" icon={<CreditCardIcon />} onClick={handleAllerPaiement}>
               Payer
             </Button>
           )}
@@ -626,10 +555,7 @@ const ConsulterUtilisateurPage = () => {
       </Flex>
 
       <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
-        <Tab
-          eventKey={0}
-          title={<TabTitleText>Informations personnelles</TabTitleText>}
-        >
+        <Tab eventKey={0} title={<TabTitleText>Informations personnelles</TabTitleText>}>
           <FormulaireUtilisateur
             form={form}
             editingFields={editingFields}

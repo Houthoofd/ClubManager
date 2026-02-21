@@ -3,12 +3,17 @@ import {
   useGetPaymentQuery,
   useCreatePaymentMutation,
   useProcessPaymentMutation,
-} from "@/lib/apollo/generated/graphql";
+  useCreatePaymentIntentForOrderMutation,
+  useConfirmOrderPaymentMutation,
+} from "@/core/api/apollo/generated/graphql";
 import type {
   GetPaymentsQuery,
   GetPaymentQuery,
   CreatePaymentInput,
-} from "@/lib/apollo/generated/graphql";
+  CreatePaymentIntentForOrderInput,
+  ConfirmOrderPaymentInput,
+} from "@/core/api/apollo/generated/graphql";
+import { useAuthStore } from "@/store/authStore";
 
 // ============================================================================
 // Types
@@ -69,11 +74,7 @@ type ProcessPaymentResult = {
  * const { payments, isLoading } = usePayments(undefined, 10, 0);
  * ```
  */
-export const usePayments = (
-  userId?: number,
-  take?: number,
-  skip?: number,
-): UsePaymentsReturn => {
+export const usePayments = (userId?: number, take?: number, skip?: number): UsePaymentsReturn => {
   const variables: { userId?: number; take?: number; skip?: number } = {};
 
   if (userId !== undefined) variables.userId = userId;
@@ -136,9 +137,7 @@ export const useUserPayments = (
  * const { payment, isLoading } = usePaymentById(123);
  * ```
  */
-export const usePaymentById = (
-  id: number | undefined,
-): UsePaymentByIdReturn => {
+export const usePaymentById = (id: number | undefined): UsePaymentByIdReturn => {
   const { data, loading, error, refetch } = useGetPaymentQuery({
     variables: { id: id! },
     skip: !id,
@@ -172,12 +171,9 @@ export const usePaymentById = (
  * ```
  */
 export const useCreatePayment = (): UseCreatePaymentReturn => {
-  const [createPaymentMutation, { loading, error }] =
-    useCreatePaymentMutation();
+  const [createPaymentMutation, { loading, error }] = useCreatePaymentMutation();
 
-  const createPayment = async (
-    input: CreatePaymentInput,
-  ): Promise<PaymentDetail> => {
+  const createPayment = async (input: CreatePaymentInput): Promise<PaymentDetail> => {
     console.log("📝 [useCreatePayment] Creating payment:", input);
 
     const result = await createPaymentMutation({
@@ -189,10 +185,7 @@ export const useCreatePayment = (): UseCreatePaymentReturn => {
       throw new Error("Payment creation failed");
     }
 
-    console.log(
-      "✅ [useCreatePayment] Payment created:",
-      result.data.createPayment.id,
-    );
+    console.log("✅ [useCreatePayment] Payment created:", result.data.createPayment.id);
 
     return result.data.createPayment as PaymentDetail;
   };
@@ -224,12 +217,9 @@ export const useCreatePayment = (): UseCreatePaymentReturn => {
  * ```
  */
 export const useProcessPayment = (): UseProcessPaymentReturn => {
-  const [processPaymentMutation, { loading, error }] =
-    useProcessPaymentMutation();
+  const [processPaymentMutation, { loading, error }] = useProcessPaymentMutation();
 
-  const processPayment = async (
-    paymentId: number,
-  ): Promise<ProcessPaymentResult> => {
+  const processPayment = async (paymentId: number): Promise<ProcessPaymentResult> => {
     console.log("💳 [useProcessPayment] Processing payment:", paymentId);
 
     const result = await processPaymentMutation({
@@ -251,9 +241,7 @@ export const useProcessPayment = (): UseProcessPaymentReturn => {
     return {
       success: processResult.success,
       message: processResult.message || "",
-      payment: processResult.payment
-        ? (processResult.payment as PaymentDetail)
-        : undefined,
+      payment: processResult.payment ? (processResult.payment as PaymentDetail) : undefined,
       clientSecret: processResult.clientSecret || undefined,
     };
   };
@@ -277,15 +265,13 @@ export const useProcessPayment = (): UseProcessPaymentReturn => {
  * const { payments, isLoading } = usePaymentsByStatus('completed');
  * ```
  */
-export const usePaymentsByStatus = (
-  status: string | undefined,
-): UsePaymentsReturn => {
+export const usePaymentsByStatus = (status: string | undefined): UsePaymentsReturn => {
   const { data, loading, error, refetch } = useGetPaymentsQuery({
     fetchPolicy: "cache-and-network",
   });
 
   const filteredPayments =
-    data?.payments.filter((payment) => payment.status === status) ?? [];
+    data?.payments.filter((payment: Payment) => payment.status === status) ?? [];
 
   return {
     payments: status ? filteredPayments : (data?.payments ?? []),
@@ -348,15 +334,13 @@ export const useFailedPayments = (): UsePaymentsReturn => {
  * const { payments, isLoading } = useOrderPayments(456);
  * ```
  */
-export const useOrderPayments = (
-  orderId: number | undefined,
-): UsePaymentsReturn => {
+export const useOrderPayments = (orderId: number | undefined): UsePaymentsReturn => {
   const { data, loading, error, refetch } = useGetPaymentsQuery({
     fetchPolicy: "cache-and-network",
   });
 
   const orderPayments =
-    data?.payments.filter((payment) => payment.order_id === orderId) ?? [];
+    data?.payments.filter((payment: Payment) => payment.order_id === orderId) ?? [];
 
   return {
     payments: orderId ? orderPayments : [],
@@ -425,7 +409,227 @@ export const usePaiementById = usePaymentById;
 export const useCreerPaiement = useCreatePayment;
 
 /**
- * Legacy alias for useProcessPayment
  * @deprecated Use useProcessPayment instead
  */
 export const useProcesserPaiement = useProcessPayment;
+
+// ============================================================================
+// Payment Due / Échéance Hooks
+// ============================================================================
+
+/**
+ * Hook to get payment due details
+ *
+ * WORKAROUND: Uses payment details until proper "échéance" schema is added
+ *
+ * @param echeanceId - Payment/Due ID
+ * @returns Payment due details with loading state
+ *
+ * @example
+ * ```tsx
+ * const { echeance, isLoading } = useEcheanceDetails(123);
+ * ```
+ */
+export const useEcheanceDetails = (echeanceId?: number) => {
+  // WORKAROUND: Use payment query as "échéance" details
+  const { payment, isLoading, error } = usePaymentById(echeanceId);
+
+  console.log("📋 [useEcheanceDetails] Payment due details (workaround):", {
+    echeanceId,
+    found: !!payment,
+  });
+
+  return {
+    echeance: payment,
+    isLoading,
+    error,
+  };
+};
+
+/**
+ * Hook to create a secure payment intent for an order
+ *
+ * @returns Create intent function with loading state
+ *
+ * @example
+ * ```tsx
+ * const { createIntent, isLoading } = useCreatePaymentIntentSecurise();
+ *
+ * const result = await createIntent(99.99, 123, 456);
+ * if (result.success) {
+ *   // Use clientSecret with Stripe
+ *   stripe.confirmCardPayment(result.clientSecret);
+ * }
+ * ```
+ */
+export const useCreatePaymentIntentSecurise = () => {
+  const [createPaymentIntentMutation, { loading, error }] =
+    useCreatePaymentIntentForOrderMutation();
+
+  const createIntent = async (
+    amount: number,
+    userId: number,
+    orderId: number,
+  ): Promise<{
+    success: boolean;
+    clientSecret: string;
+    paymentIntentId: string;
+    amount: number;
+    message: string;
+  }> => {
+    console.log("💳 [useCreatePaymentIntentSecurise] Creating payment intent:", {
+      amount,
+      userId,
+      orderId,
+    });
+
+    const input: CreatePaymentIntentForOrderInput = {
+      userId,
+      amount,
+      orderId,
+    };
+
+    const result = await createPaymentIntentMutation({
+      variables: { input },
+    });
+
+    if (!result.data?.createPaymentIntentForOrder) {
+      throw new Error("Payment intent creation failed");
+    }
+
+    const intentResult = result.data.createPaymentIntentForOrder;
+
+    console.log("✅ [useCreatePaymentIntentSecurise] Payment intent created:", {
+      success: intentResult.success,
+      paymentIntentId: intentResult.paymentIntentId,
+    });
+
+    return {
+      success: intentResult.success,
+      clientSecret: intentResult.clientSecret || "",
+      paymentIntentId: intentResult.paymentIntentId || "",
+      amount: intentResult.amount || amount,
+      message: intentResult.message || "",
+    };
+  };
+
+  return {
+    createIntent,
+    isLoading: loading,
+    error: error ?? null,
+  };
+};
+
+/**
+ * Hook to confirm a payment after Stripe authorization
+ *
+ * @returns Confirm payment function with loading state
+ *
+ * @example
+ * ```tsx
+ * const { confirmPayment, isLoading } = useConfirmPayment();
+ *
+ * const result = await confirmPayment({
+ *   orderId: 456,
+ *   paymentIntentId: 'pi_xxxxx',
+ *   paymentMethod: 'card',
+ *   userId: 123
+ * });
+ *
+ * if (result.success) {
+ *   console.log('Payment confirmed!', result.payment);
+ * }
+ * ```
+ */
+export const useConfirmPayment = () => {
+  const [confirmOrderPaymentMutation, { loading, error }] = useConfirmOrderPaymentMutation();
+
+  const confirmPayment = async (input: ConfirmOrderPaymentInput) => {
+    console.log("💳 [useConfirmPayment] Confirming payment:", {
+      orderId: input.orderId,
+      paymentIntentId: input.paymentIntentId,
+    });
+
+    const result = await confirmOrderPaymentMutation({
+      variables: { input },
+      refetchQueries: ["GetPayments", "GetOrders", "GetPayment", "GetOrder"],
+    });
+
+    if (!result.data?.confirmOrderPayment) {
+      throw new Error("Payment confirmation failed");
+    }
+
+    const confirmResult = result.data.confirmOrderPayment;
+
+    console.log("✅ [useConfirmPayment] Payment confirmed:", {
+      success: confirmResult.success,
+      paymentId: confirmResult.payment?.id,
+    });
+
+    return {
+      success: confirmResult.success,
+      message: confirmResult.message || "",
+      payment: confirmResult.payment,
+      order: confirmResult.order,
+      paymentId: confirmResult.payment?.id || null,
+    };
+  };
+
+  return {
+    confirmPayment,
+    isLoading: loading,
+    error: error ?? null,
+  };
+};
+
+/**
+ * Helper to get current user ID from Zustand auth store
+ *
+ * @returns User ID or null if not authenticated
+ *
+ * @example
+ * ```tsx
+ * const userId = obtenirIdUtilisateur();
+ * if (userId) {
+ *   // User is authenticated
+ * }
+ * ```
+ */
+export const obtenirIdUtilisateur = (): number | null => {
+  return useAuthStore.getState().getUserId();
+};
+
+/**
+ * Hook to get payment dues (echeances) by user ID
+ *
+ * WORKAROUND: Uses pending payments as "échéances" until proper schema is added
+ *
+ * @param userId - User ID
+ * @returns Payment dues (pending payments) with loading state
+ *
+ * @example
+ * ```tsx
+ * const { echeances, isLoading } = useEcheancesByUserId(123);
+ * ```
+ */
+export const useEcheancesByUserId = (userId?: number) => {
+  const { payments, isLoading, error, refetch } = useUserPayments(userId);
+
+  // WORKAROUND: Filter pending/unpaid payments as "échéances"
+  const echeances = payments.filter(
+    (payment) => payment.status === "pending" || payment.status === "unpaid",
+  );
+
+  console.log("📋 [useEcheancesByUserId] Payment dues (workaround):", {
+    userId,
+    totalPayments: payments.length,
+    pendingCount: echeances.length,
+  });
+
+  return {
+    echeances,
+    isLoading,
+    error,
+    refetch,
+  };
+};

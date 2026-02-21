@@ -1,0 +1,57 @@
+# Dependencies
+node_modules
+package-lock.json
+
+# Build outputs
+dist
+build
+.vite
+*.local
+
+# Generated files
+src/lib/apollo/generated
+
+# Config files
+vite.config.ts.timestamp-*
+
+# Coverage
+coverage
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# GraphQL
+schema.graphql
+
+# Migration docs
+*.md
+MIGRATION*.txt
+HOOK_MIGRATION_MAP.txt
+GRAPHQL_QUICKSTART.txt
+TECHNICAL_DEBT.txt
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Public assets
+public
+
+# Test snapshots
+**/__snapshots__

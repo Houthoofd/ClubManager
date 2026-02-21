@@ -1,11 +1,11 @@
 import {
   useGetSessionEnrollmentsQuery,
   useGetUserEnrollmentsQuery,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 import type {
   GetSessionEnrollmentsQuery,
   GetUserEnrollmentsQuery,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 
 // ============================================================================
 // Types

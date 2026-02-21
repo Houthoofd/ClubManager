@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Form,
@@ -8,30 +8,29 @@ import {
   Alert,
   PageSection,
   Bullseye,
-} from '@patternfly/react-core';
-import { PageHeader } from '../../components/common/PageHeader';
-import '../../styles/connexion.css'; // Réutiliser le même CSS que la page de connexion
-import { apiUrl } from '../apiUrl';
+} from "@patternfly/react-core";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import { apiUrl } from "@/shared/utils/apiUrl";
 
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setMessage('');
+    setError("");
+    setMessage("");
 
     try {
-      const response = await fetch(apiUrl('auth/forgot-password'), {
-        method: 'POST',
+      const response = await fetch(apiUrl("auth/forgot-password"), {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email }),
       });
@@ -42,10 +41,10 @@ const ForgotPasswordPage: React.FC = () => {
         setMessage(data.message);
         setEmailSent(true);
       } else {
-        setError(data.error || 'Erreur lors de la demande');
+        setError(data.error || "Erreur lors de la demande");
       }
     } catch (err) {
-      setError('Erreur de connexion au serveur');
+      setError("Erreur de connexion au serveur");
     } finally {
       setLoading(false);
     }
@@ -66,8 +65,8 @@ const ForgotPasswordPage: React.FC = () => {
         variant="login"
       />
 
-      <PageSection style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '2rem' }}>
-        <Bullseye style={{ width: '100%' }}>
+      <PageSection style={{ flex: 1, display: "flex", alignItems: "center", padding: "2rem" }}>
+        <Bullseye style={{ width: "100%" }}>
           <div className="login-container">
             {!emailSent ? (
               <Form onSubmit={handleSubmit} className="login-form">
@@ -75,7 +74,7 @@ const ForgotPasswordPage: React.FC = () => {
                   label="Adresse email"
                   isRequired
                   fieldId="email"
-                  validated={email && !isEmailValid(email) ? 'error' : 'default'}
+                  validated={email && !isEmailValid(email) ? "error" : "default"}
                   helperTextInvalid="Veuillez entrer une adresse email valide"
                   className="login-form-group"
                 >
@@ -86,13 +85,13 @@ const ForgotPasswordPage: React.FC = () => {
                     onChange={(_event, value) => setEmail(value)}
                     placeholder="votre.email@exemple.com"
                     isRequired
-                    validated={email && !isEmailValid(email) ? 'error' : 'default'}
+                    validated={email && !isEmailValid(email) ? "error" : "default"}
                     className="login-input"
                   />
                 </FormGroup>
 
                 {error && (
-                  <Alert variant="danger" title="Erreur" style={{ marginBottom: '1rem' }}>
+                  <Alert variant="danger" title="Erreur" style={{ marginBottom: "1rem" }}>
                     {error}
                   </Alert>
                 )}
@@ -105,22 +104,23 @@ const ForgotPasswordPage: React.FC = () => {
                     isDisabled={!email || !isEmailValid(email)}
                     className="login-button"
                   >
-                    {loading ? 'Envoi en cours...' : 'Envoyer le lien de récupération'}
+                    {loading ? "Envoi en cours..." : "Envoyer le lien de récupération"}
                   </Button>
                 </div>
               </Form>
             ) : (
-              <div className="login-form" style={{ textAlign: 'center' }}>
-                <Alert variant="success" title="Email envoyé" style={{ marginBottom: '1rem' }}>
+              <div className="login-form" style={{ textAlign: "center" }}>
+                <Alert variant="success" title="Email envoyé" style={{ marginBottom: "1rem" }}>
                   {message}
                 </Alert>
-                <p style={{ marginBottom: '1rem', color: '#6c757d' }}>
-                  Vérifiez votre boîte email et cliquez sur le lien pour réinitialiser votre mot de passe.
+                <p style={{ marginBottom: "1rem", color: "#6c757d" }}>
+                  Vérifiez votre boîte email et cliquez sur le lien pour réinitialiser votre mot de
+                  passe.
                 </p>
-                <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '1rem' }}>
+                <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "1rem" }}>
                   Le lien expire dans 1 heure.
                 </p>
-                <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+                <p style={{ fontSize: "12px", color: "#9ca3af" }}>
                   ⚠️ Pensez à vérifier vos spams si vous ne recevez pas l'email
                 </p>
               </div>
@@ -128,11 +128,13 @@ const ForgotPasswordPage: React.FC = () => {
 
             <div className="login-footer">
               <p>
-                Vous vous souvenez de votre mot de passe ?{' '}
+                Vous vous souvenez de votre mot de passe ?{" "}
                 <Button
                   variant="link"
-                  onClick={() => window.location.href = `${window.location.origin}/pages/connexion`}
-                  style={{ padding: 0, fontSize: 'inherit' }}
+                  onClick={() =>
+                    (window.location.href = `${window.location.origin}/pages/connexion`)
+                  }
+                  style={{ padding: 0, fontSize: "inherit" }}
                 >
                   Retour à la connexion
                 </Button>

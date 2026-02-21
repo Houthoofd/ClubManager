@@ -12,29 +12,30 @@ import {
 import {
   ModalConfirmation,
   ModalResultat,
-} from "@/components/common/modal/ModalsGestion";
-import ModalWithHelp from "@/components/common/modal/ModalWithHelp";
+} from "@/shared/components/common-legacy/modal/ModalsGestion";
+import ModalWithHelp from "@/shared/components/common-legacy/modal/ModalWithHelp";
 import OngletTableauUtilisateurs from "../components/OngletTableauUtilisateurs";
 import FormulaireUtilisateurAjout from "../components/FormulaireUtilisateurAjout";
-import { PageHeader } from "@/components/common/PageHeader";
-import { TabContainer } from "@/components/common/TabContainer";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import { TabContainer } from "@/shared/components/common-legacy/TabContainer";
 import {
   useAbonnements,
   useGrades,
   useStatus,
   useGenres,
-} from "@/hooks/useInformations";
+} from "@/shared/hooks/utils/useInformations";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUserContext } from "@/context/UserContext";
-import SendMessageModal from "@/components/messages/SendMessageModal";
-import { useTypesMessages, useEnvoyerMessage } from "@/hooks/useMessages";
-import { useAlertes } from "@/hooks/useAlertes";
-import { ResultModal } from "@/components/common/modal/ResultModal";
-import ConfirmModal from "@/components/common/modal/ConfirmModal";
+import { useUserContext } from "@/app/providers/UserProvider";
+import SendMessageModal from "@/features/messages/components/SendMessageModal";
+import { useTypesMessages, useEnvoyerMessage } from "@/features/messages/hooks-legacy/useMessages";
+import { useAlertes } from "@/shared/hooks/utils/useAlertes";
+import { ResultModal } from "@/shared/components/common-legacy/modal/ResultModal";
+import ConfirmModal from "@/shared/components/common-legacy/modal/ConfirmModal";
+import { useErrorHandler } from "@/shared/hooks";
+import { SuccessAlert, ErrorAlert } from "@/shared/components/ui";
 
 const Utilisateur = () => {
-  const { selectedUser, setSelectedUser, selectedUserId, setSelectedUserId } =
-    useUserContext();
+  const { selectedUser, setSelectedUser, selectedUserId, setSelectedUserId } = useUserContext();
 
   // ========== États ==========
   const [activeTabKey, setActiveTabKey] = useState<number>(0);
@@ -55,9 +56,7 @@ const Utilisateur = () => {
     email: "",
   });
   const [selectOptions, setSelectOptions] = useState<Record<string, any[]>>({});
-  const [userSchema, setUserSchema] = useState<Record<string, string> | null>(
-    null,
-  );
+  const [userSchema, setUserSchema] = useState<Record<string, string> | null>(null);
 
   // États pour les modales
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -65,15 +64,12 @@ const Utilisateur = () => {
     "confirmation" | "success" | "error" | "loading"
   >("confirmation");
   const [confirmModalTitle, setConfirmModalTitle] = useState("");
-  const [confirmModalError, setConfirmModalError] = useState<string | null>(
-    null,
-  );
+  const [confirmModalError, setConfirmModalError] = useState<string | null>(null);
   const [confirmModalSuccess, setConfirmModalSuccess] = useState("");
 
   // États pour la suppression
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [utilisateurToDelete, setUtilisateurToDelete] =
-    useState<UserData | null>(null);
+  const [utilisateurToDelete, setUtilisateurToDelete] = useState<UserData | null>(null);
   const [resultModalOpen, setResultModalOpen] = useState(false);
   const [resultModalMessage, setResultModalMessage] = useState("");
   const [resultModalLoading, setResultModalLoading] = useState(false);
@@ -85,15 +81,13 @@ const Utilisateur = () => {
 
   // États pour l'envoi de messages
   const [showSendMessageModal, setShowSendMessageModal] = useState(false);
-  const [selectedUserForMessage, setSelectedUserForMessage] =
-    useState<UserData | null>(null);
+  const [selectedUserForMessage, setSelectedUserForMessage] = useState<UserData | null>(null);
   const [messageResultModalOpen, setMessageResultModalOpen] = useState(false);
   const [messageResultMessage, setMessageResultMessage] = useState("");
   const [messageResultSuccess, setMessageResultSuccess] = useState(false);
 
   // ========== Hooks ==========
-  const { data: utilisateursData = [], isLoading: isLoadingUtilisateurs } =
-    useUtilisateurs();
+  const { data: utilisateursData = [], isLoading: isLoadingUtilisateurs } = useUtilisateurs();
   const updateUtilisateur = useUpdateUtilisateur();
   const deleteUtilisateur = useDeleteUtilisateur();
   const ajouterUtilisateur = useAjouterUtilisateur();
@@ -105,6 +99,16 @@ const Utilisateur = () => {
   const envoyerMessage = useEnvoyerMessage();
   const { data: alertesUtilisateurs = [] } = useAlertes();
   const queryClient = useQueryClient();
+
+  // Error handler hook for better error management
+  const {
+    handleError,
+    error: globalError,
+    clearError,
+  } = useErrorHandler({
+    showToast: true,
+    autoLogout: true,
+  });
 
   // ========== Fonctions de validation ==========
   const validateEmail = (email: string): boolean => {
@@ -153,12 +157,10 @@ const Utilisateur = () => {
           id: g.id?.toString() || "",
           label: g.genre_name || "Genre invalide",
         })),
-        status: [...new Set((statuts || []).map((s) => s.nom_role))].map(
-          (status) => ({
-            id: status?.toString() || "",
-            label: status?.toString() || "Statut invalide",
-          }),
-        ),
+        status: [...new Set((statuts || []).map((s) => s.nom_role))].map((status) => ({
+          id: status?.toString() || "",
+          label: status?.toString() || "Statut invalide",
+        })),
       });
     }
   }, [abonnements, grades, statuts, genres, userSchema]);
@@ -183,12 +185,7 @@ const Utilisateur = () => {
 
     try {
       // S'assurer que les champs requis sont présents et non vides
-      if (
-        !formData.prenom ||
-        !formData.nom ||
-        !formData.email ||
-        !formData.date_naissance
-      ) {
+      if (!formData.prenom || !formData.nom || !formData.email || !formData.date_naissance) {
         throw new Error("Veuillez remplir tous les champs obligatoires");
       }
 
@@ -366,9 +363,7 @@ const Utilisateur = () => {
       setShowSendMessageModal(false);
       setSelectedUserForMessage(null);
     } catch (error) {
-      setMessageResultMessage(
-        "Erreur lors de l'envoi du message. Veuillez réessayer.",
-      );
+      setMessageResultMessage("Erreur lors de l'envoi du message. Veuillez réessayer.");
       setMessageResultSuccess(false);
       setMessageResultModalOpen(true);
     }
@@ -381,9 +376,7 @@ const Utilisateur = () => {
 
   // Fonction pour obtenir les alertes d'un utilisateur
   const getUserAlertes = (userId: number) => {
-    return (alertesUtilisateurs || []).filter(
-      (alerte) => alerte.utilisateur_id === userId,
-    );
+    return (alertesUtilisateurs || []).filter((alerte) => alerte.utilisateur_id === userId);
   };
 
   // Fonction pour obtenir les messages suggérés selon les alertes
@@ -395,33 +388,25 @@ const Utilisateur = () => {
       switch (alerte.code) {
         case "PAIEMENT_RETARD":
           suggestions.push({
-            typeId: (typesMessages || []).find((t) =>
-              t.title.includes("Rappel 1"),
-            )?.id,
+            typeId: (typesMessages || []).find((t) => t.title.includes("Rappel 1"))?.id,
             raison: "Paiement en retard",
           });
           break;
         case "PAIEMENT_CRITIQUE":
           suggestions.push({
-            typeId: (typesMessages || []).find((t) =>
-              t.title.includes("Dernier rappel"),
-            )?.id,
+            typeId: (typesMessages || []).find((t) => t.title.includes("Dernier rappel"))?.id,
             raison: "Paiement critique",
           });
           break;
         case "COMPTE_INCOMPLET":
           suggestions.push({
-            typeId: (typesMessages || []).find((t) =>
-              t.title.includes("Mise à jour profil"),
-            )?.id,
+            typeId: (typesMessages || []).find((t) => t.title.includes("Mise à jour profil"))?.id,
             raison: "Profil incomplet",
           });
           break;
         case "ABSENCE_PROLONGEE":
           suggestions.push({
-            typeId: (typesMessages || []).find((t) =>
-              t.title.includes("Rappel entraînement"),
-            )?.id,
+            typeId: (typesMessages || []).find((t) => t.title.includes("Rappel entraînement"))?.id,
             raison: "Absence prolongée",
           });
           break;
@@ -451,9 +436,7 @@ const Utilisateur = () => {
         console.error("Erreur lors de la vérification de l'email:", error);
         // Utiliser ResultModal pour les erreurs de validation aussi
         setMessageResultSuccess(false);
-        setMessageResultMessage(
-          "Une erreur est survenue lors de la vérification de l'email.",
-        );
+        setMessageResultMessage("Une erreur est survenue lors de la vérification de l'email.");
         setMessageResultModalOpen(true);
         return false;
       }
@@ -570,9 +553,7 @@ const Utilisateur = () => {
         onClose={handleCloseSendMessageModal}
         user={selectedUserForMessage}
         typesMessages={typesMessages || []}
-        suggestedMessages={getSuggestedMessages(
-          selectedUserForMessage?.id || 0,
-        )}
+        suggestedMessages={getSuggestedMessages(selectedUserForMessage?.id || 0)}
         onSendMessage={handleSendMessageConfirm}
         isLoading={envoyerMessage.isPending}
       />

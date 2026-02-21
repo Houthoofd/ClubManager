@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * genders
@@ -12,7 +12,6 @@ export const gendersSchema = z.object({
 export const gendersCreateSchema = gendersSchema.omit({ id: true });
 
 export const gendersUpdateSchema = gendersSchema.partial().omit({ id: true });
-
 
 /**
  * users
@@ -34,10 +33,13 @@ export const usersSchema = z.object({
   updated_at: z.string().nullable().optional(),
 });
 
-export const usersCreateSchema = usersSchema.omit({ id: true, created_at: true, updated_at: true });
+export const usersCreateSchema = usersSchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
 
 export const usersUpdateSchema = usersSchema.partial().omit({ id: true });
-
 
 /**
  * user_profiles
@@ -54,10 +56,15 @@ export const userProfilesSchema = z.object({
   updated_at: z.string().nullable().optional(),
 });
 
-export const userProfilesCreateSchema = userProfilesSchema.omit({ id: true, created_at: true, updated_at: true });
+export const userProfilesCreateSchema = userProfilesSchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
 
-export const userProfilesUpdateSchema = userProfilesSchema.partial().omit({ id: true });
-
+export const userProfilesUpdateSchema = userProfilesSchema
+  .partial()
+  .omit({ id: true });
 
 /**
  * user_security
@@ -74,10 +81,15 @@ export const userSecuritySchema = z.object({
   updated_at: z.string().nullable().optional(),
 });
 
-export const userSecurityCreateSchema = userSecuritySchema.omit({ id: true, created_at: true, updated_at: true });
+export const userSecurityCreateSchema = userSecuritySchema.omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
 
-export const userSecurityUpdateSchema = userSecuritySchema.partial().omit({ id: true });
-
+export const userSecurityUpdateSchema = userSecuritySchema
+  .partial()
+  .omit({ id: true });
 
 /**
  * password_reset_tokens
@@ -91,10 +103,14 @@ export const passwordResetTokensSchema = z.object({
   created_at: z.string().nullable().optional(),
 });
 
-export const passwordResetTokensCreateSchema = passwordResetTokensSchema.omit({ id: true, created_at: true });
+export const passwordResetTokensCreateSchema = passwordResetTokensSchema.omit({
+  id: true,
+  created_at: true,
+});
 
-export const passwordResetTokensUpdateSchema = passwordResetTokensSchema.partial().omit({ id: true });
-
+export const passwordResetTokensUpdateSchema = passwordResetTokensSchema
+  .partial()
+  .omit({ id: true });
 
 /**
  * account_deletion_requests
@@ -103,15 +119,42 @@ export const accountDeletionRequestsSchema = z.object({
   id: z.number(),
   user_id: z.number(),
   reason: z.string().nullable().optional(),
-  status: z.enum(["pending", "approved", "rejected", "completed"]).nullable().optional(),
+  status: z
+    .enum(["pending", "approved", "rejected", "completed"])
+    .nullable()
+    .optional(),
   requested_at: z.string().nullable().optional(),
   processed_at: z.string().nullable().optional(),
   processed_by: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
 
-export const accountDeletionRequestsCreateSchema = accountDeletionRequestsSchema.omit({ id: true });
+export const accountDeletionRequestsCreateSchema =
+  accountDeletionRequestsSchema.omit({ id: true });
 
-export const accountDeletionRequestsUpdateSchema = accountDeletionRequestsSchema.partial().omit({ id: true });
+export const accountDeletionRequestsUpdateSchema = accountDeletionRequestsSchema
+  .partial()
+  .omit({ id: true });
 
-
+/**
+ * User Inscription/Registration Schema
+ */
+export const userInscriptionSchema = z
+  .object({
+    prenom: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
+    nom: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+    email: z.string().email("Email invalide"),
+    password: z
+      .string()
+      .min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+    confirmPassword: z.string(),
+    date_naissance: z.string().optional(),
+    telephone: z.string().optional(),
+    adresse: z.string().optional(),
+    abonnement: z.string().optional(),
+    genre: z.string().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
+  });

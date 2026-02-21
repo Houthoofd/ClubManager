@@ -3,7 +3,7 @@ import {
   useCheckProductByNameLazyQuery,
   useCheckProductByNameAndCategoryLazyQuery,
   useCheckCourseScheduleLazyQuery,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 
 // ============================================================================
 // GRAPHQL-BASED VERIFICATION (Fully Migrated)

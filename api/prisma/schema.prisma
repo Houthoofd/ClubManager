@@ -617,6 +617,61 @@ model email_validation_tokens_legacy {
   @@index([utilisateur_id], map: "utilisateur_id")
 }
 
+model email_queue {
+  id             Int               @id @default(autoincrement())
+  to             String            @db.VarChar(255)
+  subject        String?           @db.VarChar(500)
+  templateTitle  String?           @db.VarChar(100)
+  variables      Json?
+  htmlContent    String?           @db.Text
+  attempts       Int               @default(0)
+  maxAttempts    Int               @default(5)
+  status         EmailQueueStatus  @default(PENDING)
+  priority       Int               @default(0)
+  nextRetryAt    DateTime?         @db.Timestamp(0)
+  lastError      String?           @db.Text
+  errorDetails   Json?
+  userId         Int?
+  createdAt      DateTime          @default(now()) @db.Timestamp(0)
+  updatedAt      DateTime          @updatedAt @db.Timestamp(0)
+  processedAt    DateTime?         @db.Timestamp(0)
+  users          users?            @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "email_queue_user_fk")
+
+  @@index([status], map: "idx_status")
+  @@index([priority], map: "idx_priority")
+  @@index([nextRetryAt], map: "idx_next_retry")
+  @@index([userId], map: "idx_user_id")
+  @@index([createdAt], map: "idx_created_at")
+  @@index([status, attempts, nextRetryAt], map: "idx_queue_processing")
+}
+
+model emails {
+  id              String        @id @default(uuid()) @db.VarChar(255)
+  to              String        @db.VarChar(255)
+  subject         String?       @db.VarChar(500)
+  content         String?       @db.Text
+  htmlContent     String?       @db.Text
+  utilisateurId   Int?
+  status          EmailStatus   @default(SENT)
+  provider        String?       @db.VarChar(50)
+  messageId       String?       @db.VarChar(255)
+  error           String?       @db.Text
+  metadata        Json?
+  sentAt          DateTime?     @db.Timestamp(0)
+  deliveredAt     DateTime?     @db.Timestamp(0)
+  openedAt        DateTime?     @db.Timestamp(0)
+  clickedAt       DateTime?     @db.Timestamp(0)
+  bouncedAt       DateTime?     @db.Timestamp(0)
+  createdAt       DateTime      @default(now()) @db.Timestamp(0)
+  users           users?        @relation(fields: [utilisateurId], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "emails_user_fk")
+
+  @@index([utilisateurId], map: "idx_user_id")
+  @@index([status], map: "idx_status")
+  @@index([sentAt], map: "idx_sent_at")
+  @@index([createdAt], map: "idx_created_at")
+  @@index([messageId], map: "idx_message_id")
+}
+
 model emails_archive {
   id                  String                @id @db.VarChar(255)
   to_email            String                @db.VarChar(255)
@@ -897,7 +952,7 @@ model events {
   users_events_updated_byTousers users?                         @relation("events_updated_byTousers", fields: [updated_by], references: [id], onUpdate: NoAction, map: "events_ibfk_4")
 
   @@index([created_by], map: "created_by")
-  @@index([title, description], map: "ft_events_search")
+  @@index([title, description(length: 255)], map: "ft_events_search")
   @@index([start_date, end_date], map: "idx_dates")
   @@index([deleted_at], map: "idx_deleted_at")
   @@index([event_type_id], map: "idx_event_type")
@@ -1358,7 +1413,7 @@ model shop_articles {
   stocks             stocks[]
 
   @@index([category_id], map: "categorie_id")
-  @@index([name, description], map: "ft_articles_search")
+  @@index([name, description(length: 255)], map: "ft_articles_search")
   @@index([category_id, price], map: "idx_categorie_prix")
   @@index([deleted_at], map: "idx_deleted_at")
   @@index([name], map: "idx_nom")
@@ -1788,6 +1843,8 @@ model users {
   email_campaigns                                                                       email_campaigns[]
   email_tracking                                                                        email_tracking[]
   email_validation_tokens_legacy                                                        email_validation_tokens_legacy[]
+  email_queue                                                                           email_queue[]
+  emails                                                                                emails[]
   enrollments                                                                           enrollments[]
   event_documents                                                                       event_documents[]
   event_media                                                                           event_media[]
@@ -2168,6 +2225,20 @@ enum email_queue_archive_status {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum EmailQueueStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+  BOUNCED
+  DELIVERED
 }
 
 enum email_templates_category {

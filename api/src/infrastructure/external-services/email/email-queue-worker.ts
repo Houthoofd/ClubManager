@@ -12,8 +12,9 @@
  * - Logs détaillés
  */
 
-import { PrismaClient, EmailQueueStatus } from '@prisma/client';
-import { EmailSendRequest, EmailSendResult } from '@clubmanager/types';
+import { PrismaClient, EmailQueueStatus } from "@prisma/client";
+import { EmailSendRequest, EmailSendResult } from "@clubmanager/types";
+import { alertService, AlertType } from "../../services/alert.service.js";
 
 const prisma = new PrismaClient();
 
@@ -55,7 +56,7 @@ export class EmailQueueWorker {
     ) => Promise<EmailSendResult>,
   ) {
     console.log(
-      '📬 [EmailQueueWorker] Initialized with config:',
+      "📬 [EmailQueueWorker] Initialized with config:",
       JSON.stringify(config, null, 2),
     );
   }
@@ -65,13 +66,13 @@ export class EmailQueueWorker {
    */
   async start(): Promise<void> {
     if (this.isRunning) {
-      console.warn('⚠️ [EmailQueueWorker] Already running');
+      console.warn("⚠️ [EmailQueueWorker] Already running");
       return;
     }
 
     this.isRunning = true;
     this.stats.startedAt = new Date();
-    console.log('🚀 [EmailQueueWorker] Starting...');
+    console.log("🚀 [EmailQueueWorker] Starting...");
 
     // Boucle principale
     while (this.isRunning) {
@@ -80,21 +81,21 @@ export class EmailQueueWorker {
           await this.processQueue();
         }
       } catch (error) {
-        console.error('❌ [EmailQueueWorker] Error in main loop:', error);
+        console.error("❌ [EmailQueueWorker] Error in main loop:", error);
       }
 
       // Attendre avant la prochaine itération
       await this.sleep(this.config.pollInterval);
     }
 
-    console.log('🛑 [EmailQueueWorker] Stopped');
+    console.log("🛑 [EmailQueueWorker] Stopped");
   }
 
   /**
    * Arrêter le worker
    */
   async stop(): Promise<void> {
-    console.log('🛑 [EmailQueueWorker] Stopping...');
+    console.log("🛑 [EmailQueueWorker] Stopping...");
     this.isRunning = false;
 
     // Attendre que le batch actuel se termine
@@ -114,7 +115,7 @@ export class EmailQueueWorker {
    * Mettre en pause le worker
    */
   pause(): void {
-    console.log('⏸️ [EmailQueueWorker] Paused');
+    console.log("⏸️ [EmailQueueWorker] Paused");
     this.isPaused = true;
   }
 
@@ -122,7 +123,7 @@ export class EmailQueueWorker {
    * Reprendre le worker
    */
   resume(): void {
-    console.log('▶️ [EmailQueueWorker] Resumed');
+    console.log("▶️ [EmailQueueWorker] Resumed");
     this.isPaused = false;
   }
 
@@ -151,8 +152,8 @@ export class EmailQueueWorker {
     );
 
     // 4. Compter les succès/échecs
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
 
     this.stats.totalProcessed += emails.length;
     this.stats.totalSucceeded += succeeded;
@@ -177,14 +178,11 @@ export class EmailQueueWorker {
         attempts: {
           lt: this.config.maxAttempts,
         },
-        OR: [
-          { nextRetryAt: null },
-          { nextRetryAt: { lte: now } },
-        ],
+        OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
       },
       orderBy: [
-        { priority: 'desc' }, // Haute priorité d'abord
-        { createdAt: 'asc' }, // FIFO
+        { priority: "desc" }, // Haute priorité d'abord
+        { createdAt: "asc" }, // FIFO
       ],
       take: this.config.batchSize,
     });
@@ -240,7 +238,7 @@ export class EmailQueueWorker {
         );
       } else {
         // ❌ Échec mais retourné comme succès (erreur métier)
-        throw new Error(result.error || 'Unknown error');
+        throw new Error(result.error || "Unknown error");
       }
     } catch (error: any) {
       // ❌ Échec
@@ -310,9 +308,7 @@ export class EmailQueueWorker {
    * Nettoyer les emails bloqués en statut PROCESSING depuis trop longtemps
    */
   private async cleanStuckEmails(): Promise<void> {
-    const threshold = new Date(
-      Date.now() - this.config.stuckEmailThreshold,
-    );
+    const threshold = new Date(Date.now() - this.config.stuckEmailThreshold);
 
     const stuckEmails = await prisma.emailQueue.findMany({
       where: {
@@ -333,7 +329,7 @@ export class EmailQueueWorker {
           where: { id: email.id },
           data: {
             status: EmailQueueStatus.PENDING,
-            lastError: 'Email was stuck in PROCESSING state',
+            lastError: "Email was stuck in PROCESSING state",
             updatedAt: new Date(),
           },
         });
@@ -349,8 +345,8 @@ export class EmailQueueWorker {
     error: Error,
   ): Promise<void> {
     const alert = {
-      level: 'error',
-      type: 'email_permanent_failure',
+      level: "error",
+      type: "email_permanent_failure",
       emailId: email.id,
       to: email.to,
       template: email.templateTitle,
@@ -360,11 +356,37 @@ export class EmailQueueWorker {
     };
 
     console.error(
-      '🚨 [ALERT] Email permanent failure:',
+      "🚨 [ALERT] Email permanent failure:",
       JSON.stringify(alert, null, 2),
     );
 
-    // TODO: Implémenter notification (Slack, Discord, Email, etc.)
+    // Send alert notification to admin
+    try {
+      // Find system admin user (ID 1 is typically the main admin)
+      const adminUserId = 1;
+
+      await alertService.createAlert({
+        utilisateurId: adminUserId,
+        typeCode: AlertType.SYSTEM_ERROR,
+        priority: "haute" as any,
+        context: {
+          emailId: email.id,
+          recipient: email.to,
+          template: email.templateTitle,
+          attempts: email.attempts,
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        notes: `Permanent email failure after ${email.attempts} attempts - Recipient: ${email.to}, Template: ${email.templateTitle}`,
+      });
+
+      console.log("✅ [EmailQueueWorker] Alert notification sent to admin");
+    } catch (alertError) {
+      console.error(
+        "❌ [EmailQueueWorker] Failed to send alert notification:",
+        alertError,
+      );
+    }
   }
 
   /**
@@ -376,7 +398,11 @@ export class EmailQueueWorker {
       : 0;
 
     return {
-      status: this.isRunning ? (this.isPaused ? 'paused' : 'running') : 'stopped',
+      status: this.isRunning
+        ? this.isPaused
+          ? "paused"
+          : "running"
+        : "stopped",
       uptime: this.formatUptime(uptime),
       stats: {
         ...this.stats,
@@ -386,8 +412,8 @@ export class EmailQueueWorker {
             ? (
                 (this.stats.totalSucceeded / this.stats.totalProcessed) *
                 100
-              ).toFixed(2) + '%'
-            : '0%',
+              ).toFixed(2) + "%"
+            : "0%",
       },
       config: this.config,
     };
@@ -426,7 +452,7 @@ export class EmailQueueWorker {
         status: EmailQueueStatus.PENDING,
         attempts: { lt: this.config.maxAttempts },
       },
-      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
       select: {
         id: true,
         to: true,
@@ -498,7 +524,7 @@ export async function startEmailQueueWorker(
   config?: Partial<EmailQueueWorkerConfig>,
 ): Promise<EmailQueueWorker> {
   if (workerInstance) {
-    console.warn('⚠️ Email queue worker already running');
+    console.warn("⚠️ Email queue worker already running");
     return workerInstance;
   }
 
@@ -507,7 +533,7 @@ export async function startEmailQueueWorker(
 
   // Démarrer en arrière-plan (ne pas await)
   workerInstance.start().catch((error) => {
-    console.error('💀 Email queue worker crashed:', error);
+    console.error("💀 Email queue worker crashed:", error);
     workerInstance = null;
   });
 
@@ -519,7 +545,7 @@ export async function startEmailQueueWorker(
  */
 export async function stopEmailQueueWorker(): Promise<void> {
   if (!workerInstance) {
-    console.warn('⚠️ No email queue worker running');
+    console.warn("⚠️ No email queue worker running");
     return;
   }
 

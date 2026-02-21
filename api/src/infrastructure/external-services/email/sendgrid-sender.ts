@@ -499,29 +499,27 @@ export class SendGridSender {
     error?: string,
   ): Promise<void> {
     try {
-      // TODO: Décommenter après avoir régénéré Prisma Client avec: npx prisma generate
-      // await prisma.emails.create({
-      //   data: {
-      //     to,
-      //     subject,
-      //     content,
-      //     htmlContent: content,
-      //     utilisateurId,
-      //     status,
-      //     provider: "sendgrid",
-      //     messageId,
-      //     error,
-      //     metadata: {
-      //       savedBy: "SendGridSender",
-      //       timestamp: new Date().toISOString(),
-      //       contentLength: content.length,
-      //     },
-      //   },
-      // });
+      // Save email to database
+      await prisma.emails.create({
+        data: {
+          to,
+          subject,
+          content,
+          htmlContent: content,
+          utilisateurId,
+          status,
+          provider: "sendgrid",
+          messageId,
+          error,
+          metadata: {
+            savedBy: "SendGridSender",
+            timestamp: new Date().toISOString(),
+            contentLength: content.length,
+          },
+        },
+      });
 
-      console.log(
-        `💾 [SendGridSender] Email sauvegarde en base désactivée (TODO: régénérer Prisma Client)`,
-      );
+      console.log(`💾 [SendGridSender] Email saved to database: ${to}`);
     } catch (error: any) {
       console.error("❌ [SendGridSender] Erreur sauvegarde email:", error);
       // Ne pas faire échouer l'envoi si la sauvegarde échoue

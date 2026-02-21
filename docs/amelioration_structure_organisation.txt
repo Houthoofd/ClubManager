@@ -1,0 +1,16 @@
+🎯 PLAN D'ACTION RECOMMANDÉ**
+
+**Phase 1 : Quick Wins (2-3h)**
+1. Créer barrel exports manquants (`index.ts`)
+2. Créer `core/constants/` avec routes, validation, etc.
+3. Standardiser structure de 2-3 features (shop, courses)
+
+**Phase 2 : Quality (4-6h)**
+4. Créer custom hooks réutilisables
+5. Centraliser gestion d'erreurs
+6. Créer composants UI primitives (Button, Input, Modal)
+
+**Phase 3 : Advanced (optionnel)**
+7. Ajouter fixtures pour tests
+8. Créer HOCs
+9. Séparer logique métier (services)

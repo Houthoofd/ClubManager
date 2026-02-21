@@ -131,7 +131,7 @@
  * ```typescript
  * import { useArticles } from '../../hooks/shop/useArticles';
  * import CatalogueMagasin from '../../components/magasin/CatalogueMagasin';
- * import { PageHeader } from '../../components/common/PageHeader';
+ * import { PageHeader } from '@/shared/components/common-legacy/PageHeader';
  * ```
  *
  * APRÈS (imports simples et clairs):

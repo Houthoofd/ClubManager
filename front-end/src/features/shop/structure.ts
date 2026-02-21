@@ -50,8 +50,8 @@
  *   import { CatalogueMagasin } from '../components';
  *
  * External imports (from other features or shared):
- *   import { RightSidePanel } from '../../../components/common/panel/rightSidePanel';
- *   import { PageHeader } from '../../../components/common/PageHeader';
+ *   import { RightSidePanel } from '@/shared/components/ui/rightSidePanel';
+ *   import { PageHeader } from '@/shared/components/common-legacy/PageHeader';
  *   import { RootState } from '../../../redux/store';
  *
  * Shared package imports:

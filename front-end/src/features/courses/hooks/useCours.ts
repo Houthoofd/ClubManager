@@ -5,14 +5,16 @@ import {
   useCreateSessionMutation,
   useUpdateSessionMutation,
   useDeleteSessionMutation,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
 import type {
   GetSessionsQuery,
   GetSessionQuery,
   GetSessionTypesQuery,
   CreateSessionInput,
   UpdateSessionInput,
-} from "@/lib/apollo/generated/graphql";
+} from "@/core/api/apollo/generated/graphql";
+import { useUserEnrollments, useAnnulerPresence, useValiderPresence } from "./useInscriptions";
+import { useInstructors } from "./useProfesseurs";
 
 // ============================================================================
 // Types
@@ -80,10 +82,7 @@ type UseDeleteSessionReturn = {
  * const { sessions, isLoading } = useSessions(10, 0);
  * ```
  */
-export const useSessions = (
-  take?: number,
-  skip?: number,
-): UseSessionsReturn => {
+export const useSessions = (take?: number, skip?: number): UseSessionsReturn => {
   const variables: { take?: number; skip?: number } = {};
 
   if (take !== undefined) variables.take = take;
@@ -113,9 +112,7 @@ export const useSessions = (
  * const { session, isLoading } = useSessionById(123);
  * ```
  */
-export const useSessionById = (
-  id: number | undefined,
-): UseSessionByIdReturn => {
+export const useSessionById = (id: number | undefined): UseSessionByIdReturn => {
   const { data, loading, error, refetch } = useGetSessionQuery({
     variables: { id: id! },
     skip: !id,
@@ -174,8 +171,7 @@ export const useSessionTypes = (): UseSessionTypesReturn => {
  * ```
  */
 export const useCreateSession = (): UseCreateSessionReturn => {
-  const [createSessionMutation, { loading, error }] =
-    useCreateSessionMutation();
+  const [createSessionMutation, { loading, error }] = useCreateSessionMutation();
 
   const createSession = async (input: CreateSessionInput): Promise<void> => {
     console.log("📝 [useCreateSession] Creating session:", input);
@@ -189,10 +185,7 @@ export const useCreateSession = (): UseCreateSessionReturn => {
       throw new Error("Session creation failed");
     }
 
-    console.log(
-      "✅ [useCreateSession] Session created:",
-      result.data.createSession.id,
-    );
+    console.log("✅ [useCreateSession] Session created:", result.data.createSession.id);
   };
 
   return {
@@ -219,13 +212,9 @@ export const useCreateSession = (): UseCreateSessionReturn => {
  * ```
  */
 export const useUpdateSession = (): UseUpdateSessionReturn => {
-  const [updateSessionMutation, { loading, error }] =
-    useUpdateSessionMutation();
+  const [updateSessionMutation, { loading, error }] = useUpdateSessionMutation();
 
-  const updateSession = async (
-    id: number,
-    input: UpdateSessionInput,
-  ): Promise<void> => {
+  const updateSession = async (id: number, input: UpdateSessionInput): Promise<void> => {
     console.log("📝 [useUpdateSession] Updating session:", id, input);
 
     const result = await updateSessionMutation({
@@ -237,10 +226,7 @@ export const useUpdateSession = (): UseUpdateSessionReturn => {
       throw new Error("Session update failed");
     }
 
-    console.log(
-      "✅ [useUpdateSession] Session updated:",
-      result.data.updateSession.id,
-    );
+    console.log("✅ [useUpdateSession] Session updated:", result.data.updateSession.id);
   };
 
   return {
@@ -264,8 +250,7 @@ export const useUpdateSession = (): UseUpdateSessionReturn => {
  * ```
  */
 export const useDeleteSession = (): UseDeleteSessionReturn => {
-  const [deleteSessionMutation, { loading, error }] =
-    useDeleteSessionMutation();
+  const [deleteSessionMutation, { loading, error }] = useDeleteSessionMutation();
 
   const deleteSession = async (id: number): Promise<void> => {
     console.log("🗑️ [useDeleteSession] Deleting session:", id);
@@ -276,9 +261,7 @@ export const useDeleteSession = (): UseDeleteSessionReturn => {
     });
 
     if (!result.data?.deleteSession?.success) {
-      throw new Error(
-        result.data?.deleteSession?.message || "Session deletion failed",
-      );
+      throw new Error(result.data?.deleteSession?.message || "Session deletion failed");
     }
 
     console.log("✅ [useDeleteSession] Session deleted:", id);
@@ -327,3 +310,18 @@ export const useModifierCours = useUpdateSession;
  * @deprecated Use useDeleteSession instead
  */
 export const useSupprimerCours = useDeleteSession;
+
+/**
+ * Legacy alias for useUserEnrollments (enrolled courses for a user)
+ * @deprecated Use useUserEnrollments from useInscriptions instead
+ */
+export const useCoursInscritsUtilisateur = useUserEnrollments;
+
+/**
+ * Legacy alias for useInstructors
+ * @deprecated Use useInstructors from useProfesseurs instead
+ */
+export const useProfesseurs = useInstructors;
+
+// Re-export presence validation hooks from useInscriptions
+export { useAnnulerPresence, useValiderPresence };

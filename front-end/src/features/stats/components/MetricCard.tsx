@@ -1,14 +1,16 @@
-import React from 'react';
-import { Card, CardBody } from '@patternfly/react-core';
-import { ArrowUpIcon, ArrowDownIcon } from '@patternfly/react-icons';
+import React from "react";
+import { Card, CardBody } from "@patternfly/react-core";
+import { ArrowUpIcon, ArrowDownIcon } from "@patternfly/react-icons";
+import { SkeletonStats } from "@/shared/components/ui";
 
 interface MetricCardProps {
   title: string;
   value: number;
-  type: 'number' | 'currency' | 'percentage';
+  type: "number" | "currency" | "percentage";
   suffix?: string;
   trend?: string;
-  trendType?: 'positive' | 'negative' | 'neutral';
+  trendType?: "positive" | "negative" | "neutral";
+  isLoading?: boolean;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -18,28 +20,33 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   suffix,
   trend,
   trendType,
+  isLoading = false,
 }) => {
+  // Show skeleton while loading
+  if (isLoading) {
+    return <SkeletonStats hasIcon={false} />;
+  }
   const formatValue = () => {
-    if (typeof value !== 'number') return 'N/A';
-    
+    if (typeof value !== "number") return "N/A";
+
     switch (type) {
-      case 'currency':
+      case "currency":
         return `${value.toLocaleString()} €`;
-      case 'percentage':
+      case "percentage":
         return `${value}%`;
-      case 'number':
+      case "number":
       default:
         return value.toLocaleString();
     }
   };
 
   const getTrendIcon = () => {
-    if (!trend || trendType === 'neutral') return null;
-    return trendType === 'positive' ? <ArrowUpIcon /> : <ArrowDownIcon />;
+    if (!trend || trendType === "neutral") return null;
+    return trendType === "positive" ? <ArrowUpIcon /> : <ArrowDownIcon />;
   };
 
   const getTrendClass = () => {
-    if (!trendType) return '';
+    if (!trendType) return "";
     return `metric-trend--${trendType}`;
   };
 
@@ -49,13 +56,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         <div className="metric-card__header">
           <span className="metric-card__title">{title}</span>
         </div>
-        
+
         <div className="metric-card__content">
           <div className="metric-card__value">
             {formatValue()}
             {suffix && <span className="metric-card__suffix"> {suffix}</span>}
           </div>
-          
+
           {trend && (
             <div className={`metric-card__trend ${getTrendClass()}`}>
               {getTrendIcon()}

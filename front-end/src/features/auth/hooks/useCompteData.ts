@@ -7,9 +7,10 @@ import {
   useGetGradesQuery,
   useGetStatusesQuery,
   useGetGendersQuery,
-  useGetUserSubscriptionQuery,
-} from "@/lib/apollo/generated/graphql";
-import type { UpdateUserInput } from "@/lib/apollo/generated/graphql";
+  useGetUserSubscription,
+  useGetSubscriptions,
+} from "@/core/api/apollo/generated/graphql";
+import type { UpdateUserInput } from "@/core/api/apollo/generated/graphql";
 
 // ============================================================================
 // Types
@@ -99,14 +100,14 @@ export const useCompteData = (): UseCompteDataReturn => {
     data: subscriptionData,
     loading: loadingSubscription,
     refetch: refetchSubscription,
-  } = useGetUserSubscriptionQuery({
+  } = useGetUserSubscription({
     variables: { userId: utilisateurId! },
     skip: !utilisateurId,
     fetchPolicy: "cache-and-network",
   });
 
   // Fetch all subscriptions
-  const { data: subscriptionsData } = useGetSubscriptionsQuery({
+  const { data: subscriptionsData } = useGetSubscriptions({
     fetchPolicy: "cache-and-network",
   });
 
@@ -126,8 +127,7 @@ export const useCompteData = (): UseCompteDataReturn => {
   });
 
   // Update user mutation
-  const [updateUserMutation, { loading: loadingUpdate }] =
-    useUpdateUserMutation();
+  const [updateUserMutation, { loading: loadingUpdate }] = useUpdateUserMutation();
 
   // Update compte function
   const updateCompte = async (input: UpdateUserInput): Promise<void> => {
@@ -172,10 +172,7 @@ export const useCompteData = (): UseCompteDataReturn => {
   useEffect(() => {
     if (utilisateurId) {
       console.log("🔍 [useCompteData] User ID:", utilisateurId);
-      console.log(
-        "🔑 [useCompteData] Auth token exists:",
-        !!localStorage.getItem("authToken"),
-      );
+      console.log("🔑 [useCompteData] Auth token exists:", !!localStorage.getItem("authToken"));
     }
 
     if (errorMe) {

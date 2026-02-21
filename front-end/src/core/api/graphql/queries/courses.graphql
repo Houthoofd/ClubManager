@@ -1,0 +1,188 @@
+# ============================================================================
+# Sessions (Courses) Queries - English Schema
+# ============================================================================
+
+query GetSessions($take: Int, $skip: Int) {
+  sessions(take: $take, skip: $skip) {
+    id
+    session_type_id
+    instructor_id
+    date
+    start_time
+    end_time
+    location
+    max_participants
+    current_participants
+    status
+    notes
+    created_at
+  }
+}
+
+query GetSession($id: Int!) {
+  session(id: $id) {
+    id
+    session_type_id
+    instructor_id
+    date
+    start_time
+    end_time
+    location
+    max_participants
+    current_participants
+    status
+    notes
+    created_at
+  }
+}
+
+query GetSessionTypes {
+  sessionTypes {
+    id
+    activity_id
+    name
+    description
+    duration_minutes
+    max_participants
+    price
+    active
+  }
+}
+
+query GetInstructors($take: Int, $skip: Int) {
+  instructors(take: $take, skip: $skip) {
+    id
+    user_id
+    specialization
+    bio
+    certifications
+    active
+    created_at
+  }
+}
+
+query GetSessionEnrollments($sessionId: Int!) {
+  sessionEnrollments(sessionId: $sessionId) {
+    id
+    user_id
+    session_id
+    status
+    enrolled_at
+    notes
+  }
+}
+
+query GetUserEnrollments($userId: Int!) {
+  userEnrollments(userId: $userId) {
+    id
+    user_id
+    session_id
+    status
+    enrolled_at
+    notes
+  }
+}
+
+# ============================================================================
+# Sessions Mutations
+# ============================================================================
+
+mutation CreateSession($input: CreateSessionInput!) {
+  createSession(input: $input) {
+    id
+    session_type_id
+    instructor_id
+    date
+    start_time
+    end_time
+    location
+    max_participants
+    status
+    created_at
+  }
+}
+
+mutation UpdateSession($id: Int!, $input: UpdateSessionInput!) {
+  updateSession(id: $id, input: $input) {
+    id
+    session_type_id
+    instructor_id
+    date
+    start_time
+    end_time
+    location
+    max_participants
+    status
+    notes
+    created_at
+  }
+}
+
+mutation DeleteSession($id: Int!) {
+  deleteSession(id: $id) {
+    success
+    message
+  }
+}
+
+mutation EnrollUser($userId: Int!, $sessionId: Int!) {
+  enrollUser(userId: $userId, sessionId: $sessionId) {
+    id
+    user_id
+    session_id
+    status
+    enrolled_at
+  }
+}
+
+mutation CancelEnrollment($enrollmentId: Int!) {
+  cancelEnrollment(enrollmentId: $enrollmentId) {
+    success
+    message
+  }
+}
+
+mutation UpdateEnrollmentStatus($enrollmentId: Int!, $status: String!) {
+  updateEnrollmentStatus(enrollmentId: $enrollmentId, status: $status) {
+    id
+    user_id
+    session_id
+    status
+    enrolled_at
+  }
+}
+
+# ============================================================================
+# Instructor Mutations
+# ============================================================================
+
+mutation CreateInstructor($input: CreateInstructorInput!) {
+  createInstructor(input: $input) {
+    id
+    user_id
+    specialization
+    bio
+    certifications
+    active
+    created_at
+  }
+}
+
+mutation UpdateInstructor($id: Int!, $input: UpdateInstructorInput!) {
+  updateInstructor(id: $id, input: $input) {
+    id
+    user_id
+    specialization
+    bio
+    certifications
+    active
+    created_at
+  }
+}
+
+mutation DeleteInstructor($id: Int!) {
+  deleteInstructor(id: $id) {
+    success
+    message
+  }
+}

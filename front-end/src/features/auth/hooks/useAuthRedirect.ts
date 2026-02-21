@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { clearAllAuthData } from "../../utils/authCleaner";
+import { clearAllAuthData } from "@/shared/utils/authCleaner";
 
 // ============================================================================
 // Types
@@ -50,9 +50,7 @@ type UserData = {
  * @param options - Configuration options for auth redirect behavior
  * @returns Auth redirect utilities and state
  */
-export const useAuthRedirect = (
-  options: UseAuthRedirectOptions = {},
-): UseAuthRedirectReturn => {
+export const useAuthRedirect = (options: UseAuthRedirectOptions = {}): UseAuthRedirectReturn => {
   const {
     autoRedirectDelay = 5,
     checkInterval = 30000, // Check every 30 seconds
@@ -160,8 +158,7 @@ export const useAuthRedirect = (
     redirectToLogin,
     triggerAuthRequired,
     checkAuthStatus,
-    customMessage:
-      customMessage || "Votre session a expiré ou vous n'êtes pas connecté.",
+    customMessage: customMessage || "Votre session a expiré ou vous n'êtes pas connecté.",
     autoRedirectDelay,
   };
 };

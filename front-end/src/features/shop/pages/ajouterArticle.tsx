@@ -1,11 +1,5 @@
 import React, { useState } from "react";
-import {
-  Tabs,
-  Tab,
-  TabTitleText,
-  PageSection,
-  Spinner,
-} from "@patternfly/react-core";
+import { Tabs, Tab, TabTitleText, PageSection, Spinner } from "@patternfly/react-core";
 import {
   useArticlesParCategorie,
   useCategoriesMagasin,
@@ -14,18 +8,14 @@ import {
   useSupprimerArticleMagasin,
   useTaillesMagasin,
 } from "../hooks/useMagasin";
-import { useCheckArticleByNomAndCategorie } from "../../../hooks/auth/useVerification";
-import {
-  FormulaireArticle,
-  ListeArticles,
-  DetailArticleModal,
-} from "../components";
-import ModalsArticle from "../../../components/common/modal/ModalsArticle";
-import { PageHeader } from "../../../components/common/PageHeader";
-import ResultModal from "../../../components/common/modal/ResultModal";
-import ConfirmModal from "../../../components/common/modal/ConfirmModal";
-import ResumeConfirmModal from "../../../components/common/modal/ResumeConfirmModal";
-import RightSidePanel from "../../../components/common/panel/rightSidePanel";
+import { useCheckArticleByNomAndCategorie } from "@/features/auth/hooks/useVerification";
+import { FormulaireArticle, ListeArticles, DetailArticleModal } from "../components";
+import ModalsArticle from "@/shared/components/common-legacy/modal/ModalsArticle";
+import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
+import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
+import ConfirmModal from "@/shared/components/common-legacy/modal/ConfirmModal";
+import ResumeConfirmModal from "@/shared/components/common-legacy/modal/ResumeConfirmModal";
+import RightSidePanel from "@/shared/components/common-legacy/panel/rightSidePanel";
 
 interface ModificationItem {
   field: string;
@@ -46,11 +36,8 @@ const AjouterArticlePage: React.FC = () => {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultModalMessage, setResultModalMessage] = useState("");
   const [resultModalSuccess, setResultModalSuccess] = useState(false);
-  const [modificationsResume, setModificationsResume] = useState<
-    ModificationItem[]
-  >([]);
-  const [pendingSubmitEvent, setPendingSubmitEvent] =
-    useState<React.FormEvent | null>(null);
+  const [modificationsResume, setModificationsResume] = useState<ModificationItem[]>([]);
+  const [pendingSubmitEvent, setPendingSubmitEvent] = useState<React.FormEvent | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
@@ -64,9 +51,7 @@ const AjouterArticlePage: React.FC = () => {
 
   // Ajouter les états pour la modal de détails
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedDetailArticle, setSelectedDetailArticle] = useState<
-    any | null
-  >(null);
+  const [selectedDetailArticle, setSelectedDetailArticle] = useState<any | null>(null);
   const [selectedTaille, setSelectedTaille] = useState<string | null>(null);
   const [isTailleOpen, setIsTailleOpen] = useState(false);
 
@@ -76,20 +61,15 @@ const AjouterArticlePage: React.FC = () => {
   const [showPanier, setShowPanier] = useState(false);
 
   // Hooks React Query
-  const { data: articles, isLoading: loadingArticles } =
-    useArticlesParCategorie();
-  const { data: categories, isLoading: loadingCategories } =
-    useCategoriesMagasin();
+  const { data: articles, isLoading: loadingArticles } = useArticlesParCategorie();
+  const { data: categories, isLoading: loadingCategories } = useCategoriesMagasin();
   const { data: tailles, isLoading: loadingTailles } = useTaillesMagasin();
   const ajouterArticle = useAjouterArticleMagasin();
   const modifierArticle = useModifierArticleMagasin();
   const supprimerArticle = useSupprimerArticleMagasin();
   const checkArticleByNomAndCategorie = useCheckArticleByNomAndCategorie();
 
-  const handleTabClick = (
-    _event: React.MouseEvent,
-    tabIndex: string | number,
-  ) => {
+  const handleTabClick = (_event: React.MouseEvent, tabIndex: string | number) => {
     setActiveTabKey(Number(tabIndex));
   };
 
@@ -126,9 +106,7 @@ const AjouterArticlePage: React.FC = () => {
         const oldCategorie = categories?.find(
           (c) => String(c.id) === String(articleEnEdition.categorie_id),
         );
-        const newCategorie = categories?.find(
-          (c) => String(c.id) === categorieId,
-        );
+        const newCategorie = categories?.find((c) => String(c.id) === categorieId);
 
         modifications.push({
           field: "Catégorie",
@@ -139,24 +117,15 @@ const AjouterArticlePage: React.FC = () => {
 
       // Vérifier les changements d'images
       const originalImages = articleEnEdition.images || [];
-      const filteredImages = imageUrls.filter(
-        (url) => url && url.trim() !== "",
-      );
+      const filteredImages = imageUrls.filter((url) => url && url.trim() !== "");
 
-      if (
-        JSON.stringify(originalImages.sort()) !==
-        JSON.stringify(filteredImages.sort())
-      ) {
+      if (JSON.stringify(originalImages.sort()) !== JSON.stringify(filteredImages.sort())) {
         modifications.push({
           field: "Images",
           oldValue:
-            originalImages.length > 0
-              ? `${originalImages.length} image(s)`
-              : "Aucune image",
+            originalImages.length > 0 ? `${originalImages.length} image(s)` : "Aucune image",
           newValue:
-            filteredImages.length > 0
-              ? `${filteredImages.length} image(s)`
-              : "Aucune image",
+            filteredImages.length > 0 ? `${filteredImages.length} image(s)` : "Aucune image",
         });
       }
 
@@ -204,9 +173,7 @@ const AjouterArticlePage: React.FC = () => {
       });
 
       // Afficher les images pour un nouvel article
-      const filteredImages = imageUrls.filter(
-        (url) => url && url.trim() !== "",
-      );
+      const filteredImages = imageUrls.filter((url) => url && url.trim() !== "");
       if (filteredImages.length > 0) {
         modifications.push({
           field: "Images",
@@ -218,9 +185,7 @@ const AjouterArticlePage: React.FC = () => {
       // Afficher les stocks pour un nouvel article
       const filteredStocks = stocks.filter((stock) => stock.quantite > 0);
       if (filteredStocks.length > 0) {
-        const stockText = filteredStocks
-          .map((s) => `${s.taille}: ${s.quantite}`)
-          .join(", ");
+        const stockText = filteredStocks.map((s) => `${s.taille}: ${s.quantite}`).join(", ");
         modifications.push({
           field: "Stocks",
           oldValue: "Nouvel article",
@@ -247,9 +212,7 @@ const AjouterArticlePage: React.FC = () => {
       if (!articleEnEdition) {
         const exists = await checkArticleByNomAndCategorie(nom, categorieId);
         if (exists) {
-          setResultModalMessage(
-            "Un article avec ce nom existe déjà dans cette catégorie.",
-          );
+          setResultModalMessage("Un article avec ce nom existe déjà dans cette catégorie.");
           setResultModalSuccess(false);
           setShowResultModal(true);
           return;
@@ -271,23 +234,17 @@ const AjouterArticlePage: React.FC = () => {
           id: articleEnEdition.id,
           article: articlePayload,
         });
-        setResultModalMessage(
-          "Les modifications apportées ont été sauvegardées avec succès.",
-        );
+        setResultModalMessage("Les modifications apportées ont été sauvegardées avec succès.");
       } else {
         await ajouterArticle.mutateAsync(articlePayload);
-        setResultModalMessage(
-          "L'article a été ajouté avec succès à votre inventaire.",
-        );
+        setResultModalMessage("L'article a été ajouté avec succès à votre inventaire.");
       }
 
       setResultModalSuccess(true);
       resetForm();
     } catch (error) {
       console.error("Erreur lors de l'ajout/modification:", error);
-      setResultModalMessage(
-        "Une erreur est survenue lors de l'opération. Veuillez réessayer.",
-      );
+      setResultModalMessage("Une erreur est survenue lors de l'opération. Veuillez réessayer.");
       setResultModalSuccess(false);
     }
 
@@ -362,11 +319,7 @@ const AjouterArticlePage: React.FC = () => {
   };
 
   // Modifier la fonction handleAjouterAuPanier
-  const handleAjouterAuPanier = (
-    article: any,
-    taille: string,
-    quantite: number,
-  ) => {
+  const handleAjouterAuPanier = (article: any, taille: string, quantite: number) => {
     const nouvelArticle = {
       ...article,
       taille,
@@ -376,9 +329,7 @@ const AjouterArticlePage: React.FC = () => {
     setPanierArticles((prev) => [...prev, nouvelArticle]);
     setShowPanier(true); // Ouvrir automatiquement le panier
 
-    console.log(
-      `Article "${article.nom}" ajouté au panier (${taille}, quantité: ${quantite})`,
-    );
+    console.log(`Article "${article.nom}" ajouté au panier (${taille}, quantité: ${quantite})`);
   };
 
   // Fonctions pour gérer le panier
@@ -386,15 +337,9 @@ const AjouterArticlePage: React.FC = () => {
     setPanierArticles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpdateQuantite = (
-    index: number,
-    quantite: number,
-    taille: string,
-  ) => {
+  const handleUpdateQuantite = (index: number, quantite: number, taille: string) => {
     setPanierArticles((prev) =>
-      prev.map((article, i) =>
-        i === index ? { ...article, quantite, taille } : article,
-      ),
+      prev.map((article, i) => (i === index ? { ...article, quantite, taille } : article)),
     );
   };
 
@@ -425,9 +370,7 @@ const AjouterArticlePage: React.FC = () => {
     }
     return categories.map((categorie) => ({
       ...categorie,
-      articles: articles.filter(
-        (a: any) => String(a.categorie_id) === String(categorie.id),
-      ),
+      articles: articles.filter((a: any) => String(a.categorie_id) === String(categorie.id)),
     }));
   }, [articles, categories]);
 
@@ -437,15 +380,9 @@ const AjouterArticlePage: React.FC = () => {
     if (articleEnEdition) {
       setNom(articleEnEdition.nom ?? "");
       setDescription(articleEnEdition.description ?? "");
-      setPrix(
-        articleEnEdition.prix !== undefined
-          ? String(articleEnEdition.prix)
-          : "0",
-      );
+      setPrix(articleEnEdition.prix !== undefined ? String(articleEnEdition.prix) : "0");
       setCategorieId(
-        articleEnEdition.categorie_id !== undefined
-          ? String(articleEnEdition.categorie_id)
-          : null,
+        articleEnEdition.categorie_id !== undefined ? String(articleEnEdition.categorie_id) : null,
       );
       setStocks(articleEnEdition.stocks ?? [{ taille: "S", quantite: 0 }]);
       setImageUrls(articleEnEdition.images ?? []);
@@ -487,11 +424,7 @@ const AjouterArticlePage: React.FC = () => {
         />
 
         <PageSection className="store-content" style={{ flex: 1 }}>
-          <Tabs
-            activeKey={activeTabKey}
-            onSelect={handleTabClick}
-            className="modern-tabs"
-          >
+          <Tabs activeKey={activeTabKey} onSelect={handleTabClick} className="modern-tabs">
             <Tab
               eventKey={0}
               title={
@@ -561,11 +494,7 @@ const AjouterArticlePage: React.FC = () => {
             isOpen={showConfirmModal}
             onClose={annulerModifications}
             onConfirm={confirmerAjout}
-            title={
-              articleEnEdition
-                ? "Confirmer les modifications"
-                : "Confirmer l'ajout d'article"
-            }
+            title={articleEnEdition ? "Confirmer les modifications" : "Confirmer l'ajout d'article"}
             message={
               articleEnEdition
                 ? `Vous êtes sur le point de modifier l'article "${articleEnEdition.nom}".`
