@@ -9,7 +9,17 @@
  */
 
 // ============================================================================
-// Catalog & Display Components
+// Atomic Components (NEW - Modular Architecture)
+// ============================================================================
+
+export { ProductCard } from "./ProductCard";
+export { ProductList } from "./ProductList";
+export { ProductSearch } from "./ProductSearch";
+export { EmptyProductState } from "./EmptyProductState";
+export { ProductStats } from "./ProductStats";
+
+// ============================================================================
+// Catalog & Display Components (Legacy)
 // ============================================================================
 
 export { default as CatalogueMagasin } from "./CatalogueMagasin";

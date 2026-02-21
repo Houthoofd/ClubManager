@@ -9,47 +9,60 @@
  */
 
 // ============================================================================
-// Message Display Components
+// Atomic Components (NEW - Modular Architecture)
 // ============================================================================
 
-export { default as MessageCard } from './MessageCard';
-export { default as MessageDetailModal } from './MessageDetailModal';
+export { MessageCard as MessageCardAtomic } from "./MessageCard/MessageCard";
+export { MessageList } from "./MessageList";
+export { MessageSearch } from "./MessageSearch";
+export { EmptyMessageState } from "./EmptyMessageState";
+export { MessageActionButtons } from "./MessageActionButtons";
+export { MessageStats } from "./MessageStats";
+export { ReceivedMessagesContent } from "./ReceivedMessagesContent";
+export { ReadMessagesContent } from "./ReadMessagesContent";
+
+// ============================================================================
+// Message Display Components (Legacy)
+// ============================================================================
+
+export { default as MessageCard } from "./MessageCard";
+export { default as MessageDetailModal } from "./MessageDetailModal";
 
 // ============================================================================
 // Message Type Components
 // ============================================================================
 
-export { default as MessageTypeCard } from './MessageTypeCard';
-export { default as MessageTypeSelector } from './MessageTypeSelector';
-export { default as CreateMessageTypeForm } from './CreateMessageTypeForm';
+export { default as MessageTypeCard } from "./MessageTypeCard";
+export { default as MessageTypeSelector } from "./MessageTypeSelector";
+export { default as CreateMessageTypeForm } from "./CreateMessageTypeForm";
 
 // ============================================================================
 // Message Tabs
 // ============================================================================
 
-export { default as MessageTypesListTab } from './MessageTypesListTab';
-export { default as MessagesReadTab } from './MessagesReadTab';
-export { default as MessagesReceivedTab } from './MessagesReceivedTab';
+export { default as MessageTypesListTab } from "./MessageTypesListTab";
+export { default as MessagesReadTab } from "./MessagesReadTab";
+export { default as MessagesReceivedTab } from "./MessagesReceivedTab";
 
 // ============================================================================
 // Send Message Components
 // ============================================================================
 
-export { default as SendMessageForm } from './SendMessageForm';
-export { default as SendMessageModal } from './SendMessageModal';
-export { default as SendMessageConfirmModal } from './SendMessageConfirmModal';
+export { default as SendMessageForm } from "./SendMessageForm";
+export { default as SendMessageModal } from "./SendMessageModal";
+export { default as SendMessageConfirmModal } from "./SendMessageConfirmModal";
 
 // ============================================================================
 // User Selection Components
 // ============================================================================
 
-export { default as UserSelector } from './UserSelector';
+export { default as UserSelector } from "./UserSelector";
 
 // ============================================================================
 // Modal Components
 // ============================================================================
 
-export { default as DeleteMessageModal } from './DeleteMessageModal';
+export { default as DeleteMessageModal } from "./DeleteMessageModal";
 
 // ============================================================================
 // Sub-folder Components

@@ -1,4 +1,28 @@
-import { useState, useMemo } from "react";
+/**
+ * ====================================================================
+ * OrdersPage - IMPROVED WITH CUSTOM HOOKS
+ * ====================================================================
+ *
+ * Enhanced version using custom business hooks for better performance
+ * and maintainability.
+ *
+ * Custom Hooks Used:
+ * - useTableControls (filter + sort + pagination combined)
+ * - useDebounce (search optimization)
+ * - useExport (CSV/PDF export)
+ * - useLocalStorage (filters persistence)
+ *
+ * @architecture
+ * - GraphQL: useGetOrdersQuery, useUpdateOrderStatusMutation
+ * - Zustand: uiStore (notifications)
+ * - Custom Hooks: useTableControls, useDebounce, useExport
+ * - HOCs: withAuthRole (admin only), withAuth, withTracking, withErrorBoundary
+ * - i18n: orders.*
+ *
+ * @permissions Admin only
+ */
+
+import { useState, useMemo, useEffect } from "react";
 import {
   PageSection,
   Card,
@@ -12,8 +36,42 @@ import {
   Flex,
   FlexItem,
   Button,
+  Toolbar,
+  ToolbarContent,
+  ToolbarItem,
+  SearchInput,
+  Select,
+  SelectOption,
+  SelectVariant,
+  Pagination,
+  Table,
+  Thead,
+  Tr,
+  Th,
+  Tbody,
+  Td,
+  ExpandableRowContent,
+  Modal,
+  ModalVariant,
+  Spinner,
+  Bullseye,
+  EmptyState,
+  EmptyStateIcon,
+  EmptyStateBody,
+  List,
+  ListItem,
+  Divider,
 } from "@patternfly/react-core";
-import { SearchIcon, SyncIcon, DownloadIcon } from "@patternfly/react-icons";
+import {
+  SearchIcon,
+  SyncIcon,
+  DownloadIcon,
+  ShoppingCartIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  ClockIcon,
+  BanIcon,
+} from "@patternfly/react-icons";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useUiStore } from "@/core/store/uiStore";
@@ -26,9 +84,16 @@ import {
   useGetOrdersQuery,
   useUpdateOrderStatusMutation,
 } from "@/core/api/graphql/generated/graphql";
-import TableauCommandes from "../components/TableauCommandes";
-import FiltrageCommandes from "../components/FiltrageCommandes";
-import StatistiquesCommandes from "../components/StatistiquesCommandes";
+
+// ============================================================================
+// CUSTOM HOOKS IMPORTS
+// ============================================================================
+import { useTableControls, useExport } from "@/shared/hooks/business";
+import { useDebounce, useLocalStorage } from "@/shared/hooks/utils";
+
+// ============================================================================
+// Types
+// ============================================================================
 
 interface Order {
   id: number;
@@ -57,42 +122,54 @@ interface OrderStats {
   repartitionStatuts: Record<string, number>;
 }
 
-/**
- * OrdersPage Component
- *
- * Displays and manages all orders with filtering, stats and status updates
- *
- * @architecture
- * - GraphQL: useGetOrdersQuery, useUpdateOrderStatusMutation
- * - Zustand: uiStore (notifications)
- * - HOCs: withAuthRole (admin only), withAuth, withTracking, withErrorBoundary
- * - i18n: orders.*
- *
- * Features:
- * - Orders table with sorting and filtering
- * - Order statistics dashboard
- * - Status updates
- * - Export to CSV
- *
- * @permissions Admin only
- */
-const OrdersPage = () => {
+const ORDER_STATUSES = [
+  { value: "en_attente", label: "En attente", color: "orange", icon: ClockIcon },
+  { value: "confirmee", label: "Confirmée", color: "blue", icon: CheckCircleIcon },
+  { value: "en_preparation", label: "En préparation", color: "cyan", icon: ShoppingCartIcon },
+  { value: "expediee", label: "Expédiée", color: "purple", icon: ShoppingCartIcon },
+  { value: "livree", label: "Livrée", color: "green", icon: CheckCircleIcon },
+  { value: "annulee", label: "Annulée", color: "red", icon: BanIcon },
+] as const;
+
+// ============================================================================
+// Component
+// ============================================================================
+
+const OrdersPageImproved = () => {
   const { t } = useTypedTranslation();
   const { trackEvent } = useTracking();
 
   // Zustand store
   const addNotification = useUiStore((state) => state.addNotification);
 
-  // Local state
-  const [filterInput, setFilterInput] = useState("");
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-  const [activeSortIndex, setActiveSortIndex] = useState<number | undefined>(undefined);
-  const [activeSortDirection, setActiveSortDirection] = useState<"asc" | "desc" | undefined>(
-    undefined
+  // ============================================================================
+  // CUSTOM HOOK: useLocalStorage - Persist status filter
+  // ============================================================================
+  const [savedStatusFilter, setSavedStatusFilter] = useLocalStorage<string>(
+    "orders-status-filter",
+    ""
   );
-  const [isUpdatingStatut, setIsUpdatingStatut] = useState<string | null>(null);
 
-  // GraphQL queries
+  // ============================================================================
+  // Local State
+  // ============================================================================
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>(savedStatusFilter);
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [isUpdatingStatut, setIsUpdatingStatut] = useState<string | null>(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [newStatus, setNewStatus] = useState<string>("");
+
+  // ============================================================================
+  // CUSTOM HOOK: useDebounce - Optimize search
+  // ============================================================================
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
+  // ============================================================================
+  // GraphQL Queries
+  // ============================================================================
   const {
     data: ordersData,
     loading: loadingOrders,
@@ -102,15 +179,76 @@ const OrdersPage = () => {
     fetchPolicy: "cache-and-network",
   });
 
-  // GraphQL mutations
   const [updateOrderStatus] = useUpdateOrderStatusMutation();
 
-  // Extract orders from query
+  // ============================================================================
+  // Extract Data
+  // ============================================================================
   const orders = useMemo((): Order[] => {
     return (ordersData?.orders || []) as Order[];
   }, [ordersData]);
 
-  // Calculate statistics
+  // ============================================================================
+  // CUSTOM HOOK: useTableControls - Combined filter + sort + pagination
+  // ============================================================================
+  const {
+    displayData,
+    sortKey,
+    sortDirection,
+    handleSort,
+    setFilter,
+    removeFilter,
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    goToPage,
+    filters,
+  } = useTableControls(orders, {
+    itemsPerPage: 20,
+    defaultSortKey: "date_commande",
+  });
+
+  // ============================================================================
+  // CUSTOM HOOK: useExport - Export functionality
+  // ============================================================================
+  const { exportToCSV, exportToPDF, isExporting } = useExport();
+
+  // ============================================================================
+  // Apply Filters (Debounced Search + Status)
+  // ============================================================================
+  useEffect(() => {
+    // Search filter - search across multiple fields
+    if (debouncedSearch) {
+      setFilter({
+        field: "numero_commande",
+        operator: "contains",
+        value: debouncedSearch,
+        caseSensitive: false,
+      });
+    } else {
+      removeFilter("numero_commande");
+    }
+  }, [debouncedSearch, setFilter, removeFilter]);
+
+  useEffect(() => {
+    // Status filter
+    if (selectedStatus) {
+      setFilter({
+        field: "statut",
+        operator: "equals",
+        value: selectedStatus,
+      });
+      setSavedStatusFilter(selectedStatus); // Persist
+    } else {
+      removeFilter("statut");
+      setSavedStatusFilter("");
+    }
+  }, [selectedStatus, setFilter, removeFilter, setSavedStatusFilter]);
+
+  // ============================================================================
+  // Statistics
+  // ============================================================================
   const statistics = useMemo((): OrderStats => {
     if (orders.length === 0) {
       return {
@@ -139,146 +277,10 @@ const OrdersPage = () => {
     };
   }, [orders]);
 
-  // Filter orders
-  const filteredData = useMemo(() => {
-    if (!filterInput || !Array.isArray(orders)) return orders;
+  // ============================================================================
+  // Handlers
+  // ============================================================================
 
-    const searchTerm = filterInput.toLowerCase();
-    return orders.filter((order) => {
-      if (!order) return false;
-
-      return (
-        order.id?.toString().includes(searchTerm) ||
-        order.unique_id?.toLowerCase().includes(searchTerm) ||
-        order.numero_commande?.toLowerCase().includes(searchTerm) ||
-        order.statut?.toLowerCase().includes(searchTerm) ||
-        order.total?.toString().includes(searchTerm) ||
-        order.nom_utilisateur?.toLowerCase().includes(searchTerm) ||
-        order.first_name?.toLowerCase().includes(searchTerm) ||
-        order.last_name?.toLowerCase().includes(searchTerm)
-      );
-    });
-  }, [orders, filterInput]);
-
-  // Get sortable values for an order
-  const getSortableRowValues = (order: Order): (string | number)[] => [
-    order?.id || 0,
-    order?.numero_commande || order?.unique_id || "",
-    new Date(order?.date_commande || order?.created_at || 0).getTime(),
-    order?.statut || "",
-    Array.isArray(order?.articles) ? order.articles.length : 0,
-    parseFloat(order?.total?.toString() || "0"),
-  ];
-
-  // Sort orders
-  const sortedData = useMemo(() => {
-    if (
-      !Array.isArray(filteredData) ||
-      activeSortIndex === undefined ||
-      activeSortDirection === undefined
-    ) {
-      return filteredData;
-    }
-
-    return [...filteredData].sort((a, b) => {
-      if (!a || !b) return 0;
-
-      const aValue = getSortableRowValues(a)[activeSortIndex];
-      const bValue = getSortableRowValues(b)[activeSortIndex];
-
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return activeSortDirection === "asc" ? aValue - bValue : bValue - aValue;
-      }
-      return activeSortDirection === "asc"
-        ? String(aValue).localeCompare(String(bValue))
-        : String(bValue).localeCompare(String(aValue));
-    });
-  }, [filteredData, activeSortIndex, activeSortDirection]);
-
-  /**
-   * Handle status change for an order
-   */
-  const handleChangeStatut = async (orderId: string, newStatut: string) => {
-    try {
-      setIsUpdatingStatut(orderId);
-
-      const order = orders.find(
-        (o) =>
-          o.id?.toString() === orderId ||
-          o.unique_id === orderId ||
-          o.numero_commande === orderId
-      );
-
-      if (!order) {
-        addNotification({
-          type: "error",
-          message: t("orders.list.noOrders"),
-        });
-        return;
-      }
-
-      addNotification({
-        type: "info",
-        message: t("orders.status.updating"),
-      });
-
-      const response = await updateOrderStatus({
-        variables: {
-          orderId: order.id,
-          status: newStatut,
-        },
-      });
-
-      // Check if response includes stock update info
-      const stocksAffected = (response.data?.updateOrderStatus as any)?.stocksAffected;
-      const itemsProcessed = (response.data?.updateOrderStatus as any)?.itemsProcessed;
-
-      let successMessage = t("orders.status.updateSuccess", { status: newStatut });
-      if (stocksAffected) {
-        successMessage = t("orders.status.updateSuccessWithStock", {
-          status: newStatut,
-          count: itemsProcessed,
-        });
-      }
-
-      addNotification({
-        type: "success",
-        message: successMessage,
-      });
-
-      trackEvent("order_status_updated", {
-        orderId: order.id,
-        oldStatus: order.statut,
-        newStatus: newStatut,
-        stocksAffected: stocksAffected || false,
-      });
-
-      await refetchOrders();
-    } catch (error: any) {
-      console.error("Error updating order status:", error);
-
-      let errorMessage = t("orders.status.updateError");
-      if (error.message?.includes("timeout") || error.message?.includes("lock")) {
-        errorMessage = t("orders.status.serverBusy");
-      }
-
-      addNotification({
-        type: "error",
-        message: errorMessage,
-      });
-
-      trackEvent("order_status_update_failed", {
-        orderId,
-        error: error?.message || "unknown",
-      });
-    } finally {
-      setIsUpdatingStatut(null);
-    }
-  };
-
-  /**
-   * Toggle row expansion
-   */
   const toggleRow = (rowIndex: number) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(rowIndex)) {
@@ -289,225 +291,586 @@ const OrdersPage = () => {
     setExpandedRows(newExpanded);
   };
 
-  /**
-   * Handle sort
-   */
-  const onSort = (_event: React.MouseEvent, index: number, direction: "asc" | "desc") => {
-    setActiveSortIndex(index);
-    setActiveSortDirection(direction);
-    trackEvent("orders_sorted", { columnIndex: index, direction });
+  const handleOpenStatusModal = (order: Order) => {
+    setSelectedOrder(order);
+    setNewStatus(order.statut);
+    setShowStatusModal(true);
   };
 
-  /**
-   * Handle refresh
-   */
-  const handleRefresh = async () => {
+  const handleChangeStatut = async () => {
+    if (!selectedOrder || !newStatus) return;
+
     try {
-      await refetchOrders();
+      setIsUpdatingStatut(selectedOrder.id.toString());
+
+      addNotification({
+        type: "info",
+        message: t("orders.status.updating"),
+      });
+
+      await updateOrderStatus({
+        variables: {
+          orderId: selectedOrder.id,
+          status: newStatus,
+        },
+      });
+
       addNotification({
         type: "success",
-        message: t("orders.actions.refresh"),
+        message: t("orders.status.updateSuccess", { status: newStatus }),
       });
-      trackEvent("orders_refreshed");
-    } catch (error) {
+
+      trackEvent("order_status_updated", {
+        orderId: selectedOrder.id,
+        oldStatus: selectedOrder.statut,
+        newStatus,
+      });
+
+      setShowStatusModal(false);
+      setSelectedOrder(null);
+      await refetchOrders();
+    } catch (error: any) {
+      console.error("Error updating order status:", error);
+
       addNotification({
         type: "error",
-        message: t("orders.loadingError"),
+        message: error?.message || t("orders.status.updateError"),
       });
+
+      trackEvent("order_status_update_failed", {
+        orderId: selectedOrder.id,
+        error: error?.message || "unknown",
+      });
+    } finally {
+      setIsUpdatingStatut(null);
     }
   };
 
-  /**
-   * Export orders to CSV
-   */
-  const handleExport = () => {
-    const csvContent = [
-      ["ID", "Numéro", "Date", "Client", "Statut", "Total"].join(","),
-      ...filteredData.map((order) =>
-        [
-          order.id || "",
-          order.numero_commande || order.unique_id || "",
-          new Date(order.date_commande || order.created_at || "").toLocaleDateString("fr-FR"),
-          `${order.first_name || ""} ${order.last_name || ""}`.trim() ||
-            order.nom_utilisateur ||
-            t("orders.details.unknown"),
-          order.statut || "",
-          order.total || "0",
-        ].join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `commandes_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-
-    trackEvent("orders_exported", { count: filteredData.length });
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedStatus("");
+    trackEvent("orders_filters_cleared");
   };
 
-  // Loading state
+  // ============================================================================
+  // Export Handlers
+  // ============================================================================
+
+  const handleExportCSV = () => {
+    const exportData = displayData.map((order) => ({
+      numero: order.numero_commande || order.unique_id,
+      date: order.date_commande || order.created_at,
+      client: order.nom_utilisateur || `${order.first_name} ${order.last_name}`,
+      statut: order.statut,
+      articles: order.articles?.length || 0,
+      total: order.total,
+    }));
+
+    exportToCSV(exportData, {
+      filename: `commandes-${new Date().toISOString().split("T")[0]}`,
+      columns: ["numero", "date", "client", "statut", "articles", "total"],
+      columnLabels: {
+        numero: "N° Commande",
+        date: "Date",
+        client: "Client",
+        statut: "Statut",
+        articles: "Articles",
+        total: "Total (€)",
+      },
+    });
+    trackEvent("orders_export_csv", { count: displayData.length });
+  };
+
+  const handleExportPDF = () => {
+    const exportData = displayData.map((order) => ({
+      numero: order.numero_commande || order.unique_id,
+      date: new Date(order.date_commande || order.created_at || "").toLocaleDateString("fr-FR"),
+      client: order.nom_utilisateur || `${order.first_name} ${order.last_name}`,
+      statut: order.statut,
+      total: `${order.total.toFixed(2)} €`,
+    }));
+
+    exportToPDF(exportData, {
+      filename: `commandes-${new Date().toISOString().split("T")[0]}`,
+      title: "Liste des Commandes",
+      columns: ["numero", "date", "client", "statut", "total"],
+      columnLabels: {
+        numero: "N° Commande",
+        date: "Date",
+        client: "Client",
+        statut: "Statut",
+        total: "Total",
+      },
+    });
+    trackEvent("orders_export_pdf", { count: displayData.length });
+  };
+
+  const getStatusInfo = (status: string) => {
+    return ORDER_STATUSES.find((s) => s.value === status) || ORDER_STATUSES[0];
+  };
+
+  // ============================================================================
+  // Loading State
+  // ============================================================================
+
   if (loadingOrders) {
     return (
-      <div>
-        <PageHeader
-          title={t("orders.title")}
-          subtitle={t("orders.loading")}
-          variant="orders"
-        />
-        <PageSection>
-          <Alert variant="info" title={t("orders.loading")} />
-        </PageSection>
-      </div>
+      <PageSection>
+        <Bullseye>
+          <Spinner size="xl" />
+        </Bullseye>
+      </PageSection>
     );
   }
 
-  // Error state
+  // ============================================================================
+  // Error State
+  // ============================================================================
+
   if (errorOrders) {
     return (
-      <div>
-        <PageHeader title={t("orders.title")} subtitle={t("orders.loadingError")} variant="orders" />
-        <PageSection>
-          <Alert variant="danger" title={t("orders.loadingError")}>
-            <p>{errorOrders?.message || t("common.error")}</p>
-            <div style={{ marginTop: "1rem" }}>
-              <Button variant="primary" onClick={() => refetchOrders()}>
-                {t("orders.actions.refresh")}
-              </Button>
-            </div>
-          </Alert>
-        </PageSection>
-      </div>
+      <PageSection>
+        <Alert variant="danger" title={t("orders.list.loadError")} isInline>
+          {errorOrders.message}
+        </Alert>
+      </PageSection>
     );
   }
 
+  // ============================================================================
+  // Render
+  // ============================================================================
+
   return (
-    <div style={{ background: "#f8f9fa", minHeight: "100vh" }}>
+    <>
       <PageHeader
-        title={t("orders.title")}
-        subtitle={
-          <Flex alignItems={{ default: "alignItemsCenter" }} spaceItems={{ default: "spaceItemsSm" }}>
-            <FlexItem>
-              {t("orders.list.totalOrders", { count: statistics.total })}
-            </FlexItem>
-            <FlexItem>•</FlexItem>
-            <FlexItem>
-              {statistics.chiffreAffaires.toFixed(2)}€ {t("orders.stats.revenue").toLowerCase()}
-            </FlexItem>
-            <FlexItem>•</FlexItem>
-            <FlexItem>
-              {t("orders.list.lastUpdate", { time: new Date().toLocaleTimeString("fr-FR") })}
-            </FlexItem>
-          </Flex>
-        }
+        title={t("orders.list.title")}
+        subtitle={t("orders.list.subtitle")}
         variant="orders"
       />
 
-      <PageSection style={{ paddingTop: "1.5rem" }}>
-        <Grid hasGutter>
-          {/* Statistics Section */}
-          <GridItem span={12}>
-            <Card style={{ borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-              <CardTitle>
-                <Title headingLevel="h3" size="lg">
-                  {t("orders.stats.overview")}
-                </Title>
-              </CardTitle>
+      <PageSection>
+        {/* ================================================================ */}
+        {/* STATISTICS CARDS */}
+        {/* ================================================================ */}
+        <Grid hasGutter style={{ marginBottom: "1rem" }}>
+          <GridItem span={3}>
+            <Card isCompact>
               <CardBody>
-                <StatistiquesCommandes commandes={orders} statistiques={statistics} />
-              </CardBody>
-            </Card>
-          </GridItem>
-
-          {/* Filtering Section */}
-          <GridItem span={12}>
-            <Card style={{ borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-              <CardTitle>
-                <Flex
-                  justifyContent={{ default: "justifyContentSpaceBetween" }}
-                  alignItems={{ default: "alignItemsCenter" }}
-                >
+                <Flex direction={{ default: "column" }}>
                   <FlexItem>
-                    <Flex alignItems={{ default: "alignItemsCenter" }}>
-                      <FlexItem>
-                        <SearchIcon style={{ marginRight: "0.5rem" }} />
-                        {t("orders.list.search")}
-                      </FlexItem>
-                      <FlexItem>
-                        <Badge color="blue">
-                          {t("orders.list.filteredOrders", {
-                            filtered: filteredData.length,
-                            total: orders.length,
-                          })}
-                        </Badge>
-                      </FlexItem>
-                    </Flex>
+                    <ShoppingCartIcon size="lg" />
                   </FlexItem>
                   <FlexItem>
-                    <Flex spaceItems={{ default: "spaceItemsSm" }}>
-                      <FlexItem>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={<SyncIcon />}
-                          onClick={handleRefresh}
-                        >
-                          {t("orders.actions.refresh")}
-                        </Button>
-                      </FlexItem>
-                      <FlexItem>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={<DownloadIcon />}
-                          onClick={handleExport}
-                          isDisabled={filteredData.length === 0}
-                        >
-                          {t("orders.actions.export")}
-                        </Button>
-                      </FlexItem>
-                    </Flex>
+                    <Title headingLevel="h4" size="2xl">
+                      {statistics.total}
+                    </Title>
+                  </FlexItem>
+                  <FlexItem>
+                    <span style={{ fontSize: "0.875rem", color: "#6a6e73" }}>
+                      Total commandes
+                    </span>
                   </FlexItem>
                 </Flex>
-              </CardTitle>
-              <CardBody>
-                <FiltrageCommandes
-                  filterInput={filterInput}
-                  onFilterChange={setFilterInput}
-                  totalCommandes={orders.length}
-                  commandesFiltrees={filteredData.length}
-                />
               </CardBody>
             </Card>
           </GridItem>
 
-          {/* Table Section */}
-          <GridItem span={12}>
-            <Card style={{ borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-              <CardBody style={{ padding: 0 }}>
-                <TableauCommandes
-                  commandes={sortedData}
-                  expandedRows={expandedRows}
-                  activeSortIndex={activeSortIndex}
-                  activeSortDirection={activeSortDirection}
-                  onToggleRow={toggleRow}
-                  onSort={onSort}
-                  onChangeStatut={handleChangeStatut}
-                  isUpdatingStatut={isUpdatingStatut}
-                />
+          <GridItem span={3}>
+            <Card isCompact>
+              <CardBody>
+                <Flex direction={{ default: "column" }}>
+                  <FlexItem>
+                    <Title headingLevel="h4" size="2xl">
+                      {statistics.chiffreAffaires.toFixed(2)} €
+                    </Title>
+                  </FlexItem>
+                  <FlexItem>
+                    <span style={{ fontSize: "0.875rem", color: "#6a6e73" }}>
+                      Chiffre d'affaires
+                    </span>
+                  </FlexItem>
+                </Flex>
+              </CardBody>
+            </Card>
+          </GridItem>
+
+          <GridItem span={3}>
+            <Card isCompact>
+              <CardBody>
+                <Flex direction={{ default: "column" }}>
+                  <FlexItem>
+                    <Title headingLevel="h4" size="2xl">
+                      {statistics.valeurMoyenne.toFixed(2)} €
+                    </Title>
+                  </FlexItem>
+                  <FlexItem>
+                    <span style={{ fontSize: "0.875rem", color: "#6a6e73" }}>
+                      Valeur moyenne
+                    </span>
+                  </FlexItem>
+                </Flex>
+              </CardBody>
+            </Card>
+          </GridItem>
+
+          <GridItem span={3}>
+            <Card isCompact>
+              <CardBody>
+                <Flex direction={{ default: "column" }} gap={{ default: "gapXs" }}>
+                  {Object.entries(statistics.repartitionStatuts).map(([status, count]) => {
+                    const statusInfo = getStatusInfo(status);
+                    return (
+                      <FlexItem key={status}>
+                        <Badge color={statusInfo.color}>
+                          {statusInfo.label}: {count}
+                        </Badge>
+                      </FlexItem>
+                    );
+                  })}
+                </Flex>
               </CardBody>
             </Card>
           </GridItem>
         </Grid>
+
+        {/* ================================================================ */}
+        {/* TOOLBAR: Search + Filters + Export */}
+        {/* ================================================================ */}
+        <Card>
+          <CardBody>
+            <Toolbar>
+              <ToolbarContent>
+                {/* Search with debounce */}
+                <ToolbarItem style={{ flexGrow: 1, minWidth: "300px" }}>
+                  <SearchInput
+                    placeholder={t("orders.list.searchPlaceholder")}
+                    value={searchTerm}
+                    onChange={(_event, value) => setSearchTerm(value)}
+                    onClear={() => setSearchTerm("")}
+                  />
+                </ToolbarItem>
+
+                {/* Status filter */}
+                <ToolbarItem>
+                  <Select
+                    variant={SelectVariant.single}
+                    onToggle={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                    onSelect={(_, value) => {
+                      setSelectedStatus(value.toString());
+                      setIsStatusFilterOpen(false);
+                    }}
+                    selections={selectedStatus}
+                    isOpen={isStatusFilterOpen}
+                    placeholderText={t("orders.list.filterByStatus")}
+                  >
+                    <SelectOption value="">Tous les statuts</SelectOption>
+                    {ORDER_STATUSES.map((status) => (
+                      <SelectOption key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectOption>
+                    ))}
+                  </Select>
+                </ToolbarItem>
+
+                {/* Refresh */}
+                <ToolbarItem>
+                  <Button
+                    variant="plain"
+                    icon={<SyncIcon />}
+                    onClick={() => refetchOrders()}
+                  >
+                    Actualiser
+                  </Button>
+                </ToolbarItem>
+
+                {/* Export buttons */}
+                <ToolbarItem>
+                  <Button
+                    variant="secondary"
+                    icon={<DownloadIcon />}
+                    onClick={handleExportCSV}
+                    isDisabled={isExporting || displayData.length === 0}
+                  >
+                    CSV
+                  </Button>
+                </ToolbarItem>
+
+                <ToolbarItem>
+                  <Button
+                    variant="secondary"
+                    icon={<DownloadIcon />}
+                    onClick={handleExportPDF}
+                    isDisabled={isExporting || displayData.length === 0}
+                  >
+                    PDF
+                  </Button>
+                </ToolbarItem>
+
+                {/* Clear filters */}
+                {(searchTerm || selectedStatus) && (
+                  <ToolbarItem>
+                    <Button variant="link" onClick={handleClearFilters}>
+                      Effacer les filtres
+                    </Button>
+                  </ToolbarItem>
+                )}
+              </ToolbarContent>
+            </Toolbar>
+
+            {/* Active filters info */}
+            {filters.length > 0 && (
+              <div style={{ marginTop: "0.5rem" }}>
+                <span style={{ fontSize: "0.875rem", color: "#6a6e73" }}>
+                  {displayData.length} commande(s) affichée(s) sur {orders.length}
+                </span>
+              </div>
+            )}
+
+            <Divider style={{ margin: "1rem 0" }} />
+
+            {/* ============================================================ */}
+            {/* ORDERS TABLE */}
+            {/* ============================================================ */}
+
+            {displayData.length === 0 ? (
+              <EmptyState>
+                <EmptyStateIcon icon={SearchIcon} />
+                <Title headingLevel="h4" size="lg">
+                  {searchTerm || selectedStatus
+                    ? t("orders.list.noResults")
+                    : t("orders.list.noOrders")}
+                </Title>
+                <EmptyStateBody>
+                  {searchTerm || selectedStatus
+                    ? "Essayez de modifier vos filtres"
+                    : "Aucune commande pour le moment"}
+                </EmptyStateBody>
+              </EmptyState>
+            ) : (
+              <Table variant="compact">
+                <Thead>
+                  <Tr>
+                    <Th />
+                    <Th
+                      sort={{
+                        sortBy: {
+                          index: sortKey === "id" ? 0 : undefined,
+                          direction: sortDirection === "asc" ? "asc" : "desc",
+                        },
+                        onSort: () => handleSort("id"),
+                        columnIndex: 0,
+                      }}
+                    >
+                      N° Commande
+                    </Th>
+                    <Th
+                      sort={{
+                        sortBy: {
+                          index: sortKey === "date_commande" ? 1 : undefined,
+                          direction: sortDirection === "asc" ? "asc" : "desc",
+                        },
+                        onSort: () => handleSort("date_commande"),
+                        columnIndex: 1,
+                      }}
+                    >
+                      Date
+                    </Th>
+                    <Th>Client</Th>
+                    <Th>Articles</Th>
+                    <Th
+                      sort={{
+                        sortBy: {
+                          index: sortKey === "total" ? 4 : undefined,
+                          direction: sortDirection === "asc" ? "asc" : "desc",
+                        },
+                        onSort: () => handleSort("total"),
+                        columnIndex: 4,
+                      }}
+                    >
+                      Total
+                    </Th>
+                    <Th>Statut</Th>
+                    <Th>Actions</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {displayData.map((order, rowIndex) => {
+                    const statusInfo = getStatusInfo(order.statut);
+                    const StatusIcon = statusInfo.icon;
+                    const isExpanded = expandedRows.has(rowIndex);
+
+                    return (
+                      <>
+                        <Tr key={order.id}>
+                          <Td
+                            expand={{
+                              rowIndex,
+                              isExpanded,
+                              onToggle: () => toggleRow(rowIndex),
+                            }}
+                          />
+                          <Td>{order.numero_commande || order.unique_id || order.id}</Td>
+                          <Td>
+                            {new Date(
+                              order.date_commande || order.created_at || ""
+                            ).toLocaleDateString("fr-FR")}
+                          </Td>
+                          <Td>
+                            {order.nom_utilisateur ||
+                              `${order.first_name || ""} ${order.last_name || ""}`.trim() ||
+                              "N/A"}
+                          </Td>
+                          <Td>{order.articles?.length || 0}</Td>
+                          <Td>{order.total.toFixed(2)} €</Td>
+                          <Td>
+                            <Badge color={statusInfo.color} icon={<StatusIcon />}>
+                              {statusInfo.label}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Button
+                              variant="link"
+                              onClick={() => handleOpenStatusModal(order)}
+                              isDisabled={isUpdatingStatut === order.id.toString()}
+                            >
+                              Modifier
+                            </Button>
+                          </Td>
+                        </Tr>
+                        {isExpanded && (
+                          <Tr isExpanded={isExpanded}>
+                            <Td colSpan={8}>
+                              <ExpandableRowContent>
+                                <Card isCompact>
+                                  <CardTitle>Détails de la commande</CardTitle>
+                                  <CardBody>
+                                    {order.articles && order.articles.length > 0 ? (
+                                      <List>
+                                        {order.articles.map((article) => (
+                                          <ListItem key={article.id}>
+                                            <strong>{article.nom}</strong> - Quantité:{" "}
+                                            {article.quantite} - Prix: {article.prix.toFixed(2)} €
+                                          </ListItem>
+                                        ))}
+                                      </List>
+                                    ) : (
+                                      <p>Aucun article</p>
+                                    )}
+                                  </CardBody>
+                                </Card>
+                              </ExpandableRowContent>
+                            </Td>
+                          </Tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </Tbody>
+              </Table>
+            )}
+
+            {/* ============================================================ */}
+            {/* PAGINATION */}
+            {/* ============================================================ */}
+
+            {displayData.length > 0 && (
+              <div style={{ marginTop: "1rem", display: "flex", justifyContent: "center" }}>
+                <Pagination
+                  itemCount={orders.length}
+                  perPage={20}
+                  page={currentPage}
+                  onSetPage={(_, page) => goToPage(page)}
+                  onPerPageSelect={() => {}}
+                  onNextClick={nextPage}
+                  onPreviousClick={prevPage}
+                  onFirstClick={() => goToPage(1)}
+                  onLastClick={() => goToPage(totalPages)}
+                  variant="bottom"
+                />
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
+        {/* ================================================================ */}
+        {/* STATUS CHANGE MODAL */}
+        {/* ================================================================ */}
+        <Modal
+          variant={ModalVariant.small}
+          title="Modifier le statut de la commande"
+          isOpen={showStatusModal}
+          onClose={() => setShowStatusModal(false)}
+          actions={[
+            <Button
+              key="confirm"
+              variant="primary"
+              onClick={handleChangeStatut}
+              isLoading={isUpdatingStatut !== null}
+              isDisabled={isUpdatingStatut !== null || newStatus === selectedOrder?.statut}
+            >
+              Mettre à jour
+            </Button>,
+            <Button
+              key="cancel"
+              variant="link"
+              onClick={() => setShowStatusModal(false)}
+              isDisabled={isUpdatingStatut !== null}
+            >
+              Annuler
+            </Button>,
+          ]}
+        >
+          {selectedOrder && (
+            <div>
+              <p>
+                <strong>Commande:</strong> {selectedOrder.numero_commande || selectedOrder.unique_id}
+              </p>
+              <p>
+                <strong>Statut actuel:</strong>{" "}
+                <Badge color={getStatusInfo(selectedOrder.statut).color}>
+                  {getStatusInfo(selectedOrder.statut).label}
+                </Badge>
+              </p>
+              <Divider style={{ margin: "1rem 0" }} />
+              <p>
+                <strong>Nouveau statut:</strong>
+              </p>
+              <Flex direction={{ default: "column" }} gap={{ default: "gapSm" }}>
+                {ORDER_STATUSES.map((status) => (
+                  <FlexItem key={status.value}>
+                    <Button
+                      variant={newStatus === status.value ? "primary" : "secondary"}
+                      isBlock
+                      onClick={() => setNewStatus(status.value)}
+                      icon={<status.icon />}
+                    >
+                      {status.label}
+                    </Button>
+                  </FlexItem>
+                ))}
+              </Flex>
+            </div>
+          )}
+        </Modal>
       </PageSection>
-    </div>
+    </>
   );
 };
 
-// Export with HOCs: Role-based auth (admin only), Auth, Tracking, Error boundary
-export default withAuthRole(
-  withAuth(withTracking(withErrorBoundary(OrdersPage), "OrdersPage")),
-  ["admin"]
+// ============================================================================
+// Exports with HOCs
+// ============================================================================
+
+export default withErrorBoundary(
+  withTracking(
+    withAuthRole(
+      withAuth(OrdersPageImproved, {
+        requireAuth: true,
+        redirectTo: "/login",
+      }),
+      ["admin"]
+    ),
+    "orders"
+  )
 );

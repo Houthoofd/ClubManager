@@ -6,13 +6,9 @@ import {
   TabTitleText,
   Alert,
   Badge,
+  Divider,
 } from "@patternfly/react-core";
-import {
-  InboxIcon,
-  CheckCircleIcon,
-  PaperPlaneIcon,
-  ListIcon,
-} from "@patternfly/react-icons";
+import { InboxIcon, CheckCircleIcon, PaperPlaneIcon, ListIcon } from "@patternfly/react-icons";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useAuthStore } from "@/core/store/authStore";
@@ -32,12 +28,12 @@ import {
   useDeleteMessageTypeMutation,
 } from "@/core/api/graphql/generated/graphql";
 import { useGetUsersQuery } from "@/core/api/graphql/generated/graphql";
-import MessagesReceivedTab from "../components/MessagesReceivedTab";
-import MessagesReadTab from "../components/MessagesReadTab";
+import { ReceivedMessagesContent, ReadMessagesContent, MessageStats } from "../components";
 import MessageTypesListTab from "../components/MessageTypesListTab";
 import SendMessageForm from "../components/SendMessageForm";
 import MessageDetailModal from "../components/MessageDetailModal";
 import DeleteMessageModal from "../components/DeleteMessageModal";
+import { useMessageTabs } from "../hooks";
 
 interface Message {
   id: number;
@@ -53,15 +49,18 @@ interface Message {
 }
 
 /**
- * MessagesPage Component
+ * MessagesPage Component - REFACTORED WITH ATOMIC COMPONENTS
  *
- * Main messaging interface with tabs for received/read messages, types and send form
+ * Main messaging interface with tabs for received/read messages, types and send form.
+ * Fully modularized with atomic components and custom hooks.
  *
  * @architecture
  * - GraphQL: Messages queries and mutations
  * - Zustand: authStore (user), uiStore (notifications)
  * - HOCs: withAuth, withTracking, withErrorBoundary
  * - i18n: messages.*
+ * - Atomic Components: ReceivedMessagesContent, ReadMessagesContent, MessageStats
+ * - Custom Hooks: useMessageTabs
  *
  * Features:
  * - 4 tabs: Received, Read, Types, Send
@@ -69,17 +68,18 @@ interface Message {
  * - Delete confirmation modal
  * - Real-time message counts
  * - Message type management
+ * - Search functionality per tab
+ * - Message statistics display
  */
 const MessagesPage = () => {
   const { t } = useTypedTranslation();
   const { trackEvent } = useTracking();
 
   // Zustand stores
-  const user = useAuthStore((state) => state.user);
-  const addNotification = useUiStore((state) => state.addNotification);
+  const user = useAuthStore((state: any) => state.user);
+  const addNotification = useUiStore((state: any) => state.addNotification);
 
   // Local state
-  const [activeTabKey, setActiveTabKey] = useState<number>(0);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -93,6 +93,9 @@ const MessagesPage = () => {
     subject: "",
     content: "",
   });
+
+  // Custom hook for tab management
+  const { activeTabKey, setActiveTabKey } = useMessageTabs();
 
   // GraphQL queries
   const {
@@ -145,7 +148,10 @@ const MessagesPage = () => {
       id: recipient.id,
       message_id: recipient.message_id,
       recipient_id: recipient.recipient_id,
-      title: recipient.message?.subject || recipient.message?.messageType?.type_name || t("messages.list.noMessages"),
+      title:
+        recipient.message?.subject ||
+        recipient.message?.messageType?.type_name ||
+        t("messages.list.noMessages"),
       content: recipient.message?.content || "",
       sender: recipient.message?.sender
         ? `${recipient.message.sender.first_name} ${recipient.message.sender.last_name}`
@@ -166,22 +172,60 @@ const MessagesPage = () => {
     return transformedMessages.filter((msg) => msg.lu);
   }, [transformedMessages]);
 
+  // Transform messages to atomic component format
+  const receivedMessagesFormatted = useMemo(() => {
+    return messagesNonLus.map((msg) => ({
+      id: msg.id,
+      subject: msg.title,
+      content: msg.content,
+      sender: {
+        first_name: msg.sender.split(" ")[0] || "",
+        last_name: msg.sender.split(" ")[1] || "",
+      },
+      type: msg.type,
+      created_at: msg.date_envoi,
+      date: msg.date_envoi,
+      read: msg.lu,
+      lu: msg.lu,
+    }));
+  }, [messagesNonLus]);
+
+  const readMessagesFormatted = useMemo(() => {
+    return messagesLus.map((msg) => ({
+      id: msg.id,
+      subject: msg.title,
+      content: msg.content,
+      sender: {
+        first_name: msg.sender.split(" ")[0] || "",
+        last_name: msg.sender.split(" ")[1] || "",
+      },
+      type: msg.type,
+      created_at: msg.date_envoi,
+      date: msg.date_envoi,
+      read: msg.lu,
+      lu: msg.lu,
+    }));
+  }, [messagesLus]);
+
   /**
    * Handle message click to show details
    */
-  const handleMessageClick = (message: Message) => {
-    setSelectedMessage(message);
-    setIsDetailModalOpen(true);
-    trackEvent("message_detail_opened", { messageId: message.id });
+  const handleMessageClick = (messageId: string | number) => {
+    const message = transformedMessages.find((m) => m.id === Number(messageId));
+    if (message) {
+      setSelectedMessage(message);
+      setIsDetailModalOpen(true);
+      trackEvent("message_detail_opened", { messageId: message.id });
+    }
   };
 
   /**
    * Mark message as read
    */
-  const handleMarkAsRead = async (messageId: number) => {
+  const handleMarkAsRead = async (messageId: string | number) => {
     try {
       await markAsRead({
-        variables: { recipientId: messageId },
+        variables: { recipientId: Number(messageId) },
       });
 
       addNotification({
@@ -191,7 +235,7 @@ const MessagesPage = () => {
 
       trackEvent("message_marked_read", { messageId });
       await refetchMessages();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error marking message as read:", error);
 
       addNotification({
@@ -201,7 +245,7 @@ const MessagesPage = () => {
 
       trackEvent("message_mark_read_failed", {
         messageId,
-        error: error instanceof Error ? error.message : "unknown",
+        error: error?.message || "unknown",
       });
     }
   };
@@ -209,10 +253,13 @@ const MessagesPage = () => {
   /**
    * Show delete confirmation modal
    */
-  const handleShowDeleteModal = (message: Message) => {
-    setMessageToDelete(message);
-    setIsDeleteModalOpen(true);
-    trackEvent("message_delete_clicked", { messageId: message.id });
+  const handleShowDeleteModal = (messageId: string | number) => {
+    const message = transformedMessages.find((m) => m.id === Number(messageId));
+    if (message) {
+      setMessageToDelete(message);
+      setIsDeleteModalOpen(true);
+      trackEvent("message_delete_clicked", { messageId: message.id });
+    }
   };
 
   /**
@@ -240,7 +287,7 @@ const MessagesPage = () => {
       setIsDetailModalOpen(false);
 
       await refetchMessages();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting message:", error);
 
       addNotification({
@@ -250,21 +297,22 @@ const MessagesPage = () => {
 
       trackEvent("message_delete_failed", {
         messageId: messageToDelete.id,
-        error: error instanceof Error ? error.message : "unknown",
+        error: error?.message || "unknown",
       });
     }
   };
 
   /**
-   * Cancel message deletion
+   * Cancel delete modal
    */
   const handleCancelDelete = () => {
     setIsDeleteModalOpen(false);
     setMessageToDelete(null);
+    trackEvent("message_delete_cancelled");
   };
 
   /**
-   * Handle user selection for sending message
+   * Handle user selection for sending messages
    */
   const handleUserSelect = (userId: number) => {
     setSendFormData((prev) => ({
@@ -294,14 +342,14 @@ const MessagesPage = () => {
   };
 
   /**
-   * Handle send message form submission
+   * Send message
    */
   const handleSendMessage = async () => {
     // Validation
     if (sendFormData.selectedUsers.length === 0) {
       addNotification({
         type: "error",
-        message: t("messages.compose.validation.usersRequired"),
+        message: t("messages.send.errors.noRecipients"),
       });
       return;
     }
@@ -309,23 +357,23 @@ const MessagesPage = () => {
     if (!sendFormData.selectedType) {
       addNotification({
         type: "error",
-        message: t("messages.compose.validation.typeRequired"),
+        message: t("messages.send.errors.noType"),
       });
       return;
     }
 
-    if (!sendFormData.subject.trim()) {
+    if (!sendFormData.subject || !sendFormData.subject.trim()) {
       addNotification({
         type: "error",
-        message: t("messages.compose.validation.subjectRequired"),
+        message: t("messages.send.errors.noSubject"),
       });
       return;
     }
 
-    if (!sendFormData.content.trim()) {
+    if (!sendFormData.content || !sendFormData.content.trim()) {
       addNotification({
         type: "error",
-        message: t("messages.compose.validation.contentRequired"),
+        message: t("messages.send.errors.noContent"),
       });
       return;
     }
@@ -335,7 +383,7 @@ const MessagesPage = () => {
         variables: {
           input: {
             sender_id: user?.id || 0,
-            type_message_id: Number(sendFormData.selectedType),
+            type_message_id: parseInt(sendFormData.selectedType),
             subject: sendFormData.subject,
             content: sendFormData.content,
             recipient_ids: sendFormData.selectedUsers,
@@ -345,7 +393,7 @@ const MessagesPage = () => {
 
       addNotification({
         type: "success",
-        message: t("messages.compose.success", { count: sendFormData.selectedUsers.length }),
+        message: t("messages.send.success", { count: sendFormData.selectedUsers.length }),
       });
 
       trackEvent("message_sent", {
@@ -361,24 +409,23 @@ const MessagesPage = () => {
         content: "",
       });
 
-      // Switch to received tab
-      setActiveTabKey(0);
-    } catch (error) {
+      await refetchMessages();
+    } catch (error: any) {
       console.error("Error sending message:", error);
 
       addNotification({
         type: "error",
-        message: t("messages.compose.error"),
+        message: t("messages.send.error"),
       });
 
       trackEvent("message_send_failed", {
-        error: error instanceof Error ? error.message : "unknown",
+        error: error?.message || "unknown",
       });
     }
   };
 
   /**
-   * Handle create message type form change
+   * Handle create form changes
    */
   const handleCreateFormChange = (field: string, value: string) => {
     setCreateFormData((prev) => ({
@@ -388,13 +435,13 @@ const MessagesPage = () => {
   };
 
   /**
-   * Handle create message type submission
+   * Create new message type
    */
   const handleCreateMessageType = async () => {
-    if (!createFormData.title.trim()) {
+    if (!createFormData.title || !createFormData.title.trim()) {
       addNotification({
         type: "error",
-        message: t("messages.types.validation.nameRequired"),
+        message: t("messages.types.errors.noTitle"),
       });
       return;
     }
@@ -404,7 +451,7 @@ const MessagesPage = () => {
         variables: {
           input: {
             type_name: createFormData.title,
-            description: createFormData.content,
+            description: createFormData.content || "",
             active: true,
           },
         },
@@ -412,7 +459,7 @@ const MessagesPage = () => {
 
       addNotification({
         type: "success",
-        message: t("messages.types.success.created"),
+        message: t("messages.types.createSuccess"),
       });
 
       trackEvent("message_type_created", {
@@ -421,16 +468,16 @@ const MessagesPage = () => {
 
       setCreateFormData({ title: "", content: "" });
       await refetchTypes();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating message type:", error);
 
       addNotification({
         type: "error",
-        message: t("messages.types.error.createFailed"),
+        message: t("messages.types.errors.createFailed"),
       });
 
       trackEvent("message_type_create_failed", {
-        error: error instanceof Error ? error.message : "unknown",
+        error: error?.message || "unknown",
       });
     }
   };
@@ -438,13 +485,13 @@ const MessagesPage = () => {
   /**
    * Start editing a message type
    */
-  const handleEditStart = (typeId: number, typeName: string, description: string) => {
+  const handleEditStart = (typeId: number, title: string, content: string) => {
     setEditingMessageTypeId(typeId);
-    setEditFormData({ title: typeName, content: description });
+    setEditFormData({ title, content });
   };
 
   /**
-   * Cancel editing a message type
+   * Cancel editing
    */
   const handleEditCancel = () => {
     setEditingMessageTypeId(null);
@@ -454,11 +501,13 @@ const MessagesPage = () => {
   /**
    * Save edited message type
    */
-  const handleEditSave = async (typeId: number) => {
+  const handleEditSave = async () => {
+    if (!editingMessageTypeId) return;
+
     try {
       await updateMessageType({
         variables: {
-          id: typeId,
+          id: editingMessageTypeId,
           input: {
             type_name: editFormData.title,
             description: editFormData.content,
@@ -468,31 +517,31 @@ const MessagesPage = () => {
 
       addNotification({
         type: "success",
-        message: t("messages.types.success.updated"),
+        message: t("messages.types.updateSuccess"),
       });
 
-      trackEvent("message_type_updated", { typeId });
+      trackEvent("message_type_updated", { typeId: editingMessageTypeId });
 
       setEditingMessageTypeId(null);
       setEditFormData({ title: "", content: "" });
       await refetchTypes();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating message type:", error);
 
       addNotification({
         type: "error",
-        message: t("messages.types.error.updateFailed"),
+        message: t("messages.types.errors.updateFailed"),
       });
 
       trackEvent("message_type_update_failed", {
-        typeId,
-        error: error instanceof Error ? error.message : "unknown",
+        typeId: editingMessageTypeId,
+        error: error?.message || "unknown",
       });
     }
   };
 
   /**
-   * Delete a message type
+   * Delete message type
    */
   const handleDeleteMessageType = async (typeId: number) => {
     try {
@@ -502,28 +551,28 @@ const MessagesPage = () => {
 
       addNotification({
         type: "success",
-        message: t("messages.types.success.deleted"),
+        message: t("messages.types.deleteSuccess"),
       });
 
       trackEvent("message_type_deleted", { typeId });
       await refetchTypes();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting message type:", error);
 
       addNotification({
         type: "error",
-        message: t("messages.types.error.deleteFailed"),
+        message: t("messages.types.errors.deleteFailed"),
       });
 
       trackEvent("message_type_delete_failed", {
         typeId,
-        error: error instanceof Error ? error.message : "unknown",
+        error: error?.message || "unknown",
       });
     }
   };
 
   /**
-   * Handle edit form data change
+   * Handle form data changes
    */
   const handleFormDataChange = (field: string, value: string) => {
     setEditFormData((prev) => ({
@@ -573,6 +622,20 @@ const MessagesPage = () => {
       />
 
       <PageSection>
+        {/* Message Statistics */}
+        <MessageStats
+          totalMessages={transformedMessages.length}
+          unreadMessages={messagesNonLus.length}
+          readMessages={messagesLus.length}
+          showTotal={true}
+          showUnread={true}
+          showRead={true}
+          variant="horizontal"
+        />
+
+        <Divider style={{ marginBottom: "1.5rem" }} />
+
+        {/* Tabs */}
         <Tabs
           activeKey={activeTabKey}
           onSelect={(_, tabIndex) => {
@@ -588,21 +651,21 @@ const MessagesPage = () => {
                 <InboxIcon style={{ marginRight: "0.5rem" }} />
                 {t("messages.tabs.received")}
                 {messagesNonLus.length > 0 && (
-                  <Badge
-                    isRead={false}
-                    style={{ marginLeft: "0.5rem" }}
-                  >
+                  <Badge isRead={false} style={{ marginLeft: "0.5rem" }}>
                     {messagesNonLus.length}
                   </Badge>
                 )}
               </TabTitleText>
             }
           >
-            <MessagesReceivedTab
-              messages={messagesNonLus}
+            <ReceivedMessagesContent
+              messages={receivedMessagesFormatted}
               onMessageClick={handleMessageClick}
               onMarkAsRead={handleMarkAsRead}
               onDelete={handleShowDeleteModal}
+              isLoading={loadingMessages}
+              groupByDate={true}
+              showSearch={true}
             />
           </Tab>
 
@@ -616,10 +679,13 @@ const MessagesPage = () => {
               </TabTitleText>
             }
           >
-            <MessagesReadTab
-              messages={messagesLus}
+            <ReadMessagesContent
+              messages={readMessagesFormatted}
               onMessageClick={handleMessageClick}
               onDelete={handleShowDeleteModal}
+              isLoading={loadingMessages}
+              groupByDate={true}
+              showSearch={true}
             />
           </Tab>
 
@@ -667,10 +733,10 @@ const MessagesPage = () => {
               onUserSelect={handleUserSelect}
               onUserRemove={handleUserRemove}
               onTypeSelect={handleTypeSelect}
-              onSubjectChange={(value) =>
+              onSubjectChange={(value: string) =>
                 setSendFormData((prev) => ({ ...prev, subject: value }))
               }
-              onContentChange={(value) =>
+              onContentChange={(value: string) =>
                 setSendFormData((prev) => ({ ...prev, content: value }))
               }
               onSend={handleSendMessage}
@@ -692,7 +758,6 @@ const MessagesPage = () => {
       <DeleteMessageModal
         isOpen={isDeleteModalOpen}
         message={messageToDelete}
-        deleting={deletingMessage}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
@@ -700,5 +765,4 @@ const MessagesPage = () => {
   );
 };
 
-// Export with HOCs: Auth, Tracking, Error boundary
 export default withAuth(withTracking(withErrorBoundary(MessagesPage), "MessagesPage"));

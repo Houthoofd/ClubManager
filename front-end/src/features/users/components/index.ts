@@ -12,26 +12,36 @@
 // User Forms
 // ============================================================================
 
-export { default as FormulaireUtilisateur } from './FormulaireUtilisateur';
-export { default as FormulaireUtilisateurAjout } from './FormulaireUtilisateurAjout';
+export { default as FormulaireUtilisateur } from "./FormulaireUtilisateur";
+export { default as FormulaireUtilisateurAjout } from "./FormulaireUtilisateurAjout";
 
 // ============================================================================
 // User Tabs
 // ============================================================================
 
-export { default as OngletAjoutUtilisateur } from './OngletAjoutUtilisateur';
-export { default as OngletTableauUtilisateurs } from './OngletTableauUtilisateurs';
+export { default as OngletAjoutUtilisateur } from "./OngletAjoutUtilisateur";
+export { default as OngletTableauUtilisateurs } from "./OngletTableauUtilisateurs";
 
 // ============================================================================
 // User Statistics & Info
 // ============================================================================
 
-export { default as EcheancesPaiement } from './EcheancesPaiement';
-export { default as StatistiquesUtilisateur } from './StatistiquesUtilisateur';
+export { default as EcheancesPaiement } from "./EcheancesPaiement";
+export { default as StatistiquesUtilisateur } from "./StatistiquesUtilisateur";
+
+// ============================================================================
+// Atomic Components (NEW)
+// ============================================================================
+
+export * from "./UserCard";
+export * from "./UserList";
+export * from "./UserSearch";
+export * from "./EmptyUserState";
 
 // ============================================================================
 // Sub-folder Components
 // ============================================================================
 
+// Export all components from sub-folders
 // Note: utilisateurs subfolder components can be added here if needed
 // export * from './utilisateurs';

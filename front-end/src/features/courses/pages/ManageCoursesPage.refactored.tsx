@@ -4,31 +4,17 @@ import {
   PageSection,
   Button,
   Alert,
-  Card,
-  CardBody,
-  CardTitle,
-  CardActions,
-  CardHeader,
   Modal,
   ModalVariant,
   Dropdown,
   DropdownItem,
-  DropdownToggle,
   KebabToggle,
   Title,
   Divider,
-  Label,
   Flex,
   FlexItem,
 } from "@patternfly/react-core";
-import {
-  ClockIcon,
-  UserIcon,
-  PlusCircleIcon,
-  TrashIcon,
-  EditIcon,
-  UsersIcon,
-} from "@patternfly/react-icons";
+import { PlusCircleIcon, TrashIcon, EditIcon } from "@patternfly/react-icons";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { SkeletonDataList } from "@/shared/components/ui";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
@@ -42,6 +28,9 @@ import {
   useGetSessionsQuery,
   useDeleteSessionMutation,
 } from "@/core/api/graphql/generated/graphql";
+import { CourseList, CourseSearch } from "../components";
+import { useCourseSearch } from "../hooks";
+import { formatTime } from "../utils";
 import "@/styles/inscription.css";
 
 interface Instructor {
@@ -61,21 +50,19 @@ interface Session {
   professeurs?: Instructor[];
 }
 
-interface GroupedSessions {
-  [day: string]: Session[];
-}
-
 /**
  * ManageCoursesPage Component
  *
- * Displays and manages all scheduled courses
- * Allows editing, deleting, and managing instructors
+ * Displays and manages all scheduled courses using atomic components.
+ * Refactored to use CourseList, CourseSearch, and useCourseSearch hook.
  *
  * @architecture
  * - GraphQL: useGetSessionsQuery, useDeleteSessionMutation
  * - Zustand: uiStore (notifications)
  * - HOCs: withAuthRole (admin/teacher), withAuth, withTracking, withErrorBoundary
  * - i18n: courses.manage.*
+ * - Atomic Components: CourseList, CourseSearch
+ * - Custom Hooks: useCourseSearch
  *
  * @permissions Admin, Teacher only
  */
@@ -85,12 +72,11 @@ const ManageCoursesPage = () => {
   const { trackEvent } = useTracking();
 
   // Zustand store
-  const addNotification = useUiStore((state) => state.addNotification);
+  const addNotification = useUiStore((state: any) => state.addNotification);
 
   // Local state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
-  const [showLastInstructorWarning, setShowLastInstructorWarning] = useState(false);
   const [actionDropdownOpen, setActionDropdownOpen] = useState<{ [key: number]: boolean }>({});
 
   // GraphQL queries
@@ -106,57 +92,18 @@ const ManageCoursesPage = () => {
   // GraphQL mutations
   const [deleteSession, { loading: deleting }] = useDeleteSessionMutation();
 
-  // Extract sessions from query
+  // Custom hook for search functionality
+  const { searchValue, setSearchValue, clearSearch, filterCourses, hasSearch } = useCourseSearch();
+
+  // Extract and transform sessions from query
   const sessions = useMemo(() => {
     return (sessionsData?.sessions || []) as Session[];
   }, [sessionsData]);
 
-  // Group sessions by day
-  const groupedSessions = useMemo(() => {
-    const groups: GroupedSessions = {};
-
-    const dayOrder = [
-      t("courses.manage.group.monday"),
-      t("courses.manage.group.tuesday"),
-      t("courses.manage.group.wednesday"),
-      t("courses.manage.group.thursday"),
-      t("courses.manage.group.friday"),
-      t("courses.manage.group.saturday"),
-      t("courses.manage.group.sunday"),
-    ];
-
-    sessions.forEach((session) => {
-      const day = session.jour_semaine || session.jour || "Unknown";
-      if (!groups[day]) {
-        groups[day] = [];
-      }
-      groups[day].push(session);
-    });
-
-    // Sort sessions within each day by start time
-    Object.keys(groups).forEach((day) => {
-      groups[day].sort((a, b) => {
-        return (a.heure_debut || "").localeCompare(b.heure_fin || "");
-      });
-    });
-
-    // Return groups sorted by day order
-    const sortedGroups: GroupedSessions = {};
-    dayOrder.forEach((day) => {
-      if (groups[day]) {
-        sortedGroups[day] = groups[day];
-      }
-    });
-
-    // Add any remaining days not in the standard order
-    Object.keys(groups).forEach((day) => {
-      if (!sortedGroups[day]) {
-        sortedGroups[day] = groups[day];
-      }
-    });
-
-    return sortedGroups;
-  }, [sessions, t]);
+  // Apply search filter
+  const filteredSessions = useMemo(() => {
+    return filterCourses(sessions);
+  }, [sessions, filterCourses]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -186,18 +133,21 @@ const ManageCoursesPage = () => {
   /**
    * Navigate to edit course page
    */
-  const handleEditCourse = (session: Session) => {
-    trackEvent("course_edit_clicked", { sessionId: session.id });
-    navigate(`/pages/cours/ajouter?id=${session.id}`);
+  const handleEditCourse = (courseId: string | number) => {
+    trackEvent("course_edit_clicked", { sessionId: courseId });
+    navigate(`/pages/cours/ajouter?id=${courseId}`);
   };
 
   /**
    * Open delete confirmation modal
    */
-  const handleDeleteCourse = (session: Session) => {
-    setSessionToDelete(session);
-    setShowDeleteModal(true);
-    trackEvent("course_delete_clicked", { sessionId: session.id });
+  const handleDeleteCourse = (courseId: string | number) => {
+    const session = sessions.find((s) => s.id === Number(courseId));
+    if (session) {
+      setSessionToDelete(session);
+      setShowDeleteModal(true);
+      trackEvent("course_delete_clicked", { sessionId: session.id });
+    }
   };
 
   /**
@@ -245,14 +195,7 @@ const ManageCoursesPage = () => {
   };
 
   /**
-   * Format time for display (HH:MM)
-   */
-  const formatTime = (time: string): string => {
-    return time?.substring(0, 5) || "";
-  };
-
-  /**
-   * Get type badge variant
+   * Get type badge color
    */
   const getTypeBadgeColor = (type: string): string => {
     const typeColors: { [key: string]: string } = {
@@ -263,6 +206,47 @@ const ManageCoursesPage = () => {
       "Jiu-Jitsu": "red",
     };
     return typeColors[type] || "grey";
+  };
+
+  /**
+   * Render action buttons for each course card
+   */
+  const renderCourseActions = (course: any) => {
+    return (
+      <Dropdown
+        onSelect={() => toggleActionDropdown(course.id)}
+        toggle={
+          <KebabToggle
+            onToggle={() => toggleActionDropdown(course.id)}
+            id={`toggle-${course.id}`}
+          />
+        }
+        isOpen={actionDropdownOpen[course.id] || false}
+        isPlain
+        dropdownItems={[
+          <DropdownItem
+            key="edit"
+            icon={<EditIcon />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditCourse(course.id);
+            }}
+          >
+            {t("courses.manage.actions.edit")}
+          </DropdownItem>,
+          <DropdownItem
+            key="delete"
+            icon={<TrashIcon />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteCourse(course.id);
+            }}
+          >
+            {t("courses.manage.actions.delete")}
+          </DropdownItem>,
+        ]}
+      />
+    );
   };
 
   // Loading state
@@ -359,155 +343,27 @@ const ManageCoursesPage = () => {
 
         <Divider style={{ marginBottom: "2rem" }} />
 
-        {/* Course groups by day */}
-        {Object.keys(groupedSessions).length === 0 ? (
-          <div className="inscription-empty-state">
-            <Title headingLevel="h3" style={{ color: "#6c757d", marginBottom: "1rem" }}>
-              {t("courses.manage.noCourses")}
-            </Title>
-            <p style={{ marginBottom: "1.5rem" }}>{t("courses.manage.noCoursesMessage")}</p>
-            <Button
-              variant="primary"
-              icon={<PlusCircleIcon />}
-              onClick={() => navigate("/pages/cours/ajouter")}
-            >
-              {t("courses.manage.createFirst")}
-            </Button>
-          </div>
-        ) : (
-          Object.entries(groupedSessions).map(([day, daySessions]) => (
-            <div key={day} style={{ marginBottom: "2rem" }}>
-              {/* Day header */}
-              <div style={{ marginBottom: "1rem" }}>
-                <Title headingLevel="h2" size="lg">
-                  {day}
-                </Title>
-                <p style={{ fontSize: "0.875rem", color: "#6a6e73" }}>
-                  {daySessions.length} {t("courses.manage.stats.coursesPerDay")}
-                </p>
-              </div>
-
-              {/* Sessions for this day */}
-              <div style={{ display: "grid", gap: "1rem" }}>
-                {daySessions.map((session) => (
-                  <Card key={session.id} isRounded isCompact>
-                    <CardHeader>
-                      <CardTitle>
-                        <Flex
-                          justifyContent={{ default: "justifyContentSpaceBetween" }}
-                          alignItems={{ default: "alignItemsCenter" }}
-                        >
-                          <FlexItem>
-                            <Label color={getTypeBadgeColor(session.type_cours) as any}>
-                              {session.type_cours}
-                            </Label>
-                          </FlexItem>
-                          <FlexItem>
-                            <Dropdown
-                              onSelect={() => toggleActionDropdown(session.id)}
-                              toggle={
-                                <KebabToggle
-                                  onToggle={() => toggleActionDropdown(session.id)}
-                                  id={`toggle-${session.id}`}
-                                />
-                              }
-                              isOpen={actionDropdownOpen[session.id] || false}
-                              isPlain
-                              dropdownItems={[
-                                <DropdownItem
-                                  key="edit"
-                                  icon={<EditIcon />}
-                                  onClick={() => handleEditCourse(session)}
-                                >
-                                  {t("courses.manage.actions.edit")}
-                                </DropdownItem>,
-                                <DropdownItem
-                                  key="delete"
-                                  icon={<TrashIcon />}
-                                  onClick={() => handleDeleteCourse(session)}
-                                >
-                                  {t("courses.manage.actions.delete")}
-                                </DropdownItem>,
-                              ]}
-                            />
-                          </FlexItem>
-                        </Flex>
-                      </CardTitle>
-                    </CardHeader>
-
-                    <CardBody>
-                      <Flex direction={{ default: "column" }} spaceItems={{ default: "spaceItemsSm" }}>
-                        {/* Course name */}
-                        {session.nom && (
-                          <FlexItem>
-                            <strong>{session.nom}</strong>
-                          </FlexItem>
-                        )}
-
-                        {/* Schedule */}
-                        <FlexItem>
-                          <Flex alignItems={{ default: "alignItemsCenter" }}>
-                            <FlexItem>
-                              <ClockIcon style={{ marginRight: "0.5rem", color: "#6a6e73" }} />
-                            </FlexItem>
-                            <FlexItem>
-                              {formatTime(session.heure_debut)} - {formatTime(session.heure_fin)}
-                            </FlexItem>
-                          </Flex>
-                        </FlexItem>
-
-                        {/* Instructors */}
-                        {session.professeurs && session.professeurs.length > 0 && (
-                          <FlexItem>
-                            <Flex alignItems={{ default: "alignItemsCenter" }}>
-                              <FlexItem>
-                                {session.professeurs.length > 1 ? (
-                                  <UsersIcon style={{ marginRight: "0.5rem", color: "#6a6e73" }} />
-                                ) : (
-                                  <UserIcon style={{ marginRight: "0.5rem", color: "#6a6e73" }} />
-                                )}
-                              </FlexItem>
-                              <FlexItem>
-                                <Flex spaceItems={{ default: "spaceItemsXs" }}>
-                                  {session.professeurs.map((prof, idx) => (
-                                    <FlexItem key={prof.id}>
-                                      <Label color="blue" isCompact>
-                                        {prof.prenom} {prof.nom}
-                                      </Label>
-                                    </FlexItem>
-                                  ))}
-                                </Flex>
-                              </FlexItem>
-                            </Flex>
-                          </FlexItem>
-                        )}
-                      </Flex>
-                    </CardBody>
-
-                    <CardActions>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={<EditIcon />}
-                        onClick={() => handleEditCourse(session)}
-                      >
-                        {t("courses.manage.actions.edit")}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        icon={<TrashIcon />}
-                        onClick={() => handleDeleteCourse(session)}
-                      >
-                        {t("courses.manage.actions.delete")}
-                      </Button>
-                    </CardActions>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))
+        {/* Search Component */}
+        {sessions.length > 0 && (
+          <CourseSearch
+            value={searchValue}
+            onChange={setSearchValue}
+            onClear={clearSearch}
+            resultsCount={filteredSessions.length}
+            totalCount={sessions.length}
+            showResultsInfo={hasSearch}
+          />
         )}
+
+        {/* Course List Component */}
+        <CourseList
+          courses={filteredSessions}
+          groupByDay={true}
+          isFiltered={hasSearch}
+          onCourseClick={handleEditCourse}
+          renderActions={renderCourseActions}
+          isLoading={loadingSessions}
+        />
       </PageSection>
 
       {/* Delete confirmation modal */}
@@ -555,8 +411,7 @@ const ManageCoursesPage = () => {
   );
 };
 
-// Export with HOCs: Role-based auth, Auth, Tracking, Error boundary
 export default withAuthRole(
   withAuth(withTracking(withErrorBoundary(ManageCoursesPage), "ManageCoursesPage")),
-  ["admin", "teacher"]
+  ["admin", "teacher"],
 );

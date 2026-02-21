@@ -6,5 +6,13 @@
  * This file re-exports all message-related hooks from hooks-legacy
  */
 
-// Re-export all hooks from hooks-legacy
+// ============================================================================
+// Business Logic Hooks (NEW - Modular Architecture)
+// ============================================================================
+export { useMessageSearch } from "./useMessageSearch";
+export { useMessageTabs } from "./useMessageTabs";
+
+// ============================================================================
+// Legacy Hooks
+// ============================================================================
 export * from "../hooks-legacy";

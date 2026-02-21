@@ -8,5 +8,6 @@
  *   import { AddUserPage, UserDetailPage } from '@/features/users/pages';
  */
 
-export { default as AddUserPage } from './AddUserPage';
-export { default as UserDetailPage } from './UserDetailPage';
+export { default as AddUserPage } from "./AddUserPage";
+export { default as UserDetailPage } from "./UserDetailPage";
+export { ManageUsersPage, default as ManageUsersPageDefault } from "./ManageUsersPage";

@@ -1,7 +1,10 @@
-// Stats Feature Hooks - Barrel Export
+/**
+ * Stats Hooks - Barrel Export
+ *
+ * Centralized export point for all stats-related hooks
+ */
 
-// Helper hooks for stats formatting
-export { useAuthRedirect } from "@/features/auth/hooks/useAuthRedirect";
+export * from "./useStatsData";
 
-// Re-export all dashboard hooks from hooks-legacy
-export * from "../hooks-legacy";
+// Legacy hooks (if needed)
+// export * from "../hooks-legacy";

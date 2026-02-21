@@ -23,7 +23,7 @@ export {
   useAjouterProfesseur,
   useModifierProfesseur,
   useSupprimerProfesseur,
-} from '@/features/courses/hooks/useProfesseurs';
+} from "@/features/courses/hooks/useProfesseurs";
 
 // ============================================================================
 // Feature-specific types for hooks
@@ -42,7 +42,7 @@ export type {
   PlanningCourse,
   PlanningStatistics,
   PlanningFilter,
-} from '../types';
+} from "../types";
 
 // ============================================================================
 // Additional hook utilities
@@ -67,3 +67,13 @@ export type UseTeacherMutationReturn = {
   error: Error | null;
   success: boolean;
 };
+
+// ============================================================================
+// Business Logic Hooks (Custom/Modular)
+// ============================================================================
+
+export { useTeacherSearch, default as useTeacherSearchDefault } from "./useTeacherSearch";
+export type { UseTeacherSearchOptions, UseTeacherSearchReturn } from "./useTeacherSearch";
+
+export { useTeacherTabs, default as useTeacherTabsDefault } from "./useTeacherTabs";
+export type { UseTeacherTabsOptions, UseTeacherTabsReturn } from "./useTeacherTabs";

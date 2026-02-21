@@ -9,53 +9,62 @@
  */
 
 // ============================================================================
-// Course Cards
+// Atomic Components (NEW - Modular Architecture)
 // ============================================================================
 
-export { default as CarteCours } from './CarteCours';
-export { default as CoursCard } from './CoursCard';
+export { CourseCard } from "./CourseCard";
+export { CourseList } from "./CourseList";
+export { CourseSearch } from "./CourseSearch";
+export { EmptyCourseState } from "./EmptyCourseState";
+
+// ============================================================================
+// Course Cards (Legacy)
+// ============================================================================
+
+export { default as CarteCours } from "./CarteCours";
+export { default as CoursCard } from "./CoursCard";
 
 // ============================================================================
 // Course Forms
 // ============================================================================
 
-export { default as CoursForm } from './CoursForm';
-export { default as FormulaireCours } from './FormulaireCours';
+export { default as CoursForm } from "./CoursForm";
+export { default as FormulaireCours } from "./FormulaireCours";
 
 // ============================================================================
-// Course Lists
+// Course Lists (Legacy)
 // ============================================================================
 
-export { default as CoursList } from './CoursList';
-export { default as ListeCours } from './ListeCours';
+export { default as CoursList } from "./CoursList";
+export { default as ListeCours } from "./ListeCours";
 
 // ============================================================================
 // Modals
 // ============================================================================
 
-export { default as CoursModals } from './CoursModals';
-export { default as ModalsCours } from './ModalsCours';
+export { default as CoursModals } from "./CoursModals";
+export { default as ModalsCours } from "./ModalsCours";
 
 // ============================================================================
 // Participant Components
 // ============================================================================
 
-export { default as ParticipantCard } from './ParticipantCard';
-export { default as ParticipantsStats } from './ParticipantsStats';
+export { default as ParticipantCard } from "./ParticipantCard";
+export { default as ParticipantsStats } from "./ParticipantsStats";
 
 // ============================================================================
 // Professor Components
 // ============================================================================
 
-export { default as ProfesseurCard } from './ProfesseurCard';
-export { default as ProfesseurForm } from './ProfesseurForm';
-export { default as ProfesseursList } from './ProfesseursList';
+export { default as ProfesseurCard } from "./ProfesseurCard";
+export { default as ProfesseurForm } from "./ProfesseurForm";
+export { default as ProfesseursList } from "./ProfesseursList";
 
 // ============================================================================
 // Utility Components
 // ============================================================================
 
-export { default as SelectAllUsers } from './SelectAllUsers';
+export { default as SelectAllUsers } from "./SelectAllUsers";
 
 // ============================================================================
 // Sub-folder Components
