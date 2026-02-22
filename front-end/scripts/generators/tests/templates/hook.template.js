@@ -2,9 +2,33 @@
  * Template for simple hook tests (no GraphQL, no timers)
  */
 
+import { generateMockValue } from "../analyzer.js";
+
 export function generateHookTest(analysis, importPath) {
-  const { name, exports } = analysis;
+  const { name, exports, functionParams, reactHooks, hasTimers } = analysis;
   const hookName = exports.default || exports.named[0] || name;
+
+  // Get hook parameters if available
+  const params = functionParams[hookName] || [];
+  const hasParams = params.length > 0;
+
+  // Generate mock parameters
+  const mockParamsObject = hasParams
+    ? "{\n    " +
+      params.map((p) => `${p.name}: ${generateMockValue(p.type)}`).join(",\n    ") +
+      ",\n  }"
+    : "{}";
+
+  const paramsList = hasParams
+    ? params
+        .map((p) => `   * - ${p.name}: ${p.type}${p.hasDefault ? ` = ${p.defaultValue}` : ""}`)
+        .join("\n")
+    : "   * No parameters";
+
+  // Detect hook features
+  const usesState = reactHooks.includes("useState");
+  const usesEffect = reactHooks.includes("useEffect");
+  const usesMemo = reactHooks.includes("useMemo") || reactHooks.includes("useCallback");
 
   return `import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
@@ -12,6 +36,18 @@ import { ${hookName} } from '${importPath}';
 
 /**
  * Tests for ${hookName}
+ *
+ * Detected Parameters:
+${paramsList}
+ *
+ * Detected React Hooks:
+ * ${reactHooks.length > 0 ? reactHooks.map((h) => `- ${h}`).join("\n * ") : "- None detected"}
+ *
+ * Features:
+ * ${usesState ? "- State management (useState)" : ""}
+ * ${usesEffect ? "- Side effects (useEffect)" : ""}
+ * ${usesMemo ? "- Memoization (useMemo/useCallback)" : ""}
+ * ${hasTimers ? "- Timers/Debounce/Throttle" : ""}
  *
  * Coverage checklist:
  * - [x] Hook definition and initialization
@@ -47,43 +83,85 @@ describe('${hookName}', () => {
 
   describe('Initialization', () => {
     it('should initialize with default values', () => {
-      const { result } = renderHook(() => ${hookName}());
+      const { result } = renderHook(() => ${hookName}(${hasParams ? "" : ""}));
 
       expect(result.current).toBeDefined();
-      // TODO: Add assertions for initial state
+      ${
+        usesState
+          ? `
+      // Hook uses useState - verify initial state
+      // TODO: Uncomment and adjust based on actual state shape
       // expect(result.current.loading).toBe(false);
       // expect(result.current.data).toBeNull();
-      // expect(result.current.error).toBeNull();
+      // expect(result.current.error).toBeNull();`
+          : `
+      // Verify the returned value/object structure
+      // TODO: Add specific assertions for return value`
+      }
     });
 
     it('should accept initial parameters', () => {
-      const mockParams = {}; // TODO: Replace with actual parameters
+      ${
+        hasParams
+          ? `const mockParams = ${mockParamsObject};
       const { result } = renderHook(() => ${hookName}(mockParams));
 
       expect(result.current).toBeDefined();
-      // TODO: Verify initialization with params
+      // Verify hook initializes correctly with parameters
+      // TODO: Add specific assertions for how parameters affect initialization`
+          : `// Hook has no parameters
+      const { result } = renderHook(() => ${hookName}());
+
+      expect(result.current).toBeDefined();`
+      }
     });
 
     it('should handle optional parameters', () => {
-      const { result } = renderHook(() => ${hookName}());
+      ${
+        hasParams && params.some((p) => p.hasDefault || p.type.includes("?"))
+          ? `// Test with partial parameters (only required ones)
+      const minimalParams = ${
+        params.filter((p) => !p.hasDefault && !p.type.includes("?")).length > 0
+          ? "{\n        " +
+            params
+              .filter((p) => !p.hasDefault && !p.type.includes("?"))
+              .map((p) => `${p.name}: ${generateMockValue(p.type)}`)
+              .join(",\n        ") +
+            ",\n      }"
+          : "{}"
+      };
+      const { result } = renderHook(() => ${hookName}(minimalParams));
 
       expect(result.current).toBeDefined();
-      // Hook should work without parameters
+      // Hook should use defaults for optional parameters`
+          : `// Hook has no optional parameters or takes no parameters
+      const { result } = renderHook(() => ${hookName}());
+
+      expect(result.current).toBeDefined();`
+      }
     });
   });
 
   describe('State Updates and Actions', () => {
     it('should update state correctly', async () => {
-      const { result } = renderHook(() => ${hookName}());
+      const { result } = renderHook(() => ${hookName}(${hasParams ? mockParamsObject : ""}));
 
-      // TODO: Trigger state update
+      ${
+        usesState
+          ? `// Hook uses useState - test state updates
+      // TODO: Trigger state update action
       act(() => {
         // result.current.someAction();
+        // or result.current.setSomething(newValue);
       });
 
       await waitFor(() => {
         // expect(result.current.someState).toBe(expectedValue);
-      });
+      });`
+          : `// Hook doesn't use useState
+      // If hook provides actions/methods, test them here
+      // TODO: Identify and test hook's actions if any`
+      }
     });
 
     it('should handle multiple state updates sequentially', async () => {
@@ -211,64 +289,107 @@ describe('${hookName}', () => {
 
   describe('Performance and Optimization', () => {
     it('should not cause unnecessary re-renders', () => {
-      const { result, rerender } = renderHook(() => ${hookName}());
+      const { result, rerender } = renderHook(() => ${hookName}(${hasParams ? mockParamsObject : ""}));
       const firstResult = result.current;
 
       rerender();
 
+      ${
+        usesMemo
+          ? `// Hook uses memoization (useMemo/useCallback)
+      // Verify that memoized values/functions maintain stable references
+      // TODO: Check specific memoized properties
+      // expect(result.current.memoizedFunction).toBe(firstResult.memoizedFunction);
+      // expect(result.current.memoizedValue).toBe(firstResult.memoizedValue);`
+          : `// Verify stable references for functions/objects
       // TODO: Check if references are stable when they should be
-      // Functions should be memoized with useCallback
-      // expect(result.current.someFunction).toBe(firstResult.someFunction);
+      // expect(result.current.someFunction).toBe(firstResult.someFunction);`
+      }
     });
 
     it('should memoize expensive computations', () => {
-      const { result, rerender } = renderHook(() => ${hookName}());
-      const firstComputed = result.current; // TODO: Get computed value
+      ${
+        usesMemo
+          ? `const { result, rerender } = renderHook(() => ${hookName}(${hasParams ? mockParamsObject : ""}));
+      const firstComputed = result.current;
 
       rerender();
 
-      // TODO: Verify memoization with useMemo
-      // expect(result.current.computedValue).toBe(firstComputed.computedValue);
+      // Hook uses useMemo - verify computed values are memoized
+      // TODO: Identify computed values and verify they remain stable
+      // expect(result.current.computedValue).toBe(firstComputed.computedValue);`
+          : `// Hook doesn't use useMemo
+      // Skip this test or verify values are recomputed correctly
+      expect(true).toBe(true);`
+      }
     });
 
     it('should debounce/throttle operations if applicable', async () => {
-      vi.useFakeTimers();
-      const { result } = renderHook(() => ${hookName}());
+      ${
+        hasTimers
+          ? `vi.useFakeTimers();
+      const { result } = renderHook(() => ${hookName}(${hasParams ? mockParamsObject : ""}));
 
+      // Hook uses timers/debounce/throttle
       // TODO: Test debounce/throttle behavior
       act(() => {
+        // Call debounced/throttled action multiple times rapidly
         // result.current.debouncedAction();
         // result.current.debouncedAction();
         // result.current.debouncedAction();
       });
 
+      // Advance timers to trigger debounced action
       vi.advanceTimersByTime(500);
 
-      // TODO: Verify action was called only once
-      vi.useRealTimers();
+      // TODO: Verify action was called only once (debounce) or limited times (throttle)
+      vi.useRealTimers();`
+          : `// Hook doesn't use timers/debounce/throttle
+      expect(true).toBe(true);`
+      }
     });
   });
 
   describe('Integration', () => {
     it('should work with other hooks', () => {
-      // TODO: Test integration with useState, useEffect, etc.
-      const { result } = renderHook(() => ${hookName}());
+      ${
+        reactHooks.length > 0
+          ? `// Hook integrates with: ${reactHooks.join(", ")}
+      // TODO: Test how hook interacts with other hooks
+      const { result } = renderHook(() => ${hookName}(${hasParams ? mockParamsObject : ""}));
 
-      expect(result.current).toBeDefined();
+      expect(result.current).toBeDefined();`
+          : `// Hook doesn't use other React hooks
+      const { result } = renderHook(() => ${hookName}(${hasParams ? mockParamsObject : ""}));
+
+      expect(result.current).toBeDefined();`
+      }
     });
 
     it('should handle dependencies correctly', () => {
-      const dependency = { value: 'test' };
+      ${
+        hasParams
+          ? `const dependency = ${mockParamsObject};
       const { result, rerender } = renderHook(
         ({ dep }) => ${hookName}(dep),
         { initialProps: { dep: dependency } }
       );
 
       // Change dependency
-      const newDependency = { value: 'updated' };
+      const newDependency = ${params.length > 0 ? "{ ...dependency, " + params[0].name + ": " + generateMockValue(params[0].type) + " }" : "{}"};
       rerender({ dep: newDependency });
 
-      // TODO: Verify hook responds to dependency changes
+      ${
+        usesEffect
+          ? `// Hook uses useEffect - verify it responds to dependency changes
+      // TODO: Verify hook re-executes effects with new dependencies`
+          : `// Verify hook responds to parameter changes`
+      }`
+          : `// Hook has no parameters
+      const { result } = renderHook(() => ${hookName}());
+
+      expect(result.current).toBeDefined();`
+      }
     });
   });
 

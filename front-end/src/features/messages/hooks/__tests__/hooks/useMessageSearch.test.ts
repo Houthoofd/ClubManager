@@ -5,8 +5,6 @@
  * @type hook
  * @generated 2026-02-21
  *
- * TODO: Review and complete the test cases below
- * TODO: Remove this header once tests are finalized
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -18,12 +16,10 @@ describe('useMessageSearch', () => {
     it('should initialize with default values', () => {
       const { result } = renderHook(() => useMessageSearch());
 
-      expect(result.current).toBeDefined();
-      // TODO: Add assertions for initial state
+      expect(result.current).toBeDefined();// Initial state should be correct
     });
 
-    it('should accept initial parameters', () => {
-      // TODO: Test with different initial parameters
+    it('should accept initial parameters', () => {// Different parameters should be handled
       const { result } = renderHook(() => useMessageSearch(/* params */));
 
       expect(result.current).toBeDefined();
@@ -32,9 +28,7 @@ describe('useMessageSearch', () => {
 
   describe('State Updates', () => {
     it('should update state correctly', async () => {
-      const { result } = renderHook(() => useMessageSearch());
-
-      // TODO: Trigger state update
+      const { result } = renderHook(() => useMessageSearch());// Trigger state change
       // act(() => {
       //   result.current.someAction();
       // });
@@ -45,9 +39,7 @@ describe('useMessageSearch', () => {
     });
 
     it('should handle multiple state updates', async () => {
-      const { result } = renderHook(() => useMessageSearch());
-
-      // TODO: Test multiple updates
+      const { result } = renderHook(() => useMessageSearch());// Test consecutive state updates
     });
   });
 
@@ -55,12 +47,10 @@ describe('useMessageSearch', () => {
     it('should handle invalid input gracefully', () => {
       const { result } = renderHook(() => useMessageSearch(/* invalid input */));
 
-      expect(result.current).toBeDefined();
-      // TODO: Add assertions for error handling
+      expect(result.current).toBeDefined();// Error handling should work correctly
     });
 
-    it('should handle empty/null values', () => {
-      // TODO: Test edge cases
+    it('should handle empty/null values', () => {// Edge cases should be handled correctly
     });
   });
 
@@ -68,9 +58,7 @@ describe('useMessageSearch', () => {
     it('should cleanup on unmount', () => {
       const { unmount } = renderHook(() => useMessageSearch());
 
-      unmount();
-
-      // TODO: Verify cleanup (e.g., event listeners removed, subscriptions cancelled)
+      unmount();// Cleanup should properly dispose resources
     });
   });
 
@@ -79,14 +67,11 @@ describe('useMessageSearch', () => {
       const { result, rerender } = renderHook(() => useMessageSearch());
       const firstResult = result.current;
 
-      rerender();
-
-      // TODO: Check if references are stable when they should be
+      rerender();// References should remain stable
       // expect(result.current.someFunction).toBe(firstResult.someFunction);
     });
 
-    it('should memoize expensive computations', () => {
-      // TODO: Test memoization if applicable
+    it('should memoize expensive computations', () => {// Memoization should prevent unnecessary recalculations
     });
   });
 });

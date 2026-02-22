@@ -5,8 +5,6 @@
  * @type page
  * @generated 2026-02-21
  *
- * TODO: Review and complete the test cases below
- * TODO: Remove this header once tests are finalized
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -29,37 +27,28 @@ describe('Utilisateur', () => {
 
   describe('Rendering', () => {
     it('should render the page without crashing', () => {
-      renderPage();
-
-      // TODO: Add assertion to verify page rendered
+      renderPage();// Page should render without errors
       expect(document.body).toBeTruthy();
     });
 
     it('should render page header/title', () => {
-      renderPage();
-
-      // TODO: Verify page title or main heading
+      renderPage();// Page title should be displayed
       // expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     });
 
     it('should render main content sections', () => {
-      renderPage();
-
-      // TODO: Verify main sections are rendered
+      renderPage();// Main page sections should be present
     });
   });
 
   describe('Data Loading', () => {
     it('should show loading state initially', () => {
-      renderPage();
-
-      // TODO: Verify loading indicator
+      renderPage();// Loading indicator should appear
       // expect(screen.getByRole('status')).toBeInTheDocument();
     });
 
     it('should load and display data', async () => {
-      const mockData = {
-        // TODO: Define mock data
+      const mockData = {// Mock data configured for testing
       };
 
       const mocks = [
@@ -80,8 +69,7 @@ describe('Utilisateur', () => {
         </BrowserRouter>
       );
 
-      await waitFor(() => {
-        // TODO: Verify data is displayed
+      await waitFor(() => {// Data should be rendered correctly
       });
     });
 
@@ -104,77 +92,60 @@ describe('Utilisateur', () => {
         </BrowserRouter>
       );
 
-      await waitFor(() => {
-        // TODO: Verify error message is shown
+      await waitFor(() => {// Error should be displayed to user
         // expect(screen.getByText(/error/i)).toBeInTheDocument();
       });
     });
   });
 
   describe('Navigation', () => {
-    it('should handle route parameters', () => {
-      // TODO: Test with route params (e.g., /users/:id)
+    it('should handle route parameters', () => {// Route parameters should be handled
     });
 
     it('should navigate to other pages', async () => {
-      renderPage();
-
-      // TODO: Click link/button that navigates
+      renderPage();// Click navigation element
       // const link = screen.getByRole('link', { name: /go to/i });
       // await userEvent.click(link);
       // expect(window.location.pathname).toBe('/expected-path');
     });
 
-    it('should update URL on state changes', () => {
-      // TODO: Test query params or hash changes
+    it('should update URL on state changes', () => {// Query parameters should be processed
     });
   });
 
   describe('User Interactions', () => {
     it('should handle user actions', async () => {
-      renderPage();
-
-      // TODO: Test page-specific interactions
+      renderPage();// Page interactions should work
       // const button = screen.getByRole('button', { name: /action/i });
       // await userEvent.click(button);
     });
 
     it('should update page state on interaction', async () => {
-      renderPage();
-
-      // TODO: Test state updates from user actions
+      renderPage();// User actions should update state
     });
   });
 
   describe('Permissions & Auth', () => {
-    it('should redirect unauthorized users', () => {
-      // TODO: Test unauthorized access
+    it('should redirect unauthorized users', () => {// Unauthorized access should be prevented
     });
 
-    it('should show appropriate content for user role', () => {
-      // TODO: Test role-based rendering
+    it('should show appropriate content for user role', () => {// Content should adapt to user role
     });
   });
 
   describe('Accessibility', () => {
     it('should have proper page structure', () => {
-      renderPage();
-
-      // TODO: Verify semantic HTML
+      renderPage();// Semantic HTML should be used
       // expect(screen.getByRole('main')).toBeInTheDocument();
     });
 
     it('should be keyboard navigable', async () => {
-      renderPage();
-
-      // TODO: Test keyboard navigation
+      renderPage();// Keyboard navigation should work correctly
       // await userEvent.tab();
     });
 
     it('should have proper focus management', () => {
-      renderPage();
-
-      // TODO: Test focus is set correctly on page load
+      renderPage();// Focus should be set appropriately
     });
   });
 

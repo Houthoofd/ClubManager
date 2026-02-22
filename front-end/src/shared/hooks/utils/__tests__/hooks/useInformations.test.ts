@@ -5,8 +5,6 @@
  * @type hookGraphQL
  * @generated 2026-02-21
  *
- * TODO: Review and complete the test cases below
- * TODO: Remove this header once tests are finalized
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

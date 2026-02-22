@@ -17,9 +17,10 @@ export const config = {
   patterns: {
     hook: /^use[A-Z]\w+\.(ts|tsx)$/,
     component: /^[A-Z]\w+\.(tsx)$/,
-    util: /\.(utils?|helpers?|formatters?)\.(ts|tsx)$/,
+    util: /\.(utils?|helpers?|formatters?|validators?)\.|([-_]formatters?|[-_]helpers?|[-_]utils?|[-_]validators?)\.(ts|tsx)$/,
     store: /-store\.(ts|tsx)$/,
     page: /Page\.(tsx)$/,
+    service: /\.service\.(ts|tsx)$/,
   },
 
   // File types and their characteristics
@@ -41,7 +42,7 @@ export const config = {
       subdir: "components",
     },
     util: {
-      pattern: /\.(utils?|helpers?|formatters?)/,
+      pattern: /\.(utils?|helpers?|formatters?|validators?)/,
       testSuffix: ".test.ts",
       subdir: "utils",
     },
@@ -54,6 +55,11 @@ export const config = {
       pattern: /Page/,
       testSuffix: ".test.tsx",
       subdir: "pages",
+    },
+    service: {
+      pattern: /\.service/,
+      testSuffix: ".test.ts",
+      subdir: "services",
     },
   },
 
@@ -90,6 +96,28 @@ export const config = {
     create: /create\(/,
     zustandImport: /from ['"]zustand['"]/,
     persist: /persist\(/,
+  },
+
+  // i18n patterns
+  i18nPatterns: {
+    useTranslation: /useTranslation/,
+    tFunction: /\bt\(['"]/,
+    i18nImport: /from ['"]react-i18next['"]/,
+  },
+
+  // Routing patterns
+  routingPatterns: {
+    useNavigate: /useNavigate/,
+    useParams: /useParams/,
+    useLocation: /useLocation/,
+    routerImport: /from ['"]react-router(-dom)?['"]/,
+  },
+
+  // Form patterns
+  formPatterns: {
+    useForm: /useForm/,
+    reactHookForm: /from ['"]react-hook-form['"]/,
+    formik: /from ['"]formik['"]/,
   },
 
   // Files to ignore
@@ -180,6 +208,15 @@ export const config = {
       "should handle errors in actions",
       "should persist state if configured",
     ],
+    // Always include these test cases for services
+    serviceDefaults: [
+      "should be defined and exported",
+      "should handle successful API calls",
+      "should handle network errors",
+      "should handle API error responses",
+      "should validate input parameters",
+      "should not mutate input parameters",
+    ],
     // Minimum number of test cases per file type
     minimumTests: {
       hook: 5,
@@ -187,6 +224,7 @@ export const config = {
       util: 5,
       store: 5,
       page: 4,
+      service: 6,
     },
   },
 

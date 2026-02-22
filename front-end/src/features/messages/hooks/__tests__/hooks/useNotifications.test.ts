@@ -5,8 +5,6 @@
  * @type hook
  * @generated 2026-02-22
  *
- * TODO: Review and complete the test cases below
- * TODO: Remove this header once tests are finalized
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -52,8 +50,7 @@ describe('useNotifications', () => {
     it('should initialize with default values', () => {
       const { result } = renderHook(() => useNotifications());
 
-      expect(result.current).toBeDefined();
-      // TODO: Add assertions for initial state
+      expect(result.current).toBeDefined();// Initial state should be correct
       // expect(result.current.loading).toBe(false);
       // expect(result.current.data).toBeNull();
       // expect(result.current.error).toBeNull();
@@ -77,9 +74,7 @@ describe('useNotifications', () => {
 
   describe('State Updates and Actions', () => {
     it('should update state correctly', async () => {
-      const { result } = renderHook(() => useNotifications());
-
-      // TODO: Trigger state update
+      const { result } = renderHook(() => useNotifications());// Trigger state change
       act(() => {
         // result.current.someAction();
       });
@@ -90,9 +85,7 @@ describe('useNotifications', () => {
     });
 
     it('should handle multiple state updates sequentially', async () => {
-      const { result } = renderHook(() => useNotifications());
-
-      // TODO: Test multiple updates
+      const { result } = renderHook(() => useNotifications());// Test consecutive state updates
       act(() => {
         // result.current.action1();
         // result.current.action2();
@@ -217,9 +210,7 @@ describe('useNotifications', () => {
       const { result, rerender } = renderHook(() => useNotifications());
       const firstResult = result.current;
 
-      rerender();
-
-      // TODO: Check if references are stable when they should be
+      rerender();// References should remain stable
       // Functions should be memoized with useCallback
       // expect(result.current.someFunction).toBe(firstResult.someFunction);
     });

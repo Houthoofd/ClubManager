@@ -2,12 +2,13 @@
  * Template generator - Applies the appropriate template based on file analysis
  */
 
-import { getImportPath } from './utils.js';
-import { generateHookTest } from './templates/hook.template.js';
-import { generateGraphQLHookTest } from './templates/hook-graphql.template.js';
-import { generateUtilsTest } from './templates/utils.template.js';
-import { generateComponentTest } from './templates/component.template.js';
-import { generateStoreTest } from './templates/store.template.js';
+import { getImportPath } from "./utils.js";
+import { generateHookTest } from "./templates/hook.template.js";
+import { generateGraphQLHookTest } from "./templates/hook-graphql.template.js";
+import { generateUtilsTest } from "./templates/utils.template.js";
+import { generateComponentTest } from "./templates/component.template.js";
+import { generateStoreTest } from "./templates/store.template.js";
+import { generateServiceTest } from "./templates/service.template.js";
 
 /**
  * Generate test content based on file analysis
@@ -15,36 +16,43 @@ import { generateStoreTest } from './templates/store.template.js';
 export function generateTest(analysis, testFilePath) {
   const importPath = getImportPath(testFilePath, analysis.filePath);
 
-  let testContent = '';
+  let testContent = "";
 
-  switch (analysis.type) {
-    case 'hook':
-      testContent = generateHookTest(analysis, importPath);
-      break;
+  // Detect if file is a service (*.service.ts)
+  const isService = /\.service\.(ts|tsx)$/.test(analysis.fileName);
 
-    case 'hookGraphQL':
-      testContent = generateGraphQLHookTest(analysis, importPath);
-      break;
+  if (isService) {
+    testContent = generateServiceTest(analysis, importPath);
+  } else {
+    switch (analysis.type) {
+      case "hook":
+        testContent = generateHookTest(analysis, importPath);
+        break;
 
-    case 'util':
-      testContent = generateUtilsTest(analysis, importPath);
-      break;
+      case "hookGraphQL":
+        testContent = generateGraphQLHookTest(analysis, importPath);
+        break;
 
-    case 'component':
-      testContent = generateComponentTest(analysis, importPath);
-      break;
+      case "util":
+        testContent = generateUtilsTest(analysis, importPath);
+        break;
 
-    case 'store':
-      testContent = generateStoreTest(analysis, importPath);
-      break;
+      case "component":
+        testContent = generateComponentTest(analysis, importPath);
+        break;
 
-    case 'page':
-      // Pages are similar to components but might have routing
-      testContent = generatePageTest(analysis, importPath);
-      break;
+      case "store":
+        testContent = generateStoreTest(analysis, importPath);
+        break;
 
-    default:
-      testContent = generateGenericTest(analysis, importPath);
+      case "page":
+        // Pages are similar to components but might have routing
+        testContent = generatePageTest(analysis, importPath);
+        break;
+
+      default:
+        testContent = generateGenericTest(analysis, importPath);
+    }
   }
 
   return testContent;
@@ -265,7 +273,7 @@ describe('${exportName}', () => {
  * Generate test file header comment
  */
 export function generateTestHeader(analysis) {
-  const date = new Date().toISOString().split('T')[0];
+  const date = new Date().toISOString().split("T")[0];
 
   return `/**
  * Tests for ${analysis.fileName}
@@ -290,7 +298,7 @@ export function generateTestFooter(analysis) {
   return `
 /**
  * Testing Tips for ${analysis.type}:
- * ${tips.map(tip => `\n * - ${tip}`).join('')}
+ * ${tips.map((tip) => `\n * - ${tip}`).join("")}
  */
 `;
 }
@@ -301,49 +309,58 @@ export function generateTestFooter(analysis) {
 function getTipsForFileType(type) {
   const tips = {
     hook: [
-      'Test initialization with different parameters',
-      'Test state updates and side effects',
-      'Test cleanup on unmount',
-      'Verify memoization and performance',
+      "Test initialization with different parameters",
+      "Test state updates and side effects",
+      "Test cleanup on unmount",
+      "Verify memoization and performance",
     ],
     hookGraphQL: [
-      'Use MockedProvider for GraphQL mocking',
-      'Test loading, error, and success states',
-      'Test refetch and polling behavior',
-      'Test cache interactions',
+      "Use MockedProvider for GraphQL mocking",
+      "Test loading, error, and success states",
+      "Test refetch and polling behavior",
+      "Test cache interactions",
     ],
     util: [
-      'Test with valid and invalid inputs',
-      'Test edge cases and boundary values',
-      'Verify function purity (no mutations)',
-      'Test performance with large datasets',
+      "Test with valid and invalid inputs",
+      "Test edge cases and boundary values",
+      "Verify function purity (no mutations)",
+      "Test performance with large datasets",
     ],
     component: [
-      'Test rendering with different props',
-      'Test user interactions (click, type, etc.)',
-      'Test accessibility (ARIA, keyboard nav)',
-      'Test conditional rendering',
+      "Test rendering with different props",
+      "Test user interactions (click, type, etc.)",
+      "Test accessibility (ARIA, keyboard nav)",
+      "Test conditional rendering",
     ],
     store: [
-      'Test state initialization and updates',
-      'Test selectors and computed values',
-      'Test persistence if applicable',
-      'Test subscriptions and cleanup',
+      "Test state initialization and updates",
+      "Test selectors and computed values",
+      "Test persistence if applicable",
+      "Test subscriptions and cleanup",
     ],
     page: [
-      'Test with routing context',
-      'Test data loading states',
-      'Test navigation and route params',
-      'Test permissions and auth',
+      "Test with routing context",
+      "Test data loading states",
+      "Test navigation and route params",
+      "Test permissions and auth",
+    ],
+    service: [
+      "Test all service methods",
+      "Mock API calls (GraphQL or REST)",
+      "Test error handling and recovery",
+      "Verify request/response transformations",
+      "Test authentication and authorization",
     ],
   };
 
-  return tips[type] || [
-    'Write clear and descriptive test names',
-    'Test both happy path and error cases',
-    'Keep tests isolated and independent',
-    'Mock external dependencies',
-  ];
+  return (
+    tips[type] || [
+      "Write clear and descriptive test names",
+      "Test both happy path and error cases",
+      "Keep tests isolated and independent",
+      "Mock external dependencies",
+    ]
+  );
 }
 
 /**

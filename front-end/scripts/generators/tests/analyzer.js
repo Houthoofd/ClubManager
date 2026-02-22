@@ -2,9 +2,9 @@
  * File analyzer - Detects file types and extracts metadata
  */
 
-import path from 'path';
-import config from './config.js';
-import { readFile, getFileNameWithoutExt } from './utils.js';
+import path from "path";
+import config from "./config.js";
+import { readFile, getFileNameWithoutExt } from "./utils.js";
 
 /**
  * Analyze a source file and determine its type and characteristics
@@ -26,7 +26,13 @@ export function analyzeFile(filePath) {
     exports: extractExports(fileContent),
     imports: extractImports(fileContent),
     functions: extractFunctions(fileContent),
+    functionParams: extractFunctionParams(fileContent),
     props: extractProps(fileContent),
+    propsDetails: extractPropsDetails(fileContent),
+    hasI18n: detectI18n(fileContent),
+    hasRouting: detectRouting(fileContent),
+    hasFormHandling: detectFormHandling(fileContent),
+    returnTypes: extractReturnTypes(fileContent),
   };
 
   // Determine file type
@@ -48,69 +54,68 @@ export function analyzeFile(filePath) {
 }
 
 /**
- * Detect the type of file (hook, component, util, store, page)
+ * Detect the type of file (hook, component, util, store, page, service)
  */
 function detectFileType(fileName, content) {
+  // Check for service (must be before util check)
+  if (config.patterns.service.test(fileName)) {
+    return "service";
+  }
+
   // Check for store
   if (config.patterns.store.test(fileName)) {
-    return 'store';
+    return "store";
   }
 
   // Check for page
   if (config.patterns.page.test(fileName)) {
-    return 'page';
+    return "page";
   }
 
   // Check for hook
   if (config.patterns.hook.test(fileName)) {
     // If hook uses GraphQL, mark as hookGraphQL
     if (detectGraphQL(content)) {
-      return 'hookGraphQL';
+      return "hookGraphQL";
     }
-    return 'hook';
+    return "hook";
   }
 
   // Check for util/helper/formatter
   if (config.patterns.util.test(fileName)) {
-    return 'util';
+    return "util";
   }
 
   // Check for component (must be .tsx and start with capital letter)
   if (config.patterns.component.test(fileName)) {
     // Verify it's actually a component (has JSX/TSX)
     if (hasJSX(content)) {
-      return 'component';
+      return "component";
     }
   }
 
-  return 'unknown';
+  return "unknown";
 }
 
 /**
  * Detect if file uses GraphQL (Apollo Client)
  */
 function detectGraphQL(content) {
-  return Object.values(config.graphqlPatterns).some((pattern) =>
-    pattern.test(content)
-  );
+  return Object.values(config.graphqlPatterns).some((pattern) => pattern.test(content));
 }
 
 /**
  * Detect if file uses timers or debounce/throttle
  */
 function detectTimers(content) {
-  return Object.values(config.timerPatterns).some((pattern) =>
-    pattern.test(content)
-  );
+  return Object.values(config.timerPatterns).some((pattern) => pattern.test(content));
 }
 
 /**
  * Detect if file is a Zustand store
  */
 function detectZustand(content) {
-  return Object.values(config.zustandPatterns).some((pattern) =>
-    pattern.test(content)
-  );
+  return Object.values(config.zustandPatterns).some((pattern) => pattern.test(content));
 }
 
 /**
@@ -132,10 +137,10 @@ function detectReactHooks(content) {
 function hasJSX(content) {
   // Look for JSX patterns
   const jsxPatterns = [
-    /<[A-Z]\w+/,           // <Component
-    /<\w+\s+[^>]*>/,       // <div ...>
-    /return\s*\(/,         // return (
-    /jsx/i,                // jsx in content
+    /<[A-Z]\w+/, // <Component
+    /<\w+\s+[^>]*>/, // <div ...>
+    /return\s*\(/, // return (
+    /jsx/i, // jsx in content
   ];
 
   return jsxPatterns.some((pattern) => pattern.test(content));
@@ -168,7 +173,7 @@ function extractExports(content) {
 
   // Extract named exports
   const namedExportMatches = content.matchAll(
-    /export\s+(?:const|function|class|interface|type|enum)\s+(\w+)/g
+    /export\s+(?:const|function|class|interface|type|enum)\s+(\w+)/g,
   );
   for (const match of namedExportMatches) {
     const name = match[1];
@@ -181,7 +186,7 @@ function extractExports(content) {
   // Extract from export { ... }
   const exportBlockMatches = content.matchAll(/export\s+\{([^}]+)\}/g);
   for (const match of exportBlockMatches) {
-    const names = match[1].split(',').map((name) => {
+    const names = match[1].split(",").map((name) => {
       const trimmed = name.trim();
       // Handle "name as alias" syntax
       const parts = trimmed.split(/\s+as\s+/);
@@ -215,19 +220,19 @@ function extractImports(content) {
   for (const match of importMatches) {
     const source = match[1];
 
-    if (source.startsWith('.')) {
+    if (source.startsWith(".")) {
       imports.local.push(source);
     } else {
       imports.libraries.push(source);
 
       // Check for specific libraries
-      if (source.includes('@apollo/client')) {
+      if (source.includes("@apollo/client")) {
         imports.apollo = true;
       }
-      if (source === 'react' || source.startsWith('react/')) {
+      if (source === "react" || source.startsWith("react/")) {
         imports.react = true;
       }
-      if (source === 'zustand') {
+      if (source === "zustand") {
         imports.zustand = true;
       }
     }
@@ -288,6 +293,166 @@ function extractProps(content) {
 }
 
 /**
+ * Extract detailed props information (types, optional, default values)
+ */
+function extractPropsDetails(content) {
+  const propsDetails = [];
+
+  // Match interface/type definitions
+  const interfacePattern = /(?:interface|type)\s+(\w+Props)\s*\{([^}]+)\}/gs;
+  const matches = content.matchAll(interfacePattern);
+
+  for (const match of matches) {
+    const interfaceName = match[1];
+    const body = match[2];
+
+    // Extract individual prop definitions
+    const propLines = body
+      .split("\n")
+      .filter((line) => line.trim() && !line.trim().startsWith("//"));
+
+    propLines.forEach((line) => {
+      const propMatch = line.match(/(\w+)(\?)?:\s*([^;]+)/);
+      if (propMatch) {
+        propsDetails.push({
+          interface: interfaceName,
+          name: propMatch[1],
+          optional: !!propMatch[2],
+          type: propMatch[3].trim(),
+        });
+      }
+    });
+  }
+
+  return propsDetails;
+}
+
+/**
+ * Extract function parameters with their types
+ */
+function extractFunctionParams(content) {
+  const paramsMap = {};
+
+  // Match function declarations with parameters
+  const patterns = [
+    /(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)/g,
+    /(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s+)?\(([^)]*)\)\s*=>/g,
+  ];
+
+  patterns.forEach((pattern) => {
+    const matches = content.matchAll(pattern);
+    for (const match of matches) {
+      const fnName = match[1];
+      const paramsStr = match[2];
+
+      if (paramsStr.trim()) {
+        const params = paramsStr
+          .split(",")
+          .map((param) => {
+            const trimmed = param.trim();
+            // Handle destructured params, typed params, default values
+            const paramMatch = trimmed.match(
+              /(?:\{([^}]+)\}|(\w+))(?::\s*([^=]+))?(?:\s*=\s*(.+))?/,
+            );
+
+            if (paramMatch) {
+              if (paramMatch[1]) {
+                // Destructured param
+                return {
+                  name: `{ ${paramMatch[1].trim()} }`,
+                  type: paramMatch[3]?.trim() || "any",
+                  hasDefault: !!paramMatch[4],
+                  defaultValue: paramMatch[4]?.trim(),
+                };
+              } else {
+                // Regular param
+                return {
+                  name: paramMatch[2],
+                  type: paramMatch[3]?.trim() || "any",
+                  hasDefault: !!paramMatch[4],
+                  defaultValue: paramMatch[4]?.trim(),
+                };
+              }
+            }
+            return null;
+          })
+          .filter(Boolean);
+
+        paramsMap[fnName] = params;
+      }
+    }
+  });
+
+  return paramsMap;
+}
+
+/**
+ * Extract return types from functions
+ */
+function extractReturnTypes(content) {
+  const returnTypes = {};
+
+  // Match function return type annotations
+  const patterns = [
+    /(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\([^)]*\)\s*:\s*([^{]+)\s*\{/g,
+    /(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*:\s*([^=]+)\s*=>/g,
+  ];
+
+  patterns.forEach((pattern) => {
+    const matches = content.matchAll(pattern);
+    for (const match of matches) {
+      const fnName = match[1];
+      const returnType = match[2].trim();
+      returnTypes[fnName] = returnType;
+    }
+  });
+
+  return returnTypes;
+}
+
+/**
+ * Detect i18n usage (react-i18next)
+ */
+function detectI18n(content) {
+  const i18nPatterns = [/useTranslation/, /\bt\(['"]/, /i18n\./, /from ['"]react-i18next['"]/];
+
+  return i18nPatterns.some((pattern) => pattern.test(content));
+}
+
+/**
+ * Detect routing usage (react-router)
+ */
+function detectRouting(content) {
+  const routingPatterns = [
+    /useNavigate/,
+    /useParams/,
+    /useLocation/,
+    /useSearchParams/,
+    /from ['"]react-router(-dom)?['"]/,
+    /<Link\s/,
+    /<Navigate\s/,
+  ];
+
+  return routingPatterns.some((pattern) => pattern.test(content));
+}
+
+/**
+ * Detect form handling (react-hook-form, formik, etc.)
+ */
+function detectFormHandling(content) {
+  const formPatterns = [
+    /useForm/,
+    /Controller/,
+    /react-hook-form/,
+    /useFormik/,
+    /formik/i,
+    /<Form\s/,
+  ];
+
+  return formPatterns.some((pattern) => pattern.test(content));
+}
+
+/**
  * Get detailed GraphQL information
  */
 export function analyzeGraphQL(content) {
@@ -334,13 +499,13 @@ export function analyzeHookComplexity(content, analysis) {
   // GraphQL adds complexity
   if (analysis.isGraphQL) {
     complexity.score += 3;
-    complexity.factors.push('GraphQL operations');
+    complexity.factors.push("GraphQL operations");
   }
 
   // Timer/debounce adds complexity
   if (analysis.hasTimers) {
     complexity.score += 2;
-    complexity.factors.push('Timers/Debounce');
+    complexity.factors.push("Timers/Debounce");
   }
 
   // Multiple React hooks add complexity
@@ -350,24 +515,62 @@ export function analyzeHookComplexity(content, analysis) {
   }
 
   // State management
-  if (analysis.reactHooks.includes('useState')) {
+  if (analysis.reactHooks.includes("useState")) {
     complexity.score += 1;
   }
-  if (analysis.reactHooks.includes('useEffect')) {
+  if (analysis.reactHooks.includes("useEffect")) {
     complexity.score += 1;
   }
 
   // Complex logic patterns
   if (/useCallback|useMemo/.test(content)) {
     complexity.score += 1;
-    complexity.factors.push('Memoization');
+    complexity.factors.push("Memoization");
   }
 
   return complexity;
+}
+
+/**
+ * Generate mock data based on prop type
+ */
+export function generateMockValue(type) {
+  const typeStr = type.toLowerCase();
+
+  if (typeStr.includes("string")) return "'test-string'";
+  if (typeStr.includes("number")) return "42";
+  if (typeStr.includes("boolean")) return "true";
+  if (typeStr.includes("date")) return "new Date()";
+  if (typeStr.includes("array") || typeStr.includes("[]")) return "[]";
+  if (typeStr.includes("object") || typeStr === "any") return "{}";
+  if (typeStr.includes("function") || typeStr.includes("=>")) return "vi.fn()";
+  if (typeStr.includes("null")) return "null";
+  if (typeStr.includes("undefined")) return "undefined";
+
+  // Custom types
+  return "{}";
+}
+
+/**
+ * Generate default props object from props details
+ */
+export function generateDefaultProps(propsDetails) {
+  if (!propsDetails || propsDetails.length === 0) {
+    return "{}";
+  }
+
+  const props = propsDetails
+    .filter((prop) => !prop.optional)
+    .map((prop) => `    ${prop.name}: ${generateMockValue(prop.type)}`)
+    .join(",\n");
+
+  return props ? `{\n${props}\n  }` : "{}";
 }
 
 export default {
   analyzeFile,
   analyzeGraphQL,
   analyzeHookComplexity,
+  generateMockValue,
+  generateDefaultProps,
 };
