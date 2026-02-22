@@ -1,11 +1,5 @@
 import React, { useState } from "react";
-import {
-  PageSection,
-  Flex,
-  FlexItem,
-  Grid,
-  GridItem,
-} from "@patternfly/react-core";
+import { PageSection, Flex, FlexItem, Grid, GridItem } from "@patternfly/react-core";
 import { PlusIcon, CreditCardIcon, EditIcon } from "@patternfly/react-icons";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,17 +16,17 @@ import {
   useNewMembers,
   useAuthRedirect,
 } from "../hooks";
-import {
-  MetricCard,
-  ChartCard,
-  DataTable,
-  ExpandableDataSection,
-} from "../components";
+import { MetricCard, ChartCard, DataTable, ExpandableDataSection } from "../components";
 import { ActionButton } from "@/shared/components/common-legacy/ActionButton";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import AuthRequiredModal from "@/shared/components/common-legacy/modal/AuthRequiredModal";
-import { DASHBOARD_ROUTES, DEFAULT_LIMITS, AUTO_REDIRECT_DELAY, AUTH_CHECK_INTERVAL } from "../constants";
-import type { DashboardMetric, PaymentData, MemberData, TableColumn } from "../types";
+import {
+  DASHBOARD_ROUTES,
+  DEFAULT_LIMITS,
+  AUTO_REDIRECT_DELAY,
+  AUTH_CHECK_INTERVAL,
+} from "../constants";
+import type { DashboardMetric, PaymentData, MemberData, TableColumn } from "@clubmanager/types";
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,13 +35,12 @@ const DashboardPage: React.FC = () => {
   const [isNewMembersExpanded, setIsNewMembersExpanded] = useState(false);
 
   // Authentication redirect
-  const { showAuthModal, redirectToLogin, customMessage, autoRedirectDelay } =
-    useAuthRedirect({
-      autoRedirectDelay: AUTO_REDIRECT_DELAY,
-      checkInterval: AUTH_CHECK_INTERVAL,
-      customMessage:
-        "Votre session a expiré. Vous devez vous reconnecter pour accéder au tableau de bord.",
-    });
+  const { showAuthModal, redirectToLogin, customMessage, autoRedirectDelay } = useAuthRedirect({
+    autoRedirectDelay: AUTO_REDIRECT_DELAY,
+    checkInterval: AUTH_CHECK_INTERVAL,
+    customMessage:
+      "Votre session a expiré. Vous devez vous reconnecter pour accéder au tableau de bord.",
+  });
 
   console.log("🏠 DashboardPage mounted");
 
@@ -72,16 +65,8 @@ const DashboardPage: React.FC = () => {
     loading: loadingPaiementsAttente,
     error: errorPaiementsAttente,
   } = usePendingPayments();
-  const {
-    data: activePlansData,
-    loading: loadingPlans,
-    error: errorPlans,
-  } = useActivePlans();
-  const {
-    data: renewalRateData,
-    loading: loadingTaux,
-    error: errorTaux,
-  } = useRenewalRate();
+  const { data: activePlansData, loading: loadingPlans, error: errorPlans } = useActivePlans();
+  const { data: renewalRateData, loading: loadingTaux, error: errorTaux } = useRenewalRate();
   const { data: paymentsByMonthData } = usePaymentsByMonth();
   const { data: membersByPlanData } = useMembersByPlan();
   const { data: lastPaymentsData } = useLastPayments(DEFAULT_LIMITS.RECENT_PAYMENTS);
@@ -103,14 +88,7 @@ const DashboardPage: React.FC = () => {
 
   // Debug logs
   console.log("📊 Dashboard Data Summary:");
-  console.log(
-    "- Membres Count:",
-    membresCount,
-    "Loading:",
-    loadingMembres,
-    "Error:",
-    errorMembres,
-  );
+  console.log("- Membres Count:", membresCount, "Loading:", loadingMembres, "Error:", errorMembres);
   console.log(
     "- Paiements Mois:",
     paiementsMois,
@@ -190,13 +168,9 @@ const DashboardPage: React.FC = () => {
   const formatPaymentsData = (payments: PaymentData[]) => {
     return payments.map((p) => ({
       user:
-        p.user_first_name && p.user_last_name
-          ? `${p.user_first_name} ${p.user_last_name}`
-          : "N/A",
+        p.user_first_name && p.user_last_name ? `${p.user_first_name} ${p.user_last_name}` : "N/A",
       amount: p.amount ? `${p.amount} €` : "N/A",
-      date: p.payment_date
-        ? new Date(p.payment_date).toLocaleDateString("fr-FR")
-        : "N/A",
+      date: p.payment_date ? new Date(p.payment_date).toLocaleDateString("fr-FR") : "N/A",
       status: p.status || "N/A",
     }));
   };
@@ -208,15 +182,9 @@ const DashboardPage: React.FC = () => {
           ? `${p.user_first_name.charAt(0).toUpperCase()}${p.user_first_name.slice(1)} ${p.user_last_name.charAt(0).toUpperCase()}${p.user_last_name.slice(1)}`
           : `User ${p.user_id}`,
       amount: `${p.amount} €`,
-      dueDate: p.payment_date
-        ? new Date(p.payment_date).toLocaleDateString("fr-FR")
-        : "N/A",
+      dueDate: p.payment_date ? new Date(p.payment_date).toLocaleDateString("fr-FR") : "N/A",
       status:
-        p.status === "completed"
-          ? "✅ Payé"
-          : p.status === "pending"
-            ? "⏳ En attente"
-            : "❌ Échu",
+        p.status === "completed" ? "✅ Payé" : p.status === "pending" ? "⏳ En attente" : "❌ Échu",
     }));
   };
 
@@ -224,9 +192,7 @@ const DashboardPage: React.FC = () => {
     return members.map((m) => ({
       name: `${m.first_name || ""} ${m.last_name || ""}`.trim() || "N/A",
       email: m.email || "N/A",
-      registrationDate: m.created_at
-        ? new Date(m.created_at).toLocaleDateString("fr-FR")
-        : "N/A",
+      registrationDate: m.created_at ? new Date(m.created_at).toLocaleDateString("fr-FR") : "N/A",
       plan: m.plan_name || "N/A",
     }));
   };

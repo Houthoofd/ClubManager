@@ -9,7 +9,7 @@
 import React from "react";
 import { TeacherCard } from "../TeacherCard";
 import { EmptyTeacherState } from "../EmptyTeacherState";
-import type { TeacherListItem } from "../../types";
+import type { TeacherListItem } from "@clubmanager/types";
 
 export interface TeacherListProps {
   /** Array of teachers to display */

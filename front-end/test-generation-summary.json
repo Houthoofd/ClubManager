@@ -1,0 +1,21 @@
+{
+  "generated": "2026-02-22T05:04:31.523Z",
+  "total": 3,
+  "byType": {
+    "hook": 3
+  },
+  "files": [
+    {
+      "type": "hook",
+      "lines": 317
+    },
+    {
+      "type": "hook",
+      "lines": 317
+    },
+    {
+      "type": "hook",
+      "lines": 317
+    }
+  ]
+}

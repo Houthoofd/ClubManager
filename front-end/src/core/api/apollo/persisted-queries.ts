@@ -8,14 +8,15 @@
  * - ✅ Réduction de la bande passante (~90% pour les grandes queries)
  * - ✅ Amélioration des performances réseau
  * - ✅ Cache CDN plus efficace (requêtes GET au lieu de POST)
- * - ✅ Rétrocompatible (fallback automatique si serveur ne supporte pas APQ)
+ * - ✅ Réduction de la charge serveur (parsing GraphQL)
  *
  * @see https://www.apollographql.com/docs/apollo-server/performance/apq/
  */
 
-import { createPersistedQueryLink } from "@apollo/client/link/persisted-queries";
 import { ApolloLink } from "@apollo/client";
+import { createPersistedQueryLink } from "@apollo/client/link/persisted-queries";
 import { sha256 } from "crypto-hash";
+import { logger } from "@/core/utils/appLogger";
 
 // ============================================================================
 // Configuration
@@ -86,15 +87,12 @@ export const createAPQLink = (config: Partial<APQConfig> = {}): ApolloLink => {
   const finalConfig = { ...DEFAULT_APQ_CONFIG, ...config };
 
   if (!finalConfig.enabled) {
-    console.info("[APQ] Automatic Persisted Queries disabled");
+    logger.info("[APQ] Automatic Persisted Queries disabled");
     // Return a no-op link
     return new ApolloLink((operation, forward) => forward(operation));
   }
 
-  console.info("[APQ] Automatic Persisted Queries enabled", {
-    useGET: finalConfig.useGETForHashedQueries,
-    disabledOps: finalConfig.disableForOperations?.length ?? 0,
-  });
+  logger.info("[APQ] Automatic Persisted Queries enabled");
 
   return createPersistedQueryLink({
     /**
@@ -191,11 +189,7 @@ export const trackAPQUsage = (
   apqStats.savings.percentage =
     apqStats.totalQueries > 0 ? (apqStats.persistedQueries / apqStats.totalQueries) * 100 : 0;
 
-  console.debug("[APQ] Stats", {
-    operation: operationName,
-    persisted: isPersisted,
-    stats: apqStats,
-  });
+  logger.debug("[APQ] Stats");
 };
 
 // ============================================================================
@@ -241,9 +235,9 @@ export const checkAPQSupport = async (graphqlUrl: string): Promise<boolean> => {
       return true;
     }
 
-    return false;
+    return response.ok && response.headers.get("x-apq-support") === "true";
   } catch (error) {
-    console.warn("[APQ] Failed to check APQ support:", error);
+    logger.warn("[APQ] Failed to check APQ support:", error as Error);
     return false;
   }
 };

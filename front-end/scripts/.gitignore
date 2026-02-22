@@ -1,0 +1,21 @@
+# Scripts - Fichiers à ignorer
+
+# Rapports générés
+test-generation-summary.json
+*.log
+
+# Fichiers temporaires
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Backups créés par les scripts
+*.backup
+*.bak
+
+# Node modules (au cas où)
+node_modules/
+
+# Fichiers de test du générateur
+test-output/

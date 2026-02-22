@@ -1,7 +1,52 @@
 /**
- * Generated TypeScript types for users domain
- * @generated - Do not edit manually
+ * Users Domain Types
+ *
+ * TypeScript types for users domain including database entities,
+ * API operations, and business logic types.
  */
+
+// ============================================================================
+// API OPERATION TYPES
+// ============================================================================
+
+/**
+ * Options de filtrage pour users
+ */
+export interface UsersFilterOptions {
+  userId?: number;
+  limit?: number;
+  offset?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  statusId?: number;
+  role?: string;
+  isActive?: boolean;
+}
+
+/**
+ * Résultat paginé pour users
+ */
+export interface UsersPaginatedResult<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+/**
+ * Réponse de création/mise à jour
+ */
+export interface UsersMutationResult {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// ============================================================================
+// DATABASE ENTITY TYPES
+// ============================================================================
 
 export interface Genders {
   id: number;

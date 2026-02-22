@@ -42,7 +42,7 @@ import { useGetSessionsQuery } from "@/core/api/apollo/generated/graphql";
 import PlanningFilter from "../components/PlanningFilter";
 import PlanningGrid from "../components/PlanningGrid";
 import PlanningStatistics from "../components/PlanningStatistics";
-import type { PlanningCourse } from "../types";
+import type { PlanningCourse } from "@clubmanager/types";
 
 // ============================================================================
 // Constants
@@ -88,7 +88,7 @@ const TeacherPlanningPage: React.FC = () => {
       });
       showNotification(
         t("teachers.planning.errors.loadFailed", "Erreur lors du chargement du planning"),
-        "danger"
+        "danger",
       );
     },
   });
@@ -133,9 +133,7 @@ const TeacherPlanningPage: React.FC = () => {
   const coursFiltres = useMemo(() => {
     if (filtreJour === "tous") return planningData;
 
-    return planningData.filter(
-      (c) => convertirJourSemaine(c.jour_semaine) === filtreJour
-    );
+    return planningData.filter((c) => convertirJourSemaine(c.jour_semaine) === filtreJour);
   }, [planningData, filtreJour]);
 
   // Track page view on mount
@@ -147,10 +145,7 @@ const TeacherPlanningPage: React.FC = () => {
   }, [trackEvent, user?.id, planningData.length]);
 
   // Track tab changes
-  const handleTabClick = (
-    _event: React.MouseEvent,
-    tabIndex: string | number
-  ) => {
+  const handleTabClick = (_event: React.MouseEvent, tabIndex: string | number) => {
     if (typeof tabIndex === "number") {
       setActiveTabKey(tabIndex);
       trackEvent("teacher_planning_tab_change", {
@@ -175,10 +170,7 @@ const TeacherPlanningPage: React.FC = () => {
       <div className="planning-page">
         <PageHeader
           title={t("teachers.planning.title", "Mon Planning des Cours")}
-          subtitle={t(
-            "teachers.planning.subtitle",
-            "Consultez vos cours assignés"
-          )}
+          subtitle={t("teachers.planning.subtitle", "Consultez vos cours assignés")}
           variant="planning"
         />
         <PageSection>
@@ -192,10 +184,7 @@ const TeacherPlanningPage: React.FC = () => {
           >
             <Spinner size="xl" />
             <p style={{ marginLeft: "1rem" }}>
-              {t(
-                "teachers.planning.loading",
-                "Chargement du planning des cours..."
-              )}
+              {t("teachers.planning.loading", "Chargement du planning des cours...")}
             </p>
           </div>
         </PageSection>
@@ -209,10 +198,7 @@ const TeacherPlanningPage: React.FC = () => {
       <div className="planning-page">
         <PageHeader
           title={t("teachers.planning.title", "Mon Planning des Cours")}
-          subtitle={t(
-            "teachers.planning.subtitle",
-            "Consultez vos cours assignés"
-          )}
+          subtitle={t("teachers.planning.subtitle", "Consultez vos cours assignés")}
           variant="planning"
         />
         <PageSection>
@@ -235,7 +221,7 @@ const TeacherPlanningPage: React.FC = () => {
           >
             {t(
               "teachers.planning.errors.loadFailed",
-              "Impossible de charger le planning. Veuillez réessayer."
+              "Impossible de charger le planning. Veuillez réessayer.",
             )}
           </Alert>
         </PageSection>
@@ -249,10 +235,7 @@ const TeacherPlanningPage: React.FC = () => {
       <div className="planning-page">
         <PageHeader
           title={t("teachers.planning.title", "Mon Planning des Cours")}
-          subtitle={t(
-            "teachers.planning.subtitle",
-            "Consultez vos cours assignés"
-          )}
+          subtitle={t("teachers.planning.subtitle", "Consultez vos cours assignés")}
           variant="planning"
         />
         <PageSection>
@@ -264,7 +247,7 @@ const TeacherPlanningPage: React.FC = () => {
             <EmptyStateBody>
               {t(
                 "teachers.planning.empty.description",
-                "Vous n'avez pas encore de cours assignés. Contactez l'administrateur pour plus d'informations."
+                "Vous n'avez pas encore de cours assignés. Contactez l'administrateur pour plus d'informations.",
               )}
             </EmptyStateBody>
           </EmptyState>
@@ -278,19 +261,12 @@ const TeacherPlanningPage: React.FC = () => {
     <div className="planning-page">
       <PageHeader
         title={t("teachers.planning.title", "Mon Planning des Cours")}
-        subtitle={t(
-          "teachers.planning.subtitle",
-          "Consultez vos cours assignés"
-        )}
+        subtitle={t("teachers.planning.subtitle", "Consultez vos cours assignés")}
         variant="planning"
       />
 
       <PageSection className="planning-content">
-        <Tabs
-          activeKey={activeTabKey}
-          onSelect={handleTabClick}
-          className="modern-tabs"
-        >
+        <Tabs activeKey={activeTabKey} onSelect={handleTabClick} className="modern-tabs">
           {/* Tab: Planning */}
           <Tab
             eventKey={TEACHER_TABS.PLANNING}
@@ -300,10 +276,7 @@ const TeacherPlanningPage: React.FC = () => {
               </TabTitleText>
             }
           >
-            <PlanningFilter
-              filtreJour={filtreJour}
-              onFilterSelect={handleFilterSelect}
-            />
+            <PlanningFilter filtreJour={filtreJour} onFilterSelect={handleFilterSelect} />
 
             <PlanningGrid cours={coursFiltres} filtreJour={filtreJour} />
 
@@ -312,19 +285,16 @@ const TeacherPlanningPage: React.FC = () => {
               <div style={{ marginTop: "1rem", textAlign: "center", color: "#6a6e73" }}>
                 {coursFiltres.length === 0 ? (
                   <p>
-                    {t(
-                      "teachers.planning.noCoursesForDay",
-                      "Aucun cours le {{day}}",
-                      { day: filtreJour }
-                    )}
+                    {t("teachers.planning.noCoursesForDay", "Aucun cours le {{day}}", {
+                      day: filtreJour,
+                    })}
                   </p>
                 ) : (
                   <p>
-                    {t(
-                      "teachers.planning.coursesCount",
-                      "{{count}} cours le {{day}}",
-                      { count: coursFiltres.length, day: filtreJour }
-                    )}
+                    {t("teachers.planning.coursesCount", "{{count}} cours le {{day}}", {
+                      count: coursFiltres.length,
+                      day: filtreJour,
+                    })}
                   </p>
                 )}
               </div>
@@ -359,6 +329,6 @@ export default withErrorBoundary(
       requiredRoles: ["instructor", "admin"],
       redirectTo: "/login",
     }),
-    "teacher_planning"
-  )
+    "teacher_planning",
+  ),
 );

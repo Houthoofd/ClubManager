@@ -1,7 +1,52 @@
 /**
- * Generated TypeScript types for activities domain
- * @generated - Do not edit manually
+ * Activities Domain Types
+ *
+ * TypeScript types for activities domain including database entities,
+ * API operations, and business logic types.
  */
+
+// ============================================================================
+// API OPERATION TYPES
+// ============================================================================
+
+/**
+ * Options de filtrage pour activities
+ */
+export interface ActivitiesFilterOptions {
+  userId?: number;
+  limit?: number;
+  offset?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  categoryId?: number;
+  hasLevels?: boolean;
+  isActive?: boolean;
+}
+
+/**
+ * Résultat paginé pour activities
+ */
+export interface ActivitiesPaginatedResult<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+/**
+ * Réponse de création/mise à jour
+ */
+export interface ActivitiesMutationResult {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// ============================================================================
+// DATABASE ENTITY TYPES
+// ============================================================================
 
 export interface ActivityCategories {
   id: number;
@@ -120,4 +165,3 @@ export interface UserActivitiesUpdate {
   notes?: string;
   created_at?: string;
 }
-

@@ -3,6 +3,9 @@
  * Re-exports all infrastructure-related types
  */
 
+// GraphQL types
+export * from "./graphql.js";
+
 // Email types
 export type {
   EmailSendRequest,
@@ -65,7 +68,7 @@ export type {
   SubscriptionData,
   EmailConfirmationOptions,
   EmailFailureOptions,
-  WebhookConfig,
+  StripeWebhookConfig,
   SignatureValidationResult,
   WebhookHandler,
   WebhookHandlers,
@@ -93,7 +96,7 @@ export {
   SubscriptionDataSchema,
   EmailConfirmationOptionsSchema,
   EmailFailureOptionsSchema,
-  WebhookConfigSchema,
+  StripeWebhookConfigSchema,
   WebhookProcessingOptionsSchema,
   WebhookEventLogSchema,
   WebhookLogSchema,
@@ -133,3 +136,16 @@ export {
 
 // Email GraphQL Types
 export { emailGraphQLTypeDefs } from "./email.graphql.js";
+
+// Logger types
+export type {
+  LogLevel,
+  LogContext,
+  LoggerEntry,
+  LoggerConfig,
+  Logger,
+  PerformanceEntry,
+  LogBreadcrumb,
+} from "./logger.js";
+
+export { LogLevelPriority } from "./logger.js";

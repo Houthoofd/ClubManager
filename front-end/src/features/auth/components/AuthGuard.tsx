@@ -44,12 +44,12 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   ];
 
   const handleLoginRedirect = () => {
-    console.log("🔄 [AuthGuard] Redirection vers la page de connexion");
+    logger.info("🔄 [AuthGuard] Redirection vers la page de connexion");
     window.location.href = `${window.location.origin}/pages/connexion`;
   };
 
   const handleRegisterRedirect = () => {
-    console.log("🔄 [AuthGuard] Redirection vers la page d'inscription");
+    logger.info("🔄 [AuthGuard] Redirection vers la page d'inscription");
     window.location.href = `${window.location.origin}/pages/inscription`;
   };
 
@@ -64,21 +64,21 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       }
       return null;
     } catch (error) {
-      console.warn("⚠️ [AuthGuard] Erreur lecture cookie:", error);
+      logger.warn("⚠️ [AuthGuard] Erreur lecture cookie:", error);
       return null;
     }
   };
 
   const verifyAuthentication = async () => {
     try {
-      console.log("🔐 [AuthGuard] Vérification authentification (production mode)...");
+      logger.debug("🔐 [AuthGuard] Vérification authentification (production mode)...");
 
       // ÉTAPE 1: Vérifier d'abord localStorage
       const localUserData = localStorage.getItem("userData");
       const authToken = localStorage.getItem("authToken");
       const cookieToken = getCookie("token");
 
-      console.log("🔍 [AuthGuard] Données locales:", {
+      logger.debug("🔍 [AuthGuard] Données locales:", {
         hasUserData: !!localUserData,
         hasLocalStorageToken: !!authToken,
         hasCookieToken: !!cookieToken,
@@ -94,7 +94,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           const userData = JSON.parse(localUserData);
 
           if (userData.id && userData.email && userData.status) {
-            console.log("✅ [AuthGuard] Données locales ET token valides trouvés");
+            logger.info("✅ [AuthGuard] Données locales ET token valides trouvés");
 
             const userDataToSave = {
               id: userData.id,
@@ -113,20 +113,20 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
             setAuthError(null);
             setRetryCount(0);
-            console.log("✅ [AuthGuard] Authentification locale réussie (userData + token)");
+            logger.info("✅ [AuthGuard] Authentification locale réussie (userData + token)");
             return true;
           } else {
-            console.warn("⚠️ [AuthGuard] Données locales incomplètes");
+            logger.warn("⚠️ [AuthGuard] Données locales incomplètes");
           }
         } catch (parseError) {
-          console.error("❌ [AuthGuard] Erreur parsing données locales:", parseError);
+          logger.error("❌ [AuthGuard] Erreur parsing données locales:", parseError);
           localStorage.removeItem("userData");
           localStorage.removeItem("authToken");
         }
       }
 
       // ÉTAPE 2: Vérification serveur avec URL corrigée
-      console.log("🔍 [AuthGuard] Tentative vérification serveur...");
+      logger.debug("🔍 [AuthGuard] Tentative vérification serveur...");
 
       // CORRIGÉ: URLs plus robustes selon l'environnement
       let verifyUrl: string;
@@ -140,15 +140,15 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         verifyUrl = `http://localhost:3000/auth/status`;
       }
 
-      console.log("🌐 [AuthGuard] URL de vérification:", verifyUrl);
-      console.log("🌐 [AuthGuard] Origin actuel:", currentOrigin);
-      console.log("🌐 [AuthGuard] Environnement:", process.env.NODE_ENV);
+      logger.debug("🌐 [AuthGuard] URL de vérification:", verifyUrl);
+      logger.debug("🌐 [AuthGuard] Origin actuel:", currentOrigin);
+      logger.debug("🌐 [AuthGuard] Environnement:", process.env.NODE_ENV);
 
       const tokenToUse = cookieToken || authToken;
 
       try {
         // AJOUTÉ: Test de connectivité d'abord
-        console.log("🔍 [AuthGuard] Test de connectivité API...");
+        logger.debug("🔍 [AuthGuard] Test de connectivité API...");
         let testUrl =
           process.env.NODE_ENV === "production"
             ? `${currentOrigin}/api/test`
@@ -164,12 +164,12 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
           if (testResponse.ok) {
             const testData = await testResponse.json();
-            console.log("✅ [AuthGuard] API accessible:", testData.message);
+            logger.info("✅ [AuthGuard] API accessible:", testData.message);
           } else {
-            console.warn("⚠️ [AuthGuard] API répond mais avec erreur:", testResponse.status);
+            logger.warn("⚠️ [AuthGuard] API répond mais avec erreur:", testResponse.status);
           }
         } catch (testError) {
-          console.warn("⚠️ [AuthGuard] API non accessible pour test:", testError);
+          logger.warn("⚠️ [AuthGuard] API non accessible pour test:", testError);
         }
 
         // Maintenant tester la route auth/status
@@ -184,7 +184,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           signal: AbortSignal.timeout(8000),
         });
 
-        console.log("🔐 [AuthGuard] Réponse serveur auth/status:", {
+        logger.debug("🔐 [AuthGuard] Réponse serveur auth/status:", {
           status: response.status,
           statusText: response.statusText,
           contentType: response.headers.get("content-type"),
@@ -195,7 +195,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         // CORRIGÉ: Vérification du content-type plus robuste
         const contentType = response.headers.get("content-type") || "";
         if (!contentType.includes("application/json")) {
-          console.error("❌ [AuthGuard] Réponse non-JSON reçue:", {
+          logger.error("❌ [AuthGuard] Réponse non-JSON reçue:", {
             contentType,
             status: response.status,
             url: response.url,
@@ -203,7 +203,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
           // AJOUTÉ: Essayer une URL alternative en production
           if (process.env.NODE_ENV === "production") {
-            console.log("🔄 [AuthGuard] Tentative avec URL alternative...");
+            logger.info("🔄 [AuthGuard] Tentative avec URL alternative...");
             const altUrl = `${currentOrigin}/api/auth/status`;
 
             try {
@@ -220,7 +220,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
               const altContentType = altResponse.headers.get("content-type") || "";
               if (altResponse.ok && altContentType.includes("application/json")) {
-                console.log("✅ [AuthGuard] URL alternative fonctionne");
+                logger.info("✅ [AuthGuard] URL alternative fonctionne");
                 const data = await altResponse.json();
 
                 if (data.authentifie && data.user) {
@@ -260,18 +260,18 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
                   setAuthError(null);
                   setRetryCount(0);
-                  console.log("✅ [AuthGuard] Authentification serveur réussie (URL alternative)");
+                  logger.info("✅ [AuthGuard] Authentification serveur réussie (URL alternative)");
                   return true;
                 }
               }
             } catch (altError) {
-              console.warn("❌ [AuthGuard] URL alternative échouée aussi:", altError);
+              logger.warn("❌ [AuthGuard] URL alternative échouée aussi:", altError);
             }
           }
 
           // Fallback sur les données locales
           if (localUserData && hasValidToken) {
-            console.log(
+            logger.info(
               "🔄 [AuthGuard] Fallback - API retourne HTML, utilisation des données locales",
             );
             const userData = JSON.parse(localUserData);
@@ -301,7 +301,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log("🔐 [AuthGuard] Données serveur:", data);
+          logger.debug("🔐 [AuthGuard] Données serveur:", data);
 
           if (data.authentifie && data.user) {
             const userData = {
@@ -339,21 +339,21 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
             setAuthError(null);
             setRetryCount(0);
-            console.log("✅ [AuthGuard] Authentification serveur réussie");
+            logger.info("✅ [AuthGuard] Authentification serveur réussie");
             return true;
           } else {
-            console.warn("⚠️ [AuthGuard] Serveur indique utilisateur non authentifié");
+            logger.warn("⚠️ [AuthGuard] Serveur indique utilisateur non authentifié");
             return false;
           }
         } else if (response.status === 401) {
-          console.warn("🚫 [AuthGuard] Session expirée (401)");
+          logger.warn("🚫 [AuthGuard] Session expirée (401)");
           return false;
         } else if (response.status === 404) {
-          console.warn("🚫 [AuthGuard] Route auth/status non trouvée (404)");
+          logger.warn("🚫 [AuthGuard] Route auth/status non trouvée (404)");
 
           // AJOUTÉ: En cas de 404, utiliser les données locales si disponibles
           if (localUserData && hasValidToken) {
-            console.log("🔄 [AuthGuard] Fallback 404 - utilisation des données locales");
+            logger.info("🔄 [AuthGuard] Fallback 404 - utilisation des données locales");
             const userData = JSON.parse(localUserData);
 
             const userDataToSave = {
@@ -379,7 +379,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           throw new Error(`Erreur serveur: ${response.status} ${response.statusText}`);
         }
       } catch (fetchError: any) {
-        console.error("❌ [AuthGuard] Erreur fetch:", fetchError);
+        logger.error("❌ [AuthGuard] Erreur fetch:", fetchError);
 
         // AJOUTÉ: Gestion spécifique des erreurs
         if (fetchError.message.includes("HTML au lieu de JSON")) {
@@ -397,7 +397,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           try {
             const userData = JSON.parse(localUserData);
             if (userData.id && userData.email) {
-              console.log("⚠️ [AuthGuard] Fallback sur données locales suite à erreur serveur");
+              logger.info("⚠️ [AuthGuard] Fallback sur données locales suite à erreur serveur");
 
               const userDataToSave = {
                 id: userData.id,
@@ -417,7 +417,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               return true;
             }
           } catch (parseError) {
-            console.error("❌ [AuthGuard] Erreur parsing fallback:", parseError);
+            logger.error("❌ [AuthGuard] Erreur parsing fallback:", parseError);
           }
         }
 

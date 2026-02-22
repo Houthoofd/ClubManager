@@ -13,7 +13,7 @@ export * from "./components";
 export * from "./hooks";
 
 // Types
-export * from "./types";
+export * from "@clubmanager/types";
 
 // Constants
 export * from "./constants";

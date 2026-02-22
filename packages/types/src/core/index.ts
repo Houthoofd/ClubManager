@@ -9,6 +9,11 @@
 export * from "./common.js";
 
 // ============================================================================
+// I18N TYPES
+// ============================================================================
+export * from "./i18n.js";
+
+// ============================================================================
 // ERROR TYPES
 // ============================================================================
 export {
@@ -97,6 +102,7 @@ export type {
   SessionQueryOptions,
   AuditLogEntry,
   AuditQueryOptions,
+  UserData,
 } from "./services.js";
 
 export { AuditEventType, AuditSeverity } from "./services.js";

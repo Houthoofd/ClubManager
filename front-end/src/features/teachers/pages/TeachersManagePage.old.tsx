@@ -21,7 +21,7 @@ import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
 import { useInstructors } from "../hooks";
 import { TEACHER_TABS, TEACHER_TAB_LABELS, ERROR_MESSAGES, INFO_MESSAGES } from "../constants";
-import type { TeachersManagePageState, TeacherListItem } from "../types";
+import type { TeachersManagePageState, TeacherListItem } from "@clubmanager/types";
 
 const TeachersManagePage: React.FC = () => {
   const [state, setState] = useState<TeachersManagePageState>({

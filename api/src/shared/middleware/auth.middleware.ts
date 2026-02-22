@@ -10,7 +10,7 @@ import {
   AuthenticationError,
   AuthorizationError,
 } from "../errors/GraphQLErrors.js";
-import { GraphQLContext } from "../types/context.types.js";
+import { GraphQLContext } from "@clubmanager/types";
 import { utilisateurs } from "@prisma/client";
 
 // Re-export token helpers for backward compatibility

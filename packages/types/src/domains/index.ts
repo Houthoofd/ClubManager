@@ -2,6 +2,7 @@
  * Domain exports
  */
 
+export * as auth from "./auth/index.js";
 export * as users from "./users/index.js";
 export * as activities from "./activities/index.js";
 export * as sessions from "./sessions/index.js";
@@ -28,3 +29,6 @@ export type {
   InscriptionValidationState,
   InscriptionInformationModalData,
 } from "./users/users.types.js";
+
+// Teachers domain exports (direct export for convenience)
+export * from "./teachers/index.js";

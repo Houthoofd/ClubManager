@@ -13,7 +13,8 @@
  * @see https://www.apollographql.com/docs/react/caching/advanced-topics/#cache-persistence
  */
 
-import type { ApolloCache, NormalizedCacheObject } from '@apollo/client';
+import type { ApolloCache, NormalizedCacheObject } from "@apollo/client";
+import { logger } from "@/core/utils/appLogger";
 
 // ============================================================================
 // Configuration
@@ -23,22 +24,22 @@ const CACHE_PERSISTENCE_CONFIG = {
   /**
    * Clé localStorage pour stocker le cache
    */
-  STORAGE_KEY: 'apollo-cache-persist',
+  STORAGE_KEY: "apollo-cache-persist",
 
   /**
    * Version du schéma de cache (incrémente pour invalider le cache existant)
    */
-  SCHEMA_VERSION: '1.0',
+  SCHEMA_VERSION: "1.0",
 
   /**
    * Clé pour stocker la version du schéma
    */
-  VERSION_KEY: 'apollo-cache-version',
+  VERSION_KEY: "apollo-cache-version",
 
   /**
    * Clé pour stocker le timestamp de dernière sauvegarde
    */
-  TIMESTAMP_KEY: 'apollo-cache-timestamp',
+  TIMESTAMP_KEY: "apollo-cache-timestamp",
 
   /**
    * Durée de validité du cache (en ms)
@@ -63,9 +64,9 @@ const CACHE_PERSISTENCE_CONFIG = {
    * (données sensibles ou temporaires)
    */
   EXCLUDE_PATTERNS: [
-    'CurrentUser', // Données de session
-    'AuthToken',   // Tokens d'authentification
-    'temp-',       // IDs temporaires (optimistic updates)
+    "CurrentUser", // Données de session
+    "AuthToken", // Tokens d'authentification
+    "temp-", // IDs temporaires (optimistic updates)
   ],
 } as const;
 
@@ -95,7 +96,7 @@ interface PersistenceStats {
  */
 const isLocalStorageAvailable = (): boolean => {
   try {
-    const test = '__apollo_cache_test__';
+    const test = "__apollo_cache_test__";
     localStorage.setItem(test, test);
     localStorage.removeItem(test);
     return true;
@@ -132,7 +133,10 @@ const getCacheMetadata = (): CacheMetadata | null => {
       size,
     };
   } catch (error) {
-    console.warn('[Apollo Cache] Failed to get cache metadata:', error);
+    logger.warn("Failed to get Apollo cache metadata", {
+      feature: "apollo-cache",
+      metadata: { error },
+    });
     return null;
   }
 };
@@ -165,11 +169,11 @@ const sanitizeCacheData = (cacheData: string): string => {
     const parsed = JSON.parse(cacheData);
 
     // Supprime les patterns exclus
-    if (parsed && typeof parsed === 'object') {
+    if (parsed && typeof parsed === "object") {
       const sanitized = { ...parsed };
 
-      CACHE_PERSISTENCE_CONFIG.EXCLUDE_PATTERNS.forEach(pattern => {
-        Object.keys(sanitized).forEach(key => {
+      CACHE_PERSISTENCE_CONFIG.EXCLUDE_PATTERNS.forEach((pattern) => {
+        Object.keys(sanitized).forEach((key) => {
           if (key.includes(pattern)) {
             delete sanitized[key];
           }
@@ -196,7 +200,9 @@ const sanitizeCacheData = (cacheData: string): string => {
  */
 export const restoreCacheFromStorage = (): NormalizedCacheObject | null => {
   if (!isLocalStorageAvailable()) {
-    console.warn('[Apollo Cache] localStorage not available');
+    logger.warn("localStorage not available for Apollo cache", {
+      feature: "apollo-cache",
+    });
     return null;
   }
 
@@ -205,13 +211,17 @@ export const restoreCacheFromStorage = (): NormalizedCacheObject | null => {
 
     // Vérifie la validité du cache
     if (!isCacheVersionValid(metadata)) {
-      console.info('[Apollo Cache] Cache version mismatch, clearing old cache');
+      logger.info("Apollo cache version mismatch, clearing old cache", {
+        feature: "apollo-cache",
+      });
       clearPersistedCache();
       return null;
     }
 
     if (isCacheExpired(metadata)) {
-      console.info('[Apollo Cache] Cache expired, clearing old cache');
+      logger.info("Apollo cache expired, clearing old cache", {
+        feature: "apollo-cache",
+      });
       clearPersistedCache();
       return null;
     }
@@ -223,14 +233,19 @@ export const restoreCacheFromStorage = (): NormalizedCacheObject | null => {
     }
 
     const parsedCache = JSON.parse(cacheData) as NormalizedCacheObject;
-    console.info('[Apollo Cache] Cache restored from localStorage', {
-      size: metadata?.size,
-      age: metadata ? Date.now() - metadata.timestamp : 0,
+    logger.info("Apollo cache restored from localStorage", {
+      feature: "apollo-cache",
+      metadata: {
+        size: metadata?.size,
+        age: metadata ? Date.now() - metadata.timestamp : 0,
+      },
     });
 
     return parsedCache;
   } catch (error) {
-    console.error('[Apollo Cache] Failed to restore cache:', error);
+    logger.error("Failed to restore Apollo cache", error as Error, {
+      feature: "apollo-cache",
+    });
     clearPersistedCache();
     return null;
   }
@@ -254,25 +269,38 @@ export const persistCacheToStorage = (cache: ApolloCache<NormalizedCacheObject>)
 
     // Vérifie la taille max
     if (size > CACHE_PERSISTENCE_CONFIG.MAX_SIZE_BYTES) {
-      console.warn('[Apollo Cache] Cache too large to persist', {
-        size,
-        maxSize: CACHE_PERSISTENCE_CONFIG.MAX_SIZE_BYTES,
+      logger.warn("Apollo cache too large to persist", {
+        feature: "apollo-cache",
+        metadata: {
+          size,
+          maxSize: CACHE_PERSISTENCE_CONFIG.MAX_SIZE_BYTES,
+        },
       });
       return;
     }
 
     // Sauvegarde le cache
     localStorage.setItem(CACHE_PERSISTENCE_CONFIG.STORAGE_KEY, sanitized);
-    localStorage.setItem(CACHE_PERSISTENCE_CONFIG.VERSION_KEY, CACHE_PERSISTENCE_CONFIG.SCHEMA_VERSION);
+    localStorage.setItem(
+      CACHE_PERSISTENCE_CONFIG.VERSION_KEY,
+      CACHE_PERSISTENCE_CONFIG.SCHEMA_VERSION,
+    );
     localStorage.setItem(CACHE_PERSISTENCE_CONFIG.TIMESTAMP_KEY, Date.now().toString());
 
-    console.debug('[Apollo Cache] Cache persisted to localStorage', { size });
+    logger.debug("Apollo cache persisted to localStorage", {
+      feature: "apollo-cache",
+      metadata: { size },
+    });
   } catch (error) {
-    console.error('[Apollo Cache] Failed to persist cache:', error);
+    logger.error("Failed to persist Apollo cache", error as Error, {
+      feature: "apollo-cache",
+    });
 
     // Si erreur de quota, essaye de nettoyer
-    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-      console.warn('[Apollo Cache] localStorage quota exceeded, clearing cache');
+    if (error instanceof DOMException && error.name === "QuotaExceededError") {
+      logger.warn("localStorage quota exceeded, clearing Apollo cache", {
+        feature: "apollo-cache",
+      });
       clearPersistedCache();
     }
   }
@@ -286,9 +314,13 @@ export const clearPersistedCache = (): void => {
     localStorage.removeItem(CACHE_PERSISTENCE_CONFIG.STORAGE_KEY);
     localStorage.removeItem(CACHE_PERSISTENCE_CONFIG.VERSION_KEY);
     localStorage.removeItem(CACHE_PERSISTENCE_CONFIG.TIMESTAMP_KEY);
-    console.info('[Apollo Cache] Persisted cache cleared');
+    logger.info("Apollo persisted cache cleared", {
+      feature: "apollo-cache",
+    });
   } catch (error) {
-    console.error('[Apollo Cache] Failed to clear persisted cache:', error);
+    logger.error("Failed to clear Apollo persisted cache", error as Error, {
+      feature: "apollo-cache",
+    });
   }
 };
 
@@ -372,15 +404,13 @@ export const flushPersistCache = (cache: ApolloCache<NormalizedCacheObject>): vo
  * // cleanup();
  * ```
  */
-export const setupCachePersistence = (
-  cache: ApolloCache<NormalizedCacheObject>
-): (() => void) => {
+export const setupCachePersistence = (cache: ApolloCache<NormalizedCacheObject>): (() => void) => {
   if (!isLocalStorageAvailable()) {
-    console.warn('[Apollo Cache] Persistence disabled: localStorage not available');
+    logger.warn("[Apollo Cache] Persistence disabled: localStorage not available");
     return () => {};
   }
 
-  console.info('[Apollo Cache] Persistence enabled');
+  logger.info("[Apollo Cache] Persistence enabled");
 
   // Sauvegarde à chaque modification du cache (avec debounce)
   const broadcastHandler = () => {
@@ -396,7 +426,7 @@ export const setupCachePersistence = (
     flushPersistCache(cache);
   };
 
-  window.addEventListener('beforeunload', beforeUnloadHandler);
+  window.addEventListener("beforeunload", beforeUnloadHandler);
 
   // Sauvegarde périodique (toutes les 30 secondes)
   const intervalId = setInterval(() => {
@@ -409,8 +439,8 @@ export const setupCachePersistence = (
       clearTimeout(saveTimeout);
     }
     clearInterval(intervalId);
-    window.removeEventListener('beforeunload', beforeUnloadHandler);
-    console.info('[Apollo Cache] Persistence cleanup completed');
+    window.removeEventListener("beforeunload", beforeUnloadHandler);
+    logger.info("[Apollo Cache] Persistence cleanup completed");
   };
 };
 

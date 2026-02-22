@@ -331,7 +331,7 @@ export const EmailFailureOptionsSchema = z.object({
 /**
  * Configuration du webhook
  */
-export interface WebhookConfig {
+export interface StripeWebhookConfig {
   endpointSecret: string;
   stripe: Stripe;
   enableLogging?: boolean;
@@ -342,7 +342,7 @@ export interface WebhookConfig {
 /**
  * Schéma de validation pour configuration webhook
  */
-export const WebhookConfigSchema = z.object({
+export const StripeWebhookConfigSchema = z.object({
   endpointSecret: z.string().min(1, "Endpoint secret requis"),
   enableLogging: z.boolean().optional().default(true),
   retryOnFailure: z.boolean().optional().default(true),

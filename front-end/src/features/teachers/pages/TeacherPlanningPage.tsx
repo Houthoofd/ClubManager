@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from "react";
-import {
-  PageSection,
-  Tabs,
-  Tab,
-  TabTitleText,
-  Spinner,
-  Alert,
-} from "@patternfly/react-core";
+import { PageSection, Tabs, Tab, TabTitleText, Spinner, Alert } from "@patternfly/react-core";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
 import PlanningFilter from "../components/PlanningFilter";
 import PlanningGrid from "../components/PlanningGrid";
 import PlanningStatistics from "../components/PlanningStatistics";
 import { TEACHER_TABS, ERROR_MESSAGES } from "../constants";
-import type { PlanningPageState, PlanningCourse } from "../types";
+import type { PlanningPageState, PlanningCourse } from "@clubmanager/types";
 
 const TeacherPlanningPage: React.FC = () => {
   const [state, setState] = useState<PlanningPageState>({
@@ -64,14 +57,9 @@ const TeacherPlanningPage: React.FC = () => {
   const coursFiltres =
     state.filtreJour === "tous"
       ? planningData
-      : planningData.filter(
-          (c) => convertirJourSemaine(c.jour_semaine) === state.filtreJour,
-        );
+      : planningData.filter((c) => convertirJourSemaine(c.jour_semaine) === state.filtreJour);
 
-  const handleTabClick = (
-    _event: React.MouseEvent,
-    tabIndex: string | number,
-  ) => {
+  const handleTabClick = (_event: React.MouseEvent, tabIndex: string | number) => {
     if (typeof tabIndex === "number") {
       setState((prev) => ({
         ...prev,
@@ -99,9 +87,7 @@ const TeacherPlanningPage: React.FC = () => {
           }}
         >
           <Spinner size="xl" />
-          <p style={{ marginLeft: "1rem" }}>
-            Chargement du planning des cours...
-          </p>
+          <p style={{ marginLeft: "1rem" }}>Chargement du planning des cours...</p>
         </div>
       </PageSection>
     );
@@ -127,11 +113,7 @@ const TeacherPlanningPage: React.FC = () => {
           </Alert>
         )}
 
-        <Tabs
-          activeKey={state.activeTabKey}
-          onSelect={handleTabClick}
-          className="modern-tabs"
-        >
+        <Tabs activeKey={state.activeTabKey} onSelect={handleTabClick} className="modern-tabs">
           <Tab
             eventKey={TEACHER_TABS.PLANNING}
             title={
@@ -140,10 +122,7 @@ const TeacherPlanningPage: React.FC = () => {
               </TabTitleText>
             }
           >
-            <PlanningFilter
-              filtreJour={state.filtreJour}
-              onFilterSelect={handleFilterSelect}
-            />
+            <PlanningFilter filtreJour={state.filtreJour} onFilterSelect={handleFilterSelect} />
 
             <PlanningGrid cours={coursFiltres} filtreJour={state.filtreJour} />
           </Tab>
@@ -162,9 +141,7 @@ const TeacherPlanningPage: React.FC = () => {
 
         <ResultModal
           isOpen={state.showResultModal}
-          onClose={() =>
-            setState((prev) => ({ ...prev, showResultModal: false }))
-          }
+          onClose={() => setState((prev) => ({ ...prev, showResultModal: false }))}
           title={state.resultModalSuccess ? "Succès" : "Erreur"}
           message={state.resultModalMessage}
           isSuccess={state.resultModalSuccess}

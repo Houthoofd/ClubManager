@@ -1,7 +1,52 @@
 /**
- * Generated TypeScript types for statistics domain
- * @generated - Do not edit manually
+ * Statistics Domain Types
+ *
+ * TypeScript types for statistics domain including database entities,
+ * API operations, and business logic types.
  */
+
+// ============================================================================
+// API OPERATION TYPES
+// ============================================================================
+
+/**
+ * Options de filtrage pour statistics
+ */
+export interface StatisticsFilterOptions {
+  userId?: number;
+  limit?: number;
+  offset?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  dateFrom?: string;
+  dateTo?: string;
+  metricType?: string;
+}
+
+/**
+ * Résultat paginé pour statistics
+ */
+export interface StatisticsPaginatedResult<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+/**
+ * Réponse de création/mise à jour
+ */
+export interface StatisticsMutationResult {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// ============================================================================
+// DATABASE ENTITY TYPES
+// ============================================================================
 
 export interface AttendanceStats {
   id: number;
@@ -63,7 +108,7 @@ export interface AttendanceStatsUpdate {
 
 export interface FinancialStats {
   id: number;
-  period_type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  period_type: "daily" | "weekly" | "monthly" | "yearly";
   period_start: string;
   period_end: string;
   /** Revenu total */
@@ -88,7 +133,7 @@ export interface FinancialStats {
 }
 
 export interface FinancialStatsInsert {
-  period_type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  period_type: "daily" | "weekly" | "monthly" | "yearly";
   period_start: string;
   period_end: string;
   /** Revenu total */
@@ -113,7 +158,7 @@ export interface FinancialStatsInsert {
 }
 
 export interface FinancialStatsUpdate {
-  period_type?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  period_type?: "daily" | "weekly" | "monthly" | "yearly";
   period_start?: string;
   period_end?: string;
   /** Revenu total */
@@ -277,3 +322,125 @@ export interface ClubStatsUpdate {
   calculated_at?: string;
 }
 
+// ============================================================================
+// DASHBOARD & CHART TYPES
+// ============================================================================
+
+/**
+ * Chart type
+ */
+export type ChartType = "line" | "area" | "bar" | "pie";
+
+/**
+ * Metric type
+ */
+export type MetricType = "number" | "currency" | "percentage";
+
+/**
+ * Trend type
+ */
+export type TrendType = "positive" | "negative" | "neutral";
+
+/**
+ * Metric card data
+ */
+export interface MetricCardData {
+  title: string;
+  value: number;
+  type: MetricType;
+  suffix?: string;
+  trend?: string;
+  trendType?: TrendType;
+}
+
+/**
+ * Chart data point
+ */
+export interface ChartDataPoint {
+  [key: string]: any;
+}
+
+/**
+ * Chart series
+ */
+export interface ChartSeries {
+  dataKey: string;
+  name: string;
+  color: string;
+}
+
+/**
+ * Statistics for course attendance by month
+ */
+export interface StatistiquesFrequentationMois {
+  mois: string;
+  frequentation: number;
+  pourcentage_de_cours_valides: number;
+  nombres_total_de_cours_du_mois: number;
+}
+
+/**
+ * Course attendance statistics
+ */
+export interface StatistiquesFrequentation {
+  mois: StatistiquesFrequentationMois[];
+}
+
+/**
+ * Dashboard metric
+ */
+export interface DashboardMetric {
+  title: string;
+  value: number;
+  type: MetricType;
+  suffix?: string;
+  trend?: string;
+  trendType?: TrendType;
+}
+
+/**
+ * Payment data for dashboard
+ */
+export interface PaymentData {
+  user_first_name?: string;
+  user_last_name?: string;
+  user_id?: string;
+  amount: number;
+  payment_date?: string;
+  status: string;
+}
+
+/**
+ * Member data for dashboard
+ */
+export interface MemberData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  created_at?: string;
+  plan_name?: string;
+}
+
+/**
+ * Table column definition
+ */
+export interface TableColumn {
+  key: string;
+  label: string;
+}
+
+/**
+ * Table row data
+ */
+export interface TableRowData {
+  [key: string]: string | number | any;
+}
+
+/**
+ * Expandable section variant
+ */
+export type ExpandableSectionVariant =
+  | "default"
+  | "warning"
+  | "success"
+  | "info";

@@ -82,6 +82,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
+import { logger } from "@/core/utils/appLogger";
 import { en } from "./locales/en";
 import { fr } from "./locales/fr";
 import { nl } from "./locales/nl";
@@ -167,7 +168,7 @@ i18n
     saveMissing: import.meta.env.DEV,
     missingKeyHandler: (lngs, ns, key, fallbackValue) => {
       if (import.meta.env.DEV) {
-        console.warn(
+        logger.warn(
           `🌍 [i18n] Missing translation key: "${key}" for languages: ${lngs.join(", ")}`,
         );
       }
@@ -183,7 +184,7 @@ i18n
  */
 export const changeLanguage = async (language: (typeof SUPPORTED_LANGUAGES)[number]) => {
   if (!SUPPORTED_LANGUAGES.includes(language)) {
-    console.error(`🌍 [i18n] Unsupported language: ${language}`);
+    logger.error(`🌍 [i18n] Unsupported language: ${language}`);
     return;
   }
 
@@ -194,7 +195,7 @@ export const changeLanguage = async (language: (typeof SUPPORTED_LANGUAGES)[numb
 
   // Log in development
   if (import.meta.env.DEV) {
-    console.log(`🌍 [i18n] Language changed to: ${language}`);
+    logger.info(`🌍 [i18n] Language changed to: ${language}`);
   }
 };
 

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { UserData } from '@clubmanager/types';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import type { UserData } from "@clubmanager/types";
+import { logger } from "@/core/utils/appLogger";
 
 // Définir le type pour le contexte
 interface UserContextType {
@@ -18,11 +19,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    console.log('UserContext - selectedUserId mis à jour :', selectedUserId); // Log pour vérifier l'ID
+    logger.debug("UserContext - selectedUserId updated", {
+      feature: "user-context",
+      component: "UserProvider",
+      metadata: { selectedUserId },
+    });
   }, [selectedUserId]);
 
   return (
-    <UserContext.Provider value={{ selectedUser, setSelectedUser, selectedUserId, setSelectedUserId }}>
+    <UserContext.Provider
+      value={{ selectedUser, setSelectedUser, selectedUserId, setSelectedUserId }}
+    >
       {children}
     </UserContext.Provider>
   );
@@ -32,7 +39,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useUserContext = (): UserContextType => {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error('useUserContext must be used within a UserProvider');
+    throw new Error("useUserContext must be used within a UserProvider");
   }
   return context;
 };

@@ -27,6 +27,7 @@ import { onError } from "@apollo/client/link/error";
 import { setContext } from "@apollo/client/link/context";
 import { createAPQLink } from "./persisted-queries";
 import { restoreCacheFromStorage, setupCachePersistence } from "./cache-persistence";
+import { logger } from "@/core/utils/appLogger";
 
 // ====================================================================
 // CONFIGURATION
@@ -81,10 +82,18 @@ const authLink = setContext((_, { headers }) => {
 // ====================================================================
 
 const errorLink = onError(({ error }) => {
-  console.error("[Apollo Error]:", error);
+  logger.error("Apollo GraphQL error occurred", error as Error, {
+    feature: "apollo",
+    component: "errorLink",
+  });
 
   // Gérer les erreurs d'authentification
   if (error.message?.includes("UNAUTHENTICATED") || error.message?.includes("401")) {
+    logger.warn("Authentication error detected, redirecting to login", {
+      feature: "apollo",
+      action: "logout",
+    });
+
     // Nettoyer le localStorage
     localStorage.removeItem("authToken");
     localStorage.removeItem("userData");
@@ -236,7 +245,10 @@ export const apolloClient = new ApolloClient({
  */
 if (ENABLE_CACHE_PERSISTENCE) {
   setupCachePersistence(cache);
-  console.info("[Apollo] Cache persistence enabled");
+  logger.info("Apollo cache persistence enabled", {
+    feature: "apollo",
+    component: "cache-persistence",
+  });
 }
 
 // ====================================================================

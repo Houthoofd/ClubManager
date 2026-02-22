@@ -10,7 +10,7 @@
 // ============================================================================
 // Pages
 // ============================================================================
-export { default as TeachersManagePage } from "./pages/TeachersManagePage";
+export { default as TeachersManagePage } from "./pages/TeachersManagePage.old";
 export { default as TeacherPlanningPage } from "./pages/TeacherPlanningPage";
 
 // ============================================================================
@@ -63,7 +63,7 @@ export type {
   PlanningGridProps,
   PlanningFilterProps,
   PlanningStatisticsProps,
-} from "./types";
+} from "@clubmanager/types";
 
 // ============================================================================
 // Constants

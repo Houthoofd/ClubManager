@@ -47,13 +47,7 @@ import {
   Flex,
   FlexItem,
 } from "@patternfly/react-core";
-import {
-  UserIcon,
-  SearchIcon,
-  PlusCircleIcon,
-  EditIcon,
-  TrashIcon,
-} from "@patternfly/react-icons";
+import { UserIcon, SearchIcon, PlusCircleIcon, EditIcon, TrashIcon } from "@patternfly/react-icons";
 import { useTranslation } from "react-i18next";
 import { useTracking } from "@/shared/hooks/useTracking";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
@@ -69,7 +63,7 @@ import {
   useUpdateInstructorMutation,
   useDeleteInstructorMutation,
 } from "@/core/api/apollo/generated/graphql";
-import type { TeacherListItem } from "../types";
+import type { TeacherListItem } from "@clubmanager/types";
 
 // ============================================================================
 // Constants
@@ -119,7 +113,7 @@ const TeachersManagePage: React.FC = () => {
       });
       showNotification(
         t("teachers.manage.errors.loadFailed", "Erreur lors du chargement des professeurs"),
-        "danger"
+        "danger",
       );
     },
   });
@@ -132,7 +126,7 @@ const TeachersManagePage: React.FC = () => {
       });
       showNotification(
         t("teachers.manage.success.created", "Professeur créé avec succès"),
-        "success"
+        "success",
       );
       refetch();
     },
@@ -144,7 +138,7 @@ const TeachersManagePage: React.FC = () => {
       });
       showNotification(
         t("teachers.manage.errors.createFailed", "Erreur lors de la création du professeur"),
-        "danger"
+        "danger",
       );
     },
   });
@@ -157,7 +151,7 @@ const TeachersManagePage: React.FC = () => {
       });
       showNotification(
         t("teachers.manage.success.updated", "Professeur mis à jour avec succès"),
-        "success"
+        "success",
       );
       setShowEditModal(false);
       setSelectedTeacher(null);
@@ -171,7 +165,7 @@ const TeachersManagePage: React.FC = () => {
       });
       showNotification(
         t("teachers.manage.errors.updateFailed", "Erreur lors de la mise à jour du professeur"),
-        "danger"
+        "danger",
       );
     },
   });
@@ -184,7 +178,7 @@ const TeachersManagePage: React.FC = () => {
       });
       showNotification(
         t("teachers.manage.success.deleted", "Professeur supprimé avec succès"),
-        "success"
+        "success",
       );
       setShowDeleteModal(false);
       setSelectedTeacher(null);
@@ -198,7 +192,7 @@ const TeachersManagePage: React.FC = () => {
       });
       showNotification(
         t("teachers.manage.errors.deleteFailed", "Erreur lors de la suppression du professeur"),
-        "danger"
+        "danger",
       );
     },
   });
@@ -330,10 +324,7 @@ const TeachersManagePage: React.FC = () => {
       <div className="teachers-page">
         <PageHeader
           title={t("teachers.manage.title", "Gestion des professeurs")}
-          subtitle={t(
-            "teachers.manage.subtitle",
-            "Gérez les professeurs et leurs informations"
-          )}
+          subtitle={t("teachers.manage.subtitle", "Gérez les professeurs et leurs informations")}
           variant="teachers"
         />
         <PageSection>
@@ -361,10 +352,7 @@ const TeachersManagePage: React.FC = () => {
       <div className="teachers-page">
         <PageHeader
           title={t("teachers.manage.title", "Gestion des professeurs")}
-          subtitle={t(
-            "teachers.manage.subtitle",
-            "Gérez les professeurs et leurs informations"
-          )}
+          subtitle={t("teachers.manage.subtitle", "Gérez les professeurs et leurs informations")}
           variant="teachers"
         />
         <PageSection>
@@ -380,7 +368,7 @@ const TeachersManagePage: React.FC = () => {
           >
             {t(
               "teachers.manage.errors.loadFailed",
-              "Impossible de charger les professeurs. Veuillez réessayer."
+              "Impossible de charger les professeurs. Veuillez réessayer.",
             )}
           </Alert>
         </PageSection>
@@ -393,19 +381,12 @@ const TeachersManagePage: React.FC = () => {
     <div className="teachers-page">
       <PageHeader
         title={t("teachers.manage.title", "Gestion des professeurs")}
-        subtitle={t(
-          "teachers.manage.subtitle",
-          "Gérez les professeurs et leurs informations"
-        )}
+        subtitle={t("teachers.manage.subtitle", "Gérez les professeurs et leurs informations")}
         variant="teachers"
       />
 
       <PageSection className="teachers-content">
-        <Tabs
-          activeKey={activeTabKey}
-          onSelect={handleTabClick}
-          className="modern-tabs"
-        >
+        <Tabs activeKey={activeTabKey} onSelect={handleTabClick} className="modern-tabs">
           {/* Tab: Liste des professeurs */}
           <Tab
             eventKey={TEACHER_TABS.LIST}
@@ -424,7 +405,7 @@ const TeachersManagePage: React.FC = () => {
                       <SearchInput
                         placeholder={t(
                           "teachers.manage.searchPlaceholder",
-                          "Rechercher un professeur (nom, email, spécialisation)..."
+                          "Rechercher un professeur (nom, email, spécialisation)...",
                         )}
                         value={searchValue}
                         onChange={(_event: React.FormEvent<HTMLInputElement>, value: string) =>
@@ -444,7 +425,7 @@ const TeachersManagePage: React.FC = () => {
                       {t(
                         "teachers.manage.searchResults",
                         "{{count}} professeur(s) trouvé(s) sur {{total}}",
-                        { count: filteredTeachers.length, total: teachers.length }
+                        { count: filteredTeachers.length, total: teachers.length },
                       )}
                     </span>
                   </div>
@@ -467,11 +448,11 @@ const TeachersManagePage: React.FC = () => {
                       {searchValue
                         ? t(
                             "teachers.manage.empty.tryDifferent",
-                            "Essayez de modifier votre recherche"
+                            "Essayez de modifier votre recherche",
                           )
                         : t(
                             "teachers.manage.empty.addFirst",
-                            "Aucun professeur n'a encore été ajouté au système"
+                            "Aucun professeur n'a encore été ajouté au système",
                           )}
                     </EmptyStateBody>
                   </EmptyState>
@@ -603,7 +584,7 @@ const TeachersManagePage: React.FC = () => {
                 >
                   {t(
                     "teachers.manage.info.addDescription",
-                    "Pour ajouter un professeur, vous devez d'abord créer un compte utilisateur, puis promouvoir cet utilisateur au rôle d'instructeur depuis la page de gestion des utilisateurs."
+                    "Pour ajouter un professeur, vous devez d'abord créer un compte utilisateur, puis promouvoir cet utilisateur au rôle d'instructeur depuis la page de gestion des utilisateurs.",
                   )}
                 </Alert>
               </CardBody>
@@ -639,10 +620,7 @@ const TeachersManagePage: React.FC = () => {
         >
           {selectedTeacher && (
             <Form>
-              <FormGroup
-                label={t("teachers.manage.form.name", "Nom")}
-                fieldId="teacher-name"
-              >
+              <FormGroup label={t("teachers.manage.form.name", "Nom")} fieldId="teacher-name">
                 <TextInput
                   id="teacher-name"
                   value={`${selectedTeacher.first_name} ${selectedTeacher.last_name}`}
@@ -650,10 +628,7 @@ const TeachersManagePage: React.FC = () => {
                 />
               </FormGroup>
 
-              <FormGroup
-                label={t("teachers.manage.form.email", "Email")}
-                fieldId="teacher-email"
-              >
+              <FormGroup label={t("teachers.manage.form.email", "Email")} fieldId="teacher-email">
                 <TextInput id="teacher-email" value={selectedTeacher.email} isDisabled />
               </FormGroup>
 
@@ -669,7 +644,7 @@ const TeachersManagePage: React.FC = () => {
                   }
                   placeholder={t(
                     "teachers.manage.form.specializationPlaceholder",
-                    "Ex: Yoga, Pilates, Musculation..."
+                    "Ex: Yoga, Pilates, Musculation...",
                   )}
                 />
               </FormGroup>
@@ -686,24 +661,19 @@ const TeachersManagePage: React.FC = () => {
                   }
                   placeholder={t(
                     "teachers.manage.form.certificationsPlaceholder",
-                    "Ex: Certifié BPJEPS, Diplôme d'état..."
+                    "Ex: Certifié BPJEPS, Diplôme d'état...",
                   )}
                 />
               </FormGroup>
 
-              <FormGroup
-                label={t("teachers.manage.form.bio", "Biographie")}
-                fieldId="teacher-bio"
-              >
+              <FormGroup label={t("teachers.manage.form.bio", "Biographie")} fieldId="teacher-bio">
                 <TextArea
                   id="teacher-bio"
                   value={formData.bio}
-                  onChange={(_e, value) =>
-                    setFormData((prev) => ({ ...prev, bio: value }))
-                  }
+                  onChange={(_e, value) => setFormData((prev) => ({ ...prev, bio: value }))}
                   placeholder={t(
                     "teachers.manage.form.bioPlaceholder",
-                    "Décrivez l'expérience et les compétences du professeur..."
+                    "Décrivez l'expérience et les compétences du professeur...",
                   )}
                   rows={4}
                 />
@@ -743,7 +713,7 @@ const TeachersManagePage: React.FC = () => {
               {t(
                 "teachers.manage.deleteModal.confirm",
                 "Êtes-vous sûr de vouloir supprimer le professeur {{name}} ? Cette action est irréversible.",
-                { name: `${selectedTeacher.first_name} ${selectedTeacher.last_name}` }
+                { name: `${selectedTeacher.first_name} ${selectedTeacher.last_name}` },
               )}
             </p>
           )}
@@ -764,8 +734,8 @@ export default withErrorBoundary(
         requireAuth: true,
         redirectTo: "/login",
       }),
-      ["admin"]
+      ["admin"],
     ),
-    "teachers_manage"
-  )
+    "teachers_manage",
+  ),
 );

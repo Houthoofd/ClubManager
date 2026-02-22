@@ -98,7 +98,7 @@ export type {
   CoursSortBy,
   SortDirection,
   CoursSortOptions,
-} from "./types";
+} from "@clubmanager/types";
 
 // ============================================================================
 // Constants

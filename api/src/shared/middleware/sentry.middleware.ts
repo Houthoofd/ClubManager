@@ -16,7 +16,7 @@ import {
   startTransaction,
   sentryConfig,
 } from "../config/sentry.config.js";
-import { GraphQLContext } from "../types/context.types.js";
+import { GraphQLContext } from "@clubmanager/types";
 
 /**
  * Sentry middleware for GraphQL resolvers

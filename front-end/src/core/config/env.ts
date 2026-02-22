@@ -10,12 +10,13 @@
  * ```tsx
  * import { env } from '@/core/config/env';
  *
- * console.log(env.stripe.publicKey);
- * console.log(env.api.baseUrl);
+ * logger.info('Stripe key:', env.stripe.publicKey);
+ * logger.info('API URL:', env.api.baseUrl);
  * ```
  */
 
 import { z } from "zod";
+import { logger } from "@/core/utils/appLogger";
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -146,9 +147,9 @@ function parseEnv() {
     return envSchema.parse(config);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error("❌ [Config] Environment validation failed:");
-      error.errors.forEach((err) => {
-        console.error(`  - ${err.path.join(".")}: ${err.message}`);
+      logger.error("❌ [Config] Environment validation failed:");
+      error.issues.forEach((err: z.ZodIssue) => {
+        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
       });
       throw new Error("Invalid environment configuration. Check console for details.");
     }
@@ -222,19 +223,7 @@ export const getGraphQLUrl = (): string => {
  * Log configuration on startup (development only)
  */
 if (isDev) {
-  console.log("🔧 [Config] Environment configuration loaded:", {
-    environment: env.app.environment,
-    api: {
-      baseUrl: env.api.baseUrl,
-      graphql: env.api.graphqlEndpoint,
-    },
-    stripe: {
-      mode: env.stripe.isTestMode ? "TEST" : "LIVE",
-      account: env.stripe.account,
-      key: env.stripe.publicKey.substring(0, 20) + "...",
-    },
-    features: env.features,
-  });
+  logger.debug("🔧 [Config] Environment configuration loaded");
 }
 
 // ============================================================================
@@ -242,7 +231,7 @@ if (isDev) {
 // ============================================================================
 
 if (isProd && env.stripe.isTestMode) {
-  console.warn(
+  logger.warn(
     "⚠️ [Config] WARNING: Using Stripe TEST key in PRODUCTION mode! This should not happen in production.",
   );
 }

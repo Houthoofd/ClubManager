@@ -1,7 +1,54 @@
 /**
- * Generated TypeScript types for shop domain
- * @generated - Do not edit manually
+ * Shop Domain Types
+ *
+ * TypeScript types for shop domain including database entities,
+ * API operations, and business logic types.
  */
+
+// ============================================================================
+// API OPERATION TYPES
+// ============================================================================
+
+/**
+ * Options de filtrage pour shop
+ */
+export interface ShopFilterOptions {
+  userId?: number;
+  limit?: number;
+  offset?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  categoryId?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  isActive?: boolean;
+  isPhysical?: boolean;
+}
+
+/**
+ * Résultat paginé pour shop
+ */
+export interface ShopPaginatedResult<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+/**
+ * Réponse de création/mise à jour
+ */
+export interface ShopMutationResult {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+// ============================================================================
+// DATABASE ENTITY TYPES
+// ============================================================================
 
 export interface ProductCategories {
   id: number;
@@ -381,4 +428,253 @@ export interface StripeRefund {
   status: "pending" | "succeeded" | "failed" | "canceled";
   reason?: "duplicate" | "fraudulent" | "requested_by_customer";
   created_at: number;
+}
+
+// ============================================================================
+// FRONT-END SHOP TYPES
+// ============================================================================
+
+/**
+ * Cart item with UI-specific properties
+ */
+export interface CartItem {
+  id: number;
+  nom: string;
+  description?: string;
+  prix: number;
+  categorie_id?: number;
+  images?: string[];
+  taille?: string;
+  quantite: number;
+  stocks?: Array<{
+    taille: string;
+    quantite: number;
+    quantiteOriginale?: number;
+  }>;
+}
+
+/**
+ * Article with category information
+ */
+export interface ArticleWithCategory {
+  id: number;
+  nom: string;
+  description?: string;
+  prix: number;
+  categorie_id?: number;
+  images?: string[];
+  stocks?: Array<{
+    taille: string;
+    quantite: number;
+  }>;
+  category?: {
+    id: number;
+    nom: string;
+    description?: string;
+  };
+}
+
+/**
+ * Order with items and user details
+ */
+export interface OrderWithItems {
+  id: number;
+  user_id: number;
+  order_number: string;
+  total_amount: number;
+  status?: "pending" | "processing" | "completed" | "cancelled" | "refunded";
+  payment_status?: "unpaid" | "partial" | "paid" | "refunded";
+  created_at?: string;
+  items: Array<{
+    id: number;
+    order_id: number;
+    product_id: number;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+  }>;
+  user?: {
+    id: number;
+    nom: string;
+    prenom: string;
+    email: string;
+  };
+}
+
+/**
+ * Articles grouped by category
+ */
+export type ArticlesParCategorie = Record<string, Products[]>;
+
+/**
+ * Checkout form data
+ */
+export interface CheckoutFormData {
+  delivery_method: "pickup" | "delivery" | "digital";
+  delivery_address?: string;
+  notes?: string;
+}
+
+/**
+ * Payment form data
+ */
+export interface PaymentFormData {
+  payment_method: string;
+  save_payment_method?: boolean;
+}
+
+/**
+ * Article type compatible with existing codebase
+ */
+export interface Article {
+  id: number;
+  nom: string;
+  description?: string;
+  prix: number;
+  categorie_id?: number;
+  images?: string[];
+  taille?: string;
+  quantite: number;
+  stocks?: Array<{
+    id?: number;
+    taille: string;
+    quantite: number;
+    quantiteOriginale?: number;
+  }>;
+}
+
+/**
+ * Order status types
+ */
+export type OrderStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "cancelled"
+  | "refunded";
+
+/**
+ * Order item detail
+ */
+export interface OrderItemDetail {
+  id: number;
+  order_id: number;
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  size?: string;
+  color?: string;
+}
+
+/**
+ * Detailed order information
+ */
+export interface OrderDetail extends Orders {
+  items: OrderItemDetail[];
+  user_name?: string;
+  user_email?: string;
+  shipping_address?: string;
+  notes?: string;
+  payment_intent_id?: string;
+}
+
+/**
+ * Order form data for creation
+ */
+export interface OrderFormData {
+  user_id: number;
+  items: Array<{
+    product_id: number;
+    quantity: number;
+    size?: string;
+    color?: string;
+  }>;
+  payment_method?: string;
+  shipping_address?: string;
+  notes?: string;
+}
+
+/**
+ * Order statistics
+ */
+export interface OrderStats {
+  total_orders: number;
+  pending_orders: number;
+  completed_orders: number;
+  cancelled_orders: number;
+  total_revenue: number;
+  revenue_this_month: number;
+  revenue_this_week: number;
+  average_order_value: number;
+  orders_by_status: Record<OrderStatus, number>;
+  orders_by_month: Array<{
+    month: string;
+    count: number;
+    revenue: number;
+  }>;
+}
+
+/**
+ * Order filter options
+ */
+export interface OrderFilters {
+  search?: string;
+  status?: OrderStatus | null;
+  user_id?: number | null;
+  payment_method?: string | null;
+  date_from?: string;
+  date_to?: string;
+  min_amount?: number;
+  max_amount?: number;
+}
+
+/**
+ * Order sort options
+ */
+export type OrderSortBy =
+  | "created_at"
+  | "updated_at"
+  | "total_amount"
+  | "status"
+  | "user_name";
+
+export interface OrderSortOptions {
+  sortBy: OrderSortBy;
+  direction: "asc" | "desc";
+}
+
+/**
+ * Order table row data
+ */
+export interface OrderTableRow {
+  id: number;
+  user_name: string;
+  user_email?: string;
+  total_amount: number;
+  status: OrderStatus;
+  payment_method?: string;
+  created_at: string;
+  items_count: number;
+}
+
+/**
+ * Order status update data
+ */
+export interface OrderStatusUpdate {
+  order_id: number;
+  status: OrderStatus;
+  notes?: string;
+}
+
+/**
+ * Order validation errors
+ */
+export interface OrderValidationErrors {
+  user_id?: string;
+  items?: string;
+  total_amount?: string;
+  payment_method?: string;
+  shipping_address?: string;
 }

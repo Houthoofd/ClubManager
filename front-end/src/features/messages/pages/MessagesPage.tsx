@@ -21,7 +21,7 @@ import {
   ERROR_MESSAGES,
   VALIDATION_MESSAGES,
 } from "../constants";
-import type { MessageWithStatus, MessagesPageState } from "../types";
+import type { MessageWithStatus, MessagesPageState } from "@clubmanager/types";
 
 // Components
 import MessagesReceivedTab from "../components/MessagesReceivedTab";

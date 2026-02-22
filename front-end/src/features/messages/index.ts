@@ -85,7 +85,7 @@ export type {
   MessageTypesTabProps,
   SendMessageFormProps,
   MessagesPageState,
-} from "./types";
+} from "@clubmanager/types";
 
 // ============================================================================
 // Constants

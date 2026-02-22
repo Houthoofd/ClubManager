@@ -14,6 +14,7 @@
 
 import authService from "./auth.service";
 import type { AuthUser } from "./auth.service";
+import { logger } from "@/core/utils/appLogger";
 
 // ====================================================================
 // TYPES
@@ -137,7 +138,7 @@ export const getUserPreferences = (): UserPreferences => {
     const prefsJson = localStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
     return prefsJson ? JSON.parse(prefsJson) : {};
   } catch (error) {
-    console.error("[UserService] Failed to get user preferences:", error);
+    logger.error("[UserService] Failed to get user preferences:", error as Error);
     return {};
   }
 };
@@ -151,7 +152,7 @@ export const setUserPreferences = (preferences: UserPreferences): void => {
     const updatedPrefs = { ...currentPrefs, ...preferences };
     localStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(updatedPrefs));
   } catch (error) {
-    console.error("[UserService] Failed to set user preferences:", error);
+    logger.error("[UserService] Failed to set user preferences:", error as Error);
   }
 };
 
@@ -162,7 +163,7 @@ export const clearUserPreferences = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.USER_PREFERENCES);
   } catch (error) {
-    console.error("[UserService] Failed to clear user preferences:", error);
+    logger.error("[UserService] Failed to clear user preferences:", error as Error);
   }
 };
 
@@ -256,7 +257,7 @@ export const cacheUserProfile = (profile: UserProfile): void => {
     };
     localStorage.setItem(STORAGE_KEYS.USER_PROFILE_CACHE, JSON.stringify(cacheData));
   } catch (error) {
-    console.error("[UserService] Failed to cache user profile:", error);
+    logger.error("[UserService] Failed to cache user profile:", error as Error);
   }
 };
 
@@ -279,7 +280,7 @@ export const getCachedUserProfile = (maxAge = 5 * 60 * 1000): UserProfile | null
 
     return profile;
   } catch (error) {
-    console.error("[UserService] Failed to get cached user profile:", error);
+    logger.error("[UserService] Failed to get cached user profile:", error as Error);
     return null;
   }
 };
@@ -291,7 +292,7 @@ export const clearUserProfileCache = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.USER_PROFILE_CACHE);
   } catch (error) {
-    console.error("[UserService] Failed to clear user profile cache:", error);
+    logger.error("[UserService] Failed to clear user profile cache:", error as Error);
   }
 };
 
@@ -305,7 +306,7 @@ export const clearUserProfileCache = (): void => {
 export const updateCurrentUserData = (updates: Partial<AuthUser>): void => {
   const currentUser = authService.getCurrentUser();
   if (!currentUser) {
-    console.warn("[UserService] Cannot update user data: no user logged in");
+    logger.warn("[UserService] Cannot update user data: no user logged in");
     return;
   }
 

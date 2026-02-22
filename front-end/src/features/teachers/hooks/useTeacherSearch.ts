@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo } from "react";
-import type { TeacherListItem } from "../types";
+import type { TeacherListItem } from "@clubmanager/types";
 import { createSearchableString, normalizeSearchTerm } from "../utils/teacher-formatters";
 
 export interface UseTeacherSearchOptions {
@@ -36,9 +36,7 @@ export interface UseTeacherSearchReturn {
  * @param options - Configuration options
  * @returns Search state and methods
  */
-export const useTeacherSearch = (
-  options: UseTeacherSearchOptions = {}
-): UseTeacherSearchReturn => {
+export const useTeacherSearch = (options: UseTeacherSearchOptions = {}): UseTeacherSearchReturn => {
   const { initialValue = "" } = options;
 
   const [searchValue, setSearchValue] = useState<string>(initialValue);

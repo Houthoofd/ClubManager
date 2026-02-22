@@ -25,6 +25,7 @@ import {
   useLocation,
   useNavigationType,
 } from "react-router-dom";
+import { logger } from "@/core/utils/appLogger";
 
 // ============================================================================
 // CONFIGURATION
@@ -63,13 +64,13 @@ const REPLAYS_ON_ERROR_SAMPLE_RATE = 1.0; // 100% des sessions avec erreur
 export function initSentry(): void {
   // Ne pas initialiser en développement si pas de DSN
   if (!SENTRY_DSN && !import.meta.env.PROD) {
-    console.log("ℹ️ [Sentry] Désactivé en développement (pas de DSN configuré)");
+    logger.info("ℹ️ [Sentry] Désactivé en développement (pas de DSN configuré)");
     return;
   }
 
   // Vérifier que le DSN est configuré en production
   if (import.meta.env.PROD && !SENTRY_DSN) {
-    console.error("❌ [Sentry] DSN manquant en production !");
+    logger.error("❌ [Sentry] DSN manquant en production !");
     return;
   }
 
@@ -151,12 +152,9 @@ export function initSentry(): void {
       enabled: import.meta.env.PROD,
     });
 
-    console.log("✅ [Sentry] Initialisé avec succès");
-    console.log(`   Environment: ${ENVIRONMENT}`);
-    console.log(`   Release: ${RELEASE}`);
-    console.log(`   Traces Sample Rate: ${TRACES_SAMPLE_RATE * 100}%`);
+    logger.info("✅ [Sentry] Initialisé avec succès");
   } catch (error) {
-    console.error("❌ [Sentry] Erreur lors de l'initialisation:", error);
+    logger.error("❌ [Sentry] Erreur lors de l'initialisation:", error as Error);
   }
 }
 
@@ -192,7 +190,7 @@ export function setSentryUser(user: SentryUser | null): void {
     role: user.role,
   });
 
-  console.log("👤 [Sentry] User context set:", user.id);
+  logger.debug("👤 [Sentry] User context set");
 }
 
 /**
@@ -200,7 +198,7 @@ export function setSentryUser(user: SentryUser | null): void {
  */
 export function clearSentryUser(): void {
   Sentry.setUser(null);
-  console.log("🚪 [Sentry] User context cleared");
+  logger.debug("🚪 [Sentry] User context cleared");
 }
 
 // ============================================================================
@@ -244,10 +242,7 @@ export function captureError(error: Error, context?: Record<string, any>): void 
 /**
  * Capturer un message (warning, info)
  */
-export function captureMessage(
-  message: string,
-  level: Sentry.SeverityLevel = "info",
-): void {
+export function captureMessage(message: string, level: Sentry.SeverityLevel = "info"): void {
   Sentry.captureMessage(message, level);
 }
 
@@ -286,10 +281,7 @@ export function startTransaction(name: string, op: string = "custom"): Sentry.Sp
 /**
  * Mesurer la performance d'une fonction
  */
-export async function measurePerformance<T>(
-  name: string,
-  fn: () => Promise<T>,
-): Promise<T> {
+export async function measurePerformance<T>(name: string, fn: () => Promise<T>): Promise<T> {
   return await Sentry.startSpan({ name, op: "function" }, async () => {
     return await fn();
   });

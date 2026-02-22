@@ -42,27 +42,28 @@
  * ```
  */
 
-import i18n from './config';
-import { TFunction } from 'i18next';
+import i18n from "./config";
+import { TFunction } from "i18next";
+import { logger } from "@/core/utils/appLogger";
 
 // ====================================================================
 // TYPES
 // ====================================================================
 
 export type TranslationNamespace =
-  | 'common'
-  | 'navigation'
-  | 'auth'
-  | 'shop'
-  | 'courses'
-  | 'users'
-  | 'messages'
-  | 'orders'
-  | 'stats'
-  | 'teachers'
-  | 'errors'
-  | 'validation'
-  | 'language';
+  | "common"
+  | "navigation"
+  | "auth"
+  | "shop"
+  | "courses"
+  | "users"
+  | "messages"
+  | "orders"
+  | "stats"
+  | "teachers"
+  | "errors"
+  | "validation"
+  | "language";
 
 export interface TranslationOptions {
   count?: number;
@@ -74,16 +75,16 @@ export interface TranslationOptions {
 export interface FormatOptions {
   locale?: string;
   currency?: string;
-  style?: 'decimal' | 'currency' | 'percent';
+  style?: "decimal" | "currency" | "percent";
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
 }
 
 export interface DateFormatOptions {
   locale?: string;
-  dateStyle?: 'full' | 'long' | 'medium' | 'short';
-  timeStyle?: 'full' | 'long' | 'medium' | 'short';
-  format?: 'date' | 'time' | 'datetime' | 'relative';
+  dateStyle?: "full" | "long" | "medium" | "short";
+  timeStyle?: "full" | "long" | "medium" | "short";
+  format?: "date" | "time" | "datetime" | "relative";
 }
 
 // ====================================================================
@@ -120,7 +121,7 @@ export const t = translate;
 export function translateNS(
   namespace: TranslationNamespace,
   key: string,
-  options?: TranslationOptions
+  options?: TranslationOptions,
 ): string {
   return i18n.t(`${namespace}.${key}`, options);
 }
@@ -156,7 +157,7 @@ export function translationExists(key: string): boolean {
  * Obtenir la langue actuelle
  */
 export function getCurrentLanguage(): string {
-  return i18n.language || 'en';
+  return i18n.language || "en";
 }
 
 /**
@@ -185,12 +186,12 @@ export function formatNumber(value: number, options?: FormatOptions): string {
 
   try {
     return new Intl.NumberFormat(locale, {
-      style: options?.style || 'decimal',
+      style: options?.style || "decimal",
       minimumFractionDigits: options?.minimumFractionDigits,
       maximumFractionDigits: options?.maximumFractionDigits,
     }).format(value);
   } catch (error) {
-    console.error('Error formatting number:', error);
+    logger.error("Error formatting number:", error as Error);
     return String(value);
   }
 }
@@ -205,18 +206,22 @@ export function formatNumber(value: number, options?: FormatOptions): string {
  * formatCurrency(123.45, 'EUR'); // "€123.45"
  * ```
  */
-export function formatCurrency(value: number, currency: string = 'EUR', options?: FormatOptions): string {
+export function formatCurrency(
+  value: number,
+  currency: string = "EUR",
+  options?: FormatOptions,
+): string {
   const locale = options?.locale || getCurrentLanguage();
 
   try {
     return new Intl.NumberFormat(locale, {
-      style: 'currency',
+      style: "currency",
       currency,
       minimumFractionDigits: options?.minimumFractionDigits ?? 2,
       maximumFractionDigits: options?.maximumFractionDigits ?? 2,
     }).format(value);
   } catch (error) {
-    console.error('Error formatting currency:', error);
+    logger.error("Error formatting currency:", error as Error);
     return `${currency} ${value.toFixed(2)}`;
   }
 }
@@ -235,12 +240,12 @@ export function formatPercent(value: number, options?: FormatOptions): string {
 
   try {
     return new Intl.NumberFormat(locale, {
-      style: 'percent',
+      style: "percent",
       minimumFractionDigits: options?.minimumFractionDigits ?? 0,
       maximumFractionDigits: options?.maximumFractionDigits ?? 2,
     }).format(value);
   } catch (error) {
-    console.error('Error formatting percent:', error);
+    logger.error("Error formatting percent:", error as Error);
     return `${(value * 100).toFixed(2)}%`;
   }
 }
@@ -257,16 +262,16 @@ export function formatPercent(value: number, options?: FormatOptions): string {
  */
 export function formatDate(value: Date | string | number, options?: DateFormatOptions): string {
   const locale = options?.locale || getCurrentLanguage();
-  const date = typeof value === 'string' || typeof value === 'number' ? new Date(value) : value;
+  const date = typeof value === "string" || typeof value === "number" ? new Date(value) : value;
 
   if (!(date instanceof Date) || isNaN(date.getTime())) {
-    console.error('Invalid date:', value);
+    logger.error("Invalid date:", new Error(String(value)));
     return String(value);
   }
 
   try {
     // Format relatif (ex: "il y a 2 jours")
-    if (options?.format === 'relative') {
+    if (options?.format === "relative") {
       return formatRelativeDate(date, locale);
     }
 
@@ -276,7 +281,7 @@ export function formatDate(value: Date | string | number, options?: DateFormatOp
       timeStyle: options?.timeStyle,
     }).format(date);
   } catch (error) {
-    console.error('Error formatting date:', error);
+    logger.error("Error formatting date:", error as Error);
     return date.toLocaleDateString();
   }
 }
@@ -288,15 +293,15 @@ function formatRelativeDate(date: Date, locale: string): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
   const intervals = [
-    { seconds: 31536000, unit: 'year' },
-    { seconds: 2592000, unit: 'month' },
-    { seconds: 86400, unit: 'day' },
-    { seconds: 3600, unit: 'hour' },
-    { seconds: 60, unit: 'minute' },
-    { seconds: 1, unit: 'second' },
+    { seconds: 31536000, unit: "year" },
+    { seconds: 2592000, unit: "month" },
+    { seconds: 86400, unit: "day" },
+    { seconds: 3600, unit: "hour" },
+    { seconds: 60, unit: "minute" },
+    { seconds: 1, unit: "second" },
   ] as const;
 
   for (const interval of intervals) {
@@ -306,7 +311,7 @@ function formatRelativeDate(date: Date, locale: string): string {
     }
   }
 
-  return rtf.format(0, 'second');
+  return rtf.format(0, "second");
 }
 
 /**
@@ -326,16 +331,16 @@ export function formatDuration(seconds: number): string {
   const parts: string[] = [];
 
   if (hours > 0) {
-    parts.push(translatePlural('common.time.hours', hours));
+    parts.push(translatePlural("common.time.hours", hours));
   }
   if (minutes > 0) {
-    parts.push(translatePlural('common.time.minutes', minutes));
+    parts.push(translatePlural("common.time.minutes", minutes));
   }
   if (secs > 0 || parts.length === 0) {
-    parts.push(translatePlural('common.time.seconds', secs));
+    parts.push(translatePlural("common.time.seconds", secs));
   }
 
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 // ====================================================================
@@ -354,7 +359,7 @@ export function formatDuration(seconds: number): string {
 export function getValidationMessage(
   rule: string,
   field: string,
-  params?: Record<string, any>
+  params?: Record<string, any>,
 ): string {
   const key = `validation.${rule}`;
   return translate(key, { field: translate(`common.fields.${field}`), ...params });
@@ -430,39 +435,39 @@ export function useTypedTranslation() {
  */
 export const commonTranslations = {
   // Actions
-  save: () => translate('common.actions.save'),
-  cancel: () => translate('common.actions.cancel'),
-  delete: () => translate('common.actions.delete'),
-  edit: () => translate('common.actions.edit'),
-  create: () => translate('common.actions.create'),
-  submit: () => translate('common.actions.submit'),
-  close: () => translate('common.actions.close'),
-  confirm: () => translate('common.actions.confirm'),
-  search: () => translate('common.actions.search'),
-  filter: () => translate('common.actions.filter'),
-  export: () => translate('common.actions.export'),
-  import: () => translate('common.actions.import'),
+  save: () => translate("common.actions.save"),
+  cancel: () => translate("common.actions.cancel"),
+  delete: () => translate("common.actions.delete"),
+  edit: () => translate("common.actions.edit"),
+  create: () => translate("common.actions.create"),
+  submit: () => translate("common.actions.submit"),
+  close: () => translate("common.actions.close"),
+  confirm: () => translate("common.actions.confirm"),
+  search: () => translate("common.actions.search"),
+  filter: () => translate("common.actions.filter"),
+  export: () => translate("common.actions.export"),
+  import: () => translate("common.actions.import"),
 
   // Status
-  active: () => translate('common.status.active'),
-  inactive: () => translate('common.status.inactive'),
-  pending: () => translate('common.status.pending'),
-  completed: () => translate('common.status.completed'),
-  cancelled: () => translate('common.status.cancelled'),
+  active: () => translate("common.status.active"),
+  inactive: () => translate("common.status.inactive"),
+  pending: () => translate("common.status.pending"),
+  completed: () => translate("common.status.completed"),
+  cancelled: () => translate("common.status.cancelled"),
 
   // Messages
-  success: () => translate('common.messages.success'),
-  error: () => translate('common.messages.error'),
-  warning: () => translate('common.messages.warning'),
-  loading: () => translate('common.messages.loading'),
-  noData: () => translate('common.messages.noData'),
-  confirmDelete: () => translate('common.messages.confirmDelete'),
+  success: () => translate("common.messages.success"),
+  error: () => translate("common.messages.error"),
+  warning: () => translate("common.messages.warning"),
+  loading: () => translate("common.messages.loading"),
+  noData: () => translate("common.messages.noData"),
+  confirmDelete: () => translate("common.messages.confirmDelete"),
 
   // Validation
-  required: (field: string) => getValidationMessage('required', field),
-  invalid: (field: string) => getValidationMessage('invalid', field),
-  tooShort: (field: string, min: number) => getValidationMessage('minLength', field, { min }),
-  tooLong: (field: string, max: number) => getValidationMessage('maxLength', field, { max }),
+  required: (field: string) => getValidationMessage("required", field),
+  invalid: (field: string) => getValidationMessage("invalid", field),
+  tooShort: (field: string, min: number) => getValidationMessage("minLength", field, { min }),
+  tooLong: (field: string, max: number) => getValidationMessage("maxLength", field, { max }),
 };
 
 // ====================================================================

@@ -12,32 +12,28 @@
 // Pages
 // ============================================================================
 
-export { default as AddUserPage } from './pages/AddUserPage';
-export { default as UserDetailPage } from './pages/UserDetailPage';
+export { default as AddUserPage } from "./pages/AddUserPage";
+export { default as UserDetailPage } from "./pages/UserDetailPage";
 
 // ============================================================================
 // Components
 // ============================================================================
 
-export { default as EcheancesPaiement } from './components/EcheancesPaiement';
-export { default as FormulaireUtilisateur } from './components/FormulaireUtilisateur';
-export { default as FormulaireUtilisateurAjout } from './components/FormulaireUtilisateurAjout';
-export { default as OngletAjoutUtilisateur } from './components/OngletAjoutUtilisateur';
-export { default as OngletTableauUtilisateurs } from './components/OngletTableauUtilisateurs';
-export { default as StatistiquesUtilisateur } from './components/StatistiquesUtilisateur';
+export { default as EcheancesPaiement } from "./components/EcheancesPaiement";
+export { default as FormulaireUtilisateur } from "./components/FormulaireUtilisateur";
+export { default as FormulaireUtilisateurAjout } from "./components/FormulaireUtilisateurAjout";
+export { default as OngletAjoutUtilisateur } from "./components/OngletAjoutUtilisateur";
+export { default as OngletTableauUtilisateurs } from "./components/OngletTableauUtilisateurs";
+export { default as StatistiquesUtilisateur } from "./components/StatistiquesUtilisateur";
 
 // ============================================================================
 // Hooks
 // ============================================================================
 
-export * from './hooks/index';
+export * from "./hooks/index";
 
 // Named exports for commonly used hooks
-export {
-  useUsers,
-  useUserById,
-  useAllUsers,
-} from './hooks/index';
+export { useUsers, useUserById, useAllUsers } from "./hooks/index";
 
 // ============================================================================
 // Types
@@ -84,7 +80,7 @@ export type {
 
   // Validation
   UserValidationErrors,
-} from './types';
+} from "@clubmanager/types";
 
 // ============================================================================
 // Constants
@@ -150,4 +146,4 @@ export {
 
   // All constants grouped
   USERS_CONSTANTS,
-} from './constants';
+} from "./constants";

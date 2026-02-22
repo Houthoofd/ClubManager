@@ -63,7 +63,7 @@ export type {
 
   // Validation
   OrderValidationErrors,
-} from "./types";
+} from "@clubmanager/types";
 
 // ============================================================================
 // Constants

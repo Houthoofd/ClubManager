@@ -15,7 +15,8 @@
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import * as Sentry from "@sentry/react";
-import { Button, Alert, AlertActionCloseButton } from "@patternfly/react-core";
+import { Button, Alert } from "@patternfly/react-core";
+import { logger } from "@/core/utils/appLogger";
 
 // ============================================================================
 // TYPES
@@ -69,7 +70,7 @@ class SentryErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error("🚨 [ErrorBoundary] Uncaught error:", error, errorInfo);
+    logger.error("🚨 [ErrorBoundary] Uncaught error:", error);
 
     // Capture error in Sentry
     Sentry.withScope((scope) => {

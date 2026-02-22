@@ -8,5 +8,5 @@
  *   import { TeacherPlanningPage, TeachersManagePage } from '@/features/teachers/pages';
  */
 
-export { default as TeacherPlanningPage } from './TeacherPlanningPage';
-export { default as TeachersManagePage } from './TeachersManagePage';
+export { default as TeacherPlanningPage } from "./TeacherPlanningPage";
+export { default as TeachersManagePage } from "./TeachersManagePage.old";

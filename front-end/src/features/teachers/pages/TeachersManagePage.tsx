@@ -30,7 +30,7 @@ import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useInstructors, useTeacherSearch, useTeacherTabs } from "../hooks";
 import { TeacherSearch, TeacherList } from "../components";
 import { TEACHER_TABS } from "../constants";
-import type { TeacherListItem } from "../types";
+import type { TeacherListItem } from "@clubmanager/types";
 
 const TeachersManagePage: React.FC = () => {
   const { t } = useTranslation();

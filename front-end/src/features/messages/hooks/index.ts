@@ -3,16 +3,65 @@
 // ============================================================================
 
 /**
- * This file re-exports all message-related hooks from hooks-legacy
+ * This file re-exports all message-related hooks
  */
 
 // ============================================================================
-// Business Logic Hooks (NEW - Modular Architecture)
+// Business Logic Hooks (Modular Architecture)
 // ============================================================================
 export { useMessageSearch } from "./useMessageSearch";
 export { useMessageTabs } from "./useMessageTabs";
 
 // ============================================================================
-// Legacy Hooks
+// Messages Hooks
 // ============================================================================
-export * from "../hooks-legacy";
+export {
+  useMessageTypes,
+  useCreateMessageType,
+  useUpdateMessageType,
+  useDeleteMessageType,
+  useMessagesReceived,
+  useMessagesTrashed,
+  useUnreadMessagesCount,
+  useSendMessage,
+  useMarkMessageAsRead,
+  useDeleteReceivedMessage,
+  useRestoreMessage,
+  useMessages,
+  // Legacy aliases
+  useMessagesNonLus,
+  useMessagesCorbeille,
+  useSupprimerMessageRecu,
+  useMarquerMessageLu,
+  useEnvoyerMessage,
+  useTypesMessages,
+  useCreerTypeMessage,
+  useModifierTypeMessage,
+  useSupprimerTypeMessage,
+} from "./useMessages";
+
+// ============================================================================
+// Notifications Hooks
+// ============================================================================
+export {
+  useNotifications,
+  useCreateNotification,
+  useMarkNotificationAsRead,
+  useUnreadNotificationsCount,
+  // Legacy aliases
+  useCreerNotification,
+  useMarquerNotificationLue,
+} from "./useNotifications";
+
+// ============================================================================
+// Messaging/Conversation Hooks
+// ============================================================================
+export {
+  useMessaging,
+  useConversation,
+  useSendDirectMessage,
+  useSendGroupMessage,
+  // Legacy aliases
+  useMessagesUtilisateur,
+  useEnvoyerMessageGroupe,
+} from "./useMessaging";

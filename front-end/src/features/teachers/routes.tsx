@@ -19,7 +19,7 @@ import { FullPageSpinner } from "@/shared/components/ui";
 // LAZY LOADED PAGES
 // ====================================================================
 
-const TeachersManagePage = lazy(() => import("@/features/teachers/pages/TeachersManagePage"));
+const TeachersManagePage = lazy(() => import("@/features/teachers/pages/TeachersManagePage.old"));
 const TeacherPlanningPage = lazy(() => import("@/features/teachers/pages/TeacherPlanningPage"));
 
 // ====================================================================

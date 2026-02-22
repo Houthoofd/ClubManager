@@ -30,7 +30,7 @@ export {
 // ============================================================================
 
 export type {
-  Teacher,
+  Teachers as Teacher,
   TeacherListItem,
   CreateTeacherInput,
   UpdateTeacherInput,
@@ -42,7 +42,7 @@ export type {
   PlanningCourse,
   PlanningStatistics,
   PlanningFilter,
-} from "../types";
+} from "@clubmanager/types";
 
 // ============================================================================
 // Additional hook utilities

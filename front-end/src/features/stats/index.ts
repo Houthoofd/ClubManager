@@ -1,7 +1,7 @@
 // Stats Feature - Main Barrel Export
 
 // Pages
-export { DashboardPage, StatistiquesPage } from './pages';
+export { DashboardPage, StatistiquesPage } from "./pages";
 
 // Components
 export {
@@ -16,10 +16,10 @@ export {
   StatistiquesGraphique,
   StatistiquesDetail,
   StatistiquesCompte,
-} from './components';
+} from "./components";
 
 // Hooks
-export * from './hooks';
+export * from "./hooks";
 
 // Types
 export type {
@@ -37,7 +37,7 @@ export type {
   TableColumn,
   TableRowData,
   ExpandableSectionVariant,
-} from './types';
+} from "@clubmanager/types";
 
 // Constants
 export {
@@ -54,4 +54,4 @@ export {
   AUTO_REDIRECT_DELAY,
   AUTH_CHECK_INTERVAL,
   EMPTY_MESSAGES,
-} from './constants';
+} from "./constants";

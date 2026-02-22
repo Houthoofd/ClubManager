@@ -13,6 +13,7 @@
  */
 
 import { apolloClient } from "../api";
+import { logger } from "@/core/utils/appLogger";
 
 // ====================================================================
 // TYPES
@@ -65,7 +66,7 @@ export const setAuthToken = (token: string): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
   } catch (error) {
-    console.error("[AuthService] Failed to store auth token:", error);
+    logger.error("[AuthService] Failed to store auth token:", error as Error);
   }
 };
 
@@ -76,7 +77,7 @@ export const getAuthToken = (): string | null => {
   try {
     return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
   } catch (error) {
-    console.error("[AuthService] Failed to retrieve auth token:", error);
+    logger.error("[AuthService] Failed to retrieve auth token:", error as Error);
     return null;
   }
 };
@@ -88,7 +89,7 @@ export const removeAuthToken = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
   } catch (error) {
-    console.error("[AuthService] Failed to remove auth token:", error);
+    logger.error("[AuthService] Failed to remove auth token:", error as Error);
   }
 };
 
@@ -99,7 +100,7 @@ export const setRefreshToken = (token: string): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, token);
   } catch (error) {
-    console.error("[AuthService] Failed to store refresh token:", error);
+    logger.error("[AuthService] Failed to store refresh token:", error as Error);
   }
 };
 
@@ -110,7 +111,7 @@ export const getRefreshToken = (): string | null => {
   try {
     return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
   } catch (error) {
-    console.error("[AuthService] Failed to retrieve refresh token:", error);
+    logger.error("[AuthService] Failed to retrieve refresh token:", error as Error);
     return null;
   }
 };
@@ -122,7 +123,7 @@ export const removeRefreshToken = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
   } catch (error) {
-    console.error("[AuthService] Failed to remove refresh token:", error);
+    logger.error("[AuthService] Failed to remove refresh token:", error as Error);
   }
 };
 
@@ -137,7 +138,7 @@ export const setUserData = (user: AuthUser): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
   } catch (error) {
-    console.error("[AuthService] Failed to store user data:", error);
+    logger.error("[AuthService] Failed to store user data:", error as Error);
   }
 };
 
@@ -149,7 +150,7 @@ export const getUserData = (): AuthUser | null => {
     const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
     return userData ? JSON.parse(userData) : null;
   } catch (error) {
-    console.error("[AuthService] Failed to retrieve user data:", error);
+    logger.error("[AuthService] Failed to retrieve user data:", error as Error);
     return null;
   }
 };
@@ -161,7 +162,7 @@ export const removeUserData = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.USER_DATA);
   } catch (error) {
-    console.error("[AuthService] Failed to remove user data:", error);
+    logger.error("[AuthService] Failed to remove user data:", error as Error);
   }
 };
 
@@ -267,14 +268,20 @@ export const logout = async (redirectToLogin = true): Promise<void> => {
     // Clear Apollo Client cache
     await apolloClient.clearStore();
 
-    console.log("✅ [AuthService] Logout successful");
+    logger.info("Logout successful", {
+      feature: "auth",
+      action: "logout",
+    });
 
     // Redirect to login page if requested
     if (redirectToLogin && window.location.pathname !== "/pages/connexion") {
       window.location.href = "/pages/connexion";
     }
   } catch (error) {
-    console.error("[AuthService] Logout error:", error);
+    logger.error("Logout error", error as Error, {
+      feature: "auth",
+      action: "logout",
+    });
     // Clear data anyway even if Apollo fails
     clearAuthSession();
     if (redirectToLogin) {
