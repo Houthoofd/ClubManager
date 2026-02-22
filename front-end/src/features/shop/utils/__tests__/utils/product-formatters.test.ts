@@ -346,7 +346,11 @@ describe('getStockStatus', () => {
 
       // Verify return type matches expected type: "out" | "low" | "available"
       expect(result).toBeDefined();
-      // TODO: Add specific type checks for "out" | "low" | "available"
+      // Verify valid availability types
+
+      const validAvailability = ['out', 'low', 'available'];
+
+      expect(validAvailability).toContain(component.props.availability);
     });
 
     it('should handle type coercion correctly', () => {
@@ -465,7 +469,11 @@ describe('getStockColor', () => {
 
       // Verify return type matches expected type: "red" | "orange" | "green"
       expect(result).toBeDefined();
-      // TODO: Add specific type checks for "red" | "orange" | "green"
+      // Verify valid status colors
+
+      const validStatuses = ['red', 'orange', 'green'];
+
+      expect(validStatuses).toContain(component.props.status);
     });
 
     it('should handle type coercion correctly', () => {

@@ -822,7 +822,11 @@ describe('getUserRoleColor', () => {
 
       // Verify return type matches expected type: 'blue' | 'green' | 'orange' | 'purple' | 'default'
       expect(result).toBeDefined();
-      // TODO: Add specific type checks for 'blue' | 'green' | 'orange' | 'purple' | 'default'
+      // Verify valid color types
+
+      const validColors = ['blue', 'green', 'orange', 'purple', 'default'];
+
+      expect(validColors).toContain(component.props.color);
     });
 
     it('should handle type coercion correctly', () => {
@@ -1059,7 +1063,11 @@ describe('getUserStatusColor', () => {
 
       // Verify return type matches expected type: 'success' | 'info' | 'warning' | 'danger' | 'default'
       expect(result).toBeDefined();
-      // TODO: Add specific type checks for 'success' | 'info' | 'warning' | 'danger' | 'default'
+      // Verify valid variant types
+
+      const validVariants = ['success', 'info', 'warning', 'danger', 'default'];
+
+      expect(validVariants).toContain(component.props.variant);
     });
 
     it('should handle type coercion correctly', () => {
