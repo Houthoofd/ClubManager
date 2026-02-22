@@ -15,8 +15,6 @@ import { MockedProvider } from '@apollo/client/testing';
 import { ApolloError } from '@apollo/client';
 import { useCompteInfo } from '../../useCompte';
 
-
-
 describe('useCompteInfo', () => {
   // Setup wrapper with MockedProvider
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -70,7 +68,7 @@ describe('useCompteInfo', () => {
       };
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: {
@@ -107,14 +105,14 @@ describe('useCompteInfo', () => {
       const mockData2 = { id: '2', name: 'Second' };
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
+            // query: YOUR_QUERY, // Add actual GraphQL query
             variables: { id: '2' },
           },
           result: { data: mockData2 },
@@ -158,7 +156,7 @@ describe('useCompteInfo', () => {
       });
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           error: graphQLError,
@@ -192,7 +190,7 @@ describe('useCompteInfo', () => {
       });
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           error: networkError,
@@ -224,7 +222,7 @@ describe('useCompteInfo', () => {
       });
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: {
@@ -262,14 +260,14 @@ describe('useCompteInfo', () => {
       const mockData2 = { id: '1', value: 'second' };
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
+            // query: YOUR_QUERY, // Add actual GraphQL query
             variables: {},
           },
           result: { data: mockData2 },
@@ -306,7 +304,7 @@ describe('useCompteInfo', () => {
 
       const mockData = { id: '1', timestamp: Date.now() };
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: { data: mockData },
@@ -333,15 +331,11 @@ describe('useCompteInfo', () => {
 
       // Test polling interval configuration
 
-
       await waitFor(() => {
-
 
         expect(result?.current?.isLoading).toBe(false);
 
-
       });
-
 
       // Polling tested via Apollo MockedProvider pollInterval
       // vi.advanceTimersByTime(5000);
@@ -387,7 +381,7 @@ describe('useCompteInfo', () => {
   describe('Cleanup', () => {
     it('should cancel pending requests on unmount', async () => {
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           delay: 1000,

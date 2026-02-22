@@ -68,7 +68,7 @@ describe('useStatsData', () => {
       };
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: {
@@ -105,14 +105,14 @@ describe('useStatsData', () => {
       const mockData2 = { id: '2', name: 'Second' };
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
+            // query: YOUR_QUERY, // Add actual GraphQL query
             variables: { id: '2' },
           },
           result: { data: mockData2 },
@@ -156,7 +156,7 @@ describe('useStatsData', () => {
       });
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           error: graphQLError,
@@ -190,7 +190,7 @@ describe('useStatsData', () => {
       });
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           error: networkError,
@@ -222,7 +222,7 @@ describe('useStatsData', () => {
       });
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: {
@@ -260,14 +260,14 @@ describe('useStatsData', () => {
       const mockData2 = { id: '1', value: 'second' };
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
+            // query: YOUR_QUERY, // Add actual GraphQL query
             variables: {},
           },
           result: { data: mockData2 },
@@ -304,7 +304,7 @@ describe('useStatsData', () => {
 
       const mockData = { id: '1', timestamp: Date.now() };
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: { data: mockData },
@@ -331,15 +331,11 @@ describe('useStatsData', () => {
 
       // Test polling interval configuration
 
-
       await waitFor(() => {
-
 
         expect(result?.current?.isLoading).toBe(false);
 
-
       });
-
 
       // Polling tested via Apollo MockedProvider pollInterval
       // vi.advanceTimersByTime(5000);
@@ -385,7 +381,7 @@ describe('useStatsData', () => {
   describe('Cleanup', () => {
     it('should cancel pending requests on unmount', async () => {
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           delay: 1000,

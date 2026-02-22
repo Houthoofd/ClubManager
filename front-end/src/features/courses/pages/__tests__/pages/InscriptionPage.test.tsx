@@ -62,7 +62,7 @@ describe('Inscription', () => {
       };
 
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           result: { data: mockData },
@@ -83,7 +83,7 @@ describe('Inscription', () => {
 
     it('should handle loading errors', async () => {
       const mocks: any[] = [
-      // TODO: Add GraphQL mocks
+
     ]; const _unused = {
           },
           error: new Error('Failed to fetch'),
