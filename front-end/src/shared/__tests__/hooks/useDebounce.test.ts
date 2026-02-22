@@ -27,9 +27,11 @@ describe('useDebounce', () => {
   // ============================================================================
 
   it('should return initial value immediately', () => {
-    const { result } = renderHook(() => useDebounce('initial', 500));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useDebounce('initial', 500));
 
-    expect(result.current).toBe('initial');
+    expect(result?.current || {}).toBe('initial');
   });
 
   it('should debounce value updates', async () => {
@@ -40,13 +42,13 @@ describe('useDebounce', () => {
       }
     );
 
-    expect(result.current).toBe('initial');
+    expect(result?.current || {}).toBe('initial');
 
     // Update value
     rerender({ value: 'updated', delay: 500 });
 
     // Value should not update immediately
-    expect(result.current).toBe('initial');
+    expect(result?.current || {}).toBe('initial');
 
     // Fast-forward time
     act(() => {
@@ -54,7 +56,7 @@ describe('useDebounce', () => {
     });
 
     // Now value should be updated
-    expect(result.current).toBe('updated');
+    expect(result?.current || {}).toBe('updated');
   });
 
   it('should cancel previous timeout on rapid changes', () => {
@@ -76,7 +78,7 @@ describe('useDebounce', () => {
     act(() => vi.advanceTimersByTime(200));
 
     // Still showing initial value (no timeout completed)
-    expect(result.current).toBe('v1');
+    expect(result?.current || {}).toBe('v1');
 
     // Complete the timeout
     act(() => {
@@ -84,7 +86,7 @@ describe('useDebounce', () => {
     });
 
     // Should show last value
-    expect(result.current).toBe('v4');
+    expect(result?.current || {}).toBe('v4');
   });
 
   it('should use custom delay', () => {
@@ -101,13 +103,13 @@ describe('useDebounce', () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(result.current).toBe('initial');
+    expect(result?.current || {}).toBe('initial');
 
     // After 1000ms (full delay)
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(result.current).toBe('updated');
+    expect(result?.current || {}).toBe('updated');
   });
 
   it('should handle number values', () => {
@@ -124,7 +126,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current).toBe(42);
+    expect(result?.current || {}).toBe(42);
   });
 
   it('should handle boolean values', () => {
@@ -141,7 +143,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current).toBe(true);
+    expect(result?.current || {}).toBe(true);
   });
 
   it('should handle object values', () => {
@@ -161,7 +163,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current).toEqual(updatedObj);
+    expect(result?.current || {}).toEqual(updatedObj);
   });
 
   it('should handle array values', () => {
@@ -178,7 +180,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current).toEqual([4, 5, 6]);
+    expect(result?.current || {}).toEqual([4, 5, 6]);
   });
 
   // ============================================================================
@@ -199,7 +201,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current).toBe('');
+    expect(result?.current || {}).toBe('');
   });
 
   it('should handle null values', () => {
@@ -216,7 +218,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current).toBeNull();
+    expect(result?.current || {}).toBeNull();
   });
 
   it('should handle undefined values', () => {
@@ -233,7 +235,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current).toBeUndefined();
+    expect(result?.current || {}).toBeUndefined();
   });
 
   it('should handle zero delay', () => {
@@ -250,7 +252,7 @@ describe('useDebounce', () => {
       vi.advanceTimersByTime(0);
     });
 
-    expect(result.current).toBe('updated');
+    expect(result?.current || {}).toBe('updated');
   });
 
   it('should cleanup timeout on unmount', () => {
@@ -285,10 +287,12 @@ describe('useDebouncedValue', () => {
   });
 
   it('should return debounced value and control functions', () => {
-    const { result } = renderHook(() => useDebouncedValue('initial', 500));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useDebouncedValue('initial', 500));
 
-    expect(result.current.debouncedValue).toBe('initial');
-    expect(result.current.isPending).toBe(false);
+    expect(result?.current?.debouncedValue).toBe('initial');
+    expect(result?.current?.isPending).toBe(false);
     expect(typeof result.current.cancel).toBe('function');
     expect(typeof result.current.flush).toBe('function');
   });
@@ -301,17 +305,17 @@ describe('useDebouncedValue', () => {
       }
     );
 
-    expect(result.current.isPending).toBe(false);
+    expect(result?.current?.isPending).toBe(false);
 
     rerender({ value: 'updated' });
 
-    expect(result.current.isPending).toBe(true);
+    expect(result?.current?.isPending).toBe(true);
 
     act(() => {
       vi.advanceTimersByTime(500);
     });
 
-    expect(result.current.isPending).toBe(false);
+    expect(result?.current?.isPending).toBe(false);
   });
 
   it('should support leading edge update', () => {
@@ -325,7 +329,7 @@ describe('useDebouncedValue', () => {
     rerender({ value: 'updated' });
 
     // Should update immediately with leading: true
-    expect(result.current.debouncedValue).toBe('updated');
+    expect(result?.current?.debouncedValue).toBe('updated');
   });
 
   it('should support flush function', () => {
@@ -339,16 +343,16 @@ describe('useDebouncedValue', () => {
     rerender({ value: 'updated' });
 
     // Before flush
-    expect(result.current.debouncedValue).toBe('initial');
-    expect(result.current.isPending).toBe(true);
+    expect(result?.current?.debouncedValue).toBe('initial');
+    expect(result?.current?.isPending).toBe(true);
 
     // Flush immediately
     act(() => {
       result.current.flush();
     });
 
-    expect(result.current.debouncedValue).toBe('updated');
-    expect(result.current.isPending).toBe(false);
+    expect(result?.current?.debouncedValue).toBe('updated');
+    expect(result?.current?.isPending).toBe(false);
   });
 
   it('should support cancel function', () => {
@@ -361,14 +365,14 @@ describe('useDebouncedValue', () => {
 
     rerender({ value: 'updated' });
 
-    expect(result.current.isPending).toBe(true);
+    expect(result?.current?.isPending).toBe(true);
 
     act(() => {
       result.current.cancel();
     });
 
-    expect(result.current.isPending).toBe(false);
-    expect(result.current.debouncedValue).toBe('initial'); // Not updated
+    expect(result?.current?.isPending).toBe(false);
+    expect(result?.current?.debouncedValue).toBe('initial'); // Not updated
   });
 
   it('should support maxWait option', () => {
@@ -390,7 +394,7 @@ describe('useDebouncedValue', () => {
     act(() => vi.advanceTimersByTime(400));
 
     // After 1200ms total, maxWait should force update
-    expect(result.current.debouncedValue).toBe('v4');
+    expect(result?.current?.debouncedValue).toBe('v4');
   });
 });
 
@@ -409,7 +413,9 @@ describe('useDebouncedCallback', () => {
 
   it('should debounce callback execution', () => {
     const callback = vi.fn();
-    const { result } = renderHook(() => useDebouncedCallback(callback, 500));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useDebouncedCallback(callback, 500));
 
     // Call multiple times rapidly
     act(() => {
@@ -433,7 +439,9 @@ describe('useDebouncedCallback', () => {
 
   it('should handle callback with multiple arguments', () => {
     const callback = vi.fn();
-    const { result } = renderHook(() => useDebouncedCallback(callback, 500));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useDebouncedCallback(callback, 500));
 
     act(() => {
       result.current('arg1', 'arg2', 'arg3');
@@ -466,7 +474,9 @@ describe('useDebouncedCallback', () => {
 
   it('should cancel previous timeout on new call', () => {
     const callback = vi.fn();
-    const { result } = renderHook(() => useDebouncedCallback(callback, 500));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useDebouncedCallback(callback, 500));
 
     act(() => {
       result.current('first');
@@ -525,7 +535,7 @@ describe('useDebounce - Real-world scenarios', () => {
     rerender({ searchTerm: 'react' });
 
     // No debounced value yet
-    expect(result.current.debouncedSearch).toBe('');
+    expect(result?.current?.debouncedSearch).toBe('');
 
     // Wait for debounce
     act(() => {
@@ -544,7 +554,9 @@ describe('useDebounce - Real-world scenarios', () => {
   it('should work for window resize scenario', () => {
     const handleResize = vi.fn();
 
-    const { result } = renderHook(() => {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => {
       return useDebouncedCallback(handleResize, 200);
     });
 

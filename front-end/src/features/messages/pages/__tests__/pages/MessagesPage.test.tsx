@@ -7,12 +7,22 @@
  *
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { MockedProvider } from '@apollo/client/testing';
 import { MessagesPage } from '../../MessagesPage';
+
+  // Test wrapper with Apollo MockedProvider
+  const createWrapper = (mocks: any[] = []) => {
+    return ({ children }: { children: React.ReactNode }) => (
+      <MockedProvider mocks={mocks} addTypename={false}>
+        {children}
+      </MockedProvider>
+    );
+  };
 
 describe('MessagesPage', () => {
   const renderPage = (props = {}) => {
@@ -51,11 +61,9 @@ describe('MessagesPage', () => {
       const mockData = {// Mock data configured for testing
       };
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: { data: mockData },
         },
@@ -74,11 +82,9 @@ describe('MessagesPage', () => {
     });
 
     it('should handle loading errors', async () => {
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           error: new Error('Failed to fetch'),
         },

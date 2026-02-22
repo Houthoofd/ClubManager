@@ -67,12 +67,14 @@ describe('useUserSearch', () => {
   // ============================================================================
 
   it('should initialize with empty search query', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
-    expect(result.current.searchQuery).toBe('');
-    expect(result.current.isSearching).toBe(false);
-    expect(result.current.filteredUsers).toEqual(mockUsers);
-    expect(result.current.resultCount).toBe(mockUsers.length);
+    expect(result?.current?.searchQuery).toBe('');
+    expect(result?.current?.isSearching).toBe(false);
+    expect(result?.current?.filteredUsers).toEqual(mockUsers);
+    expect(result?.current?.resultCount).toBe(mockUsers.length);
   });
 
   // ============================================================================
@@ -80,90 +82,104 @@ describe('useUserSearch', () => {
   // ============================================================================
 
   it('should filter users by first name', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('Jean');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].firstName).toBe('Jean');
-    expect(result.current.isSearching).toBe(true);
-    expect(result.current.resultCount).toBe(1);
+    expect(result?.current?.isSearching).toBe(true);
+    expect(result?.current?.resultCount).toBe(1);
   });
 
   it('should filter users by last name', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('Martin');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].lastName).toBe('Martin');
   });
 
   it('should filter users by email', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('pierre.dubois');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].email).toBe('pierre.dubois@example.com');
   });
 
   it('should search case-insensitively by default', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('MARIE');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].firstName).toBe('Marie');
   });
 
   it('should search in full name (first + last)', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('Sophie Bernard');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].id).toBe(4);
   });
 
   it('should return empty array when no matches found', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('NonExistentUser');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(0);
-    expect(result.current.resultCount).toBe(0);
+    expect(result?.current?.filteredUsers).toHaveLength(0);
+    expect(result?.current?.resultCount).toBe(0);
   });
 
   it('should return all users when search query is cleared', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     // First set a search query
     act(() => {
       result.current.setSearchQuery('Jean');
     });
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
 
     // Then clear it
     act(() => {
       result.current.clearSearch();
     });
 
-    expect(result.current.searchQuery).toBe('');
-    expect(result.current.filteredUsers).toHaveLength(mockUsers.length);
-    expect(result.current.isSearching).toBe(false);
+    expect(result?.current?.searchQuery).toBe('');
+    expect(result?.current?.filteredUsers).toHaveLength(mockUsers.length);
+    expect(result?.current?.isSearching).toBe(false);
   });
 
   // ============================================================================
@@ -171,7 +187,9 @@ describe('useUserSearch', () => {
   // ============================================================================
 
   it('should respect case-sensitive search when configured', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useUserSearch(mockUsers, { caseSensitive: true })
     );
 
@@ -179,17 +197,19 @@ describe('useUserSearch', () => {
       result.current.setSearchQuery('MARIE');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(0);
+    expect(result?.current?.filteredUsers).toHaveLength(0);
 
     act(() => {
       result.current.setSearchQuery('Marie');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
   });
 
   it('should respect minimum search length', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useUserSearch(mockUsers, { minSearchLength: 3 })
     );
 
@@ -198,20 +218,22 @@ describe('useUserSearch', () => {
       result.current.setSearchQuery('Je');
     });
 
-    expect(result.current.filteredUsers).toEqual(mockUsers);
-    expect(result.current.isSearching).toBe(false);
+    expect(result?.current?.filteredUsers).toEqual(mockUsers);
+    expect(result?.current?.isSearching).toBe(false);
 
     // Query long enough
     act(() => {
       result.current.setSearchQuery('Jean');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
-    expect(result.current.isSearching).toBe(true);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
+    expect(result?.current?.isSearching).toBe(true);
   });
 
   it('should search only in specified fields', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useUserSearch(mockUsers, {
         searchFields: ['email'], // Only search in email
       })
@@ -221,17 +243,19 @@ describe('useUserSearch', () => {
     act(() => {
       result.current.setSearchQuery('Jean');
     });
-    expect(result.current.filteredUsers).toHaveLength(0);
+    expect(result?.current?.filteredUsers).toHaveLength(0);
 
     // Should find by email
     act(() => {
       result.current.setSearchQuery('jean.dupont');
     });
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
   });
 
   it('should search in phone field when included', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useUserSearch(mockUsers, {
         searchFields: ['firstName', 'lastName', 'email', 'phone'],
       })
@@ -241,12 +265,14 @@ describe('useUserSearch', () => {
       result.current.setSearchQuery('123 456');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].phone).toBe('+32 123 456 789');
   });
 
   it('should search in grade field when included', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useUserSearch(mockUsers, {
         searchFields: ['firstName', 'lastName', 'email', 'grade'],
       })
@@ -256,7 +282,7 @@ describe('useUserSearch', () => {
       result.current.setSearchQuery('Ceinture Noire');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].grade).toBe('Ceinture Noire');
   });
 
@@ -265,14 +291,16 @@ describe('useUserSearch', () => {
   // ============================================================================
 
   it('should handle empty user array', () => {
-    const { result } = renderHook(() => useUserSearch([]));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch([]));
 
     act(() => {
       result.current.setSearchQuery('test');
     });
 
-    expect(result.current.filteredUsers).toEqual([]);
-    expect(result.current.resultCount).toBe(0);
+    expect(result?.current?.filteredUsers).toEqual([]);
+    expect(result?.current?.resultCount).toBe(0);
   });
 
   it('should handle users with missing optional fields', () => {
@@ -287,7 +315,9 @@ describe('useUserSearch', () => {
       },
     ];
 
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useUserSearch(usersWithMissingFields, {
         searchFields: ['firstName', 'lastName', 'email', 'phone', 'grade'],
       })
@@ -297,17 +327,19 @@ describe('useUserSearch', () => {
       result.current.setSearchQuery('Test');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
   });
 
   it('should handle special characters in search query', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('jean.dupont@example.com');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
     expect(result.current.filteredUsers[0].email).toBe('jean.dupont@example.com');
   });
 
@@ -322,7 +354,7 @@ describe('useUserSearch', () => {
     act(() => {
       result.current.setSearchQuery('Jean');
     });
-    expect(result.current.filteredUsers).toHaveLength(1);
+    expect(result?.current?.filteredUsers).toHaveLength(1);
 
     // Update with new users array
     const newUsers = [...mockUsers, {
@@ -336,7 +368,7 @@ describe('useUserSearch', () => {
 
     rerender({ users: newUsers });
 
-    expect(result.current.filteredUsers).toHaveLength(2);
+    expect(result?.current?.filteredUsers).toHaveLength(2);
   });
 
   // ============================================================================
@@ -362,7 +394,9 @@ describe('useUserSearch', () => {
   });
 
   it('should handle multiple rapid search updates', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     act(() => {
       result.current.setSearchQuery('J');
@@ -377,8 +411,8 @@ describe('useUserSearch', () => {
       result.current.setSearchQuery('Jean');
     });
 
-    expect(result.current.filteredUsers).toHaveLength(1);
-    expect(result.current.searchQuery).toBe('Jean');
+    expect(result?.current?.filteredUsers).toHaveLength(1);
+    expect(result?.current?.searchQuery).toBe('Jean');
   });
 
   // ============================================================================
@@ -386,7 +420,9 @@ describe('useUserSearch', () => {
   // ============================================================================
 
   it('should work with complex multi-field search', () => {
-    const { result } = renderHook(() => useUserSearch(mockUsers));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useUserSearch(mockUsers));
 
     // Search partial match across multiple users
     act(() => {

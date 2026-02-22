@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Mock react-router-dom
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/' }),
+  useParams: () => ({}),
+}));
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuthRedirect } from '../../hooks/useAuthRedirect';
 
@@ -33,11 +40,13 @@ describe('useAuthRedirect', () => {
 
   describe('Initialization', () => {
     it('should initialize with default values', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
-      expect(result.current.showAuthModal).toBe(false);
-      expect(result.current.autoRedirectDelay).toBe(5);
-      expect(result.current.customMessage).toBe(
+      expect(result?.current?.showAuthModal).toBe(false);
+      expect(result?.current?.autoRedirectDelay).toBe(5);
+      expect(result?.current?.customMessage).toBe(
         "Votre session a expiré ou vous n'êtes pas connecté."
       );
       expect(typeof result.current.redirectToLogin).toBe('function');
@@ -50,32 +59,40 @@ describe('useAuthRedirect', () => {
       const autoRedirectDelay = 10;
       const checkInterval = 60000;
 
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useAuthRedirect({ customMessage, autoRedirectDelay, checkInterval })
       );
 
-      expect(result.current.customMessage).toBe(customMessage);
-      expect(result.current.autoRedirectDelay).toBe(autoRedirectDelay);
+      expect(result?.current?.customMessage).toBe(customMessage);
+      expect(result?.current?.autoRedirectDelay).toBe(autoRedirectDelay);
     });
 
     it('should not show modal when auth data is valid', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
-      expect(result.current.showAuthModal).toBe(false);
+      expect(result?.current?.showAuthModal).toBe(false);
     });
 
     it('should show modal when no auth data exists', () => {
       localStorage.clear();
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
     });
   });
 
   describe('checkAuthStatus', () => {
     it('should return true when valid token and user data exist', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(true);
     });
@@ -83,7 +100,9 @@ describe('useAuthRedirect', () => {
     it('should return false when no token exists', () => {
       localStorage.removeItem('authToken');
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -91,7 +110,9 @@ describe('useAuthRedirect', () => {
     it('should return false when no user data exists', () => {
       localStorage.removeItem('userData');
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -99,7 +120,9 @@ describe('useAuthRedirect', () => {
     it('should return false when user data is invalid JSON', () => {
       localStorage.setItem('userData', 'invalid-json');
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -107,7 +130,9 @@ describe('useAuthRedirect', () => {
     it('should return false when user data is missing required fields', () => {
       localStorage.setItem('userData', JSON.stringify({ email: 'test@example.com' }));
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -126,7 +151,9 @@ describe('useAuthRedirect', () => {
 
       localStorage.setItem('authToken', expiredToken);
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -145,7 +172,9 @@ describe('useAuthRedirect', () => {
 
       localStorage.setItem('authToken', validToken);
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(true);
     });
@@ -153,7 +182,9 @@ describe('useAuthRedirect', () => {
     it('should accept non-JWT tokens', () => {
       localStorage.setItem('authToken', 'simple-token-123');
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(true);
     });
@@ -161,7 +192,9 @@ describe('useAuthRedirect', () => {
     it('should handle malformed JWT tokens gracefully', () => {
       localStorage.setItem('authToken', 'eyJ.malformed.token');
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -169,17 +202,21 @@ describe('useAuthRedirect', () => {
 
   describe('triggerAuthRequired', () => {
     it('should show auth modal', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       act(() => {
         result.current.triggerAuthRequired();
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
     });
 
     it('should clear auth data', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       act(() => {
         result.current.triggerAuthRequired();
@@ -189,37 +226,43 @@ describe('useAuthRedirect', () => {
     });
 
     it('should accept custom message', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       act(() => {
         result.current.triggerAuthRequired('Custom message');
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
     });
   });
 
   describe('redirectToLogin', () => {
     it('should hide auth modal', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       // First show the modal
       act(() => {
         result.current.triggerAuthRequired();
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
 
       // Then redirect
       act(() => {
         result.current.redirectToLogin();
       });
 
-      expect(result.current.showAuthModal).toBe(false);
+      expect(result?.current?.showAuthModal).toBe(false);
     });
 
     it('should clear all auth data', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       act(() => {
         result.current.redirectToLogin();
@@ -229,7 +272,9 @@ describe('useAuthRedirect', () => {
     });
 
     it('should navigate to login page', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       act(() => {
         result.current.redirectToLogin();
@@ -255,7 +300,9 @@ describe('useAuthRedirect', () => {
 
     it('should trigger auth required when status becomes invalid', () => {
       const checkInterval = 30000;
-      const { result } = renderHook(() => useAuthRedirect({ checkInterval }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect({ checkInterval }));
 
       // Clear auth data to simulate invalid status
       localStorage.clear();
@@ -264,7 +311,7 @@ describe('useAuthRedirect', () => {
         vi.advanceTimersByTime(checkInterval);
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
       expect(mockClearAllAuthData).toHaveBeenCalled();
     });
 
@@ -301,16 +348,18 @@ describe('useAuthRedirect', () => {
 
   describe('Auth Cleared Event Listener', () => {
     it('should listen for auth-cleared events', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
-      expect(result.current.showAuthModal).toBe(false);
+      expect(result?.current?.showAuthModal).toBe(false);
 
       // Dispatch auth-cleared event
       act(() => {
         window.dispatchEvent(new Event('auth-cleared'));
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
       expect(mockClearAllAuthData).toHaveBeenCalled();
     });
 
@@ -328,26 +377,28 @@ describe('useAuthRedirect', () => {
     });
 
     it('should handle multiple auth-cleared events', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       // Dispatch multiple events
       act(() => {
         window.dispatchEvent(new Event('auth-cleared'));
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
 
       act(() => {
         result.current.redirectToLogin();
       });
 
-      expect(result.current.showAuthModal).toBe(false);
+      expect(result?.current?.showAuthModal).toBe(false);
 
       act(() => {
         window.dispatchEvent(new Event('auth-cleared'));
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
     });
   });
 
@@ -360,7 +411,9 @@ describe('useAuthRedirect', () => {
 
       localStorage.setItem('authToken', tokenWithoutExp);
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(true);
     });
@@ -368,7 +421,9 @@ describe('useAuthRedirect', () => {
     it('should handle empty token', () => {
       localStorage.setItem('authToken', '');
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -376,7 +431,9 @@ describe('useAuthRedirect', () => {
     it('should handle empty user data', () => {
       localStorage.setItem('userData', '{}');
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(false);
     });
@@ -392,13 +449,17 @@ describe('useAuthRedirect', () => {
         })
       );
 
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       expect(result.current.checkAuthStatus()).toBe(true);
     });
 
     it('should handle rapid check status calls', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       for (let i = 0; i < 100; i++) {
         expect(result.current.checkAuthStatus()).toBe(true);
@@ -409,9 +470,11 @@ describe('useAuthRedirect', () => {
 
     it('should handle localStorage being cleared externally', () => {
       const checkInterval = 30000;
-      const { result } = renderHook(() => useAuthRedirect({ checkInterval }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect({ checkInterval }));
 
-      expect(result.current.showAuthModal).toBe(false);
+      expect(result?.current?.showAuthModal).toBe(false);
 
       // Simulate external localStorage clear
       localStorage.clear();
@@ -420,16 +483,18 @@ describe('useAuthRedirect', () => {
         vi.advanceTimersByTime(checkInterval);
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
     });
   });
 
   describe('Integration Scenarios', () => {
     it('should handle complete auth flow', () => {
-      const { result } = renderHook(() => useAuthRedirect());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect());
 
       // Initially authenticated
-      expect(result.current.showAuthModal).toBe(false);
+      expect(result?.current?.showAuthModal).toBe(false);
       expect(result.current.checkAuthStatus()).toBe(true);
 
       // Session expires
@@ -439,14 +504,14 @@ describe('useAuthRedirect', () => {
         result.current.triggerAuthRequired();
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
 
       // User clicks login
       act(() => {
         result.current.redirectToLogin();
       });
 
-      expect(result.current.showAuthModal).toBe(false);
+      expect(result?.current?.showAuthModal).toBe(false);
       expect(mockNavigate).toHaveBeenCalledWith('/pages/connexion');
     });
 
@@ -466,7 +531,9 @@ describe('useAuthRedirect', () => {
 
       localStorage.setItem('authToken', expiringToken);
 
-      const { result } = renderHook(() => useAuthRedirect({ checkInterval }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect({ checkInterval }));
 
       expect(result.current.checkAuthStatus()).toBe(true);
 
@@ -482,7 +549,7 @@ describe('useAuthRedirect', () => {
         vi.advanceTimersByTime(checkInterval);
       });
 
-      expect(result.current.showAuthModal).toBe(true);
+      expect(result?.current?.showAuthModal).toBe(true);
     });
   });
 
@@ -498,7 +565,9 @@ describe('useAuthRedirect', () => {
     });
 
     it('should handle high-frequency auth checks efficiently', () => {
-      const { result } = renderHook(() => useAuthRedirect({ checkInterval: 100 }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useAuthRedirect({ checkInterval: 100 }));
 
       const startTime = performance.now();
 

@@ -9,11 +9,21 @@
  * @see src/features/stats/hooks/useStatsData.ts
  */
 
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { MockedProvider } from '@apollo/client/testing';
 import { useStatsData } from '../../hooks/useStatsData';
 import { ReactNode } from 'react';
+
+  // Test wrapper with Apollo MockedProvider
+  const createWrapper = (mocks: any[] = []) => {
+    return ({ children }: { children: React.ReactNode }) => (
+      <MockedProvider mocks={mocks} addTypename={false}>
+        {children}
+      </MockedProvider>
+    );
+  };
 
 /**
  * Mock GraphQL response data
@@ -139,6 +149,7 @@ const createWrapper = (mocks: any[] = createMocks()) => {
     <MockedProvider mocks={mocks} addTypename={false}>
       {children}
     </MockedProvider>
+    </MockedProvider>
   );
 };
 
@@ -148,29 +159,33 @@ describe('useStatsData', () => {
   // ============================================================================
 
   it('should initialize with loading state', () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.data).toBeNull();
-    expect(result.current.metrics).toBeNull();
-    expect(result.current.error).toBeNull();
+    expect(result?.current?.isLoading).toBe(true);
+    expect(result?.current?.data).toBeNull();
+    expect(result?.current?.metrics).toBeNull();
+    expect(result?.current?.error).toBeNull();
   });
 
   it('should load data successfully', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result?.current?.isLoading).toBe(false);
     });
 
-    expect(result.current.data).toBeDefined();
+    expect(result?.current?.data).toBeDefined();
     expect(result.current.data?.users.total).toBe(150);
     expect(result.current.data?.revenue.total).toBe(15000);
-    expect(result.current.error).toBeNull();
+    expect(result?.current?.error).toBeNull();
   });
 
   // ============================================================================
@@ -178,12 +193,14 @@ describe('useStatsData', () => {
   // ============================================================================
 
   it('should calculate user growth trend correctly', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     expect(result.current.metrics?.userGrowthTrend).toBeDefined();
@@ -192,12 +209,14 @@ describe('useStatsData', () => {
   });
 
   it('should calculate revenue growth trend correctly', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     const trend = result.current.metrics?.revenueGrowthTrend;
@@ -207,12 +226,14 @@ describe('useStatsData', () => {
   });
 
   it('should calculate order growth trend correctly', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     const trend = result.current.metrics?.orderGrowthTrend;
@@ -221,12 +242,14 @@ describe('useStatsData', () => {
   });
 
   it('should calculate average order value', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     // 15000 total revenue / 300 total orders = 50
@@ -234,12 +257,14 @@ describe('useStatsData', () => {
   });
 
   it('should calculate average revenue per user', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     // 15000 total revenue / 150 total users = 100
@@ -247,12 +272,14 @@ describe('useStatsData', () => {
   });
 
   it('should calculate conversion rate', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     // (300 orders / 150 users) * 100 = 200%
@@ -264,7 +291,9 @@ describe('useStatsData', () => {
   // ============================================================================
 
   it('should generate overview stats array', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
@@ -272,12 +301,14 @@ describe('useStatsData', () => {
       expect(result.current.overviewStats.length).toBeGreaterThan(0);
     });
 
-    expect(result.current.overviewStats).toBeInstanceOf(Array);
+    expect(result?.current?.overviewStats).toBeInstanceOf(Array);
     expect(result.current.overviewStats.length).toBe(8);
   });
 
   it('should include total users stat', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
@@ -293,7 +324,9 @@ describe('useStatsData', () => {
   });
 
   it('should include revenue stat with currency', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
@@ -309,7 +342,9 @@ describe('useStatsData', () => {
   });
 
   it('should include orders stat with pending count', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
@@ -338,15 +373,17 @@ describe('useStatsData', () => {
       },
     ];
 
-    const { result } = renderHook(() => useStatsData({ period: 'year' }), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData({ period: 'year' }), {
       wrapper: createWrapper(customMocks),
     });
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result?.current?.isLoading).toBe(false);
     });
 
-    expect(result.current.data).toBeDefined();
+    expect(result?.current?.data).toBeDefined();
   });
 
   // ============================================================================
@@ -364,17 +401,19 @@ describe('useStatsData', () => {
       },
     ];
 
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(errorMocks),
     });
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result?.current?.isLoading).toBe(false);
     });
 
-    expect(result.current.error).toBeDefined();
-    expect(result.current.data).toBeNull();
-    expect(result.current.metrics).toBeNull();
+    expect(result?.current?.error).toBeDefined();
+    expect(result?.current?.data).toBeNull();
+    expect(result?.current?.metrics).toBeNull();
   });
 
   // ============================================================================
@@ -396,12 +435,14 @@ describe('useStatsData', () => {
       },
     });
 
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(zeroOrdersMocks),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     expect(result.current.metrics?.averageOrderValue).toBe(0);
@@ -420,12 +461,14 @@ describe('useStatsData', () => {
       },
     });
 
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(zeroUsersMocks),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     expect(result.current.metrics?.averageRevenuePerUser).toBe(0);
@@ -445,12 +488,14 @@ describe('useStatsData', () => {
       },
     });
 
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(negativeTrendMocks),
     });
 
     await waitFor(() => {
-      expect(result.current.metrics).toBeDefined();
+      expect(result?.current?.metrics).toBeDefined();
     });
 
     const trend = result.current.metrics?.revenueGrowthTrend;
@@ -463,14 +508,16 @@ describe('useStatsData', () => {
   // ============================================================================
 
   it('should provide refetch function', async () => {
-    const { result } = renderHook(() => useStatsData(), {
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useStatsData(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result?.current?.isLoading).toBe(false);
     });
 
-    expect(result.current.refetch).toBeInstanceOf(Function);
+    expect(result?.current?.refetch).toBeInstanceOf(Function);
   });
 });

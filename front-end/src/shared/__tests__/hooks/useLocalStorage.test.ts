@@ -28,7 +28,9 @@ describe('useLocalStorage', () => {
   // ============================================================================
 
   it('should initialize with initial value when localStorage is empty', () => {
-    const { result } = renderHook(() => useLocalStorage('test-key', 'initial'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('test-key', 'initial'));
 
     expect(result.current[0]).toBe('initial');
   });
@@ -36,39 +38,51 @@ describe('useLocalStorage', () => {
   it('should initialize with value from localStorage if exists', () => {
     localStorage.setItem('test-key', JSON.stringify('stored-value'));
 
-    const { result } = renderHook(() => useLocalStorage('test-key', 'initial'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('test-key', 'initial'));
 
     expect(result.current[0]).toBe('stored-value');
   });
 
   it('should handle initial value with object', () => {
     const initialObject = { name: 'John', age: 30 };
-    const { result } = renderHook(() => useLocalStorage('user', initialObject));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('user', initialObject));
 
     expect(result.current[0]).toEqual(initialObject);
   });
 
   it('should handle initial value with array', () => {
     const initialArray = [1, 2, 3, 4, 5];
-    const { result } = renderHook(() => useLocalStorage('numbers', initialArray));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('numbers', initialArray));
 
     expect(result.current[0]).toEqual(initialArray);
   });
 
   it('should handle initial value with boolean', () => {
-    const { result } = renderHook(() => useLocalStorage('isActive', true));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('isActive', true));
 
     expect(result.current[0]).toBe(true);
   });
 
   it('should handle initial value with number', () => {
-    const { result } = renderHook(() => useLocalStorage('count', 42));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('count', 42));
 
     expect(result.current[0]).toBe(42);
   });
 
   it('should handle initial value with null', () => {
-    const { result } = renderHook(() => useLocalStorage('nullable', null));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('nullable', null));
 
     expect(result.current[0]).toBeNull();
   });
@@ -78,7 +92,9 @@ describe('useLocalStorage', () => {
   // ============================================================================
 
   it('should update state and localStorage when setValue is called', () => {
-    const { result } = renderHook(() => useLocalStorage('test-key', 'initial'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('test-key', 'initial'));
 
     act(() => {
       result.current[1]('updated');
@@ -89,7 +105,9 @@ describe('useLocalStorage', () => {
   });
 
   it('should handle setValue with function updater', () => {
-    const { result } = renderHook(() => useLocalStorage('count', 0));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('count', 0));
 
     act(() => {
       result.current[1]((prev) => prev + 1);
@@ -107,7 +125,9 @@ describe('useLocalStorage', () => {
   });
 
   it('should update localStorage with object', () => {
-    const { result } = renderHook(() => useLocalStorage('user', { name: 'John' }));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('user', { name: 'John' }));
 
     const newUser = { name: 'Jane', age: 25 };
 
@@ -120,7 +140,9 @@ describe('useLocalStorage', () => {
   });
 
   it('should update localStorage with array', () => {
-    const { result } = renderHook(() => useLocalStorage('items', [1, 2, 3]));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('items', [1, 2, 3]));
 
     act(() => {
       result.current[1]([4, 5, 6]);
@@ -131,7 +153,9 @@ describe('useLocalStorage', () => {
   });
 
   it('should handle multiple rapid updates', () => {
-    const { result } = renderHook(() => useLocalStorage('counter', 0));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('counter', 0));
 
     act(() => {
       result.current[1](1);
@@ -148,7 +172,9 @@ describe('useLocalStorage', () => {
   // ============================================================================
 
   it('should remove value from localStorage and reset to initial', () => {
-    const { result } = renderHook(() => useLocalStorage('test-key', 'initial'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('test-key', 'initial'));
 
     act(() => {
       result.current[1]('updated');
@@ -166,7 +192,9 @@ describe('useLocalStorage', () => {
 
   it('should reset to initial value after removal', () => {
     const initialObject = { name: 'John' };
-    const { result } = renderHook(() => useLocalStorage('user', initialObject));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('user', initialObject));
 
     act(() => {
       result.current[1]({ name: 'Jane' });
@@ -189,7 +217,9 @@ describe('useLocalStorage', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     localStorage.setItem('test-key', 'invalid-json{');
 
-    const { result } = renderHook(() => useLocalStorage('test-key', 'fallback'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('test-key', 'fallback'));
 
     expect(result.current[0]).toBe('fallback');
     expect(consoleWarnSpy).toHaveBeenCalled();
@@ -205,7 +235,9 @@ describe('useLocalStorage', () => {
       throw error;
     });
 
-    const { result } = renderHook(() => useLocalStorage('test-key', 'initial'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('test-key', 'initial'));
 
     act(() => {
       result.current[1]('large-value');
@@ -222,7 +254,9 @@ describe('useLocalStorage', () => {
       throw new Error('localStorage not available');
     });
 
-    const { result } = renderHook(() => useLocalStorage('test-key', 'fallback'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('test-key', 'fallback'));
 
     expect(result.current[0]).toBe('fallback');
 
@@ -276,7 +310,9 @@ describe('useLocalStorage', () => {
       },
     };
 
-    const { result } = renderHook(() => useLocalStorage('nested', nestedObject));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('nested', nestedObject));
 
     expect(result.current[0]).toEqual(nestedObject);
 
@@ -299,7 +335,9 @@ describe('useLocalStorage', () => {
       { id: 2, name: 'Jane' },
     ];
 
-    const { result } = renderHook(() => useLocalStorage('users', users));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('users', users));
 
     act(() => {
       result.current[1]([...users, { id: 3, name: 'Bob' }]);
@@ -314,7 +352,9 @@ describe('useLocalStorage', () => {
   // ============================================================================
 
   it('should work for theme persistence scenario', () => {
-    const { result } = renderHook(() => useLocalStorage('theme', 'light'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('theme', 'light'));
 
     expect(result.current[0]).toBe('light');
 
@@ -331,7 +371,9 @@ describe('useLocalStorage', () => {
   });
 
   it('should work for user session scenario', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useLocalStorage('user', null as { name: string; token: string } | null)
     );
 
@@ -354,7 +396,9 @@ describe('useLocalStorage', () => {
   });
 
   it('should work for shopping cart scenario', () => {
-    const { result } = renderHook(() => useLocalStorage('cart', [] as any[]));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorage('cart', [] as any[]));
 
     // Add item
     act(() => {
@@ -391,15 +435,19 @@ describe('useLocalStorageValue', () => {
   it('should return value from localStorage', () => {
     localStorage.setItem('readonly-key', JSON.stringify('stored'));
 
-    const { result } = renderHook(() => useLocalStorageValue('readonly-key', 'default'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorageValue('readonly-key', 'default'));
 
-    expect(result.current).toBe('stored');
+    expect(result?.current || {}).toBe('stored');
   });
 
   it('should return default value when key does not exist', () => {
-    const { result } = renderHook(() => useLocalStorageValue('missing-key', 'default'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorageValue('missing-key', 'default'));
 
-    expect(result.current).toBe('default');
+    expect(result?.current || {}).toBe('default');
   });
 });
 
@@ -414,13 +462,17 @@ describe('useLocalStorageSync', () => {
   });
 
   it('should initialize correctly', () => {
-    const { result } = renderHook(() => useLocalStorageSync('sync-key', 'initial'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorageSync('sync-key', 'initial'));
 
     expect(result.current[0]).toBe('initial');
   });
 
   it('should update localStorage on setValue', () => {
-    const { result } = renderHook(() => useLocalStorageSync('sync-key', 'initial'));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useLocalStorageSync('sync-key', 'initial'));
 
     act(() => {
       result.current[1]('updated');
@@ -434,7 +486,9 @@ describe('useLocalStorageSync', () => {
     const serializer = (value: number) => `custom-${value}`;
     const deserializer = (value: string) => parseInt(value.replace('custom-', ''), 10);
 
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useLocalStorageSync('custom-key', 0, { serializer, deserializer })
     );
 
@@ -449,7 +503,9 @@ describe('useLocalStorageSync', () => {
   it('should dispatch custom event when syncAcrossTabs is true', () => {
     const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
 
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useLocalStorageSync('sync-key', 'initial', { syncAcrossTabs: true })
     );
 
@@ -461,7 +517,9 @@ describe('useLocalStorageSync', () => {
   });
 
   it('should handle removeValue with sync', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useLocalStorageSync('sync-key', 'initial', { syncAcrossTabs: true })
     );
 

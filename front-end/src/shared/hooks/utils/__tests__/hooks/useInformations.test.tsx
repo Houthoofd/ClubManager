@@ -1,40 +1,53 @@
 /**
- * Tests for useStatsData.ts
+ * Tests for useInformations.ts
  *
- * @file useStatsData.ts
+ * @file useInformations.ts
  * @type hookGraphQL
  * @generated 2026-02-21
  *
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { MockedProvider } from '@apollo/client/testing';
 import { ApolloError } from '@apollo/client';
-import { useStatsData } from '../../useStatsData';
+import { useGrades } from '../../useInformations';
 
-describe('useStatsData', () => {
+
+
+describe('useGrades', () => {
   // Setup wrapper with MockedProvider
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <MockedProvider mocks={[]} addTypename={false}>
+      {children}
+    </MockedProvider>
+    </MockedProvider>
+  );
+  const _useWrapper = wrapper; const _tempWrapper = ({children}: {children: React.ReactNode}) => (<div>{children}</div>); const wrapper2 =  addTypename={false}>
       {children}
     </MockedProvider>
   );
 
   describe('Initialization', () => {
     it('should initialize in loading state', () => {
-      const { result } = renderHook(() => useStatsData(), { wrapper });
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useGrades(), { wrapper });
 
-      expect(result.current.loading).toBe(true);
-      expect(result.current.data).toBeUndefined();
-      expect(result.current.error).toBeUndefined();
+      expect(result?.current?.loading).toBe(true);
+      expect(result?.current?.data).toBeUndefined();
+      expect(result?.current?.error).toBeUndefined();
     });
 
     it('should accept initial variables', () => {
       const variables = { id: '123' };
-      const { result } = renderHook(() => useStatsData(variables), { wrapper });
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useGrades(variables), { wrapper });
 
-      expect(result.current.loading).toBe(true);
+      expect(result?.current?.loading).toBe(true);
     });
   });
 
@@ -45,7 +58,7 @@ describe('useStatsData', () => {
 
           id: 1,
 
-          data: { test: 'value' },
+          data: null,
 
           loading: false,
 
@@ -56,11 +69,9 @@ describe('useStatsData', () => {
         name: 'Test',
       };
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: {
             data: mockData,
@@ -70,39 +81,40 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useStatsData(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useGrades(), {
         wrapper: customWrapper,
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result?.current?.loading).toBe(true);
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      expect(result.current.data).toEqual(mockData);
-      expect(result.current.error).toBeUndefined();
+      expect(result?.current?.data).toEqual(mockData);
+      expect(result?.current?.error).toBeUndefined();
     });
 
     it('should refetch data when variables change', async () => {
       const mockData1 = { id: '1', name: 'First' };
       const mockData2 = { id: '2', name: 'Second' };
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: { id: '1' },
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            query: /* YOUR_QUERY */,
+            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
             variables: { id: '2' },
           },
           result: { data: mockData2 },
@@ -111,12 +123,13 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
       const { result, rerender } = renderHook(
-        ({ id }) => useStatsData({ id }),
+        ({ id }) => useGrades({ id }),
         {
           wrapper: customWrapper,
           initialProps: { id: '1' },
@@ -124,16 +137,16 @@ describe('useStatsData', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      expect(result.current.data).toEqual(mockData1);
+      expect(result?.current?.data).toEqual(mockData1);
 
       // Change variables
       rerender({ id: '2' });
 
       await waitFor(() => {
-        expect(result.current.data).toEqual(mockData2);
+        expect(result?.current?.data).toEqual(mockData2);
       });
     });
   });
@@ -144,11 +157,9 @@ describe('useStatsData', () => {
         graphQLErrors: [{ message: 'Test error' }],
       });
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           error: graphQLError,
         },
@@ -156,20 +167,23 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useStatsData(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useGrades(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      expect(result.current.error).toBeDefined();
-      expect(result.current.data).toBeUndefined();
+      expect(result?.current?.error).toBeDefined();
+      expect(result?.current?.data).toBeUndefined();
     });
 
     it('should handle network errors', async () => {
@@ -177,11 +191,9 @@ describe('useStatsData', () => {
         networkError: new Error('Network error'),
       });
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           error: networkError,
         },
@@ -189,16 +201,19 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useStatsData(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useGrades(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.error).toBeDefined();
+        expect(result?.current?.error).toBeDefined();
       });
     });
 
@@ -208,11 +223,9 @@ describe('useStatsData', () => {
         graphQLErrors: [{ message: 'Partial error' }],
       });
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: {
             data: partialData,
@@ -223,19 +236,22 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useStatsData(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useGrades(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      // Check how the hook handles partial data      expect(result.current).toBeDefined();
+      // Check how the hook handles partial data      expect(result?.current || {}).toBeDefined();
       expect(typeof result.current).toBe('object');
     });
   });
@@ -245,17 +261,15 @@ describe('useStatsData', () => {
       const mockData1 = { id: '1', value: 'first' };
       const mockData2 = { id: '1', value: 'second' };
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            query: /* YOUR_QUERY */,
+            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
             variables: {},
           },
           result: { data: mockData2 },
@@ -264,23 +278,26 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useStatsData(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useGrades(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.data).toEqual(mockData1);
+        expect(result?.current?.data).toEqual(mockData1);
       });
 
       // Trigger refetch
       // await result.current.refetch();
 
       // await waitFor(() => {
-      //   expect(result.current.data).toEqual(mockData2);
+      //   expect(result?.current?.data).toEqual(mockData2);
       // });
     });
 
@@ -288,11 +305,9 @@ describe('useStatsData', () => {
       vi.useFakeTimers();
 
       const mockData = { id: '1', timestamp: Date.now() };
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: { data: mockData },
         },
@@ -300,17 +315,20 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(
-        () => useStatsData({ pollInterval: 5000 }),
+      let result: any;
+      try {
+        const hookResult = renderHook(
+        () => useGrades({ pollInterval: 5000 }),
         { wrapper: customWrapper }
       );
 
       await waitFor(() => {
-        expect(result.current.data).toEqual(mockData);
+        expect(result?.current?.data).toEqual(mockData);
       });
 
       // Test polling interval configuration
@@ -319,7 +337,7 @@ describe('useStatsData', () => {
       await waitFor(() => {
 
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
 
       });
@@ -341,7 +359,7 @@ describe('useStatsData', () => {
 
       await waitFor(() => {
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
       });
 
@@ -356,23 +374,21 @@ describe('useStatsData', () => {
 
       await waitFor(() => {
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
       });
 
       // Check refetchQueries updates cache correctly
 
-      expect(result.current.error).toBeNull();
+      expect(result?.current?.error).toBeNull();
     });
   });
 
   describe('Cleanup', () => {
     it('should cancel pending requests on unmount', async () => {
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           delay: 1000,
           result: { data: { id: '1' } },
@@ -381,15 +397,16 @@ describe('useStatsData', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result, unmount } = renderHook(() => useStatsData(), {
+      const { result, unmount } = renderHook(() => useGrades(), {
         wrapper: customWrapper,
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result?.current?.loading).toBe(true);
 
       unmount();
 
@@ -405,7 +422,7 @@ describe('useStatsData', () => {
 
       await waitFor(() => {
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
       });
 
@@ -421,7 +438,7 @@ describe('useStatsData', () => {
 
       await waitFor(() => {
 
-        expect(result.current.error).toBeTruthy();
+        expect(result?.current?.error).toBeTruthy();
 
       });
 
@@ -431,7 +448,7 @@ describe('useStatsData', () => {
 
   describe('Performance', () => {
     it('should not cause unnecessary re-renders', () => {
-      const { result, rerender } = renderHook(() => useStatsData(), {
+      const { result, rerender } = renderHook(() => useGrades(), {
         wrapper,
       });
 
@@ -439,7 +456,7 @@ describe('useStatsData', () => {
       rerender();
 
       // Functions should be stable
-      // expect(result.current.someFunction).toBe(firstResult.someFunction);
+      // expect(result?.current?.someFunction).toBe(firstResult.someFunction);
     });
 
     it('should handle rapid successive calls', async () => {
@@ -457,7 +474,7 @@ describe('useStatsData', () => {
 
       });
 
-      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await waitFor(() => expect(result?.current?.isLoading).toBe(false));
     });
   });
 });

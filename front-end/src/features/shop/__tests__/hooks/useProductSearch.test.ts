@@ -77,23 +77,29 @@ describe('useProductSearch', () => {
   // ============================================================================
 
   it('should initialize with empty search value', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
-    expect(result.current.searchValue).toBe('');
-    expect(result.current.hasSearch).toBe(false);
+    expect(result?.current?.searchValue).toBe('');
+    expect(result?.current?.hasSearch).toBe(false);
   });
 
   it('should initialize with custom initial value', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useProductSearch({ initialValue: 'Kimono' })
     );
 
-    expect(result.current.searchValue).toBe('Kimono');
-    expect(result.current.hasSearch).toBe(true);
+    expect(result?.current?.searchValue).toBe('Kimono');
+    expect(result?.current?.hasSearch).toBe(true);
   });
 
   it('should return all products when search is empty', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     const filtered = result.current.filterProducts(mockProducts);
 
@@ -106,7 +112,9 @@ describe('useProductSearch', () => {
   // ============================================================================
 
   it('should filter products by name (French)', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Kimono');
@@ -116,11 +124,13 @@ describe('useProductSearch', () => {
 
     expect(filtered).toHaveLength(1);
     expect(filtered[0].nom).toBe('Kimono Blanc');
-    expect(result.current.hasSearch).toBe(true);
+    expect(result?.current?.hasSearch).toBe(true);
   });
 
   it('should filter products by name (English)', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Belt');
@@ -133,7 +143,9 @@ describe('useProductSearch', () => {
   });
 
   it('should filter products by description', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('combat');
@@ -146,7 +158,9 @@ describe('useProductSearch', () => {
   });
 
   it('should filter products by category', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Protection');
@@ -159,7 +173,9 @@ describe('useProductSearch', () => {
   });
 
   it('should be case-insensitive', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('KIMONO');
@@ -185,7 +201,9 @@ describe('useProductSearch', () => {
   });
 
   it('should handle partial matches', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Protè');
@@ -200,7 +218,9 @@ describe('useProductSearch', () => {
   });
 
   it('should return empty array when no matches found', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('NonExistentProduct');
@@ -216,25 +236,29 @@ describe('useProductSearch', () => {
   // ============================================================================
 
   it('should clear search value', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Kimono');
     });
 
-    expect(result.current.searchValue).toBe('Kimono');
-    expect(result.current.hasSearch).toBe(true);
+    expect(result?.current?.searchValue).toBe('Kimono');
+    expect(result?.current?.hasSearch).toBe(true);
 
     act(() => {
       result.current.clearSearch();
     });
 
-    expect(result.current.searchValue).toBe('');
-    expect(result.current.hasSearch).toBe(false);
+    expect(result?.current?.searchValue).toBe('');
+    expect(result?.current?.hasSearch).toBe(false);
   });
 
   it('should return all products after clearing search', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Kimono');
@@ -256,35 +280,41 @@ describe('useProductSearch', () => {
   // ============================================================================
 
   it('should set hasSearch to true when search has value', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
-    expect(result.current.hasSearch).toBe(false);
+    expect(result?.current?.hasSearch).toBe(false);
 
     act(() => {
       result.current.setSearchValue('test');
     });
 
-    expect(result.current.hasSearch).toBe(true);
+    expect(result?.current?.hasSearch).toBe(true);
   });
 
   it('should set hasSearch to false for whitespace-only search', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('   ');
     });
 
-    expect(result.current.hasSearch).toBe(false);
+    expect(result?.current?.hasSearch).toBe(false);
   });
 
   it('should handle single character search', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('K');
     });
 
-    expect(result.current.hasSearch).toBe(true);
+    expect(result?.current?.hasSearch).toBe(true);
     const filtered = result.current.filterProducts(mockProducts);
     expect(filtered.length).toBeGreaterThan(0);
   });
@@ -294,7 +324,9 @@ describe('useProductSearch', () => {
   // ============================================================================
 
   it('should handle empty product array', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Kimono');
@@ -316,7 +348,9 @@ describe('useProductSearch', () => {
       } as ProductItem,
     ];
 
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Product');
@@ -328,7 +362,9 @@ describe('useProductSearch', () => {
   });
 
   it('should handle special characters in search', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Protège-tibias');
@@ -340,7 +376,9 @@ describe('useProductSearch', () => {
   });
 
   it('should handle accented characters', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('ceinture');
@@ -364,7 +402,9 @@ describe('useProductSearch', () => {
       } as ProductItem,
     ];
 
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('1000');
@@ -380,7 +420,9 @@ describe('useProductSearch', () => {
   // ============================================================================
 
   it('should handle rapid search updates', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('K');
@@ -398,13 +440,15 @@ describe('useProductSearch', () => {
       result.current.setSearchValue('Kimono');
     });
 
-    expect(result.current.searchValue).toBe('Kimono');
+    expect(result?.current?.searchValue).toBe('Kimono');
     const filtered = result.current.filterProducts(mockProducts);
     expect(filtered).toHaveLength(1);
   });
 
   it('should handle search value updates', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     act(() => {
       result.current.setSearchValue('Kimono');
@@ -446,7 +490,9 @@ describe('useProductSearch', () => {
   });
 
   it('should update filter function when search changes', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     const initialFilter = result.current.filterProducts;
 
@@ -465,7 +511,9 @@ describe('useProductSearch', () => {
   // ============================================================================
 
   it('should work with realistic user typing scenario', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     // User types "Prot" letter by letter
     act(() => {
@@ -494,7 +542,9 @@ describe('useProductSearch', () => {
   });
 
   it('should work with combined filters scenario', () => {
-    const { result } = renderHook(() => useProductSearch());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductSearch());
 
     // Search for "Protection" category products
     act(() => {

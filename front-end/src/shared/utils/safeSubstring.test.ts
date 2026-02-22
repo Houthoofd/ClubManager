@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { safeSubstring } from './safeSubstring';
 
 test('safeSubstring handles null and undefined', () => {

@@ -103,21 +103,25 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should initialize with default filters', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
-    expect(result.current.filters).toEqual({
+    expect(result?.current?.filters).toEqual({
       category: '',
       minPrice: undefined,
       maxPrice: undefined,
       inStockOnly: false,
       sortBy: 'none',
     });
-    expect(result.current.hasActiveFilters).toBe(false);
-    expect(result.current.activeFilterCount).toBe(0);
+    expect(result?.current?.hasActiveFilters).toBe(false);
+    expect(result?.current?.activeFilterCount).toBe(0);
   });
 
   it('should initialize with custom initial filters', () => {
-    const { result } = renderHook(() =>
+    let result: any;
+      try {
+        const hookResult = renderHook(() =>
       useProductFilter({
         initialFilters: {
           category: 'Vêtements',
@@ -130,11 +134,13 @@ describe('useProductFilter', () => {
     expect(result.current.filters.category).toBe('Vêtements');
     expect(result.current.filters.inStockOnly).toBe(true);
     expect(result.current.filters.sortBy).toBe('price-asc');
-    expect(result.current.hasActiveFilters).toBe(true);
+    expect(result?.current?.hasActiveFilters).toBe(true);
   });
 
   it('should return all products when no filters active', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     const filtered = result.current.applyFilters(mockProducts);
 
@@ -146,7 +152,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should filter products by category', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Vêtements');
@@ -156,12 +164,14 @@ describe('useProductFilter', () => {
 
     expect(filtered).toHaveLength(2);
     expect(filtered.every((p) => p.categorie === 'Vêtements')).toBe(true);
-    expect(result.current.hasActiveFilters).toBe(true);
-    expect(result.current.activeFilterCount).toBe(1);
+    expect(result?.current?.hasActiveFilters).toBe(true);
+    expect(result?.current?.activeFilterCount).toBe(1);
   });
 
   it('should return all products when category is empty string', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Vêtements');
@@ -179,7 +189,9 @@ describe('useProductFilter', () => {
   });
 
   it('should filter Protection category', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Protection');
@@ -192,7 +204,9 @@ describe('useProductFilter', () => {
   });
 
   it('should filter Accessoires category', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Accessoires');
@@ -209,7 +223,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should filter products by minimum price', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(50, undefined);
@@ -218,12 +234,14 @@ describe('useProductFilter', () => {
     const filtered = result.current.applyFilters(mockProducts);
 
     expect(filtered.every((p) => (p.prix ?? p.price ?? 0) >= 50)).toBe(true);
-    expect(result.current.hasActiveFilters).toBe(true);
-    expect(result.current.activeFilterCount).toBe(1);
+    expect(result?.current?.hasActiveFilters).toBe(true);
+    expect(result?.current?.activeFilterCount).toBe(1);
   });
 
   it('should filter products by maximum price', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(undefined, 40);
@@ -235,7 +253,9 @@ describe('useProductFilter', () => {
   });
 
   it('should filter products by price range (min and max)', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(30, 70);
@@ -253,7 +273,9 @@ describe('useProductFilter', () => {
   });
 
   it('should clear price range when both undefined', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(30, 70);
@@ -271,7 +293,9 @@ describe('useProductFilter', () => {
   });
 
   it('should handle edge case: min price equals product price', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(45.00, undefined);
@@ -283,7 +307,9 @@ describe('useProductFilter', () => {
   });
 
   it('should handle edge case: max price equals product price', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(undefined, 45.00);
@@ -299,7 +325,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should filter only in-stock products', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setInStockOnly(true);
@@ -308,12 +336,14 @@ describe('useProductFilter', () => {
     const filtered = result.current.applyFilters(mockProducts);
 
     expect(filtered.every((p) => p.stock > 0)).toBe(true);
-    expect(result.current.hasActiveFilters).toBe(true);
-    expect(result.current.activeFilterCount).toBe(1);
+    expect(result?.current?.hasActiveFilters).toBe(true);
+    expect(result?.current?.activeFilterCount).toBe(1);
   });
 
   it('should include out-of-stock when inStockOnly is false', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setInStockOnly(false);
@@ -325,7 +355,9 @@ describe('useProductFilter', () => {
   });
 
   it('should toggle inStockOnly filter', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setInStockOnly(true);
@@ -347,19 +379,23 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should set sort by price ascending', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setSortBy('price-asc');
     });
 
     expect(result.current.filters.sortBy).toBe('price-asc');
-    expect(result.current.hasActiveFilters).toBe(true);
-    expect(result.current.activeFilterCount).toBe(1);
+    expect(result?.current?.hasActiveFilters).toBe(true);
+    expect(result?.current?.activeFilterCount).toBe(1);
   });
 
   it('should set sort by price descending', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setSortBy('price-desc');
@@ -369,7 +405,9 @@ describe('useProductFilter', () => {
   });
 
   it('should set sort by name ascending', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setSortBy('name-asc');
@@ -379,7 +417,9 @@ describe('useProductFilter', () => {
   });
 
   it('should set sort by name descending', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setSortBy('name-desc');
@@ -389,20 +429,22 @@ describe('useProductFilter', () => {
   });
 
   it('should set sort to none', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setSortBy('price-asc');
     });
 
-    expect(result.current.hasActiveFilters).toBe(true);
+    expect(result?.current?.hasActiveFilters).toBe(true);
 
     act(() => {
       result.current.setSortBy('none');
     });
 
     expect(result.current.filters.sortBy).toBe('none');
-    expect(result.current.hasActiveFilters).toBe(false);
+    expect(result?.current?.hasActiveFilters).toBe(false);
   });
 
   // ============================================================================
@@ -410,7 +452,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should apply multiple filters together', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Vêtements');
@@ -423,11 +467,13 @@ describe('useProductFilter', () => {
     expect(filtered.every((p) => p.categorie === 'Vêtements')).toBe(true);
     expect(filtered.every((p) => (p.prix ?? 0) >= 60 && (p.prix ?? 0) <= 100)).toBe(true);
     expect(filtered.every((p) => p.stock > 0)).toBe(true);
-    expect(result.current.activeFilterCount).toBe(3);
+    expect(result?.current?.activeFilterCount).toBe(3);
   });
 
   it('should apply category and stock filters', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Protection');
@@ -438,11 +484,13 @@ describe('useProductFilter', () => {
 
     expect(filtered).toHaveLength(1); // Only "Gants de Protection" (in stock)
     expect(filtered[0].nom).toBe('Gants de Protection');
-    expect(result.current.activeFilterCount).toBe(2);
+    expect(result?.current?.activeFilterCount).toBe(2);
   });
 
   it('should apply price range and stock filters', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(40, 90);
@@ -465,7 +513,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should clear all filters', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Vêtements');
@@ -474,26 +524,28 @@ describe('useProductFilter', () => {
       result.current.setSortBy('price-asc');
     });
 
-    expect(result.current.hasActiveFilters).toBe(true);
-    expect(result.current.activeFilterCount).toBe(4);
+    expect(result?.current?.hasActiveFilters).toBe(true);
+    expect(result?.current?.activeFilterCount).toBe(4);
 
     act(() => {
       result.current.clearFilters();
     });
 
-    expect(result.current.filters).toEqual({
+    expect(result?.current?.filters).toEqual({
       category: '',
       minPrice: undefined,
       maxPrice: undefined,
       inStockOnly: false,
       sortBy: 'none',
     });
-    expect(result.current.hasActiveFilters).toBe(false);
-    expect(result.current.activeFilterCount).toBe(0);
+    expect(result?.current?.hasActiveFilters).toBe(false);
+    expect(result?.current?.activeFilterCount).toBe(0);
   });
 
   it('should return all products after clearing filters', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Vêtements');
@@ -516,7 +568,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should extract unique categories from products', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     const categories = result.current.getCategories(mockProducts);
 
@@ -527,7 +581,9 @@ describe('useProductFilter', () => {
   });
 
   it('should return empty array for empty products', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     const categories = result.current.getCategories([]);
 
@@ -539,49 +595,55 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should count active filters correctly', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
-    expect(result.current.activeFilterCount).toBe(0);
+    expect(result?.current?.activeFilterCount).toBe(0);
 
     act(() => {
       result.current.setCategory('Vêtements');
     });
-    expect(result.current.activeFilterCount).toBe(1);
+    expect(result?.current?.activeFilterCount).toBe(1);
 
     act(() => {
       result.current.setPriceRange(30, 70);
     });
-    expect(result.current.activeFilterCount).toBe(2);
+    expect(result?.current?.activeFilterCount).toBe(2);
 
     act(() => {
       result.current.setInStockOnly(true);
     });
-    expect(result.current.activeFilterCount).toBe(3);
+    expect(result?.current?.activeFilterCount).toBe(3);
 
     act(() => {
       result.current.setSortBy('price-asc');
     });
-    expect(result.current.activeFilterCount).toBe(4);
+    expect(result?.current?.activeFilterCount).toBe(4);
   });
 
   it('should count price range as one filter', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(30, 70);
     });
 
-    expect(result.current.activeFilterCount).toBe(1);
+    expect(result?.current?.activeFilterCount).toBe(1);
   });
 
   it('should not count minPrice alone if both undefined', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(undefined, undefined);
     });
 
-    expect(result.current.activeFilterCount).toBe(0);
+    expect(result?.current?.activeFilterCount).toBe(0);
   });
 
   // ============================================================================
@@ -589,7 +651,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should handle empty product array', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setCategory('Vêtements');
@@ -610,7 +674,9 @@ describe('useProductFilter', () => {
       } as ProductItem,
     ];
 
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     act(() => {
       result.current.setPriceRange(10, 50);
@@ -622,7 +688,9 @@ describe('useProductFilter', () => {
   });
 
   it('should not mutate original products array', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
     const originalLength = mockProducts.length;
 
     act(() => {
@@ -639,7 +707,9 @@ describe('useProductFilter', () => {
   // ============================================================================
 
   it('should handle realistic e-commerce filtering scenario', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     // Step 1: User selects category
     act(() => {
@@ -675,7 +745,9 @@ describe('useProductFilter', () => {
   });
 
   it('should handle progressive price narrowing', () => {
-    const { result } = renderHook(() => useProductFilter());
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useProductFilter());
 
     // Start with wide range
     act(() => {

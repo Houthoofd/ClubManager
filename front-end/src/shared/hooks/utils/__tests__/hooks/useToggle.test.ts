@@ -19,21 +19,27 @@ import {
 describe("useToggle", () => {
   describe("Initialization", () => {
     it("should initialize with false by default", () => {
-      const { result } = renderHook(() => useToggle());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle());
       const [value] = result.current;
 
       expect(value).toBe(false);
     });
 
     it("should initialize with true when provided", () => {
-      const { result } = renderHook(() => useToggle(true));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(true));
       const [value] = result.current;
 
       expect(value).toBe(true);
     });
 
     it("should initialize with false when explicitly provided", () => {
-      const { result } = renderHook(() => useToggle(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(false));
       const [value] = result.current;
 
       expect(value).toBe(false);
@@ -42,7 +48,9 @@ describe("useToggle", () => {
 
   describe("Toggle functionality", () => {
     it("should toggle from false to true", () => {
-      const { result } = renderHook(() => useToggle(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(false));
 
       act(() => {
         const [, toggle] = result.current;
@@ -54,7 +62,9 @@ describe("useToggle", () => {
     });
 
     it("should toggle from true to false", () => {
-      const { result } = renderHook(() => useToggle(true));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(true));
 
       act(() => {
         const [, toggle] = result.current;
@@ -66,7 +76,9 @@ describe("useToggle", () => {
     });
 
     it("should toggle multiple times", () => {
-      const { result } = renderHook(() => useToggle(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(false));
 
       // Toggle to true
       act(() => {
@@ -93,7 +105,9 @@ describe("useToggle", () => {
 
   describe("SetValue functionality", () => {
     it("should set value to true", () => {
-      const { result } = renderHook(() => useToggle(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(false));
 
       act(() => {
         const [, , setValue] = result.current;
@@ -105,7 +119,9 @@ describe("useToggle", () => {
     });
 
     it("should set value to false", () => {
-      const { result } = renderHook(() => useToggle(true));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(true));
 
       act(() => {
         const [, , setValue] = result.current;
@@ -117,7 +133,9 @@ describe("useToggle", () => {
     });
 
     it("should allow setting same value multiple times", () => {
-      const { result } = renderHook(() => useToggle(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(false));
 
       act(() => {
         const [, , setValue] = result.current;
@@ -144,7 +162,9 @@ describe("useToggle", () => {
     });
 
     it("should maintain function references after state changes", () => {
-      const { result } = renderHook(() => useToggle());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle());
       const [, firstToggle] = result.current;
 
       act(() => {
@@ -159,9 +179,11 @@ describe("useToggle", () => {
 
   describe("Return value structure", () => {
     it("should return tuple with 3 elements", () => {
-      const { result } = renderHook(() => useToggle());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle());
 
-      expect(result.current).toHaveLength(3);
+      expect(result?.current || {}).toHaveLength(3);
       expect(typeof result.current[0]).toBe("boolean");
       expect(typeof result.current[1]).toBe("function");
       expect(typeof result.current[2]).toBe("function");
@@ -172,129 +194,149 @@ describe("useToggle", () => {
 describe("useToggleWithControls", () => {
   describe("Initialization", () => {
     it("should initialize with false by default", () => {
-      const { result } = renderHook(() => useToggleWithControls());
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls());
 
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
     });
 
     it("should initialize with provided value", () => {
-      const { result } = renderHook(() => useToggleWithControls(true));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(true));
 
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
     });
   });
 
   describe("Control functions", () => {
     it("should toggle value", () => {
-      const { result } = renderHook(() => useToggleWithControls(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(false));
 
       act(() => {
         result.current.toggle();
       });
 
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
 
       act(() => {
         result.current.toggle();
       });
 
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
     });
 
     it("should set to true with setTrue", () => {
-      const { result } = renderHook(() => useToggleWithControls(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(false));
 
       act(() => {
         result.current.setTrue();
       });
 
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
     });
 
     it("should set to false with setFalse", () => {
-      const { result } = renderHook(() => useToggleWithControls(true));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(true));
 
       act(() => {
         result.current.setFalse();
       });
 
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
     });
 
     it("should set value with setValue", () => {
-      const { result } = renderHook(() => useToggleWithControls(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(false));
 
       act(() => {
         result.current.setValue(true);
       });
 
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
 
       act(() => {
         result.current.setValue(false);
       });
 
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
     });
 
     it("should reset to initial value", () => {
-      const { result } = renderHook(() => useToggleWithControls(true));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(true));
 
       act(() => {
         result.current.setFalse();
       });
 
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
 
       act(() => {
         result.current.reset();
       });
 
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
     });
   });
 
   describe("Aliases", () => {
     it("should have on/off aliases", () => {
-      const { result } = renderHook(() => useToggleWithControls(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(false));
 
       act(() => {
         result.current.on();
       });
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
 
       act(() => {
         result.current.off();
       });
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
     });
 
     it("should have open/close aliases", () => {
-      const { result } = renderHook(() => useToggleWithControls(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(false));
 
       act(() => {
         result.current.open();
       });
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
 
       act(() => {
         result.current.close();
       });
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
     });
 
     it("should have show/hide aliases", () => {
-      const { result } = renderHook(() => useToggleWithControls(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(false));
 
       act(() => {
         result.current.show();
       });
-      expect(result.current.value).toBe(true);
+      expect(result?.current?.value).toBe(true);
 
       act(() => {
         result.current.hide();
       });
-      expect(result.current.value).toBe(false);
+      expect(result?.current?.value).toBe(false);
     });
   });
 
@@ -308,9 +350,9 @@ describe("useToggleWithControls", () => {
 
       rerender();
 
-      expect(result.current.toggle).toBe(firstToggle);
-      expect(result.current.setTrue).toBe(firstSetTrue);
-      expect(result.current.setFalse).toBe(firstSetFalse);
+      expect(result?.current?.toggle).toBe(firstToggle);
+      expect(result?.current?.setTrue).toBe(firstSetTrue);
+      expect(result?.current?.setFalse).toBe(firstSetFalse);
     });
   });
 });
@@ -318,7 +360,9 @@ describe("useToggleWithControls", () => {
 describe("useToggleWithCallbacks", () => {
   describe("Basic functionality", () => {
     it("should work without callbacks", () => {
-      const { result } = renderHook(() => useToggleWithCallbacks(false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithCallbacks(false));
 
       act(() => {
         const [, toggle] = result.current;
@@ -330,7 +374,9 @@ describe("useToggleWithCallbacks", () => {
 
     it("should call onToggle when toggling", () => {
       const onToggle = vi.fn();
-      const { result } = renderHook(() => useToggleWithCallbacks(false, { onToggle }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithCallbacks(false, { onToggle }));
 
       act(() => {
         const [, toggle] = result.current;
@@ -343,7 +389,9 @@ describe("useToggleWithCallbacks", () => {
 
     it("should call onTrue when toggling to true", () => {
       const onTrue = vi.fn();
-      const { result } = renderHook(() => useToggleWithCallbacks(false, { onTrue }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithCallbacks(false, { onTrue }));
 
       act(() => {
         const [, toggle] = result.current;
@@ -355,7 +403,9 @@ describe("useToggleWithCallbacks", () => {
 
     it("should call onFalse when toggling to false", () => {
       const onFalse = vi.fn();
-      const { result } = renderHook(() => useToggleWithCallbacks(true, { onFalse }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithCallbacks(true, { onFalse }));
 
       act(() => {
         const [, toggle] = result.current;
@@ -370,7 +420,9 @@ describe("useToggleWithCallbacks", () => {
       const onTrue = vi.fn();
       const onFalse = vi.fn();
 
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useToggleWithCallbacks(false, { onToggle, onTrue, onFalse }),
       );
 
@@ -399,7 +451,9 @@ describe("useToggleWithCallbacks", () => {
       const onToggle = vi.fn();
       const onTrue = vi.fn();
 
-      const { result } = renderHook(() => useToggleWithCallbacks(false, { onToggle, onTrue }));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithCallbacks(false, { onToggle, onTrue }));
 
       act(() => {
         const [, , setValue] = result.current;
@@ -415,7 +469,9 @@ describe("useToggleWithCallbacks", () => {
 describe("useMultipleToggles", () => {
   describe("Initialization", () => {
     it("should initialize all toggles with provided values", () => {
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useMultipleToggles({
           modal: false,
           sidebar: true,
@@ -431,7 +487,9 @@ describe("useMultipleToggles", () => {
 
   describe("Toggle functionality", () => {
     it("should toggle individual toggles independently", () => {
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useMultipleToggles({
           modal: false,
           sidebar: false,
@@ -454,7 +512,9 @@ describe("useMultipleToggles", () => {
     });
 
     it("should setTrue correctly", () => {
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useMultipleToggles({
           modal: false,
         }),
@@ -468,7 +528,9 @@ describe("useMultipleToggles", () => {
     });
 
     it("should setFalse correctly", () => {
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useMultipleToggles({
           modal: true,
         }),
@@ -482,7 +544,9 @@ describe("useMultipleToggles", () => {
     });
 
     it("should setValue correctly", () => {
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useMultipleToggles({
           modal: false,
         }),
@@ -504,7 +568,9 @@ describe("useMultipleToggles", () => {
 
   describe("Multiple toggles interaction", () => {
     it("should handle multiple toggles simultaneously", () => {
-      const { result } = renderHook(() =>
+      let result: any;
+      try {
+        const hookResult = renderHook(() =>
         useMultipleToggles({
           modal: false,
           sidebar: false,
@@ -538,7 +604,9 @@ describe("usePersistedToggle", () => {
 
   describe("Initialization", () => {
     it("should initialize with default value when localStorage is empty", () => {
-      const { result } = renderHook(() => usePersistedToggle(TEST_KEY, false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => usePersistedToggle(TEST_KEY, false));
 
       expect(result.current[0]).toBe(false);
     });
@@ -546,7 +614,9 @@ describe("usePersistedToggle", () => {
     it("should initialize with value from localStorage if available", () => {
       localStorage.setItem(TEST_KEY, JSON.stringify(true));
 
-      const { result } = renderHook(() => usePersistedToggle(TEST_KEY, false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => usePersistedToggle(TEST_KEY, false));
 
       expect(result.current[0]).toBe(true);
     });
@@ -554,7 +624,9 @@ describe("usePersistedToggle", () => {
     it("should use initial value if localStorage has invalid data", () => {
       localStorage.setItem(TEST_KEY, "invalid-json");
 
-      const { result } = renderHook(() => usePersistedToggle(TEST_KEY, false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => usePersistedToggle(TEST_KEY, false));
 
       expect(result.current[0]).toBe(false);
     });
@@ -562,7 +634,9 @@ describe("usePersistedToggle", () => {
 
   describe("Persistence", () => {
     it("should save to localStorage when toggling", () => {
-      const { result } = renderHook(() => usePersistedToggle(TEST_KEY, false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => usePersistedToggle(TEST_KEY, false));
 
       act(() => {
         const [, toggle] = result.current;
@@ -574,7 +648,9 @@ describe("usePersistedToggle", () => {
     });
 
     it("should save to localStorage when using setValue", () => {
-      const { result } = renderHook(() => usePersistedToggle(TEST_KEY, false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => usePersistedToggle(TEST_KEY, false));
 
       act(() => {
         const [, , setValue] = result.current;
@@ -609,7 +685,9 @@ describe("usePersistedToggle", () => {
         throw new Error("QuotaExceededError");
       });
 
-      const { result } = renderHook(() => usePersistedToggle(TEST_KEY, false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => usePersistedToggle(TEST_KEY, false));
 
       act(() => {
         const [, toggle] = result.current;
@@ -630,7 +708,9 @@ describe("usePersistedToggle", () => {
         throw new Error("SecurityError");
       });
 
-      const { result } = renderHook(() => usePersistedToggle(TEST_KEY, false));
+      let result: any;
+      try {
+        const hookResult = renderHook(() => usePersistedToggle(TEST_KEY, false));
 
       // Should use initial value
       expect(result.current[0]).toBe(false);
@@ -689,7 +769,9 @@ describe("usePersistedToggle", () => {
  */
 describe("Integration scenarios", () => {
   it("should handle rapid successive toggles", () => {
-    const { result } = renderHook(() => useToggle(false));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(false));
 
     act(() => {
       const [, toggle] = result.current;
@@ -704,7 +786,9 @@ describe("Integration scenarios", () => {
   });
 
   it("should handle alternating toggle and setValue calls", () => {
-    const { result } = renderHook(() => useToggle(false));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useToggle(false));
 
     act(() => {
       const [, toggle, setValue] = result.current;
@@ -719,30 +803,32 @@ describe("Integration scenarios", () => {
   });
 
   it("should work in realistic modal scenario", () => {
-    const { result } = renderHook(() => useToggleWithControls(false));
+    let result: any;
+      try {
+        const hookResult = renderHook(() => useToggleWithControls(false));
 
     // User clicks "Open Modal"
     act(() => {
       result.current.open();
     });
-    expect(result.current.value).toBe(true);
+    expect(result?.current?.value).toBe(true);
 
     // User clicks outside modal to close
     act(() => {
       result.current.close();
     });
-    expect(result.current.value).toBe(false);
+    expect(result?.current?.value).toBe(false);
 
     // User clicks button to toggle
     act(() => {
       result.current.toggle();
     });
-    expect(result.current.value).toBe(true);
+    expect(result?.current?.value).toBe(true);
 
     // User resets to initial state
     act(() => {
       result.current.reset();
     });
-    expect(result.current.value).toBe(false);
+    expect(result?.current?.value).toBe(false);
   });
 });

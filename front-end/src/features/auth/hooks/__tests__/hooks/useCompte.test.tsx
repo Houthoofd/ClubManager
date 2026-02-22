@@ -1,42 +1,53 @@
 /**
- * Tests for useUpload.ts
+ * Tests for useCompte.ts
  *
- * @file useUpload.ts
+ * @file useCompte.ts
  * @type hookGraphQL
  * @generated 2026-02-21
  *
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { MockedProvider } from '@apollo/client/testing';
 import { ApolloError } from '@apollo/client';
-import { useFileUpload } from '../../useUpload';
+import { useCompteInfo } from '../../useCompte';
 
 
 
-describe('useFileUpload', () => {
+describe('useCompteInfo', () => {
   // Setup wrapper with MockedProvider
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <MockedProvider mocks={[]} addTypename={false}>
+      {children}
+    </MockedProvider>
+    </MockedProvider>
+  );
+  const _useWrapper = wrapper; const _tempWrapper = ({children}: {children: React.ReactNode}) => (<div>{children}</div>); const wrapper2 =  addTypename={false}>
       {children}
     </MockedProvider>
   );
 
   describe('Initialization', () => {
     it('should initialize in loading state', () => {
-      const { result } = renderHook(() => useFileUpload(), { wrapper });
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useCompteInfo(), { wrapper });
 
-      expect(result.current.loading).toBe(true);
-      expect(result.current.data).toBeUndefined();
-      expect(result.current.error).toBeUndefined();
+      expect(result?.current?.loading).toBe(true);
+      expect(result?.current?.data).toBeUndefined();
+      expect(result?.current?.error).toBeUndefined();
     });
 
     it('should accept initial variables', () => {
       const variables = { id: '123' };
-      const { result } = renderHook(() => useFileUpload(variables), { wrapper });
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useCompteInfo(variables), { wrapper });
 
-      expect(result.current.loading).toBe(true);
+      expect(result?.current?.loading).toBe(true);
     });
   });
 
@@ -47,7 +58,7 @@ describe('useFileUpload', () => {
 
           id: 1,
 
-          data: null,
+          data: { test: 'value' },
 
           loading: false,
 
@@ -58,11 +69,9 @@ describe('useFileUpload', () => {
         name: 'Test',
       };
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: {
             data: mockData,
@@ -72,39 +81,40 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useFileUpload(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useCompteInfo(), {
         wrapper: customWrapper,
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result?.current?.loading).toBe(true);
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      expect(result.current.data).toEqual(mockData);
-      expect(result.current.error).toBeUndefined();
+      expect(result?.current?.data).toEqual(mockData);
+      expect(result?.current?.error).toBeUndefined();
     });
 
     it('should refetch data when variables change', async () => {
       const mockData1 = { id: '1', name: 'First' };
       const mockData2 = { id: '2', name: 'Second' };
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: { id: '1' },
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            query: /* YOUR_QUERY */,
+            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
             variables: { id: '2' },
           },
           result: { data: mockData2 },
@@ -113,12 +123,13 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
       const { result, rerender } = renderHook(
-        ({ id }) => useFileUpload({ id }),
+        ({ id }) => useCompteInfo({ id }),
         {
           wrapper: customWrapper,
           initialProps: { id: '1' },
@@ -126,16 +137,16 @@ describe('useFileUpload', () => {
       );
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      expect(result.current.data).toEqual(mockData1);
+      expect(result?.current?.data).toEqual(mockData1);
 
       // Change variables
       rerender({ id: '2' });
 
       await waitFor(() => {
-        expect(result.current.data).toEqual(mockData2);
+        expect(result?.current?.data).toEqual(mockData2);
       });
     });
   });
@@ -146,11 +157,9 @@ describe('useFileUpload', () => {
         graphQLErrors: [{ message: 'Test error' }],
       });
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           error: graphQLError,
         },
@@ -158,20 +167,23 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useFileUpload(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useCompteInfo(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      expect(result.current.error).toBeDefined();
-      expect(result.current.data).toBeUndefined();
+      expect(result?.current?.error).toBeDefined();
+      expect(result?.current?.data).toBeUndefined();
     });
 
     it('should handle network errors', async () => {
@@ -179,11 +191,9 @@ describe('useFileUpload', () => {
         networkError: new Error('Network error'),
       });
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           error: networkError,
         },
@@ -191,16 +201,19 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useFileUpload(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useCompteInfo(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.error).toBeDefined();
+        expect(result?.current?.error).toBeDefined();
       });
     });
 
@@ -210,11 +223,9 @@ describe('useFileUpload', () => {
         graphQLErrors: [{ message: 'Partial error' }],
       });
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: {
             data: partialData,
@@ -225,19 +236,22 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useFileUpload(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useCompteInfo(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.loading).toBe(false);
+        expect(result?.current?.loading).toBe(false);
       });
 
-      // Check how the hook handles partial data      expect(result.current).toBeDefined();
+      // Check how the hook handles partial data      expect(result?.current || {}).toBeDefined();
       expect(typeof result.current).toBe('object');
     });
   });
@@ -247,17 +261,15 @@ describe('useFileUpload', () => {
       const mockData1 = { id: '1', value: 'first' };
       const mockData2 = { id: '1', value: 'second' };
 
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: { data: mockData1 },
         },
         {
           request: {
-            query: /* YOUR_QUERY */,
+            // query: YOUR_QUERY, // TODO: Add actual GraphQL query
             variables: {},
           },
           result: { data: mockData2 },
@@ -266,23 +278,26 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(() => useFileUpload(), {
+      let result: any;
+      try {
+        const hookResult = renderHook(() => useCompteInfo(), {
         wrapper: customWrapper,
       });
 
       await waitFor(() => {
-        expect(result.current.data).toEqual(mockData1);
+        expect(result?.current?.data).toEqual(mockData1);
       });
 
       // Trigger refetch
       // await result.current.refetch();
 
       // await waitFor(() => {
-      //   expect(result.current.data).toEqual(mockData2);
+      //   expect(result?.current?.data).toEqual(mockData2);
       // });
     });
 
@@ -290,11 +305,9 @@ describe('useFileUpload', () => {
       vi.useFakeTimers();
 
       const mockData = { id: '1', timestamp: Date.now() };
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           result: { data: mockData },
         },
@@ -302,17 +315,20 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result } = renderHook(
-        () => useFileUpload({ pollInterval: 5000 }),
+      let result: any;
+      try {
+        const hookResult = renderHook(
+        () => useCompteInfo({ pollInterval: 5000 }),
         { wrapper: customWrapper }
       );
 
       await waitFor(() => {
-        expect(result.current.data).toEqual(mockData);
+        expect(result?.current?.data).toEqual(mockData);
       });
 
       // Test polling interval configuration
@@ -321,7 +337,7 @@ describe('useFileUpload', () => {
       await waitFor(() => {
 
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
 
       });
@@ -343,7 +359,7 @@ describe('useFileUpload', () => {
 
       await waitFor(() => {
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
       });
 
@@ -358,23 +374,21 @@ describe('useFileUpload', () => {
 
       await waitFor(() => {
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
       });
 
       // Check refetchQueries updates cache correctly
 
-      expect(result.current.error).toBeNull();
+      expect(result?.current?.error).toBeNull();
     });
   });
 
   describe('Cleanup', () => {
     it('should cancel pending requests on unmount', async () => {
-      const mocks = [
-        {
-          request: {
-            query: /* YOUR_QUERY */,
-            variables: {},
+      const mocks: any[] = [
+      // TODO: Add GraphQL mocks
+    ]; const _unused = {
           },
           delay: 1000,
           result: { data: { id: '1' } },
@@ -383,15 +397,16 @@ describe('useFileUpload', () => {
 
       const customWrapper = ({ children }: { children: React.ReactNode }) => (
         <MockedProvider mocks={mocks} addTypename={false}>
-          {children}
+      {children}
+    </MockedProvider>
         </MockedProvider>
       );
 
-      const { result, unmount } = renderHook(() => useFileUpload(), {
+      const { result, unmount } = renderHook(() => useCompteInfo(), {
         wrapper: customWrapper,
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result?.current?.loading).toBe(true);
 
       unmount();
 
@@ -407,7 +422,7 @@ describe('useFileUpload', () => {
 
       await waitFor(() => {
 
-        expect(result.current.isLoading).toBe(false);
+        expect(result?.current?.isLoading).toBe(false);
 
       });
 
@@ -423,7 +438,7 @@ describe('useFileUpload', () => {
 
       await waitFor(() => {
 
-        expect(result.current.error).toBeTruthy();
+        expect(result?.current?.error).toBeTruthy();
 
       });
 
@@ -433,7 +448,7 @@ describe('useFileUpload', () => {
 
   describe('Performance', () => {
     it('should not cause unnecessary re-renders', () => {
-      const { result, rerender } = renderHook(() => useFileUpload(), {
+      const { result, rerender } = renderHook(() => useCompteInfo(), {
         wrapper,
       });
 
@@ -441,7 +456,7 @@ describe('useFileUpload', () => {
       rerender();
 
       // Functions should be stable
-      // expect(result.current.someFunction).toBe(firstResult.someFunction);
+      // expect(result?.current?.someFunction).toBe(firstResult.someFunction);
     });
 
     it('should handle rapid successive calls', async () => {
@@ -459,7 +474,7 @@ describe('useFileUpload', () => {
 
       });
 
-      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      await waitFor(() => expect(result?.current?.isLoading).toBe(false));
     });
   });
 });

@@ -7,6 +7,7 @@
  *
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -14,6 +15,15 @@ import { SuccessModal } from '../../SuccessModal';// Providers can be imported 
 // import { MockedProvider } from '@apollo/client/testing';
 // import { I18nextProvider } from 'react-i18next';
 // import { BrowserRouter } from 'react-router-dom';
+
+  // Test wrapper with Apollo MockedProvider
+  const createWrapper = (mocks: any[] = []) => {
+    return ({ children }: { children: React.ReactNode }) => (
+      <MockedProvider mocks={mocks} addTypename={false}>
+        {children}
+      </MockedProvider>
+    );
+  };
 
 describe('SuccessModal', () => {
   // Default props for testing
