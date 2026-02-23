@@ -3,15 +3,16 @@
  * Centralizes API communication with error handling, retries, and interceptors
  */
 
-import { ApolloClient, ApolloLink, HttpLink, InMemoryCache, from } from '@apollo/client';
-import { onError } from '@apollo/client/link/error';
-import { RetryLink } from '@apollo/client/link/retry';
+import { ApolloClient, ApolloLink, HttpLink, InMemoryCache, from } from "@apollo/client";
+import { onError } from "@apollo/client/link/error";
+import { RetryLink } from "@apollo/client/link/retry";
+import { env, isDev } from "@/core/config/env";
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://clubmanagment.com/';
+const API_BASE_URL = env.api.baseUrl || "https://clubmanagment.com/";
 const GRAPHQL_ENDPOINT = `${API_BASE_URL}graphql`;
 
 // ============================================================================
@@ -25,25 +26,25 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
 
       console.error(
         `[GraphQL Error]: Message: ${message}, Location: ${JSON.stringify(locations)}, Path: ${path}`,
-        { code: errorCode, operation: operation.operationName }
+        { code: errorCode, operation: operation.operationName },
       );
 
       // Handle specific error codes
       switch (errorCode) {
-        case 'UNAUTHENTICATED':
+        case "UNAUTHENTICATED":
           // Redirect to login or refresh token
-          console.warn('User not authenticated, clearing session...');
-          localStorage.removeItem('token');
-          window.location.href = '/login';
+          console.warn("User not authenticated, clearing session...");
+          localStorage.removeItem("token");
+          window.location.href = "/login";
           break;
 
-        case 'FORBIDDEN':
-          console.error('Access forbidden to resource');
+        case "FORBIDDEN":
+          console.error("Access forbidden to resource");
           // Show toast notification
           break;
 
-        case 'BAD_USER_INPUT':
-          console.warn('Invalid input provided', { message });
+        case "BAD_USER_INPUT":
+          console.warn("Invalid input provided", { message });
           break;
 
         default:
@@ -60,24 +61,24 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
     });
 
     // Handle network errors
-    if ('statusCode' in networkError) {
+    if ("statusCode" in networkError) {
       const statusCode = (networkError as any).statusCode;
 
       switch (statusCode) {
         case 401:
-          console.warn('Unauthorized request');
-          localStorage.removeItem('token');
-          window.location.href = '/login';
+          console.warn("Unauthorized request");
+          localStorage.removeItem("token");
+          window.location.href = "/login";
           break;
 
         case 403:
-          console.error('Forbidden access');
+          console.error("Forbidden access");
           break;
 
         case 500:
         case 502:
         case 503:
-          console.error('Server error, retrying...');
+          console.error("Server error, retrying...");
           break;
 
         default:
@@ -103,7 +104,7 @@ const retryLink = new RetryLink({
     max: 3,
     retryIf: (error, _operation) => {
       // Retry only on network errors, not GraphQL errors
-      return !!error && !error.message.includes('GraphQL');
+      return !!error && !error.message.includes("GraphQL");
     },
   },
 });
@@ -114,14 +115,14 @@ const retryLink = new RetryLink({
 
 const authLink = new ApolloLink((operation, forward) => {
   // Get token from localStorage
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
 
   // Add authorization header if token exists
   operation.setContext(({ headers = {} }) => ({
     headers: {
       ...headers,
-      authorization: token ? `Bearer ${token}` : '',
-      'Content-Type': 'application/json',
+      authorization: token ? `Bearer ${token}` : "",
+      "Content-Type": "application/json",
     },
   }));
 
@@ -133,8 +134,6 @@ const authLink = new ApolloLink((operation, forward) => {
 // ============================================================================
 
 const loggingLink = new ApolloLink((operation, forward) => {
-  const isDev = import.meta.env.DEV;
-
   if (isDev) {
     console.log(`[GraphQL Request] ${operation.operationName}`, {
       query: operation.query.loc?.source.body,
@@ -161,7 +160,7 @@ const loggingLink = new ApolloLink((operation, forward) => {
 
 const httpLink = new HttpLink({
   uri: GRAPHQL_ENDPOINT,
-  credentials: 'include', // Include cookies for session management
+  credentials: "include", // Include cookies for session management
 });
 
 // ============================================================================
@@ -169,13 +168,7 @@ const httpLink = new HttpLink({
 // ============================================================================
 
 export const apolloClient = new ApolloClient({
-  link: from([
-    loggingLink,
-    errorLink,
-    retryLink,
-    authLink,
-    httpLink,
-  ]),
+  link: from([loggingLink, errorLink, retryLink, authLink, httpLink]),
   cache: new InMemoryCache({
     typePolicies: {
       Query: {
@@ -188,7 +181,7 @@ export const apolloClient = new ApolloClient({
             },
           },
           articles: {
-            keyArgs: ['categorie'],
+            keyArgs: ["categorie"],
             merge(existing = [], incoming) {
               return incoming;
             },
@@ -199,15 +192,15 @@ export const apolloClient = new ApolloClient({
   }),
   defaultOptions: {
     watchQuery: {
-      fetchPolicy: 'cache-and-network',
-      errorPolicy: 'all',
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
     },
     query: {
-      fetchPolicy: 'network-only',
-      errorPolicy: 'all',
+      fetchPolicy: "network-only",
+      errorPolicy: "all",
     },
     mutate: {
-      errorPolicy: 'all',
+      errorPolicy: "all",
     },
   },
 });
@@ -220,14 +213,14 @@ export const apolloClient = new ApolloClient({
  * Set authentication token
  */
 export const setAuthToken = (token: string): void => {
-  localStorage.setItem('token', token);
+  localStorage.setItem("token", token);
 };
 
 /**
  * Clear authentication token
  */
 export const clearAuthToken = (): void => {
-  localStorage.removeItem('token');
+  localStorage.removeItem("token");
   apolloClient.clearStore(); // Clear Apollo cache
 };
 
@@ -235,7 +228,7 @@ export const clearAuthToken = (): void => {
  * Get current authentication token
  */
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem('token');
+  return localStorage.getItem("token");
 };
 
 /**

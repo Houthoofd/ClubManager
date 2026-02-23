@@ -28,7 +28,7 @@ import {
   TrashIcon,
   EditIcon,
   UsersIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { SkeletonDataList } from "@/shared/components/ui";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";

@@ -11,7 +11,7 @@ import {
   InfoCircleIcon,
   CheckCircleIcon,
   TimesCircleIcon
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 
 interface InformationModalProps {
   isOpen: boolean;

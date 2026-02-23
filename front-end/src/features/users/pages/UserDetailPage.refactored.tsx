@@ -30,7 +30,7 @@ import {
   EditIcon,
   CheckIcon,
   TimesIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useTracking } from "@/core/hocs/withTracking";
@@ -41,7 +41,7 @@ import { useLoadingWrapper } from "@/core/hocs/withLoading";
 import { useAuthStore } from "@/store/authStore";
 import { useUiStore } from "@/store/uiStore";
 import { formatDate, formatCurrency } from "@/core/i18n/helpers";
-import { useQueryClient } from "@tanstack/react-query";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
 import {
   useUtilisateurById,
   useUpdateUtilisateur,
@@ -92,7 +92,6 @@ const UserDetailPage: React.FC = () => {
   const location = useLocation();
   const { trackEvent, trackError } = useTracking();
   const { wrapAsync } = useLoadingWrapper();
-  const queryClient = useQueryClient();
   const checkEmail = useCheckEmail();
 
   // Zustand stores
@@ -333,11 +332,12 @@ const UserDetailPage: React.FC = () => {
           changesToSend[change.field] = form[change.field as keyof FormData];
         });
 
-        await updateUtilisateur.mutateAsync(changesToSend);
+        await updateUtilisateur.mutateAsync(changesToSend as any);
 
-        // Invalidate queries
-        queryClient.invalidateQueries({ queryKey: ["utilisateur", userId] });
-        queryClient.invalidateQueries({ queryKey: ["utilisateurs"] });
+        // Refetch Apollo queries to update cache
+        apolloClient.refetchQueries({
+          include: ["GetUtilisateur", "GetUtilisateurs", "GetUsers"],
+        });
 
         setResultModalMessage(t("users.details.updateSuccess"));
         setResultModalSuccess(true);

@@ -7,7 +7,7 @@ import {
   Label,
   TextInput, // AJOUTÉ: Import de TextInput
 } from "@patternfly/react-core";
-import { ShoppingCartIcon, ChevronLeftIcon, ChevronRightIcon } from "@patternfly/react-icons";
+import { ShoppingCartIcon, ChevronLeftIcon, ChevronRightIcon } from '@/shared/icons';
 import BaseModal from "@/shared/components/common-legacy/modal/BaseModal";
 
 interface DetailArticleModalProps {

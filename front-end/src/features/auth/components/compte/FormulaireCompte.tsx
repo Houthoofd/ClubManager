@@ -9,7 +9,7 @@ import {
   Flex,
   FlexItem,
 } from '@patternfly/react-core';
-import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
+import { PencilAltIcon, CheckIcon } from '@/shared/icons';
 import { useCheckEmail } from '../../hooks/useVerification';
 
 interface FormulaireCompteProps {

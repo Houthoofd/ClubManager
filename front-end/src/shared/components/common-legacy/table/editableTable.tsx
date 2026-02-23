@@ -14,7 +14,7 @@ import {
   Spinner,
   EmptyStateBody
 } from '@patternfly/react-core';
-import { SearchIcon } from '@patternfly/react-icons';
+import { SearchIcon } from '@/shared/icons';
 
 interface Column {
   key: string;

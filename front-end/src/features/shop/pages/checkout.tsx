@@ -1,17 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { PageSection, Stepper, Step, StepperStep, Button, Alert } from "@patternfly/react-core";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { CheckoutForm, StripePaymentForm } from "../components";
 import type { CheckoutFormData } from "../components/CheckoutForm";
 import { useCartItems, useCartStore } from "@/store/cartStore";
-
-// Chargez votre clé publique Stripe
-const stripePromise = loadStripe(
-  process.env.REACT_APP_STRIPE_PUBLIC_KEY || "pk_test_your_key_here",
-);
+import { StripeProvider } from "@/app/providers/StripeProvider.lazy";
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -88,71 +82,75 @@ const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <div className="checkout-page">
-      <PageHeader
-        title="Finaliser la commande"
-        subtitle="Quelques étapes pour finaliser votre achat"
-        variant="store"
-      />
+    <StripeProvider>
+      <div className="checkout-page">
+        <PageHeader
+          title="Finaliser la commande"
+          subtitle="Quelques étapes pour finaliser votre achat"
+          variant="store"
+        />
 
-      <PageSection>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-          <Stepper activeStep={currentStep} style={{ marginBottom: "2rem" }}>
-            <Step stepNumber={1} isCurrent={currentStep === 1}>
-              Informations de livraison
-            </Step>
-            <Step stepNumber={2} isCurrent={currentStep === 2}>
-              Paiement
-            </Step>
-            <Step stepNumber={3} isCurrent={currentStep === 3}>
-              Confirmation
-            </Step>
-          </Stepper>
+        <PageSection>
+          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+            <Stepper activeStep={currentStep} style={{ marginBottom: "2rem" }}>
+              <Step stepNumber={1} isCurrent={currentStep === 1}>
+                Informations de livraison
+              </Step>
+              <Step stepNumber={2} isCurrent={currentStep === 2}>
+                Paiement
+              </Step>
+              <Step stepNumber={3} isCurrent={currentStep === 3}>
+                Confirmation
+              </Step>
+            </Stepper>
 
-          {currentStep === 1 && (
-            <CheckoutForm onSubmit={handleCustomerInfoSubmit} isLoading={isLoading} error={error} />
-          )}
+            {currentStep === 1 && (
+              <CheckoutForm
+                onSubmit={handleCustomerInfoSubmit}
+                isLoading={isLoading}
+                error={error}
+              />
+            )}
 
-          {currentStep === 2 && customerInfo && (
-            <div>
-              <div style={{ marginBottom: "1rem" }}>
-                <Button variant="link" onClick={() => setCurrentStep(1)} style={{ padding: 0 }}>
-                  ← Retour aux informations de livraison
-                </Button>
-              </div>
+            {currentStep === 2 && customerInfo && (
+              <div>
+                <div style={{ marginBottom: "1rem" }}>
+                  <Button variant="link" onClick={() => setCurrentStep(1)} style={{ padding: 0 }}>
+                    ← Retour aux informations de livraison
+                  </Button>
+                </div>
 
-              <Elements stripe={stripePromise}>
                 <StripePaymentForm
                   amount={calculerTotal()}
                   onSuccess={handlePaymentSuccess}
                   onError={handlePaymentError}
                   customerInfo={customerInfo}
                 />
-              </Elements>
-            </div>
-          )}
-
-          {currentStep === 3 && orderSuccess && (
-            <div style={{ textAlign: "center", padding: "2rem" }}>
-              <Alert variant="success" title="Commande confirmée !" isInline>
-                Votre paiement a été traité avec succès. Vous recevrez un email de confirmation.
-              </Alert>
-              <div style={{ marginTop: "2rem" }}>
-                <Button variant="primary" onClick={() => navigate("/pages/magasin/magasin")}>
-                  Retour au magasin
-                </Button>
               </div>
-            </div>
-          )}
+            )}
 
-          {error && currentStep !== 1 && (
-            <Alert variant="danger" title="Erreur" isInline style={{ marginTop: "1rem" }}>
-              {error}
-            </Alert>
-          )}
-        </div>
-      </PageSection>
-    </div>
+            {currentStep === 3 && orderSuccess && (
+              <div style={{ textAlign: "center", padding: "2rem" }}>
+                <Alert variant="success" title="Commande confirmée !" isInline>
+                  Votre paiement a été traité avec succès. Vous recevrez un email de confirmation.
+                </Alert>
+                <div style={{ marginTop: "2rem" }}>
+                  <Button variant="primary" onClick={() => navigate("/pages/magasin/magasin")}>
+                    Retour au magasin
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {error && currentStep !== 1 && (
+              <Alert variant="danger" title="Erreur" isInline style={{ marginTop: "1rem" }}>
+                {error}
+              </Alert>
+            )}
+          </div>
+        </PageSection>
+      </div>
+    </StripeProvider>
   );
 };
 

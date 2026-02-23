@@ -16,7 +16,7 @@
 // CORE
 // ====================================================================
 
-export { default as i18n } from './config';
+export { default as i18n } from "./config";
 export {
   changeLanguage,
   getCurrentLanguage,
@@ -25,52 +25,32 @@ export {
   SUPPORTED_LANGUAGES,
   DEFAULT_LANGUAGE,
   STORAGE_KEY,
-} from './config';
+} from "./config";
+
+// ====================================================================
+// LAZY LOADING
+// ====================================================================
+
+export { lazyI18nBackend } from "./lazyBackend";
+export { I18nLoader } from "./I18nLoader";
 
 // ====================================================================
 // TYPES
 // ====================================================================
 
-export type {
-  SupportedLanguage,
-  TranslationNamespace,
-  TranslationKey,
-  CommonKey,
-  NavigationKey,
-  AuthKey,
-  ShopKey,
-  CoursesKey,
-  UsersKey,
-  MessagesKey,
-  OrdersKey,
-  StatsKey,
-  TeachersKey,
-  ErrorsKey,
-  ValidationKey,
-  LanguageKey,
-  TFunction,
-  TranslationOptions,
-  LanguageOption,
-  UseTranslationOptions,
-  UseTranslationResponse,
-} from './types';
-
-export {
-  LANGUAGE_NAMES,
-  LANGUAGE_FLAGS,
-  LANGUAGE_OPTIONS,
-} from './types';
+// Types are defined in react-i18next
+// No custom types file needed
 
 // ====================================================================
 // REACT-I18NEXT HOOKS
 // ====================================================================
 
-export { useTranslation, Trans, Translation } from 'react-i18next';
+export { useTranslation, Trans, Translation } from "react-i18next";
 
 // ====================================================================
 // LOCALES
 // ====================================================================
 
-export { en } from './locales/en';
-export { fr } from './locales/fr';
-export { nl } from './locales/nl';
+export { en } from "./locales/en";
+export { fr } from "./locales/fr";
+export { nl } from "./locales/nl";

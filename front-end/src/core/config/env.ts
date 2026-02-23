@@ -16,7 +16,6 @@
  */
 
 import { z } from "zod";
-import { logger } from "@/core/utils/appLogger";
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -42,8 +41,20 @@ const apiConfigSchema = z.object({
     .string()
     .min(1, "VITE_API_BASE_URL is required")
     .url("VITE_API_BASE_URL must be a valid URL"),
-  graphqlEndpoint: z.string().url(),
+  graphqlEndpoint: z.string().url().optional(),
+  graphqlUrl: z.string().url().optional(),
+  wsUrl: z.string().optional(),
   timeout: z.number().positive().default(30000),
+});
+
+/**
+ * Sentry configuration schema
+ */
+const sentryConfigSchema = z.object({
+  dsn: z.string().optional(),
+  environment: z.string().optional(),
+  release: z.string().optional(),
+  enabled: z.boolean().default(false),
 });
 
 /**
@@ -66,6 +77,9 @@ const featureFlagsSchema = z.object({
   enableDevTools: z.boolean().default(false),
   enableAnalytics: z.boolean().default(false),
   enableErrorTracking: z.boolean().default(false),
+  enableQueryBatching: z.boolean().default(true),
+  enableAPQ: z.boolean().default(true),
+  enableCachePersistence: z.boolean().default(true),
 });
 
 /**
@@ -76,6 +90,7 @@ const envSchema = z.object({
   api: apiConfigSchema,
   app: appConfigSchema,
   features: featureFlagsSchema,
+  sentry: sentryConfigSchema,
 });
 
 // ============================================================================
@@ -96,13 +111,22 @@ function parseEnv() {
   const isTest = mode === "test";
 
   // Stripe configuration
-  const stripePublicKey =
-    raw.VITE_STRIPE_PUBLIC_KEY ||
-    raw.VITE_STRIPE_PUBLISHABLE_KEY ||
-    "pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ"; // Fallback
+  const stripePublicKey = raw.VITE_STRIPE_PUBLIC_KEY || raw.VITE_STRIPE_PUBLISHABLE_KEY;
 
-  const isStripeTestMode = stripePublicKey.includes("test");
-  const stripeAccount = stripePublicKey.substring(8, 23);
+  // Validate Stripe key is present
+  if (!stripePublicKey) {
+    const errorMsg = "VITE_STRIPE_PUBLIC_KEY is required but not set. Please check your .env file.";
+    console.error(`❌ [Config] ${errorMsg}`);
+    if (isProduction) {
+      throw new Error(errorMsg);
+    }
+    console.warn(
+      "⚠️ [Config] Using development mode without Stripe key - some features will not work",
+    );
+  }
+
+  const isStripeTestMode = stripePublicKey ? stripePublicKey.includes("test") : false;
+  const stripeAccount = stripePublicKey ? stripePublicKey.substring(8, 23) : "";
 
   // API configuration
   const apiBaseUrl = raw.VITE_API_BASE_URL || raw.VITE_API_URL || "https://clubmanagment.com/";
@@ -113,6 +137,13 @@ function parseEnv() {
   const enableDevTools = raw.VITE_ENABLE_DEVTOOLS === "true" || isDevelopment;
   const enableAnalytics = raw.VITE_ENABLE_ANALYTICS === "true" || isProduction;
   const enableErrorTracking = raw.VITE_ENABLE_ERROR_TRACKING === "true" || isProduction;
+  const enableQueryBatching = raw.VITE_ENABLE_QUERY_BATCHING !== "false";
+  const enableAPQ = raw.VITE_ENABLE_APQ !== "false";
+  const enableCachePersistence = raw.VITE_ENABLE_CACHE_PERSISTENCE !== "false";
+
+  // Sentry configuration
+  const sentryDsn = raw.VITE_SENTRY_DSN || "";
+  const sentryEnabled = isProduction && !!sentryDsn;
 
   // Construct configuration object
   const config = {
@@ -124,6 +155,8 @@ function parseEnv() {
     api: {
       baseUrl: apiBaseUrl,
       graphqlEndpoint,
+      graphqlUrl: raw.VITE_GRAPHQL_ENDPOINT || raw.VITE_GRAPHQL_URL || graphqlEndpoint,
+      wsUrl: raw.VITE_WS_URL || `ws://localhost:4000/graphql`,
       timeout: Number(raw.VITE_API_TIMEOUT) || 30000,
     },
     app: {
@@ -139,6 +172,15 @@ function parseEnv() {
       enableDevTools,
       enableAnalytics,
       enableErrorTracking,
+      enableQueryBatching,
+      enableAPQ,
+      enableCachePersistence,
+    },
+    sentry: {
+      dsn: sentryDsn,
+      environment: mode,
+      release: raw.VITE_APP_VERSION || "1.0.0",
+      enabled: sentryEnabled,
     },
   };
 
@@ -147,9 +189,9 @@ function parseEnv() {
     return envSchema.parse(config);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error("❌ [Config] Environment validation failed:");
+      console.error("❌ [Config] Environment validation failed:");
       error.issues.forEach((err: z.ZodIssue) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
+        console.error(`  - ${err.path.join(".")}: ${err.message}`);
       });
       throw new Error("Invalid environment configuration. Check console for details.");
     }
@@ -216,14 +258,14 @@ export const getApiUrl = (path: string = ""): string => {
  * Get GraphQL endpoint URL
  */
 export const getGraphQLUrl = (): string => {
-  return env.api.graphqlEndpoint;
+  return env.api.graphqlEndpoint || env.api.graphqlUrl || `${env.api.baseUrl}/graphql`;
 };
 
 /**
  * Log configuration on startup (development only)
  */
 if (isDev) {
-  logger.debug("🔧 [Config] Environment configuration loaded");
+  console.log("🔧 [Config] Environment configuration loaded");
 }
 
 // ============================================================================
@@ -231,7 +273,7 @@ if (isDev) {
 // ============================================================================
 
 if (isProd && env.stripe.isTestMode) {
-  logger.warn(
+  console.warn(
     "⚠️ [Config] WARNING: Using Stripe TEST key in PRODUCTION mode! This should not happen in production.",
   );
 }

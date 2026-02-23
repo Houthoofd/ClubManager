@@ -8,7 +8,7 @@
 
 import React from "react";
 import { Button, Dropdown, DropdownItem, KebabToggle } from "@patternfly/react-core";
-import { CheckCircleIcon, TrashIcon, EyeIcon } from "@patternfly/react-icons";
+import { CheckCircleIcon, TrashIcon, EyeIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import type { MessageActionButtonsProps } from "./MessageActionButtons.types";
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Flex, FlexItem } from '@patternfly/react-core';
-import { ChartBarIcon, TableIcon } from '@patternfly/react-icons';
+import { ChartBarIcon, TableIcon } from '@/shared/icons';
 
 interface SwitchViewControlsProps {
   showChart: boolean;

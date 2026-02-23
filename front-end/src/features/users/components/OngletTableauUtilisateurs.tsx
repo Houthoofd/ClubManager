@@ -5,7 +5,7 @@ import EditableTable from "@/shared/components/common-legacy/table/editableTable
 import SearchInput from "@/shared/components/common-legacy/input/SearchInput";
 import AlertesBadge from "@/shared/components/gestion/AlertesBadge";
 import KebabMenu from "@/shared/components/common-legacy/menu/KebabMenu";
-import { EnvelopeIcon } from "@patternfly/react-icons";
+import { EnvelopeIcon } from '@/shared/icons';
 import type { UserData } from "@clubmanager/types";
 import { useDebounce, useLocalStorage } from "@/shared/hooks/utils";
 import { SkeletonTable } from "@/shared/components/ui";

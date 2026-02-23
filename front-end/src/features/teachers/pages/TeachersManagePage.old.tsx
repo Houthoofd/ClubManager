@@ -16,7 +16,7 @@ import {
   Title,
   EmptyStateBody,
 } from "@patternfly/react-core";
-import { UserIcon, SearchIcon } from "@patternfly/react-icons";
+import { UserIcon, SearchIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
 import { useInstructors } from "../hooks";

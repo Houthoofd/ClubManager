@@ -43,7 +43,7 @@ import {
   SortAmountDownIcon,
   SortAmountUpIcon,
   DownloadIcon,
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 import {
   usePagination,
   useTableSort,

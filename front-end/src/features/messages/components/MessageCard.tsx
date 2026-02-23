@@ -7,7 +7,7 @@ import {
   Button,
   Divider,
 } from "@patternfly/react-core";
-import { TrashIcon } from "@patternfly/react-icons";
+import { TrashIcon } from '@/shared/icons';
 
 interface MessageCardProps {
   message: {

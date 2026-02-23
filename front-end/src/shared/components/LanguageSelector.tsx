@@ -32,7 +32,7 @@ import {
   MenuToggle,
   MenuToggleElement,
 } from '@patternfly/react-core';
-import { GlobeIcon } from '@patternfly/react-icons';
+import { GlobeIcon } from '@/shared/icons';
 import { changeLanguage, LANGUAGE_OPTIONS } from '@/core/i18n';
 import type { SupportedLanguage } from '@/core/i18n';
 

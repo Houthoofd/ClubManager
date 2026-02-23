@@ -1,7 +1,7 @@
 import React from "react";
 import { BaseModal } from "@/shared/components/common-legacy/modal/BaseModal";
 import { Button, Alert } from "@patternfly/react-core";
-import { ExclamationTriangleIcon } from "@patternfly/react-icons";
+import { ExclamationTriangleIcon } from '@/shared/icons';
 
 interface DeleteMessageModalProps {
   isOpen: boolean;

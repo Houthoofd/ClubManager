@@ -26,23 +26,23 @@
  *   --overwrite       Overwrite existing tests
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import parser from '@babel/parser';
-import traverse from '@babel/traverse';
-import * as t from '@babel/types';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import parser from "@babel/parser";
+import traverse from "@babel/traverse";
+import * as t from "@babel/types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const args = process.argv.slice(2);
 const options = {
-  dryRun: args.includes('--dry-run'),
-  verbose: args.includes('--verbose'),
-  overwrite: args.includes('--overwrite'),
-  file: args.includes('--file') ? args[args.indexOf('--file') + 1] : null,
-  dir: args.includes('--dir') ? args[args.indexOf('--dir') + 1] : null,
+  dryRun: args.includes("--dry-run"),
+  verbose: args.includes("--verbose"),
+  overwrite: args.includes("--overwrite"),
+  file: args.includes("--file") ? args[args.indexOf("--file") + 1] : null,
+  dir: args.includes("--dir") ? args[args.indexOf("--dir") + 1] : null,
 };
 
 // ============================================================================
@@ -52,10 +52,10 @@ const options = {
 class CodeAnalyzer {
   constructor(filePath) {
     this.filePath = filePath;
-    this.code = fs.readFileSync(filePath, 'utf-8');
+    this.code = fs.readFileSync(filePath, "utf-8");
     this.ast = null;
     this.analysis = {
-      type: 'unknown',
+      type: "unknown",
       exports: { default: null, named: [] },
       imports: [],
       functions: [],
@@ -74,8 +74,8 @@ class CodeAnalyzer {
   analyze() {
     try {
       this.ast = parser.parse(this.code, {
-        sourceType: 'module',
-        plugins: ['typescript', 'jsx'],
+        sourceType: "module",
+        plugins: ["typescript", "jsx"],
       });
 
       traverse.default(this.ast, {
@@ -111,7 +111,7 @@ class CodeAnalyzer {
       if (t.isFunctionDeclaration(path.node.declaration)) {
         this.analysis.exports.named.push(path.node.declaration.id.name);
       } else if (t.isVariableDeclaration(path.node.declaration)) {
-        path.node.declaration.declarations.forEach(decl => {
+        path.node.declaration.declarations.forEach((decl) => {
           if (t.isIdentifier(decl.id)) {
             this.analysis.exports.named.push(decl.id.name);
           }
@@ -122,14 +122,16 @@ class CodeAnalyzer {
 
   handleImport(path) {
     const source = path.node.source.value;
-    const specifiers = path.node.specifiers.map(spec => {
-      if (t.isImportDefaultSpecifier(spec)) {
-        return { type: 'default', name: spec.local.name };
-      } else if (t.isImportSpecifier(spec)) {
-        return { type: 'named', name: spec.local.name };
-      }
-      return null;
-    }).filter(Boolean);
+    const specifiers = path.node.specifiers
+      .map((spec) => {
+        if (t.isImportDefaultSpecifier(spec)) {
+          return { type: "default", name: spec.local.name };
+        } else if (t.isImportSpecifier(spec)) {
+          return { type: "named", name: spec.local.name };
+        }
+        return null;
+      })
+      .filter(Boolean);
 
     this.analysis.imports.push({ source, specifiers });
   }
@@ -138,7 +140,7 @@ class CodeAnalyzer {
     if (path.node.id) {
       this.analysis.functions.push({
         name: path.node.id.name,
-        params: path.node.params.map(p => this.getParamName(p)),
+        params: path.node.params.map((p) => this.getParamName(p)),
         async: path.node.async,
       });
     }
@@ -149,7 +151,7 @@ class CodeAnalyzer {
     if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id)) {
       this.analysis.functions.push({
         name: parent.id.name,
-        params: path.node.params.map(p => this.getParamName(p)),
+        params: path.node.params.map((p) => this.getParamName(p)),
         async: path.node.async,
       });
     }
@@ -159,16 +161,16 @@ class CodeAnalyzer {
     const callee = path.node.callee;
 
     // Detect React hooks
-    if (t.isIdentifier(callee) && callee.name.startsWith('use')) {
+    if (t.isIdentifier(callee) && callee.name.startsWith("use")) {
       const hookName = callee.name;
       const args = path.node.arguments;
 
-      if (hookName === 'useState') {
+      if (hookName === "useState") {
         const stateVar = this.getStateVariableName(path);
         if (stateVar) {
-          this.analysis.state.push({ name: stateVar, hook: 'useState' });
+          this.analysis.state.push({ name: stateVar, hook: "useState" });
         }
-      } else if (hookName === 'useEffect') {
+      } else if (hookName === "useEffect") {
         this.analysis.effects.push({ dependencies: args.length > 1 });
       }
 
@@ -182,10 +184,10 @@ class CodeAnalyzer {
     const tag = path.node.tag;
     if (t.isIdentifier(tag)) {
       const tagName = tag.name;
-      if (tagName === 'gql' || tagName === 'graphql') {
-        const query = path.node.quasi.quasis.map(q => q.value.raw).join('');
+      if (tagName === "gql" || tagName === "graphql") {
+        const query = path.node.quasi.quasis.map((q) => q.value.raw).join("");
 
-        if (query.includes('mutation')) {
+        if (query.includes("mutation")) {
           this.analysis.graphqlMutations.push(query);
         } else {
           this.analysis.graphqlQueries.push(query);
@@ -210,18 +212,22 @@ class CodeAnalyzer {
 
   containsJSX(node) {
     let hasJSX = false;
-    traverse.default(node, {
-      JSXElement: () => { hasJSX = true; },
-      JSXFragment: () => { hasJSX = true; },
-    }, null, {});
+    // Simple check without traversing - just check if body contains JSX
+    try {
+      const code = JSON.stringify(node);
+      hasJSX = code.includes("JSXElement") || code.includes("JSXFragment");
+    } catch (error) {
+      // Fallback: assume not JSX if error
+      hasJSX = false;
+    }
     return hasJSX;
   }
 
   getParamName(param) {
     if (t.isIdentifier(param)) return param.name;
-    if (t.isObjectPattern(param)) return '{...}';
-    if (t.isArrayPattern(param)) return '[...]';
-    return 'unknown';
+    if (t.isObjectPattern(param)) return "{...}";
+    if (t.isArrayPattern(param)) return "[...]";
+    return "unknown";
   }
 
   getStateVariableName(path) {
@@ -236,22 +242,26 @@ class CodeAnalyzer {
     const { exports, hooks, components, graphqlQueries, graphqlMutations } = this.analysis;
     const fileName = path.basename(this.filePath);
 
-    if (fileName.includes('.service.')) {
-      this.analysis.type = 'service';
-    } else if (fileName.includes('Context') || fileName.includes('Provider')) {
-      this.analysis.type = 'context';
-    } else if (fileName.includes('store') || hooks.includes('create')) {
-      this.analysis.type = 'store';
+    if (fileName.includes(".service.")) {
+      this.analysis.type = "service";
+    } else if (fileName.includes("Context") || fileName.includes("Provider")) {
+      this.analysis.type = "context";
+    } else if (
+      fileName.includes("Store") ||
+      fileName.includes("store") ||
+      this.code.includes("zustand")
+    ) {
+      this.analysis.type = "store";
     } else if (exports.default && components.includes(exports.default)) {
-      this.analysis.type = 'component';
-    } else if ((exports.default || exports.named[0])?.startsWith('use')) {
+      this.analysis.type = "component";
+    } else if ((exports.default || exports.named[0])?.startsWith("use")) {
       if (graphqlQueries.length > 0 || graphqlMutations.length > 0) {
-        this.analysis.type = 'hookGraphQL';
+        this.analysis.type = "hookGraphQL";
       } else {
-        this.analysis.type = 'hook';
+        this.analysis.type = "hook";
       }
     } else if (this.analysis.functions.length > 0 && components.length === 0) {
-      this.analysis.type = 'util';
+      this.analysis.type = "util";
     }
   }
 }
@@ -261,64 +271,64 @@ class CodeAnalyzer {
 // ============================================================================
 
 class MockGenerator {
-  static generateMockValue(type, name = '') {
+  static generateMockValue(type, name = "") {
     const lowerType = type.toLowerCase();
     const lowerName = name.toLowerCase();
 
     // String types
-    if (lowerType.includes('string')) {
-      if (lowerName.includes('email')) return "'test@example.com'";
-      if (lowerName.includes('name')) return "'Test Name'";
-      if (lowerName.includes('id')) return "'test-id-123'";
-      if (lowerName.includes('url')) return "'https://example.com'";
-      if (lowerName.includes('password')) return "'Password123!'";
+    if (lowerType.includes("string")) {
+      if (lowerName.includes("email")) return "'test@example.com'";
+      if (lowerName.includes("name")) return "'Test Name'";
+      if (lowerName.includes("id")) return "'test-id-123'";
+      if (lowerName.includes("url")) return "'https://example.com'";
+      if (lowerName.includes("password")) return "'Password123!'";
       return "'test-value'";
     }
 
     // Number types
-    if (lowerType.includes('number') || lowerType === 'int') {
-      if (lowerName.includes('id')) return '1';
-      if (lowerName.includes('count') || lowerName.includes('total')) return '10';
-      if (lowerName.includes('price') || lowerName.includes('amount')) return '99.99';
-      return '42';
+    if (lowerType.includes("number") || lowerType === "int") {
+      if (lowerName.includes("id")) return "1";
+      if (lowerName.includes("count") || lowerName.includes("total")) return "10";
+      if (lowerName.includes("price") || lowerName.includes("amount")) return "99.99";
+      return "42";
     }
 
     // Boolean types
-    if (lowerType.includes('boolean') || lowerType === 'bool') {
-      return lowerName.includes('is') || lowerName.includes('has') ? 'true' : 'false';
+    if (lowerType.includes("boolean") || lowerType === "bool") {
+      return lowerName.includes("is") || lowerName.includes("has") ? "true" : "false";
     }
 
     // Date types
-    if (lowerType.includes('date')) {
+    if (lowerType.includes("date")) {
       return "new Date('2024-01-01')";
     }
 
     // Array types
-    if (lowerType.includes('[]') || lowerType.includes('array')) {
-      const itemType = lowerType.replace('[]', '').replace('array<', '').replace('>', '').trim();
-      if (itemType && itemType !== 'any') {
+    if (lowerType.includes("[]") || lowerType.includes("array")) {
+      const itemType = lowerType.replace("[]", "").replace("array<", "").replace(">", "").trim();
+      if (itemType && itemType !== "any") {
         return `[${this.generateMockValue(itemType, name)}]`;
       }
-      return '[]';
+      return "[]";
     }
 
     // Object types
-    if (lowerType.includes('object') || lowerType === '{}') {
-      return '{}';
+    if (lowerType.includes("object") || lowerType === "{}") {
+      return "{}";
     }
 
     // Function types
-    if (lowerType.includes('function') || lowerType.includes('=>')) {
-      return 'vi.fn()';
+    if (lowerType.includes("function") || lowerType.includes("=>")) {
+      return "vi.fn()";
     }
 
     // React node
-    if (lowerType.includes('reactnode') || lowerType.includes('jsx')) {
-      return '<div>Test</div>';
+    if (lowerType.includes("reactnode") || lowerType.includes("jsx")) {
+      return "<div>Test</div>";
     }
 
     // Default
-    return 'undefined';
+    return "undefined";
   }
 
   static generateGraphQLMock(query) {
@@ -340,7 +350,7 @@ class MockGenerator {
 
   static extractQueryName(query) {
     const match = query.match(/(?:query|mutation)\s+(\w+)/);
-    return match ? match[1] : 'TestQuery';
+    return match ? match[1] : "TestQuery";
   }
 
   static extractQueryFields(query) {
@@ -349,10 +359,10 @@ class MockGenerator {
     let match;
 
     while ((match = fieldRegex.exec(query)) !== null) {
-      if (!['query', 'mutation', 'fragment'].includes(match[1])) {
+      if (!["query", "mutation", "fragment"].includes(match[1])) {
         fields.push({
           name: match[1],
-          type: match[2] || 'String',
+          type: match[2] || "String",
         });
       }
     }
@@ -362,7 +372,7 @@ class MockGenerator {
 
   static generateMockData(fields) {
     const data = {};
-    fields.forEach(field => {
+    fields.forEach((field) => {
       data[field.name] = this.generateMockValue(field.type, field.name);
     });
     return data;
@@ -382,25 +392,25 @@ class CompleteTestGenerator {
 
   getTestPath() {
     const parsed = path.parse(this.filePath);
-    const ext = parsed.ext === '.tsx' || this.analysis.components.length > 0 ? '.tsx' : '.ts';
+    const ext = parsed.ext === ".tsx" || this.analysis.components.length > 0 ? ".tsx" : ".ts";
     return path.join(parsed.dir, `${parsed.name}.test${ext}`);
   }
 
   generate() {
     switch (this.analysis.type) {
-      case 'hook':
+      case "hook":
         return this.generateHookTest();
-      case 'hookGraphQL':
+      case "hookGraphQL":
         return this.generateGraphQLHookTest();
-      case 'component':
+      case "component":
         return this.generateComponentTest();
-      case 'store':
+      case "store":
         return this.generateStoreTest();
-      case 'context':
+      case "context":
         return this.generateContextTest();
-      case 'service':
+      case "service":
         return this.generateServiceTest();
-      case 'util':
+      case "util":
         return this.generateUtilTest();
       default:
         return this.generateGenericTest();
@@ -470,7 +480,7 @@ describe('${hookName}', () => {
     return `import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-${hasGraphQL ? "import { MockedProvider } from '@apollo/client/testing';" : ''}
+${hasGraphQL ? "import { MockedProvider } from '@apollo/client/testing';" : ""}
 import { ${componentName} } from '${importPath}';
 
 describe('${componentName}', () => {
@@ -478,13 +488,17 @@ describe('${componentName}', () => {
 
   const renderComponent = (props = {}) => {
     const allProps = { ...defaultProps, ...props };
-    ${hasGraphQL ? `
+    ${
+      hasGraphQL
+        ? `
     return render(
       <MockedProvider mocks={[]} addTypename={false}>
         <${componentName} {...allProps} />
       </MockedProvider>
-    );` : `
-    return render(<${componentName} {...allProps} />);`}
+    );`
+        : `
+    return render(<${componentName} {...allProps} />);`
+    }
   };
 
   describe('Rendering', () => {
@@ -528,9 +542,10 @@ describe('${componentName}', () => {
   }
 
   generateUtilTest() {
-    const functions = this.analysis.exports.named.length > 0
-      ? this.analysis.exports.named
-      : this.analysis.functions.map(f => f.name).filter(Boolean);
+    const functions =
+      this.analysis.exports.named.length > 0
+        ? this.analysis.exports.named
+        : this.analysis.functions.map((f) => f.name).filter(Boolean);
 
     const importPath = this.getImportPath();
 
@@ -539,9 +554,11 @@ describe('${componentName}', () => {
     }
 
     return `import { describe, it, expect } from 'vitest';
-import { ${functions.join(', ')} } from '${importPath}';
+import { ${functions.join(", ")} } from '${importPath}';
 
-${functions.map(fnName => `
+${functions
+  .map(
+    (fnName) => `
 describe('${fnName}', () => {
   it('should be defined', () => {
     expect(${fnName}).toBeDefined();
@@ -564,7 +581,9 @@ describe('${fnName}', () => {
     expect(() => ${fnName}(undefined)).not.toThrow();
   });
 });
-`).join('\n')}
+`,
+  )
+  .join("\n")}
 `;
   }
 
@@ -610,18 +629,21 @@ describe('${storeName}', () => {
   }
 
   generateContextTest() {
-    const contextName = this.analysis.exports.named.find(n => n.includes('Context')) ||
-                        this.analysis.exports.default;
-    const providerName = this.analysis.exports.named.find(n => n.includes('Provider'));
-    const hookName = this.analysis.exports.named.find(n => n.startsWith('use'));
+    const contextName =
+      this.analysis.exports.named.find((n) => n.includes("Context")) ||
+      this.analysis.exports.default;
+    const providerName = this.analysis.exports.named.find((n) => n.includes("Provider"));
+    const hookName = this.analysis.exports.named.find((n) => n.startsWith("use"));
     const importPath = this.getImportPath();
 
     return `import { describe, it, expect } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
-import { ${[contextName, providerName, hookName].filter(Boolean).join(', ')} } from '${importPath}';
+import { ${[contextName, providerName, hookName].filter(Boolean).join(", ")} } from '${importPath}';
 
 describe('${contextName}', () => {
-  ${providerName ? `
+  ${
+    providerName
+      ? `
   it('should render provider', () => {
     const { container } = render(
       <${providerName}>
@@ -630,15 +652,21 @@ describe('${contextName}', () => {
     );
 
     expect(container).toBeInTheDocument();
-  });` : ''}
+  });`
+      : ""
+  }
 
-  ${hookName ? `
+  ${
+    hookName
+      ? `
   it('should use context hook', () => {
     const wrapper = ({ children }) => <${providerName}>{children}</${providerName}>;
     const { result } = renderHook(() => ${hookName}(), { wrapper });
 
     expect(result.current).toBeDefined();
-  });` : ''}
+  });`
+      : ""
+  }
 
   it('should be defined', () => {
     expect(${contextName}).toBeDefined();
@@ -649,16 +677,19 @@ describe('${contextName}', () => {
 
   generateServiceTest() {
     const serviceName = this.analysis.exports.default || this.analysis.exports.named[0];
-    const methods = this.analysis.functions.map(f => f.name).filter(Boolean);
+    const methods = this.analysis.functions.map((f) => f.name).filter(Boolean);
     const importPath = this.getImportPath();
-    const hasGraphQL = this.analysis.graphqlQueries.length > 0 || this.analysis.graphqlMutations.length > 0;
+    const hasGraphQL =
+      this.analysis.graphqlQueries.length > 0 || this.analysis.graphqlMutations.length > 0;
 
     return `import { describe, it, expect, vi, beforeEach } from 'vitest';
-${hasGraphQL ? "import { ApolloClient, InMemoryCache } from '@apollo/client';" : ''}
+${hasGraphQL ? "import { ApolloClient, InMemoryCache } from '@apollo/client';" : ""}
 import { ${serviceName} } from '${importPath}';
 
 describe('${serviceName}', () => {
-  ${hasGraphQL ? `
+  ${
+    hasGraphQL
+      ? `
   let client;
 
   beforeEach(() => {
@@ -669,18 +700,24 @@ describe('${serviceName}', () => {
         mutate: { fetchPolicy: 'no-cache' },
       },
     });
-  });` : ''}
+  });`
+      : ""
+  }
 
   it('should be defined', () => {
     expect(${serviceName}).toBeDefined();
   });
 
-  ${methods.map(method => `
+  ${methods
+    .map(
+      (method) => `
   describe('${method}', () => {
     it('should execute without errors', async () => {
-      ${hasGraphQL ? 'await expect(' : 'expect('}${serviceName}.${method}()${hasGraphQL ? ')' : ''}).${hasGraphQL ? 'resolves' : ''}.toBeDefined();
+      ${hasGraphQL ? "await expect(" : "expect("}${serviceName}.${method}()${hasGraphQL ? ")" : ""}).${hasGraphQL ? "resolves" : ""}.toBeDefined();
     });
-  });`).join('\n')}
+  });`,
+    )
+    .join("\n")}
 });
 `;
   }
@@ -726,9 +763,7 @@ describe('${hookName}', () => {
   }
 
   generateGenericTest() {
-    const exportName = this.analysis.exports.default ||
-                       this.analysis.exports.named[0] ||
-                       'default';
+    const exportName = this.analysis.exports.default || this.analysis.exports.named[0] || "default";
     const importPath = this.getImportPath();
 
     return `import { describe, it, expect } from 'vitest';
@@ -751,13 +786,13 @@ describe('${exportName}', () => {
     const sourceFile = this.filePath;
     let relativePath = path.relative(testDir, sourceFile);
 
-    relativePath = relativePath.replace(/\\/g, '/');
+    relativePath = relativePath.replace(/\\/g, "/");
 
-    if (!relativePath.startsWith('.')) {
-      relativePath = './' + relativePath;
+    if (!relativePath.startsWith(".")) {
+      relativePath = "./" + relativePath;
     }
 
-    relativePath = relativePath.replace(/\.(tsx?|jsx?)$/, '');
+    relativePath = relativePath.replace(/\.(tsx?|jsx?)$/, "");
 
     return relativePath;
   }
@@ -774,7 +809,7 @@ function generateTestForFile(filePath) {
   const analysis = analyzer.analyze();
 
   if (options.verbose) {
-    console.log('Analysis:', JSON.stringify(analysis, null, 2));
+    console.log("Analysis:", JSON.stringify(analysis, null, 2));
   }
 
   const generator = new CompleteTestGenerator(analysis, filePath);
@@ -789,10 +824,10 @@ function generateTestForFile(filePath) {
 
   if (fs.existsSync(testPath) && !options.overwrite) {
     console.log(`⏭️  Skipping (already exists): ${testPath}`);
-    return { success: false, testPath, reason: 'exists' };
+    return { success: false, testPath, reason: "exists" };
   }
 
-  fs.writeFileSync(testPath, testContent, 'utf-8');
+  fs.writeFileSync(testPath, testContent, "utf-8");
   console.log(`✅ Generated: ${testPath}`);
 
   return { success: true, testPath };
@@ -805,9 +840,13 @@ function processDirectory(dirPath) {
   for (const file of files) {
     const fullPath = path.join(dirPath, file.name);
 
-    if (file.isDirectory() && !file.name.startsWith('.') && file.name !== 'node_modules') {
+    if (file.isDirectory() && !file.name.startsWith(".") && file.name !== "node_modules") {
       results.push(...processDirectory(fullPath));
-    } else if (file.isFile() && /\.(ts|tsx|js|jsx)$/.test(file.name) && !file.name.includes('.test.')) {
+    } else if (
+      file.isFile() &&
+      /\.(ts|tsx|js|jsx)$/.test(file.name) &&
+      !file.name.includes(".test.")
+    ) {
       results.push(generateTestForFile(fullPath));
     }
   }
@@ -816,10 +855,10 @@ function processDirectory(dirPath) {
 }
 
 function main() {
-  console.log('🚀 Complete Test Generator - Zero TODOs\n');
+  console.log("🚀 Complete Test Generator - Zero TODOs\n");
 
   if (options.dryRun) {
-    console.log('🔍 DRY RUN MODE - No files will be written\n');
+    console.log("🔍 DRY RUN MODE - No files will be written\n");
   }
 
   let results = [];
@@ -829,18 +868,18 @@ function main() {
   } else if (options.dir) {
     results = processDirectory(options.dir);
   } else {
-    const srcDir = path.join(__dirname, '../../../src');
+    const srcDir = path.join(__dirname, "../../../src");
     results = processDirectory(srcDir);
   }
 
-  const successful = results.filter(r => r.success).length;
-  const skipped = results.filter(r => !r.success && r.reason === 'exists').length;
+  const successful = results.filter((r) => r.success).length;
+  const skipped = results.filter((r) => !r.success && r.reason === "exists").length;
 
-  console.log(`\n${'='.repeat(60)}`);
+  console.log(`\n${"=".repeat(60)}`);
   console.log(`✅ Generated: ${successful} tests`);
   console.log(`⏭️  Skipped: ${skipped} tests`);
   console.log(`📊 Total: ${results.length} files processed`);
-  console.log(`${'='.repeat(60)}\n`);
+  console.log(`${"=".repeat(60)}\n`);
 }
 
 main();

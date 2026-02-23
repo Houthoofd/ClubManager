@@ -9,7 +9,7 @@ import {
   FormSelect,
   FormSelectOption,
 } from '@patternfly/react-core';
-import { SaveIcon } from '@patternfly/react-icons';
+import { SaveIcon } from '@/shared/icons';
 
 interface FormulaireUtilisateurAjoutProps {
   prenom: string;

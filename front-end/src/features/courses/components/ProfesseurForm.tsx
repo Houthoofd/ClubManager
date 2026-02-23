@@ -5,7 +5,7 @@ import {
   Button,
   DualListSelector,
 } from '@patternfly/react-core';
-import { UserPlusIcon } from '@patternfly/react-icons';
+import { UserPlusIcon } from '@/shared/icons';
 
 interface ProfesseurFormProps {
   utilisateurs: any[];

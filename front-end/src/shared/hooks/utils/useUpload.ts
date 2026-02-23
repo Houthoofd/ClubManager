@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { apiUrl } from "@/shared/utils/apiUrl";
 
 interface UploadResponse {
@@ -8,10 +8,39 @@ interface UploadResponse {
   }[];
 }
 
+interface UploadState {
+  isLoading: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  error: Error | null;
+  data: UploadResponse | null;
+}
+
+interface UploadHookResult extends UploadState {
+  mutateAsync: (files: FileList | File[]) => Promise<UploadResponse>;
+  reset: () => void;
+}
+
 // Hook pour uploader des fichiers
-export const useFileUpload = () => {
-  return useMutation({
-    mutationFn: async (files: FileList | File[]): Promise<UploadResponse> => {
+export const useFileUpload = (): UploadHookResult => {
+  const [state, setState] = useState<UploadState>({
+    isLoading: false,
+    isError: false,
+    isSuccess: false,
+    error: null,
+    data: null,
+  });
+
+  const mutateAsync = async (files: FileList | File[]): Promise<UploadResponse> => {
+    setState({
+      isLoading: true,
+      isError: false,
+      isSuccess: false,
+      error: null,
+      data: null,
+    });
+
+    try {
       const formData = new FormData();
 
       // Convertir FileList en Array si nécessaire
@@ -32,9 +61,47 @@ export const useFileUpload = () => {
         throw new Error("Erreur lors de l'upload des fichiers");
       }
 
-      return response.json();
-    },
-  });
+      const data = await response.json();
+
+      setState({
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        error: null,
+        data,
+      });
+
+      return data;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Erreur inconnue");
+
+      setState({
+        isLoading: false,
+        isError: true,
+        isSuccess: false,
+        error: err,
+        data: null,
+      });
+
+      throw err;
+    }
+  };
+
+  const reset = () => {
+    setState({
+      isLoading: false,
+      isError: false,
+      isSuccess: false,
+      error: null,
+      data: null,
+    });
+  };
+
+  return {
+    ...state,
+    mutateAsync,
+    reset,
+  };
 };
 
 // Hook pour uploader une seule image

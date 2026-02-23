@@ -24,13 +24,13 @@ import {
   UserIcon,
   CogIcon,
   SignOutAltIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "@/app/providers/CartProvider";
 import { useUnreadMessagesCountQuery } from "@/core/api/apollo/generated/graphql";
 import { clearAllAuthData } from "@/shared/utils/authCleaner";
-import logger from "@/shared/utils/logger";
+import { logger } from "@/core/utils/appLogger";
 import { LanguageSelector } from "@/shared/components/LanguageSelector";
 
 interface AppPanelHeaderProps {

@@ -21,7 +21,7 @@ import {
   ClockIcon,
   CalendarAltIcon,
   DollarSignIcon, // CORRIGÉ: Utiliser DollarSignIcon au lieu de EuroIcon
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { apiUrl } from "@/shared/utils/apiUrl";
 import "@/styles/echeances.css";
 import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";

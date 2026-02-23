@@ -29,7 +29,7 @@ import {
   EmptyStateBody,
   Title,
 } from "@patternfly/react-core";
-import { CalendarAltIcon } from "@patternfly/react-icons";
+import { CalendarAltIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import { useTracking } from "@/shared/hooks/useTracking";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";

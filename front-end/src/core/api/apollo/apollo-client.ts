@@ -28,15 +28,15 @@ import { setContext } from "@apollo/client/link/context";
 import { createAPQLink } from "./persisted-queries";
 import { restoreCacheFromStorage, setupCachePersistence } from "./cache-persistence";
 import { logger } from "@/core/utils/appLogger";
+import { env } from "@/core/config/env";
 
 // ====================================================================
 // CONFIGURATION
 // ====================================================================
 
-const GRAPHQL_ENDPOINT = import.meta.env.VITE_GRAPHQL_ENDPOINT || "http://localhost:4000/graphql";
-const ENABLE_BATCHING = import.meta.env.VITE_ENABLE_QUERY_BATCHING !== "false"; // true par défaut
-const ENABLE_APQ = import.meta.env.VITE_ENABLE_APQ !== "false"; // true par défaut en prod
-const ENABLE_CACHE_PERSISTENCE = import.meta.env.VITE_ENABLE_CACHE_PERSISTENCE !== "false"; // true par défaut
+const ENABLE_BATCHING = env.features.enableQueryBatching !== false; // true par défaut
+const ENABLE_APQ = env.features.enableAPQ !== false; // true par défaut en prod
+const ENABLE_CACHE_PERSISTENCE = env.features.enableCachePersistence !== false; // true par défaut
 
 // ====================================================================
 // HTTP LINK - Standard ou Batching
@@ -50,13 +50,13 @@ const ENABLE_CACHE_PERSISTENCE = import.meta.env.VITE_ENABLE_CACHE_PERSISTENCE !
  */
 const httpLink = ENABLE_BATCHING
   ? new BatchHttpLink({
-      uri: GRAPHQL_ENDPOINT,
+      uri: env.api.graphqlUrl || "http://localhost:4000/graphql",
       credentials: "include",
       batchMax: 10, // Max 10 queries par batch
       batchInterval: 20, // Attendre 20ms pour grouper les queries
     })
   : new HttpLink({
-      uri: GRAPHQL_ENDPOINT,
+      uri: env.api.graphqlUrl || "http://localhost:4000/graphql",
       credentials: "include",
     });
 

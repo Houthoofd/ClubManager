@@ -21,7 +21,7 @@ import {
   CubeIcon,
   TagIcon,
   ImageIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import type { ProductCardProps } from "./ProductCard.types";
 import {

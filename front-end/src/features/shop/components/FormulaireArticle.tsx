@@ -13,7 +13,7 @@ import {
 import { MultiImageUpload } from "@/shared/components/uploads";
 import { PriceInput } from "@/shared/components/common-legacy/input/numberInput";
 import NumberInputDefault from "@/shared/components/common-legacy/input/NumberInputDefault";
-import { PlusIcon, SaveIcon } from "@patternfly/react-icons";
+import { PlusIcon, SaveIcon } from '@/shared/icons';
 
 interface Stock {
   taille: string;

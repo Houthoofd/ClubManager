@@ -30,7 +30,7 @@ import {
   CheckCircleIcon,
   BanIcon,
   UserIcon,
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 import { useTranslation } from 'react-i18next';
 import { UserCardProps } from './UserCard.types';
 import {

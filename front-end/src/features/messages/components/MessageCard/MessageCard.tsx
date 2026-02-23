@@ -8,7 +8,7 @@
 
 import React from "react";
 import { Card, CardBody, Title, Label, Flex, FlexItem } from "@patternfly/react-core";
-import { EnvelopeIcon, CheckCircleIcon, ClockIcon } from "@patternfly/react-icons";
+import { EnvelopeIcon, CheckCircleIcon, ClockIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import type { MessageCardProps } from "./MessageCard.types";
 import {

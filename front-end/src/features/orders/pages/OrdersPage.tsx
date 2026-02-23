@@ -14,7 +14,7 @@ import {
   FlexItem,
   Badge,
 } from "@patternfly/react-core";
-import { SearchIcon } from "@patternfly/react-icons";
+import { SearchIcon } from '@/shared/icons';
 import {
   useCommandes,
   useUpdateCommandeStatut,

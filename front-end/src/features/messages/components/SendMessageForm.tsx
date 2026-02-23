@@ -9,7 +9,7 @@ import {
   Checkbox,
   Alert
 } from '@patternfly/react-core';
-import { PaperPlaneIcon } from '@patternfly/react-icons';
+import { PaperPlaneIcon } from '@/shared/icons';
 import UserSelector from './UserSelector';
 import MessageTypeSelector from './MessageTypeSelector';
 

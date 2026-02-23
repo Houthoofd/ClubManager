@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PageSection, Spinner } from "@patternfly/react-core";
-import { UserIcon, TableIcon } from "@patternfly/react-icons";
+import { UserIcon, TableIcon } from '@/shared/icons';
 import type { UserData } from "@clubmanager/types";
 import {
   useUtilisateurs,
@@ -24,7 +24,7 @@ import {
   useStatus,
   useGenres,
 } from "@/shared/hooks/utils/useInformations";
-import { useQueryClient } from "@tanstack/react-query";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
 import { useUserContext } from "@/app/providers/UserProvider";
 import SendMessageModal from "@/features/messages/components/SendMessageModal";
 import { useTypesMessages, useEnvoyerMessage } from "@/features/messages/hooks-legacy/useMessages";
@@ -98,7 +98,6 @@ const Utilisateur = () => {
   const { data: typesMessages = [] } = useTypesMessages();
   const envoyerMessage = useEnvoyerMessage();
   const { data: alertesUtilisateurs = [] } = useAlertes();
-  const queryClient = useQueryClient();
 
   // Error handler hook for better error management
   const {
@@ -224,7 +223,11 @@ const Utilisateur = () => {
         statut: "",
       });
       setErrors({ email: "" });
-      queryClient.invalidateQueries({ queryKey: ["utilisateurs"] });
+
+      // Refetch Apollo queries to update cache
+      apolloClient.refetchQueries({
+        include: ["GetUtilisateurs", "GetUsers"],
+      });
     } catch (error: any) {
       // Afficher l'erreur via ResultModal
       setMessageResultSuccess(false);
@@ -258,7 +261,10 @@ const Utilisateur = () => {
       );
       setMessageResultModalOpen(true);
 
-      queryClient.invalidateQueries({ queryKey: ["utilisateurs"] });
+      // Refetch Apollo queries to update cache
+      apolloClient.refetchQueries({
+        include: ["GetUtilisateurs", "GetUsers"],
+      });
       setUtilisateurToDelete(null);
     } catch (error: any) {
       // Afficher l'erreur via ResultModal

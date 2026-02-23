@@ -22,7 +22,7 @@ import {
   SearchIcon,
   FilterIcon,
   ExclamationCircleIcon,
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 import { useTranslation } from 'react-i18next';
 
 /**

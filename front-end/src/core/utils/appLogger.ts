@@ -22,6 +22,7 @@ import type {
   PerformanceEntry,
   LogBreadcrumb,
 } from "@clubmanager/types";
+import { env, isDev, isProd } from "@/core/config/env";
 
 // ============================================================================
 // Constants
@@ -48,11 +49,11 @@ const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
 // ============================================================================
 
 const DEFAULT_CONFIG: LoggerConfig = {
-  minLevel: (import.meta.env.DEV ? "debug" : "warn") as LogLevel,
+  minLevel: (isDev ? "debug" : "warn") as LogLevel,
   enableConsole: true,
-  enableSentry: !import.meta.env.DEV,
+  enableSentry: isProd,
   enableBreadcrumbs: true,
-  enablePerformance: import.meta.env.DEV,
+  enablePerformance: isDev,
   maxBreadcrumbs: 50,
 };
 
@@ -172,8 +173,8 @@ class AppLogger implements Logger {
       context: mergedContext,
       error,
       timestamp: new Date(),
-      environment: import.meta.env.MODE,
-      version: import.meta.env.VITE_APP_VERSION,
+      environment: env.app.environment,
+      version: env.app.version,
     };
 
     // Console output

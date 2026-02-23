@@ -7,7 +7,7 @@ import {
   Flex,
   FlexItem,
 } from '@patternfly/react-core';
-import { ChevronRightIcon, ChevronDownIcon } from '@patternfly/react-icons';
+import { ChevronRightIcon, ChevronDownIcon } from '@/shared/icons';
 
 interface ExpandableDataSectionProps {
   title: string;

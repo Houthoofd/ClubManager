@@ -18,7 +18,7 @@ import {
   Flex,
   FlexItem,
 } from "@patternfly/react-core";
-import { BellIcon, CheckIcon } from "@patternfly/react-icons";
+import { BellIcon, CheckIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 
 export const NotificationsPage: React.FC = () => {

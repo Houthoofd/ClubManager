@@ -8,7 +8,7 @@
 
 import React from "react";
 import { EmptyState, Title, EmptyStateBody } from "@patternfly/react-core";
-import { CalendarAltIcon, SearchIcon } from "@patternfly/react-icons";
+import { CalendarAltIcon, SearchIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 
 export interface EmptyCourseStateProps {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Spinner, Flex, FlexItem, Card, CardBody, Title, Badge } from "@patternfly/react-core";
-import GraphiqueLineaire from "@/shared/components/common-legacy/graph/GraphiqueLineaire";
+import { GraphiqueLineaire } from "@/features/stats/components/charts";
 
 interface StatistiquesUtilisateurProps {
   statFrequentation: any;

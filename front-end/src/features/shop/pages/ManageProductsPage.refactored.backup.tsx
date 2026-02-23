@@ -69,7 +69,7 @@ import {
   SearchIcon,
   SortAmountDownIcon,
   SortAmountUpIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useUiStore } from "@/core/store/uiStore";

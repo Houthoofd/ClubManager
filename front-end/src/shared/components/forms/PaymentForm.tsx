@@ -14,7 +14,7 @@ import {
   TextInput,
   Checkbox
 } from '@patternfly/react-core';
-import { CreditCardIcon } from '@patternfly/react-icons';
+import { CreditCardIcon } from '@/shared/icons';
 
 interface PaymentFormProps {
   clientSecret: string;

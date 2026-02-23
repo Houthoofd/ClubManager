@@ -14,7 +14,7 @@
  * ```
  */
 
-import { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from "react";
 import {
   Alert,
   AlertActionCloseButton,
@@ -23,8 +23,9 @@ import {
   EmptyStateBody,
   EmptyStateIcon,
   Title,
-} from '@patternfly/react-core';
-import { ExclamationTriangleIcon } from '@patternfly/react-icons';
+} from "@patternfly/react-core";
+import { ExclamationTriangleIcon } from '@/shared/icons';
+import { isDev, isProd } from "@/core/config/env";
 
 // ============================================================================
 // Types
@@ -66,9 +67,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error to console in development
-    if (import.meta.env.DEV) {
-      console.error('❌ [ErrorBoundary] Caught error:', error);
-      console.error('Component stack:', errorInfo.componentStack);
+    if (isDev) {
+      console.error("❌ [ErrorBoundary] Caught error:", error);
+      console.error("Component stack:", errorInfo.componentStack);
     }
 
     // Store error info in state
@@ -80,7 +81,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
 
     // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
-    // if (import.meta.env.PROD) {
+    // if (isProd) {
     //   Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
     // }
   }
@@ -89,7 +90,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // Reset error boundary when resetKeys change
     if (this.state.hasError && this.props.resetKeys) {
       const hasChangedResetKeys = this.props.resetKeys.some(
-        (key, index) => key !== prevProps.resetKeys?.[index]
+        (key, index) => key !== prevProps.resetKeys?.[index],
       );
 
       if (hasChangedResetKeys) {
@@ -131,12 +132,13 @@ interface FallbackProps {
 }
 
 function DefaultErrorFallback({ error, onReset }: FallbackProps) {
-  const isDev = import.meta.env.DEV;
-
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ padding: "2rem" }}>
       <EmptyState>
-        <EmptyStateIcon icon={ExclamationTriangleIcon} color="var(--pf-v5-global--danger-color--100)" />
+        <EmptyStateIcon
+          icon={ExclamationTriangleIcon}
+          color="var(--pf-v5-global--danger-color--100)"
+        />
         <Title headingLevel="h1" size="lg">
           Oups ! Une erreur s'est produite
         </Title>
@@ -146,11 +148,11 @@ function DefaultErrorFallback({ error, onReset }: FallbackProps) {
             <Alert
               variant="danger"
               title="Détails de l'erreur (mode développement)"
-              style={{ marginTop: '1rem', textAlign: 'left' }}
+              style={{ marginTop: "1rem", textAlign: "left" }}
             >
               <strong>{error.name}:</strong> {error.message}
               {error.stack && (
-                <pre style={{ fontSize: '0.875rem', marginTop: '0.5rem', overflow: 'auto' }}>
+                <pre style={{ fontSize: "0.875rem", marginTop: "0.5rem", overflow: "auto" }}>
                   {error.stack}
                 </pre>
               )}
@@ -160,7 +162,7 @@ function DefaultErrorFallback({ error, onReset }: FallbackProps) {
         <Button onClick={onReset} variant="primary">
           Réessayer
         </Button>
-        <Button onClick={() => window.location.href = '/'} variant="link">
+        <Button onClick={() => (window.location.href = "/")} variant="link">
           Retour à l'accueil
         </Button>
       </EmptyState>

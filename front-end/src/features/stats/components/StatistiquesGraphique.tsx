@@ -1,5 +1,5 @@
 import React from "react";
-import GraphiqueLineaire from "@/shared/components/common-legacy/graph/GraphiqueLineaire";
+import { GraphiqueLineaire } from "./charts";
 
 interface StatistiquesGraphiqueProps {
   statFrequentationForGraph: any;

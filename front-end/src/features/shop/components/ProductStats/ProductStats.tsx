@@ -8,7 +8,7 @@
 
 import React from "react";
 import { Flex, FlexItem, Title } from "@patternfly/react-core";
-import { CubesIcon, ExclamationTriangleIcon, BanIcon, TagIcon } from "@patternfly/react-icons";
+import { CubesIcon, ExclamationTriangleIcon, BanIcon, TagIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import type { ProductStatsProps } from "./ProductStats.types";
 

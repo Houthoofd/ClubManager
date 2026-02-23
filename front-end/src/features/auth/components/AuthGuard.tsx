@@ -11,8 +11,9 @@ import {
   Alert,
   Spinner,
 } from "@patternfly/react-core";
-import { LockIcon, UserIcon, PlusCircleIcon } from "@patternfly/react-icons";
-import logger from "@/shared/utils/logger";
+import { LockIcon, UserIcon, PlusCircleIcon } from '@/shared/icons';
+import { logger } from "@/core/utils/appLogger";
+import { isDev, isProd } from "@/core/config/env";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -132,7 +133,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       let verifyUrl: string;
       const currentOrigin = window.location.origin;
 
-      if (process.env.NODE_ENV === "production") {
+      if (isProd) {
         // En production, tester d'abord avec /auth/status puis fallback sur /api/auth/status
         verifyUrl = `${currentOrigin}/auth/status`;
       } else {
@@ -142,17 +143,14 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
       logger.debug("🌐 [AuthGuard] URL de vérification:", verifyUrl);
       logger.debug("🌐 [AuthGuard] Origin actuel:", currentOrigin);
-      logger.debug("🌐 [AuthGuard] Environnement:", process.env.NODE_ENV);
+      logger.debug("🌐 [AuthGuard] Environnement:", isProd ? "production" : "development");
 
       const tokenToUse = cookieToken || authToken;
 
       try {
         // AJOUTÉ: Test de connectivité d'abord
         logger.debug("🔍 [AuthGuard] Test de connectivité API...");
-        let testUrl =
-          process.env.NODE_ENV === "production"
-            ? `${currentOrigin}/api/test`
-            : "http://localhost:3000/api/test";
+        let testUrl = isProd ? `${currentOrigin}/api/test` : "http://localhost:3000/api/test";
 
         try {
           const testResponse = await fetch(testUrl, {
@@ -202,7 +200,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           });
 
           // AJOUTÉ: Essayer une URL alternative en production
-          if (process.env.NODE_ENV === "production") {
+          if (isProd) {
             logger.info("🔄 [AuthGuard] Tentative avec URL alternative...");
             const altUrl = `${currentOrigin}/api/auth/status`;
 
@@ -532,7 +530,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                 color: "#adb5bd",
               }}
             >
-              {process.env.NODE_ENV === "production" ? "Mode production" : "Mode développement"}
+              {isProd ? "Mode production" : "Mode développement"}
             </div>
           </CardBody>
         </Card>
@@ -618,7 +616,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
               )}
 
               {/* AJOUTÉ: Debug info en développement */}
-              {process.env.NODE_ENV === "development" && (
+              {isDev && (
                 <FlexItem spacer={{ default: "spacerMd" }} style={{ width: "100%" }}>
                   <Alert
                     variant="info"
@@ -683,7 +681,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                     💡 <strong>Problème de connexion ?</strong>
                     <br />
                     Vérifiez votre connexion internet et réessayez.
-                    {process.env.NODE_ENV === "production" && (
+                    {isProd && (
                       <>
                         <br />
                         Mode production actif.

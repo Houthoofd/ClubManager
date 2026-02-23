@@ -19,7 +19,7 @@ import {
   CardBody,
   Title,
 } from "@patternfly/react-core";
-import { PlusCircleIcon, TrashIcon } from "@patternfly/react-icons";
+import { PlusCircleIcon, TrashIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useUiStore } from "@/core/store/uiStore";

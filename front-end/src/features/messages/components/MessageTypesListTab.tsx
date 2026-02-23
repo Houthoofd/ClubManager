@@ -4,7 +4,7 @@ import {
   CardBody,
   Title
 } from '@patternfly/react-core';
-import { ListIcon } from '@patternfly/react-icons';
+import { ListIcon } from '@/shared/icons';
 import MessageTypeCard from './MessageTypeCard';
 
 interface MessageTypesListTabProps {

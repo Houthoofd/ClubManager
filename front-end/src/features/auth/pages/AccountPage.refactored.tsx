@@ -27,7 +27,7 @@ import {
   EditIcon,
   CheckIcon,
   TimesIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useTracking } from "@/core/hocs/withTracking";
@@ -39,7 +39,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useCompteData } from "@/features/auth/hooks/useCompteData";
 import { useCheckEmail } from "@/features/auth/hooks/useCheckEmail";
 import { formatDate, formatCurrency } from "@/core/i18n/helpers";
-import { useQueryClient } from "@tanstack/react-query";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
 
 interface ModificationItem {
   field: string;
@@ -65,7 +65,6 @@ const AccountPage: React.FC = () => {
   const navigate = useNavigate();
   const { trackEvent, trackError } = useTracking();
   const { wrapAsync } = useLoadingWrapper();
-  const queryClient = useQueryClient();
   const checkEmail = useCheckEmail();
 
   // Zustand auth store
@@ -224,8 +223,10 @@ const AccountPage: React.FC = () => {
 
         await updateCompte.mutateAsync(changesToSend as any);
 
-        queryClient.invalidateQueries({ queryKey: ["compteInfo"] });
-        queryClient.invalidateQueries({ queryKey: ["userData"] });
+        // Refetch Apollo queries to update cache
+        apolloClient.refetchQueries({
+          include: ["GetCompte", "GetUtilisateur"],
+        });
 
         setResultModalMessage(t("account.updateSuccess"));
         setResultModalSuccess(true);
@@ -291,7 +292,12 @@ const AccountPage: React.FC = () => {
           <CardBody>
             <Tabs activeKey={activeTabKey} onSelect={handleTabClick}>
               {/* Personal Info Tab */}
-              <Tab eventKey={0} title={<TabTitleText icon={<UserIcon />}>{t("account.tabs.personalInfo")}</TabTitleText>}>
+              <Tab
+                eventKey={0}
+                title={
+                  <TabTitleText icon={<UserIcon />}>{t("account.tabs.personalInfo")}</TabTitleText>
+                }
+              >
                 <div style={{ padding: "2rem" }}>
                   <Form>
                     <Grid hasGutter>
@@ -321,7 +327,9 @@ const AccountPage: React.FC = () => {
                               id="date_naissance"
                               type="date"
                               value={form.date_naissance}
-                              onChange={(_event, value) => handleFormChange("date_naissance", value)}
+                              onChange={(_event, value) =>
+                                handleFormChange("date_naissance", value)
+                              }
                               isDisabled={!editingFields.date_naissance}
                             />
                             <Button
@@ -361,7 +369,11 @@ const AccountPage: React.FC = () => {
               {/* Statistics Tab */}
               <Tab
                 eventKey={1}
-                title={<TabTitleText icon={<ChartLineIcon />}>{t("account.tabs.statistics")}</TabTitleText>}
+                title={
+                  <TabTitleText icon={<ChartLineIcon />}>
+                    {t("account.tabs.statistics")}
+                  </TabTitleText>
+                }
               >
                 <div style={{ padding: "2rem" }}>
                   <p>{t("account.statisticsPlaceholder")}</p>
@@ -371,7 +383,11 @@ const AccountPage: React.FC = () => {
               {/* Payments Tab */}
               <Tab
                 eventKey={2}
-                title={<TabTitleText icon={<CreditCardIcon />}>{t("account.tabs.payments")}</TabTitleText>}
+                title={
+                  <TabTitleText icon={<CreditCardIcon />}>
+                    {t("account.tabs.payments")}
+                  </TabTitleText>
+                }
               >
                 <div style={{ padding: "2rem" }}>
                   <h3>{t("account.paymentsTitle")}</h3>
@@ -430,7 +446,11 @@ const AccountPage: React.FC = () => {
           </Button>,
         ]}
       >
-        <Alert variant={resultModalSuccess ? "success" : "danger"} title={resultModalMessage} isInline />
+        <Alert
+          variant={resultModalSuccess ? "success" : "danger"}
+          title={resultModalMessage}
+          isInline
+        />
       </Modal>
     </>
   );

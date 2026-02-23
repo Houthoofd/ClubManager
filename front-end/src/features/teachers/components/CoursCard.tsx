@@ -8,7 +8,7 @@ import {
   FlexItem,
   Label,
 } from '@patternfly/react-core';
-import { CalendarAltIcon, ClockIcon, UserIcon, EditIcon, TrashIcon } from '@patternfly/react-icons';
+import { CalendarAltIcon, ClockIcon, UserIcon, EditIcon, TrashIcon } from '@/shared/icons';
 import { PlanningCoursProfesseur } from '@clubmanager/types';
 
 interface CoursCardProps {

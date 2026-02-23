@@ -8,7 +8,7 @@ import {
   Badge,
   Divider,
 } from "@patternfly/react-core";
-import { InboxIcon, CheckCircleIcon, PaperPlaneIcon, ListIcon } from "@patternfly/react-icons";
+import { InboxIcon, CheckCircleIcon, PaperPlaneIcon, ListIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useAuthStore } from "@/core/store/authStore";

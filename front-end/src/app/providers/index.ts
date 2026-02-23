@@ -37,12 +37,11 @@ export { NavigationProvider, NavigationContext, useNavigation } from "./Navigati
  *
  * This is the recommended way to set up providers in the application.
  * It includes:
- * - ApolloProvider (GraphQL)
- * - QueryClientProvider (React Query)
+ * - ApolloProvider (GraphQL - data fetching and caching)
  * - UserProvider (User state)
  * - NavigationProvider (Navigation state)
  * - CartProvider (Shopping cart state)
- * - Elements (Stripe payments)
- * - ReactQueryDevtools (Development only)
+ *
+ * Note: Stripe provider has been moved to lazy loading on payment pages only
  */
 export { AppProviders, default as default } from "./AppProviders";

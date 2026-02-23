@@ -10,8 +10,8 @@ import {
   Button,
   Alert,
 } from "@patternfly/react-core";
-import { ChartLineIcon, ChartAreaIcon, ChartBarIcon } from "@patternfly/react-icons";
-import GraphiqueLineaire from "@/shared/components/common-legacy/graph/GraphiqueLineaire";
+import { ChartLineIcon, ChartAreaIcon, ChartBarIcon } from '@/shared/icons';
+import { GraphiqueLineaire } from "@/features/stats/components/charts";
 import UserStatsService from "../services/user-stats.service";
 
 interface StatistiquesUtilisateurProps {

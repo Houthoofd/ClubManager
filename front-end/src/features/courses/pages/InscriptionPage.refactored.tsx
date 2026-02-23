@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageSection, Button, Alert, Title } from "@patternfly/react-core";
-import { CalendarAltIcon, ClockIcon, UserIcon } from "@patternfly/react-icons";
+import { CalendarAltIcon, ClockIcon, UserIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { SkeletonDataList } from "@/shared/components/ui";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";

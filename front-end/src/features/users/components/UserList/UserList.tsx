@@ -20,7 +20,7 @@ import {
   Title,
   Spinner,
 } from '@patternfly/react-core';
-import { UsersIcon } from '@patternfly/react-icons';
+import { UsersIcon } from '@/shared/icons';
 import { useTranslation } from 'react-i18next';
 import { UserCard } from '../UserCard';
 import { User } from '../UserCard/UserCard.types';

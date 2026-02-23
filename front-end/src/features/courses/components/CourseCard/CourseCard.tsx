@@ -8,7 +8,7 @@
 
 import React from "react";
 import { Card, CardBody, Title, Label, Flex, FlexItem } from "@patternfly/react-core";
-import { ClockIcon, UserIcon, CalendarAltIcon } from "@patternfly/react-icons";
+import { ClockIcon, UserIcon, CalendarAltIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import type { CourseCardProps } from "./CourseCard.types";
 import { formatTimeRange, formatInstructorNames } from "../../utils/course-formatters";

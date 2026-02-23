@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@patternfly/react-core';
-import { TimesCircleIcon } from '@patternfly/react-icons';
+import { TimesCircleIcon } from '@/shared/icons';
 
 interface ProfesseurCardProps {
   professeur: {

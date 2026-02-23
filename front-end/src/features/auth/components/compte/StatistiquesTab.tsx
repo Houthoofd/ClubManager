@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Spinner, Button } from '@patternfly/react-core';
-import { ChevronDownIcon, ChevronRightIcon } from '@patternfly/react-icons';
+import { ChevronDownIcon, ChevronRightIcon } from '@/shared/icons';
 import StatistiquesResume from './StatistiquesResume';
 import StatistiquesGraphique from './StatistiquesGraphique';
 import StatistiquesDetail from './StatistiquesDetail';

@@ -10,7 +10,7 @@ import {
   FlexItem,
   Spinner,
 } from '@patternfly/react-core';
-import { PencilAltIcon, CheckIcon } from '@patternfly/react-icons';
+import { PencilAltIcon, CheckIcon } from '@/shared/icons';
 
 interface FormulaireUtilisateurProps {
   form: {

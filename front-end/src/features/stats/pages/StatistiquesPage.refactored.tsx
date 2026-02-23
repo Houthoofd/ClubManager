@@ -42,7 +42,7 @@ import {
   UsersIcon,
   TrophyIcon,
   ShoppingCartIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import { useTracking } from "@/shared/hooks/useTracking";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";

@@ -1,6 +1,6 @@
 import React from "react";
 import { FormSelect, FormSelectOption, TextInput, Button, Alert } from "@patternfly/react-core";
-import { SaveIcon, TimesIcon } from "@patternfly/react-icons";
+import { SaveIcon, TimesIcon } from '@/shared/icons';
 import DualListSelectorGeneric from "@/shared/components/common-legacy/dualListSelector";
 
 interface CoursFormProps {

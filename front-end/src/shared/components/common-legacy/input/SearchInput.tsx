@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextInput } from '@patternfly/react-core';
-import { SearchIcon } from '@patternfly/react-icons';
+import { SearchIcon } from '@/shared/icons';
 
 interface SearchInputProps {
   value: string;

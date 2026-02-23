@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Tooltip } from '@patternfly/react-core';
-import { ExclamationTriangleIcon, ExclamationCircleIcon } from '@patternfly/react-icons';
+import { ExclamationTriangleIcon, ExclamationCircleIcon } from '@/shared/icons';
 
 interface AlertesBadgeProps {
   alertes: {

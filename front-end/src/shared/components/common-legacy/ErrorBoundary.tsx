@@ -1,7 +1,7 @@
 import React from "react";
 import { useRouteError, isRouteErrorResponse } from "react-router-dom";
 import { EmptyState, Button, Title } from "@patternfly/react-core";
-import { ExclamationTriangleIcon, HomeIcon } from "@patternfly/react-icons";
+import { ExclamationTriangleIcon, HomeIcon } from '@/shared/icons';
 
 // Composant pour les erreurs de route (404, etc.)
 export function RouterErrorBoundary() {

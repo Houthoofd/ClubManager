@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardBody, Title } from "@patternfly/react-core";
 import { EmptyState } from "@/shared/components/ui";
-import { InboxIcon } from "@patternfly/react-icons";
+import { InboxIcon } from '@/shared/icons';
 import MessageCard from "./MessageCard";
 
 interface MessagesReceivedTabProps {

@@ -7,7 +7,7 @@ import {
   Badge, 
   Button
 } from '@patternfly/react-core';
-import { ChevronDownIcon, ChevronRightIcon } from '@patternfly/react-icons';
+import { ChevronDownIcon, ChevronRightIcon } from '@/shared/icons';
 
 interface StatistiquesDetailProps {
   statFrequentationForGraph: any;

@@ -9,7 +9,7 @@ import {
   Alert,
   Spinner,
 } from '@patternfly/react-core';
-import { CheckCircleIcon, ExclamationTriangleIcon, TimesCircleIcon } from '@patternfly/react-icons';
+import { CheckCircleIcon, ExclamationTriangleIcon, TimesCircleIcon } from '@/shared/icons';
 
 interface ModalWithHelpProps {
   isOpen: boolean;

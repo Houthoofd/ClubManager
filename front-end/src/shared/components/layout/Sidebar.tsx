@@ -14,7 +14,7 @@ import {
   CogIcon,
   PackageIcon,
   InboxIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { useEffect, useState } from "react";
 import { useMessagesNonLus } from "@/features/messages/hooks-legacy/useMessages";
 import { getUser } from "@/shared/utils/storage";

@@ -51,7 +51,7 @@ import {
   UsersIcon,
   CheckCircleIcon,
   TimesCircleIcon,
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 

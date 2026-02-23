@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { PageSection, Flex, FlexItem, Grid, GridItem } from "@patternfly/react-core";
-import { PlusIcon, CreditCardIcon, EditIcon } from "@patternfly/react-icons";
+import { PlusIcon, CreditCardIcon, EditIcon } from '@/shared/icons';
 import { useNavigate } from "react-router-dom";
 import {
   useMembersCount,

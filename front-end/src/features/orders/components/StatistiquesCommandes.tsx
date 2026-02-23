@@ -14,7 +14,7 @@ import {
   TruckIcon, 
   TimesCircleIcon,
   DollarSignIcon 
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 
 interface StatistiquesCommandesProps {
   commandes: any[];

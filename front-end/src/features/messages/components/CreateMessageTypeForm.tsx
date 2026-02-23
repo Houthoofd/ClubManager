@@ -9,7 +9,7 @@ import {
   TextArea,
   Button
 } from '@patternfly/react-core';
-import { EditIcon } from '@patternfly/react-icons';
+import { EditIcon } from '@/shared/icons';
 
 interface CreateMessageTypeFormProps {
   formData: { title: string; content: string };

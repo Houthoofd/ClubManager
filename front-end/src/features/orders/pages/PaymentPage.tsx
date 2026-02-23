@@ -22,12 +22,11 @@ import {
   ExclamationTriangleIcon,
   ArrowLeftIcon,
   ShieldAltIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
 import PaymentForm from "@/shared/components/forms/PaymentForm";
 import { apiUrl } from "@/shared/utils/apiUrl";
+import { StripeProvider } from "@/app/providers/StripeProvider.lazy";
 import { env } from "@/core/config";
 
 // AJOUTÉ: Import des hooks de paiement
@@ -37,9 +36,6 @@ import {
   useConfirmPayment,
   obtenirIdUtilisateur,
 } from "@/features/shop/hooks/usePaiements";
-
-// Charger Stripe avec votre clé publique
-const stripePromise = loadStripe(env.stripe.publicKey);
 
 const PaiementPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -826,16 +822,16 @@ const PaiementPage: React.FC = () => {
 
   // Render principal - Paiement
   return (
-    <Page>
-      <PageHeader
-        title="Paiement en ligne"
-        subtitle={`Finalisez votre ${paymentType === "echeance" ? "paiement d'échéance" : "commande"} rapidement et en toute sécurité`}
-        variant="payment"
-      />
-      <PageSection>
-        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          {clientSecret && stripePromise ? (
-            <Elements options={options} stripe={stripePromise}>
+    <StripeProvider>
+      <Page>
+        <PageHeader
+          title="Paiement en ligne"
+          subtitle={`Finalisez votre ${paymentType === "echeance" ? "paiement d'échéance" : "commande"} rapidement et en toute sécurité`}
+          variant="payment"
+        />
+        <PageSection>
+          <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+            {clientSecret ? (
               <PaymentForm
                 clientSecret={clientSecret}
                 amount={currentAmount}
@@ -847,16 +843,16 @@ const PaiementPage: React.FC = () => {
                 userId={userId}
                 returnUrl={`${window.location.origin}/pages/paiement?${paymentType}=${currentId}&userId=${userId}&payment_return=true`}
               />
-            </Elements>
-          ) : (
-            <div style={{ textAlign: "center", padding: "2rem" }}>
-              <Spinner size="lg" />
-              <div style={{ marginTop: "1rem" }}>Initialisation du paiement sécurisé...</div>
-            </div>
-          )}
-        </div>
-      </PageSection>
-    </Page>
+            ) : (
+              <div style={{ textAlign: "center", padding: "2rem" }}>
+                <Spinner size="lg" />
+                <div style={{ marginTop: "1rem" }}>Initialisation du paiement sécurisé...</div>
+              </div>
+            )}
+          </div>
+        </PageSection>
+      </Page>
+    </StripeProvider>
   );
 };
 

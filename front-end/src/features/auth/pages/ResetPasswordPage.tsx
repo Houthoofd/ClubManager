@@ -15,7 +15,7 @@ import {
   List,
   ListItem,
 } from "@patternfly/react-core";
-import { CheckCircleIcon, CheckIcon, TimesIcon } from "@patternfly/react-icons";
+import { CheckCircleIcon, CheckIcon, TimesIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { apiUrl } from "@/shared/utils/apiUrl";
 

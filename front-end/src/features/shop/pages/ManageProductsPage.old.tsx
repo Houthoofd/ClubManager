@@ -29,7 +29,7 @@ import {
   EditIcon,
   CubesIcon,
   TagIcon,
-} from "@patternfly/react-icons";
+} from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { SkeletonCard } from "@/shared/components/ui";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";

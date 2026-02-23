@@ -34,10 +34,10 @@
  *   node achieve-80-coverage.js --target 85 --verbose
  */
 
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { execSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,63 +51,76 @@ const CONFIG = {
   phases: [
     {
       id: 1,
-      name: 'Stores',
-      dir: 'src/core/stores',
+      name: "Stores",
+      dir: "src/store",
       expectedGain: 20,
-      priority: 'HIGH',
-      time: '3-5h',
+      priority: "HIGH",
+      time: "3-5h",
     },
     {
       id: 2,
-      name: 'Utils',
-      dir: 'src/core/utils',
+      name: "Utils",
+      dir: "src/core/utils",
       expectedGain: 12,
-      priority: 'HIGH',
-      time: '3-5h',
+      priority: "HIGH",
+      time: "3-5h",
     },
     {
       id: 3,
-      name: 'Hooks',
-      dir: 'src/core/hooks',
+      name: "Feature Hooks",
+      dir: "src/features",
+      pattern: "**/hooks/**/*.{ts,tsx}",
       expectedGain: 10,
-      priority: 'MEDIUM',
-      time: '4-6h',
+      priority: "MEDIUM",
+      time: "4-6h",
     },
     {
       id: 4,
-      name: 'Components',
-      dir: 'src/shared/components',
-      expectedGain: 8,
-      priority: 'MEDIUM',
-      time: '8-12h',
+      name: "Feature Components",
+      dir: "src/features",
+      pattern: "**/components/**/*.{tsx}",
+      expectedGain: 15,
+      priority: "MEDIUM",
+      time: "8-12h",
     },
     {
       id: 5,
-      name: 'Services',
-      dir: 'src/core/services',
-      expectedGain: 7,
-      priority: 'LOW',
-      time: '4-6h',
+      name: "Services",
+      dir: "src/features",
+      pattern: "**/services/**/*.{ts}",
+      expectedGain: 8,
+      priority: "MEDIUM",
+      time: "4-6h",
+    },
+    {
+      id: 6,
+      name: "Shared Components",
+      dir: "src/shared/components",
+      expectedGain: 5,
+      priority: "LOW",
+      time: "3-4h",
     },
   ],
   scripts: {
-    generateComplete: 'generate-complete-tests.js',
-    enhanceCoverage: 'enhance-coverage.js',
-    verifyNoTodos: 'verify-no-todos.js',
+    generateComplete: "generate-complete-tests.js",
+    enhanceCoverage: "enhance-coverage.js",
+    verifyNoTodos: "verify-no-todos.js",
   },
 };
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
 const options = {
-  analyzeOnly: args.includes('--analyze-only'),
-  generateOnly: args.includes('--generate-only'),
-  skipTests: args.includes('--skip-tests'),
-  dryRun: args.includes('--dry-run'),
-  verbose: args.includes('--verbose'),
-  quick: args.includes('--quick'),
-  target: args.includes('--target') ? parseInt(args[args.indexOf('--target') + 1]) : CONFIG.targetCoverage,
-  phase: args.includes('--phase') ? parseInt(args[args.indexOf('--phase') + 1]) : null,
+  analyzeOnly: args.includes("--analyze-only"),
+  generateOnly: args.includes("--generate-only"),
+  skipTests: args.includes("--skip-tests"),
+  dryRun: args.includes("--dry-run"),
+  verbose: args.includes("--verbose"),
+  quick: args.includes("--quick"),
+  target: args.includes("--target")
+    ? parseInt(args[args.indexOf("--target") + 1])
+    : CONFIG.targetCoverage,
+  phase: args.includes("--phase") ? parseInt(args[args.indexOf("--phase") + 1]) : null,
 };
 
 // ============================================================================
@@ -116,51 +129,51 @@ const options = {
 
 class Logger {
   static colors = {
-    reset: '\x1b[0m',
-    bright: '\x1b[1m',
-    red: '\x1b[31m',
-    green: '\x1b[32m',
-    yellow: '\x1b[33m',
-    blue: '\x1b[34m',
-    cyan: '\x1b[36m',
+    reset: "\x1b[0m",
+    bright: "\x1b[1m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    blue: "\x1b[34m",
+    cyan: "\x1b[36m",
   };
 
   static log(message, color = null) {
-    const colorCode = color ? this.colors[color] || '' : '';
+    const colorCode = color ? this.colors[color] || "" : "";
     console.log(`${colorCode}${message}${this.colors.reset}`);
   }
 
   static header(title) {
-    const line = '═'.repeat(70);
-    console.log('\n' + line);
-    this.log(title, 'bright');
-    console.log(line + '\n');
+    const line = "═".repeat(70);
+    console.log("\n" + line);
+    this.log(title, "bright");
+    console.log(line + "\n");
   }
 
   static section(title) {
-    console.log('\n' + '─'.repeat(70));
-    this.log(title, 'cyan');
-    console.log('─'.repeat(70) + '\n');
+    console.log("\n" + "─".repeat(70));
+    this.log(title, "cyan");
+    console.log("─".repeat(70) + "\n");
   }
 
   static success(message) {
-    this.log(`✅ ${message}`, 'green');
+    this.log(`✅ ${message}`, "green");
   }
 
   static error(message) {
-    this.log(`❌ ${message}`, 'red');
+    this.log(`❌ ${message}`, "red");
   }
 
   static warning(message) {
-    this.log(`⚠️  ${message}`, 'yellow');
+    this.log(`⚠️  ${message}`, "yellow");
   }
 
   static info(message) {
-    this.log(`ℹ️  ${message}`, 'blue');
+    this.log(`ℹ️  ${message}`, "blue");
   }
 
   static step(number, total, message) {
-    this.log(`\n[${number}/${total}] ${message}`, 'cyan');
+    this.log(`\n[${number}/${total}] ${message}`, "cyan");
   }
 }
 
@@ -168,9 +181,9 @@ class Commander {
   static exec(command, silent = false) {
     try {
       const output = execSync(command, {
-        cwd: path.join(__dirname, '../../..'),
-        encoding: 'utf-8',
-        stdio: silent ? 'pipe' : 'inherit',
+        cwd: path.join(__dirname, "../../.."),
+        encoding: "utf-8",
+        stdio: silent ? "pipe" : "inherit",
       });
       return { success: true, output };
     } catch (error) {
@@ -178,7 +191,7 @@ class Commander {
     }
   }
 
-  static execScript(scriptName, args = '') {
+  static execScript(scriptName, args = "") {
     const scriptPath = path.join(__dirname, scriptName);
     return this.exec(`node "${scriptPath}" ${args}`);
   }
@@ -209,23 +222,25 @@ class ProgressTracker {
   }
 
   print() {
-    Logger.section('📊 PROGRESS TRACKER');
+    Logger.section("📊 PROGRESS TRACKER");
 
     console.log(`Current Coverage: ${this.current.toFixed(2)}%`);
     console.log(`Target Coverage:  ${this.target}%`);
     console.log(`Remaining:        ${this.getRemaining().toFixed(2)}%`);
-    console.log('');
+    console.log("");
 
     if (this.phases.length > 0) {
-      console.log('Phases completed:');
+      console.log("Phases completed:");
       this.phases.forEach((p, i) => {
-        console.log(`  ${i + 1}. ${p.phase} → +${p.coverageGain.toFixed(2)}% (Total: ${p.achieved.toFixed(2)}%)`);
+        console.log(
+          `  ${i + 1}. ${p.phase} → +${p.coverageGain.toFixed(2)}% (Total: ${p.achieved.toFixed(2)}%)`,
+        );
       });
-      console.log('');
+      console.log("");
     }
 
     if (this.isTargetReached()) {
-      Logger.success('🎉 TARGET REACHED!');
+      Logger.success("🎉 TARGET REACHED!");
     } else {
       Logger.info(`Need ${this.getRemaining().toFixed(2)}% more to reach target`);
     }
@@ -243,7 +258,7 @@ class CoverageAchiever {
   }
 
   async run() {
-    Logger.header('🚀 ACHIEVE 80% COVERAGE - ALL-IN-ONE SCRIPT');
+    Logger.header("🚀 ACHIEVE 80% COVERAGE - ALL-IN-ONE SCRIPT");
 
     this.printConfiguration();
 
@@ -277,7 +292,6 @@ class CoverageAchiever {
 
       // Step 6: Final report
       this.finalReport();
-
     } catch (error) {
       Logger.error(`Fatal error: ${error.message}`);
       process.exit(1);
@@ -285,24 +299,24 @@ class CoverageAchiever {
   }
 
   printConfiguration() {
-    Logger.section('⚙️  CONFIGURATION');
+    Logger.section("⚙️  CONFIGURATION");
     console.log(`Target Coverage:  ${options.target}%`);
-    console.log(`Mode:            ${options.dryRun ? 'DRY RUN' : 'PRODUCTION'}`);
-    console.log(`Quick Mode:      ${options.quick ? 'Yes (Stores + Utils only)' : 'No'}`);
-    console.log(`Skip Tests:      ${options.skipTests ? 'Yes' : 'No'}`);
-    console.log(`Specific Phase:  ${options.phase || 'All phases'}`);
-    console.log('');
+    console.log(`Mode:            ${options.dryRun ? "DRY RUN" : "PRODUCTION"}`);
+    console.log(`Quick Mode:      ${options.quick ? "Yes (Stores + Utils only)" : "No"}`);
+    console.log(`Skip Tests:      ${options.skipTests ? "Yes" : "No"}`);
+    console.log(`Specific Phase:  ${options.phase || "All phases"}`);
+    console.log("");
   }
 
   async analyze() {
-    Logger.step(1, 6, '📊 Analyzing current coverage');
+    Logger.step(1, 6, "📊 Analyzing current coverage");
 
-    const analyzeArgs = `--analyze ${options.verbose ? '--verbose' : ''}`;
+    const analyzeArgs = `--analyze ${options.verbose ? "--verbose" : ""}`;
     const result = Commander.execScript(CONFIG.scripts.enhanceCoverage, analyzeArgs);
 
     if (!result.success) {
-      Logger.warning('Could not analyze coverage (coverage report may not exist yet)');
-      Logger.info('Proceeding with test generation...');
+      Logger.warning("Could not analyze coverage (coverage report may not exist yet)");
+      Logger.info("Proceeding with test generation...");
       this.tracker.setCurrent(0);
     } else {
       // Try to parse coverage from output
@@ -311,13 +325,13 @@ class CoverageAchiever {
   }
 
   async generateAll() {
-    Logger.step(2, 6, '📝 Generating complete tests');
+    Logger.step(2, 6, "📝 Generating complete tests");
 
     const phases = options.quick
       ? CONFIG.phases.slice(0, 2) // Only stores and utils
       : options.phase
-      ? [CONFIG.phases[options.phase - 1]]
-      : CONFIG.phases;
+        ? [CONFIG.phases[options.phase - 1]]
+        : CONFIG.phases;
 
     let totalGenerated = 0;
 
@@ -327,13 +341,13 @@ class CoverageAchiever {
       Logger.info(`Expected gain: +${phase.expectedGain}%`);
       Logger.info(`Estimated time: ${phase.time}`);
       Logger.info(`Target directory: ${phase.dir}`);
-      console.log('');
+      console.log("");
 
       const generateArgs = [
         `--dir ${phase.dir}`,
-        options.verbose ? '--verbose' : '',
-        options.dryRun ? '--dry-run' : '',
-      ].join(' ');
+        options.verbose ? "--verbose" : "",
+        options.dryRun ? "--dry-run" : "",
+      ].join(" ");
 
       Logger.info(`Executing: generate-complete-tests.js ${generateArgs}`);
 
@@ -345,10 +359,10 @@ class CoverageAchiever {
         totalGenerated++;
       } else {
         Logger.error(`Failed to generate ${phase.name} tests`);
-        Logger.warning('Continuing with next phase...');
+        Logger.warning("Continuing with next phase...");
       }
 
-      console.log('');
+      console.log("");
     }
 
     Logger.success(`Total phases completed: ${totalGenerated}/${phases.length}`);
@@ -356,128 +370,130 @@ class CoverageAchiever {
   }
 
   async verify() {
-    Logger.step(3, 6, '✅ Verifying test quality');
+    Logger.step(3, 6, "✅ Verifying test quality");
 
-    Logger.info('Checking for TODOs in generated tests...');
+    Logger.info("Checking for TODOs in generated tests...");
 
-    const verifyArgs = `--strict ${options.verbose ? '--verbose' : ''}`;
+    const verifyArgs = `--strict ${options.verbose ? "--verbose" : ""}`;
     const result = Commander.execScript(CONFIG.scripts.verifyNoTodos, verifyArgs);
 
     if (result.success) {
-      Logger.success('All tests are TODO-free!');
+      Logger.success("All tests are TODO-free!");
     } else {
-      Logger.warning('Some TODOs found - attempting auto-fix...');
+      Logger.warning("Some TODOs found - attempting auto-fix...");
 
-      const fixResult = Commander.execScript(CONFIG.scripts.verifyNoTodos, '--fix');
+      const fixResult = Commander.execScript(CONFIG.scripts.verifyNoTodos, "--fix");
 
       if (fixResult.success) {
-        Logger.success('TODOs fixed automatically');
+        Logger.success("TODOs fixed automatically");
       } else {
-        Logger.error('Could not auto-fix all TODOs - manual intervention may be needed');
+        Logger.error("Could not auto-fix all TODOs - manual intervention may be needed");
       }
     }
   }
 
   async runTests() {
-    Logger.step(4, 6, '🧪 Running all tests');
+    Logger.step(4, 6, "🧪 Running all tests");
 
     if (options.dryRun) {
-      Logger.info('Skipped (dry-run mode)');
+      Logger.info("Skipped (dry-run mode)");
       return;
     }
 
-    Logger.info('Executing: npm test -- --run');
+    Logger.info("Executing: npm test -- --run");
 
-    const result = Commander.exec('npm test -- --run', false);
+    const result = Commander.exec("npm test -- --run", false);
 
     if (result.success) {
-      Logger.success('All tests passed!');
+      Logger.success("All tests passed!");
     } else {
-      Logger.warning('Some tests failed - this is normal, review and fix as needed');
+      Logger.warning("Some tests failed - this is normal, review and fix as needed");
     }
   }
 
   async measureCoverage() {
-    Logger.step(5, 6, '📊 Measuring final coverage');
+    Logger.step(5, 6, "📊 Measuring final coverage");
 
     if (options.dryRun) {
-      Logger.info('Skipped (dry-run mode)');
+      Logger.info("Skipped (dry-run mode)");
       return;
     }
 
-    Logger.info('Executing: npm run test:coverage');
+    Logger.info("Executing: npm run test:coverage");
 
-    const result = Commander.exec('npm run test:coverage -- --run', false);
+    const result = Commander.exec("npm run test:coverage -- --run", false);
 
     if (result.success) {
-      Logger.success('Coverage report generated');
-      Logger.info('Opening coverage report...');
+      Logger.success("Coverage report generated");
+      Logger.info("Opening coverage report...");
 
       // Try to parse coverage
-      const coveragePath = path.join(__dirname, '../../../coverage/coverage-summary.json');
+      const coveragePath = path.join(__dirname, "../../../coverage/coverage-summary.json");
       if (fs.existsSync(coveragePath)) {
         try {
-          const coverage = JSON.parse(fs.readFileSync(coveragePath, 'utf-8'));
+          const coverage = JSON.parse(fs.readFileSync(coveragePath, "utf-8"));
           const totalCoverage = coverage.total?.lines?.pct || 0;
           this.tracker.setCurrent(totalCoverage);
           Logger.success(`Current coverage: ${totalCoverage.toFixed(2)}%`);
         } catch (error) {
-          Logger.warning('Could not parse coverage report');
+          Logger.warning("Could not parse coverage report");
         }
       }
     } else {
-      Logger.warning('Coverage measurement failed');
+      Logger.warning("Coverage measurement failed");
     }
   }
 
   finalReport() {
-    Logger.step(6, 6, '📋 Final Report');
+    Logger.step(6, 6, "📋 Final Report");
 
     const elapsed = ((Date.now() - this.startTime) / 1000 / 60).toFixed(2);
 
-    Logger.header('🎯 FINAL REPORT');
+    Logger.header("🎯 FINAL REPORT");
 
     this.tracker.print();
 
-    console.log('');
-    Logger.section('⏱️  TIME STATISTICS');
+    console.log("");
+    Logger.section("⏱️  TIME STATISTICS");
     console.log(`Total time: ${elapsed} minutes`);
-    console.log('');
+    console.log("");
 
-    Logger.section('📁 NEXT STEPS');
+    Logger.section("📁 NEXT STEPS");
 
     if (this.tracker.isTargetReached()) {
-      Logger.success('Congratulations! You have reached the target coverage!');
-      console.log('');
-      console.log('✅ Recommended next steps:');
-      console.log('   1. Review generated tests for quality');
-      console.log('   2. Commit changes to version control');
-      console.log('   3. Set up CI/CD to maintain coverage');
-      console.log('   4. Document test patterns for the team');
+      Logger.success("Congratulations! You have reached the target coverage!");
+      console.log("");
+      console.log("✅ Recommended next steps:");
+      console.log("   1. Review generated tests for quality");
+      console.log("   2. Commit changes to version control");
+      console.log("   3. Set up CI/CD to maintain coverage");
+      console.log("   4. Document test patterns for the team");
     } else {
-      Logger.info(`You need ${this.tracker.getRemaining().toFixed(2)}% more coverage to reach ${options.target}%`);
-      console.log('');
-      console.log('💡 Recommended actions:');
-      console.log('   1. Run additional phases:');
+      Logger.info(
+        `You need ${this.tracker.getRemaining().toFixed(2)}% more coverage to reach ${options.target}%`,
+      );
+      console.log("");
+      console.log("💡 Recommended actions:");
+      console.log("   1. Run additional phases:");
       CONFIG.phases.forEach((phase, i) => {
         console.log(`      - Phase ${i + 1}: ${phase.name} (+${phase.expectedGain}%)`);
       });
-      console.log('   2. Use enhance-coverage.js to identify low coverage files');
-      console.log('   3. Manually improve complex test scenarios');
-      console.log('   4. Re-run this script: node achieve-80-coverage.js');
+      console.log("   2. Use enhance-coverage.js to identify low coverage files");
+      console.log("   3. Manually improve complex test scenarios");
+      console.log("   4. Re-run this script: node achieve-80-coverage.js");
     }
 
-    console.log('');
-    Logger.section('📚 DOCUMENTATION');
-    console.log('   - Complete Guide: COVERAGE_80_PERCENT_GUIDE.md');
-    console.log('   - Scripts Readme: scripts/generators/tests/README_NO_TODO.md');
-    console.log('   - Quick Start: NOUVEAUX_OUTILS_TESTS.md');
+    console.log("");
+    Logger.section("📚 DOCUMENTATION");
+    console.log("   - Complete Guide: COVERAGE_80_PERCENT_GUIDE.md");
+    console.log("   - Scripts Readme: scripts/generators/tests/README_NO_TODO.md");
+    console.log("   - Quick Start: NOUVEAUX_OUTILS_TESTS.md");
 
-    console.log('');
-    Logger.header('✨ DONE!');
+    console.log("");
+    Logger.header("✨ DONE!");
 
     if (this.tracker.isTargetReached()) {
-      console.log('🎉🎉🎉 TARGET ACHIEVED! 🎉🎉🎉\n');
+      console.log("🎉🎉🎉 TARGET ACHIEVED! 🎉🎉🎉\n");
     }
   }
 }

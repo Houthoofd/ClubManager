@@ -7,7 +7,7 @@ import {
   Badge,
   Button,
 } from "@patternfly/react-core";
-import { EditIcon, TrashIcon } from "@patternfly/react-icons";
+import { EditIcon, TrashIcon } from '@/shared/icons';
 import ArticleCard from "./features-shop/ArticleCard";
 
 interface Article {

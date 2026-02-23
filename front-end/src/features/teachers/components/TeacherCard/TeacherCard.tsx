@@ -8,7 +8,7 @@
 
 import React from "react";
 import { Card, CardBody, Title } from "@patternfly/react-core";
-import { UserIcon } from "@patternfly/react-icons";
+import { UserIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import type { TeacherCardProps } from "./TeacherCard.types";
 import { formatDate } from "../../utils/teacher-formatters";

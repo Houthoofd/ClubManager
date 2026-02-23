@@ -7,7 +7,7 @@ import {
   MenuToggle,
   MenuToggleElement
 } from '@patternfly/react-core';
-import { EllipsisVIcon } from '@patternfly/react-icons';
+import { EllipsisVIcon } from '@/shared/icons';
 
 interface KebabMenuItem {
   title: React.ReactNode | string;

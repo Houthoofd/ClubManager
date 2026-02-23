@@ -43,7 +43,7 @@ import {
   CubeIcon,
   DollarSignIcon,
   InfoCircleIcon
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 
 interface TableauCommandesProps {
   commandes: any[];

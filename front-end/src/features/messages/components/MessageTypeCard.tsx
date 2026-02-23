@@ -10,7 +10,7 @@ import {
   TextArea,
   Divider,
 } from "@patternfly/react-core";
-import { EditIcon, TrashIcon } from "@patternfly/react-icons";
+import { EditIcon, TrashIcon } from '@/shared/icons';
 
 interface MessageTypeCardProps {
   type: {

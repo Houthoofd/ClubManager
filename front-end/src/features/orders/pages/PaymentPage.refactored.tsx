@@ -14,7 +14,7 @@ import {
   FlexItem,
   Divider,
 } from "@patternfly/react-core";
-import { CheckCircleIcon, ExclamationCircleIcon, LockIcon } from "@patternfly/react-icons";
+import { CheckCircleIcon, ExclamationCircleIcon, LockIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useAuthStore } from "@/core/store/authStore";
@@ -28,11 +28,9 @@ import {
   useConfirmOrderPaymentMutation,
   useGetOrderQuery,
 } from "@/core/api/graphql/generated/graphql";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
+import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { env } from "@/core/config/env";
+import { StripeProvider } from "@/app/providers/StripeProvider.lazy";
 
 interface PaymentFormProps {
   amount: number;
@@ -391,7 +389,10 @@ const PaymentPage = () => {
   if (paymentSuccess) {
     return (
       <div>
-        <PageHeader title={t("payment.success.title")} subtitle={t("payment.success.receiptSent")} />
+        <PageHeader
+          title={t("payment.success.title")}
+          subtitle={t("payment.success.receiptSent")}
+        />
         <PageSection>
           <Flex justifyContent={{ default: "justifyContentCenter" }}>
             <FlexItem style={{ maxWidth: "600px", width: "100%" }}>
@@ -403,11 +404,7 @@ const PaymentPage = () => {
                     spaceItems={{ default: "spaceItemsLg" }}
                   >
                     <FlexItem>
-                      <CheckCircleIcon
-                        size="xl"
-                        color="green"
-                        style={{ fontSize: "64px" }}
-                      />
+                      <CheckCircleIcon size="xl" color="green" style={{ fontSize: "64px" }} />
                     </FlexItem>
                     <FlexItem>
                       <Title headingLevel="h2" size="2xl">
@@ -466,11 +463,7 @@ const PaymentPage = () => {
                     spaceItems={{ default: "spaceItemsLg" }}
                   >
                     <FlexItem>
-                      <ExclamationCircleIcon
-                        size="xl"
-                        color="red"
-                        style={{ fontSize: "64px" }}
-                      />
+                      <ExclamationCircleIcon size="xl" color="red" style={{ fontSize: "64px" }} />
                     </FlexItem>
                     <FlexItem>
                       <Title headingLevel="h2" size="2xl">
@@ -508,94 +501,82 @@ const PaymentPage = () => {
 
   // Payment form
   return (
-    <div>
-      <PageHeader
-        title={t("payment.title")}
-        subtitle={t("payment.subtitle")}
-      />
+    <StripeProvider>
+      <div>
+        <PageHeader title={t("payment.title")} subtitle={t("payment.subtitle")} />
 
-      <PageSection>
-        <Flex justifyContent={{ default: "justifyContentCenter" }}>
-          <FlexItem style={{ maxWidth: "600px", width: "100%" }}>
-            <Card isRounded>
-              <CardBody>
-                <Flex direction={{ default: "column" }} spaceItems={{ default: "spaceItemsLg" }}>
-                  {/* Order details */}
-                  <FlexItem>
-                    <Flex
-                      justifyContent={{ default: "justifyContentSpaceBetween" }}
-                      alignItems={{ default: "alignItemsCenter" }}
-                    >
-                      <FlexItem>
-                        <Title headingLevel="h3" size="lg">
-                          {t("payment.details.orderId")}: #{orderId}
-                        </Title>
-                      </FlexItem>
-                      <FlexItem>
-                        <LockIcon style={{ marginRight: "0.5rem", color: "green" }} />
-                        <span style={{ color: "#6a6e73", fontSize: "0.875rem" }}>
-                          Paiement sécurisé
-                        </span>
-                      </FlexItem>
-                    </Flex>
-                  </FlexItem>
-
-                  <FlexItem>
-                    <Divider />
-                  </FlexItem>
-
-                  {/* Amount */}
-                  <FlexItem>
-                    <Flex
-                      justifyContent={{ default: "justifyContentSpaceBetween" }}
-                      alignItems={{ default: "alignItemsCenter" }}
-                    >
-                      <FlexItem>
-                        <span style={{ fontSize: "1rem", fontWeight: 600 }}>
-                          {t("payment.details.total")}
-                        </span>
-                      </FlexItem>
-                      <FlexItem>
-                        <Title headingLevel="h2" size="2xl">
-                          {formatAmount(amount)}
-                        </Title>
-                      </FlexItem>
-                    </Flex>
-                  </FlexItem>
-
-                  <FlexItem>
-                    <Divider />
-                  </FlexItem>
-
-                  {/* Stripe payment form */}
-                  {clientSecret && (
+        <PageSection>
+          <Flex justifyContent={{ default: "justifyContentCenter" }}>
+            <FlexItem style={{ maxWidth: "600px", width: "100%" }}>
+              <Card isRounded>
+                <CardBody>
+                  <Flex direction={{ default: "column" }} spaceItems={{ default: "spaceItemsLg" }}>
+                    {/* Order details */}
                     <FlexItem>
-                      <Elements
-                        stripe={stripePromise}
-                        options={{
-                          clientSecret,
-                          appearance: {
-                            theme: "stripe",
-                          },
-                          locale: "fr",
-                        }}
+                      <Flex
+                        justifyContent={{ default: "justifyContentSpaceBetween" }}
+                        alignItems={{ default: "alignItemsCenter" }}
                       >
+                        <FlexItem>
+                          <Title headingLevel="h3" size="lg">
+                            {t("payment.details.orderId")}: #{orderId}
+                          </Title>
+                        </FlexItem>
+                        <FlexItem>
+                          <LockIcon style={{ marginRight: "0.5rem", color: "green" }} />
+                          <span style={{ color: "#6a6e73", fontSize: "0.875rem" }}>
+                            Paiement sécurisé
+                          </span>
+                        </FlexItem>
+                      </Flex>
+                    </FlexItem>
+
+                    <FlexItem>
+                      <Divider />
+                    </FlexItem>
+
+                    {/* Amount */}
+                    <FlexItem>
+                      <Flex
+                        justifyContent={{ default: "justifyContentSpaceBetween" }}
+                        alignItems={{ default: "alignItemsCenter" }}
+                      >
+                        <FlexItem>
+                          <span style={{ fontSize: "1rem", fontWeight: 600 }}>
+                            {t("payment.details.total")}
+                          </span>
+                        </FlexItem>
+                        <FlexItem>
+                          <Title headingLevel="h2" size="2xl">
+                            {formatAmount(amount)}
+                          </Title>
+                        </FlexItem>
+                      </Flex>
+                    </FlexItem>
+
+                    <FlexItem>
+                      <Divider />
+                    </FlexItem>
+
+                    {/* Stripe payment form */}
+                    {clientSecret && (
+                      <FlexItem>
                         <PaymentForm
                           amount={amount}
                           orderId={orderId || ""}
                           onSuccess={handlePaymentSuccess}
                           onError={handlePaymentError}
                         />
-                      </Elements>
-                    </FlexItem>
-                  )}
-                </Flex>
-              </CardBody>
-            </Card>
-          </FlexItem>
-        </Flex>
-      </PageSection>
-    </div>
+                      </FlexItem>
+                    )}
+                  </Flex>
+                </CardBody>
+              </Card>
+            </FlexItem>
+          </Flex>
+        </PageSection>
+      </div>
+    </StripeProvider>
   );
 };
 

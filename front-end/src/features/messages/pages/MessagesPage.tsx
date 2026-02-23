@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { PageSection, Tabs, Tab, TabTitleText, Alert, Spinner } from "@patternfly/react-core";
-import { InboxIcon, CheckCircleIcon, PaperPlaneIcon, ListIcon } from "@patternfly/react-icons";
+import { InboxIcon, CheckCircleIcon, PaperPlaneIcon, ListIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useAuth } from "@/features/auth/hooks";
 import { useAllUsers } from "@/features/users/hooks";

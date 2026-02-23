@@ -1,6 +1,6 @@
 import React from "react";
 import { Radio, Stack, Button, Title, Alert, Modal, ModalVariant } from "@patternfly/react-core";
-import { CreditCardIcon, PaypalIcon, BitcoinIcon } from "@patternfly/react-icons";
+import { CreditCardIcon, PaypalIcon, BitcoinIcon } from '@/shared/icons';
 import StripeForm from "./stripeForm";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";

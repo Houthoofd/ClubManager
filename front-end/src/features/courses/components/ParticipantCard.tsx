@@ -6,7 +6,7 @@ import {
   FlexItem,
   Button,
 } from '@patternfly/react-core';
-import { CheckCircleIcon, TimesCircleIcon } from '@patternfly/react-icons';
+import { CheckCircleIcon, TimesCircleIcon } from '@/shared/icons';
 
 interface ParticipantCardProps {
   utilisateur: {

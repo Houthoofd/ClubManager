@@ -14,7 +14,7 @@ import {
   Alert,
   Divider,
 } from "@patternfly/react-core";
-import { BellIcon, CheckIcon, TrashIcon } from "@patternfly/react-icons";
+import { BellIcon, CheckIcon, TrashIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useAuthStore } from "@/core/store/authStore";

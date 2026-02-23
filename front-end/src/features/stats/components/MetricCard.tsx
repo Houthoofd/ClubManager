@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardBody } from "@patternfly/react-core";
-import { ArrowUpIcon, ArrowDownIcon } from "@patternfly/react-icons";
+import { ArrowUpIcon, ArrowDownIcon } from '@/shared/icons';
 import { SkeletonStats } from "@/shared/components/ui";
 
 interface MetricCardProps {

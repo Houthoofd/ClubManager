@@ -4,7 +4,7 @@ import {
   EmptyStateBody,
   Title,
 } from '@patternfly/react-core';
-import { CalendarAltIcon } from '@patternfly/react-icons';
+import { CalendarAltIcon } from '@/shared/icons';
 import { PlanningCoursProfesseur } from '@clubmanager/types';
 import CoursCard from './CoursCard';
 

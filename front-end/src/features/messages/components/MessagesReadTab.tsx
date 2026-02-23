@@ -5,7 +5,7 @@ import {
   Title,
   EmptyState
 } from '@patternfly/react-core';
-import { CheckCircleIcon } from '@patternfly/react-icons';
+import { CheckCircleIcon } from '@/shared/icons';
 
 interface MessagesReadTabProps {
   messagesLus: any[];

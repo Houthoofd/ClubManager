@@ -14,7 +14,7 @@ import {
   Flex,
   FlexItem,
 } from "@patternfly/react-core";
-import { PlusCircleIcon, TrashIcon, EditIcon } from "@patternfly/react-icons";
+import { PlusCircleIcon, TrashIcon, EditIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { SkeletonDataList } from "@/shared/components/ui";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";

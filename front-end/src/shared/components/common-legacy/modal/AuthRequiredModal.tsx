@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Button } from '@patternfly/react-core';
-import { SignOutAltIcon, ExclamationTriangleIcon } from '@patternfly/react-icons';
+import { SignOutAltIcon, ExclamationTriangleIcon } from '@/shared/icons';
 import { BaseModal } from './BaseModal';
 
 interface AuthRequiredModalProps {

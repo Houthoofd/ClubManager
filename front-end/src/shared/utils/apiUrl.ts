@@ -1,9 +1,8 @@
 import { API_BASE_URL } from "@/app/config";
+import { isProd } from "@/core/config/env";
 
 // Fonction utilitaire pour construire les URLs API
 export function apiUrl(path: string) {
-  const isProd = import.meta.env.MODE === "production";
-
   // En production -> forcer /api/
   const base = isProd
     ? API_BASE_URL.endsWith("/api/")

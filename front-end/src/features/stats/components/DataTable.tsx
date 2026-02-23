@@ -5,7 +5,7 @@ import {
   CardBody,
   Button,
 } from '@patternfly/react-core';
-import { ExternalLinkAltIcon } from '@patternfly/react-icons';
+import { ExternalLinkAltIcon } from '@/shared/icons';
 
 interface Column {
   key: string;

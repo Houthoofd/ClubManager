@@ -8,32 +8,41 @@ export default defineConfig(({ command, mode }) => {
   // Load environment variables based on mode
   const env = loadEnv(mode, process.cwd(), "");
 
-  // Get configuration from environment with fallbacks
-  const stripePublicKey =
-    env.VITE_STRIPE_PUBLIC_KEY ||
-    env.VITE_STRIPE_PUBLISHABLE_KEY ||
-    "pk_test_51RWzE9BQMqChSZKpCmBYTuBAWMcSJzg9D17ltUMtPvH72XI6krdNQsLFQeXqCgPIVXos0L7EwRFjOSB6x1tbU1Zn00EiJkQHsZ";
-
-  const apiBaseUrl = env.VITE_API_BASE_URL || env.VITE_API_URL || "https://clubmanagment.com/";
-
+  // Determine environment
   const isDevelopment = mode === "development";
   const isProduction = mode === "production";
+
+  // Get configuration from environment with fallbacks
+  const stripePublicKey = env.VITE_STRIPE_PUBLIC_KEY || env.VITE_STRIPE_PUBLISHABLE_KEY;
+  const apiBaseUrl = env.VITE_API_BASE_URL || env.VITE_API_URL || "https://clubmanagment.com/";
+
+  // Validate Stripe key in production
+  if (!stripePublicKey && isProduction) {
+    throw new Error(
+      "VITE_STRIPE_PUBLIC_KEY is required in production. Please check your .env file.",
+    );
+  }
 
   // Log configuration (development only)
   if (isDevelopment) {
     console.log("🔧 [Vite Config] Environment loaded:", {
       command,
       mode,
-      stripe_key: stripePublicKey.substring(0, 25) + "...",
-      stripe_mode: stripePublicKey.includes("test") ? "TEST" : "LIVE",
+      stripe_key: stripePublicKey ? stripePublicKey.substring(0, 25) + "..." : "NOT SET",
+      stripe_mode: stripePublicKey?.includes("test") ? "TEST" : "LIVE",
       api_url: apiBaseUrl,
-      account: stripePublicKey.substring(8, 23),
+      account: stripePublicKey ? stripePublicKey.substring(8, 23) : "N/A",
     });
   }
 
   // Warning if using test keys in production
-  if (isProduction && stripePublicKey.includes("test")) {
+  if (isProduction && stripePublicKey?.includes("test")) {
     console.warn("⚠️  [Vite Config] WARNING: Using Stripe TEST key in PRODUCTION mode!");
+  }
+
+  // Warning if no Stripe key in development
+  if (isDevelopment && !stripePublicKey) {
+    console.warn("⚠️  [Vite Config] No Stripe key found - payment features will not work");
   }
 
   return {

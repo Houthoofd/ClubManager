@@ -14,14 +14,16 @@
  * ```
  */
 
+import { env } from "@/core/config/env";
+
 // ====================================================================
 // API BASE CONFIGURATION
 // ====================================================================
 
 export const API = {
-  BASE_URL: import.meta.env.VITE_API_URL || "http://localhost:4000",
-  GRAPHQL_URL: import.meta.env.VITE_GRAPHQL_URL || "http://localhost:4000/graphql",
-  WS_URL: import.meta.env.VITE_WS_URL || "ws://localhost:4000/graphql",
+  BASE_URL: env.api.baseUrl || "http://localhost:4000",
+  GRAPHQL_URL: env.api.graphqlUrl || "http://localhost:4000/graphql",
+  WS_URL: env.api.wsUrl || "ws://localhost:4000/graphql",
 
   // Timeout configuration (in milliseconds)
   TIMEOUT: {

@@ -6,7 +6,7 @@ import {
   Badge,
   Button
 } from '@patternfly/react-core';
-import { UserIcon, TimesIcon } from '@patternfly/react-icons';
+import { UserIcon, TimesIcon } from '@/shared/icons';
 
 interface UserSelectorProps {
   utilisateurs: any[];

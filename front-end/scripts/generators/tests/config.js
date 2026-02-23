@@ -18,7 +18,7 @@ export const config = {
     hook: /^use[A-Z]\w+\.(ts|tsx)$/,
     component: /^[A-Z]\w+\.(tsx)$/,
     util: /\.(utils?|helpers?|formatters?|validators?)\.|([-_]formatters?|[-_]helpers?|[-_]utils?|[-_]validators?)\.(ts|tsx)$/,
-    store: /-store\.(ts|tsx)$/,
+    store: /Store\.(ts|tsx)$/,
     page: /Page\.(tsx)$/,
     service: /\.service\.(ts|tsx)$/,
   },
@@ -47,9 +47,9 @@ export const config = {
       subdir: "utils",
     },
     store: {
-      pattern: /-store/,
+      pattern: /Store/,
       testSuffix: ".test.ts",
-      subdir: "stores",
+      subdir: "store",
     },
     page: {
       pattern: /Page/,

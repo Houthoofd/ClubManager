@@ -12,7 +12,7 @@ import {
   Flex,
   FlexItem,
 } from "@patternfly/react-core";
-import { CreditCardIcon } from "@patternfly/react-icons";
+import { CreditCardIcon } from '@/shared/icons';
 import {
   useUtilisateurById,
   useUpdateUtilisateur,

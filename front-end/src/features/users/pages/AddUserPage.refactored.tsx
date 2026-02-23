@@ -19,7 +19,7 @@ import {
   ListItem,
   DatePicker,
 } from "@patternfly/react-core";
-import { UserPlusIcon } from "@patternfly/react-icons";
+import { UserPlusIcon } from '@/shared/icons';
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
 import { useTypedTranslation } from "@/core/i18n/useTypedTranslation";
 import { useTracking } from "@/core/hocs/withTracking";
@@ -30,7 +30,7 @@ import { useLoadingWrapper } from "@/core/hocs/withLoading";
 import { useAuthStore } from "@/store/authStore";
 import { useUiStore } from "@/store/uiStore";
 import { useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
 import {
   useAjouterUtilisateur,
   useAbonnements,
@@ -65,7 +65,7 @@ const AddUserPage: React.FC = () => {
   const navigate = useNavigate();
   const { trackEvent, trackError } = useTracking();
   const { wrapAsync, isLoading: submitting } = useLoadingWrapper();
-  const queryClient = useQueryClient();
+
   const checkEmail = useCheckEmail();
   const { user: currentUser } = useAuthStore();
   const { addNotification } = useUiStore();
@@ -224,8 +224,10 @@ const AddUserPage: React.FC = () => {
 
         await ajouterUtilisateur.mutateAsync(userData as any);
 
-        // Invalidate queries
-        queryClient.invalidateQueries({ queryKey: ["utilisateurs"] });
+        // Refetch Apollo queries to update cache
+        apolloClient.refetchQueries({
+          include: ["GetUtilisateurs", "GetUsers"],
+        });
 
         // Success notification
         addNotification({
@@ -371,7 +373,9 @@ const AddUserPage: React.FC = () => {
                     isRequired
                     fieldId="email"
                     validated={errors.email || emailExists ? "error" : "default"}
-                    helperTextInvalid={errors.email || (emailExists ? t("users.create.errors.emailExists") : "")}
+                    helperTextInvalid={
+                      errors.email || (emailExists ? t("users.create.errors.emailExists") : "")
+                    }
                   >
                     <TextInput
                       id="email"

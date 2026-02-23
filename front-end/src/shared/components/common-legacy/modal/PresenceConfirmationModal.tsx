@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@patternfly/react-core';
-import { CheckCircleIcon, ExclamationCircleIcon } from '@patternfly/react-icons';
+import { CheckCircleIcon, ExclamationCircleIcon } from '@/shared/icons';
 import { BaseModal } from './BaseModal';
 
 interface PresenceConfirmationModalProps {

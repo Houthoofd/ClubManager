@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@patternfly/react-core';
-import { EditIcon, TrashIcon, ClockIcon, CalendarAltIcon, TimesIcon } from '@patternfly/react-icons';
+import { EditIcon, TrashIcon, ClockIcon, CalendarAltIcon, TimesIcon } from '@/shared/icons';
 
 interface CoursCardProps {
   cours: any;

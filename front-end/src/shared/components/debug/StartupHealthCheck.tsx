@@ -11,7 +11,7 @@ import {
   DescriptionListDescription,
   Spinner,
 } from "@patternfly/react-core";
-import { CheckCircleIcon, TimesCircleIcon, ExclamationTriangleIcon } from "@patternfly/react-icons";
+import { CheckCircleIcon, TimesCircleIcon, ExclamationTriangleIcon } from '@/shared/icons';
 import { env } from "@/core/config";
 
 interface StartupHealthCheckProps {

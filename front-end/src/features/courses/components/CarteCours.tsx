@@ -9,7 +9,7 @@ import {
   CardFooter,
   Button,
 } from '@patternfly/react-core';
-import { PencilAltIcon, ClockIcon, UserIcon, CalendarAltIcon } from '@patternfly/react-icons';
+import { PencilAltIcon, ClockIcon, UserIcon, CalendarAltIcon } from '@/shared/icons';
 
 interface CarteCoursProps {
   cours: any;

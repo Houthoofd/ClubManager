@@ -8,7 +8,7 @@
 
 import React from "react";
 import { EmptyState, Title, EmptyStateBody } from "@patternfly/react-core";
-import { CubeIcon, SearchIcon } from "@patternfly/react-icons";
+import { CubeIcon, SearchIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 
 export interface EmptyProductStateProps {

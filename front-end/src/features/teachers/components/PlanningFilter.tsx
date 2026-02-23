@@ -9,7 +9,7 @@ import {
   FlexItem,
   Label,
 } from '@patternfly/react-core';
-import { PlusIcon } from '@patternfly/react-icons';
+import { PlusIcon } from '@/shared/icons';
 
 interface PlanningFilterProps {
   filtreJour: string;

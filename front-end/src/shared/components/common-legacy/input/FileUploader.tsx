@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FileUpload, Button } from "@patternfly/react-core";
 import type { DropEvent } from "@patternfly/react-core";
-import { TimesIcon } from "@patternfly/react-icons";
+import { TimesIcon } from '@/shared/icons';
 import { apiUrl } from '@/shared/utils/apiUrl';
 import { useMultipleImageUpload } from "../hooks/useUpload";
 

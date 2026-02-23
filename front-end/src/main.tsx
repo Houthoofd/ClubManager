@@ -88,6 +88,8 @@ import App from "./app/App";
 import { initializeStores } from "./store";
 import { initSentry } from "./core/monitoring/sentry";
 import SentryErrorBoundary from "./core/monitoring/SentryErrorBoundary";
+import { I18nLoader } from "./core/i18n/I18nLoader";
+import { isDev } from "@/core/config/env";
 import "./core/i18n/config"; // Initialize i18n BEFORE React
 import { displayBundleOptimizationStatus } from "./core/utils/bundleOptimizationStatus";
 
@@ -107,7 +109,7 @@ initSentry();
 initializeStores();
 
 // Display migration success banner in development
-if (import.meta.env.DEV) {
+if (isDev) {
   console.log("");
 
   // Display bundle optimization status
@@ -140,11 +142,13 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <SentryErrorBoundary showDialog={true}>
-      <AppProviders>
-        <AuthGuard>
-          <App />
-        </AuthGuard>
-      </AppProviders>
+      <I18nLoader>
+        <AppProviders>
+          <AuthGuard>
+            <App />
+          </AuthGuard>
+        </AppProviders>
+      </I18nLoader>
     </SentryErrorBoundary>
   </React.StrictMode>,
 );

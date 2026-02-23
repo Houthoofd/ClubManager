@@ -1,7 +1,6 @@
 import React from "react";
 import { Title, Alert } from "@patternfly/react-core";
-import GraphiqueLineaire from "@/shared/components/common-legacy/graph/GraphiqueLineaire";
-import GraphiquePie from "@/shared/components/common-legacy/graph/GraphiquePie";
+import { GraphiqueLineaire, GraphiquePie } from "../charts";
 import TableauStatistiques from "@/shared/components/common-legacy/table/TableauStatistiques";
 import SwitchViewControls from "@/shared/components/common-legacy/controls/SwitchViewControls";
 

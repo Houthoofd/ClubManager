@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, ModalVariant, Button } from '@patternfly/react-core';
 import ModalWithHelp from './ModalWithHelp';
-import { ArrowRightIcon } from '@patternfly/react-icons';
+import { ArrowRightIcon } from '@/shared/icons';
 
 interface ModalsUtilisateurProps {
   // Modal confirmation modifications

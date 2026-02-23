@@ -47,7 +47,7 @@ import {
   Flex,
   FlexItem,
 } from "@patternfly/react-core";
-import { UserIcon, SearchIcon, PlusCircleIcon, EditIcon, TrashIcon } from "@patternfly/react-icons";
+import { UserIcon, SearchIcon, PlusCircleIcon, EditIcon, TrashIcon } from '@/shared/icons';
 import { useTranslation } from "react-i18next";
 import { useTracking } from "@/shared/hooks/useTracking";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";

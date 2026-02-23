@@ -20,7 +20,7 @@ import {
   PaperPlaneIcon, 
   ExclamationTriangleIcon,
   UserIcon 
-} from '@patternfly/react-icons';
+} from '@/shared/icons';
 
 interface SendMessageModalProps {
   isOpen: boolean;

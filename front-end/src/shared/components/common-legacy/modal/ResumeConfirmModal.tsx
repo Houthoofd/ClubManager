@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, ModalBody, ModalFooter, ModalHeader, Button } from '@patternfly/react-core';
-import { ArrowRightIcon } from '@patternfly/react-icons';
+import { ArrowRightIcon } from '@/shared/icons';
 
 interface ModificationItem {
   field: string;

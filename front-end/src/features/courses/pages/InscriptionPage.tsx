@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageSection, Button, Alert, Title } from "@patternfly/react-core";
-import { CalendarAltIcon, ClockIcon, UserIcon } from "@patternfly/react-icons";
+import { CalendarAltIcon, ClockIcon, UserIcon } from '@/shared/icons';
 import { useCours, useCoursPlanning, useCoursInscritsUtilisateur } from "../hooks/useCours";
 import {
   useUtilisateursPourTousLesCours,

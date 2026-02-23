@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { PageSection, Spinner, Alert, Tabs, Tab } from "@patternfly/react-core";
 import { PageHeader } from "@/shared/components/common-legacy/PageHeader";
-import { UserIcon, ChartLineIcon, CreditCardIcon } from "@patternfly/react-icons";
+import { UserIcon, ChartLineIcon, CreditCardIcon } from '@/shared/icons';
 import {
   useCompteData,
   type Genre,
@@ -15,7 +15,7 @@ import CompteInfoTab from "../components/compte/CompteInfoTab";
 import ResultModal from "@/shared/components/common-legacy/modal/ResultModal";
 import ResumeConfirmModal from "@/shared/components/common-legacy/modal/ResumeConfirmModal";
 import { useCheckEmail } from "../hooks/useVerification";
-import { useQueryClient } from "@tanstack/react-query";
+import { apolloClient } from "@/core/api/apollo/apollo-client";
 
 function formatDateForInput(isoDateString: string): string {
   if (!isoDateString) return "";
@@ -60,8 +60,6 @@ const Compte = () => {
 
   // AJOUTÉ: Hook pour vérifier l'email
   const checkEmail = useCheckEmail();
-  // AJOUTÉ: Query client pour invalider le cache
-  const queryClient = useQueryClient();
 
   const {
     userData,
@@ -206,28 +204,10 @@ const Compte = () => {
       setEditingFields({});
       setDisabledFields({});
 
-      // MODIFIÉ: Invalidation complète du cache incluant les échéances
-      queryClient.invalidateQueries({ queryKey: ["compteData"] });
-      queryClient.invalidateQueries({ queryKey: ["userData"] });
-      queryClient.invalidateQueries({ queryKey: ["echeancesUtilisateur"] }); // AJOUTÉ
-      queryClient.invalidateQueries({ queryKey: ["paiements"] }); // AJOUTÉ
-
-      // AJOUTÉ: Invalider spécifiquement pour cet utilisateur
-      if (utilisateurId) {
-        queryClient.invalidateQueries({
-          queryKey: ["echeancesUtilisateur", utilisateurId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["echeances", "utilisateur", utilisateurId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["paiements", "utilisateur", utilisateurId],
-        });
-        console.log(
-          "💰 [Compte] Échéances invalidées pour utilisateur après mise à jour:",
-          utilisateurId,
-        );
-      }
+      // Refetch Apollo queries to update cache
+      apolloClient.refetchQueries({
+        include: ["GetCompte", "GetUtilisateur", "GetEcheances", "GetPaiements"],
+      });
 
       // AJOUTÉ: Mettre à jour le localStorage si l'email a changé
       const storedData = localStorage.getItem("userData");
@@ -255,14 +235,7 @@ const Compte = () => {
       setResultModalSuccess(false);
       setIsResultModalOpen(true);
     }
-  }, [
-    updateCompte.isSuccess,
-    updateCompte.isError,
-    updateCompte.error,
-    queryClient,
-    form.email,
-    utilisateurId,
-  ]);
+  }, [updateCompte.isSuccess, updateCompte.isError, updateCompte.error, form.email, utilisateurId]);
 
   // Affiche le résumé des changements dans la modal avant modification
   const handleApplyChanges = async () => {

@@ -26,6 +26,7 @@ import {
   useNavigationType,
 } from "react-router-dom";
 import { logger } from "@/core/utils/appLogger";
+import { env, isProd } from "@/core/config/env";
 
 // ============================================================================
 // CONFIGURATION
@@ -35,23 +36,23 @@ import { logger } from "@/core/utils/appLogger";
  * Sentry DSN (Data Source Name)
  * À configurer dans les variables d'environnement
  */
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN || "";
+const SENTRY_DSN = env.sentry?.dsn || "";
 
 /**
  * Environment (development, staging, production)
  */
-const ENVIRONMENT = import.meta.env.MODE || "development";
+const ENVIRONMENT = env.app.environment;
 
 /**
  * Release version (pour tracking des déploiements)
  */
-const RELEASE = import.meta.env.VITE_APP_VERSION || "1.0.0";
+const RELEASE = env.app.version;
 
 /**
  * Sample rates (0.0 à 1.0)
  */
-const TRACES_SAMPLE_RATE = import.meta.env.PROD ? 0.1 : 1.0; // 10% en prod, 100% en dev
-const REPLAYS_SESSION_SAMPLE_RATE = import.meta.env.PROD ? 0.1 : 0.0; // 10% en prod
+const TRACES_SAMPLE_RATE = isProd ? 0.1 : 1.0; // 10% en prod, 100% en dev
+const REPLAYS_SESSION_SAMPLE_RATE = isProd ? 0.1 : 0.0; // 10% en prod
 const REPLAYS_ON_ERROR_SAMPLE_RATE = 1.0; // 100% des sessions avec erreur
 
 // ============================================================================
@@ -63,13 +64,13 @@ const REPLAYS_ON_ERROR_SAMPLE_RATE = 1.0; // 100% des sessions avec erreur
  */
 export function initSentry(): void {
   // Ne pas initialiser en développement si pas de DSN
-  if (!SENTRY_DSN && !import.meta.env.PROD) {
+  if (!SENTRY_DSN && !isProd) {
     logger.info("ℹ️ [Sentry] Désactivé en développement (pas de DSN configuré)");
     return;
   }
 
   // Vérifier que le DSN est configuré en production
-  if (import.meta.env.PROD && !SENTRY_DSN) {
+  if (isProd && !SENTRY_DSN) {
     logger.error("❌ [Sentry] DSN manquant en production !");
     return;
   }
@@ -149,7 +150,7 @@ export function initSentry(): void {
       sendDefaultPii: false,
 
       // Activer en production uniquement
-      enabled: import.meta.env.PROD,
+      enabled: isProd,
     });
 
     logger.info("✅ [Sentry] Initialisé avec succès");
@@ -295,7 +296,7 @@ export async function measurePerformance<T>(name: string, fn: () => Promise<T>):
  * Vérifier si Sentry est activé
  */
 export function isSentryEnabled(): boolean {
-  return import.meta.env.PROD && !!SENTRY_DSN;
+  return isProd && !!SENTRY_DSN;
 }
 
 /**

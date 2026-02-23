@@ -7,7 +7,7 @@ import {
   Card,
   CardBody,
 } from '@patternfly/react-core';
-import { TimesIcon } from '@patternfly/react-icons';
+import { TimesIcon } from '@/shared/icons';
 
 interface MultiImageUploadProps {
   onImageUrlsChange: (urls: string[]) => void;
