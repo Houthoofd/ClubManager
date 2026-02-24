@@ -1,0 +1,412 @@
+name: CI/CD ClubManager
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME_API: ${{ github.repository }}/api
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  # ============================================================================
+  # FRONT-END - Tests & Build
+  # ============================================================================
+  frontend-test:
+    name: 🎨 Front-end Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: front-end/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./front-end
+        run: npm ci
+
+      - name: 🔍 Lint
+        working-directory: ./front-end
+        run: npm run lint
+
+      - name: 🧪 Run tests
+        working-directory: ./front-end
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./front-end/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+      - name: 📈 Coverage threshold check
+        working-directory: ./front-end
+        run: |
+          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+            echo "❌ Coverage $COVERAGE% is below 70%"
+            exit 1
+          fi
+          echo "✅ Coverage $COVERAGE% meets threshold"
+
+  frontend-build:
+    name: 🏗️ Front-end Build
+    runs-on: ubuntu-latest
+    needs: frontend-test
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: front-end/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./front-end
+        run: npm ci
+
+      - name: 🏗️ Build
+        working-directory: ./front-end
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_STRIPE_PUBLIC_KEY: ${{ secrets.VITE_STRIPE_PUBLIC_KEY }}
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: front-end/dist
+          retention-days: 7
+
+  # ============================================================================
+  # API/BACK-END - Tests & Build
+  # ============================================================================
+  api-test:
+    name: 🔧 API Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: clubmanager_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./api
+        run: npm ci
+
+      - name: 🗄️ Generate Prisma Client
+        working-directory: ./api
+        run: npx prisma generate
+
+      - name: 🗄️ Run database migrations
+        working-directory: ./api
+        run: npx prisma db push --skip-generate
+        env:
+          DATABASE_URL: mysql://root:test_root_password@localhost:3306/clubmanager_test
+
+      - name: 🌱 Seed test database
+        working-directory: ./api
+        run: npm run seed:test:db
+        env:
+          DATABASE_URL: mysql://root:test_root_password@localhost:3306/clubmanager_test
+          NODE_ENV: test
+
+      - name: 🧪 Run tests
+        working-directory: ./api
+        run: npm run test:windows
+        env:
+          DATABASE_URL: mysql://root:test_root_password@localhost:3306/clubmanager_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          JWT_SECRET: test_jwt_secret
+
+      - name: 📊 Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./api/coverage/lcov.info
+          flags: api
+          name: api-coverage
+
+  api-build:
+    name: 🔨 API Build
+    runs-on: ubuntu-latest
+    needs: api-test
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./api
+        run: npm ci
+
+      - name: 🗄️ Generate Prisma Client
+        working-directory: ./api
+        run: npx prisma generate
+
+      - name: 🔨 Build TypeScript
+        working-directory: ./api
+        run: npm run build
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-dist
+          path: api/dist
+          retention-days: 7
+
+  # ============================================================================
+  # DOCKER - Build & Push Images to GitHub Container Registry
+  # ============================================================================
+  docker-build-push:
+    name: 🐳 Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [frontend-build, api-build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📝 Extract metadata for API
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: 📝 Extract metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🐳 Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api
+          file: ./api/Dockerfile
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: 🐳 Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./front-end
+          file: ./front-end/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+
+  # ============================================================================
+  # DEPLOY - AWS S3 (Frontend) & EC2 (API)
+  # ============================================================================
+  deploy-frontend:
+    name: 🚀 Deploy Frontend to S3
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./dist
+
+      - name: 🔐 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: 🗑️ Clear S3 bucket (optional)
+        run: |
+          aws s3 rm s3://${{ secrets.S3_BUCKET_NAME }} --recursive
+
+      - name: 📤 Upload to S3
+        run: |
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html" \
+            --exclude "*.html"
+
+          # HTML files with no-cache
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "public, max-age=0, must-revalidate"
+
+      - name: 🔄 Invalidate CloudFront cache (if using CloudFront)
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+        continue-on-error: true
+
+  deploy-api:
+    name: 🚀 Deploy API to EC2
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 🔐 Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🔐 Login to GitHub Container Registry on EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "echo ${{ secrets.GITHUB_TOKEN }} | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin"
+
+      - name: 🐳 Pull and restart API container on EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Pull latest image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:main
+
+            # Stop and remove old container
+            docker stop clubmanager-api || true
+            docker rm clubmanager-api || true
+
+            # Run new container
+            docker run -d \
+              --name clubmanager-api \
+              --restart unless-stopped \
+              -p 4000:4000 \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+              -e REDIS_URL="${{ secrets.REDIS_URL }}" \
+              -e SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:main
+
+            # Cleanup old images
+            docker image prune -af --filter "until=24h"
+          EOF
+
+      - name: 🗄️ Run database migrations on EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "docker exec clubmanager-api npx prisma migrate deploy"
+
+      - name: ✅ Health check
+        run: |
+          sleep 10
+          curl -f http://${{ secrets.EC2_HOST }}:4000/health || exit 1
+
+  # ============================================================================
+  # NOTIFICATION - Post deployment notification
+  # ============================================================================
+  notify:
+    name: 📢 Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-api]
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📧 Send deployment notification
+        run: |
+          if [ "${{ needs.deploy-frontend.result }}" == "success" ] && [ "${{ needs.deploy-api.result }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+            # Vous pouvez ajouter ici l'envoi d'email, Slack, Discord, etc.
+          else
+            echo "❌ Deployment failed!"
+            exit 1
+          fi

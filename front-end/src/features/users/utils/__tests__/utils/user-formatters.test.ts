@@ -3,3015 +3,679 @@
  *
  * @file user-formatters.ts
  * @type util
- * @generated 2026-02-22
+ * @updated Fixed with proper parameters and assertions
  * */
 
-import { describe, it, expect } from 'vitest';
-import { UserRole, UserStatus, formatUserFullName, formatUserInitials, formatUserDisplayName, getUserRoleLabel, getUserRoleColor, getUserStatusLabel, getUserStatusColor, formatUserEmail, formatUserPhone, formatUserJoinDate, formatUserLastLogin, calculateUserAge, formatUserAge, isUserActive, canEditUser, canDeleteUser, sortUsersByName, sortUsersByJoinDate, filterUsersByRole, filterUsersByStatus, getUserAvatarOrInitials, isValidUserEmail, sanitizeUserInput } from '../../user-formatters';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  formatUserFullName,
+  formatUserInitials,
+  formatUserDisplayName,
+  getUserRoleLabel,
+  getUserRoleColor,
+  getUserStatusLabel,
+  getUserStatusColor,
+  formatUserEmail,
+  formatUserPhone,
+  formatUserJoinDate,
+  formatUserLastLogin,
+  calculateUserAge,
+  formatUserAge,
+  isUserActive,
+  canEditUser,
+  canDeleteUser,
+  sortUsersByName,
+  sortUsersByJoinDate,
+  filterUsersByRole,
+  filterUsersByStatus,
+  getUserAvatarOrInitials,
+  isValidUserEmail,
+  sanitizeUserInput,
+} from "../../user-formatters";
 
-/**
- * Tests for utility functions in user-formatters
- *
- * Functions tested:
- * - UserRole
- * - UserStatus
- * - formatUserFullName
- * - formatUserInitials
- * - formatUserDisplayName
- * - getUserRoleLabel
- * - getUserRoleColor
- * - getUserStatusLabel
- * - getUserStatusColor
- * - formatUserEmail
- * - formatUserPhone
- * - formatUserJoinDate
- * - formatUserLastLogin
- * - calculateUserAge
- * - formatUserAge
- * - isUserActive
- * - canEditUser
- * - canDeleteUser
- * - sortUsersByName
- * - sortUsersByJoinDate
- * - filterUsersByRole
- * - filterUsersByStatus
- * - getUserAvatarOrInitials
- * - isValidUserEmail
- * - sanitizeUserInput
- */
-
-describe('UserRole', () => {
-  /**
-   * Function: UserRole
-   * Parameters: none
-   * Return type: unknown
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
-      expect(UserRole).toBeDefined();
-      expect(typeof UserRole).toBe('function');
-    });
-
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = UserRole();
-
-      expect(result).toBeDefined();
-      // Expected return type: unknown
-    });
-
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = UserRole();
-      const result2 = UserRole();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = UserRole();
-      const result2 = UserRole();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => UserRole()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = UserRole();
-
-      // Verify return type matches expected type: unknown
-      expect(result).toBeDefined();
-// Type checking verified
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = UserRole(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = UserRole();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
-    });
-  });
-});
-
-
-describe('UserStatus', () => {
-  /**
-   * Function: UserStatus
-   * Parameters: none
-   * Return type: unknown
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
-      expect(UserStatus).toBeDefined();
-      expect(typeof UserStatus).toBe('function');
-    });
-
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = UserStatus();
-
-      expect(result).toBeDefined();
-      // Expected return type: unknown
-    });
-
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = UserStatus();
-      const result2 = UserStatus();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = UserStatus();
-      const result2 = UserStatus();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => UserStatus()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = UserStatus();
-
-      // Verify return type matches expected type: unknown
-      expect(result).toBeDefined();
-// Type checking verified
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = UserStatus(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = UserStatus();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
-    });
-  });
-});
-
-
-describe('formatUserFullName', () => {
-  /**
-   * Function: formatUserFullName
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("formatUserFullName", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserFullName).toBeDefined();
-      expect(typeof formatUserFullName).toBe('function');
+      expect(typeof formatUserFullName).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserFullName();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should format full name correctly", () => {
+      const result = formatUserFullName("John", "Doe");
+      expect(result).toBe("John Doe");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserFullName();
-      const result2 = formatUserFullName();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserFullName();
-      const result2 = formatUserFullName();
-
-      expect(result1).toEqual(result2);
+    it("should handle single name", () => {
+      const result = formatUserFullName("John", "");
+      expect(result).toBe("John");
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserFullName()).not.toThrow();
+  describe("Edge Cases", () => {
+    it("should handle empty names", () => {
+      const result = formatUserFullName("", "");
+      expect(result).toBe("N/A");
     });
 
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserFullName();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserFullName(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserFullName();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should trim whitespace", () => {
+      const result = formatUserFullName("  John  ", "  Doe  ");
+      expect(result).toBe("John Doe");
     });
   });
 });
 
-
-describe('formatUserInitials', () => {
-  /**
-   * Function: formatUserInitials
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("formatUserInitials", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserInitials).toBeDefined();
-      expect(typeof formatUserInitials).toBe('function');
+      expect(typeof formatUserInitials).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserInitials();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should format initials correctly", () => {
+      const result = formatUserInitials("John", "Doe");
+      expect(result).toBe("JD");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserInitials();
-      const result2 = formatUserInitials();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserInitials();
-      const result2 = formatUserInitials();
-
-      expect(result1).toEqual(result2);
+    it("should uppercase initials", () => {
+      const result = formatUserInitials("john", "doe");
+      expect(result).toBe("JD");
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserInitials()).not.toThrow();
+  describe("Edge Cases", () => {
+    it("should handle empty names", () => {
+      const result = formatUserInitials("", "");
+      expect(result).toBe("?");
     });
 
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserInitials();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserInitials(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserInitials();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should handle single name", () => {
+      const result = formatUserInitials("John", "");
+      expect(result).toBe("J");
     });
   });
 });
 
-
-describe('formatUserDisplayName', () => {
-  /**
-   * Function: formatUserDisplayName
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("formatUserDisplayName", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserDisplayName).toBeDefined();
-      expect(typeof formatUserDisplayName).toBe('function');
+      expect(typeof formatUserDisplayName).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserDisplayName();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should use preferred name if provided", () => {
+      const result = formatUserDisplayName("John", "Doe", "Johnny");
+      expect(result).toBe("Johnny");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserDisplayName();
-      const result2 = formatUserDisplayName();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserDisplayName();
-      const result2 = formatUserDisplayName();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserDisplayName()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserDisplayName();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserDisplayName(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserDisplayName();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should fallback to full name", () => {
+      const result = formatUserDisplayName("John", "Doe");
+      expect(result).toBe("John Doe");
     });
   });
 });
 
-
-describe('getUserRoleLabel', () => {
-  /**
-   * Function: getUserRoleLabel
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("getUserRoleLabel", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(getUserRoleLabel).toBeDefined();
-      expect(typeof getUserRoleLabel).toBe('function');
+      expect(typeof getUserRoleLabel).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = getUserRoleLabel();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should return label for admin", () => {
+      const result = getUserRoleLabel("admin");
+      expect(result).toBe("auth.roles.admin");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = getUserRoleLabel();
-      const result2 = getUserRoleLabel();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should return label for teacher", () => {
+      const result = getUserRoleLabel("teacher");
+      expect(result).toBe("auth.roles.teacher");
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = getUserRoleLabel();
-      const result2 = getUserRoleLabel();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => getUserRoleLabel()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = getUserRoleLabel();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = getUserRoleLabel(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = getUserRoleLabel();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return label for student", () => {
+      const result = getUserRoleLabel("student");
+      expect(result).toBe("auth.roles.student");
     });
   });
 });
 
-
-describe('getUserRoleColor', () => {
-  /**
-   * Function: getUserRoleColor
-   * Parameters: none
-   * Return type: 'blue' | 'green' | 'orange' | 'purple' | 'default'
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("getUserRoleColor", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(getUserRoleColor).toBeDefined();
-      expect(typeof getUserRoleColor).toBe('function');
+      expect(typeof getUserRoleColor).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = getUserRoleColor();
-
-      expect(result).toBeDefined();
-      // Expected return type: 'blue' | 'green' | 'orange' | 'purple' | 'default'
+    it("should return purple for admin", () => {
+      const result = getUserRoleColor("admin");
+      expect(result).toBe("purple");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = getUserRoleColor();
-      const result2 = getUserRoleColor();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should return blue for teacher", () => {
+      const result = getUserRoleColor("teacher");
+      expect(result).toBe("blue");
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = getUserRoleColor();
-      const result2 = getUserRoleColor();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => getUserRoleColor()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = getUserRoleColor();
-
-      // Verify return type matches expected type: 'blue' | 'green' | 'orange' | 'purple' | 'default'
-      expect(result).toBeDefined();
-      // Verify valid color types
-
-      const validColors = ['blue', 'green', 'orange', 'purple', 'default'];
-
-      expect(validColors).toContain(component.props.color);
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = getUserRoleColor(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = getUserRoleColor();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return green for student", () => {
+      const result = getUserRoleColor("student");
+      expect(result).toBe("green");
     });
   });
 });
 
-
-describe('getUserStatusLabel', () => {
-  /**
-   * Function: getUserStatusLabel
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("getUserStatusLabel", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(getUserStatusLabel).toBeDefined();
-      expect(typeof getUserStatusLabel).toBe('function');
+      expect(typeof getUserStatusLabel).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = getUserStatusLabel();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should return label for active", () => {
+      const result = getUserStatusLabel("active");
+      expect(result).toBe("common.status.active");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = getUserStatusLabel();
-      const result2 = getUserStatusLabel();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should return label for inactive", () => {
+      const result = getUserStatusLabel("inactive");
+      expect(result).toBe("common.status.inactive");
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = getUserStatusLabel();
-      const result2 = getUserStatusLabel();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => getUserStatusLabel()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = getUserStatusLabel();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = getUserStatusLabel(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = getUserStatusLabel();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return label for pending", () => {
+      const result = getUserStatusLabel("pending");
+      expect(result).toBe("common.status.pending");
     });
   });
 });
 
-
-describe('getUserStatusColor', () => {
-  /**
-   * Function: getUserStatusColor
-   * Parameters: none
-   * Return type: 'success' | 'info' | 'warning' | 'danger' | 'default'
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("getUserStatusColor", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(getUserStatusColor).toBeDefined();
-      expect(typeof getUserStatusColor).toBe('function');
+      expect(typeof getUserStatusColor).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = getUserStatusColor();
-
-      expect(result).toBeDefined();
-      // Expected return type: 'success' | 'info' | 'warning' | 'danger' | 'default'
+    it("should return success for active", () => {
+      const result = getUserStatusColor("active");
+      expect(result).toBe("success");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = getUserStatusColor();
-      const result2 = getUserStatusColor();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should return info for pending", () => {
+      const result = getUserStatusColor("pending");
+      expect(result).toBe("info");
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = getUserStatusColor();
-      const result2 = getUserStatusColor();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => getUserStatusColor()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = getUserStatusColor();
-
-      // Verify return type matches expected type: 'success' | 'info' | 'warning' | 'danger' | 'default'
-      expect(result).toBeDefined();
-      // Verify valid variant types
-
-      const validVariants = ['success', 'info', 'warning', 'danger', 'default'];
-
-      expect(validVariants).toContain(component.props.variant);
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = getUserStatusColor(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = getUserStatusColor();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return danger for banned", () => {
+      const result = getUserStatusColor("banned");
+      expect(result).toBe("danger");
     });
   });
 });
 
-
-describe('formatUserEmail', () => {
-  /**
-   * Function: formatUserEmail
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("formatUserEmail", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserEmail).toBeDefined();
-      expect(typeof formatUserEmail).toBe('function');
+      expect(typeof formatUserEmail).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserEmail();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should return email without masking", () => {
+      const result = formatUserEmail("john.doe@example.com", false);
+      expect(result).toBe("john.doe@example.com");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserEmail();
-      const result2 = formatUserEmail();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should mask email when requested", () => {
+      const result = formatUserEmail("john.doe@example.com", true);
+      expect(result).toContain("@example.com");
+      expect(result).toContain("***");
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserEmail();
-      const result2 = formatUserEmail();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserEmail()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserEmail();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserEmail(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserEmail();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should default to unmasked", () => {
+      const result = formatUserEmail("test@example.com");
+      expect(result).toBe("test@example.com");
     });
   });
 });
 
-
-describe('formatUserPhone', () => {
-  /**
-   * Function: formatUserPhone
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("formatUserPhone", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserPhone).toBeDefined();
-      expect(typeof formatUserPhone).toBe('function');
+      expect(typeof formatUserPhone).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserPhone();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should format international phone", () => {
+      const result = formatUserPhone("32123456789", "international");
+      expect(result).toContain("+32");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserPhone();
-      const result2 = formatUserPhone();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should format local phone", () => {
+      const result = formatUserPhone("0123456789", "local");
+      expect(result).toMatch(/\d{4}\s\d{2}\s\d{2}\s\d{2}/);
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserPhone();
-      const result2 = formatUserPhone();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserPhone()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserPhone();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserPhone(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserPhone();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should handle N/A for empty phone", () => {
+      const result = formatUserPhone("", "international");
+      expect(result).toBe("N/A");
     });
   });
 });
 
-
-describe('formatUserJoinDate', () => {
-  /**
-   * Function: formatUserJoinDate
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("formatUserJoinDate", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserJoinDate).toBeDefined();
-      expect(typeof formatUserJoinDate).toBe('function');
+      expect(typeof formatUserJoinDate).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserJoinDate();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should format ISO date string", () => {
+      const result = formatUserJoinDate("2024-01-15");
+      expect(result).toMatch(/\d{2}\/\d{2}\/\d{4}/);
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserJoinDate();
-      const result2 = formatUserJoinDate();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserJoinDate();
-      const result2 = formatUserJoinDate();
-
-      expect(result1).toEqual(result2);
+    it("should format Date object", () => {
+      const result = formatUserJoinDate(new Date("2024-01-15"));
+      expect(result).toMatch(/\d{2}\/\d{2}\/\d{4}/);
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserJoinDate()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserJoinDate();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserJoinDate(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserJoinDate();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+  describe("Edge Cases", () => {
+    it("should handle invalid date", () => {
+      const result = formatUserJoinDate("invalid");
+      expect(result).toBe("N/A");
     });
   });
 });
 
+describe("formatUserLastLogin", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
 
-describe('formatUserLastLogin', () => {
-  /**
-   * Function: formatUserLastLogin
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserLastLogin).toBeDefined();
-      expect(typeof formatUserLastLogin).toBe('function');
+      expect(typeof formatUserLastLogin).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserLastLogin();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should format recent login", () => {
+      const now = new Date("2024-01-15T14:30:00");
+      vi.setSystemTime(now);
+      const result = formatUserLastLogin("2024-01-15T14:29:30");
+      expect(result).toBe("À l'instant");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserLastLogin();
-      const result2 = formatUserLastLogin();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should format login in minutes", () => {
+      const now = new Date("2024-01-15T14:30:00");
+      vi.setSystemTime(now);
+      const result = formatUserLastLogin("2024-01-15T14:15:00");
+      expect(result).toContain("min");
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserLastLogin();
-      const result2 = formatUserLastLogin();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserLastLogin()).not.toThrow();
+    it("should format login in hours", () => {
+      const now = new Date("2024-01-15T14:30:00");
+      vi.setSystemTime(now);
+      const result = formatUserLastLogin("2024-01-15T12:30:00");
+      expect(result).toContain("h");
     });
 
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
+    it("should format login in days", () => {
+      const now = new Date("2024-01-15T14:30:00");
+      vi.setSystemTime(now);
+      const result = formatUserLastLogin("2024-01-13T14:30:00");
+      expect(result).toContain("j");
     });
   });
 
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserLastLogin();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserLastLogin(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserLastLogin();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+  describe("Edge Cases", () => {
+    it("should handle invalid date", () => {
+      const result = formatUserLastLogin("invalid");
+      expect(result).toBe("Jamais");
     });
   });
 });
 
+describe("calculateUserAge", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
 
-describe('calculateUserAge', () => {
-  /**
-   * Function: calculateUserAge
-   * Parameters: none
-   * Return type: number
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(calculateUserAge).toBeDefined();
-      expect(typeof calculateUserAge).toBe('function');
+      expect(typeof calculateUserAge).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = calculateUserAge();
-
-      expect(result).toBeDefined();
-      // Expected return type: number
+    it("should calculate age correctly", () => {
+      vi.setSystemTime(new Date("2024-01-15"));
+      const result = calculateUserAge("1999-01-15");
+      expect(result).toBe(25);
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = calculateUserAge();
-      const result2 = calculateUserAge();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = calculateUserAge();
-      const result2 = calculateUserAge();
-
-      expect(result1).toEqual(result2);
+    it("should handle Date object", () => {
+      vi.setSystemTime(new Date("2024-01-15"));
+      const result = calculateUserAge(new Date("2000-01-15"));
+      expect(result).toBe(24);
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => calculateUserAge()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = calculateUserAge();
-
-      // Verify return type matches expected type: number
-      expect(typeof result).toBe('number');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = calculateUserAge(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = calculateUserAge();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+  describe("Edge Cases", () => {
+    it("should return 0 for invalid date", () => {
+      const result = calculateUserAge("invalid");
+      expect(result).toBe(0);
     });
   });
 });
 
+describe("formatUserAge", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
 
-describe('formatUserAge', () => {
-  /**
-   * Function: formatUserAge
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(formatUserAge).toBeDefined();
-      expect(typeof formatUserAge).toBe('function');
+      expect(typeof formatUserAge).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = formatUserAge();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should format age with years", () => {
+      vi.setSystemTime(new Date("2024-01-15"));
+      const result = formatUserAge("1999-01-15");
+      expect(result).toBe("25 ans");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = formatUserAge();
-      const result2 = formatUserAge();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = formatUserAge();
-      const result2 = formatUserAge();
-
-      expect(result1).toEqual(result2);
+    it("should format single year", () => {
+      vi.setSystemTime(new Date("2024-01-15"));
+      const result = formatUserAge("2023-01-15");
+      expect(result).toBe("1 an");
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => formatUserAge()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = formatUserAge();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = formatUserAge(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = formatUserAge();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+  describe("Edge Cases", () => {
+    it("should return N/A for invalid age", () => {
+      const result = formatUserAge("invalid");
+      expect(result).toBe("N/A");
     });
   });
 });
 
-
-describe('isUserActive', () => {
-  /**
-   * Function: isUserActive
-   * Parameters: none
-   * Return type: boolean
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("isUserActive", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(isUserActive).toBeDefined();
-      expect(typeof isUserActive).toBe('function');
+      expect(typeof isUserActive).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = isUserActive();
-
-      expect(result).toBeDefined();
-      // Expected return type: boolean
+    it("should return true for active status", () => {
+      const result = isUserActive("active");
+      expect(result).toBe(true);
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = isUserActive();
-      const result2 = isUserActive();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should return false for inactive status", () => {
+      const result = isUserActive("inactive");
+      expect(result).toBe(false);
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = isUserActive();
-      const result2 = isUserActive();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => isUserActive()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = isUserActive();
-
-      // Verify return type matches expected type: boolean
-      expect(typeof result).toBe('boolean');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = isUserActive(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = isUserActive();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return false for pending status", () => {
+      const result = isUserActive("pending");
+      expect(result).toBe(false);
     });
   });
 });
 
-
-describe('canEditUser', () => {
-  /**
-   * Function: canEditUser
-   * Parameters: none
-   * Return type: boolean
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("canEditUser", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(canEditUser).toBeDefined();
-      expect(typeof canEditUser).toBe('function');
+      expect(typeof canEditUser).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = canEditUser();
-
-      expect(result).toBeDefined();
-      // Expected return type: boolean
+    it("should return true for active users", () => {
+      const result = canEditUser("active");
+      expect(result).toBe(true);
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = canEditUser();
-      const result2 = canEditUser();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should return false for banned users", () => {
+      const result = canEditUser("banned");
+      expect(result).toBe(false);
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = canEditUser();
-      const result2 = canEditUser();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => canEditUser()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = canEditUser();
-
-      // Verify return type matches expected type: boolean
-      expect(typeof result).toBe('boolean');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = canEditUser(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = canEditUser();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return true for suspended users", () => {
+      const result = canEditUser("suspended");
+      expect(result).toBe(true);
     });
   });
 });
 
-
-describe('canDeleteUser', () => {
-  /**
-   * Function: canDeleteUser
-   * Parameters: none
-   * Return type: boolean
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("canDeleteUser", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(canDeleteUser).toBeDefined();
-      expect(typeof canDeleteUser).toBe('function');
+      expect(typeof canDeleteUser).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = canDeleteUser();
-
-      expect(result).toBeDefined();
-      // Expected return type: boolean
+    it("should return false for admin", () => {
+      const result = canDeleteUser("admin");
+      expect(result).toBe(false);
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = canDeleteUser();
-      const result2 = canDeleteUser();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should return true for teacher", () => {
+      const result = canDeleteUser("teacher");
+      expect(result).toBe(true);
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = canDeleteUser();
-      const result2 = canDeleteUser();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => canDeleteUser()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = canDeleteUser();
-
-      // Verify return type matches expected type: boolean
-      expect(typeof result).toBe('boolean');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = canDeleteUser(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = canDeleteUser();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return true for student", () => {
+      const result = canDeleteUser("student");
+      expect(result).toBe(true);
     });
   });
 });
 
-
-describe('sortUsersByName', () => {
-  /**
-   * Function: sortUsersByName
-   * Parameters: none
-   * Return type: unknown
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("sortUsersByName", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(sortUsersByName).toBeDefined();
-      expect(typeof sortUsersByName).toBe('function');
+      expect(typeof sortUsersByName).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = sortUsersByName();
-
-      expect(result).toBeDefined();
-      // Expected return type: unknown
-    });
-
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = sortUsersByName();
-      const result2 = sortUsersByName();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = sortUsersByName();
-      const result2 = sortUsersByName();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => sortUsersByName()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = sortUsersByName();
-
-      // Verify return type matches expected type: unknown
-      expect(result).toBeDefined();
-// Type checking verified
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
+    it("should sort users alphabetically", () => {
+      const users = [
+        { firstName: "John", lastName: "Doe" },
+        { firstName: "Alice", lastName: "Smith" },
+        { firstName: "Bob", lastName: "Johnson" },
       ];
+      const result = sortUsersByName(users);
+      expect(result[0].firstName).toBe("Alice");
+      expect(result[1].firstName).toBe("Bob");
+      expect(result[2].firstName).toBe("John");
+    });
 
-      mixedInputs.forEach(input => {
-        const result = sortUsersByName(input);
-        expect(result).toBeDefined();
-      });
+    it("should not mutate original array", () => {
+      const users = [
+        { firstName: "John", lastName: "Doe" },
+        { firstName: "Alice", lastName: "Smith" },
+      ];
+      const original = [...users];
+      sortUsersByName(users);
+      expect(users).toEqual(original);
     });
   });
 
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = sortUsersByName();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+  describe("Edge Cases", () => {
+    it("should handle empty array", () => {
+      const result = sortUsersByName([]);
+      expect(result).toEqual([]);
     });
   });
 });
 
-
-describe('sortUsersByJoinDate', () => {
-  /**
-   * Function: sortUsersByJoinDate
-   * Parameters: none
-   * Return type: unknown
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("sortUsersByJoinDate", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(sortUsersByJoinDate).toBeDefined();
-      expect(typeof sortUsersByJoinDate).toBe('function');
+      expect(typeof sortUsersByJoinDate).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = sortUsersByJoinDate();
-
-      expect(result).toBeDefined();
-      // Expected return type: unknown
-    });
-
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = sortUsersByJoinDate();
-      const result2 = sortUsersByJoinDate();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = sortUsersByJoinDate();
-      const result2 = sortUsersByJoinDate();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => sortUsersByJoinDate()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = sortUsersByJoinDate();
-
-      // Verify return type matches expected type: unknown
-      expect(result).toBeDefined();
-// Type checking verified
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
+    it("should sort users newest first", () => {
+      const users = [
+        { createdAt: "2024-01-10", id: 1 },
+        { createdAt: "2024-01-15", id: 2 },
+        { createdAt: "2024-01-12", id: 3 },
       ];
-
-      mixedInputs.forEach(input => {
-        const result = sortUsersByJoinDate(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
+      const result = sortUsersByJoinDate(users);
+      expect(result[0].id).toBe(2);
+      expect(result[1].id).toBe(3);
+      expect(result[2].id).toBe(1);
     });
 
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = sortUsersByJoinDate();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should handle Date objects", () => {
+      const users = [
+        { createdAt: new Date("2024-01-10"), id: 1 },
+        { createdAt: new Date("2024-01-15"), id: 2 },
+      ];
+      const result = sortUsersByJoinDate(users);
+      expect(result[0].id).toBe(2);
     });
   });
 });
 
-
-describe('filterUsersByRole', () => {
-  /**
-   * Function: filterUsersByRole
-   * Parameters: none
-   * Return type: unknown
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("filterUsersByRole", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(filterUsersByRole).toBeDefined();
-      expect(typeof filterUsersByRole).toBe('function');
+      expect(typeof filterUsersByRole).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = filterUsersByRole();
-
-      expect(result).toBeDefined();
-      // Expected return type: unknown
-    });
-
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = filterUsersByRole();
-      const result2 = filterUsersByRole();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = filterUsersByRole();
-      const result2 = filterUsersByRole();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => filterUsersByRole()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = filterUsersByRole();
-
-      // Verify return type matches expected type: unknown
-      expect(result).toBeDefined();
-// Type checking verified
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
+    it("should filter users by role", () => {
+      const users = [
+        { role: "admin" as const, id: 1 },
+        { role: "teacher" as const, id: 2 },
+        { role: "student" as const, id: 3 },
       ];
-
-      mixedInputs.forEach(input => {
-        const result = filterUsersByRole(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
+      const result = filterUsersByRole(users, "teacher");
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(2);
     });
 
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = filterUsersByRole();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return all users when role is 'all'", () => {
+      const users = [
+        { role: "admin" as const, id: 1 },
+        { role: "teacher" as const, id: 2 },
+      ];
+      const result = filterUsersByRole(users, "all");
+      expect(result).toHaveLength(2);
     });
   });
 });
 
-
-describe('filterUsersByStatus', () => {
-  /**
-   * Function: filterUsersByStatus
-   * Parameters: none
-   * Return type: unknown
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("filterUsersByStatus", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(filterUsersByStatus).toBeDefined();
-      expect(typeof filterUsersByStatus).toBe('function');
+      expect(typeof filterUsersByStatus).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = filterUsersByStatus();
-
-      expect(result).toBeDefined();
-      // Expected return type: unknown
-    });
-
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = filterUsersByStatus();
-      const result2 = filterUsersByStatus();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = filterUsersByStatus();
-      const result2 = filterUsersByStatus();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => filterUsersByStatus()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = filterUsersByStatus();
-
-      // Verify return type matches expected type: unknown
-      expect(result).toBeDefined();
-// Type checking verified
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
+    it("should filter users by status", () => {
+      const users = [
+        { status: "active" as const, id: 1 },
+        { status: "inactive" as const, id: 2 },
+        { status: "active" as const, id: 3 },
       ];
-
-      mixedInputs.forEach(input => {
-        const result = filterUsersByStatus(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
+      const result = filterUsersByStatus(users, "active");
+      expect(result).toHaveLength(2);
     });
 
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = filterUsersByStatus();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should return all users when status is 'all'", () => {
+      const users = [
+        { status: "active" as const, id: 1 },
+        { status: "inactive" as const, id: 2 },
+      ];
+      const result = filterUsersByStatus(users, "all");
+      expect(result).toHaveLength(2);
     });
   });
 });
 
-
-describe('getUserAvatarOrInitials', () => {
-  /**
-   * Function: getUserAvatarOrInitials
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("getUserAvatarOrInitials", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(getUserAvatarOrInitials).toBeDefined();
-      expect(typeof getUserAvatarOrInitials).toBe('function');
+      expect(typeof getUserAvatarOrInitials).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = getUserAvatarOrInitials();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should return avatar URL if provided", () => {
+      const result = getUserAvatarOrInitials("https://example.com/avatar.jpg", "John", "Doe");
+      expect(result).toBe("https://example.com/avatar.jpg");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = getUserAvatarOrInitials();
-      const result2 = getUserAvatarOrInitials();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-    });
-
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = getUserAvatarOrInitials();
-      const result2 = getUserAvatarOrInitials();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => getUserAvatarOrInitials()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = getUserAvatarOrInitials();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = getUserAvatarOrInitials(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = getUserAvatarOrInitials();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should generate initials URL if no avatar", () => {
+      const result = getUserAvatarOrInitials(undefined, "John", "Doe");
+      expect(result).toContain("ui-avatars.com");
+      expect(result).toContain("JD");
     });
   });
 });
 
-
-describe('isValidUserEmail', () => {
-  /**
-   * Function: isValidUserEmail
-   * Parameters: none
-   * Return type: boolean
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("isValidUserEmail", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(isValidUserEmail).toBeDefined();
-      expect(typeof isValidUserEmail).toBe('function');
+      expect(typeof isValidUserEmail).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = isValidUserEmail();
-
-      expect(result).toBeDefined();
-      // Expected return type: boolean
+    it("should validate correct email", () => {
+      const result = isValidUserEmail("test@example.com");
+      expect(result).toBe(true);
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = isValidUserEmail();
-      const result2 = isValidUserEmail();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should reject invalid email", () => {
+      const result = isValidUserEmail("invalid-email");
+      expect(result).toBe(false);
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = isValidUserEmail();
-      const result2 = isValidUserEmail();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => isValidUserEmail()).not.toThrow();
-    });
-
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = isValidUserEmail();
-
-      // Verify return type matches expected type: boolean
-      expect(typeof result).toBe('boolean');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = isValidUserEmail(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = isValidUserEmail();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should reject email without @", () => {
+      const result = isValidUserEmail("testexample.com");
+      expect(result).toBe(false);
     });
   });
 });
 
-
-describe('sanitizeUserInput', () => {
-  /**
-   * Function: sanitizeUserInput
-   * Parameters: none
-   * Return type: string
-   */
-  describe('Basic Functionality', () => {
-    it('should be defined as a function', () => {
+describe("sanitizeUserInput", () => {
+  describe("Basic Functionality", () => {
+    it("should be defined as a function", () => {
       expect(sanitizeUserInput).toBeDefined();
-      expect(typeof sanitizeUserInput).toBe('function');
+      expect(typeof sanitizeUserInput).toBe("function");
     });
 
-    it('should return expected output for valid input', () => {
-      // Function has no parameters
-      const result = sanitizeUserInput();
-
-      expect(result).toBeDefined();
-      // Expected return type: string
+    it("should remove < and >", () => {
+      const result = sanitizeUserInput("<script>alert('xss')</script>");
+      expect(result).not.toContain("<");
+      expect(result).not.toContain(">");
     });
 
-    it('should handle different input types', () => {
-      // Function has no parameters - test idempotency
-      const result1 = sanitizeUserInput();
-      const result2 = sanitizeUserInput();
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
+    it("should remove javascript: protocol", () => {
+      const result = sanitizeUserInput("javascript:alert('xss')");
+      expect(result).not.toContain("javascript:");
     });
 
-    it('should produce consistent results (idempotency)', () => {
-      // Test that function returns consistent results
-      const result1 = sanitizeUserInput();
-      const result2 = sanitizeUserInput();
-
-      expect(result1).toEqual(result2);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle empty/null/undefined input', () => {
-      // Function has no parameters
-      expect(() => sanitizeUserInput()).not.toThrow();
+    it("should trim whitespace", () => {
+      const result = sanitizeUserInput("  test  ");
+      expect(result).toBe("test");
     });
 
-    it('should handle invalid input gracefully', () => {
-      // Function has no parameters to validate
-      expect(true).toBe(true);
-    });
-
-    it('should handle boundary values', () => {
-      // Test with typical boundary values
-      const boundaryInputs = [null, undefined, '', 0, -1];
-      boundaryInputs.forEach(input => {
-        expect(() => {
-          const result = typeof result === 'function' ? result(input) : input;
-        }).not.toThrow();
-      });
-      expect(true).toBe(true);
-    });
-
-    it('should handle special characters and unicode', () => {
-      // Special characters not applicable for this function
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Type Safety', () => {
-    it('should return correct type', () => {
-      const result = sanitizeUserInput();
-
-      // Verify return type matches expected type: string
-      expect(typeof result).toBe('string');
-    });
-
-    it('should handle type coercion correctly', () => {
-// Type coercion should be handled appropriately
-      const mixedInputs = [
-        '123',    // string number
-        123,      // number
-        true,     // boolean
-        false,    // boolean
-      ];
-
-      mixedInputs.forEach(input => {
-        const result = sanitizeUserInput(input);
-        expect(result).toBeDefined();
-      });
-    });
-  });
-
-  describe('Performance', () => {
-    it('should handle large inputs efficiently', () => {
-      // Performance test not applicable for parameterless function
-      expect(true).toBe(true);
-    });
-
-    it('should not mutate input (pure function)', () => {
-      // Function doesn't take object/array parameters
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Real-World Scenarios', () => {
-    it('should handle typical use case', () => {
-      // Test realistic usage
-      const result = sanitizeUserInput();
-
-      expect(result).toBeDefined();
-// Realistic scenarios should work correctly
-    });
-
-    it('should integrate with other functions', () => {
-// Should compose well with other utilities
+    it("should handle clean input", () => {
+      const result = sanitizeUserInput("Clean text");
+      expect(result).toBe("Clean text");
     });
   });
 });
-
-
-
-/**
- * Testing Tips for util:
- * 
- * - Test with valid and invalid inputs
- * - Test edge cases and boundary values
- * - Verify function purity (no mutations)
- * - Test performance with large datasets
- */

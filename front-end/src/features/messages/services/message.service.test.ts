@@ -1,168 +1,327 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { formatPersonName } from './message.service';
+import formatPersonName, {
+  formatPersonName,
+  formatMessageDate,
+  formatMessageDateRelative,
+  truncateMessageContent,
+  formatMessageCategory,
+  isUnread,
+  isSentToday,
+  isRecent,
+  hasAttachments,
+  getAttachmentCount,
+  isReply,
+  findThreadRoot,
+  getMessageReplies,
+  buildMessageThread,
+  groupMessagesByThread,
+  filterMessages,
+  sortMessagesByDate,
+  sortMessagesByImportance,
+  calculateMessageStats,
+  groupMessagesBySender,
+  groupMessagesByDate,
+  markAsRead,
+  markAsUnread,
+  toggleImportant,
+  toggleArchive,
+  validateMessage
+} from './message.service';
 
 describe('formatPersonName', () => {
-  
+
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
 
   it('should be defined', () => {
     expect(formatPersonName).toBeDefined();
+    expect(typeof formatPersonName).toBe('object');
   });
 
-  
+
   describe('formatPersonName', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.formatPersonName())..toBeDefined();
+    it('should return formatted value', () => {
+      const result = null.formatPersonName(undefined);
+      expect(typeof result).toBe('string');
+    });
+
+    it('should handle edge cases', () => {
+      const result = null.formatPersonName(null);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('formatMessageDate', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.formatMessageDate())..toBeDefined();
+    it('should return formatted value', () => {
+      const result = null.formatMessageDate("test-string");
+      expect(typeof result).toBe('string');
+    });
+
+    it('should handle edge cases', () => {
+      const result = null.formatMessageDate(null);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('formatMessageDateRelative', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.formatMessageDateRelative())..toBeDefined();
+    it('should return formatted value', () => {
+      const result = null.formatMessageDateRelative("test-string");
+      expect(typeof result).toBe('string');
+    });
+
+    it('should handle edge cases', () => {
+      const result = null.formatMessageDateRelative(null);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('truncateMessageContent', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.truncateMessageContent())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.truncateMessageContent("test-string", 100);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('formatMessageCategory', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.formatMessageCategory())..toBeDefined();
+    it('should return formatted value', () => {
+      const result = null.formatMessageCategory(undefined);
+      expect(typeof result).toBe('string');
+    });
+
+    it('should handle edge cases', () => {
+      const result = null.formatMessageCategory(null);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('isUnread', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.isUnread())..toBeDefined();
+    it('should return boolean value', () => {
+      const result = null.isUnread(undefined);
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should handle null/undefined input', () => {
+      const result = null.isUnread(null);
+      expect(typeof result).toBe('boolean');
     });
   });
+
 
   describe('isSentToday', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.isSentToday())..toBeDefined();
+    it('should return boolean value', () => {
+      const result = null.isSentToday(undefined);
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should handle null/undefined input', () => {
+      const result = null.isSentToday(null);
+      expect(typeof result).toBe('boolean');
     });
   });
+
 
   describe('isRecent', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.isRecent())..toBeDefined();
+    it('should return boolean value', () => {
+      const result = null.isRecent(undefined);
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should handle null/undefined input', () => {
+      const result = null.isRecent(null);
+      expect(typeof result).toBe('boolean');
     });
   });
+
 
   describe('hasAttachments', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.hasAttachments())..toBeDefined();
+    it('should return boolean value', () => {
+      const result = null.hasAttachments(undefined);
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should handle null/undefined input', () => {
+      const result = null.hasAttachments(null);
+      expect(typeof result).toBe('boolean');
     });
   });
+
 
   describe('getAttachmentCount', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.getAttachmentCount())..toBeDefined();
+    it('should return expected value', () => {
+      const result = null.getAttachmentCount();
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('isReply', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.isReply())..toBeDefined();
+    it('should return boolean value', () => {
+      const result = null.isReply(undefined);
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should handle null/undefined input', () => {
+      const result = null.isReply(null);
+      expect(typeof result).toBe('boolean');
     });
   });
+
 
   describe('findThreadRoot', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.findThreadRoot())..toBeDefined();
+    it('should return array', () => {
+      const result = null.findThreadRoot([]);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should handle empty array', () => {
+      const result = null.findThreadRoot([]);
+      expect(result).toEqual([]);
     });
   });
+
 
   describe('getMessageReplies', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.getMessageReplies())..toBeDefined();
+    it('should return expected value', () => {
+      const result = null.getMessageReplies();
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('buildMessageThread', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.buildMessageThread())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.buildMessageThread([], 1);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('groupMessagesByThread', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.groupMessagesByThread())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.groupMessagesByThread([]);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('filterMessages', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.filterMessages())..toBeDefined();
+    it('should return array', () => {
+      const result = null.filterMessages([]);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should handle empty array', () => {
+      const result = null.filterMessages([]);
+      expect(result).toEqual([]);
     });
   });
+
 
   describe('sortMessagesByDate', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.sortMessagesByDate())..toBeDefined();
+    it('should return array', () => {
+      const result = null.sortMessagesByDate([]);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should handle empty array', () => {
+      const result = null.sortMessagesByDate([]);
+      expect(result).toEqual([]);
     });
   });
+
 
   describe('sortMessagesByImportance', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.sortMessagesByImportance())..toBeDefined();
+    it('should return array', () => {
+      const result = null.sortMessagesByImportance([]);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('should handle empty array', () => {
+      const result = null.sortMessagesByImportance([]);
+      expect(result).toEqual([]);
     });
   });
+
 
   describe('calculateMessageStats', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.calculateMessageStats())..toBeDefined();
+    it('should calculate correct result', () => {
+      const result = null.calculateMessageStats([]);
+      expect(typeof result).toBe('number');
+    });
+
+    it('should handle zero values', () => {
+      const result = null.calculateMessageStats(0);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('groupMessagesBySender', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.groupMessagesBySender())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.groupMessagesBySender([]);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('groupMessagesByDate', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.groupMessagesByDate())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.groupMessagesByDate([]);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('markAsRead', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.markAsRead())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.markAsRead(undefined);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('markAsUnread', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.markAsUnread())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.markAsUnread(undefined);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('toggleImportant', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.toggleImportant())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.toggleImportant(undefined);
+      expect(result).toBeDefined();
     });
   });
+
 
   describe('toggleArchive', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.toggleArchive())..toBeDefined();
+    it('should return expected result', () => {
+      const result = null.toggleArchive(undefined);
+      expect(result).toBeDefined();
     });
   });
 
+
   describe('validateMessage', () => {
-    it('should execute without errors', async () => {
-      expect(formatPersonName.validateMessage())..toBeDefined();
+    it('should return boolean value', () => {
+      const result = null.validateMessage("test-string", "test-string", 1);
+      expect(typeof result).toBe('boolean');
+    });
+
+    it('should handle null/undefined input', () => {
+      const result = null.validateMessage(null);
+      expect(typeof result).toBe('boolean');
     });
   });
 });

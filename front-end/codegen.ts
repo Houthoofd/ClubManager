@@ -19,8 +19,9 @@ const config: CodegenConfig = {
         skipTypename: false,
         enumsAsTypes: true,
         excludeDeprecatedFromRoot: true,
-        // Disable Suspense hooks for compatibility with Apollo Client 4.1.4
-        noExplicitTypeImports: false,
+        // Use type imports and named imports for Vitest SSR compatibility
+        useTypeImports: true,
+        importOperationTypesFrom: "Operations",
         scalars: {
           DateTime: "string",
           Decimal: "string",

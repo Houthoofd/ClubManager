@@ -173,7 +173,7 @@ export const sortDays = (days: string[]): string[] => {
  * @returns Comma-separated instructor names
  */
 export const formatInstructorNames = (
-  instructors: Array<{ nom?: string; prenom?: string; first_name?: string; last_name?: string }>
+  instructors: Array<{ nom?: string; prenom?: string; first_name?: string; last_name?: string }>,
 ): string => {
   if (!instructors || instructors.length === 0) {
     return "Non assigné";
@@ -246,16 +246,19 @@ export const truncateText = (text: string, maxLength: number = 100): string => {
  * @returns Object with days as keys and course arrays as values
  */
 export const groupCoursesByDay = <T extends { jour_semaine?: string; jour?: string }>(
-  courses: T[]
+  courses: T[],
 ): Record<string, T[]> => {
-  return courses.reduce((grouped, course) => {
-    const day = course.jour_semaine || course.jour || "unknown";
-    if (!grouped[day]) {
-      grouped[day] = [];
-    }
-    grouped[day].push(course);
-    return grouped;
-  }, {} as Record<string, T[]>);
+  return courses.reduce(
+    (grouped, course) => {
+      const day = course.jour_semaine || course.jour || "unknown";
+      if (!grouped[day]) {
+        grouped[day] = [];
+      }
+      grouped[day].push(course);
+      return grouped;
+    },
+    {} as Record<string, T[]>,
+  );
 };
 
 /**
@@ -278,7 +281,6 @@ export const sortCoursesByTime = <T extends { heure_debut: string }>(courses: T[
  * @returns Formatted message string
  */
 export const formatSearchResultsMessage = (count: number, total: number): string => {
-  const plural = count > 1 ? "s" : "";
   const foundPlural = count > 1 ? "s" : "";
-  return `${count} cours${plural} trouvé${foundPlural} sur ${total}`;
+  return `${count} cours trouvé${foundPlural} sur ${total}`;
 };

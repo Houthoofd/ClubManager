@@ -1,15 +1,32 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
+// import { apolloTransform } from "./vite-plugins/apollo-transform";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Apollo Client transform plugin - fixes namespace imports for Vitest SSR
+    // apolloTransform({
+    //   debug: true, // Set to true to see transformation logs
+    // }),
+  ],
 
   test: {
     // ============================================================================
     // Environment Configuration
     // ============================================================================
     environment: "jsdom",
+
+    // ============================================================================
+    // Server Configuration (fix Apollo Client SSR issues)
+    // ============================================================================
+    server: {
+      deps: {
+        // Don't externalize @apollo/client - bundle it for tests
+        inline: ["@apollo/client"],
+      },
+    },
 
     // ============================================================================
     // Setup Files
@@ -130,6 +147,26 @@ export default defineConfig({
       "@/assets": path.resolve(__dirname, "./src/assets"),
       "@/styles": path.resolve(__dirname, "./src/styles"),
     },
+    // Dedupe Apollo Client to avoid multiple instances
+    dedupe: ["@apollo/client", "react", "react-dom"],
+  },
+
+  // ============================================================================
+  // Optimize Dependencies (fix Apollo Client resolution)
+  // ============================================================================
+  optimizeDeps: {
+    include: ["@apollo/client"],
+    esbuildOptions: {
+      // Use 'module' field for ESM packages
+      mainFields: ["module", "main"],
+    },
+  },
+
+  // ============================================================================
+  // SSR Configuration (disable for better Apollo compatibility)
+  // ============================================================================
+  ssr: {
+    noExternal: ["@apollo/client"],
   },
 
   // ============================================================================

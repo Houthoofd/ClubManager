@@ -1,0 +1,77 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Testing
+coverage
+*.test.ts
+*.spec.ts
+__tests__
+__mocks__
+*.test.js
+*.spec.js
+
+# Development files
+.env.local
+.env.development
+.env.test
+*.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+docs
+*.md
+README.md
+CHANGELOG.md
+
+# Build artifacts (will be generated in container)
+dist
+build
+.cache
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma
+prisma/migrations/*.sql
+prisma/dev.db
+prisma/dev.db-journal
+
+# Misc
+.editorconfig
+.prettierrc
+.prettierignore
+.eslintrc
+.eslintignore
+tsconfig.json
+jest.config.*
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Temporary files
+tmp
+temp
+*.tmp

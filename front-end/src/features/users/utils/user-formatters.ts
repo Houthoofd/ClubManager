@@ -5,18 +5,18 @@
  * Used across User components for consistent display
  */
 
-import { format, parseISO, differenceInYears } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format, parseISO, differenceInYears } from "date-fns";
+import { fr } from "date-fns/locale";
 
 /**
  * User role type
  */
-export type UserRole = 'admin' | 'teacher' | 'student' | 'member' | 'guest';
+export type UserRole = "admin" | "teacher" | "student" | "member" | "guest";
 
 /**
  * User status type
  */
-export type UserStatus = 'active' | 'inactive' | 'pending' | 'suspended' | 'banned';
+export type UserStatus = "active" | "inactive" | "pending" | "suspended" | "banned";
 
 /**
  * Format user full name
@@ -24,12 +24,11 @@ export type UserStatus = 'active' | 'inactive' | 'pending' | 'suspended' | 'bann
  * @param lastName - User's last name
  * @returns Formatted full name
  */
-export const formatUserFullName = (
-  firstName: string,
-  lastName: string
-): string => {
-  if (!firstName && !lastName) return 'N/A';
-  return `${firstName || ''} ${lastName || ''}`.trim();
+export const formatUserFullName = (firstName: string, lastName: string): string => {
+  if (!firstName && !lastName) return "N/A";
+  const fullName = `${firstName || ""} ${lastName || ""}`.trim();
+  // Replace multiple spaces with single space
+  return fullName.replace(/\s+/g, " ");
 };
 
 /**
@@ -38,13 +37,10 @@ export const formatUserFullName = (
  * @param lastName - User's last name
  * @returns User initials (ex: "JD")
  */
-export const formatUserInitials = (
-  firstName: string,
-  lastName: string
-): string => {
-  const first = firstName?.charAt(0)?.toUpperCase() || '';
-  const last = lastName?.charAt(0)?.toUpperCase() || '';
-  return `${first}${last}`.trim() || '?';
+export const formatUserInitials = (firstName: string, lastName: string): string => {
+  const first = firstName?.charAt(0)?.toUpperCase() || "";
+  const last = lastName?.charAt(0)?.toUpperCase() || "";
+  return `${first}${last}`.trim() || "?";
 };
 
 /**
@@ -57,7 +53,7 @@ export const formatUserInitials = (
 export const formatUserDisplayName = (
   firstName: string,
   lastName: string,
-  preferredName?: string
+  preferredName?: string,
 ): string => {
   if (preferredName) return preferredName;
   return formatUserFullName(firstName, lastName);
@@ -70,11 +66,11 @@ export const formatUserDisplayName = (
  */
 export const getUserRoleLabel = (role: UserRole): string => {
   const labels: Record<UserRole, string> = {
-    admin: 'auth.roles.admin',
-    teacher: 'auth.roles.teacher',
-    student: 'auth.roles.student',
-    member: 'auth.roles.member',
-    guest: 'auth.roles.guest',
+    admin: "auth.roles.admin",
+    teacher: "auth.roles.teacher",
+    student: "auth.roles.student",
+    member: "auth.roles.member",
+    guest: "auth.roles.guest",
   };
   return labels[role] || role;
 };
@@ -85,16 +81,16 @@ export const getUserRoleLabel = (role: UserRole): string => {
  * @returns PatternFly color variant
  */
 export const getUserRoleColor = (
-  role: UserRole
-): 'blue' | 'green' | 'orange' | 'purple' | 'default' => {
-  const colors: Record<UserRole, 'blue' | 'green' | 'orange' | 'purple' | 'default'> = {
-    admin: 'purple',
-    teacher: 'blue',
-    student: 'green',
-    member: 'orange',
-    guest: 'default',
+  role: UserRole,
+): "blue" | "green" | "orange" | "purple" | "default" => {
+  const colors: Record<UserRole, "blue" | "green" | "orange" | "purple" | "default"> = {
+    admin: "purple",
+    teacher: "blue",
+    student: "green",
+    member: "orange",
+    guest: "default",
   };
-  return colors[role] || 'default';
+  return colors[role] || "default";
 };
 
 /**
@@ -104,11 +100,11 @@ export const getUserRoleColor = (
  */
 export const getUserStatusLabel = (status: UserStatus): string => {
   const labels: Record<UserStatus, string> = {
-    active: 'common.status.active',
-    inactive: 'common.status.inactive',
-    pending: 'common.status.pending',
-    suspended: 'users.status.suspended',
-    banned: 'users.status.banned',
+    active: "common.status.active",
+    inactive: "common.status.inactive",
+    pending: "common.status.pending",
+    suspended: "users.status.suspended",
+    banned: "users.status.banned",
   };
   return labels[status] || status;
 };
@@ -119,16 +115,16 @@ export const getUserStatusLabel = (status: UserStatus): string => {
  * @returns PatternFly color variant
  */
 export const getUserStatusColor = (
-  status: UserStatus
-): 'success' | 'info' | 'warning' | 'danger' | 'default' => {
-  const colors: Record<UserStatus, 'success' | 'info' | 'warning' | 'danger' | 'default'> = {
-    active: 'success',
-    inactive: 'default',
-    pending: 'info',
-    suspended: 'warning',
-    banned: 'danger',
+  status: UserStatus,
+): "success" | "info" | "warning" | "danger" | "default" => {
+  const colors: Record<UserStatus, "success" | "info" | "warning" | "danger" | "default"> = {
+    active: "success",
+    inactive: "default",
+    pending: "info",
+    suspended: "warning",
+    banned: "danger",
   };
-  return colors[status] || 'default';
+  return colors[status] || "default";
 };
 
 /**
@@ -140,11 +136,12 @@ export const getUserStatusColor = (
 export const formatUserEmail = (email: string, mask: boolean = false): string => {
   if (!mask) return email;
 
-  const [username, domain] = email.split('@');
+  const [username, domain] = email.split("@");
   if (!username || !domain) return email;
 
-  const visibleChars = Math.min(3, Math.floor(username.length / 2));
-  const maskedUsername = username.substring(0, visibleChars) + '***';
+  // Show at least 1 char, up to half the username length (max 3)
+  const visibleChars = Math.max(1, Math.min(3, Math.floor(username.length / 2)));
+  const maskedUsername = username.substring(0, visibleChars) + "***";
   return `${maskedUsername}@${domain}`;
 };
 
@@ -156,19 +153,19 @@ export const formatUserEmail = (email: string, mask: boolean = false): string =>
  */
 export const formatUserPhone = (
   phone: string,
-  format: 'international' | 'local' = 'international'
+  format: "international" | "local" = "international",
 ): string => {
-  if (!phone) return 'N/A';
+  if (!phone) return "N/A";
 
   // Remove all non-digits
-  const digits = phone.replace(/\D/g, '');
+  const digits = phone.replace(/\D/g, "");
 
-  if (format === 'international' && digits.length >= 10) {
+  if (format === "international" && digits.length >= 10) {
     // Format: +32 123 45 67 89
     return `+${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 9)} ${digits.slice(9)}`;
   }
 
-  if (format === 'local' && digits.length >= 9) {
+  if (format === "local" && digits.length >= 9) {
     // Format: 0123 45 67 89
     return `${digits.slice(0, 4)} ${digits.slice(4, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`;
   }
@@ -184,14 +181,14 @@ export const formatUserPhone = (
  */
 export const formatUserJoinDate = (
   date: string | Date,
-  formatStr: string = 'dd/MM/yyyy'
+  formatStr: string = "dd/MM/yyyy",
 ): string => {
   try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
     return format(dateObj, formatStr, { locale: fr });
   } catch (error) {
-    console.error('Invalid date:', date);
-    return 'N/A';
+    console.error("Invalid date:", date);
+    return "N/A";
   }
 };
 
@@ -202,7 +199,13 @@ export const formatUserJoinDate = (
  */
 export const formatUserLastLogin = (date: string | Date): string => {
   try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    const dateObj = typeof date === "string" ? parseISO(date) : date;
+
+    // Check if date is invalid
+    if (isNaN(dateObj.getTime())) {
+      return "Jamais";
+    }
+
     const now = new Date();
     const diffInMs = now.getTime() - dateObj.getTime();
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
@@ -215,17 +218,17 @@ export const formatUserLastLogin = (date: string | Date): string => {
     if (diffInDays < 7) return `Il y a ${diffInDays}j`;
     if (diffInDays < 30) {
       const weeks = Math.floor(diffInDays / 7);
-      return `Il y a ${weeks} semaine${weeks > 1 ? 's' : ''}`;
+      return `Il y a ${weeks} semaine${weeks > 1 ? "s" : ""}`;
     }
     if (diffInDays < 365) {
       const months = Math.floor(diffInDays / 30);
       return `Il y a ${months} mois`;
     }
     const years = Math.floor(diffInDays / 365);
-    return `Il y a ${years} an${years > 1 ? 's' : ''}`;
+    return `Il y a ${years} an${years > 1 ? "s" : ""}`;
   } catch (error) {
-    console.error('Invalid date:', date);
-    return 'Jamais';
+    console.error("Invalid date:", date);
+    return "Jamais";
   }
 };
 
@@ -236,10 +239,23 @@ export const formatUserLastLogin = (date: string | Date): string => {
  */
 export const calculateUserAge = (birthDate: string | Date): number => {
   try {
-    const dateObj = typeof birthDate === 'string' ? parseISO(birthDate) : birthDate;
-    return differenceInYears(new Date(), dateObj);
+    const dateObj = typeof birthDate === "string" ? parseISO(birthDate) : birthDate;
+
+    // Check if date is invalid
+    if (isNaN(dateObj.getTime())) {
+      return 0;
+    }
+
+    const age = differenceInYears(new Date(), dateObj);
+
+    // Check if age calculation resulted in NaN
+    if (isNaN(age)) {
+      return 0;
+    }
+
+    return age;
   } catch (error) {
-    console.error('Invalid birth date:', birthDate);
+    console.error("Invalid birth date:", birthDate);
     return 0;
   }
 };
@@ -251,8 +267,8 @@ export const calculateUserAge = (birthDate: string | Date): number => {
  */
 export const formatUserAge = (birthDate: string | Date): string => {
   const age = calculateUserAge(birthDate);
-  if (age === 0) return 'N/A';
-  return `${age} an${age > 1 ? 's' : ''}`;
+  if (age === 0 || isNaN(age)) return "N/A";
+  return `${age} an${age > 1 ? "s" : ""}`;
 };
 
 /**
@@ -261,7 +277,7 @@ export const formatUserAge = (birthDate: string | Date): string => {
  * @returns True if user is active
  */
 export const isUserActive = (status: UserStatus): boolean => {
-  return status === 'active';
+  return status === "active";
 };
 
 /**
@@ -270,7 +286,7 @@ export const isUserActive = (status: UserStatus): boolean => {
  * @returns True if user can be edited
  */
 export const canEditUser = (status: UserStatus): boolean => {
-  return status !== 'banned';
+  return status !== "banned";
 };
 
 /**
@@ -279,7 +295,7 @@ export const canEditUser = (status: UserStatus): boolean => {
  * @returns True if user can be deleted
  */
 export const canDeleteUser = (role: UserRole): boolean => {
-  return role !== 'admin'; // Cannot delete admins
+  return role !== "admin"; // Cannot delete admins
 };
 
 /**
@@ -288,7 +304,7 @@ export const canDeleteUser = (role: UserRole): boolean => {
  * @returns Sorted users array
  */
 export const sortUsersByName = <T extends { firstName: string; lastName: string }>(
-  users: T[]
+  users: T[],
 ): T[] => {
   return [...users].sort((a, b) => {
     const nameA = formatUserFullName(a.firstName, a.lastName).toLowerCase();
@@ -302,12 +318,10 @@ export const sortUsersByName = <T extends { firstName: string; lastName: string 
  * @param users - Array of users
  * @returns Sorted users array
  */
-export const sortUsersByJoinDate = <T extends { createdAt: string | Date }>(
-  users: T[]
-): T[] => {
+export const sortUsersByJoinDate = <T extends { createdAt: string | Date }>(users: T[]): T[] => {
   return [...users].sort((a, b) => {
-    const dateA = typeof a.createdAt === 'string' ? parseISO(a.createdAt) : a.createdAt;
-    const dateB = typeof b.createdAt === 'string' ? parseISO(b.createdAt) : b.createdAt;
+    const dateA = typeof a.createdAt === "string" ? parseISO(a.createdAt) : a.createdAt;
+    const dateB = typeof b.createdAt === "string" ? parseISO(b.createdAt) : b.createdAt;
     return dateB.getTime() - dateA.getTime();
   });
 };
@@ -320,9 +334,9 @@ export const sortUsersByJoinDate = <T extends { createdAt: string | Date }>(
  */
 export const filterUsersByRole = <T extends { role: UserRole }>(
   users: T[],
-  role: UserRole | 'all'
+  role: UserRole | "all",
 ): T[] => {
-  if (role === 'all') return users;
+  if (role === "all") return users;
   return users.filter((user) => user.role === role);
 };
 
@@ -334,9 +348,9 @@ export const filterUsersByRole = <T extends { role: UserRole }>(
  */
 export const filterUsersByStatus = <T extends { status: UserStatus }>(
   users: T[],
-  status: UserStatus | 'all'
+  status: UserStatus | "all",
 ): T[] => {
-  if (status === 'all') return users;
+  if (status === "all") return users;
   return users.filter((user) => user.status === status);
 };
 
@@ -350,7 +364,7 @@ export const filterUsersByStatus = <T extends { status: UserStatus }>(
 export const getUserAvatarOrInitials = (
   avatarUrl: string | undefined,
   firstName: string,
-  lastName: string
+  lastName: string,
 ): string => {
   if (avatarUrl) return avatarUrl;
 
@@ -376,7 +390,7 @@ export const isValidUserEmail = (email: string): boolean => {
  */
 export const sanitizeUserInput = (input: string): string => {
   return input
-    .replace(/[<>]/g, '') // Remove < and >
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/[<>]/g, "") // Remove < and >
+    .replace(/javascript:/gi, "") // Remove javascript: protocol
     .trim();
 };

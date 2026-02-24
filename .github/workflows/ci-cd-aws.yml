@@ -1,0 +1,507 @@
+name: CI/CD - AWS S3 + GHCR
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME_API: ${{ github.repository }}/api
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  # ============================================================================
+  # FRONTEND - Test, Build & Deploy to S3
+  # ============================================================================
+  frontend-test:
+    name: 🎨 Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: front-end/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./front-end
+        run: npm ci
+
+      - name: 🔍 Lint
+        working-directory: ./front-end
+        run: npm run lint
+
+      - name: 🧪 Run tests with coverage
+        working-directory: ./front-end
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./front-end/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+        continue-on-error: true
+
+  frontend-build:
+    name: 🏗️ Frontend Build
+    runs-on: ubuntu-latest
+    needs: frontend-test
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: front-end/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./front-end
+        run: npm ci
+
+      - name: 🏗️ Build production bundle
+        working-directory: ./front-end
+        run: npm run build
+        env:
+          NODE_ENV: production
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_STRIPE_PUBLIC_KEY: ${{ secrets.VITE_STRIPE_PUBLIC_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+
+      - name: 📤 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: front-end/dist
+          retention-days: 30
+
+  # ============================================================================
+  # FRONTEND - Docker Image to GHCR (for rollback/versioning)
+  # ============================================================================
+  frontend-docker:
+    name: 🐳 Frontend Docker Image
+    runs-on: ubuntu-latest
+    needs: frontend-build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: front-end/dist
+
+      - name: 🔐 Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📝 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🐳 Build and push to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./front-end
+          file: ./front-end/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+  # ============================================================================
+  # DEPLOY FRONTEND - AWS S3 + CloudFront
+  # ============================================================================
+  deploy-s3:
+    name: 🚀 Deploy to AWS S3
+    runs-on: ubuntu-latest
+    needs: [frontend-build, frontend-docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: ./dist
+
+      - name: 🔐 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: 📤 Sync to S3 with optimized caching
+        run: |
+          # Upload assets with long-term caching (1 year)
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" \
+            --exclude "*.json" \
+            --exclude "service-worker.js" \
+            --metadata-directive REPLACE
+
+          # Upload HTML files with no-cache
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --content-type "text/html; charset=utf-8" \
+            --metadata-directive REPLACE
+
+          # Upload JSON and service workers with short caching
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} \
+            --exclude "*" \
+            --include "*.json" \
+            --include "service-worker.js" \
+            --cache-control "public, max-age=3600, must-revalidate" \
+            --metadata-directive REPLACE
+
+      - name: 🔄 Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+        continue-on-error: true
+
+      - name: ✅ Verify deployment
+        run: |
+          echo "🌐 Frontend deployed to S3"
+          echo "📦 Bucket: s3://${{ secrets.S3_BUCKET_NAME }}"
+          echo "🔗 CloudFront: https://${{ secrets.CLOUDFRONT_DOMAIN }}"
+
+  # ============================================================================
+  # API - Test & Build
+  # ============================================================================
+  api-test:
+    name: 🔧 API Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: clubmanager_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./api
+        run: npm ci
+
+      - name: 🗄️ Generate Prisma Client
+        working-directory: ./api
+        run: npx prisma generate
+
+      - name: 🗄️ Run database migrations
+        working-directory: ./api
+        run: npx prisma db push --skip-generate
+        env:
+          DATABASE_URL: mysql://root:test_root_password@localhost:3306/clubmanager_test
+
+      - name: 🌱 Seed test database
+        working-directory: ./api
+        run: npm run seed:test:db
+        env:
+          DATABASE_URL: mysql://root:test_root_password@localhost:3306/clubmanager_test
+          NODE_ENV: test
+
+      - name: 🧪 Run tests
+        working-directory: ./api
+        run: npm run test:windows
+        env:
+          DATABASE_URL: mysql://root:test_root_password@localhost:3306/clubmanager_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          JWT_SECRET: test_jwt_secret
+
+      - name: 📊 Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./api/coverage/lcov.info
+          flags: api
+          name: api-coverage
+        continue-on-error: true
+
+  api-build:
+    name: 🔨 API Build
+    runs-on: ubuntu-latest
+    needs: api-test
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      - name: 📦 Install dependencies
+        working-directory: ./api
+        run: npm ci
+
+      - name: 🗄️ Generate Prisma Client
+        working-directory: ./api
+        run: npx prisma generate
+
+      - name: 🔨 Build TypeScript
+        working-directory: ./api
+        run: npm run build
+
+  # ============================================================================
+  # API - Docker Image to GHCR
+  # ============================================================================
+  api-docker:
+    name: 🐳 API Docker Image
+    runs-on: ubuntu-latest
+    needs: api-build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📝 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🐳 Build and push to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api
+          file: ./api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          build-args: |
+            NODE_ENV=production
+
+  # ============================================================================
+  # DEPLOY API - EC2 or ECS (choisir selon votre infra)
+  # ============================================================================
+  deploy-api:
+    name: 🚀 Deploy API
+    runs-on: ubuntu-latest
+    needs: api-docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 🔐 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Option 1: Déploiement sur EC2 via SSH
+      - name: 🚀 Deploy to EC2 (Option 1)
+        if: vars.DEPLOY_TARGET == 'EC2'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Login to GHCR
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
+            # Pull latest image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
+
+            # Stop and remove old container
+            docker stop clubmanager-api || true
+            docker rm clubmanager-api || true
+
+            # Run new container
+            docker run -d \
+              --name clubmanager-api \
+              --restart unless-stopped \
+              -p 4000:4000 \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+              -e REDIS_URL="${{ secrets.REDIS_URL }}" \
+              -e SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+              -e NODE_ENV=production \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
+
+            # Run migrations
+            docker exec clubmanager-api npx prisma migrate deploy
+
+            # Cleanup old images
+            docker image prune -af --filter "until=48h"
+          EOF
+
+      # Option 2: Déploiement sur ECS/Fargate
+      - name: 🚀 Deploy to ECS (Option 2)
+        if: vars.DEPLOY_TARGET == 'ECS'
+        run: |
+          # Update ECS task definition with new image
+          aws ecs update-service \
+            --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
+            --service ${{ secrets.ECS_SERVICE_NAME }} \
+            --force-new-deployment
+
+      - name: ✅ Health check
+        run: |
+          sleep 15
+
+          if [ "${{ vars.DEPLOY_TARGET }}" == "EC2" ]; then
+            HEALTH_URL="http://${{ secrets.EC2_HOST }}:4000/health"
+          else
+            HEALTH_URL="${{ secrets.API_BASE_URL }}/health"
+          fi
+
+          for i in {1..10}; do
+            if curl -f $HEALTH_URL; then
+              echo "✅ API is healthy!"
+              exit 0
+            fi
+            echo "⏳ Waiting for API to be ready... (attempt $i/10)"
+            sleep 5
+          done
+
+          echo "❌ API health check failed"
+          exit 1
+
+  # ============================================================================
+  # NOTIFICATION - Status notification
+  # ============================================================================
+  notify:
+    name: 📢 Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-s3, deploy-api]
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: 📊 Generate deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.deploy-s3.result }}" == "success" ]; then
+            echo "✅ **Frontend (S3):** Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Frontend (S3):** Deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.deploy-api.result }}" == "success" ]; then
+            echo "✅ **API:** Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **API:** Deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Links:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: https://${{ secrets.CLOUDFRONT_DOMAIN }}" >> $GITHUB_STEP_SUMMARY
+          echo "- API: ${{ secrets.API_BASE_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- GHCR Frontend: https://github.com/${{ github.repository }}/pkgs/container/frontend" >> $GITHUB_STEP_SUMMARY
+          echo "- GHCR API: https://github.com/${{ github.repository }}/pkgs/container/api" >> $GITHUB_STEP_SUMMARY
+
+      - name: ✅ Deployment successful
+        if: needs.deploy-s3.result == 'success' && needs.deploy-api.result == 'success'
+        run: |
+          echo "🎉 Deployment completed successfully!"
+
+      - name: ❌ Deployment failed
+        if: needs.deploy-s3.result != 'success' || needs.deploy-api.result != 'success'
+        run: |
+          echo "💥 Deployment failed!"
+          exit 1

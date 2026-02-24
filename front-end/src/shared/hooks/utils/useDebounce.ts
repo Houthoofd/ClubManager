@@ -21,7 +21,7 @@
  * ```
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from "react";
 
 /**
  * Debounce a value
@@ -95,68 +95,120 @@ export function useDebouncedValue<T>(
     maxWait?: number; // Maximum time to wait before forcing update
     leading?: boolean; // Update immediately on first change
     trailing?: boolean; // Update after delay (default: true)
-  }
+  },
 ) {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   const [isPending, setIsPending] = useState(false);
 
+  // Use refs to store timeout IDs to avoid stale closures
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const maxWaitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Track if this is the first mount (skip debounce on initial render)
+  const isFirstMount = useRef(true);
+
+  // Store current value for flush
+  const currentValueRef = useRef<T>(value);
+
+  // Destructure options to avoid reference changes causing re-renders
+  const maxWait = options?.maxWait;
+  const leading = options?.leading ?? false;
+  const trailing = options?.trailing ?? true;
+
   useEffect(() => {
-    const {
-      maxWait,
-      leading = false,
-      trailing = true,
-    } = options || {};
+    currentValueRef.current = value;
 
-    let timeoutId: NodeJS.Timeout | null = null;
-    let maxWaitTimeoutId: NodeJS.Timeout | null = null;
-
-    // Leading edge: update immediately
-    if (leading && !isPending) {
-      setDebouncedValue(value);
+    // Skip effect on first mount - initial value is already set
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
     }
 
+    // Clear any existing timeouts
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (maxWaitTimeoutRef.current) {
+      clearTimeout(maxWaitTimeoutRef.current);
+      maxWaitTimeoutRef.current = null;
+    }
+
+    // Leading edge: update immediately
+    if (leading) {
+      setDebouncedValue(value);
+      if (!trailing && !maxWait) {
+        // If only leading, no debounce needed
+        return;
+      }
+    }
+
+    // Set pending state
     setIsPending(true);
 
     // Normal debounce timeout
     if (trailing) {
-      timeoutId = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setDebouncedValue(value);
         setIsPending(false);
-        if (maxWaitTimeoutId) {
-          clearTimeout(maxWaitTimeoutId);
+        if (maxWaitTimeoutRef.current) {
+          clearTimeout(maxWaitTimeoutRef.current);
+          maxWaitTimeoutRef.current = null;
         }
       }, delay);
     }
 
     // Max wait timeout: force update after maxWait
     if (maxWait) {
-      maxWaitTimeoutId = setTimeout(() => {
+      maxWaitTimeoutRef.current = setTimeout(() => {
         setDebouncedValue(value);
         setIsPending(false);
-        if (timeoutId) {
-          clearTimeout(timeoutId);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
         }
       }, maxWait);
     }
 
     // Cleanup
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (maxWaitTimeoutId) clearTimeout(maxWaitTimeoutId);
-      setIsPending(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (maxWaitTimeoutRef.current) {
+        clearTimeout(maxWaitTimeoutRef.current);
+        maxWaitTimeoutRef.current = null;
+      }
     };
-  }, [value, delay, options, isPending]);
+  }, [value, delay, maxWait, leading, trailing]);
 
-  // Cancel pending debounce
-  const cancel = () => {
+  // Cancel pending debounce - use useCallback to maintain stable reference
+  const cancel = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (maxWaitTimeoutRef.current) {
+      clearTimeout(maxWaitTimeoutRef.current);
+      maxWaitTimeoutRef.current = null;
+    }
     setIsPending(false);
-  };
+  }, []);
 
-  // Flush: immediately update to current value
-  const flush = () => {
-    setDebouncedValue(value);
+  // Flush: immediately update to current value - use useCallback
+  const flush = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (maxWaitTimeoutRef.current) {
+      clearTimeout(maxWaitTimeoutRef.current);
+      maxWaitTimeoutRef.current = null;
+    }
+    setDebouncedValue(currentValueRef.current);
     setIsPending(false);
-  };
+  }, []);
 
   return {
     debouncedValue,
@@ -188,31 +240,38 @@ export function useDebouncedValue<T>(
  */
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
-  delay: number = 500
+  delay: number = 500,
 ): (...args: Parameters<T>) => void {
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  // Use ref instead of state to persist timeout ID across renders
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef(callback);
+
+  // Update callback ref on each render to avoid stale closures
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   useEffect(() => {
     // Cleanup on unmount
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
-  }, [timeoutId]);
+  }, []);
 
   return (...args: Parameters<T>) => {
     // Clear existing timeout
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
 
     // Set new timeout
-    const newTimeoutId = setTimeout(() => {
-      callback(...args);
+    timeoutRef.current = setTimeout(() => {
+      callbackRef.current(...args);
+      timeoutRef.current = null;
     }, delay);
-
-    setTimeoutId(newTimeoutId);
   };
 }
 
