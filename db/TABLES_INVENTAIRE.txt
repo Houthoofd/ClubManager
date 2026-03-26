@@ -1,0 +1,332 @@
+================================================================================
+CLUBMANAGER - INVENTAIRE COMPLET DES TABLES DE BASE DE DONNÉES
+================================================================================
+Date: 2025-01-24
+Version: 1.0
+Total: 38 tables identifiées
+
+Cet inventaire a été créé en croisant :
+  - Les fichiers SQL dans db/creation/ et db/tables/
+  - Les clients TypeScript dans api/src/db/clients/
+  - Les requêtes SQL dans le code source
+
+================================================================================
+TABLES DE RÉFÉRENCE (6 tables)
+================================================================================
+
+1.  genres
+    - Gestion des genres (Homme, Femme, Autre)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/utilisateurs/
+
+2.  grades
+    - Grades de jiu-jitsu (ceintures)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/utilisateurs/
+
+3.  status
+    - Statuts généraux (actif, inactif, suspendu, etc.)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/*/
+
+4.  plans_tarifaires
+    - Plans d'abonnement (mensuel, annuel, etc.)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/paiements/
+
+5.  categories
+    - Catégories d'articles du magasin
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/magasin/
+
+6.  tailles
+    - Tailles disponibles pour les articles (XS, S, M, L, XL, A1, A2, etc.)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/magasin/
+
+================================================================================
+UTILISATEURS ET AUTHENTIFICATION (7 tables)
+================================================================================
+
+7.  utilisateurs
+    - Table principale des utilisateurs du club
+    - Champs: userId, first_name, last_name, nom_utilisateur, email, password,
+              date_of_birth, telephone, adresse, genre_id, grade_id,
+              abonnement_id, status_id, active, email_verified, photo_url
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/utilisateurs/
+
+8.  email_validation_tokens
+    - Tokens pour validation email, reset password, userId recovery
+    - Types: email_confirmation, password_setup, password_reset, userId_recovery
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/auth/
+
+9.  password_reset_tokens
+    - Tokens de réinitialisation de mot de passe
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/auth/
+
+10. password_reset_attempts
+    - Suivi des tentatives de reset password (protection brute force)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/auth/
+
+11. auth_attempts
+    - Suivi des tentatives de connexion (protection brute force)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/auth/
+
+12. manual_recovery_requests
+    - Demandes manuelles de récupération de compte
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/auth/
+
+13. validation_tokens
+    - Tokens génériques de validation
+    - Source: db/creation/clubmanager.sql
+
+================================================================================
+COURS ET EMPLOI DU TEMPS (6 tables)
+================================================================================
+
+14. cours_recurrent
+    - Cours récurrents hebdomadaires (template)
+    - Champs: type_cours, jour_semaine (1-7), heure_debut, heure_fin, active
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/cours/
+
+15. cours
+    - Instances de cours générées depuis cours_recurrent
+    - Champs: date_cours, type_cours, heure_debut, heure_fin, cours_recurrent_id
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/cours/
+
+16. professeurs
+    - Professeurs/Instructeurs du club
+    - Champs: nom, prenom, email, telephone, specialite, grade_id, photo_url
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/professeurs/
+
+17. cours_recurrent_professeur
+    - Association Many-to-Many: cours récurrents <-> professeurs
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/cours/
+
+18. inscriptions
+    - Inscriptions des utilisateurs aux cours
+    - Champs: utilisateur_id, cours_id, status_id (présence), commentaire
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/inscription/
+
+19. reservations
+    - Réservations de cours (système de booking)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/cours/
+
+================================================================================
+PAIEMENTS ET ABONNEMENTS (2 tables)
+================================================================================
+
+20. paiements
+    - Historique des paiements (Stripe, espèces, virement)
+    - Champs: utilisateur_id, montant, methode_paiement, statut,
+              stripe_payment_intent_id, stripe_charge_id, plan_tarifaire_id
+    - Statuts: en_attente, valide, echoue, rembourse
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/paiements/
+
+21. echeances_paiements
+    - Échéances de paiement pour abonnements récurrents
+    - Champs: utilisateur_id, plan_tarifaire_id, montant, date_echeance,
+              statut, paiement_id
+    - Statuts: en_attente, paye, en_retard, annule
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/paiements/
+
+================================================================================
+MAGASIN EN LIGNE (6 tables)
+================================================================================
+
+22. articles
+    - Articles vendus dans le magasin (kimonos, ceintures, rashguards, etc.)
+    - Champs: nom, description, prix, image_url, categorie_id, actif
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/magasin/
+
+23. images
+    - Images additionnelles des articles (galerie)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/magasin/
+
+24. stocks
+    - Gestion des stocks par article et taille
+    - Champs: article_id, taille_id, quantite, quantite_minimum
+    - Calculs: stock_physique, stock_reserve, stock_disponible (triggers)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/stock/
+
+25. commandes
+    - Commandes passées par les utilisateurs
+    - Champs: unique_id, numero_commande, utilisateur_id, total,
+              date_commande, statut, ip_address, user_agent
+    - Statuts: en_attente, payee, expediee, livree, annulee
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/commandes/
+
+26. commande_articles
+    - Lignes de commande (articles + quantités + prix)
+    - Champs: commande_id, article_id, taille_id, quantite, prix
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/magasin/
+
+27. mouvements_stock
+    - Historique des mouvements de stock (audit trail)
+    - Types: commande, livraison, annulation, retour, ajustement, inventaire
+    - Champs: article_id, taille, type_mouvement, quantite_avant,
+              quantite_apres, quantite_mouvement, commande_id, motif
+    - Source: api/src/db/clients/stock/stock.ts
+
+================================================================================
+MESSAGERIE ET NOTIFICATIONS (5 tables)
+================================================================================
+
+28. messages
+    - Messages entre utilisateurs et admin
+    - Champs: expediteur_id, destinataire_id, sujet, contenu, lu, date_lecture
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/messages/
+
+29. message_status
+    - Statuts de lecture des messages
+    - Source: db/creation/clubmanager.sql
+
+30. types_messages_personnalises
+    - Types de messages personnalisés (bienvenue, rappel, relance, etc.)
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/messagerie/
+
+31. messages_personnalises
+    - Messages personnalisés/templates pour envoi automatique
+    - Champs: type_id, titre, contenu, actif
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/messagerie/
+
+32. notifications
+    - Notifications système (push, email, SMS)
+    - Types: info, warning, error, success
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/*/
+
+================================================================================
+ALERTES SYSTÈME (3 tables)
+================================================================================
+
+33. alertes_types
+    - Types d'alertes prédéfinis
+    - Codes: COMPTE_INCOMPLET, MOT_PASSE_FAIBLE, PAIEMENT_RETARD,
+             PAIEMENT_CRITIQUE, ABSENCE_PROLONGEE, SANS_ABONNEMENT, etc.
+    - Priorités: basse, normale, haute, critique
+    - Source: db/creation/db_alerts_tables_only.sql, api/src/db/clients/alertes/
+
+34. alertes_utilisateurs
+    - Alertes spécifiques aux utilisateurs
+    - Champs: utilisateur_id, alerte_type_id, statut, donnees_contexte (JSON),
+              date_detection, date_resolution, notes, resolu_par
+    - Statuts: active, resolue, ignoree
+    - Source: db/creation/db_alerts_tables_only.sql, api/src/db/clients/alertes/
+
+35. alertes_actions
+    - Historique des actions sur les alertes
+    - Types: message_envoye, information_mise_a_jour, paiement_recu,
+             statut_change, autre
+    - Source: db/creation/db_alerts_tables_only.sql, api/src/db/clients/alertes/
+
+================================================================================
+GROUPES ET PERMISSIONS (2 tables)
+================================================================================
+
+36. groupes
+    - Groupes d'utilisateurs (admin, membre, professeur, visiteur, etc.)
+    - Source: db/creation/clubmanager.sql
+
+37. groupes_utilisateurs
+    - Association Many-to-Many: utilisateurs <-> groupes
+    - Source: db/creation/clubmanager.sql
+
+================================================================================
+STATISTIQUES ET INFORMATIONS (2 tables)
+================================================================================
+
+38. statistiques
+    - Statistiques diverses du club
+    - Champs: type, cle, valeur (JSON ou texte), date_stat
+    - Types: frequentation, revenue, inscriptions, presences, etc.
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/statistiques/
+
+39. informations
+    - Informations générales du club (config)
+    - Champs: cle, valeur, description
+    - Exemples: horaires, adresse, contact, tarifs, règles, etc.
+    - Source: db/creation/clubmanager.sql, api/src/db/clients/informations/
+
+================================================================================
+VUES ET TABLES TEMPORAIRES DÉTECTÉES
+================================================================================
+
+Les requêtes utilisent également des vues/tables calculées :
+  - cours_par_mois : Agrégation des cours par mois
+  - total_frequentation : Calcul de la fréquentation globale
+  - presences_par_mois : Calcul des présences mensuelles
+  - cours_recurrents_actifs : Filtre des cours actifs
+  - seq_0_to_52 : Séquence pour génération de calendrier
+
+Ces vues ne sont pas incluses dans le schéma consolidé car elles sont
+généralement créées dynamiquement ou via des procédures stockées.
+
+================================================================================
+RELATIONS PRINCIPALES
+================================================================================
+
+UTILISATEURS:
+  → genres (genre_id)
+  → grades (grade_id)
+  → status (status_id)
+  → plans_tarifaires (abonnement_id)
+
+COURS:
+  → cours_recurrent (cours_recurrent_id)
+  → cours_recurrent_professeur → professeurs
+  → inscriptions → utilisateurs
+
+PAIEMENTS:
+  → utilisateurs (utilisateur_id)
+  → plans_tarifaires (plan_tarifaire_id)
+  → echeances_paiements (paiement_id)
+
+MAGASIN:
+  → articles → categories
+  → stocks → articles, tailles
+  → commandes → utilisateurs
+  → commande_articles → commandes, articles, tailles
+  → mouvements_stock → articles
+
+ALERTES:
+  → alertes_utilisateurs → utilisateurs, alertes_types
+  → alertes_actions → alertes_utilisateurs, utilisateurs
+
+================================================================================
+NOTES IMPORTANTES
+================================================================================
+
+1. Encodage: Toutes les tables utilisent UTF8MB4 pour support Unicode complet
+2. Moteur: InnoDB pour support des transactions et foreign keys
+3. Timestamps: La plupart des tables ont created_at et updated_at
+4. Soft Delete: Certaines tables utilisent un champ 'active' au lieu de DELETE
+5. JSON: Plusieurs tables stockent des données JSON (donnees_contexte, etc.)
+6. Triggers: Des triggers existent pour mettre à jour automatiquement:
+   - Le total des commandes (commande_articles)
+   - Les stocks disponibles (stocks)
+   - Les statuts de présence (inscriptions)
+
+================================================================================
+FICHIERS SOURCES ANALYSÉS
+================================================================================
+
+SQL:
+  - db/creation/clubmanager.sql (fichier principal, 4175 lignes)
+  - db/creation/db_alerts_tables_only.sql (système d'alertes)
+  - db/tables/*.sql (définitions individuelles)
+
+TypeScript:
+  - api/src/db/clients/alertes/alertes.ts
+  - api/src/db/clients/auth/auth.ts
+  - api/src/db/clients/commandes/commandes.ts
+  - api/src/db/clients/compte/compte.ts
+  - api/src/db/clients/cours/cours.ts
+  - api/src/db/clients/informations/informations.ts
+  - api/src/db/clients/inscription/inscription.ts
+  - api/src/db/clients/magasin/magasin.ts
+  - api/src/db/clients/messagerie/*.ts
+  - api/src/db/clients/messages/*.ts
+  - api/src/db/clients/paiements/paiements.ts
+  - api/src/db/clients/professeurs/professeurs.ts
+  - api/src/db/clients/statistiques/statistiques.ts
+  - api/src/db/clients/stock/stock.ts
+  - api/src/db/clients/utilisateurs/*.ts
+  - api/src/db/clients/verification/verifications.ts
+
+================================================================================
+FIN DE L'INVENTAIRE
+================================================================================

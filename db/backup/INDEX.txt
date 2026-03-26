@@ -1,0 +1,409 @@
+================================================================================
+CLUBMANAGER - INDEX COMPLET DU BACKUP
+================================================================================
+Date: 2025-01-24
+Version: 1.0
+Total: 38 tables + 10 procédures + 4 triggers + 1 event
+
+================================================================================
+STRUCTURE GLOBALE
+================================================================================
+
+backup/
+├── tables/           38 fichiers SQL (tables)
+├── procedures/       10 fichiers SQL (procédures stockées)
+├── triggers/          4 fichiers SQL (triggers)
+├── events/            1 fichier SQL (event scheduler)
+├── extract_tables.py  Script Python d'extraction
+├── README.txt         Documentation complète
+├── INDEX.txt          Ce fichier
+└── RESTORE_FULL_DATABASE.sql  Script de restauration complète
+
+================================================================================
+TABLES PAR CATÉGORIE (38 tables)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ RÉFÉRENCE (6 tables)                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+  01. tables/reference/genres.sql
+      → Genres (Masculin, Féminin)
+      → 2 enregistrements par défaut
+
+  02. tables/reference/grades.sql
+      → Grades de jiu-jitsu (ceintures)
+      → 10 grades (blanche à rouge)
+
+  03. tables/reference/status.sql
+      → Statuts généraux du système
+      → 5 statuts (actif, inactif, suspendu, en attente, expulsé)
+
+  04. tables/reference/plans_tarifaires.sql
+      → Plans d'abonnement et tarifs
+      → Données configurables
+
+  05. tables/reference/categories.sql
+      → Catégories d'articles du magasin
+      → 6 catégories (Shorts, Kimonos, Ceintures, etc.)
+
+  06. tables/reference/tailles.sql
+      → Tailles disponibles (XS, S, M, L, XL, A0-A4)
+      → 9 tailles par défaut
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ UTILISATEURS (7 tables)                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+  07. tables/users/utilisateurs.sql
+      → Table principale des utilisateurs
+      → Champs: userId, nom, email, password, genre, grade, abonnement
+
+  08. tables/users/email_validation_tokens.sql
+      → Tokens de validation email et récupération
+      → Types: email_confirmation, password_reset, userId_recovery
+
+  09. tables/users/password_reset_tokens.sql
+      → Tokens de réinitialisation mot de passe
+
+  10. tables/users/password_reset_attempts.sql
+      → Historique des tentatives de reset (brute force protection)
+
+  11. tables/users/manual_recovery_requests.sql
+      → Demandes de récupération manuelle de compte
+
+  12. tables/users/validation_tokens.sql
+      → Tokens de validation génériques
+
+  *Note: auth_attempts n'existe pas dans le fichier source*
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ COURS (6 tables)                                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+  13. tables/courses/cours_recurrent.sql
+      → Cours récurrents hebdomadaires (template)
+      → Champs: type_cours, jour_semaine (1-7), horaires
+
+  14. tables/courses/cours.sql
+      → Instances de cours générées depuis cours_recurrent
+      → 209 cours générés (exemple)
+
+  15. tables/courses/professeurs.sql
+      → Professeurs et instructeurs du club
+
+  16. tables/courses/cours_recurrent_professeur.sql
+      → Association Many-to-Many: cours <-> professeurs
+
+  17. tables/courses/inscriptions.sql
+      → Inscriptions des utilisateurs aux cours
+      → Suivi des présences
+
+  18. tables/courses/reservations.sql
+      → Réservations de cours (système de booking)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PAIEMENTS (2 tables)                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+  19. tables/payments/paiements.sql
+      → Historique des paiements (Stripe, espèces, virement)
+      → 829 paiements (exemple)
+
+  20. tables/payments/echeances_paiements.sql
+      → Échéances de paiement pour abonnements
+      → 156 échéances (exemple)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MAGASIN (6 tables)                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+  21. tables/store/articles.sql
+      → Articles du magasin (kimonos, ceintures, etc.)
+      → 5 articles (exemple)
+
+  22. tables/store/images.sql
+      → Galerie d'images pour les articles
+
+  23. tables/store/stocks.sql
+      → Gestion des stocks par article et taille
+      → Calculs: stock_physique, stock_reserve, stock_disponible
+
+  24. tables/store/commandes.sql
+      → Commandes passées par les utilisateurs
+      → 37 commandes (exemple)
+
+  25. tables/store/commande_articles.sql
+      → Lignes de commande (détails articles)
+      → 33 lignes (exemple)
+
+  26. tables/store/mouvements_stock.sql
+      → Historique des mouvements de stock (audit trail)
+      → Types: commande, livraison, annulation, retour, ajustement
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MESSAGERIE (5 tables)                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+  27. tables/messaging/messages.sql
+      → Messages entre utilisateurs et admin
+
+  28. tables/messaging/message_status.sql
+      → Statuts de lecture des messages
+
+  29. tables/messaging/types_messages_personnalises.sql
+      → Types de messages personnalisés (bienvenue, rappel, etc.)
+      → 15 types (exemple)
+
+  30. tables/messaging/messages_personnalises.sql
+      → Templates de messages automatiques
+
+  31. tables/messaging/notifications.sql
+      → Notifications système (push, email, SMS)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ALERTES (3 tables)                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+  32. tables/alerts/alertes_types.sql
+      → Types d'alertes prédéfinis
+      → 8 types: COMPTE_INCOMPLET, MOT_PASSE_FAIBLE, PAIEMENT_RETARD, etc.
+
+  33. tables/alerts/alertes_utilisateurs.sql
+      → Alertes spécifiques aux utilisateurs
+      → Statuts: active, resolue, ignoree
+
+  34. tables/alerts/alertes_actions.sql
+      → Historique des actions sur alertes
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ GROUPES (2 tables)                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+  35. tables/groups/groupes.sql
+      → Groupes d'utilisateurs (admin, membre, professeur)
+
+  36. tables/groups/groupes_utilisateurs.sql
+      → Association Many-to-Many: utilisateurs <-> groupes
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SYSTÈME (2 tables)                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+  37. tables/system/statistiques.sql
+      → Statistiques du club (fréquentation, revenus, etc.)
+
+  38. tables/system/informations.sql
+      → Configuration générale du club
+      → Clés: nom_club, adresse, contact, horaires, etc.
+
+================================================================================
+PROCÉDURES STOCKÉES (10 procédures)
+================================================================================
+
+01. procedures/generate_token.sql
+    → Génération de tokens sécurisés
+
+02. procedures/create_email_validation_token.sql
+    → Création de tokens de validation email
+
+03. procedures/validate_email_token.sql
+    → Validation des tokens email
+
+04. procedures/recuperer_userId.sql
+    → Récupération du userId d'un utilisateur
+
+05. procedures/ajouter_cours_recurrent_avec_professeurs.sql
+    → Ajout d'un cours récurrent avec ses professeurs
+
+06. procedures/modifier_cours_recurrent_avec_professeurs.sql
+    → Modification d'un cours récurrent
+
+07. procedures/delete-cours-professeurs.sql
+    → Suppression de l'association cours-professeurs
+
+08. procedures/obtenir_statistiques_frequentation.sql
+    → Calcul des statistiques de fréquentation
+
+09. procedures/validation-aleatoire.sql
+    → Validation aléatoire (tests)
+
+10. procedures/delete-pool-connexion.sql
+    → Nettoyage du pool de connexions
+
+================================================================================
+TRIGGERS (4 triggers)
+================================================================================
+
+01. triggers/after_insert_user.sql
+    → Après insertion d'un utilisateur
+
+02. triggers/after_utilisateur_update_abonnement.sql
+    → Après mise à jour d'un abonnement
+
+03. triggers/after_echeance_paiement_update.sql
+    → Après mise à jour d'une échéance de paiement
+
+04. triggers/update_professeur.sql
+    → Mise à jour automatique des professeurs
+
+================================================================================
+EVENT SCHEDULER (1 event)
+================================================================================
+
+01. events/new-date.sql
+    → Génération automatique de nouveaux cours (dates)
+
+================================================================================
+SCRIPTS UTILITAIRES
+================================================================================
+
+01. extract_tables.py
+    → Script Python pour extraire automatiquement les tables
+    → Usage: python extract_tables.py
+
+02. RESTORE_FULL_DATABASE.sql
+    → Script de restauration complète de la base
+    → Usage: mysql -u root -p < RESTORE_FULL_DATABASE.sql
+    → Ordre respecté pour les foreign keys
+
+================================================================================
+ORDRE DE CRÉATION (DÉPENDANCES)
+================================================================================
+
+Niveau 0 (aucune dépendance):
+  - reference/* (6 tables)
+  - system/statistiques
+  - system/informations
+
+Niveau 1 (dépend de reference):
+  - users/utilisateurs
+
+Niveau 2 (dépend de users):
+  - users/* (6 autres tables)
+  - courses/professeurs
+  - groups/*
+  - messaging/*
+  - alerts/alertes_types
+
+Niveau 3 (dépend de niveau 2):
+  - courses/cours_recurrent
+  - payments/paiements
+  - store/articles
+  - alerts/alertes_utilisateurs
+
+Niveau 4 (dépend de niveau 3):
+  - courses/cours
+  - courses/cours_recurrent_professeur
+  - payments/echeances_paiements
+  - store/images
+  - store/stocks
+  - store/commandes
+  - alerts/alertes_actions
+
+Niveau 5 (dépend de niveau 4):
+  - courses/inscriptions
+  - courses/reservations
+  - store/commande_articles
+  - store/mouvements_stock
+
+================================================================================
+STATISTIQUES
+================================================================================
+
+Tables par domaine:
+  - Référence:    6 tables (15.8%)
+  - Utilisateurs: 7 tables (18.4%)
+  - Cours:        6 tables (15.8%)
+  - Paiements:    2 tables ( 5.3%)
+  - Magasin:      6 tables (15.8%)
+  - Messagerie:   5 tables (13.2%)
+  - Alertes:      3 tables ( 7.9%)
+  - Groupes:      2 tables ( 5.3%)
+  - Système:      2 tables ( 5.3%)
+  -----------------
+  TOTAL:         38 tables (100%)
+
+Taille approximative des fichiers:
+  - Tables:      ~350 KB
+  - Procédures:  ~50 KB
+  - Triggers:    ~15 KB
+  - Events:      ~5 KB
+  -----------------
+  TOTAL:        ~420 KB
+
+Éléments de base de données:
+  - Tables:      38
+  - Procédures:  10
+  - Triggers:     4
+  - Events:       1
+  -----------------
+  TOTAL:         53 objets
+
+================================================================================
+COMMANDES RAPIDES
+================================================================================
+
+# Lister tous les fichiers SQL
+find . -name "*.sql" -type f
+
+# Compter les tables par catégorie
+find tables/ -name "*.sql" | cut -d'/' -f2 | sort | uniq -c
+
+# Chercher une table spécifique
+grep -r "CREATE TABLE.*utilisateurs" tables/
+
+# Restaurer uniquement les tables de référence
+cat tables/reference/*.sql | mysql -u root -p clubmanager
+
+# Vérifier l'intégrité d'un fichier SQL
+mysql -u root -p --database=clubmanager < tables/users/utilisateurs.sql
+
+# Générer un script complet
+cat tables/*/*.sql > full_tables.sql
+
+================================================================================
+MAINTENANCE
+================================================================================
+
+Pour mettre à jour ce backup:
+
+1. Après modification en production:
+   - Exporter la table: mysqldump clubmanager nom_table > backup/tables/.../nom_table.sql
+   - Ajouter les headers de documentation
+   - Committer les changements
+
+2. Nouvelle table:
+   - Créer le fichier dans la bonne catégorie
+   - Ajouter au TABLE_MAPPING dans extract_tables.py
+   - Mettre à jour ce fichier INDEX.txt
+   - Mettre à jour RESTORE_FULL_DATABASE.sql
+
+3. Vérification périodique:
+   - Comparer avec la production
+   - Tester la restauration complète
+   - Vérifier les foreign keys
+
+================================================================================
+NOTES IMPORTANTES
+================================================================================
+
+✓ Tous les fichiers sont en UTF-8
+✓ Toutes les tables utilisent InnoDB
+✓ Encodage: utf8mb4_unicode_ci (support Unicode complet)
+✓ Chaque fichier contient sa propre documentation
+✓ Les données de test sont incluses
+✓ Les foreign keys sont respectées dans l'ordre de création
+✓ Compatible MySQL 5.7+ et MariaDB 10.2+
+
+⚠ NE PAS committer de données sensibles
+⚠ Utiliser des migrations pour la production
+⚠ Toujours tester la restauration avant utilisation
+
+================================================================================
+CONTACT
+================================================================================
+
+Projet: ClubManager - TFE 2025
+Auteur: Benoit Houthoofd
+Date: Janvier 2025
+
+Pour toute question, consulter:
+  - README.txt (documentation complète)
+  - TABLES_INVENTAIRE.txt (inventaire détaillé)
+  - ../creation/SCHEMA_CONSOLIDATE.sql (schéma consolidé)
+
+================================================================================
+FIN DE L'INDEX
+================================================================================
