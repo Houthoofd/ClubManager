@@ -11,7 +11,9 @@ export * from "./enums/UserRole.enum.js";
 export * from "./enums/UserStatus.enum.js";
 export * from "./api/responses/ApiResponse.types.js";
 export * from "./domain/user/User.types.js";
+export * from "./domain/course/index.js";
 export * from "./dtos/users/UserDto.js";
 export * from "./dtos/auth/AuthDto.js";
+export * from "./dtos/courses/index.js";
 export * from "./validators/index.js";
 //# sourceMappingURL=index.d.ts.map

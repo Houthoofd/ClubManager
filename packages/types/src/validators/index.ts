@@ -12,6 +12,9 @@ export * from "./users/user.validators.js";
 // Auth validators
 export * from "./users/auth.validators.js";
 
+// Course validators
+export * from "./courses/index.js";
+
 /**
  * Re-export des types inférés les plus utilisés
  */
@@ -50,3 +53,40 @@ export type {
   LogoutInput,
   ResendEmailValidationInput,
 } from "./users/auth.validators.js";
+
+export type {
+  CreateCourseRecurrentInput,
+  UpdateCourseRecurrentInput,
+  AssignProfessorInput,
+  UnassignProfessorInput,
+  SearchCourseRecurrentInput,
+  ToggleCourseRecurrentInput,
+  CreateCourseInput,
+  UpdateCourseInput,
+  CancelCourseInput,
+  SearchCourseInput,
+  DuplicateCourseInput,
+  GenerateCoursesFromRecurrentInput,
+  CreateProfessorInput,
+  UpdateProfessorInput,
+  SearchProfessorInput,
+  ToggleProfessorInput,
+  GetProfessorCoursesInput,
+  CreateInscriptionInput,
+  UpdateInscriptionInput,
+  UpdatePresenceInput,
+  BulkCreateInscriptionInput,
+  SearchInscriptionInput,
+  CancelInscriptionInput,
+  GetUserInscriptionsInput,
+  GetCourseInscriptionsInput,
+  BulkUpdatePresenceInput,
+  CreateReservationInput,
+  CancelReservationInput,
+  SearchReservationInput,
+  CheckAvailabilityInput,
+  GetUserReservationsInput,
+  GetCourseReservationsInput,
+  ConvertReservationToInscriptionInput,
+  CheckReservationConflictInput,
+} from "./courses/index.js";

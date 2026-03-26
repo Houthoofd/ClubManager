@@ -18,10 +18,14 @@ export * from "./enums/UserRole.enum.js";
 export * from "./enums/UserStatus.enum.js";
 // API Response Types
 export * from "./api/responses/ApiResponse.types.js";
-// Domain Types
+// Domain Types - Users
 export * from "./domain/user/User.types.js";
-// DTOs
+// Domain Types - Courses
+export * from "./domain/course/index.js";
+// DTOs - Users
 export * from "./dtos/users/UserDto.js";
 export * from "./dtos/auth/AuthDto.js";
+// DTOs - Courses
+export * from "./dtos/courses/index.js";
 // Validators (Zod schemas)
 export * from "./validators/index.js";
