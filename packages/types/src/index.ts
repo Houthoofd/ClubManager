@@ -47,12 +47,18 @@ export * from "./domain/user/User.types.js";
 // Domain Types - Courses
 export * from "./domain/course/index.js";
 
+// Domain Types - Payments
+export * from "./domain/payment/index.js";
+
 // DTOs - Users
 export * from "./dtos/users/UserDto.js";
 export * from "./dtos/auth/AuthDto.js";
 
 // DTOs - Courses
 export * from "./dtos/courses/index.js";
+
+// DTOs - Payments
+export * from "./dtos/payments/index.js";
 
 // Validators (Zod schemas)
 export * from "./validators/index.js";

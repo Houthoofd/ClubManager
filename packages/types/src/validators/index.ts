@@ -15,6 +15,9 @@ export * from "./users/auth.validators.js";
 // Course validators
 export * from "./courses/index.js";
 
+// Payment validators
+export * from "./payments/index.js";
+
 /**
  * Re-export des types inférés les plus utilisés
  */
@@ -90,3 +93,20 @@ export type {
   ConvertReservationToInscriptionInput,
   CheckReservationConflictInput,
 } from "./courses/index.js";
+
+export type {
+  CreatePaymentInput,
+  UpdatePaymentInput,
+  RefundPaymentInput,
+  SearchPaymentInput,
+  StripePaymentIntentInput,
+  CreatePaymentScheduleInput,
+  UpdatePaymentScheduleInput,
+  BulkCreatePaymentScheduleInput,
+  SearchPaymentScheduleInput,
+  MarkAsPaidInput,
+  CreatePricingPlanInput,
+  UpdatePricingPlanInput,
+  SearchPricingPlanInput,
+  TogglePricingPlanInput,
+} from "./payments/index.js";
