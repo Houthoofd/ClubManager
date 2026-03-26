@@ -1,0 +1,628 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model articles {
+  id                Int                 @id @default(autoincrement())
+  nom               String              @db.VarChar(100)
+  description       String?             @db.Text
+  prix              Decimal             @db.Decimal(10, 2)
+  image_url         String?             @db.VarChar(255)
+  categorie_id      Int?
+  categories        categories?         @relation(fields: [categorie_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "articles_ibfk_1")
+  commande_articles commande_articles[]
+  images            images[]
+  stocks            stocks[]
+
+  @@index([categorie_id], map: "categorie_id")
+  @@index([nom], map: "idx_nom")
+}
+
+model commandes {
+  id                Int                 @id @default(autoincrement())
+  unique_id         String?             @db.VarChar(255)
+  numero_commande   String?             @db.VarChar(100)
+  utilisateur_id    Int
+  total             Decimal             @default(0.00) @db.Decimal(10, 2)
+  date_commande     DateTime            @default(now()) @db.Timestamp(0)
+  statut            commandes_statut?   @default(en_attente)
+  ip_address        String?             @db.VarChar(45)
+  user_agent        String?             @db.Text
+  created_at        DateTime            @default(now()) @db.Timestamp(0)
+  commande_articles commande_articles[]
+  users             utilisateurs        @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commandes_ibfk_1")
+  paiements         paiements[]
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([numero_commande], map: "idx_numero_commande")
+  @@index([total], map: "idx_total")
+  @@index([unique_id], map: "idx_unique_id")
+  @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
+}
+
+model cours {
+  id                 Int             @id @default(autoincrement())
+  date_cours         DateTime        @db.Date
+  type_cours         String          @db.VarChar(50)
+  heure_debut        DateTime        @db.Time(0)
+  heure_fin          DateTime        @db.Time(0)
+  cours_recurrent_id Int
+  cours_recurrent    cours_recurrent @relation(fields: [cours_recurrent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cours_ibfk_1")
+  inscriptions       inscriptions[]
+  reservations       reservations[]
+
+  @@index([cours_recurrent_id], map: "cours_recurrent_id")
+  @@index([date_cours, type_cours], map: "idx_date_type")
+}
+
+model echeances_paiements {
+  id               Int                         @id @default(autoincrement())
+  utilisateur_id   Int
+  abonnement_id    Int
+  date_echeance    DateTime                    @db.Date
+  montant          Decimal                     @db.Decimal(10, 2)
+  statut           echeances_paiements_statut? @default(en_attente)
+  date_paiement    DateTime?                   @db.Date
+  utilisateurs     utilisateurs                @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "echeances_paiements_ibfk_1")
+  plans_tarifaires plans_tarifaires            @relation(fields: [abonnement_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "echeances_paiements_ibfk_2")
+
+  @@index([abonnement_id, date_echeance], map: "idx_abonnement_echeance")
+  @@index([utilisateur_id, date_echeance], map: "idx_utilisateur_echeance")
+}
+
+model genres {
+  id           Int            @id @default(autoincrement())
+  genre_name   String         @unique(map: "genre_name") @db.VarChar(50)
+  utilisateurs utilisateurs[]
+}
+
+model grades {
+  id           Int            @id @default(autoincrement())
+  grade_id     String         @unique(map: "grade_id") @db.VarChar(100)
+  professeurs  professeurs[]
+  utilisateurs utilisateurs[]
+}
+
+model groupes {
+  id                   Int                    @id @default(autoincrement())
+  nom                  String                 @db.VarChar(100)
+  description          String?                @db.Text
+  created_at           DateTime               @default(now()) @db.Timestamp(0)
+  groupes_utilisateurs groupes_utilisateurs[]
+  messages             messages[]
+
+  @@index([nom], map: "idx_nom")
+}
+
+model groupes_utilisateurs {
+  id             Int          @id @default(autoincrement())
+  groupe_id      Int
+  utilisateur_id Int
+  date_ajout     DateTime     @default(now()) @db.Timestamp(0)
+  groupes        groupes      @relation(fields: [groupe_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "groupes_utilisateurs_ibfk_1")
+  users          utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "groupes_utilisateurs_ibfk_2")
+
+  @@unique([groupe_id, utilisateur_id], map: "uk_groupe_utilisateur")
+  @@index([groupe_id, utilisateur_id], map: "idx_groupe_utilisateur")
+  @@index([utilisateur_id], map: "utilisateur_id")
+}
+
+model inscriptions {
+  id               Int          @id @default(autoincrement())
+  utilisateur_id   Int
+  cours_id         Int
+  date_inscription DateTime     @default(now()) @db.Timestamp(0)
+  status_id        Boolean?
+  users            utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "inscriptions_ibfk_1")
+  cours            cours        @relation(fields: [cours_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "inscriptions_ibfk_2")
+
+  @@unique([utilisateur_id, cours_id], map: "uk_utilisateur_cours")
+  @@index([cours_id], map: "cours_id")
+  @@index([utilisateur_id, cours_id], map: "idx_utilisateur_cours")
+}
+
+model messages {
+  id                                              Int              @id @default(autoincrement())
+  sender_id                                       Int
+  receiver_id                                     Int?
+  groupe_id                                       Int?
+  contenu                                         String           @db.Text
+  created_at                                      DateTime         @default(now()) @db.Timestamp(0)
+  message_status                                  message_status[]
+  utilisateurs_messages_sender_idToutilisateurs   utilisateurs     @relation("messages_sender_idToutilisateurs", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_ibfk_1")
+  utilisateurs_messages_receiver_idToutilisateurs utilisateurs?    @relation("messages_receiver_idToutilisateurs", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_ibfk_2")
+  groupes                                         groupes?         @relation(fields: [groupe_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_ibfk_3")
+  notifications                                   notifications[]
+
+  @@index([groupe_id], map: "groupe_id")
+  @@index([sender_id, receiver_id], map: "idx_sender_receiver")
+  @@index([receiver_id], map: "receiver_id")
+}
+
+model messages_personnalises {
+  id                                                               Int                                  @id @default(autoincrement())
+  utilisateur_id                                                   Int
+  contenu                                                          String                               @db.Text
+  created_at                                                       DateTime                             @default(now()) @db.Timestamp(0)
+  deleted_at                                                       DateTime?                            @db.DateTime(0)
+  deleted_by                                                       Int?
+  is_active                                                        Boolean?                             @default(true)
+  lu                                                               Boolean?                             @default(false)
+  date_lecture                                                     DateTime?                            @db.DateTime(0)
+  status_envoi                                                     messages_personnalises_status_envoi? @default(pending)
+  sendgrid_message_id                                              String?                              @db.VarChar(255)
+  error_details                                                    String?                              @db.Text
+  updated_at                                                       DateTime                             @default(now()) @db.Timestamp(0)
+  utilisateurs_messages_personnalises_utilisateur_idToutilisateurs utilisateurs                         @relation("messages_personnalises_utilisateur_idToutilisateurs", fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "messages_personnalises_ibfk_1")
+  utilisateurs_messages_personnalises_deleted_byToutilisateurs     utilisateurs?                        @relation("messages_personnalises_deleted_byToutilisateurs", fields: [deleted_by], references: [id], onUpdate: Restrict, map: "messages_personnalises_ibfk_2")
+
+  @@index([deleted_by], map: "deleted_by")
+  @@index([utilisateur_id, is_active], map: "idx_messages_personnalises_active")
+  @@index([date_lecture], map: "idx_messages_personnalises_date_lecture")
+  @@index([utilisateur_id, deleted_at], map: "idx_messages_personnalises_deleted")
+  @@index([utilisateur_id, lu], map: "idx_messages_personnalises_lu")
+  @@index([sendgrid_message_id], map: "idx_messages_personnalises_sendgrid_id")
+  @@index([status_envoi], map: "idx_messages_personnalises_status_envoi")
+  @@index([updated_at], map: "idx_messages_personnalises_updated")
+  @@index([utilisateur_id], map: "idx_utilisateur")
+}
+
+model notifications {
+  id             Int          @id @default(autoincrement())
+  utilisateur_id Int
+  message_id     Int
+  vu             Boolean?     @default(false)
+  created_at     DateTime     @default(now()) @db.Timestamp(0)
+  users          utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "notifications_ibfk_1")
+  messages       messages     @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "notifications_ibfk_2")
+
+  @@index([utilisateur_id, vu], map: "idx_utilisateur_vu")
+  @@index([message_id], map: "message_id")
+}
+
+model paiements {
+  id                       Int               @id @default(autoincrement())
+  commande_id              Int?
+  utilisateur_id           Int
+  montant                  Decimal           @db.Decimal(10, 2)
+  methode_paiement         String?           @db.VarChar(50)
+  stripe_payment_intent_id String?           @db.VarChar(255)
+  paypal_order_id          String?           @db.VarChar(255)
+  bitcoin_address          String?           @db.VarChar(255)
+  date_paiement            DateTime          @db.Date
+  statut                   String?           @default("en_attente") @db.VarChar(50)
+  description              String?           @db.Text
+  date_confirmation        DateTime?         @db.Timestamp(0)
+  date_modification        DateTime?         @default(now()) @db.Timestamp(0)
+  abonnement_id            Int?
+  periode_debut            DateTime?         @db.Date
+  periode_fin              DateTime?         @db.Date
+  users                    utilisateurs      @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "paiements_ibfk_1")
+  plans_tarifaires         plans_tarifaires? @relation(fields: [abonnement_id], references: [id], onUpdate: Restrict, map: "paiements_ibfk_2")
+  commandes                commandes?        @relation(fields: [commande_id], references: [id], onUpdate: Restrict, map: "paiements_ibfk_3")
+
+  @@unique([utilisateur_id, periode_debut, abonnement_id], map: "uk_utilisateur_periode_abonnement")
+  @@index([abonnement_id], map: "abonnement_id")
+  @@index([commande_id], map: "idx_commande_id")
+  @@index([methode_paiement], map: "idx_methode_paiement")
+  @@index([paypal_order_id], map: "idx_paypal_order_id")
+  @@index([stripe_payment_intent_id], map: "idx_stripe_payment_intent_id")
+  @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
+}
+
+model password_reset_tokens {
+  id             Int          @id @default(autoincrement())
+  utilisateur_id Int
+  token          String       @unique(map: "token") @db.VarChar(64)
+  expires_at     DateTime     @default(now()) @db.Timestamp(0)
+  created_at     DateTime     @default(now()) @db.Timestamp(0)
+  used_at        DateTime?    @db.Timestamp(0)
+  utilisateurs   utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "password_reset_tokens_ibfk_1")
+
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([token], map: "idx_token")
+  @@index([utilisateur_id], map: "idx_utilisateur_id")
+}
+
+model plans_tarifaires {
+  id                  Int                   @id @default(autoincrement())
+  nom_plan            String                @unique(map: "nom_plan") @db.VarChar(50)
+  prix                Decimal               @db.Decimal(10, 2)
+  periode             String                @db.VarChar(20)
+  description         String?               @db.Text
+  echeances_paiements echeances_paiements[]
+  paiements           paiements[]
+  utilisateurs        utilisateurs[]
+}
+
+model reservations {
+  id             Int          @id @default(autoincrement())
+  utilisateur_id Int
+  cours_id       Int
+  users          utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reservations_ibfk_1")
+  cours          cours        @relation(fields: [cours_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "reservations_ibfk_2")
+
+  @@unique([utilisateur_id, cours_id], map: "uk_utilisateur_cours")
+  @@index([cours_id], map: "cours_id")
+  @@index([utilisateur_id, cours_id], map: "idx_utilisateur_cours")
+}
+
+model status {
+  id           Int            @id @default(autoincrement())
+  nom_role     String         @unique(map: "nom_role") @db.VarChar(50)
+  description  String?        @db.Text
+  professeurs  professeurs[]
+  utilisateurs utilisateurs[]
+}
+
+model tailles {
+  id                Int                 @id @default(autoincrement())
+  nom               String              @unique(map: "nom") @db.VarChar(20)
+  commande_articles commande_articles[]
+  stocks            stocks[]
+}
+
+model categories {
+  id       Int        @id @default(autoincrement())
+  nom      String     @unique(map: "nom") @db.VarChar(100)
+  articles articles[]
+}
+
+model commande_articles {
+  id          Int       @id @default(autoincrement())
+  commande_id Int
+  article_id  Int
+  taille_id   Int
+  quantite    Int
+  prix        Decimal   @db.Decimal(10, 2)
+  commandes   commandes @relation(fields: [commande_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commande_articles_ibfk_1")
+  articles    articles  @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commande_articles_ibfk_2")
+  tailles     tailles   @relation(fields: [taille_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "commande_articles_ibfk_3")
+
+  @@index([article_id], map: "article_id")
+  @@index([commande_id, article_id], map: "idx_commande_article")
+  @@index([taille_id], map: "taille_id")
+}
+
+model cours_recurrent {
+  id                         Int                          @id @default(autoincrement())
+  type_cours                 String                       @db.VarChar(255)
+  jour_semaine               Int
+  heure_debut                DateTime                     @db.Time(0)
+  heure_fin                  DateTime                     @db.Time(0)
+  active                     Boolean?                     @default(true)
+  cours                      cours[]
+  cours_recurrent_professeur cours_recurrent_professeur[]
+
+  @@index([jour_semaine, type_cours], map: "idx_jour_type")
+}
+
+model cours_recurrent_professeur {
+  id                 Int             @id @default(autoincrement())
+  cours_recurrent_id Int
+  professeur_id      Int
+  cours_recurrent    cours_recurrent @relation(fields: [cours_recurrent_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cours_recurrent_professeur_ibfk_1")
+  professeurs        professeurs     @relation(fields: [professeur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "cours_recurrent_professeur_ibfk_2")
+
+  @@unique([cours_recurrent_id, professeur_id], map: "uk_cours_professeur")
+  @@index([cours_recurrent_id, professeur_id], map: "idx_cours_professeur")
+  @@index([professeur_id], map: "professeur_id")
+}
+
+model email_validation_tokens {
+  id             Int                          @id @default(autoincrement())
+  utilisateur_id Int
+  token          String                       @unique(map: "token") @db.VarChar(255)
+  type           email_validation_tokens_type
+  expires_at     DateTime                     @default(now()) @db.Timestamp(0)
+  used           Boolean?                     @default(false)
+  created_at     DateTime                     @default(now()) @db.Timestamp(0)
+  utilisateurs   utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "email_validation_tokens_ibfk_1")
+
+  @@index([expires_at], map: "idx_expires")
+  @@index([token], map: "idx_token")
+  @@index([utilisateur_id, type], map: "idx_utilisateur_type")
+}
+
+model images {
+  id         Int      @id @default(autoincrement())
+  article_id Int
+  url        String   @db.Text
+  is_main    Boolean? @default(false)
+  articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "images_ibfk_1")
+
+  @@index([article_id], map: "idx_article")
+}
+
+model manual_recovery_requests {
+  id                                                                 Int                              @id @default(autoincrement())
+  utilisateur_id                                                     Int
+  reason                                                             String                           @db.Text
+  verification_data                                                  String?                          @db.LongText
+  status                                                             manual_recovery_requests_status? @default(pending)
+  admin_notes                                                        String?                          @db.Text
+  processed_by                                                       Int?
+  processed_at                                                       DateTime?                        @db.Timestamp(0)
+  created_at                                                         DateTime                         @default(now()) @db.Timestamp(0)
+  expires_at                                                         DateTime?                        @db.Timestamp(0)
+  utilisateurs_manual_recovery_requests_utilisateur_idToutilisateurs utilisateurs                     @relation("manual_recovery_requests_utilisateur_idToutilisateurs", fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "manual_recovery_requests_ibfk_1")
+  utilisateurs_manual_recovery_requests_processed_byToutilisateurs   utilisateurs?                    @relation("manual_recovery_requests_processed_byToutilisateurs", fields: [processed_by], references: [id], onUpdate: Restrict, map: "manual_recovery_requests_ibfk_2")
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([utilisateur_id, status], map: "idx_utilisateur_status")
+  @@index([processed_by], map: "processed_by")
+}
+
+model message_status {
+  id             Int                    @id @default(autoincrement())
+  message_id     Int
+  utilisateur_id Int
+  status         message_status_status? @default(non_vu)
+  updated_at     DateTime               @default(now()) @db.Timestamp(0)
+  messages       messages               @relation(fields: [message_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "message_status_ibfk_1")
+  utilisateurs   utilisateurs           @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "message_status_ibfk_2")
+
+  @@unique([message_id, utilisateur_id], map: "uk_message_utilisateur")
+  @@index([message_id, utilisateur_id], map: "idx_message_utilisateur")
+  @@index([utilisateur_id], map: "utilisateur_id")
+}
+
+model password_reset_attempts {
+  id           Int      @id @default(autoincrement())
+  email        String   @db.VarChar(255)
+  ip_address   String?  @db.VarChar(45)
+  user_agent   String?  @db.Text
+  success      Boolean? @default(false)
+  attempted_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([email, attempted_at], map: "idx_email_time")
+  @@index([ip_address, attempted_at], map: "idx_ip_time")
+}
+
+model professeurs {
+  id                         Int                          @id @default(autoincrement())
+  nom                        String                       @db.VarChar(255)
+  prenom                     String                       @db.VarChar(255)
+  email                      String?                      @unique(map: "email") @db.VarChar(255)
+  grade_id                   Int?
+  status_id                  Int?
+  cours_recurrent_professeur cours_recurrent_professeur[]
+  grades                     grades?                      @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "professeurs_ibfk_1")
+  status                     status?                      @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "professeurs_ibfk_2")
+
+  @@index([grade_id], map: "grade_id")
+  @@index([email], map: "idx_email")
+  @@index([status_id], map: "status_id")
+}
+
+model sms_recovery_codes {
+  id             Int          @id @default(autoincrement())
+  utilisateur_id Int
+  phone          String       @db.VarChar(20)
+  code           String       @db.VarChar(6)
+  attempts       Int?         @default(0)
+  expires_at     DateTime     @default(now()) @db.Timestamp(0)
+  created_at     DateTime     @default(now()) @db.Timestamp(0)
+  used_at        DateTime?    @db.Timestamp(0)
+  utilisateurs   utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "sms_recovery_codes_ibfk_1")
+
+  @@unique([utilisateur_id, phone], map: "unique_utilisateur_phone")
+  @@index([expires_at], map: "idx_expires_at")
+  @@index([phone, code], map: "idx_phone_code")
+}
+
+model statistiques {
+  id               Int      @id @default(autoincrement())
+  type_statistique String   @db.VarChar(50)
+  periode_debut    DateTime @db.Date
+  periode_fin      DateTime @db.Date
+  valeur           Decimal? @db.Decimal(10, 2)
+  description      String?  @db.Text
+  date_creation    DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([type_statistique, periode_debut, periode_fin], map: "idx_type_periode")
+}
+
+model stocks {
+  id         Int      @id @default(autoincrement())
+  article_id Int
+  taille_id  Int
+  quantite   Int      @default(0)
+  articles   articles @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_1")
+  tailles    tailles  @relation(fields: [taille_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "stocks_ibfk_2")
+
+  @@unique([article_id, taille_id], map: "uk_article_taille")
+  @@index([article_id], map: "idx_article")
+  @@index([taille_id], map: "taille_id")
+}
+
+model types_messages_personnalises {
+  id         Int      @id @default(autoincrement())
+  title      String   @unique(map: "title") @db.VarChar(255)
+  content    String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model utilisateurs {
+  id                                                                             Int                        @id @default(autoincrement())
+  userId                                                                         String                     @unique(map: "unique_user_id") @db.VarChar(20)
+  first_name                                                                     String                     @db.VarChar(50)
+  last_name                                                                      String                     @db.VarChar(50)
+  nom_utilisateur                                                                String                     @db.VarChar(50)
+  email                                                                          String                     @db.VarChar(100)
+  genre_id                                                                       Int?
+  date_of_birth                                                                  DateTime                   @db.Date
+  password                                                                       String                     @db.VarChar(255)
+  status_id                                                                      Int?                       @default(1)
+  active                                                                         Boolean                    @default(true)
+  grade_id                                                                       Int?                       @default(1)
+  abonnement_id                                                                  Int?
+  date_inscription                                                               DateTime                   @default(now()) @db.Timestamp(0)
+  email_verified                                                                 Boolean?                   @default(false)
+  email_verified_at                                                              DateTime?                  @db.Timestamp(0)
+  alertes_actions                                                                alertes_actions[]
+  alertes_utilisateurs                                                           alertes_utilisateurs[]
+  commandes                                                                      commandes[]
+  echeances_paiements                                                            echeances_paiements[]
+  email_validation_tokens                                                        email_validation_tokens[]
+  groupes_utilisateurs                                                           groupes_utilisateurs[]
+  inscriptions                                                                   inscriptions[]
+  manual_recovery_requests_manual_recovery_requests_utilisateur_idToutilisateurs manual_recovery_requests[] @relation("manual_recovery_requests_utilisateur_idToutilisateurs")
+  manual_recovery_requests_manual_recovery_requests_processed_byToutilisateurs   manual_recovery_requests[] @relation("manual_recovery_requests_processed_byToutilisateurs")
+  message_status                                                                 message_status[]
+  messages_messages_sender_idToutilisateurs                                      messages[]                 @relation("messages_sender_idToutilisateurs")
+  messages_messages_receiver_idToutilisateurs                                    messages[]                 @relation("messages_receiver_idToutilisateurs")
+  messages_personnalises_messages_personnalises_utilisateur_idToutilisateurs     messages_personnalises[]   @relation("messages_personnalises_utilisateur_idToutilisateurs")
+  messages_personnalises_messages_personnalises_deleted_byToutilisateurs         messages_personnalises[]   @relation("messages_personnalises_deleted_byToutilisateurs")
+  notifications                                                                  notifications[]
+  paiements                                                                      paiements[]
+  password_reset_tokens                                                          password_reset_tokens[]
+  reservations                                                                   reservations[]
+  sms_recovery_codes                                                             sms_recovery_codes[]
+  genres                                                                         genres?                    @relation(fields: [genre_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_1")
+  status                                                                         status?                    @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_2")
+  grades                                                                         grades?                    @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_3")
+  plans_tarifaires                                                               plans_tarifaires?          @relation(fields: [abonnement_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "utilisateurs_ibfk_4")
+
+  @@index([abonnement_id], map: "abonnement_id")
+  @@index([genre_id], map: "genre_id")
+  @@index([grade_id], map: "grade_id")
+  @@index([active], map: "idx_active")
+  @@index([active, status_id], map: "idx_active_status")
+  @@index([email], map: "idx_email")
+  @@index([email_verified], map: "idx_email_verified")
+  @@index([nom_utilisateur], map: "idx_nom_utilisateur")
+  @@index([last_name, first_name, date_of_birth], map: "idx_person_lookup")
+  @@index([status_id], map: "idx_status")
+}
+
+model validation_tokens {
+  id             Int                     @id @default(autoincrement())
+  utilisateur_id Int
+  token          String                  @unique(map: "token") @db.VarChar(255)
+  user_id_string String?                 @db.VarChar(50)
+  token_hash     String?                 @db.VarChar(64)
+  type           validation_tokens_type? @default(email_confirmation)
+  expires_at     DateTime                @default(now()) @db.Timestamp(0)
+  used           Boolean?                @default(false)
+  used_at        DateTime?               @db.Timestamp(0)
+  created_at     DateTime                @default(now()) @db.Timestamp(0)
+
+  @@index([token], map: "idx_token")
+  @@index([token_hash], map: "idx_token_hash")
+  @@index([token, user_id_string], map: "idx_token_userid")
+  @@index([user_id_string], map: "idx_user_id_string")
+  @@index([utilisateur_id], map: "idx_utilisateur_id")
+}
+
+model alertes_actions {
+  id                   Int                         @id @default(autoincrement())
+  alerte_id            Int
+  action_type          alertes_actions_action_type
+  description          String?                     @db.Text
+  effectue_par         Int?
+  date_action          DateTime?                   @default(now()) @db.Timestamp(0)
+  alertes_utilisateurs alertes_utilisateurs        @relation(fields: [alerte_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_actions_ibfk_1")
+  utilisateurs         utilisateurs?               @relation(fields: [effectue_par], references: [id], onUpdate: Restrict, map: "alertes_actions_ibfk_2")
+
+  @@index([effectue_par], map: "effectue_par")
+  @@index([alerte_id, date_action], map: "idx_alerte_date")
+}
+
+model alertes_types {
+  id                   Int                     @id @default(autoincrement())
+  code                 String                  @unique(map: "code") @db.VarChar(50)
+  nom                  String                  @db.VarChar(100)
+  description          String?                 @db.Text
+  priorite             alertes_types_priorite? @default(normale)
+  actif                Boolean?                @default(true)
+  created_at           DateTime?               @default(now()) @db.Timestamp(0)
+  alertes_utilisateurs alertes_utilisateurs[]
+}
+
+model alertes_utilisateurs {
+  id               Int                          @id @default(autoincrement())
+  utilisateur_id   Int
+  alerte_type_id   Int
+  statut           alertes_utilisateurs_statut? @default(active)
+  donnees_contexte Json?
+  date_detection   DateTime?                    @default(now()) @db.Timestamp(0)
+  date_resolution  DateTime?                    @db.Timestamp(0)
+  notes            String?                      @db.Text
+  alertes_actions  alertes_actions[]
+  utilisateurs     utilisateurs                 @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_1")
+  alertes_types    alertes_types                @relation(fields: [alerte_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "alertes_utilisateurs_ibfk_2")
+
+  @@index([alerte_type_id, statut], map: "idx_type_statut")
+  @@index([utilisateur_id, statut], map: "idx_utilisateur_statut")
+}
+
+enum email_validation_tokens_type {
+  email_confirmation
+  password_setup
+}
+
+enum message_status_status {
+  vu
+  non_vu @map("non vu")
+}
+
+enum manual_recovery_requests_status {
+  pending
+  approved
+  rejected
+  expired
+}
+
+enum echeances_paiements_statut {
+  pay_       @map("payé")
+  en_attente @map("en attente")
+  chu        @map("échu")
+}
+
+enum validation_tokens_type {
+  email_confirmation
+  password_setup
+}
+
+enum commandes_statut {
+  en_attente @map("en attente")
+  pay_e      @map("payée")
+  exp_di_e   @map("expédiée")
+  annul_e    @map("annulée")
+}
+
+enum messages_personnalises_status_envoi {
+  pending
+  sent
+  failed
+  delivered
+  bounced
+}
+
+enum alertes_actions_action_type {
+  message_envoye
+  information_mise_a_jour
+  paiement_recu
+  autre
+}
+
+enum alertes_utilisateurs_statut {
+  active
+  resolue
+  ignoree
+}
+
+enum alertes_types_priorite {
+  basse
+  normale
+  haute
+  critique
+}
