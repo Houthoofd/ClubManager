@@ -1,17 +1,41 @@
 import { z } from 'zod';
 export declare const userInscriptionSchema: z.ZodObject<{
-    prenom: z.ZodString;
-    nom: z.ZodString;
+    prenom: z.ZodEffects<z.ZodString, string, string>;
+    nom: z.ZodEffects<z.ZodString, string, string>;
     nom_utilisateur: z.ZodString;
-    email: z.ZodString;
-    password: z.ZodString;
-    date_naissance: z.ZodString;
+    email: z.ZodEffects<z.ZodString, string, string>;
+    password: z.ZodEffects<z.ZodString, string, string>;
+    date_naissance: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, string>, string, string>, string, string>, string, string>, string, string>;
     genre_id: z.ZodNumber;
     abonnement_id: z.ZodNumber;
-    date_inscription: z.ZodString;
+    date_inscription: z.ZodEffects<z.ZodString, string, string>;
     status_id: z.ZodNumber;
     grade_id: z.ZodNumber;
-}, z.core.$strip>;
+}, "strip", z.ZodTypeAny, {
+    grade_id: number;
+    email: string;
+    password: string;
+    prenom: string;
+    nom: string;
+    nom_utilisateur: string;
+    genre_id: number;
+    date_naissance: string;
+    status_id: number;
+    abonnement_id: number;
+    date_inscription: string;
+}, {
+    grade_id: number;
+    email: string;
+    password: string;
+    prenom: string;
+    nom: string;
+    nom_utilisateur: string;
+    genre_id: number;
+    date_naissance: string;
+    status_id: number;
+    abonnement_id: number;
+    date_inscription: string;
+}>;
 export interface UserDataSession {
     isFind: boolean;
     message: string;
