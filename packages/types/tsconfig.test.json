@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["jest", "node"],
+    "sourceMap": true,
+    "outDir": "./dist-test",
+    "rootDir": "./src",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": false,
+  },
+  "include": ["src/**/*", "src/**/__tests__/**/*"],
+  "exclude": ["node_modules", "dist", "dist-test", "coverage"],
+}

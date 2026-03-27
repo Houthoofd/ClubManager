@@ -23,7 +23,10 @@ export const idSchema = z.number().int().positive({
 export const idStringSchema = z
   .string()
   .regex(/^\d+$/, "L'ID doit être un nombre")
-  .transform((val) => parseInt(val, 10));
+  .transform((val) => parseInt(val, 10))
+  .refine((val) => val > 0, {
+    message: "L'ID doit être un nombre positif",
+  });
 
 /**
  * Schéma pour un userId (format U-YYYY-XXXX)
@@ -126,8 +129,8 @@ export const paginationSchema = z.object({
     .number()
     .int()
     .positive()
-    .default(VALIDATION_CONSTANTS.PAGINATION.DEFAULT_PAGE)
-    .optional(),
+    .optional()
+    .default(VALIDATION_CONSTANTS.PAGINATION.DEFAULT_PAGE),
   limit: z
     .number()
     .int()
@@ -136,8 +139,8 @@ export const paginationSchema = z.object({
       VALIDATION_CONSTANTS.PAGINATION.MAX_LIMIT,
       `La limite maximale est de ${VALIDATION_CONSTANTS.PAGINATION.MAX_LIMIT} éléments`,
     )
-    .default(VALIDATION_CONSTANTS.PAGINATION.DEFAULT_LIMIT)
-    .optional(),
+    .optional()
+    .default(VALIDATION_CONSTANTS.PAGINATION.DEFAULT_LIMIT),
 });
 
 /**
