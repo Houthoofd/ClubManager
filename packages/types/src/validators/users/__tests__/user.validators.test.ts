@@ -13,7 +13,7 @@ import {
   updateEmailSchema,
   updateProfileSchema,
   anonymizeUserSchema,
-} from "../user.validators";
+} from "../user.validators.js";
 
 describe("User Validators", () => {
   describe("createUserSchema", () => {

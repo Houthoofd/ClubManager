@@ -61,6 +61,14 @@ export const dateSchema = z.date({
 export const dateOptionalSchema = dateSchema.optional().nullable();
 
 /**
+ * Schéma pour un timestamp (utilisé pour created_at, updated_at, etc.)
+ */
+export const timestampSchema = z.date({
+  required_error: "Le timestamp est requis",
+  invalid_type_error: "Format de timestamp invalide",
+});
+
+/**
  * Schéma pour valider qu'une date est dans le passé
  */
 export const pastDateSchema = z
