@@ -12,10 +12,9 @@ export { userDataLoginByUserIdSchema, userSearchByEmailSchema, } from "./utilisa
 // NEW ARCHITECTURE EXPORTS
 // ============================================
 // Constants
-export * from "./constants/validation.constants.js";
+export * from "./constants/index.js";
 // Enums
-export * from "./enums/UserRole.enum.js";
-export * from "./enums/UserStatus.enum.js";
+export * from "./enums/index.js";
 // API Response Types
 export * from "./api/responses/ApiResponse.types.js";
 // Domain Types - Users
@@ -24,6 +23,8 @@ export * from "./domain/user/User.types.js";
 export * from "./domain/course/index.js";
 // Domain Types - Payments
 export * from "./domain/payment/index.js";
+// Domain Types - Store
+export * from "./domain/store/index.js";
 // DTOs - Users
 export * from "./dtos/users/UserDto.js";
 export * from "./dtos/auth/AuthDto.js";
@@ -31,5 +32,7 @@ export * from "./dtos/auth/AuthDto.js";
 export * from "./dtos/courses/index.js";
 // DTOs - Payments
 export * from "./dtos/payments/index.js";
+// DTOs - Store
+export * from "./dtos/store/index.js";
 // Validators (Zod schemas)
 export * from "./validators/index.js";
