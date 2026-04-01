@@ -12,41 +12,44 @@
 export {
   CreateCoursUseCase,
   type CreateCoursDTO,
-} from './CreateCours.usecase.js';
+} from "./CreateCours.usecase.js";
 
 // ============== GET COURS ==============
-export {
-  GetCoursUseCase,
-  type GetCoursDTO,
-} from './GetCours.usecase.js';
+export { GetCoursUseCase, type GetCoursDTO } from "./GetCours.usecase.js";
 
 // ============== GET COURS FOR PARTICIPANT ==============
 export {
   GetCoursForParticipantUseCase,
   type GetCoursForParticipantDTO,
-} from './GetCoursForParticipant.usecase.js';
+} from "./GetCoursForParticipant.usecase.js";
 
 // ============== GET COURS PAR SEMAINE ==============
 export {
   GetCoursParSemaineUseCase,
   type GetCoursParSemaineDTO,
-} from './GetCoursParSemaine.usecase.js';
+} from "./GetCoursParSemaine.usecase.js";
+
+// ============== GET ALL COURS PAR SEMAINE ==============
+export {
+  GetAllCoursParSemaineUseCase,
+  type GetAllCoursParSemaineDTO,
+} from "./GetAllCoursParSemaine.usecase.js";
 
 // ============== CREATE INSCRIPTION ==============
 export {
   CreateInscriptionUseCase,
   type CreateInscriptionDTO,
   type InscriptionConfig,
-} from './CreateInscription.usecase.js';
+} from "./CreateInscription.usecase.js";
 
 // ============== ANNULER INSCRIPTION ==============
 export {
   AnnulerInscriptionUseCase,
   type AnnulerInscriptionDTO,
-} from './AnnulerInscription.usecase.js';
+} from "./AnnulerInscription.usecase.js";
 
 // ============== MARQUER PRESENCE ==============
 export {
   MarquerPresenceUseCase,
   type MarquerPresenceDTO,
-} from './MarquerPresence.usecase.js';
+} from "./MarquerPresence.usecase.js";

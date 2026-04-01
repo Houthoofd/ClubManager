@@ -4,6 +4,7 @@ import {
   GetCoursUseCase,
   GetCoursForParticipantUseCase,
   GetCoursParSemaineUseCase,
+  GetAllCoursParSemaineUseCase,
   CreateInscriptionUseCase,
   AnnulerInscriptionUseCase,
   MarquerPresenceUseCase,
@@ -29,6 +30,7 @@ export class CoursController {
     private readonly getCoursUseCase: GetCoursUseCase,
     private readonly getCoursForParticipantUseCase: GetCoursForParticipantUseCase,
     private readonly getCoursParSemaineUseCase: GetCoursParSemaineUseCase,
+    private readonly getAllCoursParSemaineUseCase: GetAllCoursParSemaineUseCase,
     private readonly createInscriptionUseCase: CreateInscriptionUseCase,
     private readonly annulerInscriptionUseCase: AnnulerInscriptionUseCase,
     private readonly marquerPresenceUseCase: MarquerPresenceUseCase,
@@ -149,25 +151,10 @@ export class CoursController {
         return;
       }
 
-      // 3. TODO: Le use case actuel nécessite un participantId, mais cette route
-      // devrait retourner tous les cours de la semaine (pas juste pour un participant)
-      // Pour l'instant, on utilise l'userId connecté ou on doit créer un nouveau use case
-      const userId = this.getCurrentUserId(req);
-
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          error:
-            "Utilisateur non authentifié. Cette route nécessite actuellement une authentification.",
-          code: "NOT_AUTHENTICATED",
-        });
-        return;
-      }
-
-      // Appeler le use case
-      const coursList = await this.getCoursParSemaineUseCase.execute({
-        participantId: userId,
+      // 3. Appeler le use case GetAllCoursParSemaine (planning général)
+      const coursList = await this.getAllCoursParSemaineUseCase.execute({
         weekNumber,
+        year,
       });
 
       // 4. Retourner la réponse
@@ -480,6 +467,7 @@ export function createCoursController(
   getCoursUseCase: GetCoursUseCase,
   getCoursForParticipantUseCase: GetCoursForParticipantUseCase,
   getCoursParSemaineUseCase: GetCoursParSemaineUseCase,
+  getAllCoursParSemaineUseCase: GetAllCoursParSemaineUseCase,
   createInscriptionUseCase: CreateInscriptionUseCase,
   annulerInscriptionUseCase: AnnulerInscriptionUseCase,
   marquerPresenceUseCase: MarquerPresenceUseCase,
@@ -489,6 +477,7 @@ export function createCoursController(
     getCoursUseCase,
     getCoursForParticipantUseCase,
     getCoursParSemaineUseCase,
+    getAllCoursParSemaineUseCase,
     createInscriptionUseCase,
     annulerInscriptionUseCase,
     marquerPresenceUseCase,

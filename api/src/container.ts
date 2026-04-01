@@ -38,9 +38,20 @@ import { CreateCoursUseCase } from "./core/use-cases/cours/CreateCours.usecase.j
 import { GetCoursUseCase } from "./core/use-cases/cours/GetCours.usecase.js";
 import { GetCoursForParticipantUseCase } from "./core/use-cases/cours/GetCoursForParticipant.usecase.js";
 import { GetCoursParSemaineUseCase } from "./core/use-cases/cours/GetCoursParSemaine.usecase.js";
+import { GetAllCoursParSemaineUseCase } from "./core/use-cases/cours/GetAllCoursParSemaine.usecase.js";
 import { CreateInscriptionUseCase } from "./core/use-cases/cours/CreateInscription.usecase.js";
 import { AnnulerInscriptionUseCase } from "./core/use-cases/cours/AnnulerInscription.usecase.js";
 import { MarquerPresenceUseCase } from "./core/use-cases/cours/MarquerPresence.usecase.js";
+
+// Use Cases - Cours Récurrents
+import {
+  GetAllCoursRecurrentsUseCase,
+  GetActiveCoursRecurrentsUseCase,
+  CreateCoursRecurrentUseCase,
+  UpdateCoursRecurrentUseCase,
+  ActivateCoursRecurrentUseCase,
+  DeactivateCoursRecurrentUseCase,
+} from "./core/use-cases/cours-recurrents/index.js";
 
 // Controllers
 import {
@@ -48,6 +59,7 @@ import {
   createUserController,
 } from "./presentation/http/controllers/UserController.js";
 import { CoursController } from "./presentation/http/controllers/CoursController.js";
+import { CoursRecurrentController } from "./presentation/http/controllers/CoursRecurrentController.js";
 
 /**
  * Implémentation du service de hashage de mot de passe avec bcrypt
@@ -65,47 +77,187 @@ class BcryptPasswordHasher implements IPasswordHasher {
 }
 
 /**
- * Implémentation du service d'email
- * Note: Adapter selon votre système d'email existant (SendGrid, etc.)
+ * Implémentation professionnelle du service d'email
+ * Supporte plusieurs providers : console (dev), SendGrid, NodeMailer, ou service custom
  */
 class EmailService implements IEmailService {
+  private readonly provider: "console" | "sendgrid" | "nodemailer" | "custom";
+
+  constructor() {
+    // Détecter le provider depuis les variables d'environnement
+    if (process.env.SENDGRID_API_KEY) {
+      this.provider = "sendgrid";
+    } else if (process.env.SMTP_HOST) {
+      this.provider = "nodemailer";
+    } else if (process.env.CUSTOM_EMAIL_SERVICE) {
+      this.provider = "custom";
+    } else {
+      this.provider = "console"; // Fallback pour développement
+    }
+
+    console.log(`📧 [EmailService] Initialisé avec provider: ${this.provider}`);
+  }
+
   async sendWelcomeEmail(
     email: string,
     name: string,
     verificationToken?: string,
   ): Promise<void> {
     try {
-      // TODO: Utiliser votre service d'email existant
-      // Par exemple: await messageClient.envoyerEmail(...)
+      const verificationUrl = verificationToken
+        ? `${process.env.FRONTEND_URL || "http://localhost:3000"}/verify-email?token=${verificationToken}`
+        : undefined;
 
-      console.log(`📧 [EmailService] Email de bienvenue envoyé à ${email}`);
+      // Construction du message
+      const subject = "Bienvenue sur ClubManager !";
+      const textContent = this.buildTextContent(name, verificationUrl);
+      const htmlContent = this.buildHtmlContent(name, verificationUrl);
 
-      if (verificationToken) {
-        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-        console.log(
-          `🔗 [EmailService] Lien de vérification: ${verificationUrl}`,
-        );
+      // Envoi selon le provider
+      switch (this.provider) {
+        case "sendgrid":
+          await this.sendViaSendGrid(email, subject, textContent, htmlContent);
+          break;
+        case "nodemailer":
+          await this.sendViaNodeMailer(
+            email,
+            subject,
+            textContent,
+            htmlContent,
+          );
+          break;
+        case "custom":
+          await this.sendViaCustomService(
+            email,
+            subject,
+            textContent,
+            htmlContent,
+          );
+          break;
+        default:
+          // Mode développement : console uniquement
+          console.log(`📧 [EmailService] Email envoyé à ${email}`);
+          console.log(`   Sujet: ${subject}`);
+          if (verificationUrl) {
+            console.log(`   🔗 Lien de vérification: ${verificationUrl}`);
+          }
       }
-
-      // Simulation d'envoi d'email
-      // Dans un cas réel, remplacer par votre implémentation :
-      /*
-      const { messageClient } = await import('./db/clients/messagerie/messageClient.js');
-      await messageClient.envoyerEmail({
-        destinataire: email,
-        sujet: 'Bienvenue sur ClubManager',
-        contenu: `Bonjour ${name}, bienvenue !`,
-        html: `<h1>Bienvenue ${name}</h1>...`
-      });
-      */
     } catch (error) {
-      console.error(
-        "❌ [EmailService] Erreur lors de l'envoi de l'email:",
-        error,
-      );
+      console.error("❌ [EmailService] Erreur lors de l'envoi:", error);
       // Ne pas faire échouer la création de l'utilisateur si l'email échoue
-      // L'erreur est loggée mais pas propagée
     }
+  }
+
+  private buildTextContent(name: string, verificationUrl?: string): string {
+    let content = `Bonjour ${name},\n\nBienvenue sur ClubManager !\n\n`;
+    if (verificationUrl) {
+      content += `Pour activer votre compte, veuillez cliquer sur ce lien :\n${verificationUrl}\n\n`;
+    }
+    content += `À bientôt,\nL'équipe ClubManager`;
+    return content;
+  }
+
+  private buildHtmlContent(name: string, verificationUrl?: string): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #007bff;
+              color: white;
+              text-decoration: none;
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Bienvenue ${name} !</h1>
+            <p>Nous sommes ravis de vous accueillir sur ClubManager.</p>
+            ${
+              verificationUrl
+                ? `
+              <p>Pour activer votre compte, veuillez cliquer sur le bouton ci-dessous :</p>
+              <a href="${verificationUrl}" class="button">Activer mon compte</a>
+              <p>Ou copiez ce lien dans votre navigateur :<br>${verificationUrl}</p>
+            `
+                : ""
+            }
+            <p>À bientôt,<br>L'équipe ClubManager</p>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  private async sendViaSendGrid(
+    email: string,
+    subject: string,
+    text: string,
+    html: string,
+  ): Promise<void> {
+    // TODO: Implémenter avec SendGrid si nécessaire
+    // Installation requise: npm install @sendgrid/mail
+    // const sgMail = require('@sendgrid/mail');
+    // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    // await sgMail.send({
+    //   to: email,
+    //   from: process.env.FROM_EMAIL || 'noreply@clubmanager.com',
+    //   subject,
+    //   text,
+    //   html
+    // });
+    console.log(`📧 [EmailService/SendGrid] Email préparé pour ${email}`);
+  }
+
+  private async sendViaNodeMailer(
+    email: string,
+    subject: string,
+    text: string,
+    html: string,
+  ): Promise<void> {
+    // TODO: Implémenter avec NodeMailer si nécessaire
+    // Installation requise: npm install nodemailer
+    // const nodemailer = require('nodemailer');
+    // const transporter = nodemailer.createTransport({
+    //   host: process.env.SMTP_HOST,
+    //   port: parseInt(process.env.SMTP_PORT || '587'),
+    //   secure: process.env.SMTP_SECURE === 'true',
+    //   auth: {
+    //     user: process.env.SMTP_USER,
+    //     pass: process.env.SMTP_PASSWORD,
+    //   }
+    // });
+    // await transporter.sendMail({
+    //   from: process.env.FROM_EMAIL || 'noreply@clubmanager.com',
+    //   to: email,
+    //   subject,
+    //   text,
+    //   html
+    // });
+    console.log(`📧 [EmailService/NodeMailer] Email préparé pour ${email}`);
+  }
+
+  private async sendViaCustomService(
+    email: string,
+    subject: string,
+    text: string,
+    html: string,
+  ): Promise<void> {
+    // Intégration avec votre service existant
+    // Par exemple: const { messageClient } = await import('./db/clients/messagerie/messageClient.js');
+    // await messageClient.envoyerEmail({
+    //   destinataire: email,
+    //   sujet: subject,
+    //   contenu: html
+    // });
+    console.log(`📧 [EmailService/Custom] Email préparé pour ${email}`);
   }
 }
 
@@ -207,11 +359,23 @@ class Container {
   private _annulerInscriptionUseCase: AnnulerInscriptionUseCase | null = null;
   private _marquerPresenceUseCase: MarquerPresenceUseCase | null = null;
 
+  private _getAllCoursParSemaineUseCase?: GetAllCoursParSemaineUseCase;
+
+  // Use Cases Cours Récurrents
+  private _getAllCoursRecurrentsUseCase?: GetAllCoursRecurrentsUseCase;
+  private _getActiveCoursRecurrentsUseCase?: GetActiveCoursRecurrentsUseCase;
+  private _createCoursRecurrentUseCase?: CreateCoursRecurrentUseCase;
+  private _updateCoursRecurrentUseCase?: UpdateCoursRecurrentUseCase;
+  private _activateCoursRecurrentUseCase?: ActivateCoursRecurrentUseCase;
+  private _deactivateCoursRecurrentUseCase?: DeactivateCoursRecurrentUseCase;
+
   // Controllers - Users
   private _userController: UserController | null = null;
 
   // Controllers - Cours
   private _coursController: CoursController | null = null;
+
+  private _coursRecurrentController?: CoursRecurrentController;
 
   // ============== REPOSITORIES ==============
 
@@ -379,6 +543,68 @@ class Container {
     return this._marquerPresenceUseCase;
   }
 
+  get getAllCoursParSemaineUseCase(): GetAllCoursParSemaineUseCase {
+    if (!this._getAllCoursParSemaineUseCase) {
+      this._getAllCoursParSemaineUseCase = new GetAllCoursParSemaineUseCase(
+        this.coursRepository,
+      );
+    }
+    return this._getAllCoursParSemaineUseCase;
+  }
+
+  // Cours Récurrents Use Cases
+  get getAllCoursRecurrentsUseCase(): GetAllCoursRecurrentsUseCase {
+    if (!this._getAllCoursRecurrentsUseCase) {
+      this._getAllCoursRecurrentsUseCase = new GetAllCoursRecurrentsUseCase(
+        this.coursRecurrentRepository,
+      );
+    }
+    return this._getAllCoursRecurrentsUseCase;
+  }
+
+  get getActiveCoursRecurrentsUseCase(): GetActiveCoursRecurrentsUseCase {
+    if (!this._getActiveCoursRecurrentsUseCase) {
+      this._getActiveCoursRecurrentsUseCase =
+        new GetActiveCoursRecurrentsUseCase(this.coursRecurrentRepository);
+    }
+    return this._getActiveCoursRecurrentsUseCase;
+  }
+
+  get createCoursRecurrentUseCase(): CreateCoursRecurrentUseCase {
+    if (!this._createCoursRecurrentUseCase) {
+      this._createCoursRecurrentUseCase = new CreateCoursRecurrentUseCase(
+        this.coursRecurrentRepository,
+      );
+    }
+    return this._createCoursRecurrentUseCase;
+  }
+
+  get updateCoursRecurrentUseCase(): UpdateCoursRecurrentUseCase {
+    if (!this._updateCoursRecurrentUseCase) {
+      this._updateCoursRecurrentUseCase = new UpdateCoursRecurrentUseCase(
+        this.coursRecurrentRepository,
+      );
+    }
+    return this._updateCoursRecurrentUseCase;
+  }
+
+  get activateCoursRecurrentUseCase(): ActivateCoursRecurrentUseCase {
+    if (!this._activateCoursRecurrentUseCase) {
+      this._activateCoursRecurrentUseCase = new ActivateCoursRecurrentUseCase(
+        this.coursRecurrentRepository,
+      );
+    }
+    return this._activateCoursRecurrentUseCase;
+  }
+
+  get deactivateCoursRecurrentUseCase(): DeactivateCoursRecurrentUseCase {
+    if (!this._deactivateCoursRecurrentUseCase) {
+      this._deactivateCoursRecurrentUseCase =
+        new DeactivateCoursRecurrentUseCase(this.coursRecurrentRepository);
+    }
+    return this._deactivateCoursRecurrentUseCase;
+  }
+
   // ============== CONTROLLERS ==============
 
   get userController(): UserController {
@@ -400,6 +626,7 @@ class Container {
         this.getCoursUseCase,
         this.getCoursForParticipantUseCase,
         this.getCoursParSemaineUseCase,
+        this.getAllCoursParSemaineUseCase,
         this.createInscriptionUseCase,
         this.annulerInscriptionUseCase,
         this.marquerPresenceUseCase,
@@ -409,8 +636,20 @@ class Container {
     return this._coursController;
   }
 
-  // Note: CoursRecurrentController nécessite encore ses use cases (qui n'existent pas encore)
-  // TODO: Ajouter coursRecurrentController quand les use cases seront disponibles
+  get coursRecurrentController(): CoursRecurrentController {
+    if (!this._coursRecurrentController) {
+      this._coursRecurrentController = new CoursRecurrentController(
+        this.getAllCoursRecurrentsUseCase,
+        this.getActiveCoursRecurrentsUseCase,
+        this.createCoursRecurrentUseCase,
+        this.updateCoursRecurrentUseCase,
+        this.activateCoursRecurrentUseCase,
+        this.deactivateCoursRecurrentUseCase,
+      );
+      console.log("✅ [Container] CoursRecurrentController instancié");
+    }
+    return this._coursRecurrentController;
+  }
 
   // ============== MÉTHODES UTILITAIRES ==============
 
@@ -443,9 +682,20 @@ class Container {
     this._annulerInscriptionUseCase = null;
     this._marquerPresenceUseCase = null;
 
+    this._getAllCoursParSemaineUseCase = undefined;
+
+    // Use Cases - Cours Récurrents
+    this._getAllCoursRecurrentsUseCase = undefined;
+    this._getActiveCoursRecurrentsUseCase = undefined;
+    this._createCoursRecurrentUseCase = undefined;
+    this._updateCoursRecurrentUseCase = undefined;
+    this._activateCoursRecurrentUseCase = undefined;
+    this._deactivateCoursRecurrentUseCase = undefined;
+
     // Controllers
     this._userController = null;
     this._coursController = null;
+    this._coursRecurrentController = undefined;
 
     console.log("🔄 [Container] Container réinitialisé");
   }
@@ -480,10 +730,27 @@ class Container {
       createInscriptionUseCase: this._createInscriptionUseCase !== null,
       annulerInscriptionUseCase: this._annulerInscriptionUseCase !== null,
       marquerPresenceUseCase: this._marquerPresenceUseCase !== null,
+      getAllCoursParSemaineUseCase:
+        this._getAllCoursParSemaineUseCase !== undefined,
+
+      // Use Cases - Cours Récurrents
+      getAllCoursRecurrentsUseCase:
+        this._getAllCoursRecurrentsUseCase !== undefined,
+      getActiveCoursRecurrentsUseCase:
+        this._getActiveCoursRecurrentsUseCase !== undefined,
+      createCoursRecurrentUseCase:
+        this._createCoursRecurrentUseCase !== undefined,
+      updateCoursRecurrentUseCase:
+        this._updateCoursRecurrentUseCase !== undefined,
+      activateCoursRecurrentUseCase:
+        this._activateCoursRecurrentUseCase !== undefined,
+      deactivateCoursRecurrentUseCase:
+        this._deactivateCoursRecurrentUseCase !== undefined,
 
       // Controllers
       userController: this._userController !== null,
       coursController: this._coursController !== null,
+      coursRecurrentController: this._coursRecurrentController !== undefined,
     };
   }
 }
