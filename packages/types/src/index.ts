@@ -1,172 +1,72 @@
-// Export sélectif pour éviter les conflits avec utilisateurs-service
-export type {
-  UserDataSession,
-  Professeur,
-  UserDataLogin,
-  Abonnement,
-  Grade,
-  Genres,
-  Status,
-  UserDataInscription,
-  UserDataAjout,
-  UtilisateurInscriptionPayload,
-  UserData,
-} from "./utilisateurs.js";
+// ============================================
+// LEGACY EXPORTS (DEPRECATED - moved to legacy/)
+// ============================================
+// ⚠️ These exports are deprecated and maintained only for backward compatibility
+// Please migrate to the new architecture (validators, domain types, DTOs)
+export * from "./legacy/index.js";
 
-export {
-  abonnementSchema,
-  gradeSchema,
-  genresSchema,
-  userDataLoginSchema,
-  userInscriptionSchema,
-} from "./utilisateurs.js";
-export * from "./query.js";
-export * from "./cours.js";
-// Export ancien fichier statistiques (types de base seulement)
-export type { StatistiquesFrequentation } from "./statistiques.js";
-export {
-  frequentationParCoursSchema,
-  frequentationParMoisSchema,
-  statistiquesFrequentationSchema,
-  progressionParCoursSchema,
-  statistiquesProgressionUtilisateurSchema,
-} from "./statistiques.js";
-// Export nouveau fichier statistiques-service (types complets)
-export * from "./statistiques-service.js";
-export * from "./email.js";
-export * from "./s3.js";
-export * from "./alertes.js";
-export * from "./auth.js";
-export * from "./commandes-service.js";
-export * from "./compte-service.js";
-export * from "./cours-service.js";
-export * from "./informations-service.js";
-export * from "./inscriptions-service.js";
-export * from "./messagerie.js";
-export * from "./paiements.js";
-export * from "./stock.js";
+// ============================================
+// NEW ARCHITECTURE EXPORTS
+// ============================================
 
-// Export sélectif pour professeurs pour éviter conflit avec Professeur de utilisateurs
-export type {
-  ProfesseurAvecDetails,
-  PlanningCoursProf,
-  AjouterProfesseurInput,
-  ModifierStatutProfesseurInput,
-  StatistiquesProfesseurs,
-  StatistiquesProfesseur,
-  ProfesseursResponse,
-  ProfesseursFiltres,
-  TraitementProfesseurResult,
-  ProfesseursPaginatedResponse,
-  PlanningProfesseurResponse,
-  RetirerPromotionInput,
-  AjouterProfesseurResult,
-} from "./professeurs.js";
+// Constants
+export * from "./constants/index.js";
 
-export {
-  StatutProfesseur,
-  ProfesseurSchema,
-  PlanningCoursProfSchema,
-  AjouterProfesseurInputSchema,
-  ModifierStatutProfesseurInputSchema,
-  ProfesseursError,
-} from "./professeurs.js";
+// Enums
+export * from "./enums/index.js";
 
-// Export des types du service utilisateurs
-export type {
-  Utilisateur,
-  UtilisateurAvecDetails,
-  UtilisateurRecherche,
-  CreerUtilisateurInput,
-  ModifierUtilisateurInput,
-  InscrireUtilisateurInput,
-  ConnexionInput,
-  ConnexionParUserIdInput,
-  ConnexionResult,
-  StatistiquesUtilisateurs,
-  StatistiquesUtilisateur,
-  UtilisateursFiltres,
-  UtilisateursPaginatedResponse,
-  DesactiverUtilisateurInput,
-  ReactiverUtilisateurInput,
-  VerificationEmailResult,
-  VerificationUtilisateurResult,
-  UtilisateursResponse,
-  CreerUtilisateurResult,
-  ModifierUtilisateurResult,
-  ActivationResult,
-  UtilisateursTriOptions,
-  UtilisateurInformationsCompletes,
-  RechercherParEmailInput,
-  GenererUserIdResult,
-} from "./utilisateurs-service.js";
+// API Response Types
+export * from "./api/responses/ApiResponse.types.js";
 
-export {
-  StatutUtilisateur,
-  UtilisateurSchema,
-  CreerUtilisateurInputSchema,
-  ModifierUtilisateurInputSchema,
-  InscrireUtilisateurInputSchema,
-  ConnexionInputSchema,
-  ConnexionParUserIdInputSchema,
-  DesactiverUtilisateurInputSchema,
-  ReactiverUtilisateurInputSchema,
-  RechercherParEmailInputSchema,
-  UtilisateursError,
-  UtilisateursErrorCode,
-} from "./utilisateurs-service.js";
+// Domain Types - Users
+export * from "./domain/user/User.types.js";
 
-// Export du magasin avec renommage pour éviter les conflits
-export type {
-  Article,
-  ArticleCreationData,
-  ArticleCommande,
-  ArticlesParCategorie,
-  Commande as MagasinCommande,
-  CommandeDetails,
-  NouvelleCommande,
-  Categorie as MagasinCategorie,
-  Stock,
-  FiltresArticles,
-  OptionsPagination,
-  OptionsTri,
-  ConfirmationResult,
-  MagasinConfirmationResult,
-  MagasinResponse,
-  ArticlesResponse,
-  CommandeResponse,
-  CommandesResponse,
-  CategoriesResponse,
-  IdMagasin,
-  IdArticle,
-  IdCommande,
-  IdCategorie,
-  IdUtilisateur,
-  MappingTaille,
-} from "./magasin.js";
+// Domain Types - Courses
+export * from "./domain/course/index.js";
 
-// Export des valeurs nécessaires (classes, enums, constantes)
-export {
-  StatutCommande,
-  MagasinError,
-  TAILLES_MAPPING,
-  TAILLES_REVERSE_MAPPING,
-} from "./magasin.js";
+// Domain Types - Payments
+export * from "./domain/payment/index.js";
 
-// Export des commandes avec renommage pour éviter les conflits
-export type {
-  Commande as CommandeStore,
-  CreateCommandeData,
-  UpdateCommandeData,
-  CommandeComplete,
-} from "./commandes.js";
+// Domain Types - Store
+export * from "./domain/store/index.js";
 
-// Export des nouveaux types et schémas pour la connexion multi-utilisateurs
-export type {
-  UserDataLoginByUserId,
-  UserSearchByEmail,
-} from "./utilisateurs.js";
-export {
-  userDataLoginByUserIdSchema,
-  userSearchByEmailSchema,
-} from "./utilisateurs.js";
+// Domain Types - Messaging
+export * from "./domain/messaging/index.js";
+
+// Domain Types - Groups
+export * from "./domain/groups/index.js";
+
+// Domain Types - Statistics
+export * from "./domain/statistics/index.js";
+
+// Domain Types - Lookup
+export * from "./domain/lookup/index.js";
+
+// DTOs - Users
+export * from "./dtos/users/UserDto.js";
+export * from "./dtos/auth/AuthDto.js";
+
+// DTOs - Courses
+export * from "./dtos/courses/index.js";
+
+// DTOs - Payments
+export * from "./dtos/payments/index.js";
+
+// DTOs - Store
+export * from "./dtos/store/index.js";
+
+// DTOs - Messaging
+export * from "./dtos/messaging/index.js";
+
+// DTOs - Groups
+export * from "./dtos/groups/index.js";
+
+// DTOs - Statistics
+export * from "./dtos/statistics/index.js";
+
+// DTOs - Lookup
+export * from "./dtos/lookup/index.js";
+
+// Validators
+// Validators (Zod schemas)
+export * from "./validators/index.js";
