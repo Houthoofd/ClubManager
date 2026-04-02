@@ -16,7 +16,7 @@ import {
   GROUPS_MAX_PAGE_SIZE,
   GROUPS_MIN_PAGE_SIZE,
   GROUPS_DEFAULT_PAGE,
-  DEFAULT_SORT_ORDER,
+  GROUPS_DEFAULT_SORT_ORDER,
 } from "../../constants/groups.constants.js";
 import {
   idSchema,
@@ -227,7 +227,7 @@ export const listGroupUsersSchema = z.object({
     })
     .optional()
     .default("created_at"),
-  sort_order: sortOrderSchema.optional().default(DEFAULT_SORT_ORDER),
+  sort_order: sortOrderSchema.optional().default(GROUPS_DEFAULT_SORT_ORDER),
 });
 
 /**
@@ -269,7 +269,7 @@ export const listUserGroupsSchema = z.object({
     })
     .optional()
     .default("created_at"),
-  sort_order: sortOrderSchema.optional().default(DEFAULT_SORT_ORDER),
+  sort_order: sortOrderSchema.optional().default(GROUPS_DEFAULT_SORT_ORDER),
 });
 
 // ============================================================================

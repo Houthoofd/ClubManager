@@ -9,6 +9,14 @@
  * Tables: groupes, groupes_utilisateurs
  */
 
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  MIN_PAGE_SIZE,
+  DEFAULT_PAGE,
+  VALID_SORT_ORDERS,
+} from "./common.constants.js";
+
 // ============================================================================
 // GROUPS - User groups (admin, member, professor, etc.)
 // ============================================================================
@@ -46,39 +54,45 @@ export const MAX_GROUPS_PER_USER = 50;
 export const MAX_USERS_PER_BULK_ASSIGNMENT = 100;
 
 // ============================================================================
-// PAGINATION DEFAULTS
+// PAGINATION DEFAULTS (re-exported from common for convenience)
 // ============================================================================
 
 /**
  * Default page size for paginated groups queries
+ * @see DEFAULT_PAGE_SIZE from common.constants
  */
-export const GROUPS_DEFAULT_PAGE_SIZE = 20;
+export const GROUPS_DEFAULT_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
 /**
  * Maximum page size for paginated groups queries
+ * @see MAX_PAGE_SIZE from common.constants
  */
-export const GROUPS_MAX_PAGE_SIZE = 100;
+export const GROUPS_MAX_PAGE_SIZE = MAX_PAGE_SIZE;
 
 /**
  * Minimum page size for paginated groups queries
+ * @see MIN_PAGE_SIZE from common.constants
  */
-export const GROUPS_MIN_PAGE_SIZE = 1;
+export const GROUPS_MIN_PAGE_SIZE = MIN_PAGE_SIZE;
 
 /**
  * Default page number for paginated groups queries
+ * @see DEFAULT_PAGE from common.constants
  */
-export const GROUPS_DEFAULT_PAGE = 1;
+export const GROUPS_DEFAULT_PAGE = DEFAULT_PAGE;
 
 // ============================================================================
-// COMMON VALIDATION
+// SORTING (re-exported from common for convenience)
 // ============================================================================
 
 /**
  * Valid sort orders
+ * @see VALID_SORT_ORDERS from common.constants
  */
-export const VALID_SORT_ORDERS = ['asc', 'desc'] as const;
+export { VALID_SORT_ORDERS };
 
 /**
- * Default sort order
+ * Default sort order for groups (alphabetical order makes more sense for groups)
+ * Groups are typically displayed in alphabetical order rather than reverse chronological
  */
-export const DEFAULT_SORT_ORDER = 'asc';
+export const GROUPS_DEFAULT_SORT_ORDER: "asc" | "desc" = "asc";

@@ -17,7 +17,7 @@ export type {
   GroupResponse,
   GroupsListResponse,
   GroupStats,
-} from '../../validators/groups/group.validators.js';
+} from "../../validators/groups/group.validators.js";
 
 // ============================================================================
 // GROUP USER TYPES
@@ -30,5 +30,4 @@ export type {
   GroupUserResponse,
   GroupUsersListResponse,
   UserGroupsListResponse,
-  GroupUserStats,
-} from '../../validators/groups/group-user.validators.js';
+} from "../../validators/groups/group-user.validators.js";

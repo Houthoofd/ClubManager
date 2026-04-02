@@ -3,6 +3,9 @@
  * @description Central export point for all constants
  */
 
+// Common constants (exported first to avoid conflicts)
+export * from "./common.constants.js";
+
 // Validation constants
 export * from "./validation.constants.js";
 

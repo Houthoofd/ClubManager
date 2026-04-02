@@ -1,13 +1,9 @@
 // ============================================
-// LEGACY EXPORTS (DEPRECATED - moved to legacy/)
-// ============================================
-// ⚠️ These exports are deprecated and maintained only for backward compatibility
-// Please migrate to the new architecture (validators, domain types, DTOs)
-export * from "./legacy/index.js";
-
-// ============================================
 // NEW ARCHITECTURE EXPORTS
 // ============================================
+
+// Shared utilities (Result monad, errors)
+export * from "./shared/index.js";
 
 // Constants
 export * from "./constants/index.js";
@@ -67,6 +63,17 @@ export * from "./dtos/statistics/index.js";
 // DTOs - Lookup
 export * from "./dtos/lookup/index.js";
 
-// Validators
-// Validators (Zod schemas)
-export * from "./validators/index.js";
+// ============================================
+// VALIDATORS (ZOD SCHEMAS)
+// ============================================
+// Note: Validators are NOT exported from this index to avoid type conflicts.
+// Domain types are inferred from validators, so exporting validators would create
+// duplicate type exports (e.g., Article type from domain vs Article type from validators).
+//
+// To use validators/schemas, import them directly:
+//   import { createUserSchema, loginSchema } from '@clubmanager/types/validators/users/user.validators';
+//   import { createArticleSchema } from '@clubmanager/types/validators/store/article.validators';
+//
+// All validator schemas are available in: packages/types/src/validators/
+//
+// For convenience, domain types (inferred from validators) are exported above.

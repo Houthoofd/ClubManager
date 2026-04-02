@@ -19,7 +19,7 @@ import {
   GROUPS_MIN_PAGE_SIZE,
   GROUPS_DEFAULT_PAGE,
   VALID_SORT_ORDERS,
-  DEFAULT_SORT_ORDER,
+  GROUPS_DEFAULT_SORT_ORDER,
 } from "../../constants/groups.constants.js";
 import {
   idSchema,
@@ -210,7 +210,7 @@ export const listGroupsSchema = z.object({
     })
     .optional()
     .default("nom"),
-  sort_order: sortOrderSchema.optional().default(DEFAULT_SORT_ORDER),
+  sort_order: sortOrderSchema.optional().default(GROUPS_DEFAULT_SORT_ORDER),
 });
 
 // ============================================================================

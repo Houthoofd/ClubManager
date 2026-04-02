@@ -1,16 +1,8 @@
 // ============================================
-// LEGACY EXPORTS (à migrer progressivement)
-// ============================================
-export * from "./utilisateurs.js";
-export * from "./query.js";
-export * from "./cours.js";
-export * from "./statistiques.js";
-// Export du magasin
-export * from "./magasin.js";
-export { userDataLoginByUserIdSchema, userSearchByEmailSchema, } from "./utilisateurs.js";
-// ============================================
 // NEW ARCHITECTURE EXPORTS
 // ============================================
+// Shared utilities (Result monad, errors)
+export * from "./shared/index.js";
 // Constants
 export * from "./constants/index.js";
 // Enums
@@ -25,6 +17,14 @@ export * from "./domain/course/index.js";
 export * from "./domain/payment/index.js";
 // Domain Types - Store
 export * from "./domain/store/index.js";
+// Domain Types - Messaging
+export * from "./domain/messaging/index.js";
+// Domain Types - Groups
+export * from "./domain/groups/index.js";
+// Domain Types - Statistics
+export * from "./domain/statistics/index.js";
+// Domain Types - Lookup
+export * from "./domain/lookup/index.js";
 // DTOs - Users
 export * from "./dtos/users/UserDto.js";
 export * from "./dtos/auth/AuthDto.js";
@@ -34,5 +34,25 @@ export * from "./dtos/courses/index.js";
 export * from "./dtos/payments/index.js";
 // DTOs - Store
 export * from "./dtos/store/index.js";
-// Validators (Zod schemas)
-export * from "./validators/index.js";
+// DTOs - Messaging
+export * from "./dtos/messaging/index.js";
+// DTOs - Groups
+export * from "./dtos/groups/index.js";
+// DTOs - Statistics
+export * from "./dtos/statistics/index.js";
+// DTOs - Lookup
+export * from "./dtos/lookup/index.js";
+// ============================================
+// VALIDATORS (ZOD SCHEMAS)
+// ============================================
+// Note: Validators are NOT exported from this index to avoid type conflicts.
+// Domain types are inferred from validators, so exporting validators would create
+// duplicate type exports (e.g., Article type from domain vs Article type from validators).
+//
+// To use validators/schemas, import them directly:
+//   import { createUserSchema, loginSchema } from '@clubmanager/types/validators/users/user.validators';
+//   import { createArticleSchema } from '@clubmanager/types/validators/store/article.validators';
+//
+// All validator schemas are available in: packages/types/src/validators/
+//
+// For convenience, domain types (inferred from validators) are exported above.

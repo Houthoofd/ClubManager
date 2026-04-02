@@ -10,6 +10,15 @@
  *         notifications, alertes_types, alertes_utilisateurs, alertes_actions
  */
 
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  MIN_PAGE_SIZE,
+  DEFAULT_PAGE,
+  VALID_SORT_ORDERS,
+  DEFAULT_SORT_ORDER,
+} from "./common.constants.js";
+
 // ============================================================================
 // MESSAGES - Direct messages between users
 // ============================================================================
@@ -188,39 +197,45 @@ export const ALERT_ACTION_DESCRIPTION_MAX_LENGTH = 65535;
 export const ALERT_ACTION_DESCRIPTION_MIN_LENGTH = 1;
 
 // ============================================================================
-// PAGINATION DEFAULTS
+// PAGINATION DEFAULTS (re-exported from common for convenience)
 // ============================================================================
 
 /**
  * Default page size for paginated messaging queries
+ * @see DEFAULT_PAGE_SIZE from common.constants
  */
-export const MESSAGING_DEFAULT_PAGE_SIZE = 20;
+export const MESSAGING_DEFAULT_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
 /**
  * Maximum page size for paginated messaging queries
+ * @see MAX_PAGE_SIZE from common.constants
  */
-export const MESSAGING_MAX_PAGE_SIZE = 100;
+export const MESSAGING_MAX_PAGE_SIZE = MAX_PAGE_SIZE;
 
 /**
  * Minimum page size for paginated messaging queries
+ * @see MIN_PAGE_SIZE from common.constants
  */
-export const MESSAGING_MIN_PAGE_SIZE = 1;
+export const MESSAGING_MIN_PAGE_SIZE = MIN_PAGE_SIZE;
 
 /**
  * Default page number for paginated messaging queries
+ * @see DEFAULT_PAGE from common.constants
  */
-export const MESSAGING_DEFAULT_PAGE = 1;
+export const MESSAGING_DEFAULT_PAGE = DEFAULT_PAGE;
 
 // ============================================================================
-// COMMON VALIDATION
+// SORTING (re-exported from common for convenience)
 // ============================================================================
 
 /**
  * Valid sort orders
+ * @see VALID_SORT_ORDERS from common.constants
  */
-export const VALID_SORT_ORDERS = ['asc', 'desc'] as const;
+export { VALID_SORT_ORDERS };
 
 /**
  * Default sort order
+ * @see DEFAULT_SORT_ORDER from common.constants
  */
-export const DEFAULT_SORT_ORDER = 'desc';
+export { DEFAULT_SORT_ORDER };

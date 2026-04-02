@@ -17,7 +17,7 @@ export type {
   GroupsListResponse,
   GroupStats,
   ListGroupsQuery,
-} from '../../validators/groups/group.validators.js';
+} from "../../validators/groups/group.validators.js";
 
 // ============================================================================
 // GROUP USER DTOs
@@ -29,9 +29,8 @@ export type {
   GroupUserResponse,
   GroupUsersListResponse,
   UserGroupsListResponse,
-  GroupUserStats,
   ListGroupUsersQuery,
   ListUserGroupsQuery,
   BulkAssignUsers,
   BulkUnassignUsers,
-} from '../../validators/groups/group-user.validators.js';
+} from "../../validators/groups/group-user.validators.js";

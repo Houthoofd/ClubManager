@@ -13,7 +13,7 @@
  * - Used for general status values (Actif, Inactif, Suspendu, etc.)
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 import {
   STATUS_NAME_MAX_LENGTH,
   STATUS_NAME_MIN_LENGTH,
@@ -23,9 +23,13 @@ import {
   LOOKUP_MIN_PAGE_SIZE,
   LOOKUP_DEFAULT_PAGE,
   VALID_SORT_ORDERS,
-  DEFAULT_SORT_ORDER,
-} from '../../constants/lookup.constants.js';
-import { idSchema, idStringSchema, paginationSchema } from '../common/common.validators.js';
+  LOOKUP_DEFAULT_SORT_ORDER,
+} from "../../constants/lookup.constants.js";
+import {
+  idSchema,
+  idStringSchema,
+  paginationSchema,
+} from "../common/common.validators.js";
 
 // ============================================================================
 // BASE SCHEMAS
@@ -110,11 +114,11 @@ export const listStatusesSchema = paginationSchema.extend({
   search: z.string().trim().optional(),
   has_description: z
     .string()
-    .transform((val) => val === 'true' || val === '1')
+    .transform((val) => val === "true" || val === "1")
     .pipe(z.boolean())
     .optional(),
-  sort_by: z.enum(['nom', 'id']).default('nom'),
-  sort_order: z.enum(['asc', 'desc']).default(DEFAULT_SORT_ORDER),
+  sort_by: z.enum(["nom", "id"]).default("nom"),
+  sort_order: z.enum(["asc", "desc"]).default(LOOKUP_DEFAULT_SORT_ORDER),
 });
 
 /**

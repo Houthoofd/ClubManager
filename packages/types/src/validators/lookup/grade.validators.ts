@@ -14,7 +14,7 @@
  * - Used for ranking system (white, blue, purple, brown, black belts, etc.)
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 import {
   GRADE_NAME_MAX_LENGTH,
   GRADE_NAME_MIN_LENGTH,
@@ -26,9 +26,13 @@ import {
   LOOKUP_MIN_PAGE_SIZE,
   LOOKUP_DEFAULT_PAGE,
   VALID_SORT_ORDERS,
-  DEFAULT_SORT_ORDER,
-} from '../../constants/lookup.constants.js';
-import { idSchema, idStringSchema, paginationSchema } from '../common/common.validators.js';
+  LOOKUP_DEFAULT_SORT_ORDER,
+} from "../../constants/lookup.constants.js";
+import {
+  idSchema,
+  idStringSchema,
+  paginationSchema,
+} from "../common/common.validators.js";
 
 // ============================================================================
 // BASE SCHEMAS
@@ -126,8 +130,8 @@ export const listGradesSchema = paginationSchema.extend({
   ordre_min: z.coerce.number().int().min(GRADE_MIN_ORDER).optional(),
   ordre_max: z.coerce.number().int().max(GRADE_MAX_ORDER).optional(),
   couleur: z.string().trim().optional(),
-  sort_by: z.enum(['nom', 'ordre', 'id']).default('ordre'),
-  sort_order: z.enum(['asc', 'desc']).default(DEFAULT_SORT_ORDER),
+  sort_by: z.enum(["nom", "ordre", "id"]).default("ordre"),
+  sort_order: z.enum(["asc", "desc"]).default(LOOKUP_DEFAULT_SORT_ORDER),
 });
 
 /**
@@ -145,7 +149,7 @@ export const gradesByOrderRangeSchema = z
   })
   .refine((data) => data.ordre_max >= data.ordre_min, {
     message: "L'ordre maximum doit être supérieur ou égal à l'ordre minimum",
-    path: ['ordre_max'],
+    path: ["ordre_max"],
   });
 
 /**
