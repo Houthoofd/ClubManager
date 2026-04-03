@@ -47,6 +47,14 @@ const ProfessorDetailPage = React.lazy(
   () => import("@pages/professors/ProfessorDetailPage"),
 );
 
+// Courses
+const CoursesListPage = React.lazy(
+  () => import("@pages/courses/CoursesListPage"),
+);
+const CourseDetailPage = React.lazy(
+  () => import("@pages/courses/CourseDetailPage"),
+);
+
 // Error Pages
 const NotFoundPage = React.lazy(() => import("./NotFoundPage"));
 
@@ -261,11 +269,19 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <div>Courses List (à implémenter)</div>,
+        element: (
+          <React.Suspense fallback={<LoadingFallback />}>
+            <CoursesListPage />
+          </React.Suspense>
+        ),
       },
       {
         path: ":id",
-        element: <div>Course Detail (à implémenter)</div>,
+        element: (
+          <React.Suspense fallback={<LoadingFallback />}>
+            <CourseDetailPage />
+          </React.Suspense>
+        ),
       },
     ],
   },

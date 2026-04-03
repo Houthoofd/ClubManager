@@ -24,10 +24,10 @@
 // Authentication Pages
 // ============================================================================
 
-export { LoginPage } from './auth/LoginPage';
-export { RegisterPage } from './auth/RegisterPage';
-export { ForgotPasswordPage } from './auth/ForgotPasswordPage';
-export { ResetPasswordPage } from './auth/ResetPasswordPage';
+export { LoginPage } from "./auth/LoginPage";
+export { RegisterPage } from "./auth/RegisterPage";
+export { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
+export { ResetPasswordPage } from "./auth/ResetPasswordPage";
 
 // ============================================================================
 // Dashboard Pages
@@ -39,8 +39,8 @@ export { ResetPasswordPage } from './auth/ResetPasswordPage';
 // Course Pages
 // ============================================================================
 
-// export { CoursesPage } from './courses/CoursesPage';
-// export { CourseDetailPage } from './courses/CourseDetailPage';
+export { CoursesListPage } from "./courses/CoursesListPage";
+export { CourseDetailPage } from "./courses/CourseDetailPage";
 // export { CourseEnrollmentPage } from './courses/CourseEnrollmentPage';
 
 // ============================================================================

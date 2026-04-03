@@ -64,7 +64,59 @@ export {
   RegisterForm,
   ForgotPasswordForm,
   ResetPasswordForm,
-} from './auth';
+} from "./auth";
+
+// ============================================================================
+// Professors Feature
+// ============================================================================
+
+export {
+  // Hooks
+  useProfessors,
+  useProfessorDetail,
+  useCreateProfessor,
+  useUpdateProfessor,
+  useDeleteProfessor,
+
+  // Types
+  type Professor,
+  type CreateProfessorData,
+  type UpdateProfessorData,
+
+  // UI Components
+  ProfessorCard,
+  ProfessorsList,
+  ProfessorForm,
+} from "./professors";
+
+// ============================================================================
+// Courses Feature
+// ============================================================================
+
+export {
+  // Hooks
+  useCourses,
+  useCourseDetail,
+  useCreateCourse,
+  useUpdateCourse,
+  useDeleteCourse,
+
+  // Types
+  type Course,
+  type CourseType,
+  type CourseLevel,
+  type CourseStatus,
+  type CourseFilters,
+  type CreateCourseData,
+  type UpdateCourseData,
+  COURSE_TYPE_LABELS,
+  COURSE_LEVEL_LABELS,
+  COURSE_STATUS_LABELS,
+
+  // UI Components
+  CourseCard,
+  CoursesList,
+} from "./courses";
 
 // ============================================================================
 // Future Features (to be implemented)
