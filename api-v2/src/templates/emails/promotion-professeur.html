@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promotion Professeur - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-promotion">
+            <h1>🎉 Félicitations !</h1>
+            <p class="mb-0">Promotion au rang de Professeur</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Bonjour <strong>{{firstName}} {{lastName}}</strong>,
+            </div>
+            
+            <div class="highlight-box">
+                <p class="mb-0">
+                    🌟 Nous avons le plaisir de vous informer que vous avez été promu(e) au rang de 
+                    <strong>Professeur</strong> dans notre {{clubName}} !
+                </p>
+            </div>
+            
+            <p>Cette promotion reconnaît votre engagement, vos compétences et votre dévouement au sein de notre communauté.</p>
+            
+            <p>Connectez-vous dès maintenant pour découvrir votre nouveau tableau de bord professeur :</p>
+            
+            <div class="cta-container">
+                <a href="{{frontendUrl}}" class="cta-button cta-button-promotion">
+                    🔗 Accéder à mon espace professeur
+                </a>
+            </div>
+            
+            <p>Cordialement,<br><strong>L'équipe {{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+        </div>
+    </div>
+</body>
+</html>

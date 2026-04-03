@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Email - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-test">
+            <h1>🧪 Email de test</h1>
+            <p class="mb-0">Configuration SendGrid</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Bonjour <strong>{{userName}}</strong>,
+            </div>
+            
+            <div class="test-box">
+                <p class="mb-0">
+                    ✅ <strong>SUCCÈS :</strong> La configuration SendGrid fonctionne parfaitement !
+                </p>
+            </div>
+            
+            <div class="test-details">
+                <h3>📊 Informations du test :</h3>
+                <ul>
+                    <li><strong>Date :</strong> {{testDate}}</li>
+                    <li><strong>Heure :</strong> {{testTime}}</li>
+                    <li><strong>Service :</strong> {{clubName}}</li>
+                    <li><strong>Statut :</strong> ✅ Opérationnel</li>
+                </ul>
+            </div>
+            
+            <p>Ce message confirme que :</p>
+            <ul>
+                <li>✅ La configuration SendGrid est correcte</li>
+                <li>✅ Les templates d'emails sont fonctionnels</li>
+                <li>✅ L'envoi d'emails est opérationnel</li>
+                <li>✅ Les variables sont correctement remplacées</li>
+            </ul>
+            
+            <div class="cta-container">
+                <a href="{{frontendUrl}}" class="cta-button cta-button-test">
+                    🌐 Retourner à l'application
+                </a>
+            </div>
+            
+            <p>Félicitations ! Votre système d'emails est prêt.</p>
+            
+            <p>L'équipe technique<br><strong>{{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p>Support : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

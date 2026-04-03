@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenue dans {{clubName}} !</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-welcome">
+            <h1>🎉 Bienvenue !</h1>
+            <p class="mb-0">Votre inscription est confirmée</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Bonjour <strong>{{userName}}</strong>,
+            </div>
+            
+            <div class="highlight-box">
+                <p class="mb-0">
+                    🌟 Nous sommes ravis de vous accueillir dans la famille <strong>{{clubName}}</strong> !
+                </p>
+            </div>
+            
+            <p>Votre compte a été créé avec succès. Vous pouvez maintenant accéder à votre espace personnel et découvrir tous nos services.</p>
+            
+            <div class="cta-container">
+                <a href="{{loginUrl}}" class="cta-button cta-button-welcome">
+                    🔗 Accéder à mon espace
+                </a>
+            </div>
+            
+            <h3>Prochaines étapes :</h3>
+            <ul>
+                <li>Complétez votre profil</li>
+                <li>Explorez nos cours disponibles</li>
+                <li>Consultez votre planning</li>
+                <li>Contactez-nous pour toute question</li>
+            </ul>
+            
+            <p>Si vous avez des questions, notre équipe est là pour vous aider !</p>
+            
+            <p>Sportivement,<br><strong>L'équipe {{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p>Support : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

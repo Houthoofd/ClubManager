@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification de cours - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-course">
+            <h1>📅 Notification de cours</h1>
+            <p class="mb-0">{{action}} - {{courseType}}</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Bonjour <strong>{{userName}}</strong>,
+            </div>
+            
+            <div class="highlight-box">
+                <p class="mb-0">
+                    📋 <strong>{{action}}</strong> pour le cours de <strong>{{courseType}}</strong>
+                </p>
+            </div>
+            
+            <div class="course-details">
+                <h3>📝 Détails du cours :</h3>
+                <ul>
+                    <li><strong>Type :</strong> {{courseType}}</li>
+                    <li><strong>Date :</strong> {{courseDate}}</li>
+                    <li><strong>Heure :</strong> {{courseTime}}</li>
+                    {{#if instructor}}<li><strong>Professeur :</strong> {{instructor}}</li>{{/if}}
+                </ul>
+            </div>
+            
+            <div class="cta-container">
+                <a href="{{dashboardUrl}}" class="cta-button cta-button-course">
+                    📱 Voir mon planning
+                </a>
+            </div>
+            
+            <p>Nous vous rappelons d'arriver 10 minutes avant le début du cours.</p>
+            
+            <p>Sportivement,<br><strong>L'équipe {{clubName}}</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p>Support : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>

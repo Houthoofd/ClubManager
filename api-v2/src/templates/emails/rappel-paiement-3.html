@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dernier avertissement - Suspension imminente - {{clubName}}</title>
+    <link rel="stylesheet" href="styles/email-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header header-payment-final">
+            <h1>🚨 Dernier avertissement</h1>
+            <p class="mb-0">Suspension de compte imminente</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Bonjour <strong>{{userName}}</strong>,
+            </div>
+            
+            <div class="final-warning-box">
+                <p class="mb-0">
+                    🚨 <strong>DERNIER AVERTISSEMENT :</strong> Votre compte sera suspendu sous 48h sans paiement.
+                </p>
+            </div>
+            
+            <div class="payment-details">
+                <h3>💰 Paiement en souffrance :</h3>
+                <ul>
+                    {{#if amount}}<li><strong>Montant dû :</strong> {{amount}}€</li>{{/if}}
+                    {{#if dueDate}}<li><strong>En retard depuis :</strong> {{dueDate}}</li>{{/if}}
+                </ul>
+            </div>
+            
+            <p><strong style="color: #d32f2f;">ATTENTION : Votre accès sera suspendu dans 48 heures si aucun paiement n'est effectué.</strong></p>
+            
+            <div class="cta-container">
+                <a href="{{dashboardUrl}}" class="cta-button cta-button-final">
+                    🚨 PAYER MAINTENANT
+                </a>
+            </div>
+            
+            <p>Après suspension, des frais de réactivation pourront s'appliquer.</p>
+            
+            <p><strong>Pour éviter la suspension, contactez-nous immédiatement :</strong></p>
+            <p>📞 Téléphone : [VOTRE NUMÉRO]<br>
+            📧 Email urgent : {{supportEmail}}</p>
+            
+            <p>L'équipe {{clubName}}</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{clubName}} - Tous droits réservés</p>
+            <p>Support urgent : <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+        </div>
+    </div>
+</body>
+</html>
