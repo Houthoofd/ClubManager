@@ -1,7 +1,7 @@
 # 📊 Progress Tracker - Front-End V2
 
 > **Last Updated**: Janvier 2025  
-> **Overall Progress**: ██████░░░░░░░░░░░░░░░░ 30%
+> **Overall Progress**: ████████░░░░░░░░░░░░░░ 33%
 
 ---
 
@@ -10,8 +10,8 @@
 | Category | Progress | Status |
 |----------|----------|--------|
 | **Infrastructure** | ████████████████████████████ 100% | ✅ Complete |
-| **Features** | █████░░░░░░░░░░░░░░░░░░░ 17% | 🔴 Critical |
-| **Pages** | ████████████░░░░░░░░░░░░ 40% | 🟡 In Progress |
+| **Features** | ██████░░░░░░░░░░░░░░░░░░ 25% | 🟡 In Progress |
+| **Pages** | ████████████████░░░░░░░░ 52% | 🟡 In Progress |
 | **Components** | ██░░░░░░░░░░░░░░░░░░░░░░ 10% | 🔴 Critical |
 | **Tests** | ░░░░░░░░░░░░░░░░░░░░░░░░ 0% | 🔴 Critical |
 
@@ -40,11 +40,11 @@ Professors              ██████████████████�
 ├─ Detail View          ████████████████████████████  100% ✅
 └─ Form Management      ████████████████████████████  100% ✅
 
-Courses                 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-├─ List & Filters       ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-├─ Detail View          ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-├─ CRUD (Admin)         ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-└─ Schedule View        ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
+Courses                 ████████████████████████████  100% ✅
+├─ List & Filters       ████████████████████████████  100% ✅
+├─ Detail View          ████████████████████████████  100% ✅
+├─ CRUD (Admin)         ████████████████████████████  100% ✅
+└─ API & Hooks          ████████████████████████████  100% ✅
 
 Enrollment              ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
 ├─ Enroll/Unenroll      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
@@ -140,11 +140,9 @@ Professors              ██████████████████�
 Settings                ████████████████████████████  100% ✅
 └─ SettingsPage        ████████████████████████████  100% ✅
 
-Courses                 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-├─ CoursesListPage     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-├─ CourseDetailPage    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-├─ CreateCoursePage    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
-└─ EditCoursePage      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
+Courses                 ████████████████████████████  100% ✅
+├─ CoursesListPage     ████████████████████████████  100% ✅
+└─ CourseDetailPage    ████████████████████████████  100% ✅
 
 Enrollment              ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
 ├─ MyEnrollmentsPage   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░    0% 🔴
@@ -176,7 +174,7 @@ Messages                ░░░░░░░░░░░░░░░░░░�
 Other                   ████████████████████████████  100% ✅
 └─ NotFoundPage        ████████████████████████████  100% ✅
 
-Progress: ████████████░░░░░░░░░░░░░░ 40% (10/25)
+Progress: █████████████░░░░░░░░░░░░ 48% (12/25)
 ```
 
 ---
@@ -185,8 +183,8 @@ Progress: ████████████░░░░░░░░░░░�
 
 | Metric | Current | Target | Progress |
 |--------|---------|--------|----------|
-| **Features** | 2 | 12 | ████░░░░░░░░░░░░░░░░░░░░ 17% |
-| **Pages** | 10 | 25 | ████████████░░░░░░░░░░░░ 40% |
+| **Features** | 3 | 12 | ██████░░░░░░░░░░░░░░░░░░ 25% |
+| **Pages** | 12 | 25 | ████████████████░░░░░░░░ 48% |
 | **Components** | 2 | 20 | ██░░░░░░░░░░░░░░░░░░░░░░ 10% |
 | **Tests** | 0% | 80% | ░░░░░░░░░░░░░░░░░░░░░░░░ 0% |
 | **Docs Lines** | 4800+ | 5000+ | ████████████████████████ 96% |
@@ -196,11 +194,11 @@ Progress: ████████████░░░░░░░░░░░�
 ## 🗓️ Timeline Progress
 
 ```
-Week 1-2  ████████████████████░░░░░░░░░░  30% ✅ DONE
-          Infrastructure + Auth + Professors + Docs
+Week 1-3  ████████████████████░░░░░░░░░░  33% ✅ DONE
+          Infrastructure + Auth + Professors + Courses + Docs
 
 Week 3-4  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% ⏳ CURRENT
-          Courses + Enrollment + Sessions
+          Enrollment + Sessions
 
 Week 5-6  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0% 🔵 PLANNED
           Payment + Products + Users
@@ -217,9 +215,9 @@ Week 9-12 ░░░░░░░░░░░░░░░░░░░░░░░�
 ## 🎯 Next Milestones
 
 ### ⏳ Milestone 2: Core Business (Target: Mid-Feb 2025)
-**Progress**: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0%
+**Progress**: ████████░░░░░░░░░░░░░░░░░░░░ 33%
 
-- [ ] Feature: Courses
+- [x] Feature: Courses ✅
 - [ ] Feature: Enrollment
 - [ ] Feature: Sessions
 - [ ] Widget: Calendar
