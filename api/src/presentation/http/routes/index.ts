@@ -9,13 +9,21 @@
  */
 
 // ============== USER ROUTES ==============
-export { createUserRoutes } from './users.routes.js';
-export { default as userRoutesDefault } from './users.routes.js';
+export { createUserRoutes } from "./users.routes.js";
+export { default as userRoutesDefault } from "./users.routes.js";
 
 // ============== COURS ROUTES ==============
-export { createCoursRoutes } from './cours.routes.js';
-export { default as coursRoutesDefault } from './cours.routes.js';
+export { createCoursRoutes } from "./cours.routes.js";
+export { default as coursRoutesDefault } from "./cours.routes.js";
 
 // ============== COURS RECURRENTS ROUTES ==============
-export { createCoursRecurrentsRoutes } from './cours-recurrents.routes.js';
-export { default as coursRecurrentsRoutesDefault } from './cours-recurrents.routes.js';
+export { createCoursRecurrentsRoutes } from "./cours-recurrents.routes.js";
+export { default as coursRecurrentsRoutesDefault } from "./cours-recurrents.routes.js";
+
+// ============== AUTH ROUTES ==============
+export { createAuthRoutes } from "./auth/auth.routes.js";
+export { default as authRoutesDefault } from "./auth/auth.routes.js";
+
+// ============== ACCOUNT ROUTES ==============
+export { createAccountRoutes } from "./auth/account.routes.js";
+export { default as accountRoutesDefault } from "./auth/account.routes.js";

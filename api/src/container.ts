@@ -23,6 +23,12 @@ import { CoursRepository } from "./infrastructure/database/repositories/CoursRep
 import { CoursRecurrentRepository } from "./infrastructure/database/repositories/CoursRecurrentRepository.js";
 import { InscriptionRepository } from "./infrastructure/database/repositories/InscriptionRepository.js";
 
+// Infrastructure - Auth Repositories
+import { AuthRepository } from "./infrastructure/repositories/auth/AuthRepository.js";
+import { RefreshTokenRepository } from "./infrastructure/repositories/auth/RefreshTokenRepository.js";
+import { PasswordResetTokenRepository } from "./infrastructure/repositories/auth/PasswordResetTokenRepository.js";
+import { SecurityRepository } from "./infrastructure/repositories/auth/SecurityRepository.js";
+
 // Use Cases - Users
 import {
   CreateUserUseCase,
@@ -53,6 +59,17 @@ import {
   DeactivateCoursRecurrentUseCase,
 } from "./core/use-cases/cours-recurrents/index.js";
 
+// Use Cases - Auth
+import {
+  LoginUseCase,
+  LogoutUseCase,
+  RefreshTokensUseCase,
+  RegisterUseCase,
+  ChangePasswordUseCase,
+  RequestPasswordResetUseCase,
+  ResetPasswordUseCase,
+} from "./core/use-cases/auth/index.js";
+
 // Controllers
 import {
   UserController,
@@ -60,6 +77,8 @@ import {
 } from "./presentation/http/controllers/UserController.js";
 import { CoursController } from "./presentation/http/controllers/CoursController.js";
 import { CoursRecurrentController } from "./presentation/http/controllers/CoursRecurrentController.js";
+import { AuthController } from "./presentation/http/controllers/auth/AuthController.js";
+import { AccountController } from "./presentation/http/controllers/auth/AccountController.js";
 
 /**
  * Implémentation du service de hashage de mot de passe avec bcrypt
@@ -339,6 +358,13 @@ class Container {
   private _coursRecurrentRepository: CoursRecurrentRepository | null = null;
   private _inscriptionRepository: InscriptionRepository | null = null;
 
+  // Repositories - Auth
+  private _authRepository: AuthRepository | null = null;
+  private _refreshTokenRepository: RefreshTokenRepository | null = null;
+  private _passwordResetTokenRepository: PasswordResetTokenRepository | null =
+    null;
+  private _securityRepository: SecurityRepository | null = null;
+
   // Services
   private _passwordHasher: BcryptPasswordHasher | null = null;
   private _emailService: EmailService | null = null;
@@ -369,13 +395,26 @@ class Container {
   private _activateCoursRecurrentUseCase?: ActivateCoursRecurrentUseCase;
   private _deactivateCoursRecurrentUseCase?: DeactivateCoursRecurrentUseCase;
 
+  // Use Cases - Auth
+  private _loginUseCase: LoginUseCase | null = null;
+  private _logoutUseCase: LogoutUseCase | null = null;
+  private _refreshTokensUseCase: RefreshTokensUseCase | null = null;
+  private _registerUseCase: RegisterUseCase | null = null;
+  private _changePasswordUseCase: ChangePasswordUseCase | null = null;
+  private _requestPasswordResetUseCase: RequestPasswordResetUseCase | null =
+    null;
+  private _resetPasswordUseCase: ResetPasswordUseCase | null = null;
+
   // Controllers - Users
   private _userController: UserController | null = null;
 
+  // Controllers - Auth
+  private _authController: AuthController | null = null;
+  private _accountController: AccountController | null = null;
+
   // Controllers - Cours
   private _coursController: CoursController | null = null;
-
-  private _coursRecurrentController?: CoursRecurrentController;
+  private _coursRecurrentController: CoursRecurrentController | null = null;
 
   // ============== REPOSITORIES ==============
 
@@ -409,6 +448,38 @@ class Container {
       console.log("✅ [Container] InscriptionRepository instancié");
     }
     return this._inscriptionRepository;
+  }
+
+  get authRepository(): AuthRepository {
+    if (!this._authRepository) {
+      this._authRepository = new AuthRepository();
+      console.log("✅ [Container] AuthRepository instancié");
+    }
+    return this._authRepository;
+  }
+
+  get refreshTokenRepository(): RefreshTokenRepository {
+    if (!this._refreshTokenRepository) {
+      this._refreshTokenRepository = new RefreshTokenRepository();
+      console.log("✅ [Container] RefreshTokenRepository instancié");
+    }
+    return this._refreshTokenRepository;
+  }
+
+  get passwordResetTokenRepository(): PasswordResetTokenRepository {
+    if (!this._passwordResetTokenRepository) {
+      this._passwordResetTokenRepository = new PasswordResetTokenRepository();
+      console.log("✅ [Container] PasswordResetTokenRepository instancié");
+    }
+    return this._passwordResetTokenRepository;
+  }
+
+  get securityRepository(): SecurityRepository {
+    if (!this._securityRepository) {
+      this._securityRepository = new SecurityRepository();
+      console.log("✅ [Container] SecurityRepository instancié");
+    }
+    return this._securityRepository;
   }
 
   // ============== SERVICES ==============
@@ -605,6 +676,84 @@ class Container {
     return this._deactivateCoursRecurrentUseCase;
   }
 
+  // Auth Use Cases
+  get loginUseCase(): LoginUseCase {
+    if (!this._loginUseCase) {
+      this._loginUseCase = new LoginUseCase(
+        this.authRepository,
+        this.refreshTokenRepository,
+        this.securityRepository,
+      );
+      console.log("✅ [Container] LoginUseCase instancié");
+    }
+    return this._loginUseCase;
+  }
+
+  get logoutUseCase(): LogoutUseCase {
+    if (!this._logoutUseCase) {
+      this._logoutUseCase = new LogoutUseCase(this.refreshTokenRepository);
+      console.log("✅ [Container] LogoutUseCase instancié");
+    }
+    return this._logoutUseCase;
+  }
+
+  get refreshTokensUseCase(): RefreshTokensUseCase {
+    if (!this._refreshTokensUseCase) {
+      this._refreshTokensUseCase = new RefreshTokensUseCase(
+        this.authRepository,
+        this.refreshTokenRepository,
+      );
+      console.log("✅ [Container] RefreshTokensUseCase instancié");
+    }
+    return this._refreshTokensUseCase;
+  }
+
+  get registerUseCase(): RegisterUseCase {
+    if (!this._registerUseCase) {
+      this._registerUseCase = new RegisterUseCase(
+        this.authRepository,
+        this.refreshTokenRepository,
+      );
+      console.log("✅ [Container] RegisterUseCase instancié");
+    }
+    return this._registerUseCase;
+  }
+
+  get changePasswordUseCase(): ChangePasswordUseCase {
+    if (!this._changePasswordUseCase) {
+      this._changePasswordUseCase = new ChangePasswordUseCase(
+        this.authRepository,
+        this.refreshTokenRepository,
+      );
+      console.log("✅ [Container] ChangePasswordUseCase instancié");
+    }
+    return this._changePasswordUseCase;
+  }
+
+  get requestPasswordResetUseCase(): RequestPasswordResetUseCase {
+    if (!this._requestPasswordResetUseCase) {
+      this._requestPasswordResetUseCase = new RequestPasswordResetUseCase(
+        this.authRepository,
+        this.passwordResetTokenRepository,
+        this.securityRepository,
+      );
+      console.log("✅ [Container] RequestPasswordResetUseCase instancié");
+    }
+    return this._requestPasswordResetUseCase;
+  }
+
+  get resetPasswordUseCase(): ResetPasswordUseCase {
+    if (!this._resetPasswordUseCase) {
+      this._resetPasswordUseCase = new ResetPasswordUseCase(
+        this.authRepository,
+        this.passwordResetTokenRepository,
+        this.refreshTokenRepository,
+      );
+      console.log("✅ [Container] ResetPasswordUseCase instancié");
+    }
+    return this._resetPasswordUseCase;
+  }
+
   // ============== CONTROLLERS ==============
 
   get userController(): UserController {
@@ -651,6 +800,31 @@ class Container {
     return this._coursRecurrentController;
   }
 
+  get authController(): AuthController {
+    if (!this._authController) {
+      this._authController = new AuthController(
+        this.loginUseCase,
+        this.logoutUseCase,
+        this.refreshTokensUseCase,
+      );
+      console.log("✅ [Container] AuthController instancié");
+    }
+    return this._authController;
+  }
+
+  get accountController(): AccountController {
+    if (!this._accountController) {
+      this._accountController = new AccountController(
+        this.registerUseCase,
+        this.changePasswordUseCase,
+        this.requestPasswordResetUseCase,
+        this.resetPasswordUseCase,
+      );
+      console.log("✅ [Container] AccountController instancié");
+    }
+    return this._accountController;
+  }
+
   // ============== MÉTHODES UTILITAIRES ==============
 
   /**
@@ -662,6 +836,10 @@ class Container {
     this._coursRepository = null;
     this._coursRecurrentRepository = null;
     this._inscriptionRepository = null;
+    this._authRepository = null;
+    this._refreshTokenRepository = null;
+    this._passwordResetTokenRepository = null;
+    this._securityRepository = null;
 
     // Services
     this._passwordHasher = null;
@@ -692,10 +870,21 @@ class Container {
     this._activateCoursRecurrentUseCase = undefined;
     this._deactivateCoursRecurrentUseCase = undefined;
 
+    // Use Cases - Auth
+    this._loginUseCase = null;
+    this._logoutUseCase = null;
+    this._refreshTokensUseCase = null;
+    this._registerUseCase = null;
+    this._changePasswordUseCase = null;
+    this._requestPasswordResetUseCase = null;
+    this._resetPasswordUseCase = null;
+
     // Controllers
     this._userController = null;
     this._coursController = null;
-    this._coursRecurrentController = undefined;
+    this._coursRecurrentController = null;
+    this._authController = null;
+    this._accountController = null;
 
     console.log("🔄 [Container] Container réinitialisé");
   }
@@ -710,6 +899,10 @@ class Container {
       coursRepository: this._coursRepository !== null,
       coursRecurrentRepository: this._coursRecurrentRepository !== null,
       inscriptionRepository: this._inscriptionRepository !== null,
+      authRepository: this._authRepository !== null,
+      refreshTokenRepository: this._refreshTokenRepository !== null,
+      passwordResetTokenRepository: this._passwordResetTokenRepository !== null,
+      securityRepository: this._securityRepository !== null,
 
       // Services
       passwordHasher: this._passwordHasher !== null,
@@ -747,10 +940,21 @@ class Container {
       deactivateCoursRecurrentUseCase:
         this._deactivateCoursRecurrentUseCase !== undefined,
 
+      // Use Cases - Auth
+      loginUseCase: this._loginUseCase !== null,
+      logoutUseCase: this._logoutUseCase !== null,
+      refreshTokensUseCase: this._refreshTokensUseCase !== null,
+      registerUseCase: this._registerUseCase !== null,
+      changePasswordUseCase: this._changePasswordUseCase !== null,
+      requestPasswordResetUseCase: this._requestPasswordResetUseCase !== null,
+      resetPasswordUseCase: this._resetPasswordUseCase !== null,
+
       // Controllers
       userController: this._userController !== null,
       coursController: this._coursController !== null,
-      coursRecurrentController: this._coursRecurrentController !== undefined,
+      coursRecurrentController: this._coursRecurrentController !== null,
+      authController: this._authController !== null,
+      accountController: this._accountController !== null,
     };
   }
 }
