@@ -2,8 +2,28 @@
 
 Modern React application built with **Feature-Sliced Design (FSD)** architecture.
 
+## 📚 Documentation Quick Links
+
+> **New to the project?** Start with [QUICK_START.md](./QUICK_START.md) for a 5-minute setup guide.
+
+| Document | Purpose | When to Read |
+|----------|---------|--------------|
+| 🚀 [QUICK_START.md](./QUICK_START.md) | Installation & first steps | **START HERE** |
+| 📊 [EXECUTIVE_SUMMARY.md](./EXECUTIVE_SUMMARY.md) | Project overview & status | Managers/Leads |
+| 🗺️ [ROADMAP.md](./ROADMAP.md) | Timeline & milestones | Planning |
+| 📋 [REFACTORING_TODO.md](./REFACTORING_TODO.md) | What needs to be done | Developers |
+| 🎯 [ACTION_PLAN.md](./ACTION_PLAN.md) | Immediate next tasks | Developers |
+| ✨ [FEATURES.md](./FEATURES.md) | Features catalog | Reference |
+| 🔄 [MIGRATION_GUIDE.md](../front-end/MIGRATION_GUIDE.md) | How to migrate code | As needed |
+| 📚 [DOCS_INDEX.md](./DOCS_INDEX.md) | Complete docs index | Reference |
+
+**Status**: ✅ 30% Complete | 🟡 Core Business In Progress | 📅 Target: April 2025
+
+---
+
 ## 📋 Table of Contents
 
+- [Documentation](#documentation-quick-links)
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
