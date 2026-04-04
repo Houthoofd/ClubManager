@@ -3,14 +3,27 @@
  * @description Page affichant toutes les inscriptions de l'utilisateur connecté
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Page,
+  PageSection,
+  Title,
+  Text,
+  TextContent,
+  Button,
+  ButtonVariant,
+  Toolbar,
+  ToolbarContent,
+  ToolbarItem,
+  ToolbarGroup,
+} from "@patternfly/react-core";
 import {
   MyEnrollmentsList,
   EnrollmentStatus,
   type EnrollmentFilters,
   type Enrollment,
-} from '@/features/enrollment';
+} from "@/features/enrollment";
 
 /**
  * Page "Mes Inscriptions"
@@ -46,97 +59,147 @@ export default function MyEnrollmentsPage() {
     }));
   };
 
+  // Helpers pour déterminer si un filtre est actif
+  const isAllActiveSelected =
+    filters.status?.length === 3 &&
+    filters.status.includes(EnrollmentStatus.CONFIRMED) &&
+    filters.status.includes(EnrollmentStatus.PENDING) &&
+    filters.status.includes(EnrollmentStatus.WAITLIST);
+
+  const isConfirmedOnlySelected =
+    filters.status?.length === 1 &&
+    filters.status[0] === EnrollmentStatus.CONFIRMED;
+
+  const isWaitlistOnlySelected =
+    filters.status?.length === 1 &&
+    filters.status[0] === EnrollmentStatus.WAITLIST;
+
+  const isHistorySelected =
+    filters.status?.length === 2 &&
+    filters.status.includes(EnrollmentStatus.CANCELLED) &&
+    filters.status.includes(EnrollmentStatus.REJECTED);
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+    <Page>
+      {/* Header Section */}
+      <PageSection variant="light">
+        <Title headingLevel="h1" size="2xl">
           Mes Inscriptions
-        </h1>
-        <p className="text-gray-600">
-          Gérez vos inscriptions aux cours et suivez leur statut
-        </p>
-      </div>
+        </Title>
+        <TextContent>
+          <Text>Gérez vos inscriptions aux cours et suivez leur statut</Text>
+        </TextContent>
+      </PageSection>
 
-      {/* Filtres rapides */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <button
-          onClick={() => handleStatusFilterChange([
-            EnrollmentStatus.CONFIRMED,
-            EnrollmentStatus.PENDING,
-            EnrollmentStatus.WAITLIST,
-          ])}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            filters.status?.length === 3
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Toutes les inscriptions actives
-        </button>
+      {/* Filters Section */}
+      <PageSection>
+        <Toolbar>
+          <ToolbarContent>
+            <ToolbarGroup>
+              <ToolbarItem>
+                <Button
+                  variant={
+                    isAllActiveSelected
+                      ? ButtonVariant.primary
+                      : ButtonVariant.secondary
+                  }
+                  onClick={() =>
+                    handleStatusFilterChange([
+                      EnrollmentStatus.CONFIRMED,
+                      EnrollmentStatus.PENDING,
+                      EnrollmentStatus.WAITLIST,
+                    ])
+                  }
+                >
+                  Toutes les inscriptions actives
+                </Button>
+              </ToolbarItem>
 
-        <button
-          onClick={() => handleStatusFilterChange([EnrollmentStatus.CONFIRMED])}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            filters.status?.length === 1 && filters.status[0] === EnrollmentStatus.CONFIRMED
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Confirmées uniquement
-        </button>
+              <ToolbarItem>
+                <Button
+                  variant={
+                    isConfirmedOnlySelected
+                      ? ButtonVariant.primary
+                      : ButtonVariant.secondary
+                  }
+                  onClick={() =>
+                    handleStatusFilterChange([EnrollmentStatus.CONFIRMED])
+                  }
+                >
+                  Confirmées uniquement
+                </Button>
+              </ToolbarItem>
 
-        <button
-          onClick={() => handleStatusFilterChange([EnrollmentStatus.WAITLIST])}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            filters.status?.length === 1 && filters.status[0] === EnrollmentStatus.WAITLIST
-              ? 'bg-yellow-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Liste d'attente
-        </button>
+              <ToolbarItem>
+                <Button
+                  variant={
+                    isWaitlistOnlySelected
+                      ? ButtonVariant.primary
+                      : ButtonVariant.secondary
+                  }
+                  onClick={() =>
+                    handleStatusFilterChange([EnrollmentStatus.WAITLIST])
+                  }
+                >
+                  Liste d'attente
+                </Button>
+              </ToolbarItem>
 
-        <button
-          onClick={() => handleStatusFilterChange([
-            EnrollmentStatus.CANCELLED,
-            EnrollmentStatus.REJECTED,
-          ])}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            filters.status?.length === 2 && filters.status.includes(EnrollmentStatus.CANCELLED)
-              ? 'bg-gray-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Historique
-        </button>
-      </div>
+              <ToolbarItem>
+                <Button
+                  variant={
+                    isHistorySelected
+                      ? ButtonVariant.primary
+                      : ButtonVariant.secondary
+                  }
+                  onClick={() =>
+                    handleStatusFilterChange([
+                      EnrollmentStatus.CANCELLED,
+                      EnrollmentStatus.REJECTED,
+                    ])
+                  }
+                >
+                  Historique
+                </Button>
+              </ToolbarItem>
+            </ToolbarGroup>
+          </ToolbarContent>
+        </Toolbar>
 
-      {/* Liste des inscriptions */}
-      <MyEnrollmentsList
-        filters={filters}
-        showFilters={true}
-        onEnrollmentClick={handleEnrollmentClick}
-        emptyMessage="Aucune inscription trouvée. Explorez nos cours et inscrivez-vous !"
-        className="bg-white rounded-lg shadow"
-      />
+        {/* Liste des inscriptions */}
+        <MyEnrollmentsList
+          filters={filters}
+          showFilters={true}
+          onEnrollmentClick={handleEnrollmentClick}
+          emptyMessage="Aucune inscription trouvée. Explorez nos cours et inscrivez-vous !"
+          className="pf-v5-u-mt-md"
+        />
 
-      {/* Actions rapides */}
-      <div className="mt-8 flex gap-4">
-        <button
-          onClick={() => navigate('/courses')}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
-          Découvrir les cours
-        </button>
+        {/* Actions rapides */}
+        <Toolbar>
+          <ToolbarContent>
+            <ToolbarGroup>
+              <ToolbarItem>
+                <Button
+                  variant={ButtonVariant.primary}
+                  onClick={() => navigate("/courses")}
+                >
+                  Découvrir les cours
+                </Button>
+              </ToolbarItem>
 
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-        >
-          Retour au tableau de bord
-        </button>
-      </div>
-    </div>
+              <ToolbarItem>
+                <Button
+                  variant={ButtonVariant.secondary}
+                  onClick={() => navigate("/dashboard")}
+                >
+                  Retour au tableau de bord
+                </Button>
+              </ToolbarItem>
+            </ToolbarGroup>
+          </ToolbarContent>
+        </Toolbar>
+      </PageSection>
+    </Page>
   );
 }

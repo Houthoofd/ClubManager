@@ -3,14 +3,44 @@
  * @description Page de confirmation après inscription à un cours
  */
 
-import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Page,
+  PageSection,
+  Title,
+  Text,
+  TextContent,
+  TextVariants,
+  Card,
+  CardBody,
+  CardTitle,
+  EmptyState,
+  EmptyStateHeader,
+  EmptyStateIcon,
+  EmptyStateBody,
+  Button,
+  Spinner,
+  DescriptionList,
+  DescriptionListGroup,
+  DescriptionListTerm,
+  DescriptionListDescription,
+  Alert,
+  AlertVariant,
+  AlertActionCloseButton,
+} from "@patternfly/react-core";
+import {
+  CheckCircleIcon,
+  ClockIcon,
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+} from "@patternfly/react-icons";
 import {
   useEnrollment,
   EnrollmentStatusBadge,
   UnenrollButton,
   EnrollmentStatus,
-} from '@/features/enrollment';
+} from "@/features/enrollment";
 
 /**
  * Page de confirmation d'inscription
@@ -29,55 +59,59 @@ export default function EnrollmentConfirmationPage() {
     data: enrollment,
     isLoading,
     error,
-  } = useEnrollment(enrollmentId || '');
+  } = useEnrollment(enrollmentId || "");
 
   useEffect(() => {
     if (!enrollmentId) {
-      navigate('/my-enrollments');
+      navigate("/my-enrollments");
     }
   }, [enrollmentId, navigate]);
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Page>
+        <PageSection variant="light" isFilled>
+          <EmptyState>
+            <EmptyStateHeader
+              titleText="Chargement..."
+              headingLevel="h1"
+              icon={<EmptyStateIcon icon={Spinner} />}
+            />
+          </EmptyState>
+        </PageSection>
+      </Page>
     );
   }
 
   // Error state
   if (error || !enrollment) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <div className="text-red-600 text-5xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-red-900 mb-2">
-              Inscription introuvable
-            </h2>
-            <p className="text-red-700 mb-6">
+      <Page>
+        <PageSection variant="light" isFilled>
+          <EmptyState>
+            <EmptyStateHeader
+              titleText="Inscription introuvable"
+              headingLevel="h1"
+              icon={
+                <EmptyStateIcon
+                  icon={ExclamationTriangleIcon}
+                  color="var(--pf-v5-global--danger-color--100)"
+                />
+              }
+            />
+            <EmptyStateBody>
               Nous n'avons pas pu trouver les détails de cette inscription.
-            </p>
-            <button
-              onClick={() => navigate('/my-enrollments')}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+            </EmptyStateBody>
+            <Button
+              variant="primary"
+              onClick={() => navigate("/my-enrollments")}
             >
               Voir mes inscriptions
-            </button>
-          </div>
-        </div>
-      </div>
+            </Button>
+          </EmptyState>
+        </PageSection>
+      </Page>
     );
   }
 
@@ -85,219 +119,292 @@ export default function EnrollmentConfirmationPage() {
   const isWaitlisted = enrollment.status === EnrollmentStatus.WAITLIST;
   const isPending = enrollment.status === EnrollmentStatus.PENDING;
 
+  // Determine icon based on status
+  let statusIcon = CheckCircleIcon;
+  let statusIconColor = "var(--pf-v5-global--success-color--100)";
+  if (isWaitlisted) {
+    statusIcon = ClockIcon;
+    statusIconColor = "var(--pf-v5-global--warning-color--100)";
+  } else if (isPending) {
+    statusIcon = ClockIcon;
+    statusIconColor = "var(--pf-v5-global--info-color--100)";
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Success Header */}
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4">
-            {isConfirmed && '🎉'}
-            {isWaitlisted && '⏳'}
-            {isPending && '⏱️'}
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isConfirmed && 'Inscription confirmée !'}
-            {isWaitlisted && 'Ajouté à la liste d\'attente'}
-            {isPending && 'Inscription en attente'}
-          </h1>
-          <p className="text-gray-600">
-            {isConfirmed &&
-              'Vous êtes maintenant inscrit(e) à ce cours. Un email de confirmation vous a été envoyé.'}
-            {isWaitlisted &&
-              `Vous êtes en position ${enrollment.waitlistPosition || '-'} sur la liste d'attente. Nous vous notifierons dès qu'une place se libère.`}
-            {isPending &&
-              'Votre inscription est en attente de validation. Vous recevrez une notification dès qu\'elle sera confirmée.'}
-          </p>
-        </div>
+    <Page>
+      {/* Header Section */}
+      <PageSection variant="light">
+        <EmptyState>
+          <EmptyStateHeader
+            titleText={
+              <>
+                {isConfirmed && "Inscription confirmée !"}
+                {isWaitlisted && "Ajouté à la liste d'attente"}
+                {isPending && "Inscription en attente"}
+              </>
+            }
+            headingLevel="h1"
+            icon={
+              <EmptyStateIcon
+                icon={statusIcon}
+                color={statusIconColor}
+                style={{ fontSize: "4rem" }}
+              />
+            }
+          />
+          <EmptyStateBody>
+            <TextContent>
+              <Text component={TextVariants.p}>
+                {isConfirmed &&
+                  "Vous êtes maintenant inscrit(e) à ce cours. Un email de confirmation vous a été envoyé."}
+                {isWaitlisted &&
+                  `Vous êtes en position ${enrollment.waitlistPosition || "-"} sur la liste d'attente. Nous vous notifierons dès qu'une place se libère.`}
+                {isPending &&
+                  "Votre inscription est en attente de validation. Vous recevrez une notification dès qu'elle sera confirmée."}
+              </Text>
+            </TextContent>
+          </EmptyStateBody>
+        </EmptyState>
+      </PageSection>
 
-        {/* Enrollment Details Card */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          {/* Status Badge */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Détails de l'inscription
-            </h2>
-            <EnrollmentStatusBadge
-              status={enrollment.status}
-              waitlistPosition={enrollment.waitlistPosition}
-              showLabel={true}
-              size="md"
-            />
-          </div>
+      {/* Details Section */}
+      <PageSection>
+        <Card isFullHeight>
+          <CardTitle>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+              }}
+            >
+              <span>Détails de l'inscription</span>
+              <EnrollmentStatusBadge
+                status={enrollment.status}
+                waitlistPosition={enrollment.waitlistPosition}
+                showLabel={true}
+                size="md"
+              />
+            </div>
+          </CardTitle>
+          <CardBody>
+            {/* Course Info */}
+            {enrollment.course && (
+              <>
+                <Title
+                  headingLevel="h3"
+                  size="lg"
+                  style={{ marginBottom: "1rem" }}
+                >
+                  {enrollment.course.name}
+                </Title>
 
-          {/* Course Info */}
-          {enrollment.course && (
-            <div className="mb-6 pb-6 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">
-                {enrollment.course.name}
-              </h3>
+                <DescriptionList isHorizontal>
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>Date de début</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      {new Date(enrollment.course.startDate).toLocaleDateString(
+                        "fr-FR",
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        },
+                      )}
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Date de début:</span>
-                  <p className="font-medium text-gray-900">
-                    {new Date(enrollment.course.startDate).toLocaleDateString(
-                      'fr-FR',
-                      {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      }
+                  <DescriptionListGroup>
+                    <DescriptionListTerm>Date de fin</DescriptionListTerm>
+                    <DescriptionListDescription>
+                      {new Date(enrollment.course.endDate).toLocaleDateString(
+                        "fr-FR",
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        },
+                      )}
+                    </DescriptionListDescription>
+                  </DescriptionListGroup>
+
+                  {enrollment.course.professorName && (
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>Professeur</DescriptionListTerm>
+                      <DescriptionListDescription>
+                        {enrollment.course.professorName}
+                      </DescriptionListDescription>
+                    </DescriptionListGroup>
+                  )}
+
+                  {enrollment.course.maxCapacity && (
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>Capacité</DescriptionListTerm>
+                      <DescriptionListDescription>
+                        {enrollment.course.currentEnrollments || 0} /{" "}
+                        {enrollment.course.maxCapacity} inscrits
+                      </DescriptionListDescription>
+                    </DescriptionListGroup>
+                  )}
+                </DescriptionList>
+
+                <div
+                  style={{
+                    marginTop: "1.5rem",
+                    paddingTop: "1.5rem",
+                    borderTop:
+                      "1px solid var(--pf-v5-global--BorderColor--100)",
+                  }}
+                >
+                  <DescriptionList isHorizontal>
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>
+                        Numéro d'inscription
+                      </DescriptionListTerm>
+                      <DescriptionListDescription>
+                        <Text
+                          component={TextVariants.small}
+                          style={{ fontFamily: "monospace" }}
+                        >
+                          {enrollment.id}
+                        </Text>
+                      </DescriptionListDescription>
+                    </DescriptionListGroup>
+
+                    <DescriptionListGroup>
+                      <DescriptionListTerm>
+                        Date d'inscription
+                      </DescriptionListTerm>
+                      <DescriptionListDescription>
+                        {new Date(enrollment.enrolledAt).toLocaleDateString(
+                          "fr-FR",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </DescriptionListDescription>
+                    </DescriptionListGroup>
+
+                    {enrollment.notes && (
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>Notes</DescriptionListTerm>
+                        <DescriptionListDescription>
+                          <Text
+                            component={TextVariants.small}
+                            style={{ fontStyle: "italic" }}
+                          >
+                            {enrollment.notes}
+                          </Text>
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
                     )}
-                  </p>
+                  </DescriptionList>
                 </div>
-
-                <div>
-                  <span className="text-gray-500">Date de fin:</span>
-                  <p className="font-medium text-gray-900">
-                    {new Date(enrollment.course.endDate).toLocaleDateString(
-                      'fr-FR',
-                      {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      }
-                    )}
-                  </p>
-                </div>
-
-                {enrollment.course.professorName && (
-                  <div>
-                    <span className="text-gray-500">Professeur:</span>
-                    <p className="font-medium text-gray-900">
-                      {enrollment.course.professorName}
-                    </p>
-                  </div>
-                )}
-
-                {enrollment.course.maxCapacity && (
-                  <div>
-                    <span className="text-gray-500">Capacité:</span>
-                    <p className="font-medium text-gray-900">
-                      {enrollment.course.currentEnrollments || 0} /{' '}
-                      {enrollment.course.maxCapacity} inscrits
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Enrollment Meta */}
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Numéro d'inscription:</span>
-              <span className="font-mono font-medium text-gray-900">
-                {enrollment.id}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-gray-500">Date d'inscription:</span>
-              <span className="font-medium text-gray-900">
-                {new Date(enrollment.enrolledAt).toLocaleDateString('fr-FR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-
-            {enrollment.notes && (
-              <div className="pt-3 border-t border-gray-200">
-                <span className="text-gray-500 block mb-1">Notes:</span>
-                <p className="text-gray-900 italic">{enrollment.notes}</p>
-              </div>
+              </>
             )}
-          </div>
-        </div>
+          </CardBody>
+        </Card>
+      </PageSection>
 
-        {/* Next Steps / Info Boxes */}
-        {isConfirmed && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-green-900 mb-2 flex items-center">
-              <span className="mr-2">✓</span>
-              Prochaines étapes
-            </h3>
-            <ul className="text-sm text-green-800 space-y-1 ml-6 list-disc">
+      {/* Next Steps / Info Boxes */}
+      {isConfirmed && (
+        <PageSection>
+          <Alert
+            variant={AlertVariant.success}
+            title="Prochaines étapes"
+            isInline
+          >
+            <ul style={{ marginLeft: "1.5rem" }}>
               <li>Consultez votre email pour les détails du cours</li>
               <li>Ajoutez les dates à votre calendrier</li>
-              <li>
-                Vous pouvez annuler jusqu'à 24h avant le début du cours
-              </li>
+              <li>Vous pouvez annuler jusqu'à 24h avant le début du cours</li>
             </ul>
-          </div>
-        )}
+          </Alert>
+        </PageSection>
+      )}
 
-        {isWaitlisted && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-yellow-900 mb-2 flex items-center">
-              <span className="mr-2">ℹ️</span>
-              Liste d'attente
-            </h3>
-            <ul className="text-sm text-yellow-800 space-y-1 ml-6 list-disc">
+      {isWaitlisted && (
+        <PageSection>
+          <Alert
+            variant={AlertVariant.warning}
+            title="Liste d'attente"
+            isInline
+          >
+            <ul style={{ marginLeft: "1.5rem" }}>
               <li>
                 Vous êtes en position {enrollment.waitlistPosition} sur la liste
               </li>
               <li>Vous serez notifié par email si une place se libère</li>
               <li>
-                Votre position peut évoluer si d'autres personnes se désinscrivent
+                Votre position peut évoluer si d'autres personnes se
+                désinscrivent
               </li>
-              <li>
-                Vous pouvez annuler votre demande à tout moment
-              </li>
+              <li>Vous pouvez annuler votre demande à tout moment</li>
             </ul>
-          </div>
-        )}
+          </Alert>
+        </PageSection>
+      )}
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button
+      {/* Actions */}
+      <PageSection>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+          <Button
+            variant="primary"
             onClick={() => navigate(`/courses/${enrollment.courseId}`)}
-            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            style={{ flex: "1 1 auto", minWidth: "200px" }}
           >
             Voir le cours
-          </button>
+          </Button>
 
-          <button
-            onClick={() => navigate('/my-enrollments')}
-            className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/my-enrollments")}
+            style={{ flex: "1 1 auto", minWidth: "200px" }}
           >
             Mes inscriptions
-          </button>
+          </Button>
 
           {(isConfirmed || isWaitlisted) && (
-            <UnenrollButton
-              enrollmentId={enrollment.id}
-              courseName={enrollment.course?.name}
-              onSuccess={() => navigate('/my-enrollments')}
-              confirmMessage={
-                isWaitlisted
-                  ? 'Êtes-vous sûr de vouloir quitter la liste d\'attente ?'
-                  : 'Êtes-vous sûr de vouloir annuler cette inscription ?'
-              }
-              className="flex-1"
-            />
+            <div style={{ flex: "1 1 auto", minWidth: "200px" }}>
+              <UnenrollButton
+                enrollmentId={enrollment.id}
+                courseName={enrollment.course?.name}
+                onSuccess={() => navigate("/my-enrollments")}
+                confirmMessage={
+                  isWaitlisted
+                    ? "Êtes-vous sûr de vouloir quitter la liste d'attente ?"
+                    : "Êtes-vous sûr de vouloir annuler cette inscription ?"
+                }
+                className="pf-v5-u-w-100"
+              />
+            </div>
           )}
         </div>
+      </PageSection>
 
-        {/* Contact Support */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>
-            Une question ?{' '}
-            <button
-              onClick={() => navigate('/contact')}
-              className="text-blue-600 hover:text-blue-700 underline"
+      {/* Contact Support */}
+      <PageSection>
+        <TextContent style={{ textAlign: "center" }}>
+          <Text component={TextVariants.small}>
+            Une question ?{" "}
+            <Button
+              variant="link"
+              isInline
+              onClick={() => navigate("/contact")}
             >
               Contactez-nous
-            </button>
-          </p>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Text>
+        </TextContent>
+      </PageSection>
+    </Page>
   );
 }

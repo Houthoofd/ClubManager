@@ -2,16 +2,40 @@
  * CourseCard Component
  *
  * Displays a course in a card format with key information.
- * Following FSD architecture and using PatternFly components.
+ * Following FSD architecture and using PatternFly React components.
  */
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import type { Course } from '../model/types';
-import { COURSE_TYPE_LABELS, COURSE_LEVEL_LABELS } from '../model/types';
+import React from "react";
+import { Link } from "react-router-dom";
+import {
+  Card,
+  CardTitle,
+  CardBody,
+  CardFooter,
+  Label,
+  Button,
+  Flex,
+  FlexItem,
+  Text,
+  TextContent,
+  Title,
+  DescriptionList,
+  DescriptionListGroup,
+  DescriptionListTerm,
+  DescriptionListDescription,
+} from "@patternfly/react-core";
+import {
+  CalendarAltIcon,
+  UserIcon,
+  ClockIcon,
+  UsersIcon,
+} from "@patternfly/react-icons";
+import type { Course } from "../model/types";
+import { COURSE_TYPE_LABELS, COURSE_LEVEL_LABELS } from "../model/types";
 
 interface CourseCardProps {
   course: Course;
+  onClick?: () => void;
 }
 
 /**
@@ -22,152 +46,191 @@ interface CourseCardProps {
  * <CourseCard course={course} />
  * ```
  */
-export const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
+export const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
   const availableSpots = course.capacity - course.enrolled;
   const isFull = availableSpots <= 0;
   const isAlmostFull = availableSpots > 0 && availableSpots <= 3;
 
+  const getStatusColor = (status: Course["status"]) => {
+    switch (status) {
+      case "active":
+        return "green";
+      case "full":
+        return "orange";
+      case "inactive":
+      default:
+        return "grey";
+    }
+  };
+
+  const getStatusLabel = (status: Course["status"]) => {
+    switch (status) {
+      case "active":
+        return "Actif";
+      case "full":
+        return "Complet";
+      case "inactive":
+        return "Inactif";
+      default:
+        return status;
+    }
+  };
+
+  const getLevelColor = (level: Course["level"]) => {
+    switch (level) {
+      case "beginner":
+        return "green";
+      case "intermediate":
+        return "orange";
+      case "advanced":
+        return "red";
+      default:
+        return "blue";
+    }
+  };
+
+  const getSpotsColor = () => {
+    if (isFull) return "red";
+    if (isAlmostFull) return "orange";
+    return "green";
+  };
+
   return (
-    <div className="pf-v6-c-card pf-m-hoverable">
-      <div className="pf-v6-c-card__header">
-        <div className="pf-v6-c-card__title">
-          <h3>{course.name}</h3>
-        </div>
-        <div className="pf-v6-c-card__actions">
-          <span
-            className={`pf-v6-c-label ${
-              course.status === 'active'
-                ? 'pf-m-green'
-                : course.status === 'full'
-                ? 'pf-m-orange'
-                : 'pf-m-grey'
-            }`}
-          >
-            <span className="pf-v6-c-label__content">
-              {course.status === 'active' && 'Actif'}
-              {course.status === 'full' && 'Complet'}
-              {course.status === 'inactive' && 'Inactif'}
-            </span>
-          </span>
-        </div>
-      </div>
-
-      <div className="pf-v6-c-card__body">
-        <p className="pf-v6-u-color-200 pf-v6-u-mb-md">
-          {course.description.length > 120
-            ? `${course.description.substring(0, 120)}...`
-            : course.description}
-        </p>
-
-        <div className="pf-v6-u-mb-sm">
-          <dl className="pf-v6-c-description-list pf-m-horizontal-on-sm">
-            <div className="pf-v6-c-description-list__group">
-              <dt className="pf-v6-c-description-list__term">
-                <span className="pf-v6-c-description-list__text">Type</span>
-              </dt>
-              <dd className="pf-v6-c-description-list__description">
-                <div className="pf-v6-c-description-list__text">
-                  <span className="pf-v6-c-label pf-m-blue">
-                    <span className="pf-v6-c-label__content">
-                      {COURSE_TYPE_LABELS[course.type]}
-                    </span>
-                  </span>
-                </div>
-              </dd>
-            </div>
-
-            <div className="pf-v6-c-description-list__group">
-              <dt className="pf-v6-c-description-list__term">
-                <span className="pf-v6-c-description-list__text">Niveau</span>
-              </dt>
-              <dd className="pf-v6-c-description-list__description">
-                <div className="pf-v6-c-description-list__text">
-                  <span
-                    className={`pf-v6-c-label ${
-                      course.level === 'beginner'
-                        ? 'pf-m-green'
-                        : course.level === 'intermediate'
-                        ? 'pf-m-orange'
-                        : 'pf-m-red'
-                    }`}
-                  >
-                    <span className="pf-v6-c-label__content">
-                      {COURSE_LEVEL_LABELS[course.level]}
-                    </span>
-                  </span>
-                </div>
-              </dd>
-            </div>
-
-            <div className="pf-v6-c-description-list__group">
-              <dt className="pf-v6-c-description-list__term">
-                <span className="pf-v6-c-description-list__text">Durée</span>
-              </dt>
-              <dd className="pf-v6-c-description-list__description">
-                <div className="pf-v6-c-description-list__text">
-                  {course.duration} min
-                </div>
-              </dd>
-            </div>
-
-            <div className="pf-v6-c-description-list__group">
-              <dt className="pf-v6-c-description-list__term">
-                <span className="pf-v6-c-description-list__text">Places</span>
-              </dt>
-              <dd className="pf-v6-c-description-list__description">
-                <div className="pf-v6-c-description-list__text">
-                  <span
-                    className={`pf-v6-u-font-weight-bold ${
-                      isFull
-                        ? 'pf-v6-u-danger-color-100'
-                        : isAlmostFull
-                        ? 'pf-v6-u-warning-color-100'
-                        : 'pf-v6-u-success-color-100'
-                    }`}
-                  >
-                    {availableSpots} / {course.capacity}
-                  </span>
-                </div>
-              </dd>
-            </div>
-
-            {course.professor && (
-              <div className="pf-v6-c-description-list__group">
-                <dt className="pf-v6-c-description-list__term">
-                  <span className="pf-v6-c-description-list__text">
-                    Professeur
-                  </span>
-                </dt>
-                <dd className="pf-v6-c-description-list__description">
-                  <div className="pf-v6-c-description-list__text">
-                    {course.professor.firstName} {course.professor.lastName}
-                  </div>
-                </dd>
-              </div>
-            )}
-          </dl>
-        </div>
-      </div>
-
-      <div className="pf-v6-c-card__footer">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
+    <Card isClickable={!!onClick} isCompact isRounded>
+      <CardTitle>
+        <Flex
+          alignItems={{ default: "alignItemsCenter" }}
+          spaceItems={{ default: "spaceItemsSm" }}
         >
-          <span className="pf-v6-u-font-size-xl pf-v6-u-font-weight-bold pf-v6-u-primary-color-100">
-            {course.price} €
-          </span>
-          <Link
-            to={`/courses/${course.id}`}
-            className="pf-v6-c-button pf-m-primary"
+          <FlexItem flex={{ default: "flex_1" }}>
+            <Title headingLevel="h3" size="lg">
+              {course.name}
+            </Title>
+          </FlexItem>
+          <FlexItem>
+            <Label color={getStatusColor(course.status)}>
+              {getStatusLabel(course.status)}
+            </Label>
+          </FlexItem>
+        </Flex>
+      </CardTitle>
+
+      <CardBody>
+        <TextContent>
+          <Text
+            component="p"
+            style={{ marginBottom: "var(--pf-v5-global--spacer--md)" }}
           >
-            Voir détails
-          </Link>
-        </div>
-      </div>
-    </div>
+            {course.description.length > 120
+              ? `${course.description.substring(0, 120)}...`
+              : course.description}
+          </Text>
+        </TextContent>
+
+        <Flex
+          direction={{ default: "row" }}
+          spaceItems={{ default: "spaceItemsSm" }}
+          style={{ marginBottom: "var(--pf-v5-global--spacer--md)" }}
+        >
+          <FlexItem>
+            <Label color="blue">{COURSE_TYPE_LABELS[course.type]}</Label>
+          </FlexItem>
+          <FlexItem>
+            <Label color={getLevelColor(course.level)}>
+              {COURSE_LEVEL_LABELS[course.level]}
+            </Label>
+          </FlexItem>
+        </Flex>
+
+        <Flex
+          direction={{ default: "column" }}
+          spaceItems={{ default: "spaceItemsSm" }}
+        >
+          <FlexItem>
+            <Flex
+              alignItems={{ default: "alignItemsCenter" }}
+              spaceItems={{ default: "spaceItemsXs" }}
+            >
+              <FlexItem>
+                <ClockIcon />
+              </FlexItem>
+              <FlexItem>
+                <Text component="small">
+                  <strong>Durée:</strong> {course.duration} min
+                </Text>
+              </FlexItem>
+            </Flex>
+          </FlexItem>
+
+          <FlexItem>
+            <Flex
+              alignItems={{ default: "alignItemsCenter" }}
+              spaceItems={{ default: "spaceItemsXs" }}
+            >
+              <FlexItem>
+                <UsersIcon />
+              </FlexItem>
+              <FlexItem>
+                <Text component="small">
+                  <strong>Places:</strong>{" "}
+                  <Label color={getSpotsColor()} isCompact>
+                    {availableSpots} / {course.capacity}
+                  </Label>
+                </Text>
+              </FlexItem>
+            </Flex>
+          </FlexItem>
+
+          {course.professor && (
+            <FlexItem>
+              <Flex
+                alignItems={{ default: "alignItemsCenter" }}
+                spaceItems={{ default: "spaceItemsXs" }}
+              >
+                <FlexItem>
+                  <UserIcon />
+                </FlexItem>
+                <FlexItem>
+                  <Text component="small">
+                    <strong>Professeur:</strong> {course.professor.firstName}{" "}
+                    {course.professor.lastName}
+                  </Text>
+                </FlexItem>
+              </Flex>
+            </FlexItem>
+          )}
+        </Flex>
+      </CardBody>
+
+      <CardFooter>
+        <Flex
+          justifyContent={{ default: "justifyContentSpaceBetween" }}
+          alignItems={{ default: "alignItemsCenter" }}
+        >
+          <FlexItem>
+            <Text
+              component="span"
+              style={{
+                fontSize: "var(--pf-v5-global--FontSize--xl)",
+                fontWeight: "var(--pf-v5-global--FontWeight--bold)",
+                color: "var(--pf-v5-global--primary-color--100)",
+              }}
+            >
+              {course.price} €
+            </Text>
+          </FlexItem>
+          <FlexItem>
+            <Button
+              variant="primary"
+              component={(props) => (
+                <Link {...props} to={`/courses/${course.id}`} />
+              )}
+            >
+              Voir détails
+            </Button>
+          </FlexItem>
+        </Flex>
+      </CardFooter>
+    </Card>
   );
 };

@@ -3,14 +3,48 @@
  *
  * List component for displaying the current user's enrollments.
  * Includes filtering, sorting, and status-based views.
+ * Refactored to use PatternFly components.
  */
 
-import React, { useState } from 'react';
-import { useMyEnrollments } from '../model/useEnrollment';
-import { EnrollmentStatus, formatEnrollmentDate } from '../model/types';
-import { EnrollmentStatusBadge } from './EnrollmentStatusBadge';
-import { UnenrollButton } from './UnenrollButton';
-import type { EnrollmentFilters } from '../model/types';
+import React, { useState } from "react";
+import {
+  Card,
+  CardBody,
+  CardTitle,
+  EmptyState,
+  EmptyStateIcon,
+  EmptyStateBody,
+  EmptyStateHeader,
+  Spinner,
+  Grid,
+  GridItem,
+  Select,
+  SelectOption,
+  SelectVariant,
+  Button,
+  ButtonVariant,
+  Flex,
+  FlexItem,
+  Label,
+  Alert,
+  Title,
+  Text,
+  TextContent,
+  TextVariants,
+  Divider,
+} from "@patternfly/react-core";
+import {
+  FilterIcon,
+  CalendarAltIcon,
+  MapMarkerAltIcon,
+  UserIcon,
+  ListIcon,
+} from "@patternfly/react-icons";
+import { useMyEnrollments } from "../model/useEnrollment";
+import { EnrollmentStatus, formatEnrollmentDate } from "../model/types";
+import { EnrollmentStatusBadge } from "./EnrollmentStatusBadge";
+import { UnenrollButton } from "./UnenrollButton";
+import type { EnrollmentFilters } from "../model/types";
 
 // ============================================================================
 // Props
@@ -47,10 +81,10 @@ export const MyEnrollmentsList: React.FC<MyEnrollmentsListProps> = ({
   initialFilters,
   showFilters = true,
   showUnenrollButton = true,
-  className = '',
+  className = "",
   onEnrollmentClick,
   showCourseDetails = true,
-  emptyMessage = 'Vous n\'avez aucune inscription pour le moment.',
+  emptyMessage = "Vous n'avez aucune inscription pour le moment.",
 }) => {
   // ========================================
   // State
@@ -58,12 +92,15 @@ export const MyEnrollmentsList: React.FC<MyEnrollmentsListProps> = ({
 
   const [filters, setFilters] = useState<EnrollmentFilters>({
     includeCourse: showCourseDetails,
-    sortBy: 'enrolledAt',
-    sortOrder: 'desc',
+    sortBy: "enrolledAt",
+    sortOrder: "desc",
     ...initialFilters,
   });
 
-  const [selectedStatus, setSelectedStatus] = useState<EnrollmentStatus | 'all'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<
+    EnrollmentStatus | "all"
+  >("all");
+  const [isSortSelectOpen, setIsSortSelectOpen] = useState(false);
 
   // ========================================
   // Hooks
@@ -75,117 +112,187 @@ export const MyEnrollmentsList: React.FC<MyEnrollmentsListProps> = ({
   // Handlers
   // ========================================
 
-  const handleStatusFilter = (status: EnrollmentStatus | 'all') => {
+  const handleStatusFilter = (status: EnrollmentStatus | "all") => {
     setSelectedStatus(status);
     setFilters({
       ...filters,
-      status: status === 'all' ? undefined : status,
+      status: status === "all" ? undefined : status,
     });
   };
 
-  const handleSortChange = (sortBy: EnrollmentFilters['sortBy']) => {
+  const handleSortChange = (sortBy: EnrollmentFilters["sortBy"]) => {
     setFilters({
       ...filters,
       sortBy,
     });
+    setIsSortSelectOpen(false);
   };
 
   // ========================================
   // Computed Values
   // ========================================
 
-  const activeEnrollments = enrollments?.filter(
-    e => e.status === EnrollmentStatus.CONFIRMED || e.status === EnrollmentStatus.PENDING
-  ) || [];
+  const activeEnrollments =
+    enrollments?.filter(
+      (e) =>
+        e.status === EnrollmentStatus.CONFIRMED ||
+        e.status === EnrollmentStatus.PENDING,
+    ) || [];
 
-  const waitlistedEnrollments = enrollments?.filter(
-    e => e.status === EnrollmentStatus.WAITLIST
-  ) || [];
-
-  const pastEnrollments = enrollments?.filter(
-    e => e.status === EnrollmentStatus.CANCELLED || e.status === EnrollmentStatus.REJECTED
-  ) || [];
+  const waitlistedEnrollments =
+    enrollments?.filter((e) => e.status === EnrollmentStatus.WAITLIST) || [];
 
   // ========================================
   // Render Helpers
   // ========================================
 
-  const renderEnrollmentCard = (enrollment: typeof enrollments[0]) => {
-    const canUnenroll = enrollment.status === EnrollmentStatus.CONFIRMED ||
-                        enrollment.status === EnrollmentStatus.PENDING ||
-                        enrollment.status === EnrollmentStatus.WAITLIST;
+  const renderEnrollmentCard = (enrollment: (typeof enrollments)[0]) => {
+    const canUnenroll =
+      enrollment.status === EnrollmentStatus.CONFIRMED ||
+      enrollment.status === EnrollmentStatus.PENDING ||
+      enrollment.status === EnrollmentStatus.WAITLIST;
 
     return (
-      <div
-        key={enrollment.id}
-        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-      >
-        <div className="flex items-start justify-between">
-          {/* Course Info */}
-          <div
-            className="flex-1 cursor-pointer"
-            onClick={() => onEnrollmentClick?.(enrollment.id)}
-          >
-            {enrollment.course && (
-              <>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                  {enrollment.course.title}
-                </h3>
-                {enrollment.course.code && (
-                  <p className="text-sm text-gray-500 mb-2">
-                    Code: {enrollment.course.code}
-                  </p>
+      <GridItem span={12} key={enrollment.id}>
+        <Card
+          isClickable={!!onEnrollmentClick}
+          isSelectable
+          onClick={() => onEnrollmentClick?.(enrollment.id)}
+        >
+          <CardTitle>
+            <Flex
+              justifyContent={{ default: "justifyContentSpaceBetween" }}
+              alignItems={{ default: "alignItemsFlexStart" }}
+            >
+              <FlexItem flex={{ default: "flex_1" }}>
+                {enrollment.course && (
+                  <Title headingLevel="h3" size="lg">
+                    {enrollment.course.title}
+                  </Title>
                 )}
-                {enrollment.course.professorName && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    Professeur: {enrollment.course.professorName}
-                  </p>
-                )}
-                {enrollment.course.schedule && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    📅 {enrollment.course.schedule}
-                  </p>
-                )}
-                {enrollment.course.location && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    📍 {enrollment.course.location}
-                  </p>
-                )}
-              </>
-            )}
-
-            {/* Enrollment Info */}
-            <div className="mt-3 space-y-1">
-              <p className="text-xs text-gray-500">
-                Inscrit le: {formatEnrollmentDate(enrollment.enrolledAt)}
-              </p>
-              {enrollment.notes && (
-                <p className="text-sm text-gray-600 italic">
-                  Note: {enrollment.notes}
-                </p>
+              </FlexItem>
+              <FlexItem>
+                <EnrollmentStatusBadge
+                  status={enrollment.status}
+                  waitlistPosition={enrollment.waitlistPosition}
+                  size="medium"
+                />
+              </FlexItem>
+            </Flex>
+          </CardTitle>
+          <CardBody>
+            <Flex
+              direction={{ default: "column" }}
+              spaceItems={{ default: "spaceItemsSm" }}
+            >
+              {enrollment.course && (
+                <>
+                  {enrollment.course.code && (
+                    <FlexItem>
+                      <TextContent>
+                        <Text component={TextVariants.small}>
+                          <strong>Code:</strong> {enrollment.course.code}
+                        </Text>
+                      </TextContent>
+                    </FlexItem>
+                  )}
+                  {enrollment.course.professorName && (
+                    <FlexItem>
+                      <Flex
+                        spaceItems={{ default: "spaceItemsXs" }}
+                        alignItems={{ default: "alignItemsCenter" }}
+                      >
+                        <FlexItem>
+                          <UserIcon />
+                        </FlexItem>
+                        <FlexItem>
+                          <TextContent>
+                            <Text component={TextVariants.small}>
+                              <strong>Professeur:</strong>{" "}
+                              {enrollment.course.professorName}
+                            </Text>
+                          </TextContent>
+                        </FlexItem>
+                      </Flex>
+                    </FlexItem>
+                  )}
+                  {enrollment.course.schedule && (
+                    <FlexItem>
+                      <Flex
+                        spaceItems={{ default: "spaceItemsXs" }}
+                        alignItems={{ default: "alignItemsCenter" }}
+                      >
+                        <FlexItem>
+                          <CalendarAltIcon />
+                        </FlexItem>
+                        <FlexItem>
+                          <TextContent>
+                            <Text component={TextVariants.small}>
+                              {enrollment.course.schedule}
+                            </Text>
+                          </TextContent>
+                        </FlexItem>
+                      </Flex>
+                    </FlexItem>
+                  )}
+                  {enrollment.course.location && (
+                    <FlexItem>
+                      <Flex
+                        spaceItems={{ default: "spaceItemsXs" }}
+                        alignItems={{ default: "alignItemsCenter" }}
+                      >
+                        <FlexItem>
+                          <MapMarkerAltIcon />
+                        </FlexItem>
+                        <FlexItem>
+                          <TextContent>
+                            <Text component={TextVariants.small}>
+                              {enrollment.course.location}
+                            </Text>
+                          </TextContent>
+                        </FlexItem>
+                      </Flex>
+                    </FlexItem>
+                  )}
+                </>
               )}
-            </div>
-          </div>
 
-          {/* Status & Actions */}
-          <div className="flex flex-col items-end space-y-2 ml-4">
-            <EnrollmentStatusBadge
-              status={enrollment.status}
-              waitlistPosition={enrollment.waitlistPosition}
-              size="medium"
-            />
+              <Divider />
 
-            {showUnenrollButton && canUnenroll && (
-              <UnenrollButton
-                enrollmentId={enrollment.id}
-                courseId={enrollment.courseId}
-                variant="outline"
-                size="small"
-              />
-            )}
-          </div>
-        </div>
-      </div>
+              {/* Enrollment Info */}
+              <FlexItem>
+                <TextContent>
+                  <Text component={TextVariants.small}>
+                    <strong>Inscrit le:</strong>{" "}
+                    {formatEnrollmentDate(enrollment.enrolledAt)}
+                  </Text>
+                </TextContent>
+              </FlexItem>
+
+              {enrollment.notes && (
+                <FlexItem>
+                  <TextContent>
+                    <Text component={TextVariants.small}>
+                      <em>Note: {enrollment.notes}</em>
+                    </Text>
+                  </TextContent>
+                </FlexItem>
+              )}
+
+              {showUnenrollButton && canUnenroll && (
+                <FlexItem>
+                  <UnenrollButton
+                    enrollmentId={enrollment.id}
+                    courseId={enrollment.courseId}
+                    variant="outline"
+                    size="small"
+                  />
+                </FlexItem>
+              )}
+            </Flex>
+          </CardBody>
+        </Card>
+      </GridItem>
     );
   };
 
@@ -195,14 +302,14 @@ export const MyEnrollmentsList: React.FC<MyEnrollmentsListProps> = ({
 
   if (isLoading) {
     return (
-      <div className={`space-y-4 ${className}`}>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-2/3 mb-3"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-          </div>
-        ))}
+      <div className={className}>
+        <EmptyState>
+          <EmptyStateHeader
+            titleText="Chargement en cours..."
+            icon={<EmptyStateIcon icon={Spinner} />}
+            headingLevel="h2"
+          />
+        </EmptyState>
       </div>
     );
   }
@@ -213,10 +320,14 @@ export const MyEnrollmentsList: React.FC<MyEnrollmentsListProps> = ({
 
   if (error) {
     return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
-        <p className="text-red-800">
-          Erreur lors du chargement des inscriptions: {error.message}
-        </p>
+      <div className={className}>
+        <Alert
+          variant="danger"
+          title="Erreur lors du chargement des inscriptions"
+          isInline
+        >
+          {error.message}
+        </Alert>
       </div>
     );
   }
@@ -227,21 +338,15 @@ export const MyEnrollmentsList: React.FC<MyEnrollmentsListProps> = ({
 
   if (!enrollments || enrollments.length === 0) {
     return (
-      <div className={`bg-gray-50 border border-gray-200 rounded-lg p-8 text-center ${className}`}>
-        <svg
-          className="mx-auto h-12 w-12 text-gray-400 mb-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      <div className={className}>
+        <EmptyState>
+          <EmptyStateHeader
+            titleText="Aucune inscription"
+            icon={<EmptyStateIcon icon={ListIcon} />}
+            headingLevel="h2"
           />
-        </svg>
-        <p className="text-gray-600 text-lg">{emptyMessage}</p>
+          <EmptyStateBody>{emptyMessage}</EmptyStateBody>
+        </EmptyState>
       </div>
     );
   }
@@ -254,83 +359,138 @@ export const MyEnrollmentsList: React.FC<MyEnrollmentsListProps> = ({
     <div className={className}>
       {/* Filters */}
       {showFilters && (
-        <div className="mb-6 bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Status Filter */}
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-700">Statut:</span>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleStatusFilter('all')}
-                  className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                    selectedStatus === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+        <Card style={{ marginBottom: "1.5rem" }}>
+          <CardBody>
+            <Flex
+              justifyContent={{ default: "justifyContentSpaceBetween" }}
+              alignItems={{ default: "alignItemsCenter" }}
+              spaceItems={{ default: "spaceItemsMd" }}
+            >
+              {/* Status Filter */}
+              <FlexItem>
+                <Flex
+                  spaceItems={{ default: "spaceItemsSm" }}
+                  alignItems={{ default: "alignItemsCenter" }}
+                  flexWrap={{ default: "wrap" }}
                 >
-                  Tous ({enrollments.length})
-                </button>
-                <button
-                  onClick={() => handleStatusFilter(EnrollmentStatus.CONFIRMED)}
-                  className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                    selectedStatus === EnrollmentStatus.CONFIRMED
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Confirmé ({activeEnrollments.length})
-                </button>
-                <button
-                  onClick={() => handleStatusFilter(EnrollmentStatus.WAITLIST)}
-                  className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                    selectedStatus === EnrollmentStatus.WAITLIST
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Liste d'attente ({waitlistedEnrollments.length})
-                </button>
-              </div>
-            </div>
+                  <FlexItem>
+                    <FilterIcon /> <strong>Statut:</strong>
+                  </FlexItem>
+                  <FlexItem>
+                    <Button
+                      variant={
+                        selectedStatus === "all"
+                          ? ButtonVariant.primary
+                          : ButtonVariant.secondary
+                      }
+                      onClick={() => handleStatusFilter("all")}
+                      isSmall
+                    >
+                      Tous ({enrollments.length})
+                    </Button>
+                  </FlexItem>
+                  <FlexItem>
+                    <Button
+                      variant={
+                        selectedStatus === EnrollmentStatus.CONFIRMED
+                          ? ButtonVariant.primary
+                          : ButtonVariant.secondary
+                      }
+                      onClick={() =>
+                        handleStatusFilter(EnrollmentStatus.CONFIRMED)
+                      }
+                      isSmall
+                    >
+                      Confirmé ({activeEnrollments.length})
+                    </Button>
+                  </FlexItem>
+                  <FlexItem>
+                    <Button
+                      variant={
+                        selectedStatus === EnrollmentStatus.WAITLIST
+                          ? ButtonVariant.primary
+                          : ButtonVariant.secondary
+                      }
+                      onClick={() =>
+                        handleStatusFilter(EnrollmentStatus.WAITLIST)
+                      }
+                      isSmall
+                    >
+                      Liste d'attente ({waitlistedEnrollments.length})
+                    </Button>
+                  </FlexItem>
+                </Flex>
+              </FlexItem>
 
-            {/* Sort Options */}
-            <div className="flex items-center space-x-2 ml-auto">
-              <span className="text-sm font-medium text-gray-700">Trier par:</span>
-              <select
-                value={filters.sortBy}
-                onChange={(e) => handleSortChange(e.target.value as EnrollmentFilters['sortBy'])}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="enrolledAt">Date d'inscription</option>
-                <option value="updatedAt">Dernière mise à jour</option>
-                <option value="status">Statut</option>
-              </select>
-            </div>
-          </div>
-        </div>
+              {/* Sort Options */}
+              <FlexItem>
+                <Flex
+                  spaceItems={{ default: "spaceItemsSm" }}
+                  alignItems={{ default: "alignItemsCenter" }}
+                >
+                  <FlexItem>
+                    <strong>Trier par:</strong>
+                  </FlexItem>
+                  <FlexItem>
+                    <Select
+                      variant={SelectVariant.single}
+                      onToggle={(_event, isOpen) => setIsSortSelectOpen(isOpen)}
+                      onSelect={(_event, selection) =>
+                        handleSortChange(
+                          selection as EnrollmentFilters["sortBy"],
+                        )
+                      }
+                      selections={filters.sortBy}
+                      isOpen={isSortSelectOpen}
+                      aria-label="Sort enrollments"
+                    >
+                      <SelectOption key="enrolledAt" value="enrolledAt">
+                        Date d'inscription
+                      </SelectOption>
+                      <SelectOption key="updatedAt" value="updatedAt">
+                        Dernière mise à jour
+                      </SelectOption>
+                      <SelectOption key="status" value="status">
+                        Statut
+                      </SelectOption>
+                    </Select>
+                  </FlexItem>
+                </Flex>
+              </FlexItem>
+            </Flex>
+          </CardBody>
+        </Card>
       )}
 
       {/* Enrollments List */}
-      <div className="space-y-4">
-        {enrollments.map(renderEnrollmentCard)}
-      </div>
+      <Grid hasGutter>{enrollments.map(renderEnrollmentCard)}</Grid>
 
       {/* Summary */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <div className="flex justify-between text-sm text-gray-600">
-          <span>Total: {enrollments.length} inscription(s)</span>
-          {activeEnrollments.length > 0 && (
-            <span className="text-green-600 font-medium">
-              {activeEnrollments.length} active(s)
-            </span>
-          )}
-          {waitlistedEnrollments.length > 0 && (
-            <span className="text-blue-600 font-medium">
+      <Divider style={{ marginTop: "1.5rem", marginBottom: "1rem" }} />
+      <Flex
+        justifyContent={{ default: "justifyContentSpaceBetween" }}
+        alignItems={{ default: "alignItemsCenter" }}
+      >
+        <FlexItem>
+          <TextContent>
+            <Text component={TextVariants.small}>
+              <strong>Total:</strong> {enrollments.length} inscription(s)
+            </Text>
+          </TextContent>
+        </FlexItem>
+        {activeEnrollments.length > 0 && (
+          <FlexItem>
+            <Label color="green">{activeEnrollments.length} active(s)</Label>
+          </FlexItem>
+        )}
+        {waitlistedEnrollments.length > 0 && (
+          <FlexItem>
+            <Label color="blue">
               {waitlistedEnrollments.length} en attente
-            </span>
-          )}
-        </div>
-      </div>
+            </Label>
+          </FlexItem>
+        )}
+      </Flex>
     </div>
   );
 };
